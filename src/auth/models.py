@@ -1,12 +1,23 @@
+"""
+Database models related to users/user authentication
+"""
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
-from sqlalchemy import String, CheckConstraint
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import String, Enum
 from typing import List
 from .constants import *
 from ..models import Base
 
 class User(Base):
+    """
+    Database model for User.
+
+    Attributes:
+        user_id: Integer identifier for a user.
+        user_name: String name for a user. Must be unique, cannot be null. Max length is MAX_USER_NAME_LEN.
+        user_hashed_password: Hashed value of a user's password. Cannot be null. Has length up to 256 chars.
+        user_type: A UserType (e.g. 'admin', 'user', etc.). Possible values can be found in ./constants.py.
+    """
     __tablename__ = "users"
 
     user_id: Mapped[int] = mapped_column(primary_key=True)
@@ -16,15 +27,12 @@ class User(Base):
         nullable=False
     )
     user_hashed_password : Mapped[str] = mapped_column(
-        String(256)
+        String(256),
+        nullable=False
     )
-    user_type : Mapped[str] = mapped_column(
-        String(10)
+    user_type : Mapped[UserType] = mapped_column(
+        Enum(UserType, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x])
     )
 
     label_groups_with_user : Mapped[List["LabelGroup"]] = relationship(back_populates='user_of_label_group')
     translations_with_user : Mapped[List["Translation"]] = relationship(back_populates='user_of_translation')
-
-    __table_args__ = (
-        CheckConstraint("user_type IN ('admin', 'user')", name='chk_user_type'),
-    )

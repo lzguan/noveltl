@@ -1,0 +1,38 @@
+services:
+  noveltldev:
+    image: noveltldev
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - 8000:8000
+    environment:
+      DB_HOST: db
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${CONTAINER_PORT}/${DB_NAME}
+      CONTAINER_PORT: ${CONTAINER_PORT}
+      SECRET_KEY: ${SECRET_KEY}
+    depends_on:
+      - db
+  db:
+    image: postgres
+    container_name: chapter_db_server
+    restart: always
+    
+    ports:
+      - "${DB_PORT}:${CONTAINER_PORT}" 
+      
+    environment:
+      POSTGRES_USER: "${DB_USER}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+      POSTGRES_DB: "${DB_NAME}"
+      POSTGRES_HOST_AUTH_METHOD: "scram-sha-256"
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+      
+    volumes:
+      - db_data:/var/lib/postgresql/data
+volumes:
+  db_data:

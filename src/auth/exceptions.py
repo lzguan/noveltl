@@ -13,5 +13,5 @@ class UserTooManyFoundException(TooManyFoundException):
 class UserAuthenticationFailedException(Exception):
     pass
 
-class UserNameDuplicateException(FieldInvalidException):
+class UserNameDuplicateException(DuplicateException):
     pass

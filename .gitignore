@@ -6,3 +6,4 @@ setenv.py
 .devcontainer/
 private_issues.md
 .dockerignore
+.vscode/

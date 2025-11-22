@@ -5,6 +5,7 @@ from . import models, schemas
 from .utils import *
 from .exceptions import *
 from .constants import UserType
+from psycopg2 import errorcodes
 
 def query_user_by_user_name(
         db : Session, 
@@ -113,13 +114,13 @@ def insert_user(
     except IntegrityError as e:
         db.rollback()
         pgcode = e.orig.pgcode
-        if pgcode == '23505':
+        if pgcode == errorcodes.UNIQUE_VIOLATION:
             raise UserNameDuplicateException
         raise UnknownError(str(e.orig))
     except DataError as e:
         db.rollback()
         pgcode = e.orig.pgcode
-        if pgcode == '22001':
+        if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
             raise DataTooLongException
         raise UnknownError(str(e.orig))
     return new_user

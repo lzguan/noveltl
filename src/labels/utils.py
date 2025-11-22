@@ -1,76 +1,149 @@
-from typing import List
-from bisect import bisect_left
-from .schemas import LabelOp, Label
+"""
+Utilities for label services.
+"""
+
+from typing import List, Dict, Tuple
+from . import schemas
+from . import models
 from sqlalchemy.orm import Session
 from .models import *
+from .exceptions import *
 
-def op_add(entities : List[dict], text : str, op : LabelOp) -> bool:
-    if op.start_pos >= op.end_pos:
-        return False
-    if text[op.start_pos : op.end_pos] != op.word:
-        return False
-    if op.score > 1 or op.score < 0:
-        return False
-    label = Label(entity_group=op.entity_group, score=op.score, word=op.word, start=op.start_pos, end=op.end_pos, dirty=op.dirty)
-    label_dict = label.model_dump()
-    idx = bisect_left(entities, op.start_pos, key=(lambda x : x['start']))
-    if idx > 0 and entities[idx - 1]['end'] > label_dict['start']:
-        return False
-    if idx < len(entities) and entities[idx]['start'] < label_dict['end']:
-        return False
-    entities.insert(idx, label_dict) # change to more efficient data structure
-    return True
+def _apply_add(db : Session, label_data_id : int, text : str, entities : Dict[Tuple[int, int], models.Label], op : schemas.AddLabelOp) -> None:
+    """
+    Applies a label add operation to database. Does not commit.
 
-def op_delete(entities : List[dict], text : str, op : LabelOp) -> bool:
-    if text[op.start_pos : op.end_pos] != op.word:
-        return False
-    idx = bisect_left(entities, op.start_pos, key=(lambda x : x['start']))
-    if idx > len(entities):
-        return False
-    if entities[idx]['start'] != op.start_pos or entities[idx]['end'] != op.end_pos:
-        return False
-    del entities[idx]
-    return True
-
-def op_update(entities : List[dict], text : str, op : LabelOp) -> bool:
-    if text[op.start_pos : op.end_pos] != op.word:
-        return False
-    if text[op.new_start_pos : op.new_end_pos] != op.new_word:
-        return False
-    idx = bisect_left(entities, op.start_pos, key=(lambda x : x['start']))
-    if idx > len(entities):
-        return False
-    if entities[idx]['start'] != op.start_pos or entities[idx]['end'] != op.end_pos:
-        return False
+    Args:
+        db: Database to insert into.
+        label_data_id: id of label data.
+        text: Chapter text.
+        entities: List of entities being kept track of in memory. Entries of the form
+            (start_pos, end_pos) : models.Label
+        op: Add operation data.
     
-    idx_new = bisect_left(entities, op.new_start_pos, key=(lambda x : x['start']))
+    Raises:
+        LabelWordMismatchInvalidOperationException: If text[op.start_pos:op.end_pos] does not match op.word.
+        LabelAlreadyExistsInvalidOperationException: If the entities dictionary already has a label starting/ending at op.start_pos/op.end_pos.
 
-    cur_ent = entities.pop(idx)
-    if idx_new > idx:
-        idx_new = idx_new - 1
+    Note:
+        This function does not perform range checks.
+    """
+    if op.end_pos > len(text):
+        raise LabelOutOfBoundsInvalidOperationException
+    if text[op.start_pos : op.end_pos] != op.word:
+        raise LabelWordMismatchInvalidOperationException
+    if (op.start_pos, op.end_pos) in entities:
+        raise LabelAlreadyExistsInvalidOperationException
+    label = models.Label(
+            label_entity_group=op.entity_group,
+            label_score=op.score,
+            label_word=op.word,
+            label_start=op.start_pos,
+            label_end=op.end_pos,
+            label_dirty=op.dirty,
+            label_data_id=label_data_id
+        )
+    entities[(op.start_pos, op.end_pos)] = label
+    db.add(label)
 
-    if idx_new > 0 and entities[idx_new - 1]['end'] > op.new_start_pos:
-        return False
-    if idx_new < len(entities) and entities[idx_new]['start'] < op.new_end_pos:
-        return False
-    # validation complete
-    cur_ent['start'] = op.new_start_pos
-    cur_ent['end'] = op.new_end_pos
-    cur_ent['word'] = op.new_word
+def _apply_update(text : str, entities : Dict[Tuple[int, int], models.Label], op : schemas.UpdateLabelOp) -> None:
+    """
+    Applies a label update operation to database. Does not commit.
+
+    Args:
+        text: Chapter text.
+        entities: List of entities being kept track of in memory. Entries of the form
+            (start_pos, end_pos) : models.Label
+        op: Update operation data.
+    
+    Raises:
+        LabelWordMismatchInvalidOperationException: If text[op.start_pos:op.end_pos] does not match op.word.
+        LabelNotExistsInvalidOperationException: If the entities dictionary does not have a label with op.start_pos, op.end_pos in it.
+    
+    Note:
+        This function does not perform range checks.
+    """
+    if (op.start_pos, op.end_pos) not in entities:
+        raise LabelNotExistsInvalidOperationException
+    if text[op.start_pos:op.end_pos] != op.word:
+        raise LabelWordMismatchInvalidOperationException
+    
+    label = entities[(op.start_pos, op.end_pos)]
+    range_change = False
+    cur_start = op.start_pos
+    cur_end = op.end_pos
+    if op.new_start_pos is not None and op.new_start_pos != op.start_pos:
+        range_change = True
+        cur_start = op.new_start_pos
+    if op.new_end_pos is not None and op.new_end_pos != op.end_pos:
+        range_change = True
+        cur_end = op.new_end_pos
+    if range_change:
+        if cur_end > len(text):
+            raise LabelOutOfBoundsInvalidOperationException
+        if op.new_word is None or text[cur_start:cur_end] != op.new_word:
+            raise LabelWordMismatchInvalidOperationException
+        if (cur_start, cur_end) in entities:
+            raise LabelAlreadyExistsInvalidOperationException
+        del entities[(op.start_pos, op.end_pos)]
+        label.label_word = op.new_word
+        label.label_start = cur_start
+        label.label_end = cur_end
+        entities[(cur_start, cur_end)] = label
     if op.dirty is not None:
-        cur_ent['dirty'] = op.dirty
-    if op.score is not None:
-        cur_ent['score'] = op.score
+        label.label_dirty = op.dirty
     if op.entity_group is not None:
-        cur_ent['entity_group'] = op.entity_group
-    entities.insert(idx_new, cur_ent)
-    return True
+        label.label_entity_group = op.entity_group
+    if op.score is not None:
+        label.label_score = op.score
 
-def process_op(entities : List[dict], text : str, op : LabelOp) -> bool:
-    if op.label_op == "add":
-        return op_add(entities, text, op)
-    if op.label_op == "delete":
-        return op_delete(entities, text, op)
-    if op.label_op == "update":
-        return op_update(entities, text, op)
-    return False
+def _apply_delete(db : Session, text : str, entities : Dict[Tuple[int, int], models.Label], op : schemas.DeleteLabelOp) -> None:
+    """
+    Applies a label delete operation. Does not commit.
+
+    Args:
+        db: Database to delete from.
+        text: Chapter text.
+        entities: List of entities being kept track of in memory. Entries of the form
+            (start_pos, end_pos) : models.Label
+        op: Update operation data.
+    
+    Raises:
+        LabelNotExistsInvalidOperationException: If the label to delete does not exist in database.
+        LabelWordMismatchInvalidOperationException: If text[op.start_pos:op.end_pos] does not match op.word.
+    """
+    if not (op.start_pos, op.end_pos) in entities:
+        raise LabelNotExistsInvalidOperationException
+    if text[op.start_pos:op.end_pos] != op.word:
+        raise LabelWordMismatchInvalidOperationException
+    label = entities[(op.start_pos, op.end_pos)]
+    db.delete(label)
+    del entities[(op.start_pos, op.end_pos)]
+
+def apply_operation(db : Session, label_data_id : int, text : str, entities : Dict[Tuple[int, int], models.Label], op : schemas.LabelOpBase) -> None:
+    """
+    Applies a single label operation.
+
+    Args:
+        db: Database to apply operation on.
+        text: Chapter text.
+        entities: List of entities being kept track of in memory. Entries of the form
+            (start_pos, end_pos) : models.Label
+        op: Operation data.
+    
+    Raises:
+        LabelNotExistsInvalidOperationException:
+        LabelWordMismatchInvalidOperationException:
+        LabelAlreadyExistsInvalidOperationException:
+    
+    Note:
+        This function acts as a wrapper for calling `_apply_(add, update, delete)`. See documentation for these functions for when the corresponding types of operations get passed into op.
+    """
+    if isinstance(op, schemas.AddLabelOp):
+        _apply_add(db, label_data_id, text, entities, op)
+    elif isinstance(op, schemas.UpdateLabelOp):
+        _apply_update(text, entities, op)
+    elif isinstance(op, schemas.DeleteLabelOp):
+        _apply_delete(db, text, entities, op)
+    else:
+        raise UnknownError(f"Unknown operation type: {type(op)}")

@@ -34,6 +34,11 @@ class TooManyFoundException(Exception):
     Throw when query returns more results than expected.
     """
 
+class DuplicateException(Exception):
+    """
+    Throw when trying to add an object with a unique constraint into database.
+    """
+
 class UnknownError(Exception):
     """
     Exception for undetermined errors

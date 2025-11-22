@@ -31,6 +31,7 @@
         class LabelDataMeta(BaseModel):
             some_metadata
     ```
+- Base classes should end with `Base` (e.g. `LabelOpBase`).
 - Pydantic models associated with specific user requests should be of the form `VerbObject` related to what the user wishes to do (e.g. `CreateObject`, `DeleteObject`, `UpdateObject`).
 - If a module needs to send an ACK to client, should define a `OperationStatus` pydantic schema, where Operation is the operation that needs to be ACKed. 
 
@@ -53,6 +54,7 @@
 - There should be no keyword arguments here.
 - Try to be consistent with parameter order.
 - Any dependency that the router layer has should be passed to this layer.
+- Insecure queries should be marked as private by an underscore prefix (e.g. `_query_labels_by_label_data_id_insecure`).
 
 ## Router Modules
 - Names of functions should follow the rules below:
@@ -84,10 +86,12 @@
 - Bulk querying an object by some filters should be done throug the endpoint `GET /objects` (e.g. `GET /raw-chapter-revisions`).
 - Use your own judgement for anything else. We will keep updating this part.
 
-# Exceptions
-- Be descriptive.
-- Use common sense.
-- TODO: make actual rules for this section.
+## Exceptions
+- Exceptions describing classes should be defined in the top levels `exceptions.py` file (e.g. `DuplicateException`, `NotFoundException`, etc.)
+- Exceptions for specific services should be defined in the service-specific `exceptions.py` module.
+- Exceptions that describe a certain object matching the description of a top-level exception should follow the format `ObjectTopLevelException` (e.g. `UserNameDuplicateException`, `RawChapterRevisionNotFoundException`) and should inherit from the top-level exception.
+- For exceptions that do not fall under a top-level exception, just be descriptive enough and do not match the suffix to a top-level exception (e.g. `RawChapterRevisionMakePrimaryFailedException`).
+- For service-specific describing an error that occurs to a specific type of object, top-level exceptions should follow the convention `ObjectTopLevelException` (e.g. `LabelInvalidOperationException`). Inherited exceptions should have `Object` as a prefix, as well as `TopLevelException` as a suffix (e.g. `LabelWordMismatchInvalidOperationException`).
 
 # Exception handling
 - Custom exceptions should be defined in `exceptions.py` in each feature directory (e.g. `src/auth/exeptions.py`)

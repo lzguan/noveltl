@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError, NoResultFound, DataError, MultipleRes
 from sqlalchemy import select
 from collections import defaultdict
 from ..main import logger
+from psycopg2 import errorcodes
 
 def query_novels_by_title(
         db : Session, 
@@ -56,8 +57,8 @@ def query_novel_by_id(
         novel_id: id of novel in database.
     
     Raises:
-        NovelIDNotFoundException: Novel not found in database.
-        NovelIDTooManyFoundException: Multiple novels with id found in database.
+        NovelNotFoundException: Novel not found in database.
+        NovelTooManyFoundException: Multiple novels with id found in database.
     """
     q = select(models.Novel).where(models.Novel.novel_id == novel_id)
     result = db.execute(q)
@@ -85,6 +86,8 @@ def query_raw_chapters_by_novel(
         novel_id: id of novel we are querying chapters from.
         start: If not none, then only query chapters with chapter_num >= start
         end: If not none, then only query chapters with chapter_num < end
+    
+    Raises:
     """
     q = select(models.RawChapter).where(models.RawChapter.novel_id == novel_id)
     if start is not None:
@@ -111,7 +114,7 @@ def query_raw_chapter_by_id(
         raw_chapter_id: id of chapter we are querying from.
     
     Raises:
-        RawChapterIDNotFoundException: Chapter not found in database.
+        RawChapterNotFoundException: Chapter not found in database.
         sqlalchemy.exc.MultipleResultsFound: Multiple chapters with id found in database.
     """
     q = select(models.RawChapter).where(models.RawChapter.raw_chapter_id == raw_chapter_id)
@@ -136,7 +139,7 @@ def query_raw_chapter_revision_by_id(
         raw_chapter_revision_id: id of chapter revision we are querying.
     
     Raises:
-        RawChapterRevisionIDNotFoundException: If raw_chapter_revision_id does not correspond to a chapter revision.
+        RawChapterRevisionNotFoundException: If raw_chapter_revision_id does not correspond to a chapter revision.
         InsufficientPermissionsException: If a user does not have permission to access this revision.
     """
     q = select(models.RawChapterRevision).where(models.RawChapterRevision.raw_chapter_revision_id == raw_chapter_revision_id)
@@ -165,8 +168,7 @@ def query_raw_chapter_revisions_by_raw_chapter(
         is_primary: If not None, only select primary chapters.
 
     Raises:
-        RawChapterIDNotFoundException: novel with corresponding novel_id is not in database
-    
+        RawChapterNotFoundException: novel with corresponding novel_id is not in database
     Notes:
         The caller should be responsible for converting to the best pydantic model for the use case.
     """
@@ -204,7 +206,7 @@ def query_raw_chapter_revisions_by_novel(
         is_primary: If True, then filter novels by primary status.
     
     Raises:
-        NovelIDNotFoundException: novel with corresponding novel_id is not in database
+        NovelNotFoundException: novel with corresponding novel_id is not in database
     """
     q = select(models.RawChapter.raw_chapter_num, models.RawChapterRevision).options(
         defer(models.RawChapterRevision.raw_chapter_revision_text)
@@ -224,7 +226,6 @@ def query_raw_chapter_revisions_by_novel(
     result = db.execute(q)
     result_rows  = result.all()
     if len(result_rows) == 0:
-        # will throw if novel_id is not valid
         query_novel_by_id(db, current_user, novel_id)
     ret_dict : Dict[int, List[schemas.RawChapterRevisionMeta]] = defaultdict(list)
     for chapter_num, raw_chapter_revision in result_rows:
@@ -247,7 +248,7 @@ def insert_novel(
         novel: Metadata of novel.
     
     Raises:
-        LanguageIDNotFoundException: Language id in request does not exist.
+        LanguageNotFoundException: Language id in request does not exist.
         DataTooLongException: String is too long in some field of data we are inserting.
         InsufficientPermissionsException: User does not have permission to create a novel
         UnknownError: Some other error occured.
@@ -259,13 +260,13 @@ def insert_novel(
     except IntegrityError as e:
         db.rollback()
         pgcode = e.orig.pgcode
-        if pgcode == '23503':
+        if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
             raise LanguageNotFoundException(str(e.orig))
         raise UnknownError(e)
     except DataError as e:
         db.rollback()
         pgcode = e.orig.pgcode
-        if pgcode == '22001':
+        if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
             raise DataTooLongException(str(e.orig))
         raise UnknownError(e)
     except Exception as e:
@@ -278,7 +279,7 @@ def modify_novel(
         current_user : User, 
         novel_id : int, 
         update : schemas.UpdateNovel
-    ) -> models.Novel | None:
+    ) -> models.Novel:
     """
     Modifies novel with novel_id.
 
@@ -289,8 +290,8 @@ def modify_novel(
         update: Proposed updated metadata.
     
     Raises:
-        NovelIDNotFoundException: Novel not found in database.
-        NovelIDTooManyFoundException: Multiple novels with id found in database.
+        NovelNotFoundException: Novel not found in database.
+        NovelTooManyFoundException: Multiple novels with id found in database.
         DataTooLongException: Data we are updating to is too long for some string field.
         InsufficientPermissionsException: Current user does not have permission to update this resource.
     Todo:
@@ -308,7 +309,7 @@ def modify_novel(
     except DataError as e:
         db.rollback()
         pgcode = e.orig.pgcode
-        if pgcode == '22001':
+        if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
             raise DataTooLongException(str(e.orig))
         raise UnknownError(e)
     except MultipleResultsFound as e:
@@ -347,9 +348,9 @@ def insert_raw_chapter(
     except IntegrityError as e:
         db.rollback()
         pgcode = e.orig.pgcode
-        if pgcode == '23503':
+        if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
             raise NovelNotFoundException(str(e.orig))
-        if pgcode == '23505':
+        if pgcode == errorcodes.UNIQUE_VIOLATION:
             raise ChapterNumDuplicateException(str(e.orig))
         raise UnknownError(e)
     except Exception as e:
@@ -362,7 +363,7 @@ def insert_raw_chapter_revision(
         current_user : User, 
         raw_chapter_id : int, 
         rcr : schemas.CreateRawChapterRevision
-    ) -> models.RawChapterRevision | None:
+    ) -> models.RawChapterRevision:
     """
     Insert a raw chapter revision into the database.
 
@@ -373,7 +374,7 @@ def insert_raw_chapter_revision(
         rcr: Data to insert.
     
     Raises:
-        RawChapterIDNotFoundException: Raw chapter with raw_chapter_id does not exist.
+        RawChapterNotFoundException: Raw chapter with raw_chapter_id does not exist.
         DataTooLongException: String field we are trying to insert too long.
         InsufficientPermissionsException: Current user does not have permissions to perform this action.
         UnknownError: Some other error occured.
@@ -385,13 +386,13 @@ def insert_raw_chapter_revision(
     except IntegrityError as e:
         db.rollback()
         pgcode = e.orig.pgcode
-        if pgcode == '23503':
+        if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
             raise RawChapterNotFoundException(str(e.orig))
         raise UnknownError(e)
     except DataError as e:
         db.rollback()
         pgcode = e.orig.pgcode
-        if pgcode == '22001':
+        if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
             raise DataTooLongException(str(e.orig))
         raise UnknownError(e)
     except Exception as e:
@@ -414,7 +415,7 @@ def modify_raw_chapter_revision(
         revision_id: id of raw chapter revision we are modifying.
 
     Raises:
-        RawChapterRevisionIDNotFoundException: raw_chapter_revision_id does not correspond to a raw chapter revision in db.
+        RawChapterRevisionNotFoundException: raw_chapter_revision_id does not correspond to a raw chapter revision in db.
         DataTooLongException: String we are trying to modify is too long.
         InsufficientPermissionsException: User does not have permission to perform this operation.
         UnknownError: Some other error occured.
@@ -432,7 +433,7 @@ def modify_raw_chapter_revision(
     except DataError as e:
         db.rollback()
         pgcode = e.orig.pgcode
-        if pgcode == '22001':
+        if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
             raise DataTooLongException(str(e.orig))
         raise UnknownError(e)
     except Exception as e:
@@ -454,7 +455,7 @@ def publish_raw_chapter_revision(
         raw_chapter_revision_id: id of the revision we are publishing.
     
     Raises:
-        RawChapterRevisionIDNotFoundException: Raw chapter revision with raw_chapter_revision_id not found
+        RawChapterRevisionNotFoundException: Raw chapter revision with raw_chapter_revision_id not found
         InsufficientPermissionsException: Current user does not have permissions to perform this action.
         UnknownError: Some other error occured.
     """
@@ -478,8 +479,8 @@ def make_primary_raw_chapter_revision(db : Session, current_user : User, raw_cha
         raw_chapter_revision_id: id of the revision we are publishing.
     
     Raises:
-        RawChapterRevisionIDNotFoundException: Raw chapter revision with raw_chapter_revision_id not found.
-        RawChapterIDNotFound: Raw chapter corresponding to revision with raw_chapter_revision_id not found.
+        RawChapterRevisionNotFoundException: Raw chapter revision with raw_chapter_revision_id not found.
+        RawChapterNotFound: Raw chapter corresponding to revision with raw_chapter_revision_id not found.
         RawChapterRevisionMakePrimaryFailedException: Failed during the db commit.
         RawChapterRevisionNotPublicException: Trying to make a non-public revision primary
         InsufficientPermissionsException: Current user does not have permissions to perform this action.
@@ -503,9 +504,9 @@ def make_primary_raw_chapter_revision(db : Session, current_user : User, raw_cha
                 revision.raw_chapter_revision_is_primary = True
                 db.commit()
     except IntegrityError as e:
-        if e.orig.pgcode == '23505':
+        if e.orig.pgcode == errorcodes.UNIQUE_VIOLATION:
             raise RawChapterRevisionMakePrimaryFailedException(f"Error: committing would violate a unique constraint. This is most likely caused by a race condition.")
-        if e.orig.pgcode == '23514': # extra check
+        if e.orig.pgcode == errorcodes.CHECK_VIOLATION: # extra check
             raise RawChapterRevisionNotPublicException
     except UnknownError as e:
         raise e
@@ -530,7 +531,7 @@ def remove_raw_chapter_revision(
         force_remove: If True, and user validation succeeds, then remove this revision and everything it owns.
     
     Raises:
-        RawChapterRevisionIDNotFoundException: Revision with raw_chapter_revision_id not found.
+        RawChapterRevisionNotFoundException: Revision with raw_chapter_revision_id not found.
         InsufficientPermissionsException: Current user has insufficient permissions to delete this chapter.
         DeleteRawChapterFailedException: Delete failed for other reasons.
     """

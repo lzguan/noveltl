@@ -3,7 +3,6 @@ Service functions for labels.
 """
 
 from ..auth.models import User
-from ..novels.models import *
 from . import models
 from . import schemas
 from sqlalchemy.orm import Session, defer
@@ -13,7 +12,7 @@ from sqlalchemy.exc import IntegrityError, NoResultFound, DataError
 from typing import List, Dict
 from .utils import apply_operation
 from .exceptions import *
-from ..novels.exceptions import NovelNotFoundException, RawChapterRevisionNotFoundException, RawChapterRevisionNotPublicException
+from ..novels.exceptions import NovelNotFoundException, RawChapterRevisionNotFoundException, RawChapterRevisionNotFinalException
 from psycopg2 import errorcodes
 from ..novels import models as novel_models
 from ..novels.service import query_raw_chapter_revision_by_id
@@ -54,7 +53,7 @@ def query_label_group_by_id(db : Session, current_user : User, label_group_id : 
         raise InsufficientPermissionsException
     return result_row
 
-def query_label_datas_by_raw_chapter_ids(db : Session, current_user : User, label_group_id : int, raw_chapter_revision_ids : List[int]) -> Dict[int, models.LabelData]:
+def query_label_datas_by_raw_chapter_revision_ids(db : Session, current_user : User, label_group_id : int, raw_chapter_revision_ids : List[int] | None) -> Dict[int, models.LabelData]:
     """
     Query all label datas in some label_group_id with chapter num belonging to some specified list. Return in dictionary in the format
         raw_chapter_revision_id : LabelData
@@ -69,7 +68,7 @@ def query_label_datas_by_raw_chapter_ids(db : Session, current_user : User, labe
         LabelGroupNotFoundException: If the original label group was not found.
         InsufficientPermissionsException: If the user has insufficient permissions to access the label group.
     """
-    if len(raw_chapter_revision_ids) == 0:
+    if raw_chapter_revision_ids is not None and len(raw_chapter_revision_ids) == 0:
         query_label_group_by_id(db, current_user, label_group_id)
         return {}
     q = select(
@@ -81,10 +80,12 @@ def query_label_datas_by_raw_chapter_ids(db : Session, current_user : User, labe
     ).where(
         models.LabelData.label_group_id == label_group_id
     ).where(
-        models.LabelData.raw_chapter_revision_id.in_(raw_chapter_revision_ids)
-    ).where(
         models.LabelGroup.user_id == current_user.user_id
     )
+    if raw_chapter_revision_ids:
+        q = q.where(
+            models.LabelData.raw_chapter_revision_id.in_(raw_chapter_revision_ids)
+        )
     result = db.execute(q)
     result_rows = result.scalars().all()
 
@@ -271,8 +272,8 @@ def insert_label_data(db : Session, current_user : User, label_group_id : int, r
         raise InsufficientPermissionsException
     if revision is None:
         raise RawChapterRevisionNotFoundException
-    if not revision.raw_chapter_revision_is_public:
-        raise RawChapterRevisionNotPublicException
+    if not revision.raw_chapter_revision_is_final:
+        raise RawChapterRevisionNotFinalException
     
     try:
         label_data = models.LabelData(label_group_id=label_group.label_group_id, raw_chapter_revision_id=revision.raw_chapter_revision_id)

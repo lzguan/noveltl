@@ -91,6 +91,7 @@ class RawChapterRevision(BaseModel):
     raw_chapter_revision_title : str
     raw_chapter_revision_is_primary : bool
     raw_chapter_revision_is_public : bool
+    raw_chapter_revision_is_final : bool
 
     raw_chapter_id : int
     raw_chapter_revision_text : str
@@ -111,6 +112,7 @@ class RawChapterRevisionMeta(BaseModel):
     raw_chapter_revision_title : str
     raw_chapter_revision_is_primary : bool
     raw_chapter_revision_is_public : bool
+    raw_chapter_revision_is_final : bool
 
     raw_chapter_id : int
 

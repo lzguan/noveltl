@@ -92,6 +92,7 @@ class RawChapterRevision(Base):
     raw_chapter_revision_title : Mapped[str] = mapped_column(String(MAX_CHAPTER_TITLE_LEN))
     raw_chapter_revision_is_primary : Mapped[bool] = mapped_column(Boolean, nullable=False)
     raw_chapter_revision_is_public : Mapped[bool] = mapped_column(Boolean, nullable=False)
+    raw_chapter_revision_is_final : Mapped[bool] = mapped_column(Boolean, nullable=False)
 
     raw_chapter_of_raw_chapter_revision : Mapped["RawChapter"] = relationship(back_populates="raw_chapter_revisions_with_raw_chapter")
     raw_chapter_id = mapped_column(ForeignKey('raw_chapters.raw_chapter_id'), nullable=False)

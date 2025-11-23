@@ -191,7 +191,8 @@ def query_raw_chapter_revisions_by_novel(
         start : int | None, 
         end : int | None, 
         is_public : bool | None, 
-        is_primary : bool | None
+        is_primary : bool | None,
+        is_final : bool | None
     ) -> Dict[int, List[schemas.RawChapterRevisionMeta]]:
     """
     Query all chapter revisions from novel novel_id satisfying certain restrictions.
@@ -203,8 +204,9 @@ def query_raw_chapter_revisions_by_novel(
         start: If not None, then only query chapter revisions that have chapter_num >= start.
         end: If not None, then only query chapter revisions that have chapter_num < end.
         is_public: If not None, then filter novels by public status. 
-        is_primary: If True, then filter novels by primary status.
-    
+        is_primary: If not None, then filter novels by primary status.
+        is_final: If not None, then filter novels by final status.
+
     Raises:
         NovelNotFoundException: novel with corresponding novel_id is not in database
     """
@@ -223,6 +225,8 @@ def query_raw_chapter_revisions_by_novel(
         q = q.where(models.RawChapterRevision.raw_chapter_revision_is_public == is_public)
     if is_primary is not None:
         q = q.where(models.RawChapterRevision.raw_chapter_revision_is_primary == is_primary)
+    if is_final is not None:
+        q = q.where(models.RawChapterRevision.raw_chapter_revision_is_final == is_final)
     result = db.execute(q)
     result_rows  = result.all()
     if len(result_rows) == 0:
@@ -379,7 +383,7 @@ def insert_raw_chapter_revision(
         InsufficientPermissionsException: Current user does not have permissions to perform this action.
         UnknownError: Some other error occured.
     """
-    new_revision = models.RawChapterRevision(**rcr.model_dump(), raw_chapter_id=raw_chapter_id, raw_chapter_revision_is_primary=False, raw_chapter_revision_is_public=False)
+    new_revision = models.RawChapterRevision(**rcr.model_dump(), raw_chapter_id=raw_chapter_id, raw_chapter_revision_is_primary=False, raw_chapter_revision_is_public=False, raw_chapter_revision_is_final=False)
     try:
         db.add(new_revision)
         db.commit()
@@ -421,7 +425,7 @@ def modify_raw_chapter_revision(
         UnknownError: Some other error occured.
     """
     revision = query_raw_chapter_revision_by_id(db, current_user, revision_id)
-    if revision.raw_chapter_revision_is_public:
+    if revision.raw_chapter_revision_is_final:
         raise InsufficientPermissionsException # change this to something more descriptive later
     check_permissions(current_user)
     try:
@@ -515,6 +519,34 @@ def make_primary_raw_chapter_revision(db : Session, current_user : User, raw_cha
         raise UnknownError(str(e.orig))
     return revision
 
+def make_final_raw_chapter_revision(
+        db : Session, 
+        current_user : User, 
+        raw_chapter_revision_id : int
+) -> models.RawChapterRevision:
+    """
+    Make a raw chapter revision final.
+
+    Args:
+        db: Database in which the data resides.
+        current_user: User finalizing the revision.
+        raw_chapter_revision_id: id of the revision we are finalizing.
+    
+    Raises:
+        RawChapterRevisionNotFoundException: Raw chapter revision with raw_chapter_revision_id not found
+        InsufficientPermissionsException: Current user does not have permissions to perform this action.
+        UnknownError: Some other error occured.
+    """
+    revision = query_raw_chapter_revision_by_id(db, current_user, raw_chapter_revision_id)
+    try:
+        if not revision.raw_chapter_revision_is_final:
+            revision.raw_chapter_revision_is_final = True
+            db.commit()
+    except Exception as e:
+        db.rollback()
+        raise UnknownError(e)
+    return revision
+
 def remove_raw_chapter_revision(
         db : Session, 
         current_user : User, 
@@ -538,7 +570,7 @@ def remove_raw_chapter_revision(
     revision = query_raw_chapter_revision_by_id(db, current_user, raw_chapter_revision_id)
     check_permissions(current_user)
     try:
-        if revision.raw_chapter_revision_is_public:
+        if revision.raw_chapter_revision_is_final:
             if not force_remove:
                 db.rollback()
                 return schemas.DeleteRawChapterRevisionStatus(status="verify", detail="Verify that you want to delete this public chapter.", verify="")

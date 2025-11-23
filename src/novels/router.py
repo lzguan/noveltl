@@ -1,3 +1,7 @@
+"""
+Router functions for novels service.
+"""
+
 from ..database import get_db
 from fastapi import APIRouter, Depends, HTTPException, status
 from .dependencies import *
@@ -113,7 +117,8 @@ async def read_chapter_revisions_by_novel(
     start : int | None = None, 
     end : int | None = None,
     is_public : bool | None = None,
-    is_primary : bool | None = None
+    is_primary : bool | None = None,
+    is_final : bool | None = None
     ):
     """
     Endpoint for retrieving chapter revisions in bulk.
@@ -128,7 +133,7 @@ async def read_chapter_revisions_by_novel(
         is_primary: Filter only primary novels.
     """
     try:
-        chapters = query_raw_chapter_revisions_by_novel(db, current_user, novel_id, start, end, is_public, is_primary)
+        chapters = query_raw_chapter_revisions_by_novel(db, current_user, novel_id, start, end, is_public, is_primary, is_final)
     except NovelNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -155,7 +160,7 @@ async def create_novel(
     """
     try:
         db_novel = insert_novel(db, current_user, request)
-    except LanguageIDNotFoundException as e:
+    except LanguageNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Language with language id {request.language_id} not found."
@@ -406,6 +411,37 @@ async def update_make_primary_chapter_revision(
         )
     return db_revision
 
+@router.patch(
+    '/finalize/revisions/{revision_id}', 
+    response_model=schemas.RawChapterRevision
+)
+async def update_make_final_chapter_revision(
+    revision_id : int, 
+    db : Annotated[Session, Depends(get_db)], 
+    current_user : Annotated[User, Depends(get_current_user)]
+    ):
+    """
+    Finalize chapter revision with revision_id.
+
+    Args:
+        revision_id: id of revision to finalize.
+        db: Database dependency.
+        current_user: Current user dependency.
+    """
+    try:
+        db_revision = make_final_raw_chapter_revision(db, current_user, revision_id)
+    except RawChapterRevisionNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Chapter revision with id {revision_id} not found."
+        )
+    except InsufficientPermissionsException as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Insufficient permissions to perform this action."
+        )
+    return db_revision
+
 @router.delete(
     '/revisions/{revision_id}', 
     response_model=schemas.DeleteRawChapterRevisionStatus
@@ -413,10 +449,11 @@ async def update_make_primary_chapter_revision(
 async def delete_chapter_revision(
     revision_id : int, 
     db : Annotated[Session, Depends(get_db)], 
-    current_user : Annotated[User, Depends(get_current_user)]
+    current_user : Annotated[User, Depends(get_current_user)],
+    force_remove : bool = False
     ):
     try:
-        delete_status = remove_raw_chapter_revision(db, current_user, revision_id, force_remove=False)
+        delete_status = remove_raw_chapter_revision(db, current_user, revision_id, force_remove=force_remove)
     except RawChapterRevisionNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

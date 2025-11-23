@@ -27,3 +27,6 @@ class RawChapterRevisionNotPublicException(Exception):
 
 class DeleteRawChapterRevisionFailedException(DeleteFailedException):
     pass
+
+class RawChapterRevisionNotFinalException(Exception):
+    pass

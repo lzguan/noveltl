@@ -88,28 +88,12 @@ class LabelData(BaseModel):
 
     Attributes:
         label_data_id: Integer identifier for this LabelData.
-        label_data_entities: List of labels for this LabelData.
         label_group_id: Label group this LabelData belongs to.
         raw_chapter_revision_id: Chapter this LabelData is labelling.
     """
     model_config = ConfigDict(from_attributes=True)
     label_data_id : int
-    label_data_entities : List[Label]
-
-    label_group_id : int
-    raw_chapter_revision_id : int
-
-class LabelDataMeta(BaseModel):
-    """
-    Metadata for a LabelData.
-
-    Attributes:
-        label_data_id: Integer identifier for this LabelData.
-        label_group_id: Label group this LabelData belongs to.
-        raw_chapter_revision_id: Chapter this LabelData is labelling.
-    """
-    model_config = ConfigDict(from_attributes=True)
-    label_data_id : int
+    
     label_group_id : int
     raw_chapter_revision_id : int
 

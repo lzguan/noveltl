@@ -1,5 +1,5 @@
 from ..database import get_db
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from .dependencies import *
 from ..auth.dependencies import get_current_user
 from .service import *
@@ -8,67 +8,238 @@ from typing import Annotated
 
 router = APIRouter()
 
-@router.get('/my_label_groups', response_model=List[schemas.LabelGroup])
-def retrieve_label_groups_by_current_user(db : Annotated[Session, Depends(get_db)], current_user : Annotated[User, Depends(get_current_user)]):
-    label_groups = get_label_groups_of_user(current_user, db)
-    return label_groups
+@router.get('/label-groups', response_model=List[schemas.LabelGroup])
+def read_label_groups(
+        db: Annotated[Session, Depends(get_db)],
+        current_user : Annotated[User, Depends(get_current_user)]
+    ):
+    """
+    Gets all label groups of the current user
 
-@router.get('/label_group/{label_group_id}', response_model=schemas.LabelGroup)
-def retrieve_label_group_by_id(label_group_id : int, db : Annotated[Session, Depends(get_db)], current_user : Annotated[User, Depends(get_current_user)]):
-    label_group = get_label_group(label_group_id, current_user, db)
-    if not label_group:
+    Args:
+        db: Database dependency.
+        current_user: Current user dependency.
+    """
+    return query_label_groups_by_user(db, current_user)
+
+@router.get('/label-groups/{label_group_id}', response_model=schemas.LabelGroup)
+def read_label_group(
+        label_group_id : int,
+        db : Annotated[Session, Depends(get_db)],
+        current_user : Annotated[User, Depends(get_current_user)]
+    ):
+    try:
+        label_group = query_label_group_by_id(db, current_user, label_group_id)
+    except LabelGroupNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="label group not found"
+            detail=f"Label group with id {label_group_id} not found."
+        )
+    except InsufficientPermissionsException as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Insufficient permissions to access this label group."
         )
     return label_group
 
-@router.get('/label_data', response_model=List[schemas.LabelDataMeta])
-def retrieve_label_datas_by_group_chapters(label_group_id : int, raw_chapter_revision_id : int, db : Annotated[Session, Depends(get_db)], current_user : Annotated[User, Depends(get_current_user)]):
-    label_datas = get_label_data_of_chapters(label_group_id, [raw_chapter_revision_id,], current_user, db)
-    if label_datas is None:
+@router.get('/label-datas', response_model=Dict[int, schemas.LabelData])
+def read_label_datas_by_group_chapters(
+        label_group_id : int, 
+        db : Annotated[Session, Depends(get_db)], 
+        current_user : Annotated[User, Depends(get_current_user)],
+        rcri : Annotated[List[int] | None, Query(alias="rcri")] = None         # raw_chapter_revision_ids
+    ):
+    try:
+        label_datas = query_label_datas_by_raw_chapter_revision_ids(db, current_user, label_group_id, rcri)
+    except LabelGroupNotFoundException as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="bad request"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Label group not found."
+        )
+    except InsufficientPermissionsException as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to access this label group"
         )
     return label_datas
 
-@router.post('/new_label_group', response_model=schemas.LabelGroup)
-def post_label_group(request : schemas.CreateLabelGroup, current_user : Annotated[User, Depends(get_current_user)], db : Annotated[Session, Depends(get_db)]):
-    label_group = create_label_group(request, current_user, db)
-    if not label_group:
+@router.get('/label-datas/{label_data_id}', response_model=schemas.LabelData)
+def read_label_data(
+        label_data_id : int,
+        db : Annotated[Session, Depends(get_db)],
+        current_user : Annotated[User, Depends(get_current_user)]
+    ):
+    try:
+        label_data = query_label_data_by_id(db, current_user, label_data_id)
+    except LabelDataNotFoundException as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="create label group failed"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Label data not found."
         )
-    return label_group
-
-@router.patch('/update_label_group', response_model=schemas.LabelGroup)
-def patch_label_group(request : schemas.UpdateLabelGroup, current_user : Annotated[User, Depends(get_current_user)], db : Annotated[Session, Depends(get_db)]):
-    label_group = update_label_group(request, current_user, db)
-    if not label_group:
+    except InsufficientPermissionsException as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="update label group failed"
-        )
-    return label_group
-
-@router.post('/create_label_data', response_model=schemas.LabelData)
-def post_label_data(request : schemas.CreateLabelData, current_user : Annotated[User, Depends(get_current_user)], db : Annotated[Session, Depends(get_db)]):
-    label_data = create_label_data(request, current_user, db)
-    if not label_data:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="create label data failed"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to access this label data."
         )
     return label_data
 
-@router.patch('/update_label_data', response_model=schemas.UpdateLabelDataStreamResponse)
-def patch_label_data_stream(request : schemas.UpdateLabelDataStream, current_user : Annotated[User, Depends(get_current_user)], db : Annotated[Session, Depends(get_db)]):
-    response = update_label_data_stream(request, current_user, db)
-    if not response:
+@router.get('/label-datas/{label_data_id}/labels', response_model=List[schemas.Label])
+def read_labels_by_label_data(
+        label_data_id : int,
+        db : Annotated[Session, Depends(get_db)],
+        current_user : Annotated[User, Depends(get_current_user)]
+    ):
+    """
+    Get the specific list of labels inside a label data entry.
+    """
+    try:
+        labels = query_labels_by_label_data_id(db, current_user, label_data_id)
+    except LabelDataNotFoundException:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="update failed"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Label data with id {label_data_id} not found."
         )
-    return schemas.UpdateLabelDataStreamResponse(success=True, message="update success")
+    except InsufficientPermissionsException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to access this label data."
+        )
+    return labels
+
+@router.post('/label-groups', response_model=schemas.LabelGroup)
+def create_label_group(
+        request: schemas.CreateLabelGroup,
+        db: Annotated[Session, Depends(get_db)],
+        current_user: Annotated[User, Depends(get_current_user)]
+    ):
+    """
+    Creates a new label group.
+    """
+    try:
+        label_group = insert_label_group(db, current_user, request)
+    except NovelNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Novel associated with this label group not found."
+        )
+    except LabelGroupNameDuplicateException:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You already have a label group with this name."
+        )
+    except DataTooLongException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Label group name is too long."
+        )
+    except InsufficientPermissionsException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to create a label group."
+        )
+    return label_group
+
+@router.patch('/label-groups/{label_group_id}', response_model=schemas.LabelGroup)
+def update_label_group(
+        label_group_id: int,
+        request: schemas.UpdateLabelGroup,
+        db: Annotated[Session, Depends(get_db)],
+        current_user: Annotated[User, Depends(get_current_user)]
+    ):
+    """
+    Updates a label group (e.g. rename).
+    """
+    try:
+        label_group = modify_label_group(db, current_user, label_group_id, request)
+    except LabelGroupNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Label group with id {label_group_id} not found."
+        )
+    except DataTooLongException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Label group name is too long."
+        )
+    except InsufficientPermissionsException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to modify this label group."
+        )
+    return label_group
+
+@router.post('/label-groups/{label_group_id}/label-datas', response_model=schemas.LabelData)
+def create_label_data(
+        label_group_id: int,
+        request: schemas.CreateLabelData,
+        db: Annotated[Session, Depends(get_db)],
+        current_user: Annotated[User, Depends(get_current_user)]
+    ):
+    """
+    Creates a label data entry. 
+    Requires the chapter revision to be Final.
+    """
+    try:
+        # Note: service.insert_label_data takes label_group_id as an arg
+        label_data = insert_label_data(db, current_user, label_group_id, request)
+    except LabelGroupNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Label group not found."
+        )
+    except RawChapterRevisionNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Raw chapter revision not found."
+        )
+    except RawChapterRevisionNotFinalException:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot label a chapter that is not finalized."
+        )
+    except LabelDataRevisionDuplicateException:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Label data for this chapter already exists in this group."
+        )
+    except InsufficientPermissionsException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to create label data."
+        )
+    return label_data
+
+@router.patch('/label-datas/{label_data_id}', status_code=status.HTTP_200_OK)
+def update_label_data_stream(
+        label_data_id: int,
+        request: schemas.UpdateLabelDataStream,
+        db: Annotated[Session, Depends(get_db)],
+        current_user: Annotated[User, Depends(get_current_user)]
+    ):
+    """
+    Applies a stream of edit operations to labels.
+    """
+    try:
+        modify_label_data_by_stream(db, current_user, label_data_id, request)
+    except LabelDataNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Label data with id {label_data_id} not found."
+        )
+    except RawChapterRevisionNotFinalException:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot modify labels on a chapter that is not finalized."
+        )
+    except LabelExclusionViolationInvalidOperationException:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Label overlap detected. Operations invalid."
+        )
+    except InsufficientPermissionsException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to modify this label data."
+        )
+    
+    return {"status": "success", "detail": "Operations applied successfully."}

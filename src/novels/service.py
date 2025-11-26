@@ -10,21 +10,21 @@ from . import schemas
 from .utils import *
 from .exceptions import *
 from .constants import *
-from ..auth.schemas import User
+from ..auth.models import User
 from ..languages.exceptions import LanguageNotFoundException
 from sqlalchemy.orm import Session, defer
-from typing import List, Dict
+from typing import List, Dict, Sequence
 from sqlalchemy.exc import IntegrityError, NoResultFound, DataError, MultipleResultsFound
 from sqlalchemy import select
 from collections import defaultdict
 from ..main import logger
-from psycopg2 import errorcodes
+from psycopg2 import errorcodes, Error as PgError
 
 def query_novels_by_title(
         db : Session, 
         current_user : User | None, 
         novel_title : str | None
-    ) -> List[models.Novel]:
+    ) -> Sequence[models.Novel]:
     """
     Queries novels with novel_title as substring.
 
@@ -65,9 +65,9 @@ def query_novel_by_id(
     try:
         result_scalar = result.scalar_one()
     except NoResultFound as e:
-        raise NovelNotFoundException
+        raise NovelNotFoundException(str(e))
     except MultipleResultsFound as e:
-        raise NovelTooManyFoundException
+        raise NovelTooManyFoundException(str(e))
     return result_scalar
 
 def query_raw_chapters_by_novel(
@@ -76,7 +76,7 @@ def query_raw_chapters_by_novel(
         novel_id : int, 
         start : int | None, 
         end : int | None
-    ) -> List[models.RawChapter]:
+    ) -> Sequence[models.RawChapter]:
     """
     Query all chapters of a specific novel satisfying certain conditions.
 
@@ -122,7 +122,7 @@ def query_raw_chapter_by_id(
     try:
         result_scalar = result.scalar_one()
     except NoResultFound as e:
-        raise RawChapterNotFoundException
+        raise RawChapterNotFoundException(str(e))
     return result_scalar
 
 def query_raw_chapter_revision_by_id(
@@ -147,7 +147,7 @@ def query_raw_chapter_revision_by_id(
     try:
         result_scalar = result.scalar_one()
     except NoResultFound as e:
-        raise RawChapterRevisionNotFoundException
+        raise RawChapterRevisionNotFoundException(str(e))
     return result_scalar
 
 def query_raw_chapter_revisions_by_raw_chapter(
@@ -156,7 +156,7 @@ def query_raw_chapter_revisions_by_raw_chapter(
         raw_chapter_id : int,
         is_public : bool | None,
         is_primary : bool | None
-    ) -> List[models.RawChapterRevision]:
+    ) -> Sequence[models.RawChapterRevision]:
     """
     Query all chapter revisions from a raw_chapter_id satisfying certain requirements.
 
@@ -263,15 +263,17 @@ def insert_novel(
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        pgcode = e.orig.pgcode
-        if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
-            raise LanguageNotFoundException(str(e.orig))
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
+                raise LanguageNotFoundException(str(e.orig))
         raise UnknownError(e)
     except DataError as e:
         db.rollback()
-        pgcode = e.orig.pgcode
-        if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-            raise DataTooLongException(str(e.orig))
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                raise DataTooLongException(str(e.orig))
         raise UnknownError(e)
     except Exception as e:
         db.rollback()
@@ -312,9 +314,10 @@ def modify_novel(
         db.commit()
     except DataError as e:
         db.rollback()
-        pgcode = e.orig.pgcode
-        if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-            raise DataTooLongException(str(e.orig))
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                raise DataTooLongException(str(e.orig))
         raise UnknownError(e)
     except MultipleResultsFound as e:
         db.rollback()
@@ -351,11 +354,12 @@ def insert_raw_chapter(
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        pgcode = e.orig.pgcode
-        if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
-            raise NovelNotFoundException(str(e.orig))
-        if pgcode == errorcodes.UNIQUE_VIOLATION:
-            raise ChapterNumDuplicateException(str(e.orig))
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
+                raise NovelNotFoundException(str(e.orig))
+            if pgcode == errorcodes.UNIQUE_VIOLATION:
+                raise ChapterNumDuplicateException(str(e.orig))
         raise UnknownError(e)
     except Exception as e:
         db.rollback()
@@ -389,15 +393,17 @@ def insert_raw_chapter_revision(
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        pgcode = e.orig.pgcode
-        if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
-            raise RawChapterNotFoundException(str(e.orig))
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
+                raise RawChapterNotFoundException(str(e.orig))
         raise UnknownError(e)
     except DataError as e:
         db.rollback()
-        pgcode = e.orig.pgcode
-        if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-            raise DataTooLongException(str(e.orig))
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                raise DataTooLongException(str(e.orig))
         raise UnknownError(e)
     except Exception as e:
         db.rollback()
@@ -427,7 +433,7 @@ def modify_raw_chapter_revision(
     revision = query_raw_chapter_revision_by_id(db, current_user, revision_id)
     if revision.raw_chapter_revision_is_final:
         raise InsufficientPermissionsException # change this to something more descriptive later
-    check_permissions(current_user)
+    # check_permissions(current_user)
     try:
         if rcr.raw_chapter_revision_title is not None:
             revision.raw_chapter_revision_title = rcr.raw_chapter_revision_title
@@ -436,9 +442,10 @@ def modify_raw_chapter_revision(
         db.commit()
     except DataError as e:
         db.rollback()
-        pgcode = e.orig.pgcode
-        if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-            raise DataTooLongException(str(e.orig))
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                raise DataTooLongException(str(e.orig))
         raise UnknownError(e)
     except Exception as e:
         db.rollback()
@@ -508,15 +515,16 @@ def make_primary_raw_chapter_revision(db : Session, current_user : User, raw_cha
                 revision.raw_chapter_revision_is_primary = True
                 db.commit()
     except IntegrityError as e:
-        if e.orig.pgcode == errorcodes.UNIQUE_VIOLATION:
-            raise RawChapterRevisionMakePrimaryFailedException(f"Error: committing would violate a unique constraint. This is most likely caused by a race condition.")
-        if e.orig.pgcode == errorcodes.CHECK_VIOLATION: # extra check
-            raise RawChapterRevisionNotPublicException
+        if isinstance(e.orig, PgError):
+            if e.orig.pgcode == errorcodes.UNIQUE_VIOLATION:
+                raise RawChapterRevisionMakePrimaryFailedException(f"Error: committing would violate a unique constraint. This is most likely caused by a race condition.")
+            if e.orig.pgcode == errorcodes.CHECK_VIOLATION: # extra check
+                raise RawChapterRevisionNotPublicException
     except UnknownError as e:
         raise e
     except Exception as e:
         db.rollback()
-        raise UnknownError(str(e.orig))
+        raise UnknownError(str(e))
     return revision
 
 def make_final_raw_chapter_revision(
@@ -568,7 +576,7 @@ def remove_raw_chapter_revision(
         DeleteRawChapterFailedException: Delete failed for other reasons.
     """
     revision = query_raw_chapter_revision_by_id(db, current_user, raw_chapter_revision_id)
-    check_permissions(current_user)
+    # check_permissions(current_user)
     try:
         if revision.raw_chapter_revision_is_final:
             if not force_remove:

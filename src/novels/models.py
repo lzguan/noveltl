@@ -5,9 +5,14 @@ Database models for novels and chapters.
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
 from sqlalchemy import String, UniqueConstraint, ForeignKey, Integer, Text, Boolean, Index, CheckConstraint, or_, not_
-from typing import List
+from typing import List, TYPE_CHECKING
 from .constants import *
 from ..models import Base
+
+if TYPE_CHECKING:
+    from src.languages.models import Language
+    from src.translations.models import Translation, TranslatedChapter
+    from src.labels.models import LabelGroup, LabelData
 
 class Novel(Base):
     """
@@ -28,8 +33,8 @@ class Novel(Base):
 
     novel_id : Mapped[int] = mapped_column(primary_key=True)
     novel_title : Mapped[str] = mapped_column(String(MAX_NOVEL_TITLE_LEN), nullable=False)
-    novel_description : Mapped[str] = mapped_column(Text)
-    novel_author : Mapped[str] = mapped_column(String(MAX_AUTHOR_LENGTH))
+    novel_description : Mapped[str] = mapped_column(Text, nullable=True)
+    novel_author : Mapped[str] = mapped_column(String(MAX_AUTHOR_LENGTH), nullable=True)
 
     language_id = mapped_column(ForeignKey("languages.language_id"), nullable=False)
     language_of_novel : Mapped["Language"] = relationship(back_populates="novels_with_language")

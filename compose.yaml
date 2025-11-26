@@ -12,9 +12,16 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
-      DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${CONTAINER_PORT}/${DB_NAME}
+      DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:${CONTAINER_PORT}/${DB_NAME}
       CONTAINER_PORT: ${CONTAINER_PORT}
       SECRET_KEY: ${SECRET_KEY}
+
+      TEST_HOST: test_db
+      TEST_PORT: ${TEST_PORT}
+      TEST_USER: ${TEST_USER}
+      TEST_PASSWORD: ${TEST_PASSWORD}
+      TEST_NAME: ${TEST_NAME}
+      TEST_URL: postgresql+psycopg2://${TEST_USER}:${TEST_PASSWORD}@test_db:${CONTAINER_PORT}/${TEST_NAME}
     depends_on:
       - db
   db:
@@ -34,5 +41,21 @@ services:
       
     volumes:
       - db_data:/var/lib/postgresql/data
+  test_db:
+    image: postgres
+    container_name: chapter_test_db_server
+    restart: always
+    
+    ports:
+      - "${TEST_PORT}:${CONTAINER_PORT}" 
+      
+    environment:
+      POSTGRES_USER: "${TEST_USER}"
+      POSTGRES_PASSWORD: "${TEST_PASSWORD}"
+      POSTGRES_DB: "${TEST_NAME}"
+      POSTGRES_HOST_AUTH_METHOD: "scram-sha-256"
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    profiles:
+      - test
 volumes:
   db_data:

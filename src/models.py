@@ -1,12 +1,10 @@
 """
 This module provides global db models.
 """
-
-from sqlalchemy import DateTime, UniqueConstraint, String
-from sqlalchemy.orm import DeclarativeBase, Mapped
-from sqlalchemy.orm import mapped_column, relationship
 from datetime import datetime
-from typing import List
+from sqlalchemy import DateTime
+from sqlalchemy.orm import DeclarativeBase, Mapped
+from sqlalchemy.orm import mapped_column
 
 class Base(DeclarativeBase):
     """

@@ -25,18 +25,18 @@ async def login_for_access_token(
     """
     try:
         user = authenticate_user(db, form_data.username, form_data.password)
-    except UserNotFoundException as e:
+    except UserNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found.",
             headers={"WWW-Authenticate" : "Bearer"}
         )
-    except UserTooManyFoundException as e:
+    except UserTooManyFoundException:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="More than one user with this username found."
         )
-    except UserAuthenticationFailedException as e:
+    except UserAuthenticationFailedException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Password does not match.",
@@ -73,17 +73,17 @@ async def create_register_user(
         )
     try:
         new_user = insert_user(db, None, request)
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Cannot create admin account." # change this to print str(e.orig) and add error messages in exceptions.
+            detail="Cannot create admin account."
         )
-    except UserNameDuplicateException as e:
+    except UserNameDuplicateException:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="User with this username already exists."
         )
-    except DataTooLongException as e:
+    except DataTooLongException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Some field too long."
@@ -109,17 +109,17 @@ async def create_user(
     """
     try:
         new_user = insert_user(db, current_user, request)
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Insufficient permissions to create new user." # change this to print str(e.orig) and add error messages in exceptions.
         )
-    except UserNameDuplicateException as e:
+    except UserNameDuplicateException:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="User with this username already exists."
         )
-    except DataTooLongException as e:
+    except DataTooLongException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Some field too long."
@@ -158,13 +158,13 @@ async def read_user(
     """
     try:
         user = query_user_by_user_name(db, user_name)
-    except UserNotFoundException as e:
+    except UserNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found.",
             headers={"WWW-Authenticate" : "Bearer"}
         )
-    except UserTooManyFoundException as e:
+    except UserTooManyFoundException:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="More than one user with this username found."
@@ -181,17 +181,17 @@ async def delete_users_me(
     """
     try:
         stat = remove_user(db, current_user, current_user.user_id)
-    except UserNotFoundException as e:
+    except UserNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with id {current_user.user_id} (username {current_user.user_name}) not found."
         )
-    except UserTooManyFoundException as e:
+    except UserTooManyFoundException:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Multiple users found with the same id."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unexpected error."
@@ -212,17 +212,17 @@ async def delete_user(
     """
     try:
         stat = remove_user(db, current_user, user_id)
-    except UserNotFoundException as e:
+    except UserNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with id {user_id} not found."
         )
-    except UserTooManyFoundException as e:
+    except UserTooManyFoundException:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Multiple users found with the same id."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Current user does not have permission to delete this user."

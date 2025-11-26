@@ -1,9 +1,14 @@
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
 from sqlalchemy import UniqueConstraint, ForeignKey, Integer, Text
-from typing import List
+from typing import List, TYPE_CHECKING
 from .constants import *
 from ..models import Base
+
+if TYPE_CHECKING:
+    from src.languages.models import Language
+    from src.novels.models import Novel, RawChapter
+    from src.auth.models import User
 
 class Translation(Base):
     __tablename__ = 'translations'

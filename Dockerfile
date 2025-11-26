@@ -1,25 +1,41 @@
-# For more information, please refer to https://aka.ms/vscode-docker-python
-FROM python:3-slim
+FROM python:3.12-slim
 
-EXPOSE 8000
+# 1. Install System Dependencies
+# libpq-dev and gcc are often needed for building python db drivers
+RUN apt-get update && apt-get install -y \
+    git \
+    openssh-client \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
-# Keeps Python from generating .pyc files in the container
-ENV PYTHONDONTWRITEBYTECODE=1
+# 2. Configure Poetry
+# Virtualenvs are bad in Docker (Inception). We turn them off.
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_CREATE=false \
+    POETRY_CACHE_DIR='/tmp/poetry_cache'
 
-# Turns off buffering for easier container logging
-ENV PYTHONUNBUFFERED=1
-
-# Install pip requirements
-COPY requirements.txt .
-RUN python -m pip install -r requirements.txt
+# 3. Install Poetry (System-wide)
+RUN pip install poetry==1.8.2
 
 WORKDIR /app
-COPY . /app
 
-# Creates a non-root user with an explicit UID and adds permission to access the /app folder
-# For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
+# 4. Install Dependencies
+# We copy ONLY the dependency files first to cache this layer
+COPY pyproject.toml poetry.lock* ./
+
+# Install dependencies (Main + Dev) as ROOT
+RUN poetry install --no-root && rm -rf $POETRY_CACHE_DIR
+
+# 5. User Setup
+# Create user
 RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /app
+
+# 6. Copy Code
+COPY . .
+
+# 7. Switch User (Everything is already installed in global path!)
 USER appuser
 
-# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "-k", "uvicorn.workers.UvicornWorker", "src.main:app"]
+EXPOSE 8000
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

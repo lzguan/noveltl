@@ -1,4 +1,4 @@
-def filter_by_score(flattened : list[dict], min_score: int = 0.5, **kwargs):
+def filter_by_score(flattened : list[dict], min_score: float = 0.5, **kwargs):
     """Filters entity of the form
         {
             'entity_group' : ...
@@ -28,8 +28,8 @@ def merge_adjacent_entities(
     entities : list[dict], 
     chapters_by_num : dict, 
     gap_tolerance : int = 1, 
-    separators : set = None,
-    length_checks : dict = None,
+    separators : set | None = None,
+    length_checks : dict | None = None,
     wordy : bool=False, 
     **kwargs
 ) -> list[dict]:

@@ -2,7 +2,7 @@
 Utilities for label services.
 """
 
-from typing import List, Dict, Tuple
+from typing import Dict, Tuple
 from . import schemas
 from . import models
 from sqlalchemy.orm import Session

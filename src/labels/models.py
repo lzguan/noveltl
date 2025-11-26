@@ -6,9 +6,13 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
 from sqlalchemy import String, Float, Integer, Boolean, ForeignKey, UniqueConstraint, CheckConstraint, func, and_
 from sqlalchemy.dialects.postgresql import ExcludeConstraint
-from typing import List
+from typing import List, TYPE_CHECKING
 from .constants import *
 from ..models import Base
+
+if TYPE_CHECKING:
+    from src.novels.models import Novel, RawChapterRevision
+    from src.auth.models import User
 
 class LabelGroup(Base):
     """

@@ -4,9 +4,13 @@ Database models related to users/user authentication
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
 from sqlalchemy import String, Enum
-from typing import List
+from typing import List, TYPE_CHECKING
 from .constants import *
 from ..models import Base
+
+if TYPE_CHECKING:
+    from src.labels.models import LabelGroup
+    from src.translations.models import Translation
 
 class User(Base):
     """
@@ -31,7 +35,8 @@ class User(Base):
         nullable=False
     )
     user_type : Mapped[UserType] = mapped_column(
-        Enum(UserType, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x])
+        Enum(UserType, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), 
+        nullable=False
     )
 
     label_groups_with_user : Mapped[List["LabelGroup"]] = relationship(back_populates='user_of_label_group')

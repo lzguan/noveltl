@@ -5,8 +5,7 @@ from . import models, schemas
 from .utils import *
 from .exceptions import *
 from .constants import UserType
-from psycopg2 import errorcodes
-
+from psycopg2 import errorcodes, Error as PgError
 def query_user_by_user_name(
         db : Session, 
         user_name : str
@@ -27,9 +26,9 @@ def query_user_by_user_name(
         result = db.execute(q)
         result_user = result.scalar_one()
     except NoResultFound as e:
-        raise UserNotFoundException
+        raise UserNotFoundException(str(e))
     except MultipleResultsFound as e:
-        raise UserTooManyFoundException
+        raise UserTooManyFoundException(str(e))
     return result_user
 
 def query_user_by_id(
@@ -52,9 +51,9 @@ def query_user_by_id(
         result = db.execute(q)
         result_user = result.scalar_one()
     except NoResultFound as e:
-        raise UserNotFoundException
+        raise UserNotFoundException(str(e))
     except MultipleResultsFound as e:
-        raise UserTooManyFoundException
+        raise UserTooManyFoundException(str(e))
     return result_user
 
 def authenticate_user(
@@ -113,15 +112,17 @@ def insert_user(
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        pgcode = e.orig.pgcode
-        if pgcode == errorcodes.UNIQUE_VIOLATION:
-            raise UserNameDuplicateException
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.UNIQUE_VIOLATION:
+                raise UserNameDuplicateException
         raise UnknownError(str(e.orig))
     except DataError as e:
         db.rollback()
-        pgcode = e.orig.pgcode
-        if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-            raise DataTooLongException
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                raise DataTooLongException
         raise UnknownError(str(e.orig))
     return new_user
 

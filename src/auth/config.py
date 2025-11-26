@@ -1,8 +1,5 @@
-import os
-from dotenv import load_dotenv
+from ..config import auth_settings
 
-load_dotenv()
-
-SECRET_KEY : str = os.getenv('SECRET_KEY')
+SECRET_KEY : str = auth_settings.SECRET_KEY
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 ALGORITHM = "HS256"

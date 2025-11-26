@@ -30,12 +30,12 @@ def read_label_group(
     ):
     try:
         label_group = query_label_group_by_id(db, current_user, label_group_id)
-    except LabelGroupNotFoundException as e:
+    except LabelGroupNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Label group with id {label_group_id} not found."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Insufficient permissions to access this label group."
@@ -51,12 +51,12 @@ def read_label_datas_by_group_chapters(
     ):
     try:
         label_datas = query_label_datas_by_raw_chapter_revision_ids(db, current_user, label_group_id, rcri)
-    except LabelGroupNotFoundException as e:
+    except LabelGroupNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Label group not found."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Insufficient permissions to access this label group"
@@ -71,12 +71,12 @@ def read_label_data(
     ):
     try:
         label_data = query_label_data_by_id(db, current_user, label_data_id)
-    except LabelDataNotFoundException as e:
+    except LabelDataNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Label data not found."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Insufficient permissions to access this label data."

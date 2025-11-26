@@ -2,7 +2,7 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
 from typing import Annotated
 from .config import *
-from .schemas import *
+from .models import *
 from .service import *
 from ..database import get_db
 import jwt
@@ -20,7 +20,7 @@ credentials_exception = HTTPException(
 async def get_optional_user(
         db : Annotated[Session, Depends(get_db)],
         token : Annotated[str, Depends(oauth2_scheme_optional)]
-    ) -> schemas.User | None:
+    ) -> models.User | None:
     """
     Get the current user as a Pydantic schema from a JSON web token, or return None if there is no current logged in user.
 
@@ -39,12 +39,12 @@ async def get_optional_user(
         raise credentials_exception
     try:
         user = query_user_by_user_name(db, username)
-    except UserNotFoundException as e:
+    except UserNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found."
         )
-    except UserTooManyFoundException as e:
+    except UserTooManyFoundException:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="More than one user with this username found.."
@@ -52,8 +52,8 @@ async def get_optional_user(
     return user
 
 async def get_current_user(
-        user : Annotated[schemas.User | None, Depends(get_optional_user)]
-    ) -> schemas.User:
+        user : Annotated[models.User | None, Depends(get_optional_user)]
+    ) -> models.User:
     """
     Does the same as get_optional_user, except throws an HTTPException if there is no user currently logged in.
 

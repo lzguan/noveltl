@@ -1,14 +1,24 @@
 """This module provides global config variables."""
 
-import os
-from dotenv import load_dotenv
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-load_dotenv()
+class BaseConfig(BaseSettings):
+    """Base config class."""
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-DB_HOST : str = os.getenv('DB_HOST')
-DB_PORT : str = os.getenv('DB_PORT')
-DB_USER : str = os.getenv('DB_USER')
-DB_PASSWORD : str = os.getenv('DB_PASSWORD')
-DB_NAME : str = os.getenv('DB_NAME')
-DB_URL : str = os.getenv('DB_URL')
-ADMIN_USERNAME : str = os.getenv('ADMIN_USERNAME')
+class DatabaseSettings(BaseConfig):
+    """Settings class for global config variables."""
+    DB_HOST : str = Field(default="", min_length=1)
+    DB_PORT : str = Field(default="", min_length=1)
+    DB_USER : str = Field(default="", min_length=1)
+    DB_PASSWORD : str = Field(default="", min_length=1)
+    DB_NAME : str = Field(default="", min_length=1)
+    DB_URL : str = Field(default="", min_length=1)
+
+class AuthSettings(BaseConfig):
+    """Settings class for authentication config variables."""
+    SECRET_KEY : str = Field(default="", min_length=1)
+
+database_settings = DatabaseSettings()
+auth_settings = AuthSettings()

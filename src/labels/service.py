@@ -6,18 +6,17 @@ from ..auth.models import User
 from . import models
 from . import schemas
 from sqlalchemy.orm import Session, defer
-from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, NoResultFound, DataError
-from typing import List, Dict
+from typing import Sequence, Dict, List
 from .utils import apply_operation
 from .exceptions import *
 from ..novels.exceptions import NovelNotFoundException, RawChapterRevisionNotFoundException, RawChapterRevisionNotFinalException
-from psycopg2 import errorcodes
+from psycopg2 import errorcodes, Error as PgError
 from ..novels import models as novel_models
 from ..novels.service import query_raw_chapter_revision_by_id
 
-def query_label_groups_by_user(db : Session, current_user : User) -> List[models.LabelGroup]:
+def query_label_groups_by_user(db : Session, current_user : User) -> Sequence[models.LabelGroup]:
     """
     Queries all label groups that belong to current_user.
 
@@ -48,7 +47,7 @@ def query_label_group_by_id(db : Session, current_user : User, label_group_id : 
         result = db.execute(q)
         result_row = result.scalar_one()
     except NoResultFound as e:
-        raise LabelGroupNotFoundException
+        raise LabelGroupNotFoundException(str(e))
     if result_row.user_id != current_user.user_id:
         raise InsufficientPermissionsException
     return result_row
@@ -119,12 +118,12 @@ def query_label_data_by_id(db : Session, current_user : User, label_data_id : in
         result = db.execute(q)
         label_data, user_id = result.one()
     except NoResultFound as e:
-        raise LabelDataNotFoundException
+        raise LabelDataNotFoundException(str(e))
     if user_id != current_user.user_id:
         raise InsufficientPermissionsException
     return label_data
 
-def _query_labels_by_label_data_id(db : Session, label_data_id : int) -> List[models.Label]:
+def _query_labels_by_label_data_id(db : Session, label_data_id : int) -> Sequence[models.Label]:
     """
     Returns a list of all labels corresponding to a label data. Performs no security checks.
 
@@ -141,7 +140,7 @@ def _query_labels_by_label_data_id(db : Session, label_data_id : int) -> List[mo
     result_rows = result.scalars().all()
     return result_rows
 
-def query_labels_by_label_data_id(db : Session, current_user : User, label_data_id : int) -> List[models.Label]:
+def query_labels_by_label_data_id(db : Session, current_user : User, label_data_id : int) -> Sequence[models.Label]:
     """
     Returns a list of all labels corresponding to a label data.
 
@@ -180,17 +179,19 @@ def insert_label_group(db : Session, current_user : User, request : schemas.Crea
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        pgcode = e.orig.pgcode
-        if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
-            raise NovelNotFoundException(str(e.orig))
-        if pgcode == errorcodes.UNIQUE_VIOLATION:
-            raise LabelGroupNameDuplicateException(str(e.orig))
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
+                raise NovelNotFoundException(str(e.orig))
+            if pgcode == errorcodes.UNIQUE_VIOLATION:
+                raise LabelGroupNameDuplicateException(str(e.orig))
         raise UnknownError(str(e.orig))
     except DataError as e:
         db.rollback()
-        pgcode = e.orig.pgcode
-        if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-            raise DataTooLongException(str(e.orig))
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                raise DataTooLongException(str(e.orig))
         raise UnknownError(e)
     return label_group
 
@@ -215,9 +216,10 @@ def modify_label_group(db : Session, current_user : User, label_group_id : int, 
         db.commit()
     except DataError as e:
         db.rollback()
-        pgcode = e.orig.pgcode
-        if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-            raise DataTooLongException(str(e.orig))
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                raise DataTooLongException(str(e.orig))
         raise UnknownError(e)
     return label_group
 
@@ -267,7 +269,7 @@ def insert_label_data(db : Session, current_user : User, label_group_id : int, r
     
     if result_row is None:
         raise LabelGroupNotFoundException("Label group not found.")
-    label_group, revision, novel = result_row
+    label_group, revision, _ = result_row
     if label_group.user_id != current_user.user_id:
         raise InsufficientPermissionsException
     if revision is None:
@@ -281,9 +283,10 @@ def insert_label_data(db : Session, current_user : User, label_group_id : int, r
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        pgcode = e.orig.pgcode
-        if pgcode == errorcodes.UNIQUE_VIOLATION:
-            raise LabelDataRevisionDuplicateException
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.UNIQUE_VIOLATION:
+                raise LabelDataRevisionDuplicateException
         raise UnknownError(e)
     except Exception as e:
         raise UnknownError(e)
@@ -316,9 +319,10 @@ def modify_label_data_by_stream(db : Session, current_user : User, label_data_id
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        pgcode = e.orig.pgcode
-        if pgcode == errorcodes.EXCLUSION_VIOLATION:
-            raise LabelExclusionViolationInvalidOperationException
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.EXCLUSION_VIOLATION:
+                raise LabelExclusionViolationInvalidOperationException
         raise UnknownError(e)
     except Exception as e:
         db.rollback()

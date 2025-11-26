@@ -31,12 +31,12 @@ async def read_novel(
     """
     try:
         novel = query_novel_by_id(db, current_user, novel_id)
-    except NovelNotFoundException as e:
+    except NovelNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Novel with {novel_id} not found."
         )
-    except NovelTooManyFoundException as e:
+    except NovelTooManyFoundException:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"More than one novel with {novel_id} found."
@@ -94,12 +94,12 @@ async def read_chapters_by_novel(
 async def read_chapter_revision(chapter_revision_id : int, db : Annotated[Session, Depends(get_db)], current_user : Annotated[User | None, Depends(get_optional_user)]):
     try:
         revision = query_raw_chapter_revision_by_id(db, current_user, chapter_revision_id)
-    except RawChapterRevisionNotFoundException as e:
+    except RawChapterRevisionNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter revision with {chapter_revision_id} not found."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Insufficient permissions to access this resource."
@@ -134,7 +134,7 @@ async def read_chapter_revisions_by_novel(
     """
     try:
         chapters = query_raw_chapter_revisions_by_novel(db, current_user, novel_id, start, end, is_public, is_primary, is_final)
-    except NovelNotFoundException as e:
+    except NovelNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Novel with id {novel_id} not found."
@@ -160,17 +160,17 @@ async def create_novel(
     """
     try:
         db_novel = insert_novel(db, current_user, request)
-    except LanguageNotFoundException as e:
+    except LanguageNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Language with language id {request.language_id} not found."
         )
-    except DataTooLongException as e:
+    except DataTooLongException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Data in some field is too long."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Insufficient user permissions to create this resource."
@@ -198,22 +198,22 @@ async def update_novel(
     """
     try:
         db_novel = modify_novel(db, current_user, novel_id, request)
-    except NovelNotFoundException as e:
+    except NovelNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Resource not found."
         )
-    except NovelTooManyFoundException as e:
+    except NovelTooManyFoundException:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="More than one novel with this id found."
         )
-    except DataTooLongException as e:
+    except DataTooLongException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Data in some field exceeds the maximum possible length."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Insufficient permissions to update this resource."
@@ -241,17 +241,17 @@ async def create_chapter(
     """
     try:
         db_raw_chapter = insert_raw_chapter(db, current_user, novel_id, request)
-    except NovelNotFoundException as e:
+    except NovelNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Novel with id {novel_id} not found."
         )
-    except ChapterNumDuplicateException as e:
+    except ChapterNumDuplicateException:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Chapter in this novel with corresponding chapter number already created."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Insufficient permissions to perform this action."
@@ -279,17 +279,17 @@ async def create_chapter_revision(
     """
     try:
         db_revision = insert_raw_chapter_revision(db, current_user, chapter_id, request)
-    except RawChapterNotFoundException as e:
+    except RawChapterNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter with id {chapter_id} not found."
         )
-    except DataTooLongException as e:
+    except DataTooLongException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Field in request too long."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Insufficient permissions to perform this action."
@@ -317,17 +317,17 @@ async def update_chapter_revision(
     """
     try:
         db_revision = modify_raw_chapter_revision(db, current_user, revision_id, request)
-    except RawChapterRevisionNotFoundException as e:
+    except RawChapterRevisionNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter revision with id {revision_id} not found."
         )
-    except DataTooLongException as e:
+    except DataTooLongException:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Field in request to long."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Insufficient permissions to perform this action."
@@ -353,12 +353,12 @@ async def update_publish_chapter_revision(
     """
     try:
         db_revision = publish_raw_chapter_revision(db, current_user, revision_id)
-    except RawChapterRevisionNotFoundException as e:
+    except RawChapterRevisionNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter revision with id {revision_id} not found."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Insufficient permissions to perform this action."
@@ -384,27 +384,27 @@ async def update_make_primary_chapter_revision(
     """
     try:
         db_revision = make_primary_raw_chapter_revision(db, current_user, revision_id)
-    except RawChapterRevisionNotFoundException as e:
+    except RawChapterRevisionNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter revision with id {revision_id} not found."
         )
-    except RawChapterNotFoundException as e:
+    except RawChapterNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Server did not find a chapter associated with this revision"
         )
-    except RawChapterRevisionMakePrimaryFailedException as e:
+    except RawChapterRevisionMakePrimaryFailedException:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Commit to database failed. Probably a race condition."
         )
-    except RawChapterRevisionNotPublicException as e:
+    except RawChapterRevisionNotPublicException:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Revision not public yet."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Insufficient permissions to perform this action."
@@ -430,12 +430,12 @@ async def update_make_final_chapter_revision(
     """
     try:
         db_revision = make_final_raw_chapter_revision(db, current_user, revision_id)
-    except RawChapterRevisionNotFoundException as e:
+    except RawChapterRevisionNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter revision with id {revision_id} not found."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Insufficient permissions to perform this action."
@@ -454,12 +454,12 @@ async def delete_chapter_revision(
     ):
     try:
         delete_status = remove_raw_chapter_revision(db, current_user, revision_id, force_remove=force_remove)
-    except RawChapterRevisionNotFoundException as e:
+    except RawChapterRevisionNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter revision with id {revision_id} not found."
         )
-    except InsufficientPermissionsException as e:
+    except InsufficientPermissionsException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Insufficient permissions to perform this action."

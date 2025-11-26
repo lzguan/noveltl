@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from .exceptions import *
 from sqlalchemy.exc import NoResultFound
+from typing import Sequence
 
 def query_language_by_id(db : Session, language_id : int) -> models.Language:
     """
@@ -23,6 +24,39 @@ def query_language_by_id(db : Session, language_id : int) -> models.Language:
     result = db.execute(q)
     try:
         ret = result.scalar_one()
-    except NoResultFound as e:
+    except NoResultFound:
         raise LanguageNotFoundException
     return ret
+
+def query_language_by_code(db : Session, language_code : str) -> models.Language:
+    """
+    Finds language with corresponding language_code in database.
+
+    Args:
+        db: Database from which we are querying.
+        language_code: code of language we are trying to obtain.
+    
+    Raises:
+        LanguageNotFoundException: language code not found in database.
+    """
+    q = select(models.Language).where(models.Language.language_code == language_code)
+    result = db.execute(q)
+    try:
+        ret = result.scalar_one()
+    except NoResultFound:
+        raise LanguageNotFoundException
+    return ret
+
+def query_all_languages(db : Session) -> Sequence[models.Language]:
+    """
+    Queries all languages in the database.
+
+    Args:
+        db: Database from which we are querying.
+    
+    Returns:
+        List of all languages in the database.
+    """
+    q = select(models.Language)
+    result = db.execute(q)
+    return result.scalars().all()

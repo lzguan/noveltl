@@ -1,10 +1,10 @@
 from pydantic import Field, model_validator
 from typing import Dict, List, Self, Tuple, TypedDict, cast
 
-from .schemas import NERModelParamsBase
-from ..labels.schemas import Label
+from ..schemas import NERModelParamsBase
+from ...labels.schemas import Label
 from .utils import *
-from .nermodels import *
+from .interfaces import *
 
 
 class CluenerModelParams(NERModelParamsBase):
@@ -60,7 +60,7 @@ class CluenerModel(NERModel):
         self.is_deterministic = True
         self.tokenizer = CluenerTokenizer(pipeline.tokenizer)
     
-    def predict(self, text: str, params: CluenerModelParams) -> Tuple[List[Label], List[Label]]:
+    def predict(self, text: str, params: CluenerModelParams) -> Tuple[List[Label], List[CluenerRawNERResult]]:
         chunks = chunk_text(text, params.separators, self.tokenizer, params.chunk_size, force_chunk=params.force_chunk)
         ret = []
         err = []
@@ -70,7 +70,7 @@ class CluenerModel(NERModel):
                 label['word'] = label['word'].replace(" ", "")
                 label['start'] = label['start'] + start
                 label['end'] = label['end'] + start
-                if text[label['start']:label['end']] != label['word']:
+                if self.normalize(text[label['start']:label['end']]) != label['word']:
                     err.append(label)
                 else:
                     ret.append(Label(
@@ -80,12 +80,14 @@ class CluenerModel(NERModel):
                         label_score=label["score"],
                         label_entity_group=label["entity_group"], 
                         label_dirty=False
-                    
                     ))
         return ret, err
     
     def get_tokenizer(self) -> Tokenizer:
         return self.tokenizer
+    
+    def normalize(self, text: str) -> str:
+        return text.lower()
 
 class Cluener:
     

@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, String, UniqueConstraint, Enum, Text
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
@@ -17,15 +17,26 @@ class AutoLabel(Base):
         auto_label_data: JSONB column containing the auto-labeled data.
         auto_label_model_name: Name of the model used to generate the auto labels.
         auto_label_model_params: Parameters used for the model to generate the auto labels.
+        auto_label_status: Status of labeling task for this autolabel
+        auto_label_message: Message about the status of this auto label (e.g. auto label failure reason)
         raw_chapter_revision_id: Chapter this AutoLabel is associated with.
+
+    Notes:
+        Each raw chapter revision can only have one autolabel with a given model and parameters.
     """
     __tablename__ = 'auto_labels'
 
     auto_label_id : Mapped[int] = mapped_column(primary_key=True)
-    auto_label_data : Mapped[dict] = mapped_column(JSONB, nullable=False)
-    auto_label_model_name : Mapped[str] = mapped_column(String(MAX_MODEL_NAME_LEN), nullable=True)
-    auto_label_model_params : Mapped[dict] = mapped_column(JSONB, nullable=True)
+    auto_label_data : Mapped[dict] = mapped_column(JSONB, nullable=True)
+    auto_label_model_name : Mapped[str] = mapped_column(String(MAX_MODEL_NAME_LEN), nullable=False)
+    auto_label_model_params : Mapped[dict] = mapped_column(JSONB, nullable=False)
+    auto_label_status : Mapped[AutoLabelStatus] = mapped_column(Enum(AutoLabelStatus, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False, default=AutoLabelStatus.PENDING)
+    auto_label_message : Mapped[str] = mapped_column(Text, nullable=True)
+
     raw_chapter_revision_id : Mapped[int] = mapped_column(ForeignKey('raw_chapter_revisions.raw_chapter_revision_id'), nullable=False)
     raw_chapter_revision_of_auto_label : Mapped["RawChapterRevision"] = relationship(back_populates='auto_labels_with_raw_chapter_revision')
 
-    
+    __table_args__ = (
+        UniqueConstraint(raw_chapter_revision_id, auto_label_model_name, auto_label_model_params, name="uq_model_name_params"),
+
+    )

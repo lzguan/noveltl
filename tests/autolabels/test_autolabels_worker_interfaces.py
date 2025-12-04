@@ -4,8 +4,8 @@ Todo: Refactor AI generated tests.
 
 from typing import List, Tuple
 import pytest
-from src.autolabels.nermodels import Tokenizer
-from src.autolabels.utils import Priority, _chunk_blocks, _chunk_paragraph, chunk_text
+from src.autolabels.worker.interfaces import Tokenizer
+from src.autolabels.worker.utils import Priority, _chunk_blocks, _chunk_paragraph, chunk_text
 from src.autolabels.exceptions import *
 
 

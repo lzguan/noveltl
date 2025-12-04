@@ -1,8 +1,8 @@
 from typing import Protocol, TypeVar, List, Tuple, Any
-from . import schemas
-from .exceptions import *
+from .. import schemas
+from ..exceptions import *
 import logging
-from ..labels.schemas import Label
+from ...labels.schemas import Label
 
 my_logger = logging.getLogger(__name__)
 my_logger.propagate = True
@@ -68,3 +68,12 @@ class NERModel(Protocol[P]):
         """
         ...
 
+    def normalize(self, text: str) -> str:
+        """
+        Normalizes text to match the format of the model's output labels.
+        e.g. "Red" -> "red" for case-insensitive models.
+
+        Args:
+            text: Text to normalize.
+        """
+        ...

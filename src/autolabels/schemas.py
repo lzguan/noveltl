@@ -59,10 +59,10 @@ class CreateAutoLabel(BaseModel):
     Pydantic schema for creating an auto-labeled data entry.
 
     Attributes:
-        raw_chapter_revision_id: Chapter this AutoLabel is associated with.
+        raw_chapter_revision_ids: Chapters this AutoLabel is associated with.
         auto_label_model_name: Name of the model used to generate the auto labels.
         auto_label_model_params: Parameters used for the model to generate the auto labels.
     """
-    raw_chapter_revision_id : int
+    raw_chapter_revision_ids : List[int]
     auto_label_model_name : str
     auto_label_model_params : Dict[str, str | int | float | bool]

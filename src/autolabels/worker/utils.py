@@ -1,7 +1,7 @@
 from typing import Dict, Generator, Tuple, List
-from .exceptions import *
+from ..exceptions import *
 from enum import IntEnum
-from .nermodels import Tokenizer
+from .interfaces import Tokenizer
 
 class Priority(IntEnum):
     HIGH = 1

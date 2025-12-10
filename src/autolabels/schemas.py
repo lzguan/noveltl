@@ -1,5 +1,9 @@
+"""
+Pydantic schemas for autolabels.
+"""
+
 from pydantic import BaseModel, ConfigDict, Field
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from ..labels.schemas import Label
 from .constants import *
 
@@ -27,14 +31,17 @@ class AutoLabel(BaseModel):
         auto_label_model_name: Name of the model used to generate the auto labels.
         auto_label_model_params: Parameters used for the model to generate the auto labels.
         auto_label_model_is_deterministic: Whether the model is deterministic.
+        auto_label_status: Labeling progress for this autolabel.
+        auto_label_message: Details on status.
         raw_chapter_revision_id: Chapter this AutoLabel is associated with.
     """
     model_config = ConfigDict(from_attributes=True)
     auto_label_id : int
-    auto_label_data : List[Label]
+    auto_label_data : List[Label] | None
     auto_label_model_name : str
     auto_label_model_params : Dict[str, str | int | float | bool]
-    auto_label_model_is_deterministic : bool
+    auto_label_status : AutoLabelStatus
+    auto_label_message : str | None = None
     raw_chapter_revision_id : int
 
 class AutoLabelMeta(BaseModel):
@@ -46,15 +53,20 @@ class AutoLabelMeta(BaseModel):
         auto_label_model_name: Name of the model used to generate the auto labels.
         auto_label_model_params: Parameters used for the model to generate the auto labels.
         auto_label_model_is_deterministic: Whether the model is deterministic.
+        auto_label_status: Labeling progress for this autolabel.
+        auto_label_message: Details on status.
         raw_chapter_revision_id: Chapter this AutoLabel is associated with.
     """
+    model_config = ConfigDict(from_attributes=True)
+
     auto_label_id : int
     auto_label_model_name : str
     auto_label_model_params : Dict[str, str | int | float | bool]
-    auto_label_model_is_deterministic : bool
+    auto_label_status : AutoLabelStatus
+    auto_label_message : str | None = None
     raw_chapter_revision_id : int
 
-class CreateAutoLabel(BaseModel):
+class CreateAutoLabels(BaseModel):
     """
     Pydantic schema for creating an auto-labeled data entry.
 
@@ -66,3 +78,6 @@ class CreateAutoLabel(BaseModel):
     raw_chapter_revision_ids : List[int]
     auto_label_model_name : str
     auto_label_model_params : Dict[str, str | int | float | bool]
+
+class CreateAutoLabelsStatus(BaseModel):
+    message : List[Tuple[int, AutoLabelMeta, str]]

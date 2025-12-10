@@ -88,11 +88,14 @@ class CluenerModel(NERModel):
     
     def normalize(self, text: str) -> str:
         return text.lower()
+    
+    def validate(self, params: Dict[str, str | int | float | bool]) -> NERModelParamsBase:
+        return CluenerModelParams.model_validate(params)
 
 class Cluener:
     
     def __init__(self):
-        from transformers import pipeline
+        from transformers import pipeline # type : ignore
 
         self.pipeline = pipeline(
             'token-classification',

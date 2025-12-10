@@ -59,5 +59,9 @@ services:
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     profiles:
       - test
+  redis:
+    image: redis
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
 volumes:
   db_data:

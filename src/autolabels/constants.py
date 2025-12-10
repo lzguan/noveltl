@@ -11,5 +11,7 @@ class AutoLabelStatus(StrEnum):
     """Task for this autolabel failed"""
     PENDING = 'pending'
     """Task for this autolabel in progress"""
+    PROCESSING = 'processing'
+    """Task for this autolabel currently processing"""
     DONE = 'done'
     """Task for this autolabel succeeded"""

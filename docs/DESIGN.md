@@ -33,8 +33,20 @@ We will divide this applications into distinct services.
 - Labels are associated with _label groups_, which can be further subdivided into _label datas_, each associated with a single chapter revision (not just chapter). Specific _labels_ are then associated to Label Datas. 
 - Each label consists of a start/end position, along with the word being labeled and a text category (e.g. PERSON, LOCATION, etc.).
 - Each label group is associated with a novel and a user. The only users able to access this label group now are the user that created this label group and the admins.
+
+### Auto Labels
 - Users are able to call an autolabeler on a list of raw chapter revisions that they have access to. The results of these calls will be stored as _auto labels_, for which each one is associated with a chapter revision, along with a _model_ and the parameters used in that model. Users can then pull results in auto labels to be used in label groups. Auto labels store the auto-labeled data in JSON format.
     - The reason we store the results of autolabeling into auto labels is to limit NER calls. Two users may be working on the same novel and may wish to both autogenerate labels using the same model. 
+- When a user tries to invoke an autolabel request, they may face some delays due to the computation-intensive nature of autolabeling. This is especially true for batch requests: a user may request to label an entire novels' worth of chapters at once. To solve this issue, we offload requests to be done in increments and allow the user to see the status of any request. Unless explicitly specified by the user, they should not be allowed to update already completed autolabels. The user should always be allowed to re-request updates regardless of whether they get processed or not, and should be informed of the status of their request after they send it.
+- Implementation details:
+    - Each auto label in the database can have 4 states: `FAILED`, `PENDING`, `PROCESSING`, and `DONE`. 
+    - When a user wishes to autolabel a raw chapter revision, the server will create an autolabel in database if it doesn't exist yet and move the request to a redis queue to be sent to a processing server running a worker. The server will then mark the autolabel status as `PENDING` in the database and update the `auto_label_last_job_request_id` to some new job request. This step will only occur when one of the following conditions is true:
+        - If the autolabel did not yet exist in the server
+        - If the autolabel status is marked as `FAILED`
+        - If the autolabel status is otherwise not marked as `DONE` and the last request to autogenerate this autolabel occured some time ago (rate limiting)
+    - A worker server will pick up requests from the redis queue and process them according to the following protocol:
+        - When the worker server first picks up a job request, it tries to update the corresponding autolabel in db (with matching `auto_label_id` and `job_id`) to `PROCESSING` status. If nothing gets updated (i.e. the `job_id` the worker receives does not match), then the worker 
+
 - Users are able to aggregate data in a label group to create _glossaries_. Each glossary corresponds to a label group. A glossary stores a JSON dict with entries of the form `term : (translation_of_term, description_of_term)`. Users must manually regenerate glossaries to ensure they are up to date with the current labelling. Glossaries that are not up to date with labelling are marked as such.
 
 #### Translations

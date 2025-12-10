@@ -1,4 +1,4 @@
-from typing import Protocol, TypeVar, List, Tuple, Any
+from typing import Protocol, TypeVar, List, Tuple, Any, Dict
 from .. import schemas
 from ..exceptions import *
 import logging
@@ -68,12 +68,21 @@ class NERModel(Protocol[P]):
         """
         ...
 
-    def normalize(self, text: str) -> str:
+    def normalize(self, text : str) -> str:
         """
         Normalizes text to match the format of the model's output labels.
         e.g. "Red" -> "red" for case-insensitive models.
 
         Args:
             text: Text to normalize.
+        """
+        ...
+    
+    def validate(self, params : Dict[str, str | int | float | bool]) -> schemas.NERModelParamsBase:
+        """
+        Validates an arbitrary dictionary of parameters. Raises an error if validation fails.
+
+        Args:
+            params: Dictionary to validate.
         """
         ...

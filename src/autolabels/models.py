@@ -18,6 +18,7 @@ class AutoLabel(Base):
         auto_label_model_name: Name of the model used to generate the auto labels.
         auto_label_model_params: Parameters used for the model to generate the auto labels.
         auto_label_status: Status of labeling task for this autolabel
+        auto_label_last_job_id: Job id of last request to autogenerate this autolabel
         auto_label_message: Message about the status of this auto label (e.g. auto label failure reason)
         raw_chapter_revision_id: Chapter this AutoLabel is associated with.
 
@@ -31,6 +32,7 @@ class AutoLabel(Base):
     auto_label_model_name : Mapped[str] = mapped_column(String(MAX_MODEL_NAME_LEN), nullable=False)
     auto_label_model_params : Mapped[dict] = mapped_column(JSONB, nullable=False)
     auto_label_status : Mapped[AutoLabelStatus] = mapped_column(Enum(AutoLabelStatus, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False, default=AutoLabelStatus.PENDING)
+    auto_label_last_job_id : Mapped[str] = mapped_column(String(36), nullable=True)
     auto_label_message : Mapped[str] = mapped_column(Text, nullable=True)
 
     raw_chapter_revision_id : Mapped[int] = mapped_column(ForeignKey('raw_chapter_revisions.raw_chapter_revision_id'), nullable=False)

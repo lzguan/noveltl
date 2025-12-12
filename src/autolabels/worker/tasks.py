@@ -18,7 +18,7 @@ def get_ner_model(model_name : str) -> NERModel:
     
     raise ValueError(f"Model {model_name} not found in registry.")
 
-async def autolabel_infer(job_id : str, auto_label_id: int, model_name: str, model_params: Dict[str, str | int | float | bool]) -> None:
+async def autolabel_infer(ctx, job_id : str, auto_label_id: int, model_name: str, model_params: Dict[str, str | int | float | bool]) -> None:
     ner_model = get_ner_model(model_name)
     params = ner_model.validate(model_params)
     stmt = update(

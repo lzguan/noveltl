@@ -80,8 +80,10 @@ class RawChapterRevision(Base):
         raw_chapter_revision_id: Integer primary key identifier.
         raw_chapter_revision_text: Text contained in this revision of the chapter.
         raw_chapter_revision_title: Chapter title. Different revisions of the same chapter can have different titles.
-        raw_chapter_revision_is_primary: Boolean mark for whether a chapter is the primary chapter (the 'finalized' chapter)
-        raw_chapter_revision_is_public: Boolean mark for whether a chapter is marked as public. Chapters marked as public should be immutable and available for use in other modules.
+        raw_chapter_revision_is_primary: Boolean mark for whether a revision is the primary chapter (the 'finalized' chapter)
+        raw_chapter_revision_is_public: Boolean mark for whether a revision is marked as public. 
+        raw_chapter_revision_is_final: Boolean mark for whether a revision is marked as final. Final revisions should be immutable.
+        raw_chapter_id: Id of chapter this revision belongs to.
     
     Note:
         raw_chapter_revision_title must have length at most MAX_CHAPTER_TITLE_LEN.

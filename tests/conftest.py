@@ -4,10 +4,15 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator, List, Dict
 from pathlib import Path
+from arq import create_pool, ArqRedis
+from arq.connections import RedisSettings
+from pwdlib import PasswordHash
 
 from src.models import Base
 from src.languages.models import Language
 from src.novels.models import Novel
+from src.auth.models import User
+from src.auth.constants import UserType
 
 
 TEST_URL = os.getenv("TEST_URL")
@@ -49,8 +54,19 @@ def sample_languages(db_session : Session) -> Dict[str, Language]:
     db_session.refresh(jp)
     return {"en": en, "zh": zh, "kr": kr, "jp": jp}
 
+@pytest.fixture 
+def password_hash() -> PasswordHash:
+    return PasswordHash.recommended()
+
 @pytest.fixture
-def sample_novels(sample_languages : dict[str, Language], db_session : Session) -> List[Novel]:
+def sample_users(db_session : Session, password_hash : PasswordHash) -> List[User]:
+    test_admin = User(user_name="admin", user_hashed_password = password_hash.hash('123'), user_type=UserType.ADMIN)
+    test_user = User(user_name="user", user_hashed_password = password_hash.hash('456'), user_type=UserType.USER)
+    db_session.add_all([test_admin, test_user])
+    return [test_admin, test_user]
+
+@pytest.fixture
+def sample_novels(sample_languages : Dict[str, Language], db_session : Session) -> List[Novel]:
     # Create some sample novels
     novel0 = Novel(novel_title="Sample Novel 1", language_id=sample_languages['en'].language_id)
     novel1 = Novel(novel_title="Sample Novel 2", language_id=sample_languages['zh'].language_id)
@@ -90,9 +106,13 @@ class ChapterLoader:
 
 
 @pytest.fixture
-def chapter_loader():
+def chapter_loader() -> ChapterLoader:
     """
     Returns a chapter loader callable that takes a pathname in the `test_data/chapters/` directory (e.g. if `chapters/chinese` contains `chapter_1.txt`, `chapter_2.txt`), then calling `chapter_loader().load("chinese")` should return a sequence of strings containing the content in `chapter_1.txt` and `chapter_2.txt`. Calling with the recursive flag will return the contents of all subdirectories as well (e.g. `chapter_loader().load("", recursive=True)` will also return chapters in `chapters/korean`, if that is a folder).
     """
     base_path = Path(__file__).parent / 'test_data' / 'chapters'
     return ChapterLoader(base_path)
+
+@pytest.fixture
+async def redis() -> ArqRedis:
+    return await create_pool(RedisSettings(host='redis', port=6379))

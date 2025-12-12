@@ -1,19 +1,17 @@
 services:
-  noveltldev:
-    image: noveltldev
+  dev:
+    image: dev
     build:
       context: .
       dockerfile: ./Dockerfile
-    ports:
-      - 8000:8000
+      target: dev
     environment:
       DB_HOST: db
       DB_PORT: ${DB_PORT}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
-      DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:${CONTAINER_PORT}/${DB_NAME}
-      CONTAINER_PORT: ${CONTAINER_PORT}
+      DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       SECRET_KEY: ${SECRET_KEY}
 
       TEST_HOST: test_db
@@ -21,18 +19,20 @@ services:
       TEST_USER: ${TEST_USER}
       TEST_PASSWORD: ${TEST_PASSWORD}
       TEST_NAME: ${TEST_NAME}
-      TEST_URL: postgresql+psycopg2://${TEST_USER}:${TEST_PASSWORD}@test_db:${CONTAINER_PORT}/${TEST_NAME}
+      TEST_URL: postgresql+psycopg2://${TEST_USER}:${TEST_PASSWORD}@test_db:5432/${TEST_NAME}
+
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
     depends_on:
       - db
     volumes:
       - .:/app
   db:
     image: postgres
-    container_name: chapter_db_server
     restart: always
     
     ports:
-      - "${DB_PORT}:${CONTAINER_PORT}" 
+      - "${DB_PORT}:5432" 
       
     environment:
       POSTGRES_USER: "${DB_USER}"
@@ -45,11 +45,10 @@ services:
       - db_data:/var/lib/postgresql/data
   test_db:
     image: postgres
-    container_name: chapter_test_db_server
     restart: always
     
     ports:
-      - "${TEST_PORT}:${CONTAINER_PORT}" 
+      - "${TEST_PORT}:5432" 
       
     environment:
       POSTGRES_USER: "${TEST_USER}"
@@ -62,12 +61,12 @@ services:
   redis:
     image: redis
     ports:
-      - "${REDIS_PORT}:${REDIS_PORT}"
+      - "${REDIS_PORT}:6379"
   worker:
     build: 
       context: .
+      target: worker
       dockerfile: Dockerfile
-    command: arq src.autolabels.worker.worker.WorkerSettings
     depends_on:
       - db
       - redis
@@ -77,13 +76,38 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
-      DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:${CONTAINER_PORT}/${DB_NAME}
+      DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
 
-      REDIS_HOST: ${REDIS_HOST}
+      REDIS_HOST: redis
       REDIS_PORT: ${REDIS_PORT}
       
       SECRET_KEY: ${SECRET_KEY}
     volumes:
       - .:/app
+  backend:
+    build: 
+      context: .
+      target: backend
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+      - redis
+    environment:
+      DB_HOST: db
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+      
+      SECRET_KEY: ${SECRET_KEY}
+    volumes:
+      - .:/app
+    ports:
+      - 8000:8000
+
 volumes:
   db_data:

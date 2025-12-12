@@ -20,5 +20,10 @@ class AuthSettings(BaseConfig):
     """Settings class for authentication config variables."""
     SECRET_KEY : str = Field(default="", min_length=1)
 
+class RedisSettings(BaseConfig):
+    """Settings class for redis config variables."""
+    REDIS_HOST : str = Field(default="", min_length=1)
+    REDIS_PORT : str = Field(default="", min_length=1)
+
 database_settings = DatabaseSettings()
 auth_settings = AuthSettings()

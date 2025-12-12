@@ -9,10 +9,11 @@ class AutoLabelDispatcher(Protocol):
     """
     async def enqueue(
         self,
+        job_id : str,
         auto_label_id : int,
-        text : str,
         model_name : str, 
-        model_params : Dict[str, str | int | float | bool]
+        model_params : Dict[str, str | int | float | bool],
+        text : str = ""
     ) -> None:
         """
         Enqueue a request.
@@ -34,14 +35,15 @@ class ArqDispatcher(AutoLabelDispatcher):
         self.redis = redis_pool
         
     async def enqueue(
-            self, job_id : str, 
+            self, 
+            job_id : str, 
             auto_label_id: int, 
-            text: str, 
             model_name: str, 
-            model_params: Dict[str, str | int | float | bool]
+            model_params: Dict[str, str | int | float | bool],
+            text : str = ""
         ) -> None:
         try:
-            await self.redis.enqueue_job('autolabel_infer', job_id, auto_label_id, text, model_name, model_params, _job_id=job_id)
+            await self.redis.enqueue_job('autolabel_infer', job_id, auto_label_id, model_name, model_params, _job_id=job_id)
         except (ConnectionError, TimeoutError, OSError) as e:
             raise EnqueueFailedException(f"Redis connection failed: {str(e)}") from e
         except ResponseError as e:

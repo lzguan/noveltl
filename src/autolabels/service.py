@@ -1,11 +1,21 @@
+"""
+Service functions for auto labeling.
+"""
+
+from typing import Sequence, List, Dict, Tuple
 from sqlalchemy.orm import Session, defer
-from sqlalchemy import select
-from sqlalchemy.exc import NoResultFound
-from typing import Sequence, List
+from sqlalchemy import select, and_
+from sqlalchemy.exc import NoResultFound, IntegrityError
+from psycopg2 import errorcodes, Error as PgError
+from uuid import uuid4
+import asyncio
+from ..auth.constants import UserType
 from . import models
 from . import schemas
+from .utils import AutoLabelDispatcher
 from .exceptions import *
-
+from ..exceptions import *
+from .constants import *
 from ..auth.models import User, UserType
 from ..novels import models as novel_models
 
@@ -97,9 +107,117 @@ def query_auto_labels(
 
     return [schemas.AutoLabelMeta.model_validate(row) for row in result_rows]
 
-def insert_auto_labels(db : Session, current_user : User, request : schemas.CreateAutoLabels) -> models.AutoLabel:
+async def insert_auto_labels(db : Session, current_user : User, dispatcher : AutoLabelDispatcher, request : schemas.CreateAutoLabels) -> schemas.CreateAutoLabelsStatus:
     """
+    Idempotent insert of autolabels that separates new entries from existing ones.
+    1. Queries all requested revision IDs to check if the specific model config already exists.
+    2. Separates results into 'inserts' (newly created) and 'exists' (pre-existing duplicates).
+    3. Bulk inserts and queues jobs for the new entries.
+
+    Args:
+        db: Database to insert into.
+        current_user: User performing the action.
+        request: Request metadata.
     
+    Raises:
+        AutoLabelDuplicateException: If insertion violates a unique constraint. Will most likely occur when there is a race condition.
+    
+    Notes:
+        This function ignores all revision IDs that do not exist or that the user has insufficient permissions for.
     """
-    raise Exception
+    # select pairs of the form
+    # (raw_chapter_revision_id, AutoLabel where revision id/model name/params match OR None if such an AutoLabel does not exist)
+    # should only return one such pair per raw_chapter_revision_id by UniqueConstraints on autolabels table
+    q = select(
+        novel_models.RawChapterRevision, 
+        models.AutoLabel
+    ).options(
+        defer(models.AutoLabel.auto_label_data),
+        defer(novel_models.RawChapterRevision.raw_chapter_revision_text)
+    ).outerjoin(
+        models.AutoLabel,
+        and_(
+            models.AutoLabel.raw_chapter_revision_id == novel_models.RawChapterRevision.raw_chapter_revision_id,
+            models.AutoLabel.auto_label_model_name == request.auto_label_model_name,
+            models.AutoLabel.auto_label_model_params == request.auto_label_model_params
+        )
+    ).where(
+        novel_models.RawChapterRevision.raw_chapter_revision_id.in_(request.raw_chapter_revision_ids)
+    )
+    if current_user.user_type != UserType.ADMIN:
+        q = q.where(novel_models.RawChapterRevision.raw_chapter_revision_is_public == True)
+    result = db.execute(q)
+    result_rows = result.all()
+    
+    exists : Dict[int, schemas.AutoLabelMeta] = {}
+    to_insert : List[Tuple[int, models.AutoLabel, bool]] = []
+    inserts : Dict[int, Tuple[schemas.AutoLabelMeta, bool]] = {}
+    for r, a in result_rows:
+        # type hinting (is there a better way? idk)
+        revision : novel_models.RawChapterRevision = r
+        autolabel : models.AutoLabel | None = a
+        if autolabel is not None:
+            exists[revision.raw_chapter_revision_id] = schemas.AutoLabelMeta.model_validate(autolabel)
+        else:
+            new_autolabel = models.AutoLabel(
+                auto_label_model_name=request.auto_label_model_name,
+                auto_label_model_params=request.auto_label_model_params,
+                auto_label_status=AutoLabelProgress.PENDING,
+                raw_chapter_revision_id=revision.raw_chapter_revision_id,
+                auto_label_message="Waiting to be queued."
+            )
+            to_insert.append((revision.raw_chapter_revision_id, new_autolabel, False))
+
+    try:
+        db.add_all([temp[1] for temp in to_insert])
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        assert isinstance(e.orig, PgError)
+        pgcode = e.orig.pgcode
+        if pgcode == errorcodes.UNIQUE_VIOLATION:
+            raise AutoLabelDuplicateException(str(e.orig))
+        raise UnknownError(e)
+    except Exception as e:
+        db.rollback()
+        raise UnknownError(e)
+    
+    tasks = []
+    for _, autolabel, _ in to_insert:
+        job_id = str(uuid4())
+        autolabel.auto_label_last_job_id = job_id
+        tasks.append(
+            dispatcher.enqueue(
+                job_id, 
+                autolabel.auto_label_id, 
+                request.auto_label_model_name, 
+                request.auto_label_model_params
+            )
+        )
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise UnknownError(e)
+    
+    ret = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    for i in range(len(ret)):
+        revision_id, autolabel, _ = to_insert[i]
+        if ret[i] is None:
+            autolabel.auto_label_message = "Job queued."
+            to_insert[i] = (revision_id, autolabel, True)
+        else:
+            autolabel.auto_label_message = "Job failed to queue."
+            autolabel.auto_label_status = AutoLabelProgress.FAILED
+    try:
+        db.commit()
+    except Exception as e:
+        raise UnknownError(e)
+    
+    inserts = {revision_id : (schemas.AutoLabelMeta.model_validate(autolabel), success) for revision_id, autolabel, success in to_insert}
+    return schemas.CreateAutoLabelsStatus(inserts=inserts, exists=exists)
+
+
+def regenerate_auto_labels():
     pass

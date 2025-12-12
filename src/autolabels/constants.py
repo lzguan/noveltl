@@ -2,16 +2,17 @@ from enum import StrEnum
 
 MAX_MODEL_NAME_LEN = 128
 
-class AutoLabelStatus(StrEnum):
+class AutoLabelProgress(StrEnum):
     """
-    Status for an autolabel in database. One of 'failed', 'pending', 'done'
+    Status for an autolabel in database. One of 'failed', 'pending', 'processing', 'done'
     """
 
     FAILED = 'failed'
     """Task for this autolabel failed"""
     PENDING = 'pending'
-    """Task for this autolabel in progress"""
+    """Task for this autolabel queueing"""
     PROCESSING = 'processing'
     """Task for this autolabel currently processing"""
     DONE = 'done'
     """Task for this autolabel succeeded"""
+

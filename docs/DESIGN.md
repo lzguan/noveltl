@@ -45,7 +45,9 @@ We will divide this applications into distinct services.
         - If the autolabel status is marked as `FAILED`
         - If the autolabel status is otherwise not marked as `DONE` and the last request to autogenerate this autolabel occured some time ago (rate limiting)
     - A worker server will pick up requests from the redis queue and process them according to the following protocol:
-        - When the worker server first picks up a job request, it tries to update the corresponding autolabel in db (with matching `auto_label_id` and `job_id`) to `PROCESSING` status. If nothing gets updated (i.e. the `job_id` the worker receives does not match), then the worker 
+        - When the worker server first picks up a job request, it tries to update the corresponding autolabel in db (with matching `auto_label_id` and `job_id`) to `PROCESSING` status. If nothing gets updated (i.e. the `job_id` the worker receives does not match), then the worker returns without performing any action.
+        - The worker will then try to run inference in another thread. If this process fails/returns an exception, the worker will write `FAILED` to the database, under the condition that the `job_id` that the current thread has matches the one in the database.
+        - If inference succeeds, the worker will write the results of inference to the database, under the condition that the `job_id` still matches. 
 
 - Users are able to aggregate data in a label group to create _glossaries_. Each glossary corresponds to a label group. A glossary stores a JSON dict with entries of the form `term : (translation_of_term, description_of_term)`. Users must manually regenerate glossaries to ensure they are up to date with the current labelling. Glossaries that are not up to date with labelling are marked as such.
 

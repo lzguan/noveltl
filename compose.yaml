@@ -63,5 +63,27 @@ services:
     image: redis
     ports:
       - "${REDIS_PORT}:${REDIS_PORT}"
+  worker:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    command: arq src.autolabels.worker.worker.WorkerSettings
+    depends_on:
+      - db
+      - redis
+    environment:
+      DB_HOST: db
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:${CONTAINER_PORT}/${DB_NAME}
+
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      
+      SECRET_KEY: ${SECRET_KEY}
+    volumes:
+      - .:/app
 volumes:
   db_data:

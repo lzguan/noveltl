@@ -18,6 +18,9 @@ class TokenDoesNotExistException(Exception):
 class AutoLabelNotFoundException(NotFoundException):
     pass
 
+class AutoLabelDuplicateException(DuplicateException):
+    pass
+
 class EnqueueFailedException(Exception):
     """
     Exception raised from `AutoLabelDispatcher.enqueue()`. 

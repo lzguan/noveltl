@@ -51,7 +51,14 @@ def chinese_xianxia_small_test_chapters(chinese_xianxia_small_test_novel : Novel
 
 @pytest.mark.asyncio
 @pytest.mark.slow
-async def test_insert_auto_labels_basic(chinese_xianxia_small_test_chapters : List[Tuple[RawChapter, RawChapterRevision]], redis : ArqRedis, db_session : Session, sample_users : List[User], worker_mock : Worker):
+async def test_insert_auto_labels_basic(
+    chinese_xianxia_small_test_novel : Novel, 
+    chinese_xianxia_small_test_chapters : List[Tuple[RawChapter, RawChapterRevision]], 
+    redis : ArqRedis, 
+    db_session : Session, 
+    sample_users : List[User], 
+    worker_mock : Worker
+):
     ret = await insert_auto_labels(
         db_session, 
         sample_users[0], 
@@ -59,7 +66,8 @@ async def test_insert_auto_labels_basic(chinese_xianxia_small_test_chapters : Li
         CreateAutoLabels(
             raw_chapter_revision_ids=[revision.raw_chapter_revision_id for _, revision in chinese_xianxia_small_test_chapters],
             auto_label_model_name='cluener',
-            auto_label_model_params={}
+            auto_label_model_params={},
+            novel_id=chinese_xianxia_small_test_novel.novel_id
         )
     )
     assert len(ret.inserts) == len(chinese_xianxia_small_test_chapters)

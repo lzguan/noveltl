@@ -84,5 +84,8 @@ class NERModel(Protocol[P]):
 
         Args:
             params: Dictionary to validate.
+        
+        Raises:
+            ValidationError: If validation fails.
         """
         ...

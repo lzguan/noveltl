@@ -245,7 +245,7 @@ def update_label_data_stream(
     return {"status": "success", "detail": "Operations applied successfully."}
 
 @router.post(
-    'label-groups/{label_group_id}/auto-labels', 
+    '/label-group/{label_group_id}/label-datas/auto-labels', 
     response_model=schemas.CreateLabelDataByAutoLabelStatus
 )
 def create_label_datas_by_auto_labels(
@@ -254,5 +254,14 @@ def create_label_datas_by_auto_labels(
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
+    """
+    Creates label datas and populates its labels using the request to filter which label datas to use.
+
+    Args:
+        label_group_id: id for label group we are populating.
+        request: Request for things to filter on.
+        db: Database dependency.
+        current_user: Current user dependency.
+    """
     result = insert_label_datas_by_autolabels(db, current_user, label_group_id, request)
     return result

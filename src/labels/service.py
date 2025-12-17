@@ -245,12 +245,12 @@ def insert_label_data(db : Session, current_user : User, label_group_id : int, r
     q = select(
         models.LabelGroup, novel_models.RawChapterRevision, novel_models.Novel
     ).options(
-            defer(novel_models.RawChapterRevision.raw_chapter_revision_title),
-            defer(novel_models.RawChapterRevision.raw_chapter_revision_text),
-            defer(novel_models.Novel.novel_title),
-            defer(novel_models.Novel.novel_description),
-            defer(novel_models.Novel.novel_author)
-        ).select_from(
+        defer(novel_models.RawChapterRevision.raw_chapter_revision_title),
+        defer(novel_models.RawChapterRevision.raw_chapter_revision_text),
+        defer(novel_models.Novel.novel_title),
+        defer(novel_models.Novel.novel_description),
+        defer(novel_models.Novel.novel_author)
+    ).select_from(
         models.LabelGroup
     ).outerjoin(
         novel_models.RawChapterRevision, 
@@ -272,7 +272,9 @@ def insert_label_data(db : Session, current_user : User, label_group_id : int, r
     
     if result_row is None:
         raise LabelGroupNotFoundException("Label group not found.")
-    label_group, revision, _ = result_row
+    l, r, _ = result_row
+    label_group : models.LabelGroup = l
+    revision : novel_models.RawChapterRevision | None = r
     if label_group.user_id != current_user.user_id:
         raise InsufficientPermissionsException
     if revision is None:
@@ -408,7 +410,7 @@ def insert_label_datas_by_autolabels(
                 if autolabel.auto_label_data:
                     stmt = insert(models.Label).values([{**label, 'label_data_id' : label_data_id} for label in autolabel.auto_label_data])
                     db.execute(stmt)
-                    success.append(autolabel.raw_chapter_revision_id)
+                success.append(autolabel.raw_chapter_revision_id)
         except IntegrityError as e:
             if isinstance(e.orig, PgError):
                 pgcode = e.orig.pgcode

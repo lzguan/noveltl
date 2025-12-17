@@ -2,6 +2,7 @@ from typing import Dict, cast, Any
 from sqlalchemy import update, select
 from sqlalchemy import CursorResult
 from sqlalchemy.exc import NoResultFound
+from pydantic import ValidationError
 
 from .inference import *
 from .config import SessionLocal
@@ -19,15 +20,44 @@ def get_ner_model(model_name : str) -> NERModel:
     raise ValueError(f"Model {model_name} not found in registry.")
 
 async def autolabel_infer(ctx, job_id : str, auto_label_id: int, model_name: str, model_params: Dict[str, Any]) -> None:
-    ner_model = get_ner_model(model_name)
-    params = ner_model.validate(model_params)
-    stmt = update(
+    base_update = update(
         AutoLabel
     ).where(
         AutoLabel.auto_label_id == auto_label_id
     ).where(
         AutoLabel.auto_label_last_job_id == job_id
-    ).where(
+    ) # don't modify this variable
+    try:
+        ner_model = get_ner_model(model_name)
+        params = ner_model.validate(model_params)
+    except ValidationError as e:
+        stmt = base_update.values(
+            auto_label_status=AutoLabelProgress.FAILED,
+            auto_label_message=f"'{model_name}' is not a valid model name."
+        )
+        with SessionLocal() as db:
+            db.execute(stmt)
+            db.commit()
+        raise e
+    except ValueError as e:
+        stmt = base_update.values(
+            auto_label_status=AutoLabelProgress.FAILED,
+            auto_label_message=f"'{model_name}' is not a valid model name."
+        )
+        with SessionLocal() as db:
+            db.execute(stmt)
+            db.commit()
+        raise e
+    except Exception as e:
+        stmt = base_update.values(
+            auto_label_status=AutoLabelProgress.FAILED,
+            auto_label_message=f"Unknown error occured: {str(e)}"
+        )
+        with SessionLocal() as db:
+            db.execute(stmt)
+            db.commit()
+        raise e
+    stmt = base_update.where(
         AutoLabel.auto_label_status == AutoLabelProgress.PENDING
     ).values(
         auto_label_status=AutoLabelProgress.PROCESSING
@@ -52,13 +82,7 @@ async def autolabel_infer(ctx, job_id : str, auto_label_id: int, model_name: str
             res = db.execute(q)
             text = res.scalar_one()
         except NoResultFound as e:
-            stmt = update(
-                AutoLabel
-            ).where(
-                AutoLabel.auto_label_id == auto_label_id
-            ).where(
-                AutoLabel.auto_label_last_job_id == job_id
-            ).values(
+            stmt = base_update.values(
                 auto_label_status=AutoLabelProgress.FAILED,
                 auto_label_message="Auto Label ID not valid:" + str(e)
             )
@@ -66,13 +90,7 @@ async def autolabel_infer(ctx, job_id : str, auto_label_id: int, model_name: str
             db.commit()
             raise e
         except Exception as e:
-            stmt = update(
-                AutoLabel
-            ).where(
-                AutoLabel.auto_label_id == auto_label_id
-            ).where(
-                AutoLabel.auto_label_last_job_id == job_id
-            ).values(
+            stmt = base_update.values(
                 auto_label_status=AutoLabelProgress.FAILED,
                 auto_label_message=str(e)
             )
@@ -84,13 +102,7 @@ async def autolabel_infer(ctx, job_id : str, auto_label_id: int, model_name: str
         result, err = await loop.run_in_executor(None, ner_model.predict, text, params)
     except Exception as e:
         with SessionLocal() as db:
-            stmt = update(
-                AutoLabel
-            ).where(
-                AutoLabel.auto_label_id == auto_label_id
-            ).where(
-                AutoLabel.auto_label_last_job_id == job_id
-            ).values(
+            stmt = base_update.values(
                 auto_label_status=AutoLabelProgress.FAILED,
                 auto_label_message=str(e)
             )
@@ -98,13 +110,7 @@ async def autolabel_infer(ctx, job_id : str, auto_label_id: int, model_name: str
             db.commit()
             raise e
     with SessionLocal() as db:
-        stmt = update(
-            AutoLabel
-        ).where(
-            AutoLabel.auto_label_id == auto_label_id
-        ).where(
-            AutoLabel.auto_label_last_job_id == job_id
-        ).values(
+        stmt = base_update.values(
             auto_label_data=[l.model_dump() for l in result],
             auto_label_status=AutoLabelProgress.DONE,
             auto_label_message=str(err)
@@ -114,13 +120,7 @@ async def autolabel_infer(ctx, job_id : str, auto_label_id: int, model_name: str
             db.commit()
         except Exception as e:
             db.rollback()
-            stmt = update(
-                AutoLabel
-            ).where(
-                AutoLabel.auto_label_id == auto_label_id
-            ).where(
-                AutoLabel.auto_label_last_job_id == job_id
-            ).values(
+            stmt = base_update.values(
                 auto_label_status=AutoLabelProgress.FAILED,
                 auto_label_message=str(e)
             )

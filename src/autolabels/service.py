@@ -18,7 +18,6 @@ from ..exceptions import *
 from .constants import *
 from ..auth.models import User, UserType
 from ..novels import models as novel_models
-from ..novels.exceptions import RawChapterRevisionNotFinalException
 
 def query_auto_label_by_id(db : Session, current_user : User, auto_label_id : int) -> models.AutoLabel:
     """
@@ -124,7 +123,7 @@ async def insert_auto_labels(db : Session, current_user : User, dispatcher : Aut
         AutoLabelDuplicateException: If insertion violates a unique constraint. Will most likely occur when there is a race condition.
     
     Notes:
-        This function ignores all revision IDs that do not exist or that the user has insufficient permissions for.
+        This function ignores all revision IDs that do not exist, revisions that are not final, and revisions that the user has insufficient permissions for.
     """
     # select pairs of the form
     # (raw_chapter_revision_id, AutoLabel where revision id/model name/params match OR None if such an AutoLabel does not exist)
@@ -142,9 +141,29 @@ async def insert_auto_labels(db : Session, current_user : User, dispatcher : Aut
             models.AutoLabel.auto_label_model_name == request.auto_label_model_name,
             models.AutoLabel.auto_label_model_params == request.auto_label_model_params
         )
+    ).join(
+        novel_models.RawChapter,
+        novel_models.RawChapter.raw_chapter_id == novel_models.RawChapterRevision.raw_chapter_id
+    ).join(
+        novel_models.Novel,
+        novel_models.Novel.novel_id == novel_models.RawChapter.novel_id
     ).where(
-        novel_models.RawChapterRevision.raw_chapter_revision_id.in_(request.raw_chapter_revision_ids)
+        novel_models.RawChapterRevision.raw_chapter_revision_is_final == True
+    ).where(
+        novel_models.Novel.novel_id == request.novel_id
     )
+    if request.raw_chapter_ids is not None and len(request.raw_chapter_ids) > 0:
+        q = q.where(novel_models.RawChapter.raw_chapter_id.in_(request.raw_chapter_ids))
+    if request.raw_chapter_revision_ids is not None and len(request.raw_chapter_revision_ids) > 0:
+        q = q.where(novel_models.RawChapterRevision.raw_chapter_revision_id.in_(request.raw_chapter_revision_ids))
+    if request.start is not None:
+        q = q.where(novel_models.RawChapter.raw_chapter_num >= request.start)
+    if request.end is not None:
+        q = q.where(novel_models.RawChapter.raw_chapter_num < request.end)
+    if request.is_primary is not None:
+        q = q.where(novel_models.RawChapterRevision.raw_chapter_revision_is_primary == request.is_primary)
+    if request.is_public is not None:
+        q = q.where(novel_models.RawChapterRevision.raw_chapter_revision_is_public == request.is_public)
     if current_user.user_type != UserType.ADMIN:
         q = q.where(novel_models.RawChapterRevision.raw_chapter_revision_is_public == True)
     result = db.execute(q)

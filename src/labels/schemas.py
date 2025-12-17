@@ -234,10 +234,10 @@ class CreateLabelDataByAutoLabel(BaseModel):
     """
     model_name : str
     model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
-    raw_chapter_ids : List[int] | None
-    raw_chapter_revision_ids : List[int] | None
-    start : int | None
-    end : int | None
+    raw_chapter_ids : List[int] | None = None
+    raw_chapter_revision_ids : List[int] | None = None
+    start : int | None = None
+    end : int | None = None
 
 class CreateLabelDataByAutoLabelStatus(BaseModel):
     """

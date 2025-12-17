@@ -5,26 +5,27 @@ Todo: Refactor AI generated tests.
 from typing import List, Tuple
 import pytest
 from src.autolabels.worker.interfaces import Tokenizer
-from src.autolabels.worker.utils import Priority, _chunk_blocks, _chunk_paragraph, chunk_text
+from src.autolabels.worker.utils import _chunk_blocks, _chunk_paragraph, chunk_text
 from src.autolabels.exceptions import *
+from src.autolabels.constants import SepPriority
 
 
 def test_chunk_blocks():
     separators = {
-        '.': Priority.HIGH, 
-        ',': Priority.MED, 
-        ' ': Priority.LOW
+        '.': SepPriority.HIGH, 
+        ',': SepPriority.MED, 
+        ' ': SepPriority.LOW
     }
     text = "Hello, world. This is a test"
     chunks = list(_chunk_blocks(text, separators))
     expected_chunks = [
-        ("Hello,", 0, Priority.MED),
-        (" ", 6, Priority.LOW),
-        ("world.", 7, Priority.HIGH),
-        (" ", 13, Priority.LOW),
-        ("This ", 14, Priority.LOW),
-        ("is ", 19, Priority.LOW),
-        ("a ", 22, Priority.LOW),
+        ("Hello,", 0, SepPriority.MED),
+        (" ", 6, SepPriority.LOW),
+        ("world.", 7, SepPriority.HIGH),
+        (" ", 13, SepPriority.LOW),
+        ("This ", 14, SepPriority.LOW),
+        ("is ", 19, SepPriority.LOW),
+        ("a ", 22, SepPriority.LOW),
         ("test", 24, None)
     ]
     assert chunks == expected_chunks
@@ -57,10 +58,10 @@ class TokenizerTestWordsMerge(Tokenizer):
     def tokenize_words(self, text: str) -> List[Tuple[str, int]]:
         return [(word, word.count(' ') + 1) for word in self.tokenize(text)]
 
-def test_priority_enum():
-    assert Priority.HIGH < Priority.MED
-    assert Priority.MED < Priority.LOW
-    assert Priority.HIGH < Priority.LOW
+def test_SepPriority_enum():
+    assert SepPriority.HIGH < SepPriority.MED
+    assert SepPriority.MED < SepPriority.LOW
+    assert SepPriority.HIGH < SepPriority.LOW
 
 def test_tokenizer_tokenize_simple():
     tokenizer1 = TokenizerTestWords()
@@ -106,8 +107,8 @@ def test_chunk_text_basic():
     tokenizer1 = TokenizerTestWords()
     text = "Hello, world. This is a test"
     separators = {
-        '.': Priority.HIGH, 
-        ',': Priority.MED, 
+        '.': SepPriority.HIGH, 
+        ',': SepPriority.MED, 
     }
     chunks = list(chunk_text(text, separators, tokenizer1, max_chunk_size=4, force_chunk=False))
     chunks_text = [chunk for chunk, _ in chunks]
@@ -117,8 +118,8 @@ def test_chunk_text_basic():
     tokenizer2 = TokenizerTestWordsMerge()
     text2 = "the quick brown fox jumps over the lazy dog"
     separators2 = {
-        '.': Priority.HIGH, 
-        ',': Priority.MED
+        '.': SepPriority.HIGH, 
+        ',': SepPriority.MED
     }
     with pytest.raises(ChunkTooLargeException):
         chunks_2 = list(chunk_text(text2, separators2, tokenizer2, max_chunk_size=5, force_chunk=False))
@@ -134,11 +135,11 @@ class TokenizerTestChars(Tokenizer):
     def tokenize_words(self, text: str) -> List[Tuple[str, int]]:
         return [(c, 1) for c in text]
 
-def test_chunk_text_priority():
+def test_chunk_text_SepPriority():
     separators = {
-        '\n': Priority.HIGH,
-        '.': Priority.MED,
-        ',': Priority.LOW
+        '\n': SepPriority.HIGH,
+        '.': SepPriority.MED,
+        ',': SepPriority.LOW
     }
     tokenizer = TokenizerTestChars()
     text = "a,b\nc," 
@@ -159,7 +160,7 @@ def test_chunk_text_priority():
     assert chunks2[2][0] == "d,e"
 
 def test_chunk_text_massive_paragraph():
-    separators = {' ': Priority.LOW}
+    separators = {' ': SepPriority.LOW}
     text = "Hi MassiveBlock" 
     tokenizer = TokenizerTestChars()
     
@@ -170,7 +171,7 @@ def test_chunk_text_massive_paragraph():
     assert joined_result == text
 
 def test_chunk_text_no_valid_separator():
-    separators = {'.': Priority.HIGH}
+    separators = {'.': SepPriority.HIGH}
     text = "ABCDEF"
     tokenizer = TokenizerTestChars()
     
@@ -197,7 +198,7 @@ def test_chunk_paragraph_no_match():
 
 def test_chunk_text_no_match():
     text = "A,AA"
-    separators = {"," : Priority.HIGH}
+    separators = {"," : SepPriority.HIGH}
     tokenizer = TokenizerTestWrong()
     with pytest.raises(TokenDoesNotExistException):
         list(chunk_text(text, separators, tokenizer, 3, force_chunk=True))
@@ -209,10 +210,10 @@ class TokenizerTestZero(Tokenizer):
 
 def test_chunk_text_zero_token_infinite_loop():
     separators = {
-        "\n": Priority.HIGH,
-        ".": Priority.MED,
-        ",": Priority.LOW,
-        " ": Priority.LOW
+        "\n": SepPriority.HIGH,
+        ".": SepPriority.MED,
+        ",": SepPriority.LOW,
+        " ": SepPriority.LOW
     }
     tokenizer = TokenizerTestZero()
     max_chunk_size = 5
@@ -226,10 +227,10 @@ def test_chunk_text_zero_token_infinite_loop():
 
 def test_chunk_text_max_chunk_size():
     separators = separators = {
-        "\n": Priority.HIGH,
-        ".": Priority.MED,
-        ",": Priority.LOW,
-        " ": Priority.LOW
+        "\n": SepPriority.HIGH,
+        ".": SepPriority.MED,
+        ",": SepPriority.LOW,
+        " ": SepPriority.LOW
     }
     tokenizer = TokenizerTestChars()
     max_chunk_size = 10
@@ -242,10 +243,10 @@ def test_chunk_text_max_chunk_size():
 
 def test_chunk_text_unicode():
     separators = separators = {
-        "\n": Priority.HIGH,
-        ".": Priority.MED,
-        ",": Priority.LOW,
-        " ": Priority.LOW
+        "\n": SepPriority.HIGH,
+        ".": SepPriority.MED,
+        ",": SepPriority.LOW,
+        " ": SepPriority.LOW
     }
     tokenizer = TokenizerTestChars()
     text = "😊" * 20

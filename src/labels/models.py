@@ -105,7 +105,6 @@ class Label(Base):
     label_data_of_label : Mapped["LabelData"] = relationship(back_populates='labels_with_label_data')
 
     __table_args__ = (
-        UniqueConstraint(label_start, label_data_id, name='uq_one_label_with_start_per_label_data'),
         CheckConstraint(and_(label_score >= 0.0, label_score <= 1.0), name='chk_score_bounds'),
         CheckConstraint(label_start < label_end, name="chk_label_start_lt_label_end"),
         ExcludeConstraint(

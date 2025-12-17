@@ -12,6 +12,7 @@ from src.autolabels.schemas import CreateAutoLabels
 from src.autolabels.models import AutoLabel
 from src.autolabels.utils import ArqDispatcher
 from src.auth.models import User
+from src.autolabels.constants import AutoLabelProgress
 
 
 class Loader(Protocol):
@@ -71,3 +72,4 @@ async def test_insert_auto_labels_basic(chinese_xianxia_small_test_chapters : Li
     rows = db_session.execute(q).scalars().all()
     for row in rows:
         print(row.__dict__)
+        assert row.auto_label_status == AutoLabelProgress.DONE

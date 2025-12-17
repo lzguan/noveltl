@@ -1,4 +1,4 @@
-from typing import Dict, cast
+from typing import Dict, cast, Any
 from sqlalchemy import update, select
 from sqlalchemy import CursorResult
 from sqlalchemy.exc import NoResultFound
@@ -18,7 +18,7 @@ def get_ner_model(model_name : str) -> NERModel:
     
     raise ValueError(f"Model {model_name} not found in registry.")
 
-async def autolabel_infer(ctx, job_id : str, auto_label_id: int, model_name: str, model_params: Dict[str, str | int | float | bool]) -> None:
+async def autolabel_infer(ctx, job_id : str, auto_label_id: int, model_name: str, model_params: Dict[str, Any]) -> None:
     ner_model = get_ner_model(model_name)
     params = ner_model.validate(model_params)
     stmt = update(

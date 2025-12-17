@@ -1,6 +1,8 @@
-from enum import StrEnum
+from enum import StrEnum, IntEnum
 
 MAX_MODEL_NAME_LEN = 128
+MAX_PARAMS_SIZE_BYTES = 10240
+MAX_PARAMS_FIELDS = 50
 
 class AutoLabelProgress(StrEnum):
     """
@@ -16,3 +18,7 @@ class AutoLabelProgress(StrEnum):
     DONE = 'done'
     """Task for this autolabel succeeded"""
 
+class SepPriority(IntEnum):
+    HIGH = 1
+    MED = 2
+    LOW = 3

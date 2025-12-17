@@ -10,7 +10,7 @@ from .utils import *
 router = APIRouter()
 
 @router.get(
-    '/autolabels/{auto_label_id}', 
+    '/auto-labels/{auto_label_id}', 
     response_model=schemas.AutoLabel
 )
 async def read_autolabel_by_id(
@@ -40,22 +40,22 @@ async def read_autolabel_by_id(
         )
     return autolabel
 
-@router.get('/autolabels', response_model=Dict[int, schemas.AutoLabelMeta])
+@router.get('/auto-labels', response_model=Dict[int, schemas.AutoLabelMeta])
 async def read_autolabels(
         novel_id : int, 
         db : Annotated[Session, Depends(get_db)], 
         current_user : Annotated[User, Depends(get_current_user)], 
         raw_chapter_ids : Annotated[List[int] | None, Query()] = None, 
-        raw_chapter_revision_ids : List[int] | None = None,  
+        raw_chapter_revision_ids : Annotated[List[int] | None, Query()] = None,  
         start : int | None = None, 
         end : int | None = None, 
-        model_names : str | None = None,
+        model_names : Annotated[List[str] | None, Query()] = None,
     ):
     auto_labels = query_auto_labels(db, current_user, novel_id, raw_chapter_ids, raw_chapter_revision_ids, start, end, model_names)
     return auto_labels
 
 @router.post(
-    '/autolabels', 
+    '/auto-labels', 
     response_model=schemas.CreateAutoLabelsStatus
 )
 async def create_autolabels(

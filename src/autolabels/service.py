@@ -18,6 +18,7 @@ from ..exceptions import *
 from .constants import *
 from ..auth.models import User, UserType
 from ..novels import models as novel_models
+from ..novels.exceptions import RawChapterRevisionNotFinalException
 
 def query_auto_label_by_id(db : Session, current_user : User, auto_label_id : int) -> models.AutoLabel:
     """
@@ -59,7 +60,7 @@ def query_auto_labels(
         raw_chapter_revision_ids : List[int] | None,  
         start : int | None, 
         end : int | None, 
-        model_names : str | None, 
+        model_names : List[str] | None, 
     ) -> Dict[int, schemas.AutoLabelMeta]:
     """
     Query auto-labels with filtering and return lightweight metadata. Return format is a dictionary of the form `raw_chapter_revision_id : AutoLabelMeta`.

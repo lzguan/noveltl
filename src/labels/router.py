@@ -243,3 +243,16 @@ def update_label_data_stream(
         )
     
     return {"status": "success", "detail": "Operations applied successfully."}
+
+@router.post(
+    'label-groups/{label_group_id}/auto-labels', 
+    response_model=schemas.CreateLabelDataByAutoLabelStatus
+)
+def create_label_datas_by_auto_labels(
+        label_group_id : int, 
+        request : schemas.CreateLabelDataByAutoLabel,
+        db : Annotated[Session, Depends(get_db)],
+        current_user : Annotated[User, Depends(get_current_user)]
+    ):
+    result = insert_label_datas_by_autolabels(db, current_user, label_group_id, request)
+    return result

@@ -1,38 +1,9 @@
-from pydantic import Field, model_validator
-from typing import Dict, List, Self, Tuple, TypedDict, cast
+from typing import Dict, List, Tuple, TypedDict, cast
 
-from ..schemas import NERModelParamsBase
+from ..schemas import CluenerModelParams, NERModelParamsBase
 from ...labels.schemas import Label
 from .utils import *
 from .interfaces import *
-
-
-class CluenerModelParams(NERModelParamsBase):
-        chunk_size : int = Field(default=500, gt=0, le=512)
-        separators : Dict[str, Priority] = Field(
-            default={
-                "\n": Priority.HIGH,
-                
-                "。": Priority.MED,
-                "！": Priority.MED,
-                "？": Priority.MED,            
-                ".": Priority.MED,
-                "!": Priority.MED,
-                "?": Priority.MED,
-
-                "，": Priority.LOW,
-                "；": Priority.LOW,
-                "：": Priority.LOW,
-                ",": Priority.LOW,
-                ";": Priority.LOW,
-                ":": Priority.LOW
-            })
-        force_chunk : bool = False
-        @model_validator(mode='after')
-        def verify_separators(self) -> Self:
-            if self.separators is not None and not all(len(key) == 1 for key in self.separators):
-                raise ValueError("A separator does not have length 1")
-            return self
 
 class CluenerTokenizer(Tokenizer):
     def __init__(self, tokenizer):
@@ -90,7 +61,7 @@ class CluenerModel(NERModel):
         return text.lower()
     
     def validate(self, params: Dict[str, str | int | float | bool]) -> NERModelParamsBase:
-        return CluenerModelParams.model_validate(params)
+        return CluenerModelParams.model_validate(params, context={'skip_default_values' : True})
 
 class Cluener:
     

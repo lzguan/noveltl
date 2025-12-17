@@ -3,8 +3,10 @@ Pydantic schemas for labels.
 """
 
 from pydantic import BaseModel, Field, model_validator, ConfigDict
-from typing import List, Literal, Annotated, Union, Self
+from typing import List, Literal, Annotated, Union, Self, Tuple
 from .constants import *
+from ..autolabels.validators import SmallDict
+from ..autolabels.constants import MAX_PARAMS_FIELDS
 
 class LabelGroup(BaseModel):
     """
@@ -217,3 +219,33 @@ class UpdateLabelDataStreamResponse(BaseModel):
     """
     status : Literal["success", "fail"]
     detail : str | None = None
+
+class CreateLabelDataByAutoLabel(BaseModel):
+    """
+    Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.
+
+    Attributes:
+        model_name: Name of NER model that performed the autolabeling.
+        model_params: Parameters of model used.
+        raw_chapter_ids: Optional filter on what chapters to include.
+        raw_chapter_revision_ids: Optional filter on what revisions to include.
+        start: Optional filter on the least chapter number to include.
+        end: Optional filter on the greatest chapter number to include.
+    """
+    model_name : str
+    model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
+    raw_chapter_ids : List[int] | None
+    raw_chapter_revision_ids : List[int] | None
+    start : int | None
+    end : int | None
+
+class CreateLabelDataByAutoLabelStatus(BaseModel):
+    """
+    Return message for CreateLabelDataByAutoLabel.
+
+    Attributes:
+        success: List of ids of RawChapterRevisions for successful inserts
+        errors: List of tuples of (RawChapterRevision ids for failed inserts, error message)
+    """
+    success : List[int]
+    errors: List[Tuple[int, str]]

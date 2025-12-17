@@ -2,19 +2,22 @@
 Service functions for labels.
 """
 
-from ..auth.models import User
 from . import models
 from . import schemas
 from sqlalchemy.orm import Session, defer
-from sqlalchemy import select
+from sqlalchemy import select, insert
 from sqlalchemy.exc import IntegrityError, NoResultFound, DataError
-from typing import Sequence, Dict, List
+from typing import Sequence, Dict, List, Tuple
 from .utils import apply_operation
 from .exceptions import *
 from ..novels.exceptions import NovelNotFoundException, RawChapterRevisionNotFoundException, RawChapterRevisionNotFinalException
 from psycopg2 import errorcodes, Error as PgError
 from ..novels import models as novel_models
 from ..novels.service import query_raw_chapter_revision_by_id
+from ..autolabels import models as autolabel_models
+from ..autolabels.constants import AutoLabelProgress
+from ..auth.models import User
+from ..auth.constants import UserType
 
 def query_label_groups_by_user(db : Session, current_user : User) -> Sequence[models.LabelGroup]:
     """
@@ -327,3 +330,102 @@ def modify_label_data_by_stream(db : Session, current_user : User, label_data_id
     except Exception as e:
         db.rollback()
         raise e
+    
+def insert_label_datas_by_autolabels(
+        db : Session, 
+        current_user : User, 
+        label_group_id : int,
+        request : schemas.CreateLabelDataByAutoLabel
+    ) -> schemas.CreateLabelDataByAutoLabelStatus:
+    """
+    Move autolabels from the autolabels table over to label_datas/labels. Will try to insert each new label_data and all labels associated with it. Best effort function - try to insert as many new label_datas as possible, and log the errors in the return value.
+
+    Args:
+        db: Database being used.
+        current_user: User performing the operation.
+        label_group_id: id of label group to attach new label_datas to.
+        request: Parameters to specify which autolabels get processed.
+    
+    Todo:
+        Right now, label inserts are being done chapter by chapter. This requires one message sent to database per chapter. We would ideally like to minimize the amount of communication being done between the database and the backend. To accomplish this, we will batch database communication into bundles of 50 chapters each and perform chapter-by-chapter message sending on a bundle only if that bundle fails on initial update. 
+
+        Note this can probably be optimized further, but not sure if it's worth it. 
+    """
+    # user validation
+    label_group = query_label_group_by_id(db, current_user, label_group_id)
+
+    q = select(
+        autolabel_models.AutoLabel, novel_models.RawChapterRevision
+    ).join(
+        novel_models.RawChapterRevision,
+        novel_models.RawChapterRevision.raw_chapter_revision_id == autolabel_models.AutoLabel.raw_chapter_revision_id
+    ).join(
+        novel_models.RawChapter,
+        novel_models.RawChapter.raw_chapter_id == novel_models.RawChapterRevision.raw_chapter_id
+    ).join(
+        novel_models.Novel,
+        novel_models.Novel.novel_id == novel_models.RawChapter.novel_id
+    ).where(
+        autolabel_models.AutoLabel.auto_label_model_name == request.model_name
+    ).where(
+        autolabel_models.AutoLabel.auto_label_model_params == request.model_params
+    ).where(
+        autolabel_models.AutoLabel.auto_label_status == AutoLabelProgress.DONE
+    ).where(
+        novel_models.Novel.novel_id == label_group.novel_id
+    )
+    if request.raw_chapter_ids is not None and len(request.raw_chapter_ids) > 0:
+        q = q.where(novel_models.RawChapter.raw_chapter_id.in_(request.raw_chapter_ids))
+    if request.raw_chapter_revision_ids is not None and len(request.raw_chapter_revision_ids) > 0:
+        q = q.where(novel_models.RawChapterRevision.raw_chapter_revision_id.in_(request.raw_chapter_revision_ids))
+    if request.start is not None:
+        q = q.where(novel_models.RawChapter.raw_chapter_num >= request.start)
+    if request.end is not None:
+        q = q.where(novel_models.RawChapter.raw_chapter_num < request.end)
+    if current_user.user_type != UserType.ADMIN:
+        q = q.where(novel_models.RawChapterRevision.raw_chapter_revision_is_public == True)
+    result = db.execute(q)
+
+    success : List[int] = []
+    errors : List[Tuple[int, str]] = []
+
+    for a, r in result:
+        autolabel : autolabel_models.AutoLabel = a
+        revision : novel_models.RawChapterRevision = r
+        try:
+            if not all(revision.raw_chapter_revision_text[label['label_start']:label['label_end']] == label['label_word'] for label in autolabel.auto_label_data):
+                raise LabelWordMismatchInvalidOperationException
+            with db.begin_nested():
+                stmt = insert(models.LabelData).values(
+                    {
+                        "label_group_id" : label_group_id,
+                        "raw_chapter_revision_id" : autolabel.raw_chapter_revision_id
+                    }
+                ).returning(
+                    models.LabelData.label_data_id
+                )
+                label_data_id = db.execute(stmt).scalar_one()
+                if autolabel.auto_label_data:
+                    stmt = insert(models.Label).values([{**label, 'label_data_id' : label_data_id} for label in autolabel.auto_label_data])
+                    db.execute(stmt)
+                    success.append(autolabel.raw_chapter_revision_id)
+        except IntegrityError as e:
+            if isinstance(e.orig, PgError):
+                pgcode = e.orig.pgcode
+                if pgcode == errorcodes.UNIQUE_VIOLATION:
+                    errors.append((autolabel.raw_chapter_revision_id, f"Failed insert for chapter revision with id {autolabel.raw_chapter_revision_id}, autolabel id {autolabel.auto_label_id} due to label data for label group already existing."))
+                elif pgcode == errorcodes.EXCLUSION_VIOLATION:
+                    errors.append((autolabel.raw_chapter_revision_id, f"Failed insert for chapter revision with id {autolabel.raw_chapter_revision_id}, autolabel id {autolabel.auto_label_id} due to labels in autolabel data overlapping."))
+                else:
+                    errors.append((autolabel.raw_chapter_revision_id, f"Failed insert for chapter revision with id {autolabel.raw_chapter_revision_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e.orig)}"))
+            else:
+                errors.append((autolabel.raw_chapter_revision_id, f"Failed insert for chapter revision with id {autolabel.raw_chapter_revision_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}"))
+        except Exception as e:
+            errors.append((autolabel.raw_chapter_revision_id, f"Failed insert for chapter revision with id {autolabel.raw_chapter_revision_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}"))
+    try:
+        db.commit()
+    except Exception as e:
+        raise UnknownError(e)
+    return schemas.CreateLabelDataByAutoLabelStatus(success=success, errors=errors)
+
+    

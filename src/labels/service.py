@@ -340,7 +340,7 @@ def insert_label_datas_by_autolabels(
         request : schemas.CreateLabelDataByAutoLabel
     ) -> schemas.CreateLabelDataByAutoLabelStatus:
     """
-    Move autolabels from the autolabels table over to label_datas/labels. Will try to insert each new label_data and all labels associated with it. Best effort function - try to insert as many new label_datas as possible, and log the errors in the return value.
+    Move autolabels from the autolabels table over to label_datas/labels. Will try to insert each new label_data and all labels associated with it. Best effort function - try to insert as many new label_datas as possible, and log the errors in the return value. Successful inserts logged as raw_chapter_revision_id, and errors logged as pairs of (raw_chapter_revision_id, message)
 
     Args:
         db: Database being used.

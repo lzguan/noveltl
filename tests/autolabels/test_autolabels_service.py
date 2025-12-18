@@ -24,12 +24,12 @@ async def test_insert_auto_labels_basic(
     chinese_xianxia_small_test_novel : Novel, 
     chinese_xianxia_small_test_chapters : List[Tuple[RawChapter, RawChapterRevision]], 
     redis : ArqRedis, 
-    db_session : Session, 
+    test_db : Session, 
     sample_users : List[User], 
     worker_mock : Worker
 ):
     ret = await insert_auto_labels(
-        db_session, 
+        test_db, 
         sample_users[0], 
         ArqDispatcher(redis), 
         CreateAutoLabels(
@@ -46,7 +46,7 @@ async def test_insert_auto_labels_basic(
 
     await worker_mock.main()
     q = select(AutoLabel).where(AutoLabel.auto_label_id.in_([ret.inserts[a][0].auto_label_id for a in ret.inserts]))
-    rows = db_session.execute(q).scalars().all()
+    rows = test_db.execute(q).scalars().all()
     for row in rows:
         print(row.__dict__)
         assert row.auto_label_status == AutoLabelProgress.DONE

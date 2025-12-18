@@ -245,7 +245,7 @@ def update_label_data_stream(
     return {"status": "success", "detail": "Operations applied successfully."}
 
 @router.post(
-    '/label-group/{label_group_id}/label-datas/auto-labels', 
+    '/label-groups/{label_group_id}/label-datas/auto-labels', 
     response_model=schemas.CreateLabelDataByAutoLabelStatus
 )
 def create_label_datas_by_auto_labels(

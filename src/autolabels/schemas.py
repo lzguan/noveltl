@@ -64,10 +64,10 @@ class AutoLabel(BaseModel):
         auto_label_data: Dictionary containing the auto-labeled data.
         auto_label_model_name: Name of the model used to generate the auto labels.
         auto_label_model_params: Parameters used for the model to generate the auto labels.
-        auto_label_model_is_deterministic: Whether the model is deterministic.
         auto_label_status: Labeling progress for this autolabel.
         auto_label_message: Details on status.
         raw_chapter_revision_id: Chapter this AutoLabel is associated with.
+        auto_label_last_job_id: Job id of last job that was run on this AutoLabel.
     """
     model_config = ConfigDict(from_attributes=True)
     auto_label_id : int
@@ -87,10 +87,10 @@ class AutoLabelMeta(BaseModel):
         auto_label_id: Integer identifier for this AutoLabel.
         auto_label_model_name: Name of the model used to generate the auto labels.
         auto_label_model_params: Parameters used for the model to generate the auto labels.
-        auto_label_model_is_deterministic: Whether the model is deterministic.
         auto_label_status: Labeling progress for this autolabel.
         auto_label_message: Details on status.
         raw_chapter_revision_id: Chapter this AutoLabel is associated with.
+        auto_label_last_job_id: Job id of last job that was run on this AutoLabel.
     """
     model_config = ConfigDict(from_attributes=True)
 

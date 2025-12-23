@@ -38,6 +38,7 @@ We will divide this applications into distinct services.
         4. **Public** - this novel is accessible to requests.
     - Each novel will have a list of contributors, along with an owner. These will be stored in an associative array with entries of the form (user, novel, contributor_type).
     - Each chapter revision will be either public or not public. Public chapter revisions will be visible to all user requests so long as the user has the permissions to view the novel. Otherwise, only contributors to the novel will have permissions to view the chapter.
+    - To account for translations, novels will be able to link to other novels via nullable _novel parent_ foreign keys. Novels can then be classified into _novel types_ - for example, `'translation'`, `'original'`, etc.
 
 #### Labels
 - This service will store information about the labeling for novels. 

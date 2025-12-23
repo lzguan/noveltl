@@ -63,8 +63,3 @@ We will divide this applications into distinct services.
 
 - Users are able to aggregate data in a label group to create _glossaries_. Each glossary corresponds to a label group. A glossary stores a JSON dict with entries of the form `term : (translation_of_term, description_of_term)`. Users must manually regenerate glossaries to ensure they are up to date with the current labelling. Glossaries that are not up to date with labelling are marked as such.
 
-#### Translations
-- Details not yet decided. Will likely follow the same schema as **Novels**. Autogeneration will take glossaries from the **Labels** service and pipe it into an LLM.
-
-## v2
-

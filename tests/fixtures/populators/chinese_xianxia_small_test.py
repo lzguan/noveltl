@@ -6,6 +6,7 @@ import json
 
 from src.languages.models import Language
 from src.novels.models import Novel, RawChapter, RawChapterRevision
+from src.novels.constants import NovelType, Visibility
 from src.labels.models import LabelGroup
 from src.auth.models import User
 from src.auth.constants import UserType
@@ -36,7 +37,7 @@ def chinese_xianxia_small_test_novel(
     chinese_xianxia_small_test_language : Language, 
     test_db : Session
 ) -> Novel:
-    test_novel = Novel(novel_title="Test", language_id=chinese_xianxia_small_test_language.language_id)
+    test_novel = Novel(novel_title="Test", language_id=chinese_xianxia_small_test_language.language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
     test_db.add(test_novel)
     test_db.commit()
     return test_novel

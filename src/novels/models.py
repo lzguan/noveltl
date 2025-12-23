@@ -4,8 +4,9 @@ Database models for novels and chapters.
 
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
-from sqlalchemy import String, UniqueConstraint, ForeignKey, Integer, Text, Boolean, Index, CheckConstraint, or_, not_
-from typing import List, TYPE_CHECKING
+from sqlalchemy import Dialect, String, UniqueConstraint, ForeignKey, Integer, Text, Boolean, Enum, Index, CheckConstraint, or_, not_
+from sqlalchemy.types import TypeDecorator
+from typing import Any, List, TYPE_CHECKING
 from .constants import *
 from ..models import Base
 
@@ -13,6 +14,32 @@ if TYPE_CHECKING:
     from src.languages.models import Language
     from src.translations.models import Translation, TranslatedChapter
     from src.labels.models import LabelGroup, LabelData
+    from src.auth.models import User
+
+class EnumAsInteger(TypeDecorator):
+    """
+    Custom SQLAlchemy type to store Python Enums as integers in the database.
+
+    Copied off stackoverflow.
+    https://stackoverflow.com/questions/32287299/sqlalchemy-database-int-to-python-enum
+    """
+    impl = Integer
+
+    def __init__(self, enum_type):
+        super(EnumAsInteger, self).__init__()
+        self.enum_type = enum_type
+
+    def process_bind_param(self, value: Any | None, dialect: Dialect) -> Any:
+        if value is not None and isinstance(value, self.enum_type):   
+            return value.value
+        raise ValueError(f"Invalid value {value} for enum {self.enum_type}")
+
+    def process_result_value(self, value: Any | None, dialect: Dialect) -> Any | None:
+        return self.enum_type(value)
+    
+    def copy(self, **kwargs):
+        return EnumAsInteger(self.enum_type)
+
 
 class Novel(Base):
     """
@@ -23,6 +50,9 @@ class Novel(Base):
         novel_title: Title of novel.
         novel_description: Description/summary of novel.
         novel_author: Author of novel.
+        novel_visibility: Visibility level of novel. Encoded as a Visibility enum.
+        novel_type: Type of novel. Encoded as a NovelType enum.
+        novel_parent_id: Integer foreign key identifier to parent novel, for example if this novel is a translation of another novel.
         language_id: Integer foreign key for the language the novel is written in.
     
     Note:
@@ -35,6 +65,12 @@ class Novel(Base):
     novel_title : Mapped[str] = mapped_column(String(MAX_NOVEL_TITLE_LEN), nullable=False)
     novel_description : Mapped[str] = mapped_column(Text, nullable=True)
     novel_author : Mapped[str] = mapped_column(String(MAX_AUTHOR_LENGTH), nullable=True)
+    novel_visibility : Mapped[Visibility] = mapped_column(EnumAsInteger(Visibility), nullable=False)
+    novel_type : Mapped[NovelType] = mapped_column(Enum(NovelType, native_enum=False, length=16, values_callable=lambda x : [str(e.value) for e in x]), nullable=False)
+
+    novel_parent_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id'), nullable=True)
+    novel_parent : Mapped["Novel"] = relationship("Novel", back_populates="novel_children", remote_side=[novel_id])
+    novel_children : Mapped[List["Novel"]] = relationship("Novel", back_populates="novel_parent")
 
     language_id = mapped_column(ForeignKey("languages.language_id"), nullable=False)
     language_of_novel : Mapped["Language"] = relationship(back_populates="novels_with_language")
@@ -42,6 +78,33 @@ class Novel(Base):
     raw_chapters_with_novel : Mapped[List["RawChapter"]] = relationship(back_populates='novel_of_raw_chapter')
     translations_with_novel : Mapped[List["Translation"]] = relationship(back_populates='novel_of_translation')
     label_groups_with_novel : Mapped[List["LabelGroup"]] = relationship(back_populates='novel_of_label_group')
+    contributors_with_novel : Mapped[List["Contributor"]] = relationship(back_populates='novel_of_contributor')
+
+class Contributor(Base):
+    """
+    Database model for a contributor to a novel. Effectively an associative array for a many-many relationship between users and novels.
+
+    Attributes:
+        contributor_id: Integer primary key identifier.
+        contributor_role: Role of the contributor in the novel.
+        novel_id: Integer foreign key identifier to the novel this contributor contributes to.
+        user_id: Integer foreign key identifier to the user who is the contributor.
+    """
+    __tablename__ = 'novel_contributors'
+
+    contributor_id : Mapped[int] = mapped_column(primary_key=True)
+    contributor_role : Mapped[Role] = mapped_column(Enum(Role, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False)
+    
+    novel_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id'), nullable=False)
+    novel_of_contributor : Mapped["Novel"] = relationship(back_populates='contributors_with_novel')
+    
+    user_id : Mapped[int] = mapped_column(ForeignKey('users.user_id'), nullable=False)
+    user_of_contributor : Mapped["User"] = relationship(back_populates='contributors_with_user')
+
+    __table_args__ = (
+        UniqueConstraint('novel_id', 'user_id', name='uq_novel_user'),
+    )
+
 
 class RawChapter(Base):
     """

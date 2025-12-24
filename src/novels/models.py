@@ -12,7 +12,6 @@ from ..models import Base
 
 if TYPE_CHECKING:
     from src.languages.models import Language
-    from src.translations.models import Translation, TranslatedChapter
     from src.labels.models import LabelGroup, LabelData
     from src.auth.models import User
 
@@ -76,7 +75,6 @@ class Novel(Base):
     language_of_novel : Mapped["Language"] = relationship(back_populates="novels_with_language")
 
     raw_chapters_with_novel : Mapped[List["RawChapter"]] = relationship(back_populates='novel_of_raw_chapter')
-    translations_with_novel : Mapped[List["Translation"]] = relationship(back_populates='novel_of_translation')
     label_groups_with_novel : Mapped[List["LabelGroup"]] = relationship(back_populates='novel_of_label_group')
     contributors_with_novel : Mapped[List["Contributor"]] = relationship(back_populates='novel_of_contributor')
 
@@ -126,8 +124,6 @@ class RawChapter(Base):
 
     novel_id = mapped_column(ForeignKey('novels.novel_id'), nullable=False)
     novel_of_raw_chapter : Mapped[Novel] = relationship(back_populates='raw_chapters_with_novel')
-
-    translated_chapters_with_raw_chapter : Mapped[List["TranslatedChapter"]] = relationship(back_populates='raw_chapter_of_translated_chapter')
 
     raw_chapter_revisions_with_raw_chapter : Mapped[List["RawChapterRevision"]] = relationship(back_populates='raw_chapter_of_raw_chapter_revision')
 

@@ -10,7 +10,7 @@ from ..models import Base
 
 if TYPE_CHECKING:
     from src.labels.models import LabelGroup
-    from src.translations.models import Translation
+
     from src.novels.models import Contributor
 
 class User(Base):
@@ -41,5 +41,4 @@ class User(Base):
     )
 
     label_groups_with_user : Mapped[List["LabelGroup"]] = relationship(back_populates='user_of_label_group')
-    translations_with_user : Mapped[List["Translation"]] = relationship(back_populates='user_of_translation')
     contributors_with_user : Mapped[List["Contributor"]] = relationship(back_populates='user_of_contributor')

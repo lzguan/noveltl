@@ -5,6 +5,13 @@ Todo:
     Implement user permissions.
 """
 
+from sqlalchemy import select, update, literal, insert, delete
+from sqlalchemy.orm import Session, defer
+from sqlalchemy.exc import IntegrityError, NoResultFound, DataError, MultipleResultsFound
+from typing import List, Dict, Sequence
+from collections import defaultdict
+from psycopg2 import errorcodes, Error as PgError
+
 from . import models
 from . import schemas
 from .utils import *
@@ -12,32 +19,27 @@ from .exceptions import *
 from .constants import *
 from ..auth.models import User
 from ..languages.exceptions import LanguageNotFoundException
-from sqlalchemy.orm import Session, defer
-from typing import List, Dict, Sequence
-from sqlalchemy.exc import IntegrityError, NoResultFound, DataError, MultipleResultsFound
-from sqlalchemy import select
-from collections import defaultdict
 from ..config import uvicorn_logger
-from psycopg2 import errorcodes, Error as PgError
+from .permissions import *
 
 def query_novels_by_title(
         db : Session, 
-        current_user : User, 
+        current_user : User | None, 
         novel_title : str | None
     ) -> Sequence[models.Novel]:
     """
-    Queries novels with novel_title as substring.
+    Queries novels with novel_title as substring. Selects only public novels.
 
     Args:
         db: Database from which we are querying.
-        current_user: User that is querying.
+        current_user: User that is querying. Can be None for guest access.
         novel_title: Substring we wish to search for.
     """
     if novel_title is None:
         search_term = "%"
     else:
         search_term = f"%{novel_title}%"
-    q = select(models.Novel).where(models.Novel.novel_title.ilike(search_term))
+    q = select(models.Novel).where(models.Novel.novel_title.ilike(search_term)).where(models.Novel.novel_visibility == Visibility.PUBLIC)
     result = db.execute(q)
     result_scalars = result.scalars().all()
     
@@ -45,15 +47,15 @@ def query_novels_by_title(
 
 def query_novel_by_id(
         db : Session, 
-        current_user : User, 
+        current_user : User | None, 
         novel_id : int
     ) -> models.Novel:
     """
-    Queries a novel by id
+    Queries a novel by id. Will return a novel if the user has permission to view it and throws an exception otherwise.
 
     Args:
         db: Database from which we are querying.
-        current_user: User that is querying.
+        current_user: User that is querying. Can be None for guest access.
         novel_id: id of novel in database.
     
     Raises:
@@ -61,6 +63,7 @@ def query_novel_by_id(
         NovelTooManyFoundException: Multiple novels with id found in database.
     """
     q = select(models.Novel).where(models.Novel.novel_id == novel_id)
+    q = novel_mod_access_select(q, current_user)
     result = db.execute(q)
     try:
         result_scalar = result.scalar_one()
@@ -72,13 +75,13 @@ def query_novel_by_id(
 
 def query_raw_chapters_by_novel(
         db : Session, 
-        current_user : User, 
+        current_user : User | None, 
         novel_id : int, 
         start : int | None, 
         end : int | None
     ) -> Sequence[models.RawChapter]:
     """
-    Query all chapters of a specific novel satisfying certain conditions.
+    Query all chapters of a specific novel satisfying certain conditions. Only returns chapters that the user has permission to view.
 
     Args:
         db: Database from which we are querying.
@@ -89,20 +92,29 @@ def query_raw_chapters_by_novel(
     
     Raises:
     """
-    q = select(models.RawChapter).where(models.RawChapter.novel_id == novel_id)
+    q = select(
+        models.RawChapter
+    ).select_from(
+        models.Novel
+    ).where(
+        models.Novel.novel_id == novel_id
+    ).join(
+        models.RawChapter, 
+        models.RawChapter.novel_id == models.Novel.novel_id
+    )
     if start is not None:
         q = q.where(models.RawChapter.raw_chapter_num >= start)
     if end is not None:
         q = q.where(models.RawChapter.raw_chapter_num < end)
-    result_scalars = db.execute(q).scalars().all()
-    if len(result_scalars) == 0:
-        # throws error if novel_id is invalid
-        query_novel_by_id(db, current_user, novel_id)
+    q = raw_chapter_mod_access_select(q, current_user)
+    q = q.order_by(models.RawChapter.raw_chapter_num.asc())
+    result = db.execute(q)
+    result_scalars = result.scalars().all()
     return result_scalars
 
 def query_raw_chapter_by_id(
         db : Session, 
-        current_user : User, 
+        current_user : User | None, 
         raw_chapter_id : int
     ) -> models.RawChapter:
     """
@@ -117,7 +129,15 @@ def query_raw_chapter_by_id(
         RawChapterNotFoundException: Chapter not found in database.
         sqlalchemy.exc.MultipleResultsFound: Multiple chapters with id found in database.
     """
-    q = select(models.RawChapter).where(models.RawChapter.raw_chapter_id == raw_chapter_id)
+    q = select(
+        models.RawChapter
+    ).where(
+        models.RawChapter.raw_chapter_id == raw_chapter_id
+    ).join(
+        models.Novel, 
+        models.RawChapter.novel_id == models.Novel.novel_id
+    )
+    q = raw_chapter_mod_access_select(q, current_user)
     result = db.execute(q)
     try:
         result_scalar = result.scalar_one()
@@ -127,7 +147,7 @@ def query_raw_chapter_by_id(
 
 def query_raw_chapter_revision_by_id(
         db : Session, 
-        current_user : User,
+        current_user : User | None,
         raw_chapter_revision_id : int
     ) -> models.RawChapterRevision:
     """
@@ -142,7 +162,18 @@ def query_raw_chapter_revision_by_id(
         RawChapterRevisionNotFoundException: If raw_chapter_revision_id does not correspond to a chapter revision.
         InsufficientPermissionsException: If a user does not have permission to access this revision.
     """
-    q = select(models.RawChapterRevision).where(models.RawChapterRevision.raw_chapter_revision_id == raw_chapter_revision_id)
+    q = select(
+        models.RawChapterRevision
+    ).where(
+        models.RawChapterRevision.raw_chapter_revision_id == raw_chapter_revision_id
+    ).join(
+        models.RawChapter,
+        models.RawChapter.raw_chapter_id == models.RawChapterRevision.raw_chapter_id
+    ).join(
+        models.Novel,
+        models.Novel.novel_id == models.RawChapter.novel_id
+    )
+    q = raw_chapter_revision_mod_access_select(q, current_user)
     result = db.execute(q)
     try:
         result_scalar = result.scalar_one()
@@ -152,7 +183,7 @@ def query_raw_chapter_revision_by_id(
 
 def query_raw_chapter_revisions_by_raw_chapter(
         db : Session,
-        current_user : User,
+        current_user : User | None,
         raw_chapter_id : int,
         is_public : bool | None,
         is_primary : bool | None
@@ -172,12 +203,18 @@ def query_raw_chapter_revisions_by_raw_chapter(
     Notes:
         The caller should be responsible for converting to the best pydantic model for the use case.
     """
-    q = select(models.RawChapterRevision).where(models.RawChapterRevision.raw_chapter_id == raw_chapter_id)
+    q = select(models.RawChapterRevision).where(models.RawChapterRevision.raw_chapter_id == raw_chapter_id).join(
+        models.RawChapter,
+        models.RawChapter.raw_chapter_id == models.RawChapterRevision.raw_chapter_id
+    ).join(
+        models.Novel,
+        models.Novel.novel_id == models.RawChapter.novel_id
+    )
     if is_public is not None:
         q = q.where(models.RawChapterRevision.raw_chapter_revision_is_public == is_public)
     if is_primary is not None:
         q = q.where(models.RawChapterRevision.raw_chapter_revision_is_primary == is_primary)
-    
+    q = raw_chapter_revision_mod_access_select(q, current_user)
     result = db.execute(q)
     result_rows = result.scalars().all()
     if len(result_rows) == 0:
@@ -186,7 +223,7 @@ def query_raw_chapter_revisions_by_raw_chapter(
 
 def query_raw_chapter_revisions_by_novel(
         db : Session, 
-        current_user : User,
+        current_user : User | None,
         novel_id : int, 
         start : int | None, 
         end : int | None, 
@@ -212,10 +249,15 @@ def query_raw_chapter_revisions_by_novel(
     """
     q = select(models.RawChapter.raw_chapter_num, models.RawChapterRevision).options(
         defer(models.RawChapterRevision.raw_chapter_revision_text)
+    ).select_from(
+        models.RawChapterRevision
     ).join(
         models.RawChapter, models.RawChapter.raw_chapter_id == models.RawChapterRevision.raw_chapter_id
+    ).join(
+        models.Novel, 
+        models.Novel.novel_id == models.RawChapter.novel_id
     ).where(
-        models.RawChapter.novel_id == novel_id
+        models.Novel.novel_id == novel_id
     )
     if start is not None:
         q = q.where(models.RawChapter.raw_chapter_num >= start)
@@ -227,6 +269,7 @@ def query_raw_chapter_revisions_by_novel(
         q = q.where(models.RawChapterRevision.raw_chapter_revision_is_primary == is_primary)
     if is_final is not None:
         q = q.where(models.RawChapterRevision.raw_chapter_revision_is_final == is_final)
+    q = raw_chapter_revision_mod_access_select(q, current_user)
     result = db.execute(q)
     result_rows  = result.all()
     if len(result_rows) == 0:
@@ -235,21 +278,21 @@ def query_raw_chapter_revisions_by_novel(
     for chapter_num, raw_chapter_revision in result_rows:
         uvicorn_logger.info(chapter_num)
         uvicorn_logger.info(raw_chapter_revision)
-        ret_dict[chapter_num].append(schemas.RawChapterRevisionMeta.model_validate(raw_chapter_revision.__dict__))
+        ret_dict[chapter_num].append(schemas.RawChapterRevisionMeta.model_validate(raw_chapter_revision))
     return ret_dict
 
 def insert_novel(
         db : Session, 
         current_user : User, 
-        novel : schemas.CreateNovel
+        request : schemas.CreateNovel
     ) -> models.Novel:
     """
     Insert a novel into the database.
 
     Args:
         db: Database which we are inserting into.
-        current_user: User performing the insert. Exact user validation protocol has yet to be determined.
-        novel: Metadata of novel.
+        current_user: User performing the insert. Only users/admins can create novels.
+        request: Metadata of novel.
     
     Raises:
         LanguageNotFoundException: Language id in request does not exist.
@@ -257,9 +300,12 @@ def insert_novel(
         InsufficientPermissionsException: User does not have permission to create a novel
         UnknownError: Some other error occured.
     """
-    db_novel = models.Novel(**novel.model_dump())
+    novel = models.Novel(**request.model_dump())
     try:
-        db.add(db_novel)
+        db.add(novel)
+        db.flush()
+        contributor = Contributor(contributor_role=Role.OWNER, novel_id=novel.novel_id, user_id=current_user.user_id)
+        db.add(contributor)
         db.commit()
     except IntegrityError as e:
         db.rollback()
@@ -278,13 +324,13 @@ def insert_novel(
     except Exception as e:
         db.rollback()
         raise UnknownError(e)
-    return db_novel
+    return novel
 
 def modify_novel(
         db : Session, 
         current_user : User, 
         novel_id : int, 
-        update : schemas.UpdateNovel
+        request : schemas.UpdateNovel
     ) -> models.Novel:
     """
     Modifies novel with novel_id.
@@ -293,24 +339,24 @@ def modify_novel(
         db: Database containing the novel to modify.
         current_user: User performing the modify. Exact user validation protocol has yet to be determined.
         novel_id: id of novel to modify.
-        update: Proposed updated metadata.
+        request: Proposed updated metadata.
     
     Raises:
         NovelNotFoundException: Novel not found in database.
         NovelTooManyFoundException: Multiple novels with id found in database.
         DataTooLongException: Data we are updating to is too long for some string field.
         InsufficientPermissionsException: Current user does not have permission to update this resource.
-    Todo:
-        Make this function atomic.
     """
-    db_novel = query_novel_by_id(db, current_user, novel_id)
+    stmt = update(
+        models.Novel
+    ).where(
+        models.Novel.novel_id == novel_id
+    ).values(request.model_dump(exclude_unset=True))
+    stmt = novel_mod_access_update(stmt, current_user)
+    stmt = stmt.returning(models.Novel)
     try:
-        if update.novel_title is not None:
-            db_novel.novel_title = update.novel_title 
-        if update.novel_author is not None:
-            db_novel.novel_author = update.novel_author
-        if update.novel_description is not None:
-            db_novel.novel_description = update.novel_description
+        result = db.execute(stmt)
+        result_row = result.scalar_one()
         db.commit()
     except DataError as e:
         db.rollback()
@@ -322,16 +368,20 @@ def modify_novel(
     except MultipleResultsFound as e:
         db.rollback()
         raise NovelTooManyFoundException
+    except NoResultFound as e:
+        db.rollback()
+        raise NovelNotFoundException
     except Exception as e:
         db.rollback()
         raise UnknownError(e)
-    return db_novel
+    
+    return result_row
 
 def insert_raw_chapter(
         db : Session, 
         current_user : User, 
         novel_id : int, 
-        raw_chapter : schemas.CreateRawChapter
+        request : schemas.CreateRawChapter
     ) -> models.RawChapter:
     """
     Insert a raw chapter into a database.
@@ -348,9 +398,20 @@ def insert_raw_chapter(
         InsufficientPermissionsException: Current user does not have permissions to perform this action.
         UnknownError: Some other error occured.
     """
-    new_chapter = models.RawChapter(**raw_chapter.model_dump(), novel_id=novel_id)
+    data = list(request.model_dump().items())
+    data.append(('novel_id', novel_id))
+    cols = [k for k, _ in data]
+
+    vals = select(
+        *[literal(v) for _, v in data]
+    )
+    vals = raw_chapter_mod_access_insert(vals, current_user, novel_id)
+    stmt = insert(models.RawChapter).from_select(cols, vals).returning(models.RawChapter)
+
+
     try:
-        db.add(new_chapter)
+        result = db.execute(stmt)
+        result_row = result.scalar_one()
         db.commit()
     except IntegrityError as e:
         db.rollback()
@@ -361,16 +422,22 @@ def insert_raw_chapter(
             if pgcode == errorcodes.UNIQUE_VIOLATION:
                 raise ChapterNumDuplicateException(str(e.orig))
         raise UnknownError(e)
+    except NoResultFound as e:
+        db.rollback()
+        raise InsufficientPermissionsException
+    except MultipleResultsFound as e:
+        db.rollback()
+        raise UnknownError(e)
     except Exception as e:
         db.rollback()
         raise UnknownError(e)
-    return new_chapter
+    return result_row
 
 def insert_raw_chapter_revision(
         db : Session, 
         current_user : User, 
         raw_chapter_id : int, 
-        rcr : schemas.CreateRawChapterRevision
+        request : schemas.CreateRawChapterRevision
     ) -> models.RawChapterRevision:
     """
     Insert a raw chapter revision into the database.
@@ -387,9 +454,19 @@ def insert_raw_chapter_revision(
         InsufficientPermissionsException: Current user does not have permissions to perform this action.
         UnknownError: Some other error occured.
     """
-    new_revision = models.RawChapterRevision(**rcr.model_dump(), raw_chapter_id=raw_chapter_id, raw_chapter_revision_is_primary=False, raw_chapter_revision_is_public=False, raw_chapter_revision_is_final=False)
+    data = list(request.model_dump().items())
+    data.extend([('raw_chapter_id', raw_chapter_id), ('raw_chapter_revision_is_primary', False), ('raw_chapter_revision_is_public', False), ('raw_chapter_revision_is_final', False)])
+    cols = [k for k, _ in data]
+
+    vals = select(
+        *[literal(v) for _, v in data]
+    )
+    vals = raw_chapter_revision_mod_access_insert(vals, current_user, raw_chapter_id)
+
+    stmt = insert(models.RawChapterRevision).from_select(cols, vals).returning(models.RawChapterRevision)
     try:
-        db.add(new_revision)
+        result = db.execute(stmt)
+        new_revision = result.scalar_one()
         db.commit()
     except IntegrityError as e:
         db.rollback()
@@ -397,6 +474,12 @@ def insert_raw_chapter_revision(
             pgcode = e.orig.pgcode
             if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
                 raise RawChapterNotFoundException(str(e.orig))
+        raise UnknownError(e)
+    except NoResultFound as e:
+        db.rollback()
+        raise InsufficientPermissionsException
+    except MultipleResultsFound as e:   
+        db.rollback()
         raise UnknownError(e)
     except DataError as e:
         db.rollback()
@@ -414,7 +497,7 @@ def modify_raw_chapter_revision(
         db : Session, 
         current_user : User,
         revision_id : int,
-        rcr : schemas.UpdateRawChapterRevision, 
+        request : schemas.UpdateRawChapterRevision, 
     ) -> models.RawChapterRevision:
     """
     Modifies data of raw chapter revision with revision_id. Cannot modify public revisions.
@@ -430,15 +513,18 @@ def modify_raw_chapter_revision(
         InsufficientPermissionsException: User does not have permission to perform this operation.
         UnknownError: Some other error occured.
     """
-    revision = query_raw_chapter_revision_by_id(db, current_user, revision_id)
-    if revision.raw_chapter_revision_is_final:
-        raise InsufficientPermissionsException # change this to something more descriptive later
-    # check_permissions(current_user)
+    stmt = update(
+        models.RawChapterRevision
+    ).where(
+        models.RawChapterRevision.raw_chapter_revision_id == revision_id
+    ).values(
+        request.model_dump(exclude_unset=True)
+    )
+    stmt = raw_chapter_revision_mod_access_update(stmt, current_user)
+    stmt = stmt.returning(models.RawChapterRevision)
     try:
-        if rcr.raw_chapter_revision_title is not None:
-            revision.raw_chapter_revision_title = rcr.raw_chapter_revision_title
-        if rcr.raw_chapter_revision_text is not None:
-            revision.raw_chapter_revision_text = rcr.raw_chapter_revision_text
+        result = db.execute(stmt)
+        revision = result.scalar_one()
         db.commit()
     except DataError as e:
         db.rollback()
@@ -447,6 +533,9 @@ def modify_raw_chapter_revision(
             if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
                 raise DataTooLongException(str(e.orig))
         raise UnknownError(e)
+    except NoResultFound as e:
+        db.rollback()
+        raise RawChapterRevisionNotFoundException(str(e))
     except Exception as e:
         db.rollback()
         raise UnknownError(e)
@@ -470,11 +559,22 @@ def publish_raw_chapter_revision(
         InsufficientPermissionsException: Current user does not have permissions to perform this action.
         UnknownError: Some other error occured.
     """
-    revision = query_raw_chapter_revision_by_id(db, current_user, raw_chapter_revision_id)
+    stmt = update(
+        models.RawChapterRevision
+    ).where(
+        models.RawChapterRevision.raw_chapter_revision_id == raw_chapter_revision_id
+    ).values(
+        raw_chapter_revision_is_public = True
+    )
+    stmt = raw_chapter_revision_mod_access_update(stmt, current_user)
+    stmt = stmt.returning(models.RawChapterRevision)
     try:
-        if not revision.raw_chapter_revision_is_public:
-            revision.raw_chapter_revision_is_public = True
-            db.commit()
+        result = db.execute(stmt)
+        revision = result.scalar_one()
+        db.commit()
+    except NoResultFound as e:
+        db.rollback()
+        raise InsufficientPermissionsException(str(e))
     except Exception as e:
         db.rollback()
         raise UnknownError(e)
@@ -482,7 +582,7 @@ def publish_raw_chapter_revision(
 
 def make_primary_raw_chapter_revision(db : Session, current_user : User, raw_chapter_revision_id : int) -> models.RawChapterRevision:
     """
-    Mark a raw chapter revision as primary.
+    Mark a raw chapter revision as primary. Returns the chapter marked as primary.
 
     Args:
         db: Database in which the data resides.
@@ -497,31 +597,44 @@ def make_primary_raw_chapter_revision(db : Session, current_user : User, raw_cha
         InsufficientPermissionsException: Current user does not have permissions to perform this action.
         UnknownError: Some other error occured.
     """
-    revision = query_raw_chapter_revision_by_id(db, current_user, raw_chapter_revision_id)
-    if not revision.raw_chapter_revision_is_public:
-        raise RawChapterRevisionNotPublicException
-    primaries = query_raw_chapter_revisions_by_raw_chapter(db, current_user, revision.raw_chapter_id, None, True)
+    stmt = update(
+        models.RawChapterRevision
+    ).where(
+        models.RawChapterRevision.raw_chapter_revision_id != raw_chapter_revision_id
+    ).where(
+        models.RawChapterRevision.raw_chapter_revision_is_primary == True
+    ).where(
+        models.RawChapterRevision.raw_chapter_id == select(
+            models.RawChapterRevision.raw_chapter_id
+        ).where(
+            models.RawChapterRevision.raw_chapter_revision_id == raw_chapter_revision_id
+        ).scalar_subquery()
+    ).values(raw_chapter_revision_is_primary=False)
+    stmt = raw_chapter_revision_mod_access_update(stmt, current_user)
+
+    stmt2 = update(
+        models.RawChapterRevision
+    ).where(
+        models.RawChapterRevision.raw_chapter_revision_id == raw_chapter_revision_id
+    ).values(
+        raw_chapter_revision_is_primary = True
+    )
+    stmt2 = raw_chapter_revision_mod_access_update(stmt2, current_user)
+    stmt2 = stmt2.returning(models.RawChapterRevision)
     try:
-        if len(primaries) == 0:
-            revision.raw_chapter_revision_is_primary = True
-            db.commit()
-        elif len(primaries) > 1:
-            raise UnknownError(f"Error: found more than one primary chapter for chapter with id {revision.raw_chapter_id}")
-        else:
-            current_primary = primaries[0]
-            if current_primary != revision:
-                current_primary.raw_chapter_revision_is_primary = False
-                db.commit()
-                revision.raw_chapter_revision_is_primary = True
-                db.commit()
+        db.execute(stmt)
+        result = db.execute(stmt2)
+        revision = result.scalar_one()
+        db.commit()
+    except NoResultFound as e:
+        db.rollback()
+        raise InsufficientPermissionsException(str(e))
     except IntegrityError as e:
         if isinstance(e.orig, PgError):
             if e.orig.pgcode == errorcodes.UNIQUE_VIOLATION:
-                raise RawChapterRevisionMakePrimaryFailedException(f"Error: committing would violate a unique constraint. This is most likely caused by a race condition.")
+                raise RawChapterRevisionMakePrimaryFailedException(f"Only one primary revision allowed per chapter. {str(e.orig)}")
             if e.orig.pgcode == errorcodes.CHECK_VIOLATION: # extra check
                 raise RawChapterRevisionNotPublicException
-    except UnknownError as e:
-        raise e
     except Exception as e:
         db.rollback()
         raise UnknownError(str(e))
@@ -545,11 +658,23 @@ def make_final_raw_chapter_revision(
         InsufficientPermissionsException: Current user does not have permissions to perform this action.
         UnknownError: Some other error occured.
     """
-    revision = query_raw_chapter_revision_by_id(db, current_user, raw_chapter_revision_id)
+    stmt = update(
+        models.RawChapterRevision
+    ).where(
+        models.RawChapterRevision.raw_chapter_revision_id == raw_chapter_revision_id
+    ).values(
+        raw_chapter_revision_is_final = True
+    )
+    stmt = raw_chapter_revision_mod_access_update(stmt, current_user)
+    stmt = stmt.returning(models.RawChapterRevision)
+
     try:
-        if not revision.raw_chapter_revision_is_final:
-            revision.raw_chapter_revision_is_final = True
-            db.commit()
+        result = db.execute(stmt)
+        revision = result.scalar_one()
+        db.commit()
+    except NoResultFound as e:
+        db.rollback()
+        raise InsufficientPermissionsException(str(e))
     except Exception as e:
         db.rollback()
         raise UnknownError(e)
@@ -558,8 +683,7 @@ def make_final_raw_chapter_revision(
 def remove_raw_chapter_revision(
         db : Session, 
         current_user : User, 
-        raw_chapter_revision_id : int, 
-        force_remove : bool = False
+        raw_chapter_revision_id : int
     ) -> schemas.DeleteRawChapterRevisionStatus:
     """
     Remove a raw chapter revision from the database.
@@ -575,23 +699,16 @@ def remove_raw_chapter_revision(
         InsufficientPermissionsException: Current user has insufficient permissions to delete this chapter.
         DeleteRawChapterFailedException: Delete failed for other reasons.
     """
-    revision = query_raw_chapter_revision_by_id(db, current_user, raw_chapter_revision_id)
-    # check_permissions(current_user)
+    stmt = delete(
+        models.RawChapterRevision
+    ).where(
+        models.RawChapterRevision.raw_chapter_revision_id == raw_chapter_revision_id
+    )
+    stmt = raw_chapter_revision_mod_access_delete(stmt, current_user)
     try:
-        if revision.raw_chapter_revision_is_final:
-            if not force_remove:
-                db.rollback()
-                return schemas.DeleteRawChapterRevisionStatus(status="verify", detail="Verify that you want to delete this public chapter.", verify="")
-            else:
-                # implement delete cascade
-                pass
-        else:
-            db.delete(revision)
-            db.commit()
-    except DeleteRawChapterRevisionFailedException as e:
-        db.rollback()
-        raise e
+        db.execute(stmt)
+        db.commit()
     except Exception as e:
         db.rollback()
-        raise DeleteRawChapterRevisionFailedException
+        raise DeleteRawChapterRevisionFailedException(e)
     return schemas.DeleteRawChapterRevisionStatus(status="success", detail="Delete succeeded.")

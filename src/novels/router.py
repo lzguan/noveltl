@@ -5,7 +5,7 @@ Router functions for novels service.
 from ..database import get_db
 from fastapi import APIRouter, Depends, HTTPException, status
 from .dependencies import *
-from ..auth.dependencies import get_current_user
+from ..auth.dependencies import get_current_user, get_optional_user
 from .service import *
 from .schemas import *
 from typing import Annotated
@@ -19,7 +19,7 @@ router = APIRouter()
 async def read_novel(
     novel_id : int, 
     db : Annotated[Session, Depends(get_db)], 
-    current_user : Annotated[User, Depends(get_current_user)]
+    current_user : Annotated[User | None, Depends(get_optional_user)]
     ):
     """
     Endpoint for retrieving a novel from database.
@@ -49,7 +49,7 @@ async def read_novel(
 )
 async def read_novels(
     db : Annotated[Session, Depends(get_db)], 
-    current_user : Annotated[User, Depends(get_current_user)], 
+    current_user : Annotated[User | None, Depends(get_optional_user)], 
     title_contains : str | None = None
     ):
     """
@@ -70,7 +70,7 @@ async def read_novels(
 async def read_chapters_by_novel(
     novel_id : int, 
     db : Annotated[Session, Depends(get_db)], 
-    current_user : Annotated[User, Depends(get_current_user)], 
+    current_user : Annotated[User | None, Depends(get_optional_user)], 
     start : int | None = None, 
     end : int | None = None
     ):
@@ -91,7 +91,7 @@ async def read_chapters_by_novel(
     '/chapter-revisions/{chapter_revision_id}',
     response_model=schemas.RawChapterRevision
 )
-async def read_chapter_revision(chapter_revision_id : int, db : Annotated[Session, Depends(get_db)], current_user : Annotated[User, Depends(get_current_user)]):
+async def read_chapter_revision(chapter_revision_id : int, db : Annotated[Session, Depends(get_db)], current_user : Annotated[User | None, Depends(get_optional_user)]):
     try:
         revision = query_raw_chapter_revision_by_id(db, current_user, chapter_revision_id)
     except RawChapterRevisionNotFoundException:
@@ -113,7 +113,7 @@ async def read_chapter_revision(chapter_revision_id : int, db : Annotated[Sessio
 async def read_chapter_revisions_by_novel(
     novel_id : int, 
     db : Annotated[Session, Depends(get_db)], 
-    current_user : Annotated[User, Depends(get_current_user)], 
+    current_user : Annotated[User | None, Depends(get_optional_user)], 
     start : int | None = None, 
     end : int | None = None,
     is_public : bool | None = None,
@@ -449,11 +449,10 @@ async def update_make_final_chapter_revision(
 async def delete_chapter_revision(
     revision_id : int, 
     db : Annotated[Session, Depends(get_db)], 
-    current_user : Annotated[User, Depends(get_current_user)],
-    force_remove : bool = False
+    current_user : Annotated[User, Depends(get_current_user)]
     ):
     try:
-        delete_status = remove_raw_chapter_revision(db, current_user, revision_id, force_remove=force_remove)
+        delete_status = remove_raw_chapter_revision(db, current_user, revision_id)
     except RawChapterRevisionNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

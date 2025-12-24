@@ -2,7 +2,7 @@
 Pydantic models for novels and chapters.
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Literal
 from .constants import *
 
@@ -61,11 +61,15 @@ class UpdateNovel(BaseModel):
         novel_description: Updated description of novel we are updating. If None, then do not update.
         novel_author: Author of novel we are creating. If None, then do not update.
         novel_visibility: Updated visibility level of novel we are updating. If None, then do not update.
+        novel_type: Updated novel type. If None, then do not update.
+        novel_parent_id: Updated novel parent id. Will use this parameter if and only if explicitly set in the user request (even if the user request contains null).
     """
     novel_title : str | None = None
     novel_description : str | None = None
     novel_author : str | None = None
     novel_visibility : Visibility | None = None
+    novel_type : NovelType | None = None
+    novel_parent_id: int | None = None
 
 class RawChapter(BaseModel):
     """
@@ -122,6 +126,7 @@ class RawChapterRevisionMeta(BaseModel):
         raw_chapter_revision_is_public: Boolean flag for whether this revision is public and immutable.
         raw_chapter_id: Integer foreign key to the parent raw chapter.
     """
+    model_config = ConfigDict(from_attributes=True)
 
     raw_chapter_revision_id : int
     raw_chapter_revision_title : str
@@ -158,13 +163,11 @@ class DeleteRawChapterRevisionStatus(BaseModel):
     Pydantic model to signal return status of delete operation for raw chapter revision.
 
     Attributes:
-        status: One of "success", "fail", "verify".
+        status: One of "success", "fail".
         detail: Details on operation.
-        verify: If verification, link to verify.
     
     Notes:
-        Unless under exceptional circumstances, should not return an error and just raise an exception.
+        Unless under exceptional circumstances, should not return fail and just raise an exception.
     """
-    status : Literal["success", "fail", "verify"]
+    status : Literal["success", "fail"]
     detail : str | None = None
-    verify : str | None = None

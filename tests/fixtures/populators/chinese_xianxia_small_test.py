@@ -26,6 +26,7 @@ class Hash(Protocol):
     def verify(self, password : str | bytes, hash : str | bytes) -> bool:
         ...
 
+@pytest.fixture
 def chinese_xianxia_small_test_user(test_db : Session, no_hash : Hash) -> User:
     user = User(user_name="yomomma", user_hashed_password=no_hash.hash("abc"), user_type=UserType.USER)
     test_db.add(user)
@@ -43,11 +44,11 @@ def chinese_xianxia_small_test_novel(
     return test_novel
 
 @pytest.fixture
-def chinese_xianxia_small_test_label_group(sample_users : List[User], chinese_xianxia_small_test_novel : Novel, test_db : Session) -> LabelGroup:
+def chinese_xianxia_small_test_label_group(chinese_xianxia_small_test_user : User, chinese_xianxia_small_test_novel : Novel, test_db : Session) -> LabelGroup:
     """
-    Fixture for a single label group using sample_users, with sample_users[0] being the owning user
+    Fixture for a single label group.
     """
-    label_group = LabelGroup(label_group_name="small test", user_id=sample_users[0].user_id, novel_id=chinese_xianxia_small_test_novel.novel_id)
+    label_group = LabelGroup(label_group_name="small test", user_id=chinese_xianxia_small_test_user.user_id, novel_id=chinese_xianxia_small_test_novel.novel_id)
     test_db.add(label_group)
     test_db.commit()
     return label_group

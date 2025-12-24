@@ -25,12 +25,12 @@ async def test_insert_auto_labels_basic(
     chinese_xianxia_small_test_chapters : List[Tuple[RawChapter, RawChapterRevision]], 
     redis : ArqRedis, 
     test_db : Session, 
-    sample_users : List[User], 
+    chinese_xianxia_small_test_user : User, 
     worker_mock : Worker
 ):
     ret = await insert_auto_labels(
         test_db, 
-        sample_users[0], 
+        chinese_xianxia_small_test_user,
         ArqDispatcher(redis), 
         CreateAutoLabels(
             raw_chapter_revision_ids=[revision.raw_chapter_revision_id for _, revision in chinese_xianxia_small_test_chapters],

@@ -20,12 +20,12 @@ def test_label_insert_label_data_by_autolabels_basic(
     chinese_xianxia_small_test_chapters : List[Tuple[novel_models.RawChapter, novel_models.RawChapterRevision]],
     chinese_xianxia_small_test_novel : novel_models.Novel,
     chinese_xianxia_small_test_default_params_cluener : Dict,
-    sample_users : List[auth_models.User],
+    chinese_xianxia_small_test_user : auth_models.User,
     test_db : Session
 ):
     # this test is AI generated.
     request = CreateLabelDataByAutoLabel(model_name='cluener', model_params=chinese_xianxia_small_test_default_params_cluener)
-    res = insert_label_datas_by_autolabels(test_db, sample_users[0], chinese_xianxia_small_test_label_group.label_group_id, request)
+    res = insert_label_datas_by_autolabels(test_db, chinese_xianxia_small_test_user, chinese_xianxia_small_test_label_group.label_group_id, request)
 
     assert len(res.errors) == 0, f"Expected 0 errors, got: {res.errors}"
     expected_count = len(chinese_xianxia_small_test_autolabels_cluener)

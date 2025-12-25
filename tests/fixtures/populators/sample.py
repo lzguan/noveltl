@@ -7,6 +7,7 @@ from src.languages.models import Language
 from src.auth.constants import UserType
 from src.auth.models import User
 from src.novels.models import Novel
+from src.novels.constants import NovelType, Visibility
 
 class Hash(Protocol):
     def hash(self, password : str | bytes, *args, **kwargs) -> str:
@@ -41,10 +42,10 @@ def sample_users(test_db : Session, recommended_hash : Hash) -> List[User]:
 @pytest.fixture
 def sample_novels(sample_languages : Dict[str, Language], test_db : Session) -> List[Novel]:
     # Create some sample novels
-    novel0 = Novel(novel_title="Sample Novel 1", language_id=sample_languages['en'].language_id)
-    novel1 = Novel(novel_title="Sample Novel 2", language_id=sample_languages['zh'].language_id)
-    novel2 = Novel(novel_title="Sample Novel 3", language_id=sample_languages['kr'].language_id, novel_description="A description.", novel_author="An Author")
-    novel3 = Novel(novel_title="Smample Novel 4", language_id=sample_languages['zh'].language_id, novel_description="Another description.", novel_author="Another Author")
+    novel0 = Novel(novel_title="Sample Novel 1", language_id=sample_languages['en'].language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
+    novel1 = Novel(novel_title="Sample Novel 2", language_id=sample_languages['zh'].language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
+    novel2 = Novel(novel_title="Sample Novel 3", language_id=sample_languages['kr'].language_id, novel_description="A description.", novel_author="An Author", novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
+    novel3 = Novel(novel_title="Smample Novel 4", language_id=sample_languages['zh'].language_id, novel_description="Another description.", novel_author="Another Author", novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
     test_db.add_all([novel0, novel1, novel2, novel3])
     test_db.commit()
     test_db.refresh(novel0)

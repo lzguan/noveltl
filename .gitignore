@@ -7,3 +7,5 @@ devcontainer/
 private_issues.md
 .dockerignore
 .vscode/
+.pytest_cache/
+pytest.log

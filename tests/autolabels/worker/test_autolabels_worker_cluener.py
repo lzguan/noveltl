@@ -1,8 +1,13 @@
-from src.autolabels.worker.inference import Cluener, CluenerModelParams
 import pytest
+import logging
 from typing import Generator, Protocol
 
+from src.autolabels.worker.inference import Cluener, CluenerModelParams
+
+
 pytestmark = pytest.mark.implementation
+
+logger = logging.getLogger(__name__)
 
 @pytest.fixture(scope="session")
 def cluener():
@@ -18,9 +23,10 @@ def test_pure_chinese_fantasy_basic(cluener : Cluener, chapter_loader : Loader):
     for chapter in chapters:
         res, err = cluener.model.predict(chapter, CluenerModelParams())
         assert all(cluener.model.normalize(chapter[label.label_start:label.label_end]) == label.label_word for label in res)
-        print(f"Errors: {err}")
+        logger.info("Result: %s", res)
+        logger.info("Errors: %s", err)
         for label in err:
-            print(f"error: {label['word']} does not match {chapter[label['start']:label['end']]} (normalized value {cluener.model.normalize(chapter[label['start']:label['end']])})")
+            logger.info("error: %s does not match %s (normalized value %s)", label['word'], chapter[label['start']:label['end']], cluener.model.normalize(chapter[label['start']:label['end']]))
 
 @pytest.mark.slow
 def test_mixed_chinese_scifi_basic(cluener : Cluener, chapter_loader : Loader):
@@ -28,7 +34,7 @@ def test_mixed_chinese_scifi_basic(cluener : Cluener, chapter_loader : Loader):
     for chapter in chapters:
         res, err = cluener.model.predict(chapter, CluenerModelParams())
         assert all(cluener.model.normalize(chapter[label.label_start:label.label_end]) == label.label_word for label in res)
-        print(f"Result: {res}")
-        print(f"Errors: {err}")
+        logger.info("Result: %s", res)
+        logger.info("Errors: %s", err)
         for label in err:
-            print(f"Word {label['word']} does not match {chapter[label['start']:label['end']]} (normalized value {cluener.model.normalize(chapter[label['start']:label['end']])})")
+            logger.info("Word %s does not match %s (normalized value %s)", label['word'], chapter[label['start']:label['end']], cluener.model.normalize(chapter[label['start']:label['end']]))

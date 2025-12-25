@@ -20,5 +20,6 @@ class NoHash(Hash):
     def verify(self, password: str | bytes, hash: str | bytes) -> bool:
         return str(password) == str(hash)
 
+@pytest.fixture
 def no_hash() -> Hash:
     return NoHash()

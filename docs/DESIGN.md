@@ -38,6 +38,7 @@ We will divide this applications into distinct services.
         4. **Public** - this novel is accessible to requests.
     - Each novel will have a list of contributors, along with an owner. These will be stored in an associative array with entries of the form (user, novel, contributor_type).
     - Each chapter revision will be either public or not public. Public chapter revisions will be visible to all user requests so long as the user has the permissions to view the novel. Otherwise, only contributors to the novel will have permissions to view the chapter.
+    - To account for translations, novels will be able to link to other novels via nullable _novel parent_ foreign keys. Novels can then be classified into _novel types_ - for example, `'translation'`, `'original'`, etc.
 
 #### Labels
 - This service will store information about the labeling for novels. 
@@ -61,9 +62,4 @@ We will divide this applications into distinct services.
         - If inference succeeds, the worker will write the results of inference to the database, under the condition that the `job_id` still matches. 
 
 - Users are able to aggregate data in a label group to create _glossaries_. Each glossary corresponds to a label group. A glossary stores a JSON dict with entries of the form `term : (translation_of_term, description_of_term)`. Users must manually regenerate glossaries to ensure they are up to date with the current labelling. Glossaries that are not up to date with labelling are marked as such.
-
-#### Translations
-- Details not yet decided. Will likely follow the same schema as **Novels**. Autogeneration will take glossaries from the **Labels** service and pipe it into an LLM.
-
-## v2
 

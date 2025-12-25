@@ -22,6 +22,5 @@ class Base(DeclarativeBase):
 from .languages.models import *
 from .auth.models import *
 from .novels.models import *
-from .translations.models import *
 from .labels.models import *
 from .autolabels.models import *

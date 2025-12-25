@@ -11,7 +11,7 @@ from ..models import Base
 
 if TYPE_CHECKING:
     from src.novels.models import Novel
-    from src.translations.models import Translation
+
 
 class Language(Base):
     """
@@ -29,7 +29,6 @@ class Language(Base):
     language_code: Mapped[str] = mapped_column(String(MAX_LANGUAGE_CODE_LENGTH), nullable=False)
 
     novels_with_language : Mapped[List["Novel"]] = relationship(back_populates="language_of_novel", passive_deletes=True)
-    translations_with_language : Mapped[List["Translation"]] = relationship(back_populates='language_of_translation')
 
     __table_args__ = (
         CheckConstraint('char_length(language_code) = 2', name='chk_language_code_length'),

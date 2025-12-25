@@ -1,4 +1,5 @@
 import pytest
+import logging
 from typing import Protocol, Generator, Tuple, List
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -13,6 +14,7 @@ from src.autolabels.utils import ArqDispatcher
 from src.auth.models import User
 from src.autolabels.constants import AutoLabelProgress
 
+logger = logging.getLogger(__name__)
 
 class Loader(Protocol):
     def __call__(self, pathname : str, recursive : bool = False) -> Generator[str, None, None]:
@@ -25,12 +27,12 @@ async def test_insert_auto_labels_basic(
     chinese_xianxia_small_test_chapters : List[Tuple[RawChapter, RawChapterRevision]], 
     redis : ArqRedis, 
     test_db : Session, 
-    sample_users : List[User], 
+    chinese_xianxia_small_test_user : User, 
     worker_mock : Worker
 ):
     ret = await insert_auto_labels(
         test_db, 
-        sample_users[0], 
+        chinese_xianxia_small_test_user,
         ArqDispatcher(redis), 
         CreateAutoLabels(
             raw_chapter_revision_ids=[revision.raw_chapter_revision_id for _, revision in chinese_xianxia_small_test_chapters],
@@ -40,13 +42,13 @@ async def test_insert_auto_labels_basic(
         )
     )
     assert len(ret.inserts) == len(chinese_xianxia_small_test_chapters)
-    print(ret.inserts)
+    logger.info("ret.inserts: %s", ret.inserts)
     assert len(ret.exists) == 0
-    print(ret.exists)
+    logger.info("ret.exists: %s", ret.exists)
 
     await worker_mock.main()
     q = select(AutoLabel).where(AutoLabel.auto_label_id.in_([ret.inserts[a][0].auto_label_id for a in ret.inserts]))
     rows = test_db.execute(q).scalars().all()
     for row in rows:
-        print(row.__dict__)
+        logger.info("AutoLabel row: %s", row.__dict__)
         assert row.auto_label_status == AutoLabelProgress.DONE

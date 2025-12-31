@@ -1,5 +1,5 @@
 from ..database import get_db
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status
 from .dependencies import *
 from ..auth.dependencies import get_current_user
 from .service import *
@@ -10,6 +10,7 @@ router = APIRouter()
 
 @router.get('/label-groups', response_model=List[schemas.LabelGroup])
 def read_label_groups(
+        novel_id : int,
         db: Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
@@ -19,8 +20,9 @@ def read_label_groups(
     Args:
         db: Database dependency.
         current_user: Current user dependency.
+        novel_id: id of novel to query label groups for.
     """
-    return query_label_groups_by_user(db, current_user)
+    return query_label_groups(db, current_user, novel_id)
 
 @router.get('/label-groups/{label_group_id}', response_model=schemas.LabelGroup)
 def read_label_group(
@@ -42,15 +44,16 @@ def read_label_group(
         )
     return label_group
 
-@router.get('/label-datas', response_model=Dict[int, schemas.LabelData])
+@router.get('/label-datas', response_model=List[schemas.LabelData])
 def read_label_datas_by_group_chapters(
         label_group_id : int, 
         db : Annotated[Session, Depends(get_db)], 
         current_user : Annotated[User, Depends(get_current_user)],
-        rcri : Annotated[List[int] | None, Query(alias="rcri")] = None         # raw_chapter_revision_ids
+        start : int | None = None,
+        end : int | None = None
     ):
     try:
-        label_datas = query_label_datas_by_raw_chapter_revision_ids(db, current_user, label_group_id, rcri)
+        label_datas = query_label_datas(db, current_user, label_group_id, start, end)
     except LabelGroupNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

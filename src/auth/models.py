@@ -5,11 +5,12 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
 from sqlalchemy import String, Enum
 from typing import List, TYPE_CHECKING
+
 from .constants import *
 from ..models import Base
 
 if TYPE_CHECKING:
-    from src.labels.models import LabelGroup
+    from src.labels.models import LabelContributors
 
     from src.novels.models import Contributor
 
@@ -40,5 +41,5 @@ class User(Base):
         nullable=False
     )
 
-    label_groups_with_user : Mapped[List["LabelGroup"]] = relationship(back_populates='user_of_label_group')
     contributors_with_user : Mapped[List["Contributor"]] = relationship(back_populates='user_of_contributor')
+    label_contributors_with_user : Mapped[List["LabelContributors"]] = relationship(back_populates='user_of_label_contributor')

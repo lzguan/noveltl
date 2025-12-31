@@ -22,9 +22,6 @@ class LabelGroup(BaseModel):
 
     label_group_id : int
     label_group_name : str = Field(max_length=MAX_LABEL_GROUP_NAME_LEN)
-
-    user_id : int
-
     novel_id : int
 
 class CreateLabelGroup(BaseModel):
@@ -170,7 +167,7 @@ class UpdateLabelOp(LabelOpBase):
         new_word: Optional parameter. The new word the label is labelling. Must satisfy `new_word == chapter_text[new_start_pos : new_end_pos]`.
         dirty: Optional parameter. Value to change the current label's dirty value to.
         entity_group: Optional parameter. New entity group for this label.
-        score: New score for the entity.
+        score: Optional parameter. New score for the entity.
     """
     op : Literal['update']
     new_start_pos : int | None = Field(default=None, ge=0)

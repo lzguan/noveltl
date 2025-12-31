@@ -4,7 +4,7 @@ Database models for labels.
 
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column, relationship
-from sqlalchemy import String, Float, Integer, Boolean, ForeignKey, UniqueConstraint, CheckConstraint, func, and_
+from sqlalchemy import Enum, String, Float, Integer, Boolean, ForeignKey, UniqueConstraint, CheckConstraint, func, and_
 from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from typing import List, TYPE_CHECKING
 from .constants import *
@@ -23,25 +23,35 @@ class LabelGroup(Base):
         label_group_name: Name given to this label group.
         user_id: User that owns this label group.
         novel_id: Novel this label group is referring to.
-    
-    Note:
-        Each user can only have one label group with a given name per novel.
     """
     __tablename__ = 'label_groups'
     label_group_id : Mapped[int] = mapped_column(primary_key=True)
     label_group_name : Mapped[str] = mapped_column(String(MAX_LABEL_GROUP_NAME_LEN))
     
-    user_id : Mapped[int] = mapped_column(ForeignKey('users.user_id'), nullable=False)
-    user_of_label_group : Mapped["User"] = relationship(back_populates='label_groups_with_user')
-
     novel_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id'), nullable=False)
     novel_of_label_group : Mapped["Novel"] = relationship(back_populates='label_groups_with_novel')
 
     label_datas_with_label_group : Mapped[List["LabelData"]] = relationship(back_populates='label_group_of_label_data', cascade='all, delete-orphan')
+    label_contributors_with_label_group : Mapped[List["LabelContributors"]] = relationship(back_populates='label_group_of_label_contributor', cascade='all, delete-orphan')
 
-    __table_args__ = (
-        UniqueConstraint('label_group_name', 'user_id', 'novel_id', name="one_label_group_with_name_per_user_novel"),
-    )
+class LabelContributors(Base):
+    """
+    Association table for many-to-many relationship between LabelGroup and Users.
+
+    Attributes:
+        label_contributor_role: Role of the user in the label group (e.g., 'owner', 'contributor').
+        label_group_id: Foreign key identifier for the LabelGroup.
+        user_id: Foreign key identifier for the User.
+    """
+    __tablename__ = 'label_group_contributors'
+
+    label_contributor_role : Mapped[LabelRole] = mapped_column(Enum(LabelRole, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False)
+
+    label_group_id : Mapped[int] = mapped_column(ForeignKey('label_groups.label_group_id'), primary_key=True)
+    label_group_of_label_contributor : Mapped[LabelGroup] = relationship(back_populates='label_contributors_with_label_group')
+
+    user_id : Mapped[int] = mapped_column(ForeignKey('users.user_id'), primary_key=True)
+    user_of_label_contributor : Mapped["User"] = relationship(back_populates='label_contributors_with_user')
 
 class LabelData(Base):
     """

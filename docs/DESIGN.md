@@ -44,7 +44,8 @@ We will divide this applications into distinct services.
 - This service will store information about the labeling for novels. 
 - Labels are associated with _label groups_, which can be further subdivided into _label datas_, each associated with a single chapter revision (not just chapter). Specific _labels_ are then associated to Label Datas. 
 - Each label consists of a start/end position, along with the word being labeled and a text category (e.g. PERSON, LOCATION, etc.).
-- Each label group is associated with a novel and a user. The only users able to access this label group now are the user that created this label group and the admins.
+- (Removed 12/25/2025) ~~Each label group is associated with a novel and a user. The only users able to access this label group now are the user that created this label group and the admins.~~
+- (Update 12/25/2025) We handle contributors in the same way as with novels for this service. Will write more details later. One difference between labels and novels is that labels should have an option to be _publically editable_ in addition to the _public_ option. We will also add the constraint that a label group must be public in order for it to be publically editable.
 
 ### Auto Labels
 - Users are able to call an autolabeler on a list of raw chapter revisions that they have access to. The results of these calls will be stored as _auto labels_, for which each one is associated with a chapter revision, along with a _model_ and the parameters used in that model. Users can then pull results in auto labels to be used in label groups. Auto labels store the auto-labeled data in JSON format.

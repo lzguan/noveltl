@@ -1,0 +1,331 @@
+from sqlalchemy import select, and_, or_, exists, Select, Update, Delete
+
+from .constants import *
+from .models import *
+from ..novels import models as novel_models
+from ..novels.constants import Visibility
+from ..auth.models import User
+from ..auth.constants import UserType
+
+def label_group_mod_access_select[T : Select](q : T, current_user : User) -> T:
+    """
+    Takes a select statement for label groups and returns a select statement that restricts permissions on q.
+    """
+    if current_user.user_type != UserType.ADMIN:
+        return q.where(
+            exists(
+                select(
+                    1
+                ).select_from(
+                    LabelContributors
+                ).where(
+                    and_(
+                        LabelContributors.label_group_id == LabelGroup.label_group_id,
+                        LabelContributors.user_id == current_user.user_id
+                    )
+                )
+            )
+        )
+    return q
+
+def label_group_mod_access_update[T : Update](q : T, current_user : User) -> T:
+    """
+    Takes an update statement for label groups and returns an update statement that restricts permissions on q.
+    """
+    if current_user.user_type != UserType.ADMIN:
+        return q.where(
+            exists(
+                select(
+                    1
+                ).select_from(
+                    LabelContributors
+                ).where(
+                    and_(
+                        LabelContributors.label_group_id == LabelGroup.label_group_id,
+                        LabelContributors.user_id == current_user.user_id,
+                        LabelContributors.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR])
+                    )
+                )
+            )
+        )
+    return q
+
+def label_data_mod_access_select[T : Select](q : T, current_user : User) -> T:
+    """
+    Takes a select statement for label datas and returns a select statement that restricts permissions on q.
+    """
+    if current_user.user_type != UserType.ADMIN:
+        return q.where(
+            exists(
+                select(
+                    1
+                ).select_from(
+                    LabelContributors
+                ).where(
+                    and_(
+                        LabelContributors.label_group_id == LabelData.label_group_id,
+                        LabelContributors.user_id == current_user.user_id
+                    )
+                )
+            )
+        )
+    return q
+
+def label_data_mod_access_update[T : Update](q : T, current_user : User) -> T:
+    """
+    Takes an update statement for label datas and returns an update statement that restricts permissions on q.
+    """
+    if current_user.user_type != UserType.ADMIN:
+        return q.where(
+            exists(
+                select(
+                    1
+                ).select_from(
+                    LabelContributors
+                ).where(
+                    and_(
+                        LabelContributors.label_group_id == LabelData.label_group_id,
+                        LabelContributors.user_id == current_user.user_id,
+                        LabelContributors.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR])
+                    )
+                )
+            )
+        )
+    return q
+
+def label_data_mod_access_insert[T : Select](q : T, current_user : User, label_group_id : int) -> T:
+    """
+    Takes a select statement used for an insert from select statement for label datas and returns a select statement for a label data that restricts permissions on q. 
+    """
+    if current_user.user_type != UserType.ADMIN:
+        return q.where(
+            exists(
+                select(
+                    1
+                ).select_from(
+                    LabelContributors
+                ).where(
+                    and_(
+                        LabelContributors.label_group_id == label_group_id,
+                        LabelContributors.user_id == current_user.user_id,
+                        LabelContributors.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR])
+                    )
+                )
+            )
+        ).where(
+            or_(
+                exists(
+                    select(
+                        1
+                    ).select_from(
+                        LabelGroup
+                    ).where(
+                        LabelGroup.label_group_id == label_group_id
+                    ).join(
+                        novel_models.Novel, LabelGroup.novel_id == novel_models.Novel.novel_id
+                    ).join(
+                        novel_models.Contributor, 
+                        novel_models.Contributor.novel_id == novel_models.Novel.novel_id
+                    ).where(
+                        novel_models.Contributor.user_id == current_user.user_id
+                    )
+                ),
+                select(
+                    novel_models.Novel.novel_visibility
+                ).select_from(
+                    LabelGroup
+                ).where(
+                    LabelGroup.label_group_id == label_group_id
+                ).join(
+                    novel_models.Novel,
+                    novel_models.Novel.novel_id == LabelGroup.novel_id
+                ).scalar_subquery() >= Visibility.UNLISTED
+            )
+        )
+    return q
+
+def label_mod_access_insert[T : Select](q : T, current_user : User, label_data_id : int) -> T:
+    """
+    Takes a select statement used for an insert from select statement for labels and returns a select statement for a label that restricts permissions on q. 
+    """
+    if current_user.user_type != UserType.ADMIN:
+        return q.where(
+            exists(
+                select(
+                    1
+                ).select_from(
+                    LabelData
+                ).where(
+                    LabelData.label_data_id == label_data_id
+                ).join(
+                    LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id
+                ).join(
+                    LabelContributors, LabelGroup.label_group_id == LabelContributors.label_group_id
+                ).where(
+                    and_(
+                        LabelContributors.user_id == current_user.user_id,
+                        LabelContributors.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
+                    )
+                    
+                )
+            )
+        ).where(
+            or_(
+                exists(
+                    select(
+                        1
+                    ).select_from(
+                        LabelData
+                    ).where(
+                        LabelData.label_data_id == label_data_id
+                    ).join(
+                        LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id
+                    ).join(
+                        novel_models.Novel, LabelGroup.novel_id == novel_models.Novel.novel_id
+                    ).join(
+                        novel_models.Contributor, 
+                        novel_models.Contributor.novel_id == novel_models.Novel.novel_id
+                    ).where(
+                        novel_models.Contributor.user_id == current_user.user_id
+                    )
+                ),
+                select(
+                    novel_models.Novel.novel_visibility
+                ).select_from(
+                    LabelData
+                ).where(
+                    LabelData.label_data_id == label_data_id
+                ).join(
+                    LabelGroup,
+                    LabelGroup.label_group_id == LabelData.label_group_id
+                ).join(
+                    novel_models.Novel,
+                    novel_models.Novel.novel_id == LabelGroup.novel_id
+                ).scalar_subquery() >= Visibility.UNLISTED
+            )
+        )
+    return q
+
+def label_mod_access_update[T : Update](q : T, current_user : User) -> T:
+    """
+    Takes an update statement for labels and returns an update statement that restricts permissions on q.
+    """
+    if current_user.user_type != UserType.ADMIN:
+        return q.where(
+            exists(
+                select(
+                    1
+                ).select_from(
+                    LabelData
+                ).where(
+                    LabelData.label_data_id == Label.label_data_id
+                ).join(
+                    LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id
+                ).join(
+                    LabelContributors, LabelGroup.label_group_id == LabelContributors.label_group_id
+                ).where(
+                    and_(
+                        LabelContributors.user_id == current_user.user_id,
+                        LabelContributors.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
+                    )
+                    
+                )
+            )
+        ).where(
+            or_(
+                exists(
+                    select(
+                        1
+                    ).select_from(
+                        LabelData
+                    ).where(
+                        LabelData.label_data_id == Label.label_data_id
+                    ).join(
+                        LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id
+                    ).join(
+                        novel_models.Novel, LabelGroup.novel_id == novel_models.Novel.novel_id
+                    ).join(
+                        novel_models.Contributor, 
+                        novel_models.Contributor.novel_id == novel_models.Novel.novel_id
+                    ).where(
+                        novel_models.Contributor.user_id == current_user.user_id
+                    )
+                ),
+                select(
+                    novel_models.Novel.novel_visibility
+                ).select_from(
+                    LabelData
+                ).where(
+                    LabelData.label_data_id == Label.label_data_id
+                ).join(
+                    LabelGroup,
+                    LabelGroup.label_group_id == LabelData.label_group_id
+                ).join(
+                    novel_models.Novel,
+                    novel_models.Novel.novel_id == LabelGroup.novel_id
+                ).scalar_subquery() >= Visibility.UNLISTED
+            )
+        )
+    return q
+
+def label_mod_access_delete[T : Delete](q : T, current_user : User) -> T:
+    """
+    Takes a delete statement for labels and returns a delete statement that restricts permissions on q.
+    """
+    if current_user.user_type != UserType.ADMIN:
+        return q.where(
+            exists(
+                select(
+                    1
+                ).select_from(
+                    LabelData
+                ).where(
+                    LabelData.label_data_id == Label.label_data_id
+                ).join(
+                    LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id
+                ).join(
+                    LabelContributors, LabelGroup.label_group_id == LabelContributors.label_group_id
+                ).where(
+                    and_(
+                        LabelContributors.user_id == current_user.user_id,
+                        LabelContributors.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
+                    )
+                    
+                )
+            )
+        ).where(
+            or_(
+                exists(
+                    select(
+                        1
+                    ).select_from(
+                        LabelData
+                    ).where(
+                        LabelData.label_data_id == Label.label_data_id
+                    ).join(
+                        LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id
+                    ).join(
+                        novel_models.Novel, LabelGroup.novel_id == novel_models.Novel.novel_id
+                    ).join(
+                        novel_models.Contributor, 
+                        novel_models.Contributor.novel_id == novel_models.Novel.novel_id
+                    ).where(
+                        novel_models.Contributor.user_id == current_user.user_id
+                    )
+                ),
+                select(
+                    novel_models.Novel.novel_visibility
+                ).select_from(
+                    LabelData
+                ).where(
+                    LabelData.label_data_id == Label.label_data_id
+                ).join(
+                    LabelGroup,
+                    LabelGroup.label_group_id == LabelData.label_group_id
+                ).join(
+                    novel_models.Novel,
+                    novel_models.Novel.novel_id == LabelGroup.novel_id
+                ).scalar_subquery() >= Visibility.UNLISTED
+            )
+        )
+    return q

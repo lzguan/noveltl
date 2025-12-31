@@ -229,7 +229,8 @@ def query_raw_chapter_revisions_by_novel(
         is_final : bool | None
     ) -> Dict[int, List[schemas.RawChapterRevisionMeta]]:
     """
-    Query all chapter revisions from novel novel_id satisfying certain restrictions.
+    Query all chapter revisions from novel novel_id satisfying certain restrictions. Returns a dictionary in the format 
+        `chapter_num : List[RawChapterRevisionMeta]`
 
     Args:
         db: Database from which we are querying from.

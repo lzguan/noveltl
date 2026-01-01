@@ -25,9 +25,6 @@ class LabelWordMismatchInvalidOperationException(LabelInvalidOperationException)
 class LabelOutOfBoundsInvalidOperationException(LabelInvalidOperationException):
     pass
 
-class LabelAlreadyExistsInvalidOperationException(LabelInvalidOperationException):
-    pass
-
 class LabelNotExistsInvalidOperationException(LabelInvalidOperationException):
     pass
 

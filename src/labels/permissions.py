@@ -3,7 +3,7 @@ from sqlalchemy import select, and_, or_, exists, Select, Update, Delete
 from .constants import *
 from .models import *
 from ..novels import models as novel_models
-from ..novels.constants import Visibility
+from ..novels.constants import Visibility, Role
 from ..auth.models import User
 from ..auth.constants import UserType
 
@@ -23,6 +23,28 @@ def label_group_mod_access_select[T : Select](q : T, current_user : User) -> T:
                         LabelContributors.label_group_id == LabelGroup.label_group_id,
                         LabelContributors.user_id == current_user.user_id
                     )
+                )
+            )
+        )
+    return q
+
+def label_group_mod_access_insert[T : Select](q : T, current_user : User, novel_id : int) -> T:
+    """
+    Takes a select statement used for an insert statement for label groups and returns a select statement that restricts permissions on q.
+    """
+    if current_user.user_type != UserType.ADMIN:
+        return q.where(
+            exists(
+                select(
+                    1
+                ).select_from(
+                    novel_models.Contributor
+                ).where(
+                    novel_models.Contributor.novel_id == novel_id
+                ).where(
+                    novel_models.Contributor.user_id == current_user.user_id
+                ).where(
+                    novel_models.Contributor.contributor_role.in_([Role.OWNER, Role.EDITOR])
                 )
             )
         )
@@ -166,7 +188,6 @@ def label_mod_access_insert[T : Select](q : T, current_user : User, label_data_i
                         LabelContributors.user_id == current_user.user_id,
                         LabelContributors.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
                     )
-                    
                 )
             )
         ).where(

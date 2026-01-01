@@ -4,7 +4,8 @@ Utilities for label services.
 
 from sqlalchemy import literal, insert, select, update, delete, and_
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy.exc import NoResultFound, IntegrityError
+from psycopg2 import errorcodes, Error as PgError
 
 from . import schemas
 from . import models
@@ -14,7 +15,7 @@ from .exceptions import *
 
 def _apply_add(db : Session, current_user : User, label_data_id : int, text : str, op : schemas.AddLabelOp) -> None:
     """
-    Applies a label add operation to database. Does not commit.
+    Applies a label add operation to database. Does not commit. Secure operation.
 
     Args:
         db: Database to insert into.
@@ -24,11 +25,10 @@ def _apply_add(db : Session, current_user : User, label_data_id : int, text : st
         op: Add operation data.
     
     Raises:
+        LabelOutOfBoundsInvalidOperationException: If the range [op.start_pos:op.end_pos] overflows the range of text.
         LabelWordMismatchInvalidOperationException: If text[op.start_pos:op.end_pos] does not match op.word.
-        LabelAlreadyExistsInvalidOperationException: If the entities dictionary already has a label starting/ending at op.start_pos/op.end_pos.
-
-    Note:
-        This function does not perform range checks.
+        LabelDataNotFoundException: If LabelData with label_data_id does not exist, or insufficient permissions to access with the current_user.
+        LabelExclusionViolationInvalidOperationException: If an exclusion constraint is violated.
     """
     if op.end_pos > len(text):
         raise LabelOutOfBoundsInvalidOperationException
@@ -59,14 +59,21 @@ def _apply_add(db : Session, current_user : User, label_data_id : int, text : st
         result.scalar_one()
     except NoResultFound as e:
         db.rollback()
-        raise e
+        raise LabelDataNotFoundException
+    except IntegrityError as e:
+        db.rollback()
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.EXCLUSION_VIOLATION:
+                raise LabelExclusionViolationInvalidOperationException
+        raise UnknownError(e)
     except Exception as e:
         db.rollback()
-        raise e
+        raise UnknownError(e)
 
 def _apply_update(db : Session, current_user : User, label_data_id : int, text : str, op : schemas.UpdateLabelOp) -> None:
     """
-    Applies a label update operation to database. Does not commit.
+    Applies a label update operation to database. Does not commit. Secure operation.
 
     Args:
         db: Database to update.
@@ -76,20 +83,33 @@ def _apply_update(db : Session, current_user : User, label_data_id : int, text :
         op: Update operation data.
     
     Raises:
-        LabelWordMismatchInvalidOperationException: If text[op.start_pos:op.end_pos] does not match op.word.
-        LabelNotExistsInvalidOperationException: If the entities dictionary does not have a label with op.start_pos, op.end_pos in it.
-    
-    Note:
-        This function does not perform range checks.
+        LabelOutOfBoundsInvalidOperationException: If the range [op.start_pos:op.end_pos] overflows the range of text.
+        LabelWordMismatchInvalidOperationException: If text[op.start_pos:op.end_pos] does not match op.word, or similarly if the updated ranges do not match the updated word. 
+        LabelDataNotFoundException: If LabelData with label_data_id does not exist, or insufficient permissions to access with the current_user. 
+        LabelExclusionViolationInvalidOperationException: If an exclusion constraint is violated.
     """
+    if op.end_pos > len(text):
+        raise LabelOutOfBoundsInvalidOperationException
     if text[op.start_pos:op.end_pos] != op.word:
         raise LabelWordMismatchInvalidOperationException
+    if op.new_end_pos is not None and op.new_end_pos > len(text):
+        raise LabelOutOfBoundsInvalidOperationException
+    new_start_pos = op.new_start_pos if op.new_start_pos is not None else op.start_pos
+    new_end_pos = op.new_end_pos if op.new_end_pos is not None else op.end_pos
+    if op.new_start_pos is not None or op.new_end_pos is not None:
+        if op.new_word is None:
+            raise LabelWordMismatchInvalidOperationException
+        if text[new_start_pos:new_end_pos] != op.new_word:
+            raise LabelWordMismatchInvalidOperationException
+    elif op.new_start_pos is None and op.new_end_pos is None:
+        if op.new_word is not None:
+            raise LabelInvalidOperationException("New word should not be set.")
     vals = {}
     if op.new_start_pos is not None:
         vals['label_start'] = op.new_start_pos
     if op.new_end_pos is not None:
         vals['label_end'] = op.new_end_pos
-    if op.new_word is not None:
+    if op.new_start_pos is not None or op.new_end_pos is not None:
         vals['label_word'] = op.new_word
     if op.dirty is not None:
         vals['label_dirty'] = op.dirty
@@ -118,10 +138,17 @@ def _apply_update(db : Session, current_user : User, label_data_id : int, text :
         result.scalar_one()
     except NoResultFound as e:
         db.rollback()
-        raise e
+        raise LabelDataNotFoundException
+    except IntegrityError as e:
+        db.rollback()
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.EXCLUSION_VIOLATION:
+                raise LabelExclusionViolationInvalidOperationException
+        raise UnknownError(e)
     except Exception as e:
         db.rollback()
-        raise e
+        raise UnknownError(e)
 
 def _apply_delete(db : Session, current_user : User, label_data_id : int, text : str, op : schemas.DeleteLabelOp) -> None:
     """
@@ -137,7 +164,10 @@ def _apply_delete(db : Session, current_user : User, label_data_id : int, text :
     Raises:
         LabelNotExistsInvalidOperationException: If the label to delete does not exist in database.
         LabelWordMismatchInvalidOperationException: If text[op.start_pos:op.end_pos] does not match op.word.
+        LabelOutOfBoundsInvalidOperationException: If the range [op.start_pos:op.end_pos] overflows the range of text.
     """
+    if op.end_pos > len(text):
+        raise LabelOutOfBoundsInvalidOperationException
     if text[op.start_pos:op.end_pos] != op.word:
         raise LabelWordMismatchInvalidOperationException
     stmt = delete(models.Label).where(
@@ -158,12 +188,10 @@ def _apply_delete(db : Session, current_user : User, label_data_id : int, text :
         result.scalar_one()
     except NoResultFound as e:
         db.rollback()
-        raise e
+        raise LabelNotExistsInvalidOperationException
     except Exception as e:
         db.rollback()
-        raise e
-    
-
+        raise UnknownError(e)
 
 def apply_operation(db : Session, current_user : User, label_data_id : int, text : str, op : schemas.LabelOpBase) -> None:
     """
@@ -177,9 +205,12 @@ def apply_operation(db : Session, current_user : User, label_data_id : int, text
         op: Operation data.
     
     Raises:
-        LabelNotExistsInvalidOperationException:
-        LabelWordMismatchInvalidOperationException:
-        LabelAlreadyExistsInvalidOperationException:
+        LabelOutOfBoundsInvalidOperationException: If the operation refers to positions outside the text bounds.
+        LabelWordMismatchInvalidOperationException: If the word provided in the operation does not match the text at the specified positions.
+        LabelDataNotFoundException: If the LabelData does not exist or the user lacks permissions.
+        LabelExclusionViolationInvalidOperationException: If an add/update operation creates an overlapping label (exclusion constraint violation).
+        LabelNotExistsInvalidOperationException: If a delete operation targets a label that does not exist.
+        LabelInvalidOperationException: If an update operation is malformed (e.g. setting a new word without moving the label).
     
     Note:
         This function acts as a wrapper for calling `_apply_(add, update, delete)`. See documentation for these functions for when the corresponding types of operations get passed into op.

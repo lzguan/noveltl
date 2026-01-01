@@ -63,7 +63,7 @@ def query_label_group_by_id(db : Session, current_user : User, label_group_id : 
 def query_label_datas(db : Session, current_user : User, label_group_id : int, start : int | None, end : int | None) -> Sequence[models.LabelData]:
     """
     Query all label datas in some label_group_id with certain criteria. Return in dictionary in the format
-        raw_chapter_revision_id : LabelData
+        `raw_chapter_revision_id : LabelData`
 
     Args:
         db: Database to query from.

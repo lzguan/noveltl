@@ -87,6 +87,7 @@ def _apply_update(db : Session, current_user : User, label_data_id : int, text :
         LabelWordMismatchInvalidOperationException: If text[op.start_pos:op.end_pos] does not match op.word, or similarly if the updated ranges do not match the updated word. 
         LabelDataNotFoundException: If LabelData with label_data_id does not exist, or insufficient permissions to access with the current_user. 
         LabelExclusionViolationInvalidOperationException: If an exclusion constraint is violated.
+        LabelInvalidOperationException: If new word is set but neither new_start_pos nor new_end_pos are set.
     """
     if op.end_pos > len(text):
         raise LabelOutOfBoundsInvalidOperationException

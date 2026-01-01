@@ -7,9 +7,6 @@ from ..exceptions import *
 class LabelGroupNotFoundException(NotFoundException):
     pass
 
-class LabelGroupNameDuplicateException(DuplicateException):
-    pass
-
 class LabelDataNotFoundException(NotFoundException):
     pass
 

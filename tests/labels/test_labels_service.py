@@ -1,5 +1,5 @@
 import pytest # type: ignore
-from typing import Protocol, Generator, Tuple
+from typing import Tuple, Dict
 
 from src.labels.service import *
 from src.autolabels import models as autolabel_models
@@ -7,12 +7,6 @@ from src.labels import models as label_models
 from src.novels import models as novel_models
 from src.labels.schemas import CreateLabelDataByAutoLabel
 from src.auth import models as auth_models
-
-
-
-class Loader(Protocol):
-    def __call__(self, pathname : str, recursive : bool = False) -> Generator[str, None, None]:
-        ...
 
 def test_label_insert_label_data_by_autolabels_basic(
     chinese_xianxia_small_test_autolabels_cluener : List[autolabel_models.AutoLabel],
@@ -71,6 +65,11 @@ def test_label_insert_label_data_by_autolabels_basic(
 
 
 ## ---------------- Populate test data ---------------- ##
+
+# class Loader(Protocol):
+#     def __call__(self, pathname : str, recursive : bool = False) -> Generator[str, None, None]:
+#         ...
+
 # @pytest.mark.asyncio
 # async def test_chinese_xianxia_small_test_autolabels(chinese_xianxia_small_test_novel : Novel, chinese_xianxia_small_test_chapters : List[Tuple[RawChapter, RawChapterRevision]], autolabel_loader : Loader, test_db : Session, worker_mock : Worker, redis, sample_users : List[User]):
 #     from src.autolabels.service import insert_auto_labels

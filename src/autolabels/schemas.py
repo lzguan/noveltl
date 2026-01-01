@@ -107,8 +107,15 @@ class CreateAutoLabels(BaseModel):
     Pydantic schema for creating an auto-labeled data entry.
 
     Attributes:
+        novel_id: Id of novel to create auto labels for.
         auto_label_model_name: Name of the model used to generate the auto labels.
         auto_label_model_params: Parameters used for the model to generate the auto labels.
+        raw_chapter_ids: Optional parameter. Restrict to revisions with specific raw chapter ids.
+        raw_chapter_revision_ids: Optional parameter. Restrict to revisions with specific raw chapter revision ids. 
+        start: Optional parameter. Restrict to revisions with raw chapter num >= start.
+        end: Optional parameter. Restrict to revisions with raw chapter num < end.
+        is_primary: Optional paremter. Restrict to revisions with this specific primary flag.
+        is_public: Optional parameter. Restrict to revisions with this specific public flag.
 
     """
     novel_id : int

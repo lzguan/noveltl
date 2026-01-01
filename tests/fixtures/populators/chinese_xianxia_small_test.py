@@ -7,7 +7,8 @@ import json
 from src.languages.models import Language
 from src.novels.models import Novel, RawChapter, RawChapterRevision
 from src.novels.constants import NovelType, Visibility
-from src.labels.models import LabelGroup
+from src.labels.models import LabelGroup, LabelContributor
+from src.labels.constants import LabelRole
 from src.auth.models import User
 from src.auth.constants import UserType
 from src.autolabels.models import AutoLabel
@@ -48,10 +49,20 @@ def chinese_xianxia_small_test_label_group(chinese_xianxia_small_test_user : Use
     """
     Fixture for a single label group.
     """
-    label_group = LabelGroup(label_group_name="small test", user_id=chinese_xianxia_small_test_user.user_id, novel_id=chinese_xianxia_small_test_novel.novel_id)
+    label_group = LabelGroup(label_group_name="small test", novel_id=chinese_xianxia_small_test_novel.novel_id)
     test_db.add(label_group)
     test_db.commit()
     return label_group
+
+def chinese_xianxia_small_test_label_contributor(chinese_xianixia_small_test_user : User, chinese_xianxia_small_test_label_group : LabelGroup, test_db : Session) -> LabelContributor:
+    label_contributor = LabelContributor(
+        label_contributor_role=LabelRole, 
+        label_group_id=chinese_xianxia_small_test_label_group.label_group_id, 
+        user_id=chinese_xianixia_small_test_user.user_id
+    )
+    test_db.add(label_contributor)
+    test_db.commit()
+    return label_contributor
 
 class Loader(Protocol):
     def __call__(self, pathname : str, recursive : bool = False) -> Generator[str, None, None]:

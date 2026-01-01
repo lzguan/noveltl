@@ -17,11 +17,11 @@ def label_group_mod_access_select[T : Select](q : T, current_user : User) -> T:
                 select(
                     1
                 ).select_from(
-                    LabelContributors
+                    LabelContributor
                 ).where(
                     and_(
-                        LabelContributors.label_group_id == LabelGroup.label_group_id,
-                        LabelContributors.user_id == current_user.user_id
+                        LabelContributor.label_group_id == LabelGroup.label_group_id,
+                        LabelContributor.user_id == current_user.user_id
                     )
                 )
             )
@@ -60,12 +60,12 @@ def label_group_mod_access_update[T : Update](q : T, current_user : User) -> T:
                 select(
                     1
                 ).select_from(
-                    LabelContributors
+                    LabelContributor
                 ).where(
                     and_(
-                        LabelContributors.label_group_id == LabelGroup.label_group_id,
-                        LabelContributors.user_id == current_user.user_id,
-                        LabelContributors.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR])
+                        LabelContributor.label_group_id == LabelGroup.label_group_id,
+                        LabelContributor.user_id == current_user.user_id,
+                        LabelContributor.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR])
                     )
                 )
             )
@@ -82,11 +82,11 @@ def label_data_mod_access_select[T : Select](q : T, current_user : User) -> T:
                 select(
                     1
                 ).select_from(
-                    LabelContributors
+                    LabelContributor
                 ).where(
                     and_(
-                        LabelContributors.label_group_id == LabelData.label_group_id,
-                        LabelContributors.user_id == current_user.user_id
+                        LabelContributor.label_group_id == LabelData.label_group_id,
+                        LabelContributor.user_id == current_user.user_id
                     )
                 )
             )
@@ -103,12 +103,12 @@ def label_data_mod_access_update[T : Update](q : T, current_user : User) -> T:
                 select(
                     1
                 ).select_from(
-                    LabelContributors
+                    LabelContributor
                 ).where(
                     and_(
-                        LabelContributors.label_group_id == LabelData.label_group_id,
-                        LabelContributors.user_id == current_user.user_id,
-                        LabelContributors.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR])
+                        LabelContributor.label_group_id == LabelData.label_group_id,
+                        LabelContributor.user_id == current_user.user_id,
+                        LabelContributor.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR])
                     )
                 )
             )
@@ -125,12 +125,12 @@ def label_data_mod_access_insert[T : Select](q : T, current_user : User, label_g
                 select(
                     1
                 ).select_from(
-                    LabelContributors
+                    LabelContributor
                 ).where(
                     and_(
-                        LabelContributors.label_group_id == label_group_id,
-                        LabelContributors.user_id == current_user.user_id,
-                        LabelContributors.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR])
+                        LabelContributor.label_group_id == label_group_id,
+                        LabelContributor.user_id == current_user.user_id,
+                        LabelContributor.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR])
                     )
                 )
             )
@@ -182,11 +182,11 @@ def label_mod_access_insert[T : Select](q : T, current_user : User, label_data_i
                 ).join(
                     LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id
                 ).join(
-                    LabelContributors, LabelGroup.label_group_id == LabelContributors.label_group_id
+                    LabelContributor, LabelGroup.label_group_id == LabelContributor.label_group_id
                 ).where(
                     and_(
-                        LabelContributors.user_id == current_user.user_id,
-                        LabelContributors.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
+                        LabelContributor.user_id == current_user.user_id,
+                        LabelContributor.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
                     )
                 )
             )
@@ -243,11 +243,11 @@ def label_mod_access_update[T : Update](q : T, current_user : User) -> T:
                 ).join(
                     LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id
                 ).join(
-                    LabelContributors, LabelGroup.label_group_id == LabelContributors.label_group_id
+                    LabelContributor, LabelGroup.label_group_id == LabelContributor.label_group_id
                 ).where(
                     and_(
-                        LabelContributors.user_id == current_user.user_id,
-                        LabelContributors.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
+                        LabelContributor.user_id == current_user.user_id,
+                        LabelContributor.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
                     )
                     
                 )
@@ -305,11 +305,11 @@ def label_mod_access_delete[T : Delete](q : T, current_user : User) -> T:
                 ).join(
                     LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id
                 ).join(
-                    LabelContributors, LabelGroup.label_group_id == LabelContributors.label_group_id
+                    LabelContributor, LabelGroup.label_group_id == LabelContributor.label_group_id
                 ).where(
                     and_(
-                        LabelContributors.user_id == current_user.user_id,
-                        LabelContributors.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
+                        LabelContributor.user_id == current_user.user_id,
+                        LabelContributor.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
                     )
                     
                 )

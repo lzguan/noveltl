@@ -188,7 +188,7 @@ def insert_label_group(db : Session, current_user : User, request : schemas.Crea
     try:
         result = db.execute(stmt)
         result.scalar_one()
-        stmt = insert(models.LabelContributors).values(
+        stmt = insert(models.LabelContributor).values(
             {
                 "label_group_id" : result.scalar_one().label_group_id,
                 "user_id" : current_user.user_id, 

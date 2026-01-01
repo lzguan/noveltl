@@ -10,7 +10,7 @@ from .constants import *
 from ..models import Base
 
 if TYPE_CHECKING:
-    from src.labels.models import LabelContributors
+    from src.labels.models import LabelContributor
 
     from src.novels.models import Contributor
 
@@ -42,4 +42,4 @@ class User(Base):
     )
 
     contributors_with_user : Mapped[List["Contributor"]] = relationship(back_populates='user_of_contributor')
-    label_contributors_with_user : Mapped[List["LabelContributors"]] = relationship(back_populates='user_of_label_contributor')
+    label_contributors_with_user : Mapped[List["LabelContributor"]] = relationship(back_populates='user_of_label_contributor')

@@ -32,9 +32,9 @@ class LabelGroup(Base):
     novel_of_label_group : Mapped["Novel"] = relationship(back_populates='label_groups_with_novel')
 
     label_datas_with_label_group : Mapped[List["LabelData"]] = relationship(back_populates='label_group_of_label_data', cascade='all, delete-orphan')
-    label_contributors_with_label_group : Mapped[List["LabelContributors"]] = relationship(back_populates='label_group_of_label_contributor', cascade='all, delete-orphan')
+    label_contributors_with_label_group : Mapped[List["LabelContributor"]] = relationship(back_populates='label_group_of_label_contributor', cascade='all, delete-orphan')
 
-class LabelContributors(Base):
+class LabelContributor(Base):
     """
     Association table for many-to-many relationship between LabelGroup and Users.
 

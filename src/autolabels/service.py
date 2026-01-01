@@ -1,5 +1,7 @@
 """
 Service functions for auto labeling.
+
+Todo: Rewrite to use more raw sql. This seems like a huge pain in the ass so I am putting this off indefinitely.
 """
 
 from typing import List, Dict, Tuple
@@ -9,15 +11,17 @@ from sqlalchemy.exc import NoResultFound, IntegrityError
 from psycopg2 import errorcodes, Error as PgError
 from uuid import uuid4
 import asyncio
-from ..auth.constants import UserType
+
 from . import models
 from . import schemas
 from .utils import AutoLabelDispatcher
+from ..auth.constants import UserType
+from ..auth.models import User, UserType
 from .exceptions import *
 from ..exceptions import *
 from .constants import *
-from ..auth.models import User, UserType
 from ..novels import models as novel_models
+from ..novels.permissions import *
 
 def query_auto_label_by_id(db : Session, current_user : User, auto_label_id : int) -> models.AutoLabel:
     """
@@ -90,8 +94,6 @@ def query_auto_labels(
     ).where(
         novel_models.RawChapterRevision.raw_chapter_revision_is_final == True
     ).where(novel_models.Novel.novel_id == novel_id)
-    if current_user.user_type != UserType.ADMIN:
-        q = q.where(novel_models.RawChapterRevision.raw_chapter_revision_is_public == True)
     if raw_chapter_ids is not None and len(raw_chapter_ids) > 0:
         q = q.where(novel_models.RawChapter.raw_chapter_id.in_(raw_chapter_ids))
     if raw_chapter_revision_ids is not None and len(raw_chapter_revision_ids) > 0:
@@ -102,6 +104,7 @@ def query_auto_labels(
         q = q.where(novel_models.RawChapter.raw_chapter_num < end)
     if model_names is not None and len(model_names) > 0:
         q = q.where(models.AutoLabel.auto_label_model_name.in_(model_names))
+    q = novel_mod_access_select(q, current_user)
     result = db.execute(q)
     result_rows = result.scalars().all()
 
@@ -164,8 +167,7 @@ async def insert_auto_labels(db : Session, current_user : User, dispatcher : Aut
         q = q.where(novel_models.RawChapterRevision.raw_chapter_revision_is_primary == request.is_primary)
     if request.is_public is not None:
         q = q.where(novel_models.RawChapterRevision.raw_chapter_revision_is_public == request.is_public)
-    if current_user.user_type != UserType.ADMIN:
-        q = q.where(novel_models.RawChapterRevision.raw_chapter_revision_is_public == True)
+    q = novel_mod_access_select(q, current_user)
     result = db.execute(q)
     result_rows = result.all()
     

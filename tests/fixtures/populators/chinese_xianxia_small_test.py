@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 import json
 
 from src.languages.models import Language
-from src.novels.models import Novel, RawChapter, RawChapterRevision
-from src.novels.constants import NovelType, Visibility
+from src.novels.models import Novel, RawChapter, RawChapterRevision, Contributor
+from src.novels.constants import NovelType, Visibility, Role
 from src.labels.models import LabelGroup, LabelContributor
 from src.labels.constants import LabelRole
 from src.auth.models import User
@@ -54,11 +54,23 @@ def chinese_xianxia_small_test_label_group(chinese_xianxia_small_test_user : Use
     test_db.commit()
     return label_group
 
-def chinese_xianxia_small_test_label_contributor(chinese_xianixia_small_test_user : User, chinese_xianxia_small_test_label_group : LabelGroup, test_db : Session) -> LabelContributor:
+@pytest.fixture
+def chinese_xianxia_small_test_contributor(chinese_xianxia_small_test_user : User, chinese_xianxia_small_test_novel : Novel, test_db : Session) -> Contributor:
+    contributor = Contributor(
+        contributor_role=Role.OWNER,
+        novel_id=chinese_xianxia_small_test_novel.novel_id,
+        user_id=chinese_xianxia_small_test_user.user_id
+    )
+    test_db.add(contributor)
+    test_db.commit()
+    return contributor
+
+@pytest.fixture
+def chinese_xianxia_small_test_label_contributor(chinese_xianxia_small_test_user : User, chinese_xianxia_small_test_label_group : LabelGroup, test_db : Session) -> LabelContributor:
     label_contributor = LabelContributor(
-        label_contributor_role=LabelRole, 
+        label_contributor_role=LabelRole.OWNER, 
         label_group_id=chinese_xianxia_small_test_label_group.label_group_id, 
-        user_id=chinese_xianixia_small_test_user.user_id
+        user_id=chinese_xianxia_small_test_user.user_id
     )
     test_db.add(label_contributor)
     test_db.commit()

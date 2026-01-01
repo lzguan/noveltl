@@ -1,5 +1,6 @@
 import pytest # type: ignore
 from typing import Tuple, Dict
+import logging
 
 from src.labels.service import *
 from src.autolabels import models as autolabel_models
@@ -8,6 +9,8 @@ from src.novels import models as novel_models
 from src.labels.schemas import CreateLabelDataByAutoLabel
 from src.auth import models as auth_models
 
+logger = logging.getLogger(__name__)
+
 def test_label_insert_label_data_by_autolabels_basic(
     chinese_xianxia_small_test_autolabels_cluener : List[autolabel_models.AutoLabel],
     chinese_xianxia_small_test_label_group : label_models.LabelGroup,
@@ -15,6 +18,8 @@ def test_label_insert_label_data_by_autolabels_basic(
     chinese_xianxia_small_test_novel : novel_models.Novel,
     chinese_xianxia_small_test_default_params_cluener : Dict,
     chinese_xianxia_small_test_user : auth_models.User,
+    chinese_xianxia_small_test_label_contributor : label_models.LabelContributor,
+    chinese_xianxia_small_test_contributor : novel_models.Contributor,
     test_db : Session
 ):
     # this test is AI generated.
@@ -23,6 +28,7 @@ def test_label_insert_label_data_by_autolabels_basic(
 
     assert len(res.errors) == 0, f"Expected 0 errors, got: {res.errors}"
     expected_count = len(chinese_xianxia_small_test_autolabels_cluener)
+    logger.info(f"Expecting {expected_count} succeses, have {len(res.success)} succeses + {len(res.errors)} failures")
     assert len(res.success) == expected_count
     
     source_revision_ids = {al.raw_chapter_revision_id for al in chinese_xianxia_small_test_autolabels_cluener}
@@ -66,6 +72,10 @@ def test_label_insert_label_data_by_autolabels_basic(
 
 ## ---------------- Populate test data ---------------- ##
 
+# from typing import Protocol, Generator
+# from arq.worker import Worker
+# from pathlib import Path
+
 # class Loader(Protocol):
 #     def __call__(self, pathname : str, recursive : bool = False) -> Generator[str, None, None]:
 #         ...
@@ -90,16 +100,27 @@ def test_label_insert_label_data_by_autolabels_basic(
 #         )
 #     )
 #     await worker_mock.main()
-#     q = select(models.AutoLabel, RawChapter).select_from(models.AutoLabel).join(RawChapterRevision, models.AutoLabel.raw_chapter_revision_id == RawChapterRevision.raw_chapter_revision_id).join(RawChapter, RawChapter.raw_chapter_id == RawChapterRevision.raw_chapter_id)
+#     q = select(
+#         autolabel_models.AutoLabel, 
+#         RawChapter
+#     ).select_from(
+#         autolabel_models.AutoLabel
+#     ).join(
+#         RawChapterRevision, 
+#         RawChapterRevision.raw_chapter_revision_id == autolabel_models.AutoLabel.raw_chapter_revision_id
+#     ).join(
+#         RawChapter, 
+#         RawChapter.raw_chapter_id == RawChapterRevision.raw_chapter_id
+#     )
 #     path = Path(__file__).parent.parent / 'test_data' / 'autolabels' / 'chinese' / 'chinese_xianxia' / 'small_test' / 'cluener'
 #     result = test_db.execute(q)
-#     for a, r in result:
+#     for a, c in result:
 #         autolabel : AutoLabel = a
-#         revision : RawChapter = r
+#         chapter : RawChapter = c
 #         autolabel_schema = AutoLabel.model_validate(autolabel)
-#         with open(path / f'chapter_{revision.raw_chapter_num}.json', 'w') as f:
+#         with open(path / f'chapter_{chapter.raw_chapter_num}.json', 'w') as f:
 #             to_dump = autolabel_schema.model_dump()
 #             del to_dump['auto_label_id']
 #             del to_dump['raw_chapter_revision_id']
-#             json.dump(autolabel_schema.model_dump(), f)
+#             json.dump(to_dump, f)
 ## -------------------------------------------------- ##

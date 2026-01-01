@@ -74,8 +74,9 @@ class DataLoader:
     """
     Class for a data loader. Callable class.
     """
-    def __init__(self, base_path : Path):
+    def __init__(self, base_path : Path, pattern : str):
         self.base_path = base_path
+        self.pattern = pattern
     
     def _load(self, subdir: str = "", recursive: bool = False) -> Generator[str, None, None]:
         target_dir = self.base_path / subdir
@@ -85,7 +86,7 @@ class DataLoader:
                 f"Test data directory not found: {target_dir}\n"
                 f"Current base path: {self.base_path}"
             )        
-        files = target_dir.rglob("*.txt") if recursive else target_dir.glob("*.txt")
+        files = target_dir.rglob(self.pattern) if recursive else target_dir.glob(self.pattern)
         sorted_files = sorted(files, key=lambda p:p.name)
         for f in sorted_files:
             yield f.read_text(encoding='utf-8')
@@ -101,13 +102,13 @@ def chapter_loader() -> DataLoader:
     Calling with the recursive flag will return the contents of all subdirectories as well (e.g. `chapter_loader().load("", recursive=True)` will also return chapters in `chapters/korean`, if that is a folder).
     """
     base_path = Path(__file__).parent / 'test_data' / 'chapters'
-    return DataLoader(base_path)
+    return DataLoader(base_path, "*.txt")
 
 @pytest.fixture
 def autolabel_loader() -> DataLoader:
     """
     Returns an autolabel loader callable that takes a pathname in the `test_data/autolabel/` directory (e.g. if `chapters/chinese` contains `chapter_1.json', `chapter_2.json`), then calling `autolabel_loader().load("chinese")` should return a generator of strings containing the content in `chapter_1.json` and `chapter_2.json`. 
-    Calling with the recursive flag will return the contents of all subdirectories as well (e.g. `autolabel().load("", recursive=True)` will also return chapters in `chapters/korean`, if that is a folder).
+    Calling with the recursive flag will return the contents of all subdirectories as well (e.g. `autolabel().load("", recursive=True)` will also return chapters in `autolabels/korean`, if that is a folder).
     """
     base_path = Path(__file__).parent / 'test_data' / 'autolabels'
-    return DataLoader(base_path)
+    return DataLoader(base_path, "*.json")

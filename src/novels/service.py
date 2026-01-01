@@ -505,7 +505,7 @@ def modify_raw_chapter_revision(
         models.RawChapterRevision
     ).where(
         models.RawChapterRevision.raw_chapter_revision_id == revision_id
-    ).values(
+    ).where(models.RawChapterRevision.raw_chapter_revision_is_final == False).values(
         request.model_dump(exclude_unset=True)
     )
     stmt = raw_chapter_revision_mod_access_update(stmt, current_user)

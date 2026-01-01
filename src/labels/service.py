@@ -173,15 +173,21 @@ def insert_label_group(db : Session, current_user : User, request : schemas.Crea
         NovelNotFoundException: Novel attached to label group not found in database.
         DataTooLongException: Some field data was too long.
     """
-    stmt = insert(models.LabelGroup).values(
-        {
-            **request.model_dump(),
-            "user_id" : current_user.user_id
-        }
+    data = list(request.model_dump().items())
+    data.append(("user_id", current_user.user_id))
+    vals = select(
+        *[literal(v) for _, v in data]
+    )
+    vals = label_group_mod_access_insert(vals, current_user, request.novel_id)
+    cols = [k for k, _ in data]
+
+    stmt = insert(models.LabelGroup).from_select(
+        cols, vals
     ).returning(models.LabelGroup)
     label_group = models.LabelGroup(**request.model_dump(), user_id=current_user.user_id)
     try:
         result = db.execute(stmt)
+        result.scalar_one()
         stmt = insert(models.LabelContributors).values(
             {
                 "label_group_id" : result.scalar_one().label_group_id,
@@ -205,6 +211,9 @@ def insert_label_group(db : Session, current_user : User, request : schemas.Crea
             if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
                 raise DataTooLongException(str(e.orig))
         raise UnknownError(e)
+    except NoResultFound as e:
+        db.rollback()
+        raise NovelNotFoundException
     except Exception as e:
         db.rollback()
         raise UnknownError(e)
@@ -231,6 +240,7 @@ def modify_label_group(db : Session, current_user : User, label_group_id : int, 
     ).values(
         **request.model_dump(exclude_unset=True)
     ).returning(models.LabelGroup)
+    stmt = label_group_mod_access_update(stmt, current_user)
     try:
         result = db.execute(stmt)
         label_group = result.scalar_one()
@@ -264,6 +274,7 @@ def insert_label_data(db : Session, current_user : User, label_group_id : int, r
         RawChapterRevisionNotFoundException: If raw chapter revision with request.raw_chapter_revision not found.
         LabelGroupNotFoundException: If label group with label_group_id not found.
         LabelDataRevisionDuplicateException: If a label data with this chapter revision in this label group already exists.
+        NotFoundException: Either raw chapter revision or label group not found.
     """
     data = list(request.model_dump().items())
     data.append(("label_group_id", label_group_id))
@@ -308,11 +319,13 @@ def modify_label_data_by_stream(db : Session, current_user : User, label_data_id
         label_data_id: id of label data being modified
 
     Raises:
-        LabelDataNotFoundException: Label data not found.
-        InsufficientPermissionsException: Current user does not have permission to access this label data.
-        LabelNotExistsInvalidOperationException:
-        LabelWordMismatchInvalidOperationException:
-        LabelAlreadyExistsInvalidOperationException:
+        RawChapterRevisionNotFoundException: If the chapter associated with the label data not found.
+        LabelOutOfBoundsInvalidOperationException: If an operation refers to positions outside the text bounds.
+        LabelWordMismatchInvalidOperationException: If the word provided in an operation does not match the text at the specified positions.
+        LabelDataNotFoundException: If the LabelData does not exist or the user lacks permissions.
+        LabelExclusionViolationInvalidOperationException: If an add/update operation creates an overlapping label (exclusion constraint violation).
+        LabelNotExistsInvalidOperationException: If a delete operation targets a label that does not exist.
+        LabelInvalidOperationException: If an update operation is malformed (e.g. setting a new word without moving the label).
     """
     q = select(
         novel_models.RawChapterRevision.raw_chapter_revision_text
@@ -331,19 +344,11 @@ def modify_label_data_by_stream(db : Session, current_user : User, label_data_id
     except NoResultFound as e:
         raise RawChapterRevisionNotFoundException
     except Exception as e:
-        raise e
-    
+        raise UnknownError(e)
     try:
         for op in request.ops:
             apply_operation(db, current_user, label_data_id, text, op)
         db.commit()
-    except IntegrityError as e:
-        db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.EXCLUSION_VIOLATION:
-                raise LabelExclusionViolationInvalidOperationException
-        raise UnknownError(e)
     except Exception as e:
         db.rollback()
         raise e
@@ -368,7 +373,6 @@ def insert_label_datas_by_autolabels(
 
         Note this can probably be optimized further, but not sure if it's worth it. 
     """
-
     q = select(
         autolabel_models.AutoLabel, novel_models.RawChapterRevision
     ).select_from(
@@ -414,7 +418,7 @@ def insert_label_datas_by_autolabels(
         revision : novel_models.RawChapterRevision = r
         try:
             if not all(revision.raw_chapter_revision_text[label['label_start']:label['label_end']] == label['label_word'] for label in autolabel.auto_label_data):
-                raise LabelWordMismatchInvalidOperationException
+                raise LabelWordMismatchInvalidOperationException("Text mismatch between autolabel and chapter")
             with db.begin_nested():
                 vals = select(
                     literal(label_group_id),
@@ -447,6 +451,8 @@ def insert_label_datas_by_autolabels(
                     errors.append((autolabel.raw_chapter_revision_id, f"Failed insert for chapter revision with id {autolabel.raw_chapter_revision_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e.orig)}"))
             else:
                 errors.append((autolabel.raw_chapter_revision_id, f"Failed insert for chapter revision with id {autolabel.raw_chapter_revision_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}"))
+        except NoResultFound as e:
+            errors.append((autolabel.raw_chapter_revision_id, f"Failed insert for chapter revision with id {autolabel.raw_chapter_revision_id}, autolabel id {autolabel.auto_label_id} due to insufficient permissions: {str(e)}"))
         except Exception as e:
             errors.append((autolabel.raw_chapter_revision_id, f"Failed insert for chapter revision with id {autolabel.raw_chapter_revision_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}"))
     try:

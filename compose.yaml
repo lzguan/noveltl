@@ -1,28 +1,33 @@
+x-db-env: &db-env
+  DB_HOST: db
+  DB_PORT: ${DB_PORT}
+  DB_NAME: ${DB_NAME}
+  DB_USER: ${DB_USER}
+  DB_PASSWORD: ${DB_PASSWORD}
+  DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+
+x-test-db-env: &test-db-env
+  TEST_HOST: test_db
+  TEST_PORT: ${TEST_PORT}
+  TEST_USER: ${TEST_USER}
+  TEST_PASSWORD: ${TEST_PASSWORD}
+  TEST_NAME: ${TEST_NAME}
+  TEST_URL: postgresql+psycopg2://${TEST_USER}:${TEST_PASSWORD}@test_db:5432/${TEST_NAME}
+
+x-redis-env: &redis-env
+  REDIS_HOST: redis
+  REDIS_PORT: ${REDIS_PORT}
+
 services:
   dev:
     image: dev
     build:
-      context: .
-      dockerfile: ./Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
       target: dev
     environment:
-      DB_HOST: db
-      DB_PORT: ${DB_PORT}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      <<: [*db-env, *test-db-env, *redis-env]
       SECRET_KEY: ${SECRET_KEY}
-
-      TEST_HOST: test_db
-      TEST_PORT: ${TEST_PORT}
-      TEST_USER: ${TEST_USER}
-      TEST_PASSWORD: ${TEST_PASSWORD}
-      TEST_NAME: ${TEST_NAME}
-      TEST_URL: postgresql+psycopg2://${TEST_USER}:${TEST_PASSWORD}@test_db:5432/${TEST_NAME}
-
-      REDIS_HOST: redis
-      REDIS_PORT: ${REDIS_PORT}
     depends_on:
       - db
     volumes:
@@ -64,48 +69,32 @@ services:
       - "${REDIS_PORT}:6379"
   worker:
     build: 
-      context: .
+      context: ./backend
       target: worker
       dockerfile: Dockerfile
     depends_on:
       - db
       - redis
     environment:
-      DB_HOST: db
-      DB_PORT: ${DB_PORT}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
-
-      REDIS_HOST: redis
-      REDIS_PORT: ${REDIS_PORT}
+      <<: [*db-env, *redis-env]
       
-      SECRET_KEY: ${SECRET_KEY}
+      SECRET_KEY: ${SECRET_KEY} # purely to not crash on startup
     volumes:
-      - .:/app
+      - ./backend:/app
   backend:
     build: 
-      context: .
+      context: ./backend
       target: backend
       dockerfile: Dockerfile
     depends_on:
       - db
       - redis
     environment:
-      DB_HOST: db
-      DB_PORT: ${DB_PORT}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      <<: [*db-env, *redis-env]
 
-      REDIS_HOST: redis
-      REDIS_PORT: ${REDIS_PORT}
-      
       SECRET_KEY: ${SECRET_KEY}
     volumes:
-      - .:/app
+      - ./backend:/app
     ports:
       - 8000:8000
 

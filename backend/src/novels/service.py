@@ -206,7 +206,7 @@ def query_raw_chapter_revisions_by_raw_chapter(
     ).join(
         models.Novel,
         models.Novel.novel_id == models.RawChapter.novel_id
-    )
+    ).order_by(models.RawChapter.raw_chapter_num.asc())
     if is_public is not None:
         q = q.where(models.RawChapterRevision.raw_chapter_revision_is_public == is_public)
     if is_primary is not None:
@@ -227,7 +227,7 @@ def query_raw_chapter_revisions_by_novel(
         is_public : bool | None, 
         is_primary : bool | None,
         is_final : bool | None
-    ) -> Dict[int, List[schemas.RawChapterRevisionMeta]]:
+    ) -> List[schemas.RawChapterRevisionMeta]:
     """
     Query all chapter revisions from novel novel_id satisfying certain restrictions. Returns a dictionary in the format 
         `chapter_num : List[RawChapterRevisionMeta]`
@@ -245,7 +245,7 @@ def query_raw_chapter_revisions_by_novel(
     Raises:
         NovelNotFoundException: novel with corresponding novel_id is not in database (or insufficient permissions to view it).
     """
-    q = select(models.RawChapter.raw_chapter_num, models.RawChapterRevision).options(
+    q = select(models.RawChapterRevision).options(
         defer(models.RawChapterRevision.raw_chapter_revision_text)
     ).select_from(
         models.RawChapterRevision
@@ -267,15 +267,12 @@ def query_raw_chapter_revisions_by_novel(
         q = q.where(models.RawChapterRevision.raw_chapter_revision_is_primary == is_primary)
     if is_final is not None:
         q = q.where(models.RawChapterRevision.raw_chapter_revision_is_final == is_final)
-    q = raw_chapter_revision_mod_access_select(q, current_user)
+    q = novel_mod_access_select(q, current_user)
     result = db.execute(q)
-    result_rows  = result.all()
+    result_rows  = result.scalars().all()
     if len(result_rows) == 0:
         query_novel_by_id(db, current_user, novel_id)
-    ret_dict : Dict[int, List[schemas.RawChapterRevisionMeta]] = defaultdict(list)
-    for chapter_num, raw_chapter_revision in result_rows:
-        ret_dict[chapter_num].append(schemas.RawChapterRevisionMeta.model_validate(raw_chapter_revision))
-    return ret_dict
+    return [schemas.RawChapterRevisionMeta.model_validate(row) for row in result_rows]
 
 def insert_novel(
         db : Session, 

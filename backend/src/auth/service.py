@@ -6,6 +6,8 @@ from .utils import *
 from .exceptions import *
 from .constants import UserType
 from psycopg2 import errorcodes, Error as PgError
+
+
 def query_user_by_user_name(
         db : Session, 
         user_name : str

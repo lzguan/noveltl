@@ -107,8 +107,8 @@ async def read_chapter_revision(chapter_revision_id : int, db : Annotated[Sessio
     return revision
 
 @router.get(
-    '/chapters-revisions', 
-    response_model=Dict[int, List[schemas.RawChapterRevisionMeta]]
+    '/chapter-revisions', 
+    response_model=List[schemas.RawChapterRevisionMeta]
 )
 async def read_chapter_revisions_by_novel(
     novel_id : int, 
@@ -259,7 +259,7 @@ async def create_chapter(
     return db_raw_chapter
 
 @router.post(
-    '/chapters/{chapter_id}/revision', 
+    '/chapters/{chapter_id}/revisions', 
     response_model=schemas.RawChapterRevision
 )
 async def create_chapter_revision(

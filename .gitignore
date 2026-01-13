@@ -1,11 +1,8 @@
 .env
 *.egg-info/
 __pycache__
-setenv.py
 .venv/
-devcontainer/
 private_issues.md
-.dockerignore
 .vscode/
 .pytest_cache/
 pytest.log

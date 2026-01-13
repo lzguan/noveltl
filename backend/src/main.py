@@ -8,12 +8,12 @@ from .config import uvicorn_logger
 
 @asynccontextmanager
 async def lifespan(app : FastAPI):
-    uvicorn_logger.info("a")
+    uvicorn_logger.info("Server starting.")
     async with set_redis():
-        uvicorn_logger.info("b")
+        uvicorn_logger.info("Redis connection created.")
         yield
-        uvicorn_logger.info("c")
-    uvicorn_logger.info("d")
+        uvicorn_logger.info("Redis connection aborting.")
+    uvicorn_logger.info("Closing server.")
 
 from .auth.router import router as auth_router
 from .novels.router import router as novel_router

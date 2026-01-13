@@ -10,10 +10,8 @@ redis : ArqRedis | None = None
 async def set_redis():
     global redis
     redis = await create_pool(redis_settings)
-    uvicorn_logger.info(redis)
     yield
     await redis.aclose()
-    uvicorn_logger.info("redis closed")
 
 def get_redis() -> ArqRedis:
     if redis is not None:

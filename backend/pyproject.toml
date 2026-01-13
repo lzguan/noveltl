@@ -1,47 +1,64 @@
-[tool.poetry]
+[project]
 name = "noveltl-dev"
 version = "0.1.0"
 description = "Novel translation backend"
-authors = ["Leo Guan <leo.ziqi@gmail.com>"]
+authors = [{ name = "Leo Guan", email = "leo.ziqi@gmail.com" }]
+requires-python = ">=3.12,<4"
 readme = "README.md"
-packages = [{include = "src"}]
-package-mode = false
+dependencies = [
+    "sqlalchemy>=2.0.40,<3",
+    "psycopg2-binary>=2.9.0,<3",
+    "pydantic>=2.10.0,<3",
+    "pydantic-settings>=2.2.0,<3",
+    "python-multipart>=0.0.9,<0.0.10",
+    "alembic>=1.13.0,<2",
+    "redis<=5.3.1",
+    "arq>=0.26.3,<0.27",
+]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-sqlalchemy = "^2.0.40"
-psycopg2-binary = "^2.9.0"
-pydantic = "^2.10.0"
-pydantic-settings = "^2.2.0"
-python-multipart = "^0.0.9"
-alembic = "^1.13.0"
-redis = "<=5.3.1"
-arq = "^0.26.3"
+[dependency-groups]
+backend = [
+    "fastapi>=0.119.0,<0.120",
+    "uvicorn>=0.30.0,<0.31",
+    "pyjwt==2.9.0",
+    "argon2-cffi>=23.0.0,<24",
+    "pwdlib>=0.3.0,<0.4",
+]
+worker = [
+    "transformers>=4.35.0,<5",
+    "torch>=2.9.1",
+]
+dev = [
+    "pytest>=8.0.0,<9",
+    "httpx>=0.27.0,<0.28",
+    "pytest-asyncio>=0.24.0,<0.25",
+]
 
-[tool.poetry.group.backend.dependencies]
-fastapi = "^0.119.0"
-uvicorn = "^0.30.0"
-pyjwt = "2.9.0"
-argon2-cffi = "^23.0.0"
-pwdlib = "^0.3.0"
+[tool.uv]
+package = false
+default-groups = [
+    "backend",
+    "worker",
+    "dev",
+]
 
-[tool.poetry.group.worker.dependencies]
-transformers = "^4.35.0"
-torch = {version = "^2.9.1+cpu", source = "torch-cpu"}
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.0.0"
-httpx = "^0.27.0"
-pytest-asyncio = "^0.24.0"
-
-[[tool.poetry.source]]
+[[tool.uv.index]]
 name = "torch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
-priority = "explicit"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "torch-cpu" }
+
+[tool.hatch.build.targets.sdist]
+include = ["src"]
+
+[tool.hatch.build.targets.wheel]
+include = ["src"]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 minversion = "6.0"

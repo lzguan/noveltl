@@ -20,18 +20,16 @@ x-redis-env: &redis-env
 
 services:
   dev:
-    image: dev
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: dev
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - .:/project
     environment:
       <<: [*db-env, *test-db-env, *redis-env]
       SECRET_KEY: ${SECRET_KEY}
-    depends_on:
-      - db
-    volumes:
-      - .:/app
+    command: sleep infinity
+
   db:
     image: postgres
     restart: always
@@ -48,6 +46,7 @@ services:
       
     volumes:
       - db_data:/var/lib/postgresql/data
+
   test_db:
     image: postgres
     restart: always
@@ -67,6 +66,7 @@ services:
     image: redis
     ports:
       - "${REDIS_PORT}:6379"
+
   worker:
     build: 
       context: ./backend
@@ -80,7 +80,8 @@ services:
       
       SECRET_KEY: ${SECRET_KEY} # purely to not crash on startup
     volumes:
-      - ./backend:/app
+      - ./backend:/project
+
   backend:
     build: 
       context: ./backend
@@ -94,7 +95,7 @@ services:
 
       SECRET_KEY: ${SECRET_KEY}
     volumes:
-      - ./backend:/app
+      - ./backend:/project
     ports:
       - 8000:8000
 
@@ -103,8 +104,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend:/project
     ports:
       - 5173:5173
 

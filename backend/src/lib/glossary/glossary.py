@@ -3,41 +3,41 @@ import os
 import statistics
 from collections.abc import Callable
 
-from .extractor import *
+from .extractor import Extractor
 from .utils import NumpyEncoder
 
 
 class GlossaryBuilder:
     """Object that builds a glossary given a list of chapters in a dictionary format
         chapter_name : chapter_content
-    
+
     Args:
         extractor: Extractor object to extract named entities from text
         chapters: Raw data for chapters
         chapter_name_to_num:  [Optional] Callable that converts chapter names to numbers
         word_normalizer: [Optional] Callable that normalizes a word for a named entity
-    
+
     Usage:
         Follows a pipeline. load_and_extract -> normalize_words -> flatten -> build_frequency_table -> apply_filters
     """
-    def __init__(self, extractor : Extractor, chapters : dict[str, str], chapter_name_to_num : Callable[[str], int] = None, normalizer : Callable[[dict], dict] = (lambda x : x)):
+    def __init__(self, extractor : Extractor, chapters : dict[str, str], chapter_name_to_num : Callable[[str], int] = lambda x: 1, normalizer : Callable[[dict], dict] = (lambda x : x)):
         self.extractor = extractor
         self.chapters = chapters
         self.chapter_name_to_num = chapter_name_to_num
         self.normalizer = normalizer
 
-        self.extracted_entities = None
+        self.extracted_entities = {}
         self.frequency_table = None
 
-        self.flattened_entities = None
+        self.flattened_entities = {}
 
         self.first_appearances = None
 
         self.chapters_by_num = { chapter_name_to_num(chapter_name) : content for chapter_name, content in self.chapters.items() }
 
-    def load_and_extract(self, wordy=False, checkpoint : str=None):
+    def load_and_extract(self, wordy=False, checkpoint : str=""):
         """Computes extracted_entities in the format
-            chapter_number : 
+            chapter_number :
                 {
                     'chapter_name' : ...
                     'entities' : [list of named entities in chapter]
@@ -178,7 +178,7 @@ class GlossaryBuilder:
 
     def apply_filter(self, filter_func : Callable, **kwargs):
         """Filter out entries from flattened data
-        
+
         Args:
             filter_func: filter function that takes parameters flattened_entities, freq_table, **kwargs and returns a filtered list of entries from flattened_entities
         """

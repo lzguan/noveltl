@@ -1,7 +1,7 @@
 """defined models
 
 Revision ID: 0af69e401fcc
-Revises: 
+Revises:
 Create Date: 2025-10-19 04:40:16.836387+00:00
 
 """

@@ -7,13 +7,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-import schemas
-
 from ..auth.dependencies import get_current_user, get_optional_user
 from ..auth.models import User
 from ..database import get_db
 from ..exceptions import DataTooLongException, InsufficientPermissionsException
 from ..languages.exceptions import LanguageNotFoundException
+from . import schemas
 from .exceptions import (
     ChapterNumDuplicateException,
     NovelNotFoundException,

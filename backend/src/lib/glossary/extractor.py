@@ -9,7 +9,7 @@ class Tokenizer(Protocol):
 
 class NERModel(Protocol):
     def predict(self, text : str) -> list[dict]:
-        """Returns a list of named entities in text in the format 
+        """Returns a list of named entities in text in the format
             {
                 'entity_group' : ...
                 'score' : ...
@@ -87,7 +87,7 @@ class Extractor:
                 'start' : ...
                 'end' : ...
             }
-        
+
         Args:
             text: text to perform extraction on
         """

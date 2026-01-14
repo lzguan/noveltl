@@ -1,20 +1,22 @@
 import logging
 
 import pytest  # type: ignore
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from src.auth import models as auth_models
 from src.autolabels import models as autolabel_models
 from src.labels import models as label_models
 from src.labels.schemas import CreateLabelDataByAutoLabel
-from src.labels.service import *
+from src.labels.service import insert_label_datas_by_autolabels
 from src.novels import models as novel_models
 
 logger = logging.getLogger(__name__)
 
 def test_label_insert_label_data_by_autolabels_basic(
-    chinese_xianxia_small_test_autolabels_cluener : List[autolabel_models.AutoLabel],
+    chinese_xianxia_small_test_autolabels_cluener : list[autolabel_models.AutoLabel],
     chinese_xianxia_small_test_label_group : label_models.LabelGroup,
-    chinese_xianxia_small_test_chapters : List[tuple[novel_models.RawChapter, novel_models.RawChapterRevision]],
+    chinese_xianxia_small_test_chapters : list[tuple[novel_models.RawChapter, novel_models.RawChapterRevision]],
     chinese_xianxia_small_test_novel : novel_models.Novel,
     chinese_xianxia_small_test_default_params_cluener : dict,
     chinese_xianxia_small_test_user : auth_models.User,
@@ -59,7 +61,7 @@ def test_label_insert_label_data_by_autolabels_basic(
 
         assert len(db_labels) == len(sorted_source_labels)
 
-        for db_label, source_label in zip(db_labels, sorted_source_labels):
+        for db_label, source_label in zip(db_labels, sorted_source_labels, strict=False):
             assert db_label.label_word == source_label['label_word']
             assert db_label.label_start == source_label['label_start']
             assert db_label.label_end == source_label['label_end']

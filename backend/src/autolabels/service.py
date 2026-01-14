@@ -11,6 +11,7 @@ from uuid import uuid4
 from psycopg2 import Error as PgError
 from psycopg2 import errorcodes
 from sqlalchemy import and_, exists, insert, literal, not_, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session, defer
 
@@ -135,7 +136,7 @@ async def insert_auto_labels(db : Session, current_user : User, dispatcher : Aut
     ]
     q = select(
         literal(request.auto_label_model_name),
-        literal(request.auto_label_model_params),
+        literal(request.auto_label_model_params, type_=JSONB),
         literal(AutoLabelProgress.PENDING),
         literal("Waiting to be queued."),
         novel_models.RawChapterRevision.raw_chapter_revision_id
@@ -171,6 +172,7 @@ async def insert_auto_labels(db : Session, current_user : User, dispatcher : Aut
     stmt = insert(models.AutoLabel).from_select(columns, q).returning(models.AutoLabel)
     try:
         result = db.execute(stmt)
+        result_rows = result.scalars().all()
         db.commit()
     except IntegrityError as e:
         db.rollback()
@@ -182,8 +184,6 @@ async def insert_auto_labels(db : Session, current_user : User, dispatcher : Aut
     except Exception as e:
         db.rollback()
         raise UnknownError from e
-
-    result_rows = result.scalars().all()
 
     tasks : list[Coroutine] = []
     for autolabel in result_rows:

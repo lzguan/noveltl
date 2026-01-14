@@ -115,7 +115,7 @@ class DataLoader:
 @pytest.fixture
 def chapter_loader() -> DataLoader:
     """
-    Returns a chapter loader callable that takes a pathname in the `test_data/chapters/` directory (e.g. if `chapters/chinese` contains `chapter_1.txt`, `chapter_2.txt`), then calling `chapter_loader().load("chinese")` should return a generator of strings containing the content in `chapter_1.txt` and `chapter_2.txt`. 
+    Returns a chapter loader callable that takes a pathname in the `test_data/chapters/` directory (e.g. if `chapters/chinese` contains `chapter_1.txt`, `chapter_2.txt`), then calling `chapter_loader().load("chinese")` should return a generator of strings containing the content in `chapter_1.txt` and `chapter_2.txt`.
     Calling with the recursive flag will return the contents of all subdirectories as well (e.g. `chapter_loader().load("", recursive=True)` will also return chapters in `chapters/korean`, if that is a folder).
     """
     base_path = Path(__file__).parent / 'test_data' / 'chapters'
@@ -124,7 +124,7 @@ def chapter_loader() -> DataLoader:
 @pytest.fixture
 def autolabel_loader() -> DataLoader:
     """
-    Returns an autolabel loader callable that takes a pathname in the `test_data/autolabel/` directory (e.g. if `chapters/chinese` contains `chapter_1.json', `chapter_2.json`), then calling `autolabel_loader().load("chinese")` should return a generator of strings containing the content in `chapter_1.json` and `chapter_2.json`. 
+    Returns an autolabel loader callable that takes a pathname in the `test_data/autolabel/` directory (e.g. if `chapters/chinese` contains `chapter_1.json', `chapter_2.json`), then calling `autolabel_loader().load("chinese")` should return a generator of strings containing the content in `chapter_1.json` and `chapter_2.json`
     Calling with the recursive flag will return the contents of all subdirectories as well (e.g. `autolabel().load("", recursive=True)` will also return chapters in `autolabels/korean`, if that is a folder).
     """
     base_path = Path(__file__).parent / 'test_data' / 'autolabels'

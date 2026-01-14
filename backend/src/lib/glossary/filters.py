@@ -8,7 +8,7 @@ def filter_by_score(flattened : list[dict], min_score: float = 0.5, **kwargs):
             'end' : ...
         }
         by minimum score
-    
+
     Args:
         flattened: flattened list of entities
         min_score: minimum score of entities to include

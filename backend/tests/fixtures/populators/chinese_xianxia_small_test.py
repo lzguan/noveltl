@@ -121,7 +121,7 @@ def chinese_xianxia_small_test_autolabels_cluener(
     chinese_xianxia_small_test_chapters : list[tuple[RawChapter, RawChapterRevision]],
     autolabel_loader : Loader
 ) -> list[AutoLabel]:
-    autolabels_gen = (json.loads(l) for l in autolabel_loader('chinese/chinese_xianxia/small_test/cluener'))
+    autolabels_gen = (json.loads(lab) for lab in autolabel_loader('chinese/chinese_xianxia/small_test/cluener'))
     out = []
     i = 0
     for autolabel in autolabels_gen:

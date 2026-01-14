@@ -1,7 +1,9 @@
-from .tasks import model_cache, autolabel_infer
-from .inference import Cluener
 from arq.connections import RedisSettings
-from .config import REDIS_PORT, REDIS_HOST
+
+from .config import REDIS_HOST, REDIS_PORT
+from .inference import Cluener
+from .tasks import autolabel_infer, model_cache
+
 
 async def startup(ctx):
     model_cache['cluener'] = Cluener().model

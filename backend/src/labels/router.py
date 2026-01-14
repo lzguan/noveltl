@@ -1,14 +1,40 @@
-from ..database import get_db
-from fastapi import APIRouter, Depends, HTTPException, status
-from .dependencies import *
-from ..auth.dependencies import get_current_user
-from .service import *
-from .schemas import *
 from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from ..auth.dependencies import get_current_user
+from ..auth.models import User
+from ..database import get_db
+from ..exceptions import DataTooLongException, NotFoundException
+from ..novels.exceptions import NovelNotFoundException, RawChapterRevisionNotFoundException
+from . import schemas
+from .exceptions import (
+    LabelDataNotFoundException,
+    LabelDataRevisionDuplicateException,
+    LabelExclusionViolationInvalidOperationException,
+    LabelGroupNotFoundException,
+    LabelInvalidOperationException,
+    LabelNotExistsInvalidOperationException,
+    LabelOutOfBoundsInvalidOperationException,
+    LabelWordMismatchInvalidOperationException,
+)
+from .service import (
+    insert_label_data,
+    insert_label_datas_by_autolabels,
+    insert_label_group,
+    modify_label_data_by_stream,
+    modify_label_group,
+    query_label_data_by_id,
+    query_label_datas,
+    query_label_group_by_id,
+    query_label_groups,
+    query_labels_by_label_data_id,
+)
 
 router = APIRouter()
 
-@router.get('/label-groups', response_model=List[schemas.LabelGroup])
+@router.get('/label-groups', response_model=list[schemas.LabelGroup])
 def read_label_groups(
         novel_id : int,
         db: Annotated[Session, Depends(get_db)],
@@ -32,17 +58,17 @@ def read_label_group(
     ):
     try:
         label_group = query_label_group_by_id(db, current_user, label_group_id)
-    except LabelGroupNotFoundException:
+    except LabelGroupNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Label group with id {label_group_id} not found."
-        )
+        ) from e
     return label_group
 
-@router.get('/label-datas', response_model=List[schemas.LabelData])
+@router.get('/label-datas', response_model=list[schemas.LabelData])
 def read_label_datas_by_group_chapters(
-        label_group_id : int, 
-        db : Annotated[Session, Depends(get_db)], 
+        label_group_id : int,
+        db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)],
         start : int | None = None,
         end : int | None = None
@@ -59,14 +85,14 @@ def read_label_data(
     ):
     try:
         label_data = query_label_data_by_id(db, current_user, label_data_id)
-    except LabelDataNotFoundException:
+    except LabelDataNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Label data not found."
-        )
+        ) from e
     return label_data
 
-@router.get('/label-datas/{label_data_id}/labels', response_model=List[schemas.Label])
+@router.get('/label-datas/{label_data_id}/labels', response_model=list[schemas.Label])
 def read_labels_by_label_data(
         label_data_id : int,
         db : Annotated[Session, Depends(get_db)],
@@ -89,16 +115,16 @@ def create_label_group(
     """
     try:
         label_group = insert_label_group(db, current_user, request)
-    except NovelNotFoundException:
+    except NovelNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Novel associated with this label group not found."
-        )
-    except DataTooLongException:
+        ) from e
+    except DataTooLongException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Label group name is too long."
-        )
+        ) from e
     return label_group
 
 @router.patch('/label-groups/{label_group_id}', response_model=schemas.LabelGroup)
@@ -113,16 +139,16 @@ def update_label_group(
     """
     try:
         label_group = modify_label_group(db, current_user, label_group_id, request)
-    except LabelGroupNotFoundException:
+    except LabelGroupNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Label group with id {label_group_id} not found."
-        )
-    except DataTooLongException:
+        ) from e
+    except DataTooLongException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Label group name is too long."
-        )
+        ) from e
     return label_group
 
 @router.post('/label-groups/{label_group_id}/label-datas', response_model=schemas.LabelData)
@@ -133,31 +159,31 @@ def create_label_data(
         current_user: Annotated[User, Depends(get_current_user)]
     ):
     """
-    Creates a label data entry. 
+    Creates a label data entry.
     Requires the chapter revision to be Final.
     """
     try:
         label_data = insert_label_data(db, current_user, label_group_id, request)
-    except LabelGroupNotFoundException:
+    except LabelGroupNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Label group not found."
-        )
-    except RawChapterRevisionNotFoundException:
+        ) from e
+    except RawChapterRevisionNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Raw chapter revision not found."
-        )
-    except LabelDataRevisionDuplicateException:
+        ) from e
+    except LabelDataRevisionDuplicateException as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Label data for this chapter already exists in this group."
-        )
-    except NotFoundException:
+        ) from e
+    except NotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Label group or raw chapter revision not found."
-        )
+        ) from e
     return label_data
 
 @router.patch('/label-datas/{label_data_id}', status_code=status.HTTP_204_NO_CONTENT)
@@ -172,45 +198,44 @@ def update_label_data_stream(
     """
     try:
         modify_label_data_by_stream(db, current_user, label_data_id, request)
-    except (LabelDataNotFoundException, RawChapterRevisionNotFoundException):
+    except (LabelDataNotFoundException, RawChapterRevisionNotFoundException) as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Label Data {label_data_id} or its underlying Chapter Revision not found."
-        )
+        ) from e
     except LabelWordMismatchInvalidOperationException as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Word mismatch detected: {str(e) or 'Label word does not match text.'}"
-        )
-    except LabelExclusionViolationInvalidOperationException:
+        ) from e
+    except LabelExclusionViolationInvalidOperationException as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Label overlap detected. Operations violate exclusion constraints."
-        )
-    except LabelOutOfBoundsInvalidOperationException:
+        ) from e
+    except LabelOutOfBoundsInvalidOperationException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Operation positions are out of bounds of the chapter text."
-        )
-    except LabelNotExistsInvalidOperationException:
+        ) from e
+    except LabelNotExistsInvalidOperationException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="The label targeted for deletion does not exist."
-        )
+        ) from e
     except LabelInvalidOperationException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e) or "Invalid operation."
-        )
-
+        ) from e
     return
 
 @router.post(
-    '/label-groups/{label_group_id}/label-datas/auto-labels', 
+    '/label-groups/{label_group_id}/label-datas/auto-labels',
     response_model=schemas.CreateLabelDataByAutoLabelStatus
 )
 def create_label_datas_by_auto_labels(
-        label_group_id : int, 
+        label_group_id : int,
         request : schemas.CreateLabelDataByAutoLabel,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]

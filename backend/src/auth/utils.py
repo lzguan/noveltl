@@ -1,12 +1,14 @@
-from pwdlib import PasswordHash
-from datetime import datetime, timedelta, timezone
-from .config import *
+from datetime import UTC, datetime, timedelta
+
 import jwt
+from pwdlib import PasswordHash
+
+from .config import ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, SECRET_KEY
 
 password_hash = PasswordHash.recommended()
 
 def verify_password(
-        plain_password : str, 
+        plain_password : str,
         hashed_password : str
     ) -> bool:
     """
@@ -14,7 +16,7 @@ def verify_password(
 
     Args:
         plain_password: A plain password.
-        hashed_password: The candidate hashed password. 
+        hashed_password: The candidate hashed password.
     """
     return password_hash.verify(plain_password, hashed_password)
 
@@ -30,7 +32,7 @@ def hash_password(
     return password_hash.hash(password)
 
 def create_access_token(
-        data : dict, 
+        data : dict,
         expires_delta : timedelta
     ) -> str:
     """
@@ -42,9 +44,9 @@ def create_access_token(
     """
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp" : expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

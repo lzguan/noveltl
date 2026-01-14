@@ -1,7 +1,10 @@
-from typing import Protocol, Dict
+from typing import Protocol
+
 from arq import ArqRedis
-from .exceptions import *
-from redis.exceptions import ConnectionError, TimeoutError, ResponseError
+from redis.exceptions import ConnectionError, ResponseError, TimeoutError
+
+from .exceptions import EnqueueFailedException, QueueFullException
+
 
 class AutoLabelDispatcher(Protocol):
     """
@@ -11,19 +14,19 @@ class AutoLabelDispatcher(Protocol):
         self,
         job_id : str,
         auto_label_id : int,
-        model_name : str, 
-        model_params : Dict[str, str | int | float | bool],
-        text : str = ""
+        model_name : str,
+        model_params : dict[str, str | int | float | bool],
+        *args
     ) -> None:
         """
         Enqueue a request.
 
         Args:
+            job_id: String id to queue job with.
             auto_label_id: Integer identifier for the AutoLabel being operated on in db.
-            text: Text of chapter.
             model_name: Name of NER model.
             model_params: Params passed into NER model.
-        
+
         Raises:
             QueueFullException: Queue is full.
             EnqueueFailedException: Enqueue failed for some other reason.
@@ -33,14 +36,14 @@ class AutoLabelDispatcher(Protocol):
 class ArqDispatcher(AutoLabelDispatcher):
     def __init__(self, redis_pool : ArqRedis) -> None:
         self.redis = redis_pool
-        
+
     async def enqueue(
-            self, 
-            job_id : str, 
-            auto_label_id: int, 
-            model_name: str, 
-            model_params: Dict[str, str | int | float | bool],
-            text : str = ""
+            self,
+            job_id : str,
+            auto_label_id: int,
+            model_name: str,
+            model_params: dict[str, str | int | float | bool],
+            *args
         ) -> None:
         try:
             await self.redis.enqueue_job('autolabel_infer', job_id, auto_label_id, model_name, model_params, _job_id=job_id)
@@ -52,4 +55,4 @@ class ArqDispatcher(AutoLabelDispatcher):
             # If it's another protocol error, treat as generic failure
             raise EnqueueFailedException(f"Redis protocol error: {str(e)}") from e
         except (TypeError, ValueError) as e:
-             raise EnqueueFailedException(f"Failed to serialize job data: {str(e)}") from e
+            raise EnqueueFailedException(f"Failed to serialize job data: {str(e)}") from e

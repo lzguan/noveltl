@@ -1,15 +1,29 @@
-from ..database import get_db
-from fastapi import APIRouter, Depends, HTTPException, status
-from .dependencies import *
-from .service import *
-from .schemas import *
-from fastapi.security import OAuth2PasswordRequestForm
+"""
+Router endpoints for auth.
+
+Todo: Come up with a proper api.
+"""
+
+from datetime import timedelta
 from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+
+from ..database import get_db
+from ..exceptions import DataTooLongException, InsufficientPermissionsException
+from . import schemas
+from .config import ACCESS_TOKEN_EXPIRE_MINUTES
+from .dependencies import get_current_user, get_optional_user
+from .exceptions import UserAuthenticationFailedException, UserNameDuplicateException, UserNotFoundException
+from .service import authenticate_user, insert_user, query_user_by_user_name, remove_user
+from .utils import create_access_token
 
 router = APIRouter()
 
 @router.post(
-    "/token", 
+    "/token",
     response_model=schemas.Token
 )
 async def login_for_access_token(
@@ -25,23 +39,18 @@ async def login_for_access_token(
     """
     try:
         user = authenticate_user(db, form_data.username, form_data.password)
-    except UserNotFoundException:
+    except UserNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found.",
             headers={"WWW-Authenticate" : "Bearer"}
-        )
-    except UserTooManyFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="More than one user with this username found."
-        )
-    except UserAuthenticationFailedException:
+        ) from e
+    except UserAuthenticationFailedException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Password does not match.",
             headers={"WWW-Authenticate" : "Bearer"}
-        )
+        ) from e
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         {"sub" : user.user_name},
@@ -50,21 +59,21 @@ async def login_for_access_token(
     return schemas.Token(access_token=access_token, token_type='bearer')
 
 @router.post(
-    "/register", 
+    "/register",
     response_model=schemas.User
 )
 async def create_register_user(
         request : schemas.CreateUser,
-        db :  Annotated[Session, Depends(get_db)], 
+        db :  Annotated[Session, Depends(get_db)],
         current_user : Annotated[schemas.User | None, Depends(get_optional_user)]
     ):
     """
     Endpoint for registering a new user. Client with registration request must not be logged in.
 
     Args:
+        request: Create user request.
         db: Database dependency.
         current_user: Optional user dependency. Should be None for this function to succeed.
-        request: 
     """
     if current_user is not None:
         raise HTTPException(
@@ -73,30 +82,30 @@ async def create_register_user(
         )
     try:
         new_user = insert_user(db, None, request)
-    except InsufficientPermissionsException:
+    except InsufficientPermissionsException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Cannot create admin account."
-        )
-    except UserNameDuplicateException:
+        ) from e
+    except UserNameDuplicateException as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="User with this username already exists."
-        )
-    except DataTooLongException:
+        ) from e
+    except DataTooLongException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Some field too long."
-        )
+        ) from e
     return new_user
 
 @router.post(
-    "/users", 
+    "/users",
     response_model=schemas.User
 )
 async def create_user(
         request : schemas.CreateUser,
-        db : Annotated[Session, Depends(get_db)], 
+        db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[schemas.User, Depends(get_current_user)]
     ):
     """
@@ -109,25 +118,25 @@ async def create_user(
     """
     try:
         new_user = insert_user(db, current_user, request)
-    except InsufficientPermissionsException:
+    except InsufficientPermissionsException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Insufficient permissions to create new user." # change this to print str(e.orig) and add error messages in exceptions.
-        )
-    except UserNameDuplicateException:
+        ) from e
+    except UserNameDuplicateException as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="User with this username already exists."
-        )
-    except DataTooLongException:
+        ) from e
+    except DataTooLongException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Some field too long."
-        )
+        ) from e
     return new_user
 
 @router.get(
-    "/users/me", 
+    "/users/me",
     response_model=schemas.User
 )
 async def read_user_me(
@@ -158,17 +167,12 @@ async def read_user(
     """
     try:
         user = query_user_by_user_name(db, user_name)
-    except UserNotFoundException:
+    except UserNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found.",
             headers={"WWW-Authenticate" : "Bearer"}
-        )
-    except UserTooManyFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="More than one user with this username found."
-        )
+        ) from e
     return user
 
 @router.delete("/users/me", response_model=schemas.DeleteUserStatus)
@@ -181,25 +185,20 @@ async def delete_users_me(
     """
     try:
         stat = remove_user(db, current_user, current_user.user_id)
-    except UserNotFoundException:
+    except UserNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with id {current_user.user_id} (username {current_user.user_name}) not found."
-        )
-    except UserTooManyFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Multiple users found with the same id."
-        )
-    except InsufficientPermissionsException:
+        ) from e
+    except InsufficientPermissionsException as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unexpected error."
-        )
+        ) from e
     return stat
 
 @router.delete(
-    '/users/{user_id}', 
+    '/users/{user_id}',
     response_model=schemas.DeleteUserStatus
 )
 async def delete_user(
@@ -212,19 +211,14 @@ async def delete_user(
     """
     try:
         stat = remove_user(db, current_user, user_id)
-    except UserNotFoundException:
+    except UserNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with id {user_id} not found."
-        )
-    except UserTooManyFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Multiple users found with the same id."
-        )
-    except InsufficientPermissionsException:
+        ) from e
+    except InsufficientPermissionsException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Current user does not have permission to delete this user."
-        )
+        ) from e
     return stat

@@ -1,11 +1,19 @@
-from sqlalchemy import select, and_, or_, exists, Select, Update, Delete
+"""
+Module for putting permission restrictions on database queries.
 
-from .constants import *
-from .models import *
-from ..novels import models as novel_models
-from ..novels.constants import Visibility, Role
-from ..auth.models import User
+Todo:
+Fix inconsistencies between whether to use src.novels.permissions in conjunction or do all permission checking in this module.
+"""
+
+from sqlalchemy import Delete, Select, Update, and_, exists, or_, select
+
 from ..auth.constants import UserType
+from ..auth.models import User
+from ..novels import models as novel_models
+from ..novels.constants import Role, Visibility
+from .constants import LabelRole
+from .models import Label, LabelContributor, LabelData, LabelGroup
+
 
 def label_group_mod_access_select[T : Select](q : T, current_user : User) -> T:
     """
@@ -117,7 +125,7 @@ def label_data_mod_access_update[T : Update](q : T, current_user : User) -> T:
 
 def label_data_mod_access_insert[T : Select](q : T, current_user : User, label_group_id : int) -> T:
     """
-    Takes a select statement used for an insert from select statement for label datas and returns a select statement for a label data that restricts permissions on q. 
+    Takes a select statement used for an insert from select statement for label datas and returns a select statement for a label data that restricts permissions on q.
     """
     if current_user.user_type != UserType.ADMIN:
         return q.where(
@@ -146,7 +154,7 @@ def label_data_mod_access_insert[T : Select](q : T, current_user : User, label_g
                     ).join(
                         novel_models.Novel, LabelGroup.novel_id == novel_models.Novel.novel_id
                     ).join(
-                        novel_models.Contributor, 
+                        novel_models.Contributor,
                         novel_models.Contributor.novel_id == novel_models.Novel.novel_id
                     ).where(
                         novel_models.Contributor.user_id == current_user.user_id
@@ -168,7 +176,7 @@ def label_data_mod_access_insert[T : Select](q : T, current_user : User, label_g
 
 def label_mod_access_insert[T : Select](q : T, current_user : User, label_data_id : int) -> T:
     """
-    Takes a select statement used for an insert from select statement for labels and returns a select statement for a label that restricts permissions on q. 
+    Takes a select statement used for an insert from select statement for labels and returns a select statement for a label that restricts permissions on q.
     """
     if current_user.user_type != UserType.ADMIN:
         return q.where(
@@ -204,7 +212,7 @@ def label_mod_access_insert[T : Select](q : T, current_user : User, label_data_i
                     ).join(
                         novel_models.Novel, LabelGroup.novel_id == novel_models.Novel.novel_id
                     ).join(
-                        novel_models.Contributor, 
+                        novel_models.Contributor,
                         novel_models.Contributor.novel_id == novel_models.Novel.novel_id
                     ).where(
                         novel_models.Contributor.user_id == current_user.user_id
@@ -249,7 +257,7 @@ def label_mod_access_update[T : Update](q : T, current_user : User) -> T:
                         LabelContributor.user_id == current_user.user_id,
                         LabelContributor.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
                     )
-                    
+
                 )
             )
         ).where(
@@ -266,7 +274,7 @@ def label_mod_access_update[T : Update](q : T, current_user : User) -> T:
                     ).join(
                         novel_models.Novel, LabelGroup.novel_id == novel_models.Novel.novel_id
                     ).join(
-                        novel_models.Contributor, 
+                        novel_models.Contributor,
                         novel_models.Contributor.novel_id == novel_models.Novel.novel_id
                     ).where(
                         novel_models.Contributor.user_id == current_user.user_id
@@ -311,7 +319,7 @@ def label_mod_access_delete[T : Delete](q : T, current_user : User) -> T:
                         LabelContributor.user_id == current_user.user_id,
                         LabelContributor.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
                     )
-                    
+
                 )
             )
         ).where(
@@ -328,7 +336,7 @@ def label_mod_access_delete[T : Delete](q : T, current_user : User) -> T:
                     ).join(
                         novel_models.Novel, LabelGroup.novel_id == novel_models.Novel.novel_id
                     ).join(
-                        novel_models.Contributor, 
+                        novel_models.Contributor,
                         novel_models.Contributor.novel_id == novel_models.Novel.novel_id
                     ).where(
                         novel_models.Contributor.user_id == current_user.user_id

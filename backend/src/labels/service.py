@@ -1,24 +1,38 @@
 """
 Service functions for labels.
 """
+from collections.abc import Sequence
+
+from psycopg2 import Error as PgError
+from psycopg2 import errorcodes
+from sqlalchemy import insert, literal, select, update
+from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
-from sqlalchemy import select, insert, update, literal
-from sqlalchemy.exc import IntegrityError, NoResultFound, DataError
-from typing import Sequence, List, Tuple
-from psycopg2 import errorcodes, Error as PgError
 
-
-from . import models
-from . import schemas
-from .permissions import *
-from ..novels.permissions import *
-from .utils import apply_operation
-from .exceptions import *
-from ..novels.exceptions import *
-from ..novels import models as novel_models
+from ..auth.models import User
 from ..autolabels import models as autolabel_models
 from ..autolabels.constants import AutoLabelProgress
-from ..auth.models import User
+from ..exceptions import DataTooLongException, NotFoundException, UnknownError
+from ..novels import models as novel_models
+from ..novels.exceptions import NovelNotFoundException, RawChapterRevisionNotFoundException
+from ..novels.permissions import novel_mod_access_select, raw_chapter_revision_mod_access_select
+from . import models, schemas
+from .constants import LabelRole
+from .exceptions import (
+    LabelDataNotFoundException,
+    LabelDataRevisionDuplicateException,
+    LabelGroupNotFoundException,
+    LabelWordMismatchInvalidOperationException,
+)
+from .permissions import (
+    label_data_mod_access_insert,
+    label_data_mod_access_select,
+    label_group_mod_access_insert,
+    label_group_mod_access_select,
+    label_group_mod_access_update,
+)
+from .utils import apply_operation
+
 
 def query_label_groups(db : Session, current_user : User, novel_id : int) -> Sequence[models.LabelGroup]:
     """
@@ -45,7 +59,7 @@ def query_label_group_by_id(db : Session, current_user : User, label_group_id : 
         db: Database that we query from.
         current_user: Current user.
         label_group_id: id of label group to query.
-    
+
     Raises:
         LabelGroupNotFoundException: No label group was found.
     """
@@ -57,7 +71,7 @@ def query_label_group_by_id(db : Session, current_user : User, label_group_id : 
         result = db.execute(q)
         result_row = result.scalar_one()
     except NoResultFound as e:
-        raise LabelGroupNotFoundException(str(e))
+        raise LabelGroupNotFoundException from e
     return result_row
 
 def query_label_datas(db : Session, current_user : User, label_group_id : int, start : int | None, end : int | None) -> Sequence[models.LabelData]:
@@ -128,7 +142,7 @@ def query_label_data_by_id(db : Session, current_user : User, label_data_id : in
         result = db.execute(q)
         label_data = result.scalar_one()
     except NoResultFound as e:
-        raise LabelDataNotFoundException(str(e))
+        raise LabelDataNotFoundException from e
     return label_data
 
 def query_labels_by_label_data_id(db : Session, current_user : User, label_data_id : int) -> Sequence[models.Label]:
@@ -147,7 +161,7 @@ def query_labels_by_label_data_id(db : Session, current_user : User, label_data_
     ).where(
         models.Label.label_data_id == label_data_id
     ).join(
-        models.Label, 
+        models.Label,
         models.LabelData.label_data_id == models.Label.label_data_id
     ).order_by(models.Label.label_start)
     q = label_data_mod_access_select(q, current_user)
@@ -168,7 +182,7 @@ def insert_label_group(db : Session, current_user : User, request : schemas.Crea
         db: Database to query from.
         current_user: Current user.
         request: Metadata for creating label group.
-    
+
     Raises:
         NovelNotFoundException: Novel attached to label group not found in database.
         DataTooLongException: Some field data was too long.
@@ -191,7 +205,7 @@ def insert_label_group(db : Session, current_user : User, request : schemas.Crea
         stmt = insert(models.LabelContributor).values(
             {
                 "label_group_id" : result.scalar_one().label_group_id,
-                "user_id" : current_user.user_id, 
+                "user_id" : current_user.user_id,
                 "label_contributor_role" : LabelRole.OWNER
             }
         )
@@ -202,21 +216,21 @@ def insert_label_group(db : Session, current_user : User, request : schemas.Crea
         if isinstance(e.orig, PgError):
             pgcode = e.orig.pgcode
             if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
-                raise NovelNotFoundException(str(e.orig))
-        raise UnknownError(str(e.orig))
+                raise NovelNotFoundException from e
+        raise UnknownError from e
     except DataError as e:
         db.rollback()
         if isinstance(e.orig, PgError):
             pgcode = e.orig.pgcode
             if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException(str(e.orig))
-        raise UnknownError(e)
+                raise DataTooLongException from e
+        raise UnknownError from e
     except NoResultFound as e:
         db.rollback()
-        raise NovelNotFoundException
+        raise NovelNotFoundException from e
     except Exception as e:
         db.rollback()
-        raise UnknownError(e)
+        raise UnknownError from e
     return label_group
 
 def modify_label_group(db : Session, current_user : User, label_group_id : int, request : schemas.UpdateLabelGroup) -> models.LabelGroup:
@@ -228,7 +242,7 @@ def modify_label_group(db : Session, current_user : User, label_group_id : int, 
         current_user: Current user.
         label_group_id: id of label group.
         request: Update info.
-    
+
     Raises:
         LabelGroupNotFoundException: No label group was found.
         DataTooLongException: Field data too long.
@@ -250,14 +264,14 @@ def modify_label_group(db : Session, current_user : User, label_group_id : int, 
         if isinstance(e.orig, PgError):
             pgcode = e.orig.pgcode
             if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException(str(e.orig))
-        raise UnknownError(e)
+                raise DataTooLongException from e
+        raise UnknownError from e
     except NoResultFound as e:
         db.rollback()
-        raise LabelGroupNotFoundException(str(e))
+        raise LabelGroupNotFoundException from e
     except Exception as e:
         db.rollback()
-        raise UnknownError(e)
+        raise UnknownError from e
     return label_group
 
 def insert_label_data(db : Session, current_user : User, label_group_id : int, request : schemas.CreateLabelData) -> models.LabelData:
@@ -297,16 +311,16 @@ def insert_label_data(db : Session, current_user : User, label_group_id : int, r
         if isinstance(e.orig, PgError):
             pgcode = e.orig.pgcode
             if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
-                raise NotFoundException("Either raw chapter revision or label group not found.")
+                raise NotFoundException("Either raw chapter revision or label group not found.") from e
             elif pgcode == errorcodes.UNIQUE_VIOLATION:
-                raise LabelDataRevisionDuplicateException
-        raise UnknownError(e)
+                raise LabelDataRevisionDuplicateException from e
+        raise UnknownError from e
     except NoResultFound as e:
         db.rollback()
-        raise LabelGroupNotFoundException(str(e))
+        raise LabelGroupNotFoundException from e
     except Exception as e:
         db.rollback()
-        raise UnknownError(e)
+        raise UnknownError from e
     return label_data
 
 def modify_label_data_by_stream(db : Session, current_user : User, label_data_id : int, request : schemas.UpdateLabelDataStream) -> None:
@@ -342,9 +356,9 @@ def modify_label_data_by_stream(db : Session, current_user : User, label_data_id
         result = db.execute(q)
         text = result.scalar_one()
     except NoResultFound as e:
-        raise RawChapterRevisionNotFoundException
+        raise RawChapterRevisionNotFoundException from e
     except Exception as e:
-        raise UnknownError(e)
+        raise UnknownError from e
     try:
         for op in request.ops:
             apply_operation(db, current_user, label_data_id, text, op)
@@ -352,10 +366,10 @@ def modify_label_data_by_stream(db : Session, current_user : User, label_data_id
     except Exception as e:
         db.rollback()
         raise e
-    
+
 def insert_label_datas_by_autolabels(
-        db : Session, 
-        current_user : User, 
+        db : Session,
+        current_user : User,
         label_group_id : int,
         request : schemas.CreateLabelDataByAutoLabel
     ) -> schemas.CreateLabelDataByAutoLabelStatus:
@@ -367,11 +381,11 @@ def insert_label_datas_by_autolabels(
         current_user: User performing the operation.
         label_group_id: id of label group to attach new label_datas to.
         request: Parameters to specify which autolabels get processed.
-    
-    Todo:
-        Right now, label inserts are being done chapter by chapter. This requires one message sent to database per chapter. We would ideally like to minimize the amount of communication being done between the database and the backend. To accomplish this, we will batch database communication into bundles of n chapters each and perform chapter-by-chapter message sending on a bundle only if that bundle fails on initial update. 
 
-        Note this can probably be optimized further, but not sure if it's worth it. 
+    Todo:
+        Right now, label inserts are being done chapter by chapter. This requires one message sent to database per chapter. We would ideally like to minimize the amount of communication being done between the database and the backend. To accomplish this, we will batch database communication into bundles of n chapters each and perform chapter-by-chapter message sending on a bundle only if that bundle fails on initial update.
+
+        Note this can probably be optimized further, but not sure if it's worth it.
     """
     q = select(
         autolabel_models.AutoLabel, novel_models.RawChapterRevision
@@ -410,8 +424,8 @@ def insert_label_datas_by_autolabels(
         q = q.where(novel_models.RawChapter.raw_chapter_num < request.end)
     result = db.execute(q)
 
-    success : List[int] = []
-    errors : List[Tuple[int, str]] = []
+    success : list[int] = []
+    errors : list[tuple[int, str]] = []
 
     for a, r in result:
         autolabel : autolabel_models.AutoLabel = a
@@ -458,7 +472,6 @@ def insert_label_datas_by_autolabels(
     try:
         db.commit()
     except Exception as e:
-        raise UnknownError(e)
+        raise UnknownError from e
     return schemas.CreateLabelDataByAutoLabelStatus(success=success, errors=errors)
 
-    

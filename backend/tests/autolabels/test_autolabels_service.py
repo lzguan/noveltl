@@ -1,18 +1,20 @@
-import pytest
 import logging
-from typing import Protocol, Generator, Tuple, List
-from sqlalchemy.orm import Session
-from sqlalchemy import select
+from collections.abc import Generator
+from typing import Protocol
+
+import pytest
 from arq import ArqRedis
 from arq.worker import Worker
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from src.autolabels.service import insert_auto_labels
-from src.novels.models import Novel, RawChapter, RawChapterRevision
-from src.autolabels.schemas import CreateAutoLabels
-from src.autolabels.models import AutoLabel
-from src.autolabels.utils import ArqDispatcher
 from src.auth.models import User
 from src.autolabels.constants import AutoLabelProgress
+from src.autolabels.models import AutoLabel
+from src.autolabels.schemas import CreateAutoLabels
+from src.autolabels.service import insert_auto_labels
+from src.autolabels.utils import ArqDispatcher
+from src.novels.models import Novel, RawChapter, RawChapterRevision
 
 logger = logging.getLogger(__name__)
 
@@ -23,17 +25,17 @@ class Loader(Protocol):
 @pytest.mark.asyncio
 @pytest.mark.slow
 async def test_insert_auto_labels_basic(
-    chinese_xianxia_small_test_novel : Novel, 
-    chinese_xianxia_small_test_chapters : List[Tuple[RawChapter, RawChapterRevision]], 
-    redis : ArqRedis, 
-    test_db : Session, 
-    chinese_xianxia_small_test_user : User, 
+    chinese_xianxia_small_test_novel : Novel,
+    chinese_xianxia_small_test_chapters : list[tuple[RawChapter, RawChapterRevision]],
+    redis : ArqRedis,
+    test_db : Session,
+    chinese_xianxia_small_test_user : User,
     worker_mock : Worker
 ):
     ret = await insert_auto_labels(
-        test_db, 
+        test_db,
         chinese_xianxia_small_test_user,
-        ArqDispatcher(redis), 
+        ArqDispatcher(redis),
         CreateAutoLabels(
             raw_chapter_revision_ids=[revision.raw_chapter_revision_id for _, revision in chinese_xianxia_small_test_chapters],
             auto_label_model_name='cluener',

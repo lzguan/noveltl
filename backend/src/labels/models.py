@@ -2,22 +2,23 @@
 Database models for labels.
 """
 
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column, relationship
-from sqlalchemy import Enum, String, Float, Integer, Boolean, ForeignKey, UniqueConstraint, CheckConstraint, func, and_
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Boolean, CheckConstraint, Enum, Float, ForeignKey, Integer, String, UniqueConstraint, and_, func
 from sqlalchemy.dialects.postgresql import ExcludeConstraint
-from typing import List, TYPE_CHECKING
-from .constants import *
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from ..models import Base
+from .constants import MAX_LABEL_ENTITY_GROUP_NAME_LEN, MAX_LABEL_GROUP_NAME_LEN, MAX_LABEL_WORD_LEN, LabelRole
 
 if TYPE_CHECKING:
-    from src.novels.models import Novel, RawChapterRevision
     from src.auth.models import User
+    from src.novels.models import Novel, RawChapterRevision
 
 class LabelGroup(Base):
     """
     Class for grouping labels for each chapter for a given novel and user
-    
+
     Attributes:
         label_group_id: Integer identifier.
         label_group_name: Name given to this label group.
@@ -27,12 +28,12 @@ class LabelGroup(Base):
     __tablename__ = 'label_groups'
     label_group_id : Mapped[int] = mapped_column(primary_key=True)
     label_group_name : Mapped[str] = mapped_column(String(MAX_LABEL_GROUP_NAME_LEN))
-    
+
     novel_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id'), nullable=False)
     novel_of_label_group : Mapped["Novel"] = relationship(back_populates='label_groups_with_novel')
 
-    label_datas_with_label_group : Mapped[List["LabelData"]] = relationship(back_populates='label_group_of_label_data', cascade='all, delete-orphan')
-    label_contributors_with_label_group : Mapped[List["LabelContributor"]] = relationship(back_populates='label_group_of_label_contributor', cascade='all, delete-orphan')
+    label_datas_with_label_group : Mapped[list["LabelData"]] = relationship(back_populates='label_group_of_label_data', cascade='all, delete-orphan')
+    label_contributors_with_label_group : Mapped[list["LabelContributor"]] = relationship(back_populates='label_group_of_label_contributor', cascade='all, delete-orphan')
 
 class LabelContributor(Base):
     """
@@ -56,7 +57,7 @@ class LabelContributor(Base):
 class LabelData(Base):
     """
     Class for storing label data for a given chapter.
-    
+
     Attributes:
         label_data_id: Integer identifier.
         label_group_id: Label group that label_data belongs to.
@@ -76,7 +77,7 @@ class LabelData(Base):
     raw_chapter_revision_id : Mapped[int] = mapped_column(ForeignKey('raw_chapter_revisions.raw_chapter_revision_id'), nullable=False)
     raw_chapter_revision_of_label_data : Mapped["RawChapterRevision"] = relationship(back_populates='label_datas_with_raw_chapter_revision')
 
-    labels_with_label_data : Mapped[List["Label"]] = relationship(back_populates='label_data_of_label', cascade='all, delete-orphan')
+    labels_with_label_data : Mapped[list["Label"]] = relationship(back_populates='label_data_of_label', cascade='all, delete-orphan')
 
     __table_args__ = (
         UniqueConstraint('label_group_id', 'raw_chapter_revision_id', name='one_label_group_per_chapter'),

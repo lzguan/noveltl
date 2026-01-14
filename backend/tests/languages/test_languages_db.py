@@ -1,10 +1,12 @@
 import pytest
-from sqlalchemy.exc import IntegrityError, DataError, NoResultFound
-from src.languages.models import Language
-from sqlalchemy.orm import Session
-from sqlalchemy import select
-from psycopg2.errors import Error as Psycopg2Error
 from psycopg2 import errorcodes
+from psycopg2.errors import Error as Psycopg2Error
+from sqlalchemy import select
+from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
+from sqlalchemy.orm import Session
+
+from src.languages.models import Language
+
 
 def test_language_creation(test_db : Session):
     # Create a language

@@ -1,17 +1,16 @@
 """
 Database models related to users/user authentication
 """
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column, relationship
-from sqlalchemy import String, Enum
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
-from .constants import *
+from sqlalchemy import Enum, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from ..models import Base
+from .constants import MAX_USER_NAME_LEN, UserType
 
 if TYPE_CHECKING:
     from src.labels.models import LabelContributor
-
     from src.novels.models import Contributor
 
 class User(Base):
@@ -28,7 +27,7 @@ class User(Base):
 
     user_id: Mapped[int] = mapped_column(primary_key=True)
     user_name : Mapped[str] = mapped_column(
-        String(MAX_USER_NAME_LEN), 
+        String(MAX_USER_NAME_LEN),
         unique=True,
         nullable=False
     )
@@ -37,9 +36,9 @@ class User(Base):
         nullable=False
     )
     user_type : Mapped[UserType] = mapped_column(
-        Enum(UserType, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), 
+        Enum(UserType, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]),
         nullable=False
     )
 
-    contributors_with_user : Mapped[List["Contributor"]] = relationship(back_populates='user_of_contributor')
-    label_contributors_with_user : Mapped[List["LabelContributor"]] = relationship(back_populates='user_of_label_contributor')
+    contributors_with_user : Mapped[list["Contributor"]] = relationship(back_populates='user_of_contributor')
+    label_contributors_with_user : Mapped[list["LabelContributor"]] = relationship(back_populates='user_of_label_contributor')

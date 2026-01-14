@@ -1,9 +1,9 @@
-from sqlalchemy import select, or_, and_, exists, Select, Update, Delete
+from sqlalchemy import Delete, Select, Update, and_, exists, or_, select
 
-from .constants import *
-from .models import *
-from ..auth.models import User
 from ..auth.constants import UserType
+from ..auth.models import User
+from .constants import Role, Visibility
+from .models import Contributor, Novel, RawChapter, RawChapterRevision
 
 
 def novel_mod_access_select[T : Select](q : T, current_user : User | None) -> T:
@@ -57,12 +57,12 @@ def raw_chapter_revision_mod_access_select[T : Select](q : T,  current_user : Us
     Takes a select statement on raw chapter revisions and returns a select statement that restricts permissions on raw chapter revisions.
     """
     if current_user is None:
-        return novel_mod_access_select(q, None).where(RawChapterRevision.raw_chapter_revision_is_public == True)
+        return novel_mod_access_select(q, None).where(RawChapterRevision.raw_chapter_revision_is_public.is_(True))
     elif current_user.user_type != UserType.ADMIN:
         return q.where(or_(
             and_(
                 Novel.novel_visibility >= Visibility.UNLISTED,
-                RawChapterRevision.raw_chapter_revision_is_public == True
+                RawChapterRevision.raw_chapter_revision_is_public.is_(True)
             ),
             exists(
                 select(
@@ -101,7 +101,7 @@ def novel_mod_access_update[T : Update](stmt : T, current_user : User) -> T:
 
 def raw_chapter_mod_access_insert[T : Select](stmt : T, current_user : User, novel_id : int) -> T:
     """
-    Takes an select statement used for an insert from select statement for raw chapter and returns a select statement for a raw chapter that restrict permissions on stmt. 
+    Takes an select statement used for an insert from select statement for raw chapter and returns a select statement for a raw chapter that restrict permissions on stmt.
     """
     if current_user.user_type != UserType.ADMIN:
         return stmt.where(

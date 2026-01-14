@@ -1,25 +1,25 @@
-from typing import Dict, cast, Any
-from sqlalchemy import update, select
-from sqlalchemy import CursorResult
-from sqlalchemy.exc import NoResultFound
-from pydantic import ValidationError
-
-from .inference import *
-from .config import SessionLocal
-from ..models import AutoLabel
-from ..constants import AutoLabelProgress
-from ...novels.models import RawChapterRevision
 import asyncio
+from typing import Any, cast
 
-model_cache : Dict[str, NERModel] = {}
+from pydantic import ValidationError
+from sqlalchemy import CursorResult, select, update
+from sqlalchemy.exc import NoResultFound
+
+from ...novels.models import RawChapterRevision
+from ..constants import AutoLabelProgress
+from ..models import AutoLabel
+from .config import SessionLocal
+from .interfaces import NERModel
+
+model_cache : dict[str, NERModel] = {}
 
 def get_ner_model(model_name : str) -> NERModel:
     if model_name in model_cache:
         return model_cache[model_name]
-    
+
     raise ValueError(f"Model {model_name} not found in registry.")
 
-async def autolabel_infer(ctx, job_id : str, auto_label_id: int, model_name: str, model_params: Dict[str, Any]) -> None:
+async def autolabel_infer(ctx, job_id : str, auto_label_id: int, model_name: str, model_params: dict[str, Any]) -> None:
     base_update = update(
         AutoLabel
     ).where(
@@ -111,7 +111,7 @@ async def autolabel_infer(ctx, job_id : str, auto_label_id: int, model_name: str
             raise e
     with SessionLocal() as db:
         stmt = base_update.values(
-            auto_label_data=[l.model_dump() for l in result],
+            auto_label_data=[lab.model_dump() for lab in result],
             auto_label_status=AutoLabelProgress.DONE,
             auto_label_message=str(err)
         )

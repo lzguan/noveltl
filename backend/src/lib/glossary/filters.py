@@ -25,12 +25,12 @@ def filter_by_word_length(flattened : list[dict], min_length : int = 2, **kwargs
 
 
 def merge_adjacent_entities(
-    entities : list[dict], 
-    chapters_by_num : dict, 
-    gap_tolerance : int = 1, 
+    entities : list[dict],
+    chapters_by_num : dict,
+    gap_tolerance : int = 1,
     separators : set | None = None,
     length_checks : dict | None = None,
-    wordy : bool=False, 
+    wordy : bool=False,
     **kwargs
 ) -> list[dict]:
     """
@@ -45,10 +45,10 @@ def merge_adjacent_entities(
     """
     if not entities:
         return []
-    
+
     if not separators:
         separators = set()
-    
+
     if not length_checks:
         length_checks = {}
 
@@ -64,9 +64,9 @@ def merge_adjacent_entities(
             merged_entities.append(current_merge)
             current_merge = next_entity.copy()
             continue
-        
+
         gap = next_entity['start'] - current_merge['end']
-        
+
         if gap < 0 or gap > gap_tolerance:
             merged_entities.append(current_merge)
             current_merge = next_entity.copy()
@@ -91,7 +91,7 @@ def merge_adjacent_entities(
             merged_entities.append(current_merge)
             current_merge = next_entity.copy()
             continue
-        
+
         # Passed all checks
         if wordy:
             print(f"performing merge on\n{current_merge}\n{next_entity}")
@@ -102,7 +102,7 @@ def merge_adjacent_entities(
         if wordy:
             print(f"resulting merge\n{current_merge}")
         merged_entities.append(current_merge)
-    
+
     return merged_entities
 
 def filter_substrings(flattened : list[dict], chapters_by_num : dict, wordy : bool=False):

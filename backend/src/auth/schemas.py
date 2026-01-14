@@ -2,9 +2,12 @@
 Pydantic schemas for User models
 """
 
-from pydantic import BaseModel, ConfigDict, field_validator
 from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, field_validator
+
 from .constants import UserType
+
 
 class User(BaseModel):
     """

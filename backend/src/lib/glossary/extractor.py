@@ -1,6 +1,7 @@
 # Class for extracting named entities from text
 from typing import Protocol
 
+
 class Tokenizer(Protocol):
     def tokenize(self, text : str) -> list[str]:
         """Returns a list of token strings"""
@@ -18,7 +19,7 @@ class NERModel(Protocol):
             }
         """
         ...
-    
+
     def get_tokenizer(self) -> Tokenizer:
         ...
 
@@ -50,7 +51,7 @@ class Extractor:
                     cur_chunk_size = 0
                 sentences = [sentence + self.sentence_sep for sentence in line.split(self.sentence_sep) if sentence]
                 # same logic as splitting lines but with sentences
-                for sentence in sentences: 
+                for sentence in sentences:
                     t_sentence = self.tokenizer.tokenize(sentence)
                     if len(t_sentence) > self.chunk_size:
                         raise Exception("Sentence too long")
@@ -106,14 +107,14 @@ class Extractor:
 class HuggingFaceTokenizer:
     def __init__(self, tokenizer):
         self.tokenizer = tokenizer
-    
+
     def tokenize(self, text : str) -> list[str]:
         return self.tokenizer.tokenize(text)
 
 class HuggingFaceModel:
     def __init__(self, pipeline):
         self.pipeline = pipeline
-    
+
     def predict(self, text : str) -> list[dict]:
         return self.pipeline(text)
 

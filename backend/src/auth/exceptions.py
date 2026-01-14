@@ -2,13 +2,12 @@
 Exceptions related to authorization
 """
 
-from ..exceptions import *
+from ..exceptions import DuplicateException, NotFoundException
+
 
 class UserNotFoundException(NotFoundException):
     pass
 
-class UserTooManyFoundException(TooManyFoundException):
-    pass
 
 class UserAuthenticationFailedException(Exception):
     pass

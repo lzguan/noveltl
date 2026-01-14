@@ -2,18 +2,33 @@
 Database models for novels and chapters.
 """
 
-from sqlalchemy.orm import Mapped
-from sqlalchemy.orm import mapped_column, relationship
-from sqlalchemy import Dialect, String, UniqueConstraint, ForeignKey, Integer, Text, Boolean, Enum, Index, CheckConstraint, or_, not_
+from typing import TYPE_CHECKING, Any
+
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Dialect,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    not_,
+    or_,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
-from typing import Any, List, TYPE_CHECKING
-from .constants import *
+
 from ..models import Base
+from .constants import MAX_AUTHOR_LENGTH, MAX_CHAPTER_TITLE_LEN, MAX_NOVEL_TITLE_LEN, NovelType, Role, Visibility
 
 if TYPE_CHECKING:
-    from src.languages.models import Language
-    from src.labels.models import LabelGroup, LabelData
     from src.auth.models import User
+    from src.autolabels.models import AutoLabel
+    from src.labels.models import LabelData, LabelGroup
+    from src.languages.models import Language
 
 class EnumAsInteger(TypeDecorator):
     """
@@ -26,17 +41,17 @@ class EnumAsInteger(TypeDecorator):
     cache_ok = True
 
     def __init__(self, enum_type):
-        super(EnumAsInteger, self).__init__()
+        super().__init__()
         self.enum_type = enum_type
 
     def process_bind_param(self, value: Any | None, dialect: Dialect) -> Any:
-        if value is not None and isinstance(value, self.enum_type):   
+        if value is not None and isinstance(value, self.enum_type):
             return value.value
         raise ValueError(f"Invalid value {value} for enum {self.enum_type}")
 
     def process_result_value(self, value: Any | None, dialect: Dialect) -> Any | None:
         return self.enum_type(value)
-    
+
     def copy(self, **kwargs):
         return EnumAsInteger(self.enum_type)
 
@@ -54,7 +69,7 @@ class Novel(Base):
         novel_type: Type of novel. Encoded as a NovelType enum.
         novel_parent_id: Integer foreign key identifier to parent novel, for example if this novel is a translation of another novel.
         language_id: Integer foreign key for the language the novel is written in.
-    
+
     Note:
         novel_title is non-nullable.
         novel_author must have length at most MAX_AUTHOR_LENGTH.
@@ -70,14 +85,14 @@ class Novel(Base):
 
     novel_parent_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id'), nullable=True)
     novel_parent : Mapped["Novel"] = relationship("Novel", back_populates="novel_children", remote_side=[novel_id])
-    novel_children : Mapped[List["Novel"]] = relationship("Novel", back_populates="novel_parent")
+    novel_children : Mapped[list["Novel"]] = relationship("Novel", back_populates="novel_parent")
 
     language_id = mapped_column(ForeignKey("languages.language_id"), nullable=False)
     language_of_novel : Mapped["Language"] = relationship(back_populates="novels_with_language")
 
-    raw_chapters_with_novel : Mapped[List["RawChapter"]] = relationship(back_populates='novel_of_raw_chapter')
-    label_groups_with_novel : Mapped[List["LabelGroup"]] = relationship(back_populates='novel_of_label_group')
-    contributors_with_novel : Mapped[List["Contributor"]] = relationship(back_populates='novel_of_contributor')
+    raw_chapters_with_novel : Mapped[list["RawChapter"]] = relationship(back_populates='novel_of_raw_chapter')
+    label_groups_with_novel : Mapped[list["LabelGroup"]] = relationship(back_populates='novel_of_label_group')
+    contributors_with_novel : Mapped[list["Contributor"]] = relationship(back_populates='novel_of_contributor')
 
 class Contributor(Base):
     """
@@ -93,10 +108,10 @@ class Contributor(Base):
 
     contributor_id : Mapped[int] = mapped_column(primary_key=True)
     contributor_role : Mapped[Role] = mapped_column(Enum(Role, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False)
-    
+
     novel_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id'), nullable=False)
     novel_of_contributor : Mapped["Novel"] = relationship(back_populates='contributors_with_novel')
-    
+
     user_id : Mapped[int] = mapped_column(ForeignKey('users.user_id'), nullable=False)
     user_of_contributor : Mapped["User"] = relationship(back_populates='contributors_with_user')
 
@@ -113,7 +128,7 @@ class RawChapter(Base):
         raw_chapter_id: Integer primary key identifier.
         raw_chapter_num: Integer chapter numbering. For example, a value of 5 would correspond to chapter 5.
         novel_id: Integer foreign key identifier to the novel this chapter belongs to.
-    
+
     Note:
         Each pair (raw_chapter_num, novel_id) should be unique.
         raw_chapter_num and novel_id are non-nullable.
@@ -126,7 +141,7 @@ class RawChapter(Base):
     novel_id = mapped_column(ForeignKey('novels.novel_id'), nullable=False)
     novel_of_raw_chapter : Mapped[Novel] = relationship(back_populates='raw_chapters_with_novel')
 
-    raw_chapter_revisions_with_raw_chapter : Mapped[List["RawChapterRevision"]] = relationship(back_populates='raw_chapter_of_raw_chapter_revision')
+    raw_chapter_revisions_with_raw_chapter : Mapped[list["RawChapterRevision"]] = relationship(back_populates='raw_chapter_of_raw_chapter_revision')
 
     __table_args__ = (
         UniqueConstraint('raw_chapter_num', 'novel_id', name="raw_chapter_per_novel"),
@@ -141,10 +156,10 @@ class RawChapterRevision(Base):
         raw_chapter_revision_text: Text contained in this revision of the chapter.
         raw_chapter_revision_title: Chapter title. Different revisions of the same chapter can have different titles.
         raw_chapter_revision_is_primary: Boolean mark for whether a revision is the primary chapter (the 'finalized' chapter)
-        raw_chapter_revision_is_public: Boolean mark for whether a revision is marked as public. 
+        raw_chapter_revision_is_public: Boolean mark for whether a revision is marked as public.
         raw_chapter_revision_is_final: Boolean mark for whether a revision is marked as final. Final revisions should be immutable.
         raw_chapter_id: Id of chapter this revision belongs to.
-    
+
     Note:
         raw_chapter_revision_title must have length at most MAX_CHAPTER_TITLE_LEN.
         Both public and primary flags are non-nullable.
@@ -164,9 +179,9 @@ class RawChapterRevision(Base):
     raw_chapter_of_raw_chapter_revision : Mapped["RawChapter"] = relationship(back_populates="raw_chapter_revisions_with_raw_chapter")
     raw_chapter_id = mapped_column(ForeignKey('raw_chapters.raw_chapter_id'), nullable=False)
 
-    label_datas_with_raw_chapter_revision : Mapped[List["LabelData"]] = relationship(back_populates='raw_chapter_revision_of_label_data')
+    label_datas_with_raw_chapter_revision : Mapped[list["LabelData"]] = relationship(back_populates='raw_chapter_revision_of_label_data')
 
-    auto_labels_with_raw_chapter_revision : Mapped[List["AutoLabel"]] = relationship(back_populates='raw_chapter_revision_of_auto_label', cascade='all, delete-orphan') # type: ignore
+    auto_labels_with_raw_chapter_revision : Mapped[list["AutoLabel"]] = relationship(back_populates='raw_chapter_revision_of_auto_label', cascade='all, delete-orphan') # type: ignore
 
     __table_args__ = (
         Index('ix_one_primary_revision_per_chapter', 'raw_chapter_id', unique=True, postgresql_where=(raw_chapter_revision_is_primary.is_(True))),

@@ -2,23 +2,54 @@
 Router functions for novels service.
 """
 
-from ..database import get_db
-from fastapi import APIRouter, Depends, HTTPException, status
-from .dependencies import *
-from ..auth.dependencies import get_current_user, get_optional_user
-from .service import *
-from .schemas import *
 from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+import schemas
+
+from ..auth.dependencies import get_current_user, get_optional_user
+from ..auth.models import User
+from ..database import get_db
+from ..exceptions import DataTooLongException, InsufficientPermissionsException
+from ..languages.exceptions import LanguageNotFoundException
+from .exceptions import (
+    ChapterNumDuplicateException,
+    NovelNotFoundException,
+    RawChapterNotFoundException,
+    RawChapterRevisionMakePrimaryFailedException,
+    RawChapterRevisionNotFoundException,
+    RawChapterRevisionNotPublicException,
+)
+from .service import (
+    insert_novel,
+    insert_raw_chapter,
+    insert_raw_chapter_revision,
+    make_final_raw_chapter_revision,
+    make_primary_raw_chapter_revision,
+    modify_novel,
+    modify_raw_chapter_revision,
+    publish_raw_chapter_revision,
+    query_novel_by_id,
+    query_novels_by_title,
+    query_raw_chapter_by_id,
+    query_raw_chapter_revision_by_id,
+    query_raw_chapter_revisions_by_novel,
+    query_raw_chapter_revisions_by_raw_chapter,
+    query_raw_chapters_by_novel,
+    remove_raw_chapter_revision,
+)
 
 router = APIRouter()
 
 @router.get(
-    '/novels/{novel_id}', 
+    '/novels/{novel_id}',
     response_model=schemas.Novel
 )
 async def read_novel(
-    novel_id : int, 
-    db : Annotated[Session, Depends(get_db)], 
+    novel_id : int,
+    db : Annotated[Session, Depends(get_db)],
     current_user : Annotated[User | None, Depends(get_optional_user)]
     ):
     """
@@ -31,25 +62,20 @@ async def read_novel(
     """
     try:
         novel = query_novel_by_id(db, current_user, novel_id)
-    except NovelNotFoundException:
+    except NovelNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Novel with {novel_id} not found."
-        )
-    except NovelTooManyFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"More than one novel with {novel_id} found."
-        )
+        ) from e
     return novel
 
 @router.get(
-    '/novels', 
-    response_model=List[schemas.Novel]
+    '/novels',
+    response_model=list[schemas.Novel]
 )
 async def read_novels(
-    db : Annotated[Session, Depends(get_db)], 
-    current_user : Annotated[User | None, Depends(get_optional_user)], 
+    db : Annotated[Session, Depends(get_db)],
+    current_user : Annotated[User | None, Depends(get_optional_user)],
     title_contains : str | None = None
     ):
     """
@@ -64,14 +90,14 @@ async def read_novels(
     return novels
 
 @router.get(
-    '/chapters', 
-    response_model=List[schemas.RawChapter]
+    '/chapters',
+    response_model=list[schemas.RawChapter]
 )
 async def read_chapters_by_novel(
-    novel_id : int, 
-    db : Annotated[Session, Depends(get_db)], 
-    current_user : Annotated[User | None, Depends(get_optional_user)], 
-    start : int | None = None, 
+    novel_id : int,
+    db : Annotated[Session, Depends(get_db)],
+    current_user : Annotated[User | None, Depends(get_optional_user)],
+    start : int | None = None,
     end : int | None = None
     ):
     """
@@ -84,7 +110,13 @@ async def read_chapters_by_novel(
         start: Optional query parameter. Will filter by chapters with chapter_num >= start.
         end: Optional query parameter. Will filter by chapters with chapter_num < end.
     """
-    chapters = query_raw_chapters_by_novel(db, current_user, novel_id, start, end)
+    try:
+        chapters = query_raw_chapters_by_novel(db, current_user, novel_id, start, end)
+    except NovelNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Novel not found."
+        ) from e
     return chapters
 
 @router.get(
@@ -106,11 +138,11 @@ async def read_chapter_by_id(
     """
     try:
         chapter = query_raw_chapter_by_id(db, current_user, chapter_id)
-    except RawChapterNotFoundException:
+    except RawChapterNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter with id {chapter_id} not found."
-        )
+        ) from e
     return chapter
 
 @router.get(
@@ -120,27 +152,22 @@ async def read_chapter_by_id(
 async def read_chapter_revision(chapter_revision_id : int, db : Annotated[Session, Depends(get_db)], current_user : Annotated[User | None, Depends(get_optional_user)]):
     try:
         revision = query_raw_chapter_revision_by_id(db, current_user, chapter_revision_id)
-    except RawChapterRevisionNotFoundException:
+    except RawChapterRevisionNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter revision with id {chapter_revision_id} not found."
-        )
-    except InsufficientPermissionsException:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions to access this resource."
-        )
+        ) from e
     return revision
 
 @router.get(
-    '/novels/{novel_id}/revisions', 
-    response_model=List[schemas.RawChapterRevisionMeta]
+    '/novels/{novel_id}/revisions',
+    response_model=list[schemas.RawChapterRevisionMeta]
 )
 async def read_chapter_revisions_by_novel(
-    novel_id : int, 
-    db : Annotated[Session, Depends(get_db)], 
-    current_user : Annotated[User | None, Depends(get_optional_user)], 
-    start : int | None = None, 
+    novel_id : int,
+    db : Annotated[Session, Depends(get_db)],
+    current_user : Annotated[User | None, Depends(get_optional_user)],
+    start : int | None = None,
     end : int | None = None,
     is_public : bool | None = None,
     is_primary : bool | None = None,
@@ -160,16 +187,16 @@ async def read_chapter_revisions_by_novel(
     """
     try:
         revisions = query_raw_chapter_revisions_by_novel(db, current_user, novel_id, start, end, is_public, is_primary, is_final)
-    except NovelNotFoundException:
+    except NovelNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Novel with id {novel_id} not found."
-        )
+        ) from e
     return revisions
 
 @router.get(
-    '/chapters/{chapter_id}/revisions', 
-    response_model=List[schemas.RawChapterRevisionMeta]
+    '/chapters/{chapter_id}/revisions',
+    response_model=list[schemas.RawChapterRevisionMeta]
 )
 async def read_chapter_revision_by_chapter(
     chapter_id : int,
@@ -190,20 +217,20 @@ async def read_chapter_revision_by_chapter(
     """
     try:
         revisions = query_raw_chapter_revisions_by_raw_chapter(db, current_user, chapter_id, is_public, is_primary)
-    except RawChapterNotFoundException:
+    except RawChapterNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter with id {chapter_id} not found."
-        )
+        ) from e
     return revisions
 
 @router.post(
-    '/novels', 
+    '/novels',
     response_model=schemas.Novel
 )
 async def create_novel(
     request : schemas.CreateNovel,
-    db : Annotated[Session, Depends(get_db)], 
+    db : Annotated[Session, Depends(get_db)],
     current_user : Annotated[User, Depends(get_current_user)]
     ):
     """
@@ -216,31 +243,27 @@ async def create_novel(
     """
     try:
         db_novel = insert_novel(db, current_user, request)
-    except LanguageNotFoundException:
+    except LanguageNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Language with language id {request.language_id} not found."
-        )
-    except DataTooLongException:
+        ) from e
+    except DataTooLongException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Data in some field is too long."
-        )
-    except InsufficientPermissionsException:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Insufficient user permissions to create this resource."
-        )
+            detail="Data in some field is too long."
+        ) from e
+
     return db_novel
 
 @router.patch(
-    '/novels/{novel_id}', 
+    '/novels/{novel_id}',
     response_model=schemas.Novel
 )
 async def update_novel(
-    novel_id : int, 
-    request : schemas.UpdateNovel, 
-    db : Annotated[Session, Depends(get_db)], 
+    novel_id : int,
+    request : schemas.UpdateNovel,
+    db : Annotated[Session, Depends(get_db)],
     current_user : Annotated[User, Depends(get_current_user)]
     ):
     """
@@ -254,36 +277,31 @@ async def update_novel(
     """
     try:
         db_novel = modify_novel(db, current_user, novel_id, request)
-    except NovelNotFoundException:
+    except NovelNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Resource not found."
-        )
-    except NovelTooManyFoundException:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="More than one novel with this id found."
-        )
-    except DataTooLongException:
+        ) from e
+    except DataTooLongException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Data in some field exceeds the maximum possible length."
-        )
-    except InsufficientPermissionsException:
+        ) from e
+    except InsufficientPermissionsException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Insufficient permissions to update this resource."
-        )
+        ) from e
     return db_novel
 
 @router.post(
-    '/novels/{novel_id}/chapters', 
+    '/novels/{novel_id}/chapters',
     response_model=schemas.RawChapter
 )
 async def create_chapter(
-    novel_id : int, 
-    request : schemas.CreateRawChapter, 
-    db : Annotated[Session, Depends(get_db)], 
+    novel_id : int,
+    request : schemas.CreateRawChapter,
+    db : Annotated[Session, Depends(get_db)],
     current_user : Annotated[User, Depends(get_current_user)]
     ):
     """
@@ -297,31 +315,31 @@ async def create_chapter(
     """
     try:
         db_raw_chapter = insert_raw_chapter(db, current_user, novel_id, request)
-    except NovelNotFoundException:
+    except NovelNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Novel with id {novel_id} not found."
-        )
-    except ChapterNumDuplicateException:
+        ) from e
+    except ChapterNumDuplicateException as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Chapter in this novel with corresponding chapter number already created."
-        )
-    except InsufficientPermissionsException:
+        ) from e
+    except InsufficientPermissionsException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Insufficient permissions to perform this action."
-        )
+        ) from e
     return db_raw_chapter
 
 @router.post(
-    '/chapters/{chapter_id}/revisions', 
+    '/chapters/{chapter_id}/revisions',
     response_model=schemas.RawChapterRevision
 )
 async def create_chapter_revision(
-    chapter_id : int, 
-    request : CreateRawChapterRevision, 
-    db : Annotated[Session, Depends(get_db)], 
+    chapter_id : int,
+    request : schemas.CreateRawChapterRevision,
+    db : Annotated[Session, Depends(get_db)],
     current_user : Annotated[User, Depends(get_current_user)]
     ):
     """
@@ -335,31 +353,31 @@ async def create_chapter_revision(
     """
     try:
         db_revision = insert_raw_chapter_revision(db, current_user, chapter_id, request)
-    except RawChapterNotFoundException:
+    except RawChapterNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter with id {chapter_id} not found."
-        )
-    except DataTooLongException:
+        ) from e
+    except DataTooLongException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Field in request too long."
-        )
-    except InsufficientPermissionsException:
+        ) from e
+    except InsufficientPermissionsException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Insufficient permissions to perform this action."
-        )
+        ) from e
     return db_revision
 
 @router.patch(
-    '/revisions/{revision_id}', 
+    '/revisions/{revision_id}',
     response_model=schemas.RawChapterRevision
 )
 async def update_chapter_revision(
-    revision_id : int, 
-    request : schemas.UpdateRawChapterRevision, 
-    db : Annotated[Session, Depends(get_db)], 
+    revision_id : int,
+    request : schemas.UpdateRawChapterRevision,
+    db : Annotated[Session, Depends(get_db)],
     current_user : Annotated[User, Depends(get_current_user)]
     ):
     """
@@ -373,30 +391,30 @@ async def update_chapter_revision(
     """
     try:
         db_revision = modify_raw_chapter_revision(db, current_user, revision_id, request)
-    except RawChapterRevisionNotFoundException:
+    except RawChapterRevisionNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter revision with id {revision_id} not found."
-        )
-    except DataTooLongException:
+        ) from e
+    except DataTooLongException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Field in request to long."
-        )
-    except InsufficientPermissionsException:
+        ) from e
+    except InsufficientPermissionsException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Insufficient permissions to perform this action."
-        )
+        ) from e
     return db_revision
 
 @router.patch(
-    '/publish/revisions/{revision_id}', 
+    '/publish/revisions/{revision_id}',
     response_model=schemas.RawChapterRevision
 )
 async def update_publish_chapter_revision(
-    revision_id : int, 
-    db : Annotated[Session, Depends(get_db)], 
+    revision_id : int,
+    db : Annotated[Session, Depends(get_db)],
     current_user : Annotated[User, Depends(get_current_user)]
     ):
     """
@@ -409,25 +427,25 @@ async def update_publish_chapter_revision(
     """
     try:
         db_revision = publish_raw_chapter_revision(db, current_user, revision_id)
-    except RawChapterRevisionNotFoundException:
+    except RawChapterRevisionNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter revision with id {revision_id} not found."
-        )
-    except InsufficientPermissionsException:
+        ) from e
+    except InsufficientPermissionsException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Insufficient permissions to perform this action."
-        )
+            detail="Insufficient permissions to perform this action."
+        ) from e
     return db_revision
 
 @router.patch(
-    '/make-primary/revisions/{revision_id}', 
+    '/make-primary/revisions/{revision_id}',
     response_model=schemas.RawChapterRevision
 )
 async def update_make_primary_chapter_revision(
-    revision_id : int, 
-    db : Annotated[Session, Depends(get_db)], 
+    revision_id : int,
+    db : Annotated[Session, Depends(get_db)],
     current_user : Annotated[User, Depends(get_current_user)]
     ):
     """
@@ -440,40 +458,40 @@ async def update_make_primary_chapter_revision(
     """
     try:
         db_revision = make_primary_raw_chapter_revision(db, current_user, revision_id)
-    except RawChapterRevisionNotFoundException:
+    except RawChapterRevisionNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter revision with id {revision_id} not found."
-        )
-    except RawChapterNotFoundException:
+        ) from e
+    except RawChapterNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Server did not find a chapter associated with this revision"
-        )
-    except RawChapterRevisionMakePrimaryFailedException:
+        ) from e
+    except RawChapterRevisionMakePrimaryFailedException as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Commit to database failed. Probably a race condition."
-        )
-    except RawChapterRevisionNotPublicException:
+        ) from e
+    except RawChapterRevisionNotPublicException as e:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Revision not public yet."
-        )
-    except InsufficientPermissionsException:
+        ) from e
+    except InsufficientPermissionsException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Insufficient permissions to perform this action."
-        )
+            detail="Insufficient permissions to perform this action."
+        ) from e
     return db_revision
 
 @router.patch(
-    '/finalize/revisions/{revision_id}', 
+    '/finalize/revisions/{revision_id}',
     response_model=schemas.RawChapterRevision
 )
 async def update_make_final_chapter_revision(
-    revision_id : int, 
-    db : Annotated[Session, Depends(get_db)], 
+    revision_id : int,
+    db : Annotated[Session, Depends(get_db)],
     current_user : Annotated[User, Depends(get_current_user)]
     ):
     """
@@ -486,37 +504,37 @@ async def update_make_final_chapter_revision(
     """
     try:
         db_revision = make_final_raw_chapter_revision(db, current_user, revision_id)
-    except RawChapterRevisionNotFoundException:
+    except RawChapterRevisionNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter revision with id {revision_id} not found."
-        )
-    except InsufficientPermissionsException:
+        ) from e
+    except InsufficientPermissionsException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Insufficient permissions to perform this action."
-        )
+            detail="Insufficient permissions to perform this action."
+        ) from e
     return db_revision
 
 @router.delete(
-    '/revisions/{revision_id}', 
+    '/revisions/{revision_id}',
     response_model=schemas.DeleteRawChapterRevisionStatus
 )
 async def delete_chapter_revision(
-    revision_id : int, 
-    db : Annotated[Session, Depends(get_db)], 
+    revision_id : int,
+    db : Annotated[Session, Depends(get_db)],
     current_user : Annotated[User, Depends(get_current_user)]
     ):
     try:
         delete_status = remove_raw_chapter_revision(db, current_user, revision_id)
-    except RawChapterRevisionNotFoundException:
+    except RawChapterRevisionNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chapter revision with id {revision_id} not found."
-        )
-    except InsufficientPermissionsException:
+        ) from e
+    except InsufficientPermissionsException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Insufficient permissions to perform this action."
-        )
+        ) from e
     return delete_status

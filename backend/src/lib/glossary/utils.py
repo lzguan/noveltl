@@ -1,7 +1,10 @@
-from pathlib import Path
 import glob
 import json
+from pathlib import Path
+
 import numpy as np
+
+
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.integer):
@@ -32,10 +35,10 @@ def smart_normalizer(entity: dict) -> dict:
 
     # 1. Define the comprehensive set of characters to strip from the outside.
     punctuation_to_strip = "·-—”“’‘《》【】…().#&_ "
-    
+
     # 2. Strip the surrounding punctuation.
     stripped_word = original_word.strip(punctuation_to_strip)
-    
+
     # 3. Remove all internal whitespace from the result.
     # e.g., "隗 辛" becomes "隗辛"
     cleaned_word = "".join(stripped_word.split())
@@ -43,7 +46,7 @@ def smart_normalizer(entity: dict) -> dict:
     # If no change was made after all cleaning, return the original entity.
     if original_word == cleaned_word:
         return new_entity
-        
+
     # 4. If the word changed, find the new start position.
     # This finds the starting index of the first real character of the cleaned word.
     start_diff = original_word.find(cleaned_word[0]) if cleaned_word else 0
@@ -52,7 +55,7 @@ def smart_normalizer(entity: dict) -> dict:
     new_entity['start'] = entity['start'] + start_diff
     new_entity['end'] = new_entity['start'] + len(cleaned_word)
     new_entity['word'] = cleaned_word
-    
+
     return new_entity
 
 
@@ -70,7 +73,7 @@ def load_chapters(path : str) -> dict[str, str]:
     chapters = {}
     file_paths = glob.glob(path)
     for file_path in file_paths:
-        with open(file_path, 'r', encoding='utf-8') as file:
+        with open(file_path, encoding='utf-8') as file:
             p = Path(file_path)
             content = file.read()
             chapter_name = p.name

@@ -1,9 +1,10 @@
 """This module provides global config variables."""
 
-from pydantic import Field # type: ignore
-from pydantic_settings import BaseSettings, SettingsConfigDict # type: ignore
-from arq.connections import RedisSettings
 import logging
+
+from arq.connections import RedisSettings
+from pydantic import Field  # type: ignore
+from pydantic_settings import BaseSettings, SettingsConfigDict  # type: ignore
 
 uvicorn_logger = logging.getLogger("uvicorn.info")
 

@@ -1,22 +1,22 @@
-import pytest # type: ignore
-from typing import Tuple, Dict
 import logging
 
-from src.labels.service import *
+import pytest  # type: ignore
+
+from src.auth import models as auth_models
 from src.autolabels import models as autolabel_models
 from src.labels import models as label_models
-from src.novels import models as novel_models
 from src.labels.schemas import CreateLabelDataByAutoLabel
-from src.auth import models as auth_models
+from src.labels.service import *
+from src.novels import models as novel_models
 
 logger = logging.getLogger(__name__)
 
 def test_label_insert_label_data_by_autolabels_basic(
     chinese_xianxia_small_test_autolabels_cluener : List[autolabel_models.AutoLabel],
     chinese_xianxia_small_test_label_group : label_models.LabelGroup,
-    chinese_xianxia_small_test_chapters : List[Tuple[novel_models.RawChapter, novel_models.RawChapterRevision]],
+    chinese_xianxia_small_test_chapters : List[tuple[novel_models.RawChapter, novel_models.RawChapterRevision]],
     chinese_xianxia_small_test_novel : novel_models.Novel,
-    chinese_xianxia_small_test_default_params_cluener : Dict,
+    chinese_xianxia_small_test_default_params_cluener : dict,
     chinese_xianxia_small_test_user : auth_models.User,
     chinese_xianxia_small_test_label_contributor : label_models.LabelContributor,
     chinese_xianxia_small_test_contributor : novel_models.Contributor,
@@ -30,7 +30,7 @@ def test_label_insert_label_data_by_autolabels_basic(
     expected_count = len(chinese_xianxia_small_test_autolabels_cluener)
     logger.info(f"Expecting {expected_count} succeses, have {len(res.success)} succeses + {len(res.errors)} failures")
     assert len(res.success) == expected_count
-    
+
     source_revision_ids = {al.raw_chapter_revision_id for al in chinese_xianxia_small_test_autolabels_cluener}
     assert set(res.success) == source_revision_ids
 
@@ -42,7 +42,7 @@ def test_label_insert_label_data_by_autolabels_basic(
     assert len(label_datas_in_db) == expected_count
 
     source_data_map = {
-        al.raw_chapter_revision_id: al.auto_label_data 
+        al.raw_chapter_revision_id: al.auto_label_data
         for al in chinese_xianxia_small_test_autolabels_cluener
     }
 
@@ -64,10 +64,10 @@ def test_label_insert_label_data_by_autolabels_basic(
             assert db_label.label_start == source_label['label_start']
             assert db_label.label_end == source_label['label_end']
             assert db_label.label_entity_group == source_label['label_entity_group']
-            
+
             if 'label_score' in source_label:
                 assert db_label.label_score == pytest.approx(source_label['label_score'])
-    
+
 
 
 ## ---------------- Populate test data ---------------- ##
@@ -87,11 +87,11 @@ def test_label_insert_label_data_by_autolabels_basic(
 #     from src.autolabels.schemas import CreateAutoLabels, AutoLabel
 #     from sqlalchemy import select
 #     import json
-    
+
 #     await insert_auto_labels(
-#         test_db, 
-#         sample_users[0], 
-#         ArqDispatcher(redis), 
+#         test_db,
+#         sample_users[0],
+#         ArqDispatcher(redis),
 #         CreateAutoLabels(
 #             raw_chapter_revision_ids=[revision.raw_chapter_revision_id for _, revision in chinese_xianxia_small_test_chapters],
 #             auto_label_model_name='cluener',
@@ -101,15 +101,15 @@ def test_label_insert_label_data_by_autolabels_basic(
 #     )
 #     await worker_mock.main()
 #     q = select(
-#         autolabel_models.AutoLabel, 
+#         autolabel_models.AutoLabel,
 #         RawChapter
 #     ).select_from(
 #         autolabel_models.AutoLabel
 #     ).join(
-#         RawChapterRevision, 
+#         RawChapterRevision,
 #         RawChapterRevision.raw_chapter_revision_id == autolabel_models.AutoLabel.raw_chapter_revision_id
 #     ).join(
-#         RawChapter, 
+#         RawChapter,
 #         RawChapter.raw_chapter_id == RawChapterRevision.raw_chapter_id
 #     )
 #     path = Path(__file__).parent.parent / 'test_data' / 'autolabels' / 'chinese' / 'chinese_xianxia' / 'small_test' / 'cluener'

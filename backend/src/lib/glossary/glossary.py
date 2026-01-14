@@ -1,10 +1,11 @@
 import json
-from typing import Callable
 import os
 import statistics
+from collections.abc import Callable
 
 from .extractor import *
 from .utils import NumpyEncoder
+
 
 class GlossaryBuilder:
     """Object that builds a glossary given a list of chapters in a dictionary format
@@ -24,16 +25,16 @@ class GlossaryBuilder:
         self.chapters = chapters
         self.chapter_name_to_num = chapter_name_to_num
         self.normalizer = normalizer
-        
+
         self.extracted_entities = None
         self.frequency_table = None
 
         self.flattened_entities = None
-        
+
         self.first_appearances = None
-        
+
         self.chapters_by_num = { chapter_name_to_num(chapter_name) : content for chapter_name, content in self.chapters.items() }
-    
+
     def load_and_extract(self, wordy=False, checkpoint : str=None):
         """Computes extracted_entities in the format
             chapter_number : 
@@ -59,7 +60,7 @@ class GlossaryBuilder:
             if wordy:
                 print("Loading checkpoint ...")
             try:
-                with open(checkpoint, 'r') as file:
+                with open(checkpoint) as file:
                     chap_ent_json = json.load(file)
                     self.extracted_entities = { int(key) : value for key, value in chap_ent_json.items()}
             except Exception as e:
@@ -74,7 +75,7 @@ class GlossaryBuilder:
 
         if wordy:
             print("Extracting entities ...")
-        
+
         for index, chapter_name in enumerate(self.chapters):
             if wordy:
                 print(f"Processing chapter {chapter_name}")
@@ -101,7 +102,7 @@ class GlossaryBuilder:
             with open(checkpoint, 'w') as file:
                 json.dump(self.extracted_entities, file, cls=NumpyEncoder)
         return self
-    
+
     def normalize_words(self):
         """Normalize all words for all entries by applying the normalizer"""
         for chapter_num in self.extracted_entities:
@@ -122,8 +123,8 @@ class GlossaryBuilder:
             }
         """
         self.flattened_entities = [
-            {**entity, 'chapter' : chapter_num, 'chapter_name' : self.extracted_entities[chapter_num]['chapter_name']} 
-            for chapter_num in self.extracted_entities 
+            {**entity, 'chapter' : chapter_num, 'chapter_name' : self.extracted_entities[chapter_num]['chapter_name']}
+            for chapter_num in self.extracted_entities
             for entity in self.extracted_entities[chapter_num]['entities']
         ]
         return self
@@ -147,7 +148,7 @@ class GlossaryBuilder:
             if ent['word'] not in aggregate_data:
                 aggregate_data[ent['word']] = {
                     'scores' : [ent['score']],
-                    'chapters' : {ent['chapter']}, 
+                    'chapters' : {ent['chapter']},
                     'entity_groups' : [ent['entity_group']],
                 }
                 if 'dirty' in ent and ent['dirty']:
@@ -174,7 +175,7 @@ class GlossaryBuilder:
             for word in aggregate_data
         }
         return self
-    
+
     def apply_filter(self, filter_func : Callable, **kwargs):
         """Filter out entries from flattened data
         
@@ -183,7 +184,7 @@ class GlossaryBuilder:
         """
         self.flattened_entities = filter_func(self.flattened_entities, **kwargs)
         return self
-    
+
     def build_first_appearances(self):
         """Construct a list
             {
@@ -200,7 +201,7 @@ class GlossaryBuilder:
                 }
             elif ent['word'] not in chapter_appearances[ent['chapter']]:
                 chapter_appearances[ent['chapter']]['entities'].append(ent['word'])
-        
+
         seen = set()
         sorted_keys = sorted(list(chapter_appearances.keys()))
         self.first_appearances = {}

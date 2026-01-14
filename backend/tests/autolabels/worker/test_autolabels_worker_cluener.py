@@ -1,6 +1,9 @@
-import pytest
 import logging
-from typing import Generator, Protocol
+from collections.abc import Generator
+from typing import Protocol
+
+import pytest
+
 from src.autolabels.schemas import CluenerModelParams
 from src.autolabels.worker.interfaces import NERModel
 
@@ -23,7 +26,7 @@ class Loader(Protocol):
 
 @pytest.mark.slow
 def test_pure_chinese_fantasy_basic(cluener : ModelWrapper, chapter_loader : Loader):
-    
+
     chapters = chapter_loader('chinese/pure_chinese_fantasy', recursive=True)
     for chapter in chapters:
         res, err = cluener.model.predict(chapter, CluenerModelParams())

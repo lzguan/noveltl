@@ -1,7 +1,8 @@
 """
 Exceptions used in the autolabeling service
 """
-from ..exceptions import *
+from ..exceptions import DuplicateException, NotFoundException
+
 
 class ChunkTooLargeException(Exception):
     """
@@ -23,7 +24,7 @@ class AutoLabelDuplicateException(DuplicateException):
 
 class EnqueueFailedException(Exception):
     """
-    Exception raised from `AutoLabelDispatcher.enqueue()`. 
+    Exception raised from `AutoLabelDispatcher.enqueue()`.
     """
     pass
 

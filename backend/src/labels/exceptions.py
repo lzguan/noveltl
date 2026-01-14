@@ -2,7 +2,8 @@
 Exceptions relating to labels.
 """
 
-from ..exceptions import *
+from ..exceptions import DuplicateException, NotFoundException
+
 
 class LabelGroupNotFoundException(NotFoundException):
     pass

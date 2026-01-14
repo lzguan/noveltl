@@ -2,11 +2,14 @@
 Pydantic schemas for labels.
 """
 
-from pydantic import BaseModel, Field, model_validator, ConfigDict
-from typing import List, Literal, Annotated, Union, Self, Tuple
-from .constants import *
-from ..autolabels.validators import SmallDict
+from typing import Annotated, Literal, Self
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 from ..autolabels.constants import MAX_PARAMS_FIELDS
+from ..autolabels.validators import SmallDict
+from .constants import MAX_LABEL_ENTITY_GROUP_NAME_LEN, MAX_LABEL_GROUP_NAME_LEN, MAX_LABEL_WORD_LEN
+
 
 class LabelGroup(BaseModel):
     """
@@ -73,7 +76,7 @@ class Label(BaseModel):
         if self.label_start >= self.label_end:
             raise ValueError("Label start must be less than label end")
         return self
-    
+
     @model_validator(mode='after')
     def check_word_len(self) -> Self:
         if len(self.label_word) != self.label_end - self.label_start:
@@ -82,7 +85,7 @@ class Label(BaseModel):
 
     def __repr__(self) -> str:
         return f"{{label_word : {self.label_word},label_entity_group : {self.label_entity_group},label_start : {self.label_start},label_end : {self.label_end},label_score : {self.label_score},label_entity_group : {self.label_entity_group}}}"
-    
+
 class LabelData(BaseModel):
     """
     Pydantic schema for a list of labels in some text.
@@ -94,7 +97,7 @@ class LabelData(BaseModel):
     """
     model_config = ConfigDict(from_attributes=True)
     label_data_id : int
-    
+
     label_group_id : int
     raw_chapter_revision_id : int
 
@@ -125,7 +128,7 @@ class LabelOpBase(BaseModel):
         if self.start_pos >= self.end_pos:
             raise ValueError("Label start must be less than label end")
         return self
-    
+
     @model_validator(mode='after')
     def check_word_len(self) -> Self:
         if len(self.word) != self.end_pos - self.start_pos:
@@ -184,7 +187,7 @@ class UpdateLabelOp(LabelOpBase):
         if cur_start >= cur_end:
             raise ValueError("Start pos must be less than end pos")
         return self
-    
+
     @model_validator(mode='after')
     def check_new_word_len(self) -> Self:
         if self.new_word is None:
@@ -202,9 +205,9 @@ class UpdateLabelDataStream(BaseModel):
     Pydantic schema for a buffered stream of label operations.
 
     Attributes:
-        ops: A list of label operations 
+        ops: A list of label operations.
     """
-    ops : List[Annotated[Union[AddLabelOp, DeleteLabelOp, UpdateLabelOp], Field(discriminator='op')]]
+    ops : list[Annotated[AddLabelOp | DeleteLabelOp | UpdateLabelOp, Field(discriminator='op')]]
 
 class UpdateLabelDataStreamResponse(BaseModel):
     """
@@ -231,8 +234,8 @@ class CreateLabelDataByAutoLabel(BaseModel):
     """
     model_name : str
     model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
-    raw_chapter_ids : List[int] | None = None
-    raw_chapter_revision_ids : List[int] | None = None
+    raw_chapter_ids : list[int] | None = None
+    raw_chapter_revision_ids : list[int] | None = None
     start : int | None = None
     end : int | None = None
 
@@ -244,5 +247,5 @@ class CreateLabelDataByAutoLabelStatus(BaseModel):
         success: List of ids of RawChapterRevisions for successful inserts
         errors: List of tuples of (RawChapterRevision ids for failed inserts, error message)
     """
-    success : List[int]
-    errors: List[Tuple[int, str]]
+    success : list[int]
+    errors: list[tuple[int, str]]

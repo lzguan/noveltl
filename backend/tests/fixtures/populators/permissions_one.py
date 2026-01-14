@@ -1,13 +1,14 @@
-import pytest
+from typing import Protocol
 
-from typing import Dict, Protocol
+import pytest
 from sqlalchemy.orm import Session
 
-from src.languages.models import Language
-from src.novels.models import Novel, Contributor
-from src.novels.constants import NovelType, Visibility, Role
-from src.auth.models import User
 from src.auth.constants import UserType
+from src.auth.models import User
+from src.languages.models import Language
+from src.novels.constants import NovelType, Role, Visibility
+from src.novels.models import Contributor, Novel
+
 
 @pytest.fixture
 def p1_language(test_db : Session) -> Language:
@@ -46,7 +47,7 @@ def p1_admin(test_db : Session, no_hash : Hash) -> User:
 
 @pytest.fixture
 def p1_novel_public_tyrone(
-    p1_language : Language, 
+    p1_language : Language,
     test_db : Session,
     p1_user_1 : User
 ) -> Novel:
@@ -59,7 +60,7 @@ def p1_novel_public_tyrone(
 
 @pytest.fixture
 def p1_novel_public_speed(
-    p1_language : Language, 
+    p1_language : Language,
     test_db : Session,
     p1_user_2 : User
 ) -> Novel:
@@ -72,7 +73,7 @@ def p1_novel_public_speed(
 
 @pytest.fixture
 def p1_novel_unlisted_tyrone(
-    p1_language : Language, 
+    p1_language : Language,
     test_db : Session,
     p1_user_1 : User
 ) -> Novel:
@@ -85,7 +86,7 @@ def p1_novel_unlisted_tyrone(
 
 @pytest.fixture
 def p1_novel_unlisted_speed(
-    p1_language : Language, 
+    p1_language : Language,
     test_db : Session,
     p1_user_2 : User
 ) -> Novel:
@@ -98,7 +99,7 @@ def p1_novel_unlisted_speed(
 
 @pytest.fixture
 def p1_novel_restricted_tyrone(
-    p1_language : Language, 
+    p1_language : Language,
     test_db : Session,
     p1_user_1 : User
 ) -> Novel:
@@ -111,7 +112,7 @@ def p1_novel_restricted_tyrone(
 
 @pytest.fixture
 def p1_novel_restricted_speed(
-    p1_language : Language, 
+    p1_language : Language,
     test_db : Session,
     p1_user_2 : User
 ) -> Novel:
@@ -124,7 +125,7 @@ def p1_novel_restricted_speed(
 
 @pytest.fixture
 def p1_novel_private_tyrone(
-    p1_language : Language, 
+    p1_language : Language,
     test_db : Session,
     p1_user_1 : User
 ) -> Novel:
@@ -137,7 +138,7 @@ def p1_novel_private_tyrone(
 
 @pytest.fixture
 def p1_novel_private_speed(
-    p1_language : Language, 
+    p1_language : Language,
     test_db : Session,
     p1_user_2 : User
 ) -> Novel:
@@ -150,7 +151,7 @@ def p1_novel_private_speed(
 
 @pytest.fixture
 def p1_novel_owner_editor(
-    p1_language : Language, 
+    p1_language : Language,
     test_db : Session,
     p1_user_1 : User,
     p1_user_2 : User
@@ -165,7 +166,7 @@ def p1_novel_owner_editor(
 
 @pytest.fixture
 def p1_novel_owner_viewer(
-    p1_language : Language, 
+    p1_language : Language,
     test_db : Session,
     p1_user_1 : User,
     p1_user_2 : User
@@ -190,7 +191,7 @@ def p1_novels(
     p1_novel_private_speed : Novel,
     p1_novel_owner_editor : Novel,
     p1_novel_owner_viewer : Novel
-) -> Dict[str, Novel]:
+) -> dict[str, Novel]:
     return {
         "put": p1_novel_public_tyrone,
         "pus": p1_novel_public_speed,

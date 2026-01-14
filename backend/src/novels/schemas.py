@@ -2,9 +2,12 @@
 Pydantic models for novels and chapters.
 """
 
-from pydantic import BaseModel, ConfigDict
 from typing import Literal
-from .constants import *
+
+from pydantic import BaseModel, ConfigDict
+
+from .constants import NovelType, Visibility
+
 
 class Novel(BaseModel):
     """
@@ -80,7 +83,7 @@ class RawChapter(BaseModel):
     """
     raw_chapter_id : int
     raw_chapter_num : int
-    
+
     novel_id : int
 
 class CreateRawChapter(BaseModel):
@@ -163,7 +166,7 @@ class DeleteRawChapterRevisionStatus(BaseModel):
     Attributes:
         status: One of "success", "fail".
         detail: Details on operation.
-    
+
     Notes:
         Unless under exceptional circumstances, should not return fail and just raise an exception.
     """

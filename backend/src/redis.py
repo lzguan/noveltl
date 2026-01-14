@@ -1,8 +1,10 @@
-from arq import ArqRedis, create_pool
-from .config import redis_settings
 from contextlib import asynccontextmanager
-from .exceptions import RedisNotInitializedError
+
+from arq import ArqRedis, create_pool
 from fastapi import HTTPException, status
+
+from .config import redis_settings
+from .exceptions import RedisNotInitializedError
 
 redis: ArqRedis | None = None
 

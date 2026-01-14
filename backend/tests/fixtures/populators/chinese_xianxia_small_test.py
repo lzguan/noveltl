@@ -1,17 +1,19 @@
-import pytest
-
-from typing import Dict, List, Protocol, Tuple, Generator
-from sqlalchemy.orm import Session
 import json
+from collections.abc import Generator
+from typing import Protocol
 
-from src.languages.models import Language
-from src.novels.models import Novel, RawChapter, RawChapterRevision, Contributor
-from src.novels.constants import NovelType, Visibility, Role
-from src.labels.models import LabelGroup, LabelContributor
-from src.labels.constants import LabelRole
-from src.auth.models import User
+import pytest
+from sqlalchemy.orm import Session
+
 from src.auth.constants import UserType
+from src.auth.models import User
 from src.autolabels.models import AutoLabel
+from src.labels.constants import LabelRole
+from src.labels.models import LabelContributor, LabelGroup
+from src.languages.models import Language
+from src.novels.constants import NovelType, Role, Visibility
+from src.novels.models import Contributor, Novel, RawChapter, RawChapterRevision
+
 
 @pytest.fixture
 def chinese_xianxia_small_test_language(test_db : Session) -> Language:
@@ -36,7 +38,7 @@ def chinese_xianxia_small_test_user(test_db : Session, no_hash : Hash) -> User:
 
 @pytest.fixture
 def chinese_xianxia_small_test_novel(
-    chinese_xianxia_small_test_language : Language, 
+    chinese_xianxia_small_test_language : Language,
     test_db : Session
 ) -> Novel:
     test_novel = Novel(novel_title="Test", language_id=chinese_xianxia_small_test_language.language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
@@ -68,8 +70,8 @@ def chinese_xianxia_small_test_contributor(chinese_xianxia_small_test_user : Use
 @pytest.fixture
 def chinese_xianxia_small_test_label_contributor(chinese_xianxia_small_test_user : User, chinese_xianxia_small_test_label_group : LabelGroup, test_db : Session) -> LabelContributor:
     label_contributor = LabelContributor(
-        label_contributor_role=LabelRole.OWNER, 
-        label_group_id=chinese_xianxia_small_test_label_group.label_group_id, 
+        label_contributor_role=LabelRole.OWNER,
+        label_group_id=chinese_xianxia_small_test_label_group.label_group_id,
         user_id=chinese_xianxia_small_test_user.user_id
     )
     test_db.add(label_contributor)
@@ -82,12 +84,12 @@ class Loader(Protocol):
 
 @pytest.fixture
 def chinese_xianxia_small_test_chapters(
-    chinese_xianxia_small_test_novel : Novel, 
-    chapter_loader : Loader, 
+    chinese_xianxia_small_test_novel : Novel,
+    chapter_loader : Loader,
     test_db : Session
-) -> List[Tuple[RawChapter, RawChapterRevision]]:
+) -> list[tuple[RawChapter, RawChapterRevision]]:
     texts = chapter_loader('chinese/chinese_xianxia/small_test')
-    out : List[Tuple[RawChapter, RawChapterRevision]] = []
+    out : list[tuple[RawChapter, RawChapterRevision]] = []
     i = 0
     for text in texts:
         chapter = RawChapter(raw_chapter_num=i, novel_id=chinese_xianxia_small_test_novel.novel_id)
@@ -98,7 +100,7 @@ def chinese_xianxia_small_test_chapters(
             raw_chapter_revision_title=f"chapter {i}",
             raw_chapter_revision_is_primary=True,
             raw_chapter_revision_is_public=True,
-            raw_chapter_revision_is_final=True, 
+            raw_chapter_revision_is_final=True,
             raw_chapter_id=chapter.raw_chapter_id
         )
         test_db.add(revision)
@@ -109,16 +111,16 @@ def chinese_xianxia_small_test_chapters(
 
 
 @pytest.fixture
-def chinese_xianxia_small_test_default_params_cluener() -> Dict:
+def chinese_xianxia_small_test_default_params_cluener() -> dict:
     return  {"chunk_size": 500, "separators": {"\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "\u3002": 2, "\uff01": 2, "\uff0c": 3, "\uff1a": 3, "\uff1b": 3, "\uff1f": 2}, "force_chunk": False}
 
 
 @pytest.fixture
 def chinese_xianxia_small_test_autolabels_cluener(
     test_db : Session,
-    chinese_xianxia_small_test_chapters : List[Tuple[RawChapter, RawChapterRevision]],
+    chinese_xianxia_small_test_chapters : list[tuple[RawChapter, RawChapterRevision]],
     autolabel_loader : Loader
-) -> List[AutoLabel]:
+) -> list[AutoLabel]:
     autolabels_gen = (json.loads(l) for l in autolabel_loader('chinese/chinese_xianxia/small_test/cluener'))
     out = []
     i = 0

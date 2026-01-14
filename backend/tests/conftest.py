@@ -1,20 +1,20 @@
-import pytest
 import os
-from sqlalchemy import create_engine, text, Engine
-from sqlalchemy.orm import sessionmaker, Session
-from typing import Generator
+from collections.abc import Generator
 from pathlib import Path
-from arq import create_pool, ArqRedis
+
+import pytest
+from arq import ArqRedis, create_pool
 from arq.connections import RedisSettings
 from arq.worker import Worker
 from fastapi.testclient import TestClient
+from sqlalchemy import Engine, create_engine, text
+from sqlalchemy.orm import Session, sessionmaker
 
-from src.models import Base
 from src.autolabels.worker.worker import WorkerSettings
-from src.main import app
 from src.database import get_db
+from src.main import app
+from src.models import Base
 from src.redis import get_redis_for_app
-
 
 pytest_plugins = [
     "tests.fixtures.populators.sample",
@@ -27,7 +27,7 @@ pytest_plugins = [
 def test_url() -> str:
     ret = os.getenv("TEST_URL")
     if ret is None:
-        raise EnvironmentError("TEST_URL environment variable not set for tests.")
+        raise OSError("TEST_URL environment variable not set for tests.")
     return ret
 
 @pytest.fixture
@@ -48,7 +48,7 @@ def test_db(test_engine : Engine, testing_session_local : sessionmaker) -> Gener
 
     Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
-    
+
     db = testing_session_local()
     try:
         yield db
@@ -94,20 +94,20 @@ class DataLoader:
     def __init__(self, base_path : Path, pattern : str):
         self.base_path = base_path
         self.pattern = pattern
-    
+
     def _load(self, subdir: str = "", recursive: bool = False) -> Generator[str, None, None]:
         target_dir = self.base_path / subdir
-        
+
         if not target_dir.exists():
             raise FileNotFoundError(
                 f"Test data directory not found: {target_dir}\n"
                 f"Current base path: {self.base_path}"
-            )        
+            )
         files = target_dir.rglob(self.pattern) if recursive else target_dir.glob(self.pattern)
         sorted_files = sorted(files, key=lambda p:p.name)
         for f in sorted_files:
             yield f.read_text(encoding='utf-8')
-    
+
     def __call__(self, subdir: str = "", recursive: bool = False) -> Generator[str, None, None]:
         return self._load(subdir, recursive)
 

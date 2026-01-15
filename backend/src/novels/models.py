@@ -68,7 +68,7 @@ class Novel(Base):
         novel_visibility: Visibility level of novel. Encoded as a Visibility enum.
         novel_type: Type of novel. Encoded as a NovelType enum.
         novel_parent_id: Integer foreign key identifier to parent novel, for example if this novel is a translation of another novel.
-        language_id: Integer foreign key for the language the novel is written in.
+        language_code: String foreign key for the language the novel is written in.
 
     Note:
         novel_title is non-nullable.
@@ -83,11 +83,11 @@ class Novel(Base):
     novel_visibility : Mapped[Visibility] = mapped_column(EnumAsInteger(Visibility), nullable=False)
     novel_type : Mapped[NovelType] = mapped_column(Enum(NovelType, native_enum=False, length=16, values_callable=lambda x : [str(e.value) for e in x]), nullable=False)
 
-    novel_parent_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id'), nullable=True)
+    novel_parent_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id', name='fk_novels_novel_parent_id_novels'), nullable=True)
     novel_parent : Mapped["Novel"] = relationship("Novel", back_populates="novel_children", remote_side=[novel_id])
     novel_children : Mapped[list["Novel"]] = relationship("Novel", back_populates="novel_parent")
 
-    language_id = mapped_column(ForeignKey("languages.language_id"), nullable=False)
+    language_code : Mapped[str] = mapped_column(ForeignKey("languages.language_code", name='fk_novels_language_code_languages'), nullable=False)
     language_of_novel : Mapped["Language"] = relationship(back_populates="novels_with_language")
 
     raw_chapters_with_novel : Mapped[list["RawChapter"]] = relationship(back_populates='novel_of_raw_chapter')
@@ -106,18 +106,13 @@ class Contributor(Base):
     """
     __tablename__ = 'novel_contributors'
 
-    contributor_id : Mapped[int] = mapped_column(primary_key=True)
     contributor_role : Mapped[Role] = mapped_column(Enum(Role, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False)
 
-    novel_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id'), nullable=False)
+    novel_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id', ), primary_key=True)
     novel_of_contributor : Mapped["Novel"] = relationship(back_populates='contributors_with_novel')
 
-    user_id : Mapped[int] = mapped_column(ForeignKey('users.user_id'), nullable=False)
+    user_id : Mapped[int] = mapped_column(ForeignKey('users.user_id'), primary_key=True)
     user_of_contributor : Mapped["User"] = relationship(back_populates='contributors_with_user')
-
-    __table_args__ = (
-        UniqueConstraint('novel_id', 'user_id', name='uq_novel_user'),
-    )
 
 
 class RawChapter(Base):
@@ -138,7 +133,7 @@ class RawChapter(Base):
     raw_chapter_id : Mapped[int] = mapped_column(primary_key=True)
     raw_chapter_num : Mapped[int] = mapped_column(Integer, nullable=False)
 
-    novel_id = mapped_column(ForeignKey('novels.novel_id'), nullable=False)
+    novel_id = mapped_column(ForeignKey('novels.novel_id', name='fk_raw_chapters_novel_id_novels'), nullable=False)
     novel_of_raw_chapter : Mapped[Novel] = relationship(back_populates='raw_chapters_with_novel')
 
     raw_chapter_revisions_with_raw_chapter : Mapped[list["RawChapterRevision"]] = relationship(back_populates='raw_chapter_of_raw_chapter_revision')
@@ -177,13 +172,13 @@ class RawChapterRevision(Base):
     raw_chapter_revision_is_final : Mapped[bool] = mapped_column(Boolean, nullable=False)
 
     raw_chapter_of_raw_chapter_revision : Mapped["RawChapter"] = relationship(back_populates="raw_chapter_revisions_with_raw_chapter")
-    raw_chapter_id = mapped_column(ForeignKey('raw_chapters.raw_chapter_id'), nullable=False)
+    raw_chapter_id = mapped_column(ForeignKey('raw_chapters.raw_chapter_id', name='fk_raw_chapter_revisions_raw_chapter_id_raw_chapters'), nullable=False)
 
     label_datas_with_raw_chapter_revision : Mapped[list["LabelData"]] = relationship(back_populates='raw_chapter_revision_of_label_data')
 
-    auto_labels_with_raw_chapter_revision : Mapped[list["AutoLabel"]] = relationship(back_populates='raw_chapter_revision_of_auto_label', cascade='all, delete-orphan') # type: ignore
+    auto_labels_with_raw_chapter_revision : Mapped[list["AutoLabel"]] = relationship(back_populates='raw_chapter_revision_of_auto_label', cascade='all, delete-orphan')
 
     __table_args__ = (
-        Index('ix_one_primary_revision_per_chapter', 'raw_chapter_id', unique=True, postgresql_where=(raw_chapter_revision_is_primary.is_(True))),
+        Index('ix_one_primary_revision_per_chapter', 'raw_chapter_id', unique=True, postgresql_where=raw_chapter_revision_is_primary.is_(True)),
         CheckConstraint(or_(raw_chapter_revision_is_public, not_(raw_chapter_revision_is_primary)), name="primary_must_be_public_check")
     )

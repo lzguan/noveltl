@@ -1,7 +1,7 @@
 import pytest
 from psycopg2 import errorcodes
 from psycopg2.errors import Error as Psycopg2Error
-from sqlalchemy import select
+from sqlalchemy import insert, select
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
@@ -14,7 +14,7 @@ def test_language_creation(test_db : Session):
     test_db.add(lang)
     test_db.commit()
     # Query the language back
-    queried_lang = test_db.execute(select(Language).where(Language.language_id == lang.language_id)).scalar_one()
+    queried_lang = test_db.execute(select(Language).where(Language.language_code == lang.language_code)).scalar_one()
     assert queried_lang is not None
     assert queried_lang.language_name == "English"
     assert queried_lang.language_code == "en"
@@ -22,7 +22,7 @@ def test_language_creation(test_db : Session):
     lang2 = Language(language_name="French", language_code="fr")
     test_db.add(lang2)
     test_db.commit()
-    queried_lang2 = test_db.execute(select(Language).where(Language.language_id == lang2.language_id)).scalar_one()
+    queried_lang2 = test_db.execute(select(Language).where(Language.language_code == lang2.language_code)).scalar_one()
     assert queried_lang2 is not None
     assert queried_lang2.language_name == "French"
     assert queried_lang2.language_code == "fr"
@@ -47,9 +47,8 @@ def test_language_unique_constraints(test_db : Session):
     test_db.rollback()
 
     # Attempt to create another language with the same code
-    lang3 = Language(language_name="French", language_code="en")
-    test_db.add(lang3)
     with pytest.raises(IntegrityError) as e:
+        test_db.execute(insert(Language).values(language_name="French", language_code="en"))
         test_db.commit()
     assert isinstance(e.value.orig, Psycopg2Error)
     assert e.value.orig.pgcode == errorcodes.UNIQUE_VIOLATION  # Unique violation
@@ -94,7 +93,7 @@ def test_language_length_constraints(test_db : Session):
     lang4 = Language(language_name=max_name, language_code=max_code)
     test_db.add(lang4)
     test_db.commit()
-    queried_lang4 = test_db.execute(select(Language).where(Language.language_id == lang4.language_id)).scalar_one()
+    queried_lang4 = test_db.execute(select(Language).where(Language.language_code == lang4.language_code)).scalar_one()
     assert queried_lang4 is not None
     assert queried_lang4.language_name == max_name
     assert queried_lang4.language_code == max_code

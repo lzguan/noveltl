@@ -21,7 +21,7 @@ class Novel(BaseModel):
         novel_visibility: Visibility enum of novel.
         novel_type: NovelType enum of novel.
         novel_parent_id: Integer id of parent novel, if any.
-        language_id: Integer id key to language of the novel.
+        language_code: String code key to language of the novel.
     """
     novel_id : int
     novel_title : str
@@ -31,7 +31,7 @@ class Novel(BaseModel):
     novel_type : NovelType
     novel_parent_id : int | None = None
 
-    language_id : int
+    language_code : str
 
 class CreateNovel(BaseModel):
     """
@@ -43,7 +43,7 @@ class CreateNovel(BaseModel):
         novel_author: Author of novel we are creating.
         novel_visibility: Visibility level of novel we are creating.
         novel_type: Type of novel we are creating.
-        language_id: id of language of novel we are creating.
+        language_code: String code key to language of novel we are creating.
     """
     novel_title : str
     novel_description : str | None = None
@@ -51,7 +51,7 @@ class CreateNovel(BaseModel):
     novel_visibility : Visibility
     novel_type : NovelType
 
-    language_id : int
+    language_code : str
 
 class UpdateNovel(BaseModel):
     """

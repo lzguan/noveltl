@@ -133,8 +133,8 @@ def query_label_data_by_id(db : Session, current_user : User, label_data_id : in
     ).where(
         models.LabelData.label_data_id == label_data_id
     ).join(
-        models.RawChapterRevision,
-        models.LabelData.raw_chapter_revision_id == models.RawChapterRevision.raw_chapter_revision_id
+        novel_models.RawChapterRevision,
+        models.LabelData.raw_chapter_revision_id == novel_models.RawChapterRevision.raw_chapter_revision_id
     )
     q = label_data_mod_access_select(q, current_user)
     q = raw_chapter_revision_mod_access_select(q, current_user)
@@ -166,8 +166,8 @@ def query_labels_by_label_data_id(db : Session, current_user : User, label_data_
     ).order_by(models.Label.label_start)
     q = label_data_mod_access_select(q, current_user)
     q = q.join(
-        models.RawChapterRevision,
-        models.LabelData.raw_chapter_revision_id == models.RawChapterRevision.raw_chapter_revision_id
+        novel_models.RawChapterRevision,
+        models.LabelData.raw_chapter_revision_id == novel_models.RawChapterRevision.raw_chapter_revision_id
     )
     q = raw_chapter_revision_mod_access_select(q, current_user)
     result = db.execute(q)
@@ -201,7 +201,6 @@ def insert_label_group(db : Session, current_user : User, request : schemas.Crea
     label_group = models.LabelGroup(**request.model_dump(), user_id=current_user.user_id)
     try:
         result = db.execute(stmt)
-        result.scalar_one()
         stmt = insert(models.LabelContributor).values(
             {
                 "label_group_id" : result.scalar_one().label_group_id,

@@ -4,7 +4,7 @@ Router functions for novels service.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from ..auth.dependencies import get_current_user, get_optional_user
@@ -44,32 +44,6 @@ from .service import (
 router = APIRouter()
 
 @router.get(
-    '/novels/{novel_id}',
-    response_model=schemas.Novel
-)
-async def read_novel(
-    novel_id : int,
-    db : Annotated[Session, Depends(get_db)],
-    current_user : Annotated[User | None, Depends(get_optional_user)]
-    ):
-    """
-    Endpoint for retrieving a novel from database.
-
-    Args:
-        novel_id: id of novel to query
-        current_user: Optional current user dependency.
-        db: Database dependency
-    """
-    try:
-        novel = query_novel_by_id(db, current_user, novel_id)
-    except NovelNotFoundException as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Novel with {novel_id} not found."
-        ) from e
-    return novel
-
-@router.get(
     '/novels',
     response_model=list[schemas.Novel]
 )
@@ -96,7 +70,8 @@ async def read_novels(
 async def read_novels_mine(
         db: Annotated[Session, Depends(get_db)],
         current_user : Annotated[User , Depends(get_current_user)],
-        editable : bool = False
+        editable : bool = False,
+        title_contains : str | None = Query(default=None, alias="titleContains")
     ):
     """
     Endpoint for retrieving novels that the user has special access to.
@@ -106,8 +81,34 @@ async def read_novels_mine(
         current_user: Current user dependency.
         editable: If True, return only novels which the user can edit (i.e. has owner or editor permissions).
     """
-    novels = query_novels_by_current_user(db, current_user, editable)
+    novels = query_novels_by_current_user(db, current_user, editable, title_contains)
     return novels
+
+@router.get(
+    '/novels/{novel_id}',
+    response_model=schemas.Novel
+)
+async def read_novel(
+    novel_id : int,
+    db : Annotated[Session, Depends(get_db)],
+    current_user : Annotated[User | None, Depends(get_optional_user)]
+    ):
+    """
+    Endpoint for retrieving a novel from database.
+
+    Args:
+        novel_id: id of novel to query
+        current_user: Optional current user dependency.
+        db: Database dependency
+    """
+    try:
+        novel = query_novel_by_id(db, current_user, novel_id)
+    except NovelNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Novel with {novel_id} not found."
+        ) from e
+    return novel
 
 @router.get(
     '/chapters',
@@ -266,7 +267,7 @@ async def create_novel(
     except LanguageNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Language with language id {request.language_id} not found."
+            detail=f"Language with language code {request.language_code} not found."
         ) from e
     except DataTooLongException as e:
         raise HTTPException(
@@ -419,7 +420,7 @@ async def update_chapter_revision(
     except DataTooLongException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Field in request to long."
+            detail="Field in request too long."
         ) from e
     except InsufficientPermissionsException as e:
         raise HTTPException(
@@ -472,7 +473,7 @@ async def update_make_primary_chapter_revision(
     Mark chapter revision with revision_id as primary.
 
     Args:
-        revision_id: id of revision to make primary..
+        revision_id: id of revision to make primary.
         db: Database dependency.
         current_user: Current user dependency.
     """

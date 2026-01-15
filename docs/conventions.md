@@ -8,7 +8,7 @@
 - Names of columns should be `snake_case`.
 - Table names should describe the thing stored in each row as plural (e.g. `fruits`, `houses`, etc.).
 - Properties of `x` (columns in table `xs`) should be called `x_field_name` (e.g. `Fruit.fruit_name` in table named `fruits`).
-- If `x` has a ForeignKey to `y`, the corresponding relationships should be defined by `y_of_x` in `x` and `xs_of_y` in `y` (e.g. `fruits_with_colour` in table `colours` and `colour_of_fruit` in table `fruits`).
+- If `x` has a ForeignKey to `y`, the corresponding relationships should be defined by `y_of_x` in `x` and `xs_with_y` in `y` (e.g. `fruits_with_colour` in table `colours` and `colour_of_fruit` in table `fruits`).
 - If `x` has a ForeignKey to `y`, the ForeignKey column name should be called `y_id` in `x` e.g. `colour_id` in table `fruits`.
 - Convention may be broken in the case that breaking a naming convention gives a more descriptive column.
 

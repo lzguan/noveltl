@@ -66,7 +66,8 @@ def query_novels_by_title(
 def query_novels_by_current_user(
         db : Session,
         current_user : User,
-        editable : bool
+        editable : bool,
+        title_contains : str | None
     ) -> list[models.Novel]:
     """
     Queries all novels that the current user has special access to.
@@ -85,6 +86,10 @@ def query_novels_by_current_user(
     q = select(
         models.Novel
     ).where(exists(subq))
+
+    if title_contains:
+        q = q.where(models.Novel.novel_title.ilike(f"%{title_contains}%"))
+
     result = db.execute(q)
     result_scalars = result.scalars().all()
     return list(result_scalars)

@@ -95,7 +95,7 @@ export const NovelDetailsPage = () => {
                                     <ul style={{ margin: 0, paddingLeft: '20px' }}>
                                         {revs.map(rev => (
                                             <li key={rev.raw_chapter_revision_id} style={{ marginBottom: '4px' }}>
-                                                <Link to={routeTo.view.chapter(rev.raw_chapter_id, rev.raw_chapter_revision_id)} style={{ color: rev.raw_chapter_revision_is_primary ? 'green' : 'blue' }}>
+                                                <Link to={routeTo.view.chapter(rev.raw_chapter_id, { revisionId: rev.raw_chapter_revision_id })} style={{ color: rev.raw_chapter_revision_is_primary ? 'green' : 'blue' }}>
                                                     {rev.raw_chapter_revision_title || 'Untitled Revision'}
                                                 </Link>
                                                 {rev.raw_chapter_revision_is_primary && 

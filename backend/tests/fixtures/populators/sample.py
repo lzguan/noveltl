@@ -45,10 +45,10 @@ def sample_users(test_db : Session, recommended_hash : Hash) -> list[User]:
 @pytest.fixture
 def sample_novels(sample_languages : dict[str, Language], test_db : Session) -> list[Novel]:
     # Create some sample novels
-    novel0 = Novel(novel_title="Sample Novel 1", language_id=sample_languages['en'].language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
-    novel1 = Novel(novel_title="Sample Novel 2", language_id=sample_languages['zh'].language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
-    novel2 = Novel(novel_title="Sample Novel 3", language_id=sample_languages['kr'].language_id, novel_description="A description.", novel_author="An Author", novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
-    novel3 = Novel(novel_title="Smample Novel 4", language_id=sample_languages['zh'].language_id, novel_description="Another description.", novel_author="Another Author", novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
+    novel0 = Novel(novel_title="Sample Novel 1", language_code=sample_languages['en'].language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
+    novel1 = Novel(novel_title="Sample Novel 2", language_code=sample_languages['zh'].language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
+    novel2 = Novel(novel_title="Sample Novel 3", language_code=sample_languages['kr'].language_code, novel_description="A description.", novel_author="An Author", novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
+    novel3 = Novel(novel_title="Smample Novel 4", language_code=sample_languages['zh'].language_code, novel_description="Another description.", novel_author="Another Author", novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
     test_db.add_all([novel0, novel1, novel2, novel3])
     test_db.commit()
     test_db.refresh(novel0)

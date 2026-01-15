@@ -1,10 +1,20 @@
 import client from './client'
 import * as NovelType from '../types/novel'
 
-export const get_novels = async (title_contains : string) : Promise<NovelType.Novel[]> => {
+export const get_novels = async (title_contains? : string) : Promise<NovelType.Novel[]> => {
     const result = await client.get('/novels', {
         params : {
             title_contains
+        }
+    })
+    return result.data
+}
+
+export const get_novels_mine = async (editable : boolean, titleContains? : string) : Promise<NovelType.Novel[]> => {
+    const result = await client.get('/novels/mine', {
+        params : {
+            editable,
+            titleContains
         }
     })
     return result.data

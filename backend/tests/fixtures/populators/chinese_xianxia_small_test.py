@@ -41,7 +41,7 @@ def chinese_xianxia_small_test_novel(
     chinese_xianxia_small_test_language : Language,
     test_db : Session
 ) -> Novel:
-    test_novel = Novel(novel_title="Test", language_id=chinese_xianxia_small_test_language.language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
+    test_novel = Novel(novel_title="Test", language_code=chinese_xianxia_small_test_language.language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
     test_db.add(test_novel)
     test_db.commit()
     return test_novel

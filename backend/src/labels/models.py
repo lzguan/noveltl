@@ -29,7 +29,7 @@ class LabelGroup(Base):
     label_group_id : Mapped[int] = mapped_column(primary_key=True)
     label_group_name : Mapped[str] = mapped_column(String(MAX_LABEL_GROUP_NAME_LEN))
 
-    novel_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id'), nullable=False)
+    novel_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id', name='fk_label_groups_novel_id_novels'), nullable=False)
     novel_of_label_group : Mapped["Novel"] = relationship(back_populates='label_groups_with_novel')
 
     label_datas_with_label_group : Mapped[list["LabelData"]] = relationship(back_populates='label_group_of_label_data', cascade='all, delete-orphan')
@@ -71,10 +71,10 @@ class LabelData(Base):
 
     label_data_id : Mapped[int] = mapped_column(primary_key=True)
 
-    label_group_id : Mapped[int] = mapped_column(ForeignKey('label_groups.label_group_id'), nullable=False)
+    label_group_id : Mapped[int] = mapped_column(ForeignKey('label_groups.label_group_id', name='fk_label_datas_label_group_id_label_groups'), nullable=False)
     label_group_of_label_data : Mapped[LabelGroup] = relationship(back_populates='label_datas_with_label_group')
 
-    raw_chapter_revision_id : Mapped[int] = mapped_column(ForeignKey('raw_chapter_revisions.raw_chapter_revision_id'), nullable=False)
+    raw_chapter_revision_id : Mapped[int] = mapped_column(ForeignKey('raw_chapter_revisions.raw_chapter_revision_id', name='fk_label_datas_raw_chapter_revision_id_raw_chapter_revisions'), nullable=False)
     raw_chapter_revision_of_label_data : Mapped["RawChapterRevision"] = relationship(back_populates='label_datas_with_raw_chapter_revision')
 
     labels_with_label_data : Mapped[list["Label"]] = relationship(back_populates='label_data_of_label', cascade='all, delete-orphan')
@@ -112,7 +112,7 @@ class Label(Base):
     label_end : Mapped[int] = mapped_column(Integer, nullable=False)
     label_dirty : Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    label_data_id : Mapped[int] = mapped_column(ForeignKey('label_datas.label_data_id'), nullable=False)
+    label_data_id : Mapped[int] = mapped_column(ForeignKey('label_datas.label_data_id', name='fk_labels_label_data_id_label_datas'), nullable=False)
     label_data_of_label : Mapped["LabelData"] = relationship(back_populates='labels_with_label_data')
 
     __table_args__ = (

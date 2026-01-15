@@ -51,7 +51,7 @@ def p1_novel_public_tyrone(
     test_db : Session,
     p1_user_1 : User
 ) -> Novel:
-    test_novel = Novel(novel_title="pt", language_id=p1_language.language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
+    test_novel = Novel(novel_title="pt", language_code=p1_language.language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
     test_db.add(test_novel)
     test_db.commit()
     test_db.add(Contributor(novel_id=test_novel.novel_id, user_id=p1_user_1.user_id, contributor_role=Role.OWNER))
@@ -64,7 +64,7 @@ def p1_novel_public_speed(
     test_db : Session,
     p1_user_2 : User
 ) -> Novel:
-    test_novel = Novel(novel_title="ps", language_id=p1_language.language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
+    test_novel = Novel(novel_title="ps", language_code=p1_language.language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
     test_db.add(test_novel)
     test_db.commit()
     test_db.add(Contributor(novel_id=test_novel.novel_id, user_id=p1_user_2.user_id, contributor_role=Role.OWNER))
@@ -77,7 +77,7 @@ def p1_novel_unlisted_tyrone(
     test_db : Session,
     p1_user_1 : User
 ) -> Novel:
-    test_novel = Novel(novel_title="ut", language_id=p1_language.language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.UNLISTED)
+    test_novel = Novel(novel_title="ut", language_code=p1_language.language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.UNLISTED)
     test_db.add(test_novel)
     test_db.commit()
     test_db.add(Contributor(novel_id=test_novel.novel_id, user_id=p1_user_1.user_id, contributor_role=Role.OWNER))
@@ -90,7 +90,7 @@ def p1_novel_unlisted_speed(
     test_db : Session,
     p1_user_2 : User
 ) -> Novel:
-    test_novel = Novel(novel_title="us", language_id=p1_language.language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.UNLISTED)
+    test_novel = Novel(novel_title="us", language_code=p1_language.language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.UNLISTED)
     test_db.add(test_novel)
     test_db.commit()
     test_db.add(Contributor(novel_id=test_novel.novel_id, user_id=p1_user_2.user_id, contributor_role=Role.OWNER))
@@ -103,7 +103,7 @@ def p1_novel_restricted_tyrone(
     test_db : Session,
     p1_user_1 : User
 ) -> Novel:
-    test_novel = Novel(novel_title="rt", language_id=p1_language.language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.RESTRICTED)
+    test_novel = Novel(novel_title="rt", language_code=p1_language.language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.RESTRICTED)
     test_db.add(test_novel)
     test_db.commit()
     test_db.add(Contributor(novel_id=test_novel.novel_id, user_id=p1_user_1.user_id, contributor_role=Role.OWNER))
@@ -116,7 +116,7 @@ def p1_novel_restricted_speed(
     test_db : Session,
     p1_user_2 : User
 ) -> Novel:
-    test_novel = Novel(novel_title="rs", language_id=p1_language.language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.RESTRICTED)
+    test_novel = Novel(novel_title="rs", language_code=p1_language.language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.RESTRICTED)
     test_db.add(test_novel)
     test_db.commit()
     test_db.add(Contributor(novel_id=test_novel.novel_id, user_id=p1_user_2.user_id, contributor_role=Role.OWNER))
@@ -129,7 +129,7 @@ def p1_novel_private_tyrone(
     test_db : Session,
     p1_user_1 : User
 ) -> Novel:
-    test_novel = Novel(novel_title="prt", language_id=p1_language.language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PRIVATE)
+    test_novel = Novel(novel_title="prt", language_code=p1_language.language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PRIVATE)
     test_db.add(test_novel)
     test_db.commit()
     test_db.add(Contributor(novel_id=test_novel.novel_id, user_id=p1_user_1.user_id, contributor_role=Role.OWNER))
@@ -142,7 +142,7 @@ def p1_novel_private_speed(
     test_db : Session,
     p1_user_2 : User
 ) -> Novel:
-    test_novel = Novel(novel_title="prs", language_id=p1_language.language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PRIVATE)
+    test_novel = Novel(novel_title="prs", language_code=p1_language.language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PRIVATE)
     test_db.add(test_novel)
     test_db.commit()
     test_db.add(Contributor(novel_id=test_novel.novel_id, user_id=p1_user_2.user_id, contributor_role=Role.OWNER))
@@ -156,7 +156,7 @@ def p1_novel_owner_editor(
     p1_user_1 : User,
     p1_user_2 : User
 ) -> Novel:
-    test_novel = Novel(novel_title="oe", language_id=p1_language.language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PRIVATE)
+    test_novel = Novel(novel_title="oe", language_code=p1_language.language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PRIVATE)
     test_db.add(test_novel)
     test_db.commit()
     test_db.add(Contributor(novel_id=test_novel.novel_id, user_id=p1_user_1.user_id, contributor_role=Role.OWNER))
@@ -171,7 +171,7 @@ def p1_novel_owner_viewer(
     p1_user_1 : User,
     p1_user_2 : User
 ) -> Novel:
-    test_novel = Novel(novel_title="ov", language_id=p1_language.language_id, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PRIVATE)
+    test_novel = Novel(novel_title="ov", language_code=p1_language.language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PRIVATE)
     test_db.add(test_novel)
     test_db.commit()
     test_db.add(Contributor(novel_id=test_novel.novel_id, user_id=p1_user_1.user_id, contributor_role=Role.OWNER))

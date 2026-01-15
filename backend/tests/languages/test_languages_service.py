@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from src.languages import models
 from src.languages.exceptions import LanguageNotFoundException
-from src.languages.service import query_all_languages, query_language_by_code, query_language_by_id
+from src.languages.service import query_all_languages, query_language_by_code
 
 
 @pytest.fixture(scope="function")
@@ -18,20 +18,19 @@ def language_session_test(test_db : Session) -> dict[str, models.Language]:
 
 def test_query_language_by_id(test_db : Session, language_session_test : dict[str, models.Language]):
     lang_en = language_session_test['en']
-    queried_lang = query_language_by_id(test_db, language_session_test['en'].language_id)
+    queried_lang = query_language_by_code(test_db, language_session_test['en'].language_code)
     assert queried_lang.language_name == "English"
     assert queried_lang.language_code == "en"
-    assert queried_lang.language_id == lang_en.language_id
+    assert queried_lang.language_code == lang_en.language_code
 
     lang_fr = language_session_test['fr']
-    queried_lang = query_language_by_id(test_db, language_session_test['fr'].language_id)
+    queried_lang = query_language_by_code(test_db, language_session_test['fr'].language_code)
     assert queried_lang.language_name == "French"
     assert queried_lang.language_code == "fr"
-    assert queried_lang.language_id == lang_fr.language_id
+    assert queried_lang.language_code == lang_fr.language_code
 
-    largest_id = max(lang.language_id for _, lang in language_session_test.items())
     with pytest.raises(LanguageNotFoundException):
-        query_language_by_id(test_db, largest_id + 1)  # Non-existent ID
+        query_language_by_code(test_db, "xx")  # Non-existent code
 
 def test_query_language_by_code(test_db : Session, language_session_test : dict[str, models.Language]):
     queried_lang = query_language_by_code(test_db, "en")

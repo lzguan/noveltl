@@ -37,7 +37,7 @@ class AutoLabel(Base):
     auto_label_last_job_id : Mapped[str] = mapped_column(String(36), nullable=True)
     auto_label_message : Mapped[str] = mapped_column(Text, nullable=True)
 
-    raw_chapter_revision_id : Mapped[int] = mapped_column(ForeignKey('raw_chapter_revisions.raw_chapter_revision_id'), nullable=False)
+    raw_chapter_revision_id : Mapped[int] = mapped_column(ForeignKey('raw_chapter_revisions.raw_chapter_revision_id', name='fk_auto_labels_raw_chapter_revision_id_raw_chapter_revisions'), nullable=False)
     raw_chapter_revision_of_auto_label : Mapped["RawChapterRevision"] = relationship(back_populates='auto_labels_with_raw_chapter_revision')
 
     __table_args__ = (

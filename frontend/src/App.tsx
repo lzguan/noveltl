@@ -1,23 +1,31 @@
-
 import './App.css'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router'
 import { LoginPage } from './pages/LoginPage'
 import { NovelsPage } from './pages/NovelsPage'
 import { NovelDetailsPage } from './pages/NovelDetailsPage'
 import { ChapterReaderPage } from './pages/ChapterReaderPage'
+import { EditNovelsPage } from './pages/EditNovelsPage'
+import { DashboardPage } from './pages/DashboardPage'
+import { Layout } from './components/layout/Layout'
 import { AppRoutes } from './routes'
 
 function App() {
-  return (
-    <Routes>
-      <Route path={AppRoutes.LOGIN} element={<LoginPage/>} />
-      <Route path={AppRoutes.DASHBOARD} element={<div>Welcome to Dashboard</div>} />
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path={AppRoutes.VIEW.NOVELS} element={<NovelsPage />} />
-      <Route path={AppRoutes.VIEW.NOVEL_DETAILS} element={<NovelDetailsPage/>}/>
-      <Route path={AppRoutes.VIEW.CHAPTER} element={<ChapterReaderPage/>}/>
-    </Routes>
-  )
+    return (
+        <Routes>
+            <Route path={AppRoutes.LOGIN} element={<LoginPage />} />
+            
+            {/* Routes with navbar */}
+            <Route element={<Layout />}>
+                <Route path={AppRoutes.DASHBOARD} element={<DashboardPage />} />
+                <Route path={AppRoutes.VIEW.NOVELS} element={<NovelsPage />} />
+                <Route path={AppRoutes.VIEW.NOVEL_DETAILS} element={<NovelDetailsPage />} />
+                <Route path={AppRoutes.VIEW.CHAPTER} element={<ChapterReaderPage />} />
+                <Route path={AppRoutes.EDIT.NOVELS} element={<EditNovelsPage />} />
+            </Route>
+            
+            <Route path="/" element={<Navigate to={AppRoutes.DASHBOARD} replace />} />
+        </Routes>
+    )
 }
 
 export default App

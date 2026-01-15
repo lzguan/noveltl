@@ -3,7 +3,7 @@ Database models related to users/user authentication
 """
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Enum, String
+from sqlalchemy import Enum, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..models import Base
@@ -28,7 +28,6 @@ class User(Base):
     user_id: Mapped[int] = mapped_column(primary_key=True)
     user_name : Mapped[str] = mapped_column(
         String(MAX_USER_NAME_LEN),
-        unique=True,
         nullable=False
     )
     user_hashed_password : Mapped[str] = mapped_column(
@@ -42,3 +41,7 @@ class User(Base):
 
     contributors_with_user : Mapped[list["Contributor"]] = relationship(back_populates='user_of_contributor')
     label_contributors_with_user : Mapped[list["LabelContributor"]] = relationship(back_populates='user_of_label_contributor')
+
+    __table_args__ = (
+        UniqueConstraint('user_name', name='uq_user_name'),
+    )

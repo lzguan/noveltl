@@ -19,7 +19,7 @@ export interface Novel {
     novel_visibility : Visibility
     novel_type : NovelType
     novel_parent_id? : number
-    language_id : number
+    language_code : string
 }
 
 export interface CreateNovel {
@@ -28,7 +28,7 @@ export interface CreateNovel {
     novel_author? : string
     novel_visibility : Visibility
     novel_type : NovelType
-    language_id : number
+    language_code : string
 }
 
 export interface UpdateNovel {

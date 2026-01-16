@@ -8,23 +8,26 @@ import { EditNovelsPage } from './pages/EditNovelsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { Layout } from './components/layout/Layout'
 import { AppRoutes } from './routes'
+import { LanguageProvider } from './contexts/LanguageProvider'
 
 function App() {
     return (
-        <Routes>
-            <Route path={AppRoutes.LOGIN} element={<LoginPage />} />
-            
-            {/* Routes with navbar */}
-            <Route element={<Layout />}>
-                <Route path={AppRoutes.DASHBOARD} element={<DashboardPage />} />
-                <Route path={AppRoutes.VIEW.NOVELS} element={<NovelsPage />} />
-                <Route path={AppRoutes.VIEW.NOVEL_DETAILS} element={<NovelDetailsPage />} />
-                <Route path={AppRoutes.VIEW.CHAPTER} element={<ChapterReaderPage />} />
-                <Route path={AppRoutes.EDIT.NOVELS} element={<EditNovelsPage />} />
-            </Route>
-            
-            <Route path="/" element={<Navigate to={AppRoutes.DASHBOARD} replace />} />
-        </Routes>
+        <LanguageProvider>
+            <Routes>
+                <Route path={AppRoutes.LOGIN} element={<LoginPage />} />
+                
+                {/* Routes with navbar */}
+                <Route element={<Layout />}>
+                    <Route path={AppRoutes.DASHBOARD} element={<DashboardPage />} />
+                    <Route path={AppRoutes.VIEW.NOVELS} element={<NovelsPage />} />
+                    <Route path={AppRoutes.VIEW.NOVEL_DETAILS} element={<NovelDetailsPage />} />
+                    <Route path={AppRoutes.VIEW.CHAPTER} element={<ChapterReaderPage />} />
+                    <Route path={AppRoutes.EDIT.NOVELS} element={<EditNovelsPage />} />
+                </Route>
+                
+                <Route path="/" element={<Navigate to={AppRoutes.DASHBOARD} replace />} />
+            </Routes>
+        </LanguageProvider>
     )
 }
 

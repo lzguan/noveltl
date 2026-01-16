@@ -21,9 +21,6 @@ def read_language_by_code(
     Args:
         language_code: The code of the language to retrieve.
         db: Database session.
-
-    Returns:
-        The Language object corresponding to the given code.
     """
     try:
         lang = query_language_by_code(db, language_code)
@@ -43,8 +40,5 @@ def read_all_languages(
 
     Args:
         db: Database session.
-
-    Returns:
-        A list of all Language objects in the database.
     """
     return query_all_languages(db)

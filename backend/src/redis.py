@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from arq import ArqRedis, create_pool
@@ -10,7 +11,7 @@ redis: ArqRedis | None = None
 
 
 @asynccontextmanager
-async def set_redis():
+async def set_redis() -> AsyncIterator[None]:
     global redis
     redis = await create_pool(redis_settings)
     yield

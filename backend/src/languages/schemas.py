@@ -6,8 +6,8 @@ class Language(BaseModel):
     Pydantic schema for language.
 
     Attributes:
-        code: String code key to language.
-        name: String name of language.
+        language_code: String code key to language.
+        language_name: String name of language.
     """
-    code: str
-    name: str
+    language_code: str
+    language_name: str

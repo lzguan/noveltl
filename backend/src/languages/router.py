@@ -1,33 +1,38 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from . import schemas
+from .exceptions import LanguageNotFoundException
 from .service import query_all_languages, query_language_by_code
 
 router = APIRouter()
 
 @router.get('/languages/{language_code}', response_model=schemas.Language)
 def read_language_by_code(
-        db : Annotated[Session, Depends(get_db)],
-        language_code : str
+        language_code : str,
+        db : Annotated[Session, Depends(get_db)]
     ):
     """
     Retrieves a language by its code.
 
     Args:
-        db: Database session.
         language_code: The code of the language to retrieve.
+        db: Database session.
 
     Returns:
         The Language object corresponding to the given code.
-
-    Raises:
-        LanguageNotFoundException: If no language with the given code is found.
     """
-    return query_language_by_code(db, language_code)
+    try:
+        lang = query_language_by_code(db, language_code)
+    except LanguageNotFoundException as e:
+        raise HTTPException(
+            status_code=404,
+            detail="Language not found"
+        ) from e
+    return lang
 
 @router.get('/languages', response_model=list[schemas.Language])
 def read_all_languages(

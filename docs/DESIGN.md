@@ -11,7 +11,7 @@ In this document, we will outline the specifications for this project and descri
 
 ### Motivation
 
-Right now, Large Language Models (LLMs) are an effective tool for creating high-quality translations for short documents. For longer documents, especially novels, LLMs have issues translating names consistently. To solve this problem, a tool to be able to identify all named entities in a novel is essential. The overall goal for this project is to present a platform for users to be able to efficiently automatically label data, while providing room to edit labeling, and for users to be able to use this labeling in LLM translations along with the capacity to edit these translations. In **v1**, this project is tailored specifically to novel translations, which explains some of the naming decisions. 
+Right now, Large Language Models (LLMs) are an effective tool for creating high-quality translations for short documents. For longer documents, especially novels, LLMs have issues translating names consistently. To solve this problem, a tool to be able to identify all named entities in a novel is essential. The overall goal for this project is to present a platform for users to be able to efficiently automatically label data, while providing room to edit labeling, and for users to be able to use this labeling in LLM translations along with the capacity to edit these translations. At the moment, this project is tailored specifically to novel translations, which explains some of the naming decisions. 
 
 ### High level overview
 

@@ -23,7 +23,7 @@ The risk of the LLM being wrong can be significantly reduced by providing contex
 
 Step 2 also presents a significant failure risk. For one, a text with the words "George lives in Washington, a city in a country founded by George Washington" could be labelled as "`George` lives in `Washington`, a city in a country founded by `George Washington`". When performing merge/split operations, there is a possibility that the label `George Washington` gets split up into two labels: `George` and `Washington`. This issue is compounded in Chinese as there are no spaces in that language.
 
-A potential solution is to ask a human to vet each operation. This is of course infeasible, as Chinese webnovels can have lengths well into thousands of chapters, with hundreds of labels per chapter. Even a small fraction of this number can be extrememly costly to vet for an experienced Chinese reader, let alone a human who barely knows any Chinese. An alternative solution is to force a human to approve a 'type' of operation on a specific input. For example, in the merging process, we may have a situation where two characters' names show up side-by-side and the NER program labels both characters' names individually at times, along with the combined name. To be specific, we may catch the following patterns:
+A potential solution is to ask a human to vet each operation. This is of course infeasible, as Chinese webnovels can have lengths well into thousands of chapters, with hundreds of labels per chapter. Even a small fraction of this number can be extremely costly to vet for an experienced Chinese reader, let alone a human who barely knows any Chinese. An alternative solution is to force a human to approve a 'type' of operation on a specific input. For example, in the merging process, we may have a situation where two characters' names show up side-by-side and the NER program labels both characters' names individually at times, along with the combined name. To be specific, we may catch the following patterns:
 
 - `a`
 - `b`
@@ -51,8 +51,8 @@ This is a rather high level of abstraction, with relatively few details. Firstly
 
 To model this, we will create a `Filter<Instance, Context>` class using generic types `Instance` and `Context`. A `Filter<Instance, Context>` object will have the following methods/attributes:
 1. `flag_instances() -> list[Instance]`
-2. A list of functions `get_context_list: list[Callable[[Instance], Context]]`. Note that the callables themselves can be defined outside the class to save memory. 
-3. A list of functions `decide_instance_list : list[Callable[[Instance, Context, ...], bool]]`. Same note as (2).
+2. A list of functions `get_context_list: dict[str, Callable[[Instance], Context]]`. Note that the callables themselves can be defined outside the class to save memory. 
+3. A list of functions `decide_instance_list : dict[str, Callable[[Instance, Context, ...], bool]]`. Same note as (2).
 4. A function `apply_filter(list[Instance])`. This performs the actual filtering.
 
 These functions will be defined on the backend, with a communication protocol to the frontend. The frontend will store manage all the state associated with the operation. Furthermore, `apply_filter` should be called using information sent from the frontend. This is feasible as the `Instance` data structure is designed to be small, and the frontend should not store a significant number of `Context` objects at a time.
@@ -66,6 +66,28 @@ One method for the frontend to use this abstraction is as follows:
 The implementations of `filter.flag_instances` and each of the `get_context` functions should be fast and straightforward. There is possibility to make these batchable to increase throughput. For the `decide_instance` functions, one example might be to pass the context and instance to an LLM and have it return `yes` or `no`. Another implementation might be to send human approval or not.
 
 We can use the same ideas as step 2 for steps 4/7. The key idea is once again to get context around a specific label. We can then add a frontend side functionality to view the context around a label, along with the ability to pass this context to an LLM to assist with decision making.
+
+## API Design
+
+As per our current design, we are unable to call the abstractions directly on the frontend - all the chapter data is on the backend and we need to be able to fetch relevant parts of the database without overloading the frontend/bandwidth. Another issue is the lack of a fixed type definition for an instance/context. We will provide a communication protocol to resolve these two problems.
+
+### Schema communication
+
+Our initial idea for schema communication can be found in **Appendix A**. We have since decided to use OpenAPI as our communication protocol, as it is more widely used and already implemented in Pydantic. Challenging/interesting implementation details will be added below as we implement this feature.
+
+### Endpoints
+
+We will define the following endpoints on the backend:
+
+- `GET /filters/`
+- `GET /filters/{id}`
+- `GET /filters/{id}/schema`
+- `POST /filters/{id}/flag`
+- `POST /filters/{id}/context`
+- `POST /filters/{id}/decide`
+- `POST /filters/{id}/apply`
+
+These should be fairly self-explanatory.
 
 ## UI Requirements
 
@@ -199,3 +221,237 @@ Aggregated view of unique terms across the novel (step 3 in pipeline).
 - Jump to shown context on click
 - Edit translation
 - Mark as reviewed/verified
+
+## Appendix A - a former schema communication protocol
+
+### Schema communication
+
+Before we write any designs down, we will note down some of the assumptions:
+
+- Instance and Context schema must be easy to input on the user side. That is, they should only consist of dropdown options, strings, ints, or lists of such.
+- It is easier and more robust to design filters on the backend side and have the client request the schema, than to rewrite the same schema on the client side. As such, the client must be able to dynamically render forms from schema.
+
+Hence, on the backend, we will make the assertion that any Instance/Context class will inherit from a pydantic `BaseModel`. Each filter can then implement a `validate_instance_input`/`validate_context_input` that takes JSON data and returns an `Instance`/`Context` object, or raises an exception.
+
+To communicate the schema of an instance/context with the frontend, we will send data as *form schema*:
+
+```json
+{
+    "filter_name" : "<name of filter goes here>",
+    "fields" : [
+        {
+            "field_name" : "<field name goes here>",
+            "field_type" : "<Label, int, float, string, bool, or another form schema>",
+            "is_list" : "<true or false>",
+            "options" : {
+                # additional options go here, will specify later
+            }
+        }
+    ]
+}
+```
+
+To be specific, a `Label` type in the form is specified by its `label_data_id`, `label_start`, `label_end`, and `label_word` parameters. The `label_word` parameter acts as a checksum. We may add more custom types to the protocol if there is a compelling reason. The `Label` custom type is added specifically because there are plans to have a lot of interactivity with the labels in the novel editor. 
+
+When we say that the value of `"field_type"` can be another form schema, we mean that a form schema is defined recursively as follows:
+
+---
+
+1. `"Label"`, `"int"`, `"float"`, `"string"`, `"bool"` are *field types*.
+
+2. If `T` is a field type, then
+```json
+{
+    "field_name" : ...,
+    "field_type" : T,
+    "is_list" : "true | false",
+    "options" : {}
+}
+```
+is a *field element*.
+
+3. An array of field elements is a field type. That is, if `form_1`, ..., `form_n` are field elements, then so is `[form_1, ..., form_n]`. 
+
+4. If `E1`, ..., `En` are field elements, then 
+```json
+{
+    "filter_name" : ...,
+    "fields" : [E1, ..., En]
+}
+```
+is a form schema.
+
+---
+
+The client can use this form schema, received from the backend, to render a form and construct JSON to be sent back to the backend. The data sent will be JSON with keys being `field_name`s and data being user input. A straightforward example will be given in the next section, which should clear up the exact format.
+
+### Example
+
+To see that this protocol is reasonable, we should perhaps give an example where we implement a filter function from a much older prototype of this project. Consider the following function:
+
+```python
+def merge_adjacent_entities(
+    entities : list[dict],
+    chapters_by_num : dict,
+    gap_tolerance : int = 1,
+    separators : set | None = None,
+    length_checks : dict | None = None,
+    wordy : bool=False,
+    **kwargs
+) -> list[dict]:
+    """
+    Merges adjacent entities by looking up text from a chapter dictionary.
+
+    Args:
+        entities: A list of entity dictionaries
+        chapters_by_num: A dictionary mapping {chapter_num: chapter_content}
+        gap_tolerance: Max characters between entities to merge them
+        separators: List of strings to blacklist from being between words when merging
+        length_checks: A dict of the form { entity_group : max_length } that prevents two words of that category from being merged if the merged string is longer than max_length
+    """
+    ...
+```
+
+Let us first clarify what these words mean, as the old implementation has differing vocabulary from the current project. In this implementation, an entity (or entity dictionary) corresponds to a label in the current project. To be specific, an entity is a dictionary of the form
+```python
+{
+    'entity_group' : ...
+    'score' : ...
+    'word' : ...
+    'start' : ...
+    'end' : ...
+}
+```
+In the context of the old implementation, the `entities` parameter in this function is meant to be a flattened list of all labels across all chapters, augmented with a `chapter` field in each parameter. The `entity_group` parameter is meant to be a string denoting what type of entity a given entity is (for example, person, place, etc.). The `chapters_by_num` dictionary is meant as metadata to map chapter number to chapter text. Both of these parameters are unnecessary in our current implementation as the database represents both of these objects - the flat entities list is replaced by the `labels` table and the `chapters_by_num`, which is meant to be a multiplexing tool, is replaced by the `raw_chapter_revisions` table along with the one-to-many relationship between chapter revisions and labels.
+
+We will create a form that is able to model the parameters for `gap_tolerance`, `separators`, and `length_checks`. 
+
+```json
+{
+    "filter_name": "merge_adjacent_entities",
+    "fields": [
+        {
+            "field_name": "gap_tolerance",
+            "field_type": "int",
+            "is_list": false,
+            "options": { "default": 1, "min": 0 }
+        },
+        {
+            "field_name": "separators",
+            "field_type": "string",
+            "is_list": true,
+            "options": { "default": [] }
+        },
+        {
+            "field_name": "length_checks",
+            "field_type": [
+                { "field_name": "entity_group", "field_type": "string", "is_list": false, "options": {} },
+                { "field_name": "max_length", "field_type": "int", "is_list": false, "options": {} }
+            ],
+            "is_list": true,
+            "options": { "default": [] }
+        }
+    ]
+}
+```
+
+We can see that in `length_checks`, the appropriate fields are grouped together. An example user response would then look like this:
+
+```json
+{
+    "filter_name" : "merge_adjacent_entities",
+    "fields" : {
+        "gap_tolerance" : 2,
+        "separators" : [
+            "，", "。", "、", "；", "：", "！", "？", "…",
+            """, """, "「", "」", "『", "』",
+            "（", "）", "【", "】", "《", "》",
+            "\n", "——", "·",
+            "和", "与", "及", "或", "或者", "还是", "而", "但", "但是", "却", "不过", "然而",
+            "的", "对", "向", "给", "把", "被", "让", "跟", "同",
+            "说", "道", "问", "答", "看", "见", "叫", "是",
+            "他", "她", "它", "我", "你", "们"
+        ],
+        "length_checks" : [
+            { "entity_group" : "PER", "max_length" : 4},
+            { "entity_group" : "LOC", "max_length" : 6},
+            { "entity_group" : "ORG", "max_length" : 8},
+            { "entity_group" : "TECHNIQUE", "max_length" : 10},
+            { "entity_group" : "ITEM", "max_length" : 6},
+            { "entity_group" : "TITLE", "max_length" : 4}
+        ]
+    }
+}
+```
+
+With added freedom comes added responsibility. Designing forms in a way conducive to user experience is now rather important. Try to keep form schema short and with as little nesting as possible. Order the field elements in a way that makes sense to the user. 
+
+### List of Options
+
+Options are additional restrictions that can be placed on field elements. Below is a list of all supported options (STC):
+
+The `options` object in a field element can contain the following keys, depending on `field_type`:
+
+#### Universal (all types)
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `default` | varies | Default value for the field |
+| `required` | bool | Whether the field is required (default: `false`) |
+| `description` | string | Help text shown to user |
+| `label` | string | Display label (defaults to `field_name`) |
+
+#### Numeric (`int`, `float`)
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `min` | number | Minimum value |
+| `max` | number | Maximum value |
+| `step` | number | Increment step for UI slider/spinner |
+
+#### String (`string`)
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `min_length` | int | Minimum character length |
+| `max_length` | int | Maximum character length |
+| `pattern` | string | Regex pattern for validation |
+| `enum` | list[string] | Restrict to specific values (renders as dropdown) |
+| `multiline` | bool | Render as textarea instead of input |
+
+#### Boolean (`bool`)
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `true_label` | string | Label for true option (e.g., "Enabled") |
+| `false_label` | string | Label for false option (e.g., "Disabled") |
+
+#### Label (`Label`)
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `filter_entity_group` | list[string] | Only allow labels with these entity groups |
+| `filter_chapter` | int | Only allow labels from this chapter |
+| `allow_create` | bool | Allow creating new labels inline |
+
+#### List (`is_list: true`)
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `min_items` | int | Minimum number of items |
+| `max_items` | int | Maximum number of items |
+| `unique` | bool | Require unique items |
+| `item_label` | string | Label for each item row (e.g., "Separator") |
+
+#### Nested object (field_type is array of field elements)
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `collapsible` | bool | Allow collapsing in UI |
+| `inline` | bool | Render fields inline vs stacked |
+
+## Appendix B - potential issues/future resolutions
+
+- Pagination
+- Undo/rollback apply filters
+- Concurrency

@@ -1,6 +1,7 @@
 """
 Utilities for label services.
 """
+from typing import Any
 
 from psycopg2 import Error as PgError
 from psycopg2 import errorcodes
@@ -114,7 +115,7 @@ def _apply_update(db : Session, current_user : User, label_data_id : int, text :
     elif op.new_start_pos is None and op.new_end_pos is None:
         if op.new_word is not None:
             raise LabelInvalidOperationException("New word should not be set.")
-    vals = {}
+    vals : dict[str, Any] = {}
     if op.new_start_pos is not None:
         vals['label_start'] = op.new_start_pos
     if op.new_end_pos is not None:

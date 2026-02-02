@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import jwt
 from pwdlib import PasswordHash
@@ -32,7 +33,7 @@ def hash_password(
     return password_hash.hash(password)
 
 def create_access_token(
-        data : dict,
+        data : dict[Any, Any],
         expires_delta : timedelta
     ) -> str:
     """
@@ -48,6 +49,6 @@ def create_access_token(
     else:
         expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp" : expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM) # type: ignore
     return encoded_jwt
 

@@ -12,9 +12,9 @@ class SkipDefaultModel(BaseModel):
             if not isinstance(data, dict):
                 raise ValueError("Data is not a dict.")
             fields_with_defaults = {k for k, v in cls.model_fields.items() if not v.is_required()}
-            keys_set = {k for k, _ in data.items()}
+            keys_set = {k for k, _ in data.items()} # pyright: ignore[reportUnknownVariableType]
             missing = fields_with_defaults - keys_set
             if len(missing) > 0:
                 raise ValueError(f"Fields not set: {missing}")
 
-        return data
+        return data # pyright: ignore[reportUnknownVariableType]

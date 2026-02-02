@@ -4,6 +4,7 @@ Module for putting permission restrictions on database queries.
 Todo:
 Fix inconsistencies between whether to use src.novels.permissions in conjunction or do all permission checking in this module.
 """
+from typing import Any
 
 from sqlalchemy import Delete, Select, Update, and_, exists, or_, select
 
@@ -15,7 +16,7 @@ from .constants import LabelRole
 from .models import Label, LabelContributor, LabelData, LabelGroup
 
 
-def label_group_mod_access_select[T : Select](q : T, current_user : User) -> T:
+def label_group_mod_access_select[T : Select[tuple[Any, ...]]](q : T, current_user : User) -> T:
     """
     Takes a select statement for label groups and returns a select statement that restricts permissions on q.
     """
@@ -36,7 +37,7 @@ def label_group_mod_access_select[T : Select](q : T, current_user : User) -> T:
         )
     return q
 
-def label_group_mod_access_insert[T : Select](q : T, current_user : User, novel_id : int) -> T:
+def label_group_mod_access_insert[T : Select[tuple[Any, ...]]](q : T, current_user : User, novel_id : int) -> T:
     """
     Takes a select statement used for an insert statement for label groups and returns a select statement that restricts permissions on q.
     """
@@ -80,7 +81,7 @@ def label_group_mod_access_update[T : Update](q : T, current_user : User) -> T:
         )
     return q
 
-def label_data_mod_access_select[T : Select](q : T, current_user : User) -> T:
+def label_data_mod_access_select[T : Select[tuple[Any, ...]]](q : T, current_user : User) -> T:
     """
     Takes a select statement for label datas and returns a select statement that restricts permissions on q.
     """
@@ -123,7 +124,7 @@ def label_data_mod_access_update[T : Update](q : T, current_user : User) -> T:
         )
     return q
 
-def label_data_mod_access_insert[T : Select](q : T, current_user : User, label_group_id : int) -> T:
+def label_data_mod_access_insert[T : Select[tuple[Any, ...]]](q : T, current_user : User, label_group_id : int) -> T:
     """
     Takes a select statement used for an insert from select statement for label datas and returns a select statement for a label data that restricts permissions on q.
     """
@@ -174,7 +175,7 @@ def label_data_mod_access_insert[T : Select](q : T, current_user : User, label_g
         )
     return q
 
-def label_mod_access_insert[T : Select](q : T, current_user : User, label_data_id : int) -> T:
+def label_mod_access_insert[T : Select[tuple[Any, ...]]](q : T, current_user : User, label_data_id : int) -> T:
     """
     Takes a select statement used for an insert from select statement for labels and returns a select statement for a label that restricts permissions on q.
     """

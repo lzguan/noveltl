@@ -46,7 +46,7 @@ class LabelContributor(Base):
     """
     __tablename__ = 'label_group_contributors'
 
-    label_contributor_role : Mapped[LabelRole] = mapped_column(Enum(LabelRole, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False)
+    label_contributor_role : Mapped[LabelRole] = mapped_column(Enum(LabelRole, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False) # type: ignore
 
     label_group_id : Mapped[int] = mapped_column(ForeignKey('label_groups.label_group_id'), primary_key=True)
     label_group_of_label_contributor : Mapped[LabelGroup] = relationship(back_populates='label_contributors_with_label_group')

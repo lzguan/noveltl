@@ -96,8 +96,9 @@ line-ending = "auto"
 
 [tool.pyright]
 include = ["src"]
+exclude = ["src/lib"]
 venvPath = "/"
 venv = "app"
-typeCheckingMode = "standard"
+typeCheckingMode = "strict"
 reportUnusedImport = true
 reportUnusedVariable = true

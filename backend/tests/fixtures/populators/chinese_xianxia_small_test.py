@@ -1,6 +1,6 @@
 import json
 from collections.abc import Generator
-from typing import Protocol
+from typing import Any, Protocol
 
 import pytest
 from sqlalchemy.orm import Session
@@ -23,7 +23,7 @@ def chinese_xianxia_small_test_language(test_db : Session) -> Language:
     return zh
 
 class Hash(Protocol):
-    def hash(self, password : str | bytes, *args, **kwargs) -> str:
+    def hash(self, password : str | bytes, *args : Any, **kwargs : Any) -> str:
         ...
 
     def verify(self, password : str | bytes, hash : str | bytes) -> bool:
@@ -111,7 +111,7 @@ def chinese_xianxia_small_test_chapters(
 
 
 @pytest.fixture
-def chinese_xianxia_small_test_default_params_cluener() -> dict:
+def chinese_xianxia_small_test_default_params_cluener() -> dict[str, Any]:
     return  {"chunk_size": 500, "separators": {"\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "\u3002": 2, "\uff01": 2, "\uff0c": 3, "\uff1a": 3, "\uff1b": 3, "\uff1f": 2}, "force_chunk": False}
 
 
@@ -122,7 +122,7 @@ def chinese_xianxia_small_test_autolabels_cluener(
     autolabel_loader : Loader
 ) -> list[AutoLabel]:
     autolabels_gen = (json.loads(lab) for lab in autolabel_loader('chinese/chinese_xianxia/small_test/cluener'))
-    out = []
+    out : list[AutoLabel]= []
     i = 0
     for autolabel in autolabels_gen:
         a = AutoLabel(**autolabel, raw_chapter_revision_id=chinese_xianxia_small_test_chapters[i][1].raw_chapter_revision_id)

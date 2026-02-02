@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 import pytest  # type: ignore
 from sqlalchemy import select
@@ -18,7 +19,7 @@ def test_label_insert_label_data_by_autolabels_basic(
     chinese_xianxia_small_test_label_group : label_models.LabelGroup,
     chinese_xianxia_small_test_chapters : list[tuple[novel_models.RawChapter, novel_models.RawChapterRevision]],
     chinese_xianxia_small_test_novel : novel_models.Novel,
-    chinese_xianxia_small_test_default_params_cluener : dict,
+    chinese_xianxia_small_test_default_params_cluener : dict[str, Any],
     chinese_xianxia_small_test_user : auth_models.User,
     chinese_xianxia_small_test_label_contributor : label_models.LabelContributor,
     chinese_xianxia_small_test_contributor : novel_models.Contributor,
@@ -68,7 +69,7 @@ def test_label_insert_label_data_by_autolabels_basic(
             assert db_label.label_entity_group == source_label['label_entity_group']
 
             if 'label_score' in source_label:
-                assert db_label.label_score == pytest.approx(source_label['label_score'])
+                assert db_label.label_score == pytest.approx(source_label['label_score']) # type: ignore
 
 
 

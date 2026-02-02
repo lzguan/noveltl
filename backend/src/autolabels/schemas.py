@@ -52,7 +52,7 @@ class CluenerModelParams(NERModelParamsBase):
     force_chunk : bool = False
     @model_validator(mode='after')
     def verify_separators(self) -> Self:
-        if self.separators is not None and not all(len(key) == 1 for key in self.separators):
+        if not all(len(key) == 1 for key in self.separators):
             raise ValueError("A separator does not have length 1")
         return self
 

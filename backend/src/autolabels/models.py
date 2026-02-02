@@ -32,8 +32,8 @@ class AutoLabel(Base):
     auto_label_id : Mapped[int] = mapped_column(primary_key=True)
     auto_label_data : Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
     auto_label_model_name : Mapped[str] = mapped_column(String(MAX_MODEL_NAME_LEN), nullable=False)
-    auto_label_model_params : Mapped[dict] = mapped_column(JSONB, nullable=False)
-    auto_label_status : Mapped[AutoLabelProgress] = mapped_column(Enum(AutoLabelProgress, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False, default=AutoLabelProgress.PENDING)
+    auto_label_model_params : Mapped[dict[Any, Any]] = mapped_column(JSONB, nullable=False)
+    auto_label_status : Mapped[AutoLabelProgress] = mapped_column(Enum(AutoLabelProgress, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False, default=AutoLabelProgress.PENDING) # type: ignore
     auto_label_last_job_id : Mapped[str] = mapped_column(String(36), nullable=True)
     auto_label_message : Mapped[str] = mapped_column(Text, nullable=True)
 

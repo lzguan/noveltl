@@ -1,11 +1,11 @@
-from typing import Protocol
+from typing import Any, Protocol
 
 import pytest
 from pwdlib import PasswordHash
 
 
 class Hash(Protocol):
-    def hash(self, password : str | bytes, *args, **kwargs) -> str:
+    def hash(self, password : str | bytes, *args : Any, **kwargs : Any) -> str:
         ...
 
     def verify(self, password : str | bytes, hash : str | bytes) -> bool:
@@ -16,7 +16,7 @@ def recommended_hash() -> Hash:
     return PasswordHash.recommended()
 
 class NoHash(Hash):
-    def hash(self, password: str | bytes, *args, **kwargs) -> str:
+    def hash(self, password: str | bytes) -> str:
         return str(password)
 
     def verify(self, password: str | bytes, hash: str | bytes) -> bool:

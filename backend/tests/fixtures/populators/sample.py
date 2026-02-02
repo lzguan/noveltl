@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Any, Protocol
 
 import pytest
 from sqlalchemy.orm import Session
@@ -13,7 +13,7 @@ from src.novels.models import Contributor, Novel, RawChapter, RawChapterRevision
 
 
 class Hash(Protocol):
-    def hash(self, password : str | bytes, *args, **kwargs) -> str:
+    def hash(self, password : str | bytes, *args : Any, **kwargs : Any) -> str:
         ...
 
     def verify(self, password : str | bytes, hash : str | bytes) -> bool:

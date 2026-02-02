@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy import Delete, Select, Update, and_, exists, or_, select
 
 from ..auth.constants import UserType
@@ -6,7 +8,7 @@ from .constants import Role, Visibility
 from .models import Contributor, Novel, RawChapter, RawChapterRevision
 
 
-def novel_mod_access_select[T : Select](q : T, current_user : User | None) -> T:
+def novel_mod_access_select[T : Select[tuple[Any, ...]]](q : T, current_user : User | None) -> T:
     """
     Takes a select statement for novels and returns a select statement that restricts permissions on q.
     """
@@ -29,7 +31,7 @@ def novel_mod_access_select[T : Select](q : T, current_user : User | None) -> T:
         ))
     return q
 
-def raw_chapter_mod_access_select[T : Select](q : T, current_user : User | None) -> T:
+def raw_chapter_mod_access_select[T : Select[tuple[Any, ...]]](q : T, current_user : User | None) -> T:
     """
     Takes a select statement on raw chapters and returns a select statement that restricts permissions on raw chapters.
     """
@@ -52,7 +54,7 @@ def raw_chapter_mod_access_select[T : Select](q : T, current_user : User | None)
         ))
     return q
 
-def raw_chapter_revision_mod_access_select[T : Select](q : T,  current_user : User | None) -> T:
+def raw_chapter_revision_mod_access_select[T : Select[tuple[Any, ...]]](q : T,  current_user : User | None) -> T:
     """
     Takes a select statement on raw chapter revisions and returns a select statement that restricts permissions on raw chapter revisions.
     """
@@ -99,7 +101,7 @@ def novel_mod_access_update[T : Update](stmt : T, current_user : User) -> T:
         )
     return stmt
 
-def raw_chapter_mod_access_insert[T : Select](stmt : T, current_user : User, novel_id : int) -> T:
+def raw_chapter_mod_access_insert[T : Select[tuple[Any, ...]]](stmt : T, current_user : User, novel_id : int) -> T:
     """
     Takes an select statement used for an insert from select statement for raw chapter and returns a select statement for a raw chapter that restrict permissions on stmt.
     """
@@ -140,7 +142,7 @@ def raw_chapter_mod_access_update[T : Update](stmt : T, current_user : User) -> 
         )
     return stmt
 
-def raw_chapter_revision_mod_access_insert[T : Select](stmt : T, current_user : User, raw_chapter_id : int) -> T:
+def raw_chapter_revision_mod_access_insert[T : Select[tuple[Any, ...]]](stmt : T, current_user : User, raw_chapter_id : int) -> T:
     if current_user.user_type != UserType.ADMIN:
         return stmt.where(
             exists(

@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Any, Protocol
 
 import pytest
 from sqlalchemy.orm import Session
@@ -18,7 +18,7 @@ def p1_language(test_db : Session) -> Language:
     return zh
 
 class Hash(Protocol):
-    def hash(self, password : str | bytes, *args, **kwargs) -> str:
+    def hash(self, password : str | bytes, *args : Any, **kwargs : Any) -> str:
         ...
 
     def verify(self, password : str | bytes, hash : str | bytes) -> bool:

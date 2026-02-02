@@ -6,7 +6,7 @@ Todo:
 """
 
 from collections.abc import Sequence
-from typing import cast
+from typing import Any, cast
 
 from psycopg2 import Error as PgError
 from psycopg2 import errorcodes
@@ -759,7 +759,7 @@ def remove_raw_chapter_revision(
     stmt = raw_chapter_revision_mod_access_delete(stmt, current_user)
     try:
         result = db.execute(stmt)
-        cursor_res = cast(CursorResult, result)
+        cursor_res = cast(CursorResult[Any], result)
         if cursor_res.rowcount == 0:
             db.rollback()
             query_raw_chapter_revision_by_id(db, current_user, raw_chapter_revision_id)

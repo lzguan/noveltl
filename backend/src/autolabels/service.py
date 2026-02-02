@@ -6,6 +6,7 @@ Todo: Rewrite to use more raw sql. This seems like a huge pain in the ass so I a
 
 import asyncio
 from collections.abc import Coroutine
+from typing import Any
 from uuid import uuid4
 
 from psycopg2 import Error as PgError
@@ -127,7 +128,7 @@ async def insert_auto_labels(db : Session, current_user : User, dispatcher : Aut
     Notes:
         This function ignores all revision IDs that do not exist, revisions that are not final, and revisions that the user has insufficient permissions for.
     """
-    columns = [
+    columns : list[Any] = [
         models.AutoLabel.auto_label_model_name,
         models.AutoLabel.auto_label_model_params,
         models.AutoLabel.auto_label_status,
@@ -185,7 +186,7 @@ async def insert_auto_labels(db : Session, current_user : User, dispatcher : Aut
         db.rollback()
         raise UnknownError from e
 
-    tasks : list[Coroutine] = []
+    tasks : list[Coroutine[Any, Any, None]] = []
     for autolabel in result_rows:
         job_id = str(uuid4())
         autolabel.auto_label_last_job_id = job_id

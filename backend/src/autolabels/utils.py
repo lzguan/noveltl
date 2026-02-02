@@ -16,7 +16,6 @@ class AutoLabelDispatcher(Protocol):
         auto_label_id : int,
         model_name : str,
         model_params : dict[str, str | int | float | bool],
-        *args
     ) -> None:
         """
         Enqueue a request.
@@ -43,7 +42,6 @@ class ArqDispatcher(AutoLabelDispatcher):
             auto_label_id: int,
             model_name: str,
             model_params: dict[str, str | int | float | bool],
-            *args
         ) -> None:
         try:
             await self.redis.enqueue_job('autolabel_infer', job_id, auto_label_id, model_name, model_params, _job_id=job_id)

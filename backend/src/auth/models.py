@@ -35,7 +35,7 @@ class User(Base):
         nullable=False
     )
     user_type : Mapped[UserType] = mapped_column(
-        Enum(UserType, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]),
+        Enum(UserType, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), # type: ignore
         nullable=False
     )
 

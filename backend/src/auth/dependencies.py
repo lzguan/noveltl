@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -17,7 +17,7 @@ oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="token", auto_error=False
 
 async def get_optional_user(
         db : Annotated[Session, Depends(get_db)],
-        token : Annotated[str, Depends(oauth2_scheme_optional)]
+        token : Annotated[str | None, Depends(oauth2_scheme_optional)]
     ) -> models.User | None:
     """
     Get the current user as a Pydantic schema from a JSON web token, or return None if there is no current logged in user.
@@ -29,7 +29,7 @@ async def get_optional_user(
     if token is None:
         return None
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload : dict[str, Any] = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM]) # type: ignore
         username = payload.get("sub")
         if username is None:
             raise HTTPException(

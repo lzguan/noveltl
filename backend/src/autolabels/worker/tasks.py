@@ -11,15 +11,15 @@ from ..models import AutoLabel
 from .config import SessionLocal
 from .interfaces import NERModel
 
-model_cache : dict[str, NERModel] = {}
+model_cache : dict[str, NERModel[Any]] = {}
 
-def get_ner_model(model_name : str) -> NERModel:
+def get_ner_model(model_name : str) -> NERModel[Any]:
     if model_name in model_cache:
         return model_cache[model_name]
 
     raise ValueError(f"Model {model_name} not found in registry.")
 
-async def autolabel_infer(ctx, job_id : str, auto_label_id: int, model_name: str, model_params: dict[str, Any]) -> None:
+async def autolabel_infer(ctx : Any, job_id : str, auto_label_id: int, model_name: str, model_params: dict[str, Any]) -> None:
     base_update = update(
         AutoLabel
     ).where(
@@ -65,7 +65,7 @@ async def autolabel_infer(ctx, job_id : str, auto_label_id: int, model_name: str
     with SessionLocal() as db:
         try:
             res = db.execute(stmt)
-            cursor_res = cast(CursorResult, res)
+            cursor_res = cast(CursorResult[Any], res)
             if cursor_res.rowcount == 0:
                 db.rollback()
                 return

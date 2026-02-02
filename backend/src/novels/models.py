@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from src.labels.models import LabelData, LabelGroup
     from src.languages.models import Language
 
-class EnumAsInteger(TypeDecorator):
+class EnumAsInteger(TypeDecorator): # type: ignore
     """
     Custom SQLAlchemy type to store Python Enums as integers in the database.
 
@@ -40,7 +40,7 @@ class EnumAsInteger(TypeDecorator):
     impl = Integer
     cache_ok = True
 
-    def __init__(self, enum_type):
+    def __init__(self, enum_type): # type: ignore
         super().__init__()
         self.enum_type = enum_type
 
@@ -50,10 +50,10 @@ class EnumAsInteger(TypeDecorator):
         raise ValueError(f"Invalid value {value} for enum {self.enum_type}")
 
     def process_result_value(self, value: Any | None, dialect: Dialect) -> Any | None:
-        return self.enum_type(value)
+        return self.enum_type(value) # type: ignore
 
-    def copy(self, **kwargs):
-        return EnumAsInteger(self.enum_type)
+    def copy(self, **kwargs): # type: ignore
+        return EnumAsInteger(self.enum_type) # type: ignore
 
 
 class Novel(Base):
@@ -81,7 +81,7 @@ class Novel(Base):
     novel_description : Mapped[str] = mapped_column(Text, nullable=True)
     novel_author : Mapped[str] = mapped_column(String(MAX_AUTHOR_LENGTH), nullable=True)
     novel_visibility : Mapped[Visibility] = mapped_column(EnumAsInteger(Visibility), nullable=False)
-    novel_type : Mapped[NovelType] = mapped_column(Enum(NovelType, native_enum=False, length=16, values_callable=lambda x : [str(e.value) for e in x]), nullable=False)
+    novel_type : Mapped[NovelType] = mapped_column(Enum(NovelType, native_enum=False, length=16, values_callable=lambda x : [str(e.value) for e in x]), nullable=False) # type: ignore
 
     novel_parent_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id', name='fk_novels_novel_parent_id_novels'), nullable=True)
     novel_parent : Mapped["Novel"] = relationship("Novel", back_populates="novel_children", remote_side=[novel_id])
@@ -106,7 +106,7 @@ class Contributor(Base):
     """
     __tablename__ = 'novel_contributors'
 
-    contributor_role : Mapped[Role] = mapped_column(Enum(Role, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False)
+    contributor_role : Mapped[Role] = mapped_column(Enum(Role, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False) # type: ignore
 
     novel_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id', ), primary_key=True)
     novel_of_contributor : Mapped["Novel"] = relationship(back_populates='contributors_with_novel')

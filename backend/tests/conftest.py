@@ -36,11 +36,11 @@ def test_engine(test_url : str) -> Engine:
     return engine
 
 @pytest.fixture
-def testing_session_local(test_engine : Engine) -> sessionmaker:
+def testing_session_local(test_engine : Engine) -> sessionmaker[Session]:
     return sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 @pytest.fixture(scope="function")
-def test_db(test_engine : Engine, testing_session_local : sessionmaker) -> Generator[Session, None, None]:
+def test_db(test_engine : Engine, testing_session_local : sessionmaker[Session]) -> Generator[Session, None, None]:
     """Creates a new database session for a test."""
     with test_engine.connect() as connection:
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist"))

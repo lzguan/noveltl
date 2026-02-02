@@ -6,6 +6,7 @@ from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
 from src.languages.models import Language
+from src.novels.models import Novel
 
 
 def test_language_creation(test_db : Session):
@@ -98,7 +99,7 @@ def test_language_length_constraints(test_db : Session):
     assert queried_lang4.language_name == max_name
     assert queried_lang4.language_code == max_code
 
-def test_cannot_delete_language_in_use(test_db : Session, sample_novels : list):
+def test_cannot_delete_language_in_use(test_db : Session, sample_novels : list[Novel]):
     # sample_novels fixture creates novels with languages
     # Attempt to delete a language that is in use
     lang_in_use = test_db.execute(select(Language).where(Language.language_name == "English")).scalar_one()

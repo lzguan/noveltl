@@ -1,4 +1,4 @@
-from typing import TypedDict, cast
+from typing import Any, Protocol, TypedDict, cast
 
 from ...labels.schemas import Label
 from ..schemas import CluenerModelParams, NERModelParamsBase
@@ -6,10 +6,17 @@ from .interfaces import NERModel, Tokenizer
 from .utils import chunk_text
 
 
+class TokenizerType(Protocol):
+    def tokenize(self, text: str) -> list[str]:
+        ...
+
+class PipelineType(Protocol):
+    tokenizer : TokenizerType
+    def __call__(self, text: str) -> list[dict[str, Any]]:
+        ...
+
 class CluenerTokenizer(Tokenizer):
-    def __init__(self, tokenizer):
-        if tokenizer is None:
-            raise Exception("Cluener pipeline tokenizer is None.")
+    def __init__(self, tokenizer: TokenizerType):
         self.tokenizer = tokenizer
 
     def tokenize(self, text: str) -> list[str]:
@@ -26,7 +33,7 @@ class CluenerRawNERResult(TypedDict):
     entity_group : str
 
 class CluenerModel(NERModel[CluenerModelParams]):
-    def __init__(self, pipeline):
+    def __init__(self, pipeline : PipelineType):
         self.pipeline = pipeline
         self.model_name = 'uer/roberta-base-finetuned-cluener2020-chinese' # maybe change this later
         self.is_deterministic = True
@@ -34,8 +41,8 @@ class CluenerModel(NERModel[CluenerModelParams]):
 
     def predict(self, text: str, params: CluenerModelParams) -> tuple[list[Label], list[CluenerRawNERResult]]:
         chunks = chunk_text(text, params.separators, self.tokenizer, params.chunk_size, force_chunk=params.force_chunk)
-        ret = []
-        err = []
+        ret : list[Label] = []
+        err : list[CluenerRawNERResult]= []
         for txt, start in chunks:
             result : list[CluenerRawNERResult] = cast(list[CluenerRawNERResult], self.pipeline(txt))
             for label in result:
@@ -74,5 +81,5 @@ class Cluener:
             model='uer/roberta-base-finetuned-cluener2020-chinese',
             aggregation_strategy="simple"
         )
-        self.model : NERModel[CluenerModelParams] = CluenerModel(self.pipeline)
+        self.model : NERModel[CluenerModelParams] = CluenerModel(self.pipeline) # pyright: ignore[reportArgumentType]
 

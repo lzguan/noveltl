@@ -1,24 +1,22 @@
 from typing import Any, Protocol
 
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..auth.models import User
+from .schemas import (
+    ApplyFilterOptionsBase,
+    ContextBase,
+    DecideInstancesOptionsBase,
+    FlagInstancesOptionsBase,
+    GetContextsOptionsBase,
+    InstanceBase,
+)
 
 
-class OptionsBase(BaseModel):
-    pass
-
-class InstanceBase(BaseModel):
-    pass
-
-class ContextBase(BaseModel):
-    pass
-
-class Filter[FlagInstanceOptions : OptionsBase,
-             GetContextOptions : OptionsBase,
-             DecideInstanceOptions : OptionsBase,
-             ApplyFilterOptions : OptionsBase,
+class Filter[FlagInstancesOptions : FlagInstancesOptionsBase,
+             GetContextsOptions : GetContextsOptionsBase,
+             DecideInstancesOptions : DecideInstancesOptionsBase,
+             ApplyFilterOptions : ApplyFilterOptionsBase,
              Instance : InstanceBase,
              Context : ContextBase
             ](Protocol):
@@ -31,6 +29,8 @@ class Filter[FlagInstanceOptions : OptionsBase,
     """
 
     description : str
+    supports_decide : bool
+    supports_apply : bool
 
     def get_instance_schema(self) -> dict[Any, Any]:
         """
@@ -50,19 +50,25 @@ class Filter[FlagInstanceOptions : OptionsBase,
         """
         ...
 
-    def get_get_context_options_schema(self) -> dict[Any, Any]:
+    def get_get_contexts_options_schema(self) -> dict[Any, Any]:
         """
         Returns the schema of the options type used by the filter.
         """
         ...
 
-    def get_decide_instance_options_schema(self) -> dict[Any, Any]:
+    def get_decide_instances_options_schema(self) -> dict[Any, Any]:
         """
         Returns the schema of the options type used by the filter.
         """
         ...
 
-    def flag_instances(self, db : Session, current_user : User, options : FlagInstanceOptions) -> list[Instance]:
+    def get_apply_filter_options_schema(self) -> dict[Any, Any]:
+        """
+        Returns the schema of the options type used by the filter.
+        """
+        ...
+
+    def flag_instances(self, db : Session, current_user : User, options : FlagInstancesOptions) -> list[Instance]:
         """
         Flags instances that meet certain criteria. May pull data from the database using a SQLAlchemy session.
 
@@ -76,7 +82,7 @@ class Filter[FlagInstanceOptions : OptionsBase,
         """
         ...
 
-    def get_contexts(self, db : Session, current_user : User, instances : list[Instance], options : GetContextOptions) -> list[Context | None]:
+    def get_contexts(self, db : Session, current_user : User, instances : list[Instance], options : GetContextsOptions) -> list[Context | None]:
         """
         Retrieves a list of contexts for a given list of instances from the database. Returns a list of contexts corresponding to the input instances. If an instance has no context, the corresponding entry is None.
 
@@ -88,9 +94,9 @@ class Filter[FlagInstanceOptions : OptionsBase,
         """
         ...
 
-    def decide_instance(self, db : Session, current_user : User, instance_contexts : list[tuple[Instance, Context]], options : DecideInstanceOptions) -> bool:
+    def decide_instances(self, db : Session, current_user : User, instance_contexts : list[tuple[Instance, Context]], options : DecideInstancesOptions) -> list[bool]:
         """
-        Decides whether an instance passes the filter in a given context.
+        Decides whether an instance passes the filter in a given context. Returns True if the instance passes the filter (i.e., should be included in `apply_filter`), False otherwise.
 
         Args:
             db: SQLAlchemy session for database access.
@@ -100,14 +106,16 @@ class Filter[FlagInstanceOptions : OptionsBase,
         """
         ...
 
-    def apply_filter(self, db : Session, current_user : User, instances : list[Instance], options : ApplyFilterOptions) -> list[Instance]:
+    def apply_filter(self, db : Session, current_user : User, label_group_id : int, instances : list[Instance], options : ApplyFilterOptions) -> None:
         """
         Applies the filter to each instance in a list of instances.
 
         Args:
             db: SQLAlchemy session for database access.
+            current_user: The user requesting the filter application.
+            label_group_id: The ID of the label group to apply the filter to.
             instances: List of instances to apply the filter to.
-            options: Options for deciding instances.
+            options: Options for applying the filter.
         """
         ...
 

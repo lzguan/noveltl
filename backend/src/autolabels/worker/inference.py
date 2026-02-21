@@ -58,7 +58,7 @@ class CluenerModel(NERModel[CluenerModelParams]):
                         label_end=label["end"],
                         label_score=label["score"],
                         label_entity_group=label["entity_group"],
-                        label_dirty=False
+                        label_dirty=False,
                     ))
         return ret, err
 

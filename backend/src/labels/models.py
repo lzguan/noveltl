@@ -22,7 +22,6 @@ class LabelGroup(Base):
     Attributes:
         label_group_id: Integer identifier.
         label_group_name: Name given to this label group.
-        user_id: User that owns this label group.
         novel_id: Novel this label group is referring to.
     """
     __tablename__ = 'label_groups'

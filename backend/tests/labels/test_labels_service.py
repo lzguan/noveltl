@@ -14,6 +14,8 @@ from src.novels import models as novel_models
 
 logger = logging.getLogger(__name__)
 
+@pytest.mark.order(1)
+@pytest.mark.dependency(name="insert_label_datas_by_autolabels", scope="session")
 def test_label_insert_label_data_by_autolabels_basic(
     chinese_xianxia_small_test_autolabels_cluener : list[autolabel_models.AutoLabel],
     chinese_xianxia_small_test_label_group : label_models.LabelGroup,

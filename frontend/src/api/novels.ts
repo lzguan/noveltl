@@ -50,17 +50,17 @@ export const get_chapter_revisions_by_novel = async (
     novel_id : number,
     start? : number,
     end? : number,
-    is_public? : boolean,
-    is_primary? : boolean,
-    is_final? : boolean
+    isPublic? : boolean,
+    isPrimary? : boolean,
+    isFinal? : boolean
 ) : Promise<NovelType.RawChapterRevisionMeta[]> => {
     const result = await client.get(`novels/${novel_id}/revisions`, {
         params : {
             start,
             end,
-            is_public,
-            is_primary,
-            is_final
+            isPublic,
+            isPrimary,
+            isFinal
         }
     })
     return result.data
@@ -68,13 +68,13 @@ export const get_chapter_revisions_by_novel = async (
 
 export const get_chapter_revisions_by_chapter = async (
     chapter_id : number,
-    is_public? : boolean,
-    is_primary? : boolean
+    isPublic? : boolean,
+    isPrimary? : boolean
 ) : Promise<NovelType.RawChapterRevisionMeta[]> => {
     const result = await client.get(`chapters/${chapter_id}/revisions`, {
         params : {
-            is_public,
-            is_primary
+            isPublic,
+            isPrimary
         }
     })
     return result.data

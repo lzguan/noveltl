@@ -1,7 +1,9 @@
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+
+from filters.schemas import InstanceContextOptions, InstanceOptions
 
 from ..auth.dependencies import get_current_user
 from ..auth.models import User
@@ -28,7 +30,7 @@ def read_filter_schemas():
 
 @router.post('/filters/{filter_name}/flag-instances', response_model=list[Any])
 def read_flagged_instances(
-        filter_name : str,
+        filter_name : Annotated[str, Query(description="The name of the filter to use for flagging instances.", alias="filterName")],
         options : dict[Any, Any],
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
@@ -51,9 +53,8 @@ def read_flagged_instances(
 
 @router.post('/filters/{filter_name}/get-contexts', response_model=list[Any])
 def read_contexts(
-        filter_name : str,
-        instances : list[Any],
-        options : dict[Any, Any],
+        filter_name : Annotated[str, Query(description="The name of the filter to use for retrieving contexts.", alias="filterName")],
+        body : InstanceOptions,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
@@ -67,6 +68,8 @@ def read_contexts(
         db: Database session for any necessary database access during context retrieval.
         current_user: The user making the request, which may be relevant for certain filters.
     """
+    instances = body.instance
+    options = body.options
     try:
         return get_contexts(db, current_user, filter_name, instances, options)
     except FilterNotFoundException as e:
@@ -78,9 +81,8 @@ def read_contexts(
 
 @router.post('/filters/{filter_name}/decide-instances', response_model=list[bool])
 def read_decisions(
-        filter_name : str,
-        instance_contexts : list[Any],
-        options : dict[Any, Any],
+        filter_name : Annotated[str, Query(description="The name of the filter to use for deciding instances.", alias="filterName")],
+        body : InstanceContextOptions,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
@@ -89,11 +91,12 @@ def read_decisions(
 
     Args:
         filter_name: The name of the filter to use.
-        instance_contexts: A list of tuples, each containing an instance and its corresponding context (or None). Instances and contexts will be validated against the filter's schemas.
-        options: The options for deciding instances, which will be validated against the filter's schema.
+        body: An InstanceContextOptions object containing the list of instance-context pairs and the options for deciding instances. Each instance and context will be validated against the filter's schemas.
         db: Database session for any necessary database access during the decision process.
         current_user: The user making the request, which may be relevant for certain filters.
     """
+    instance_contexts = body.instance_contexts
+    options = body.options
     try:
         return decide_instances(db, current_user, filter_name, instance_contexts, options)
     except FilterNotFoundException as e:
@@ -105,10 +108,9 @@ def read_decisions(
 
 @router.post('/filters/{filter_name}/apply', status_code=204)
 def apply_filter_to_label_group(
-        filter_name : str,
-        label_group_id : int,
-        instances : list[Any],
-        options : dict[Any, Any],
+        filter_name : Annotated[str, Query(description="The name of the filter to apply.", alias="filterName")],
+        label_group_id : Annotated[int, Query(description="The ID of the label group to apply the filter to.", alias="labelGroupId")],
+        body : InstanceOptions,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
@@ -118,11 +120,12 @@ def apply_filter_to_label_group(
     Args:
         filter_name: The name of the filter to apply.
         label_group_id: The ID of the label group to apply the filter to.
-        instances: The list of instances to apply the filter to. Each instance will be validated against the filter's instance schema.
-        options: The options for applying the filter, which will be validated against the filter's schema.
+        body: An InstanceOptions object containing the list of instances and the options for applying the filter. Each instance will be validated against the filter's instance schema, and the options will be validated against the filter's apply filter options schema.
         db: Database session for any necessary database access during filter application.
         current_user: The user making the request, which may be relevant for certain filters.
     """
+    instances = body.instance
+    options = body.options
     try:
         apply_filter(db, current_user, filter_name, label_group_id, instances, options)
     except FilterNotFoundException as e:

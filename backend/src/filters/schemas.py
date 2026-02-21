@@ -2,7 +2,7 @@
 Common schemas for filters, including context and instance schemas. These are used across different filter implementations to standardize the data structures for contexts and instances.
 """
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -68,3 +68,16 @@ class SingleLabel(InstanceBase):
     type : Literal["single_label"] = "single_label"
     label : label_schemas.Label
     raw_chapter_revision_id : int
+
+
+# --------------------------------------
+# ------ Router schemas and types ------
+# --------------------------------------
+
+class InstanceOptions(BaseModel):
+    instance: list[Any]
+    options : dict[Any, Any]
+
+class InstanceContextOptions(BaseModel):
+    instance_contexts: list[tuple[Any, Any]]
+    options : dict[Any, Any]

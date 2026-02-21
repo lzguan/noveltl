@@ -22,6 +22,9 @@ FILTER_REGISTRY : dict[str, RegisteredFilter] = {
 }
 
 def query_schemas() -> dict[str, SchemaInfo]:
+    """
+    Queries the FILTER_REGISTRY to retrieve the schemas for all registered filters.
+    """
     return {
         filter_name: SchemaInfo(
             description=filter.description,
@@ -39,6 +42,15 @@ def query_schemas() -> dict[str, SchemaInfo]:
 
 
 def flag_instances(db : Session, current_user : User, filter_name : str, options : Any) -> list[Instance]:
+    """
+    Flags instances using a specified filter and options.
+
+    Args:
+        db: Database session for any necessary database access during filtering.
+        current_user: The user making the request, which may be relevant for certain filters.
+        filter_name: The name of the filter to use.
+        options: The options for flagging instances, which will be validated against the filter's schema
+    """
     if filter_name not in FILTER_REGISTRY:
         raise FilterNotFoundException(f"Filter {filter_name} not found in registry")
     filter = FILTER_REGISTRY[filter_name]
@@ -82,7 +94,7 @@ def decide_instances(db : Session, current_user : User, filter_name : str, insta
         raise InstanceContextValidationException(f"Invalid instances or contexts for filter {filter_name}: {e}") from e
     return list(filter.decide_instances(db, current_user, validated_instance_contexts, validated_options))
 
-def apply_filter(db : Session, current_user : User, filter_name : str, label_group_id : int, instances : list[Instance], options : Any) -> None:
+def apply_filter(db : Session, current_user : User, filter_name : str, label_group_id : int, instances : list[Any], options : Any) -> None:
     if filter_name not in FILTER_REGISTRY:
         raise FilterNotFoundException(f"Filter {filter_name} not found in registry")
     filter = FILTER_REGISTRY[filter_name]

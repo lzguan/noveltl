@@ -190,9 +190,9 @@ async def read_chapter_revisions_by_novel(
     current_user : Annotated[User | None, Depends(get_optional_user)],
     start : int | None = None,
     end : int | None = None,
-    is_public : bool | None = None,
-    is_primary : bool | None = None,
-    is_final : bool | None = None
+    is_public : Annotated[bool | None, Query(description="Filter only public chapters.", alias="isPublic")] = None,
+    is_primary : Annotated[bool | None, Query(description="Filter only primary chapters.", alias="isPrimary")] = None,
+    is_final : Annotated[bool | None, Query(description="Filter only final chapters.", alias="isFinal")] = None
     ):
     """
     Endpoint for retrieving chapter revisions in bulk.
@@ -223,8 +223,8 @@ async def read_chapter_revision_by_chapter(
     chapter_id : int,
     db : Annotated[Session, Depends(get_db)],
     current_user : Annotated[User | None, Depends(get_optional_user)],
-    is_public : bool | None = None,
-    is_primary : bool | None = None
+    is_public : Annotated[bool | None, Query(description="Filter only public chapters.", alias="isPublic")] = None,
+    is_primary : Annotated[bool | None, Query(description="Filter only primary chapters.", alias="isPrimary")] = None
 ):
     """
     Endpoint for retrieving chapter revisions in bulk from a raw chapter.

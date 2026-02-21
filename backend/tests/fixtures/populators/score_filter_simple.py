@@ -10,9 +10,6 @@ import pytest
 from sqlalchemy.orm import Session
 
 from src.auth.models import User
-from src.filters.score_filter import (
-    ScoreFilter,
-)
 from src.labels.constants import LabelRole
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.languages.models import Language
@@ -143,8 +140,3 @@ def sf_labels(test_db: Session, sf_label_data: LabelData) -> list[Label]:
     test_db.add_all(labels)
     test_db.commit()
     return labels
-
-
-@pytest.fixture
-def score_filter() -> ScoreFilter:
-    return ScoreFilter()

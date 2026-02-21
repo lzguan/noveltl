@@ -101,7 +101,7 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
         q = select(
             label_models.Label, novel_models.RawChapterRevision.raw_chapter_revision_id
         ).where(
-            label_models.Label.label_score >= options.min_score
+            label_models.Label.label_score < options.min_score
         ).join(
             label_models.LabelData,
             label_models.Label.label_data_id == label_models.LabelData.label_data_id

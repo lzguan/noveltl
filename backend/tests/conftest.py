@@ -23,6 +23,7 @@ pytest_plugins = [
     "tests.fixtures.populators.label_permissions",
     "tests.fixtures.password_hash",
     "tests.fixtures.populators.score_filter_simple",
+    "tests.fixtures.filters"
 ]
 
 @pytest.fixture

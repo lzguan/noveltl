@@ -44,9 +44,9 @@ class TestFlagInstances:
         )
         results = score_filter.flag_instances(test_db, sf_user, options)
 
-        assert len(results) == 1
-        assert results[0].label.label_word == "Hello"
-        assert results[0].label.label_score == 0.9
+        assert len(results) == 2
+        assert ("world", 0.5) in [(result.label.label_word, result.label.label_score) for result in results]
+        assert ("test", 0.3) in [(result.label.label_word, result.label.label_score) for result in results]
 
     def test_flag_instances_returns_all_above_threshold(
         self,
@@ -62,9 +62,9 @@ class TestFlagInstances:
         )
         results = score_filter.flag_instances(test_db, sf_user, options)
 
-        assert len(results) == 2
+        assert len(results) == 1
         words = {r.label.label_word for r in results}
-        assert words == {"Hello", "world"}
+        assert words == {"test"}
 
     def test_flag_instances_returns_empty_for_high_threshold(
         self,
@@ -80,7 +80,9 @@ class TestFlagInstances:
         )
         results = score_filter.flag_instances(test_db, sf_user, options)
 
-        assert len(results) == 0
+        assert len(results) == 3
+        words = {r.label.label_word for r in results}
+        assert words == {"Hello", "world", "test"}
 
 
 # --- Tests for get_contexts ---
@@ -105,9 +107,11 @@ class TestGetContexts:
         context_options = ScoreGetContextOptions()
         contexts = score_filter.get_contexts(test_db, sf_user, instances, context_options)
 
-        assert len(contexts) == 1
-        assert contexts[0] is not None
-        assert "Hello" in contexts[0].text
+        assert len(contexts) == 2
+        assert contexts is not None
+        assert all(context is not None for context in contexts)
+        assert "Hello world." in [context.text.strip() for context in contexts] # type: ignore
+        assert "This is a test sentence." in [context.text.strip() for context in contexts] # type: ignore
 
     def test_get_contexts_returns_none_for_inaccessible_revision(
         self,
@@ -178,7 +182,7 @@ class TestDecideInstances:
     ):
         options = ScoreFlagInstancesOptions(
             label_group_id=sf_label_group.label_group_id,
-            min_score=0.0
+            min_score=1.0
         )
         instances = score_filter.flag_instances(test_db, sf_user, options)
 
@@ -204,7 +208,7 @@ class TestDecideInstances:
     ):
         options = ScoreFlagInstancesOptions(
             label_group_id=sf_label_group.label_group_id,
-            min_score=0.0
+            min_score=1.0
         )
         instances = score_filter.flag_instances(test_db, sf_user, options)
 
@@ -229,7 +233,7 @@ class TestDecideInstances:
     ):
         options = ScoreFlagInstancesOptions(
             label_group_id=sf_label_group.label_group_id,
-            min_score=0.0
+            min_score=1.0
         )
         instances = score_filter.flag_instances(test_db, sf_user, options)
 
@@ -257,13 +261,13 @@ class TestApplyFilter:
         sf_labels: list[Label],
         score_filter: ScoreFilter,
     ):
-        # Flag high-score labels
+        # Flag low-score labels
         options = ScoreFlagInstancesOptions(
             label_group_id=sf_label_group.label_group_id,
             min_score=0.8
         )
         instances = score_filter.flag_instances(test_db, sf_user, options)
-        assert len(instances) == 1  # Only "Hello" with score 0.9
+        assert len(instances) == 2  # Only "world" with score 0.5 and "test" with score 0.3
 
         # Apply filter (delete the flagged labels)
         apply_options = ScoreApplyFilterOptions(create_copy=False)
@@ -274,11 +278,11 @@ class TestApplyFilter:
             select(Label).where(Label.label_data_id == sf_label_data.label_data_id)
         ).scalars().all()
 
-        assert len(remaining) == 2
+        assert len(remaining) == 1
         remaining_words = {lab.label_word for lab in remaining}
-        assert "Hello" not in remaining_words
-        assert "world" in remaining_words
-        assert "test" in remaining_words
+        assert "Hello" in remaining_words
+        assert "world" not in remaining_words
+        assert "test" not in remaining_words
 
     def test_apply_filter_with_copy_preserves_original(
         self,
@@ -292,7 +296,7 @@ class TestApplyFilter:
         # Flag all labels
         options = ScoreFlagInstancesOptions(
             label_group_id=sf_label_group.label_group_id,
-            min_score=0.0
+            min_score=1.0
         )
         instances = score_filter.flag_instances(test_db, sf_user, options)
         assert len(instances) == 3

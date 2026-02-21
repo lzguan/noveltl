@@ -7,8 +7,8 @@ These tests use the chinese_xianxia_small_test fixtures which contain:
 - 173 labels with score >= 0.7
 
 Invariants tested:
-- COMPLETENESS: All labels >= threshold ARE returned by flag_instances
-- CORRECTNESS: No labels < threshold are returned by flag_instances
+- COMPLETENESS: All labels < threshold ARE returned by flag_instances
+- CORRECTNESS: No labels >= threshold are returned by flag_instances
 - PRESERVATION: apply_filter with create_copy leaves original unchanged
 - DELETION: apply_filter without create_copy removes exactly the specified labels
 """
@@ -35,11 +35,6 @@ pytestmark = pytest.mark.dependency(
     depends=["insert_label_datas_by_autolabels"],
     scope="session",
 )
-
-@pytest.fixture
-def score_filter() -> ScoreFilter:
-    return ScoreFilter()
-
 
 @pytest.fixture
 def cxst_labels_populated(
@@ -81,7 +76,7 @@ class TestFlagInstancesCompleteness:
         score_filter: ScoreFilter,
     ):
         """
-        COMPLETENESS: Every label with score >= min_score MUST be returned.
+        COMPLETENESS: Every label with score < min_score MUST be returned.
         """
         min_score = 0.7
 
@@ -92,7 +87,7 @@ class TestFlagInstancesCompleteness:
             ).where(
                 LabelData.label_group_id == cxst_labels_populated.label_group_id
             ).where(
-                Label.label_score >= min_score
+                Label.label_score < min_score
             )
         ).scalar()
 
@@ -104,7 +99,7 @@ class TestFlagInstancesCompleteness:
         results = score_filter.flag_instances(test_db, chinese_xianxia_small_test_user, options)
 
         assert len(results) == expected_count, (
-            f"Expected {expected_count} labels with score >= {min_score}, "
+            f"Expected {expected_count} labels with score < {min_score}, "
             f"but flag_instances returned {len(results)}"
         )
 
@@ -129,12 +124,12 @@ class TestFlagInstancesCompleteness:
 
         options = ScoreFlagInstancesOptions(
             label_group_id=cxst_labels_populated.label_group_id,
-            min_score=0.0
+            min_score=1.0
         )
         results = score_filter.flag_instances(test_db, chinese_xianxia_small_test_user, options)
 
         assert len(results) == total_count, (
-            f"Expected all {total_count} labels with min_score=0, "
+            f"Expected all {total_count} labels with min_score=1.0, "
             f"but got {len(results)}"
         )
 
@@ -150,7 +145,7 @@ class TestFlagInstancesCorrectness:
         score_filter: ScoreFilter,
     ):
         """
-        CORRECTNESS: No label with score < min_score should be returned.
+        CORRECTNESS: No label with score >= min_score should be returned.
         """
         min_score = 0.7
 
@@ -161,7 +156,7 @@ class TestFlagInstancesCorrectness:
         results = score_filter.flag_instances(test_db, chinese_xianxia_small_test_user, options)
 
         for result in results:
-            assert result.label.label_score >= min_score, (
+            assert result.label.label_score < min_score, (
                 f"Label '{result.label.label_word}' has score {result.label.label_score} "
                 f"which is below threshold {min_score}"
             )
@@ -174,11 +169,11 @@ class TestFlagInstancesCorrectness:
         score_filter: ScoreFilter,
     ):
         """
-        CORRECTNESS: If min_score > max score in data, return empty list.
+        CORRECTNESS: If min_score < min score in data, return empty list.
         """
         options = ScoreFlagInstancesOptions(
             label_group_id=cxst_labels_populated.label_group_id,
-            min_score=0.999  # Higher than max score (0.995)
+            min_score=0.0
         )
         results = score_filter.flag_instances(test_db, chinese_xianxia_small_test_user, options)
 
@@ -217,7 +212,7 @@ class TestFlagInstancesScorePartition:
             ).where(
                 LabelData.label_group_id == cxst_labels_populated.label_group_id
             ).where(
-                Label.label_score < min_score
+                Label.label_score >= min_score
             )
         ).scalar()
 
@@ -355,7 +350,7 @@ class TestApplyFilterDeletion:
         score_filter: ScoreFilter,
     ):
         """
-        DELETION: After deleting labels >= threshold, all remaining labels < threshold.
+        DELETION: After deleting labels < threshold, all remaining labels >= threshold.
         """
         min_score = 0.7
 
@@ -382,12 +377,12 @@ class TestApplyFilterDeletion:
             ).where(
                 LabelData.label_group_id == cxst_labels_populated.label_group_id
             ).where(
-                Label.label_score >= min_score
+                Label.label_score < min_score
             )
         ).scalar()
 
         assert remaining_above == 0, (
-            f"Found {remaining_above} labels with score >= {min_score} after deletion"
+            f"Found {remaining_above} labels with score < {min_score} after deletion"
         )
 
 

@@ -165,7 +165,7 @@ class TestDecideInstances:
         contexts = score_filter.get_contexts(test_db, sf_user, instances, context_options)
 
         # Filter out None contexts
-        instance_contexts = [(i, c) for i, c in zip(instances, contexts, strict=False) if c is not None]
+        instance_contexts = [(i, c) for i, c in zip(instances, contexts, strict=False)]
 
         decide_options = ScoreDecideInstancesOptions(mode="auto", exclude_phrases=[])
         decisions = score_filter.decide_instances(test_db, sf_user, instance_contexts, decide_options)
@@ -189,7 +189,7 @@ class TestDecideInstances:
         context_options = ScoreGetContextOptions()
         contexts = score_filter.get_contexts(test_db, sf_user, instances, context_options)
 
-        instance_contexts = [(i, c) for i, c in zip(instances, contexts, strict=False) if c is not None]
+        instance_contexts = [(i, c) for i, c in zip(instances, contexts, strict=False)]
 
         decide_options = ScoreDecideInstancesOptions(mode="auto", exclude_phrases=["Hello"])
         decisions = score_filter.decide_instances(test_db, sf_user, instance_contexts, decide_options)
@@ -215,7 +215,7 @@ class TestDecideInstances:
         context_options = ScoreGetContextOptions()
         contexts = score_filter.get_contexts(test_db, sf_user, instances, context_options)
 
-        instance_contexts = [(i, c) for i, c in zip(instances, contexts, strict=False) if c is not None]
+        instance_contexts = [(i, c) for i, c in zip(instances, contexts, strict=False)]
 
         manual_decisions = [True, False, True][:len(instance_contexts)]
         decide_options = ScoreDecideInstancesOptions(mode="manual", decisions=manual_decisions)
@@ -240,7 +240,7 @@ class TestDecideInstances:
         context_options = ScoreGetContextOptions()
         contexts = score_filter.get_contexts(test_db, sf_user, instances, context_options)
 
-        instance_contexts = [(i, c) for i, c in zip(instances, contexts, strict=False) if c is not None]
+        instance_contexts = [(i, c) for i, c in zip(instances, contexts, strict=False)]
 
         # Provide wrong number of decisions
         decide_options = ScoreDecideInstancesOptions(mode="manual", decisions=[True])

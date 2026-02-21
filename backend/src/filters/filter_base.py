@@ -1,4 +1,4 @@
-from typing import Any, Protocol
+from typing import Protocol
 
 from sqlalchemy.orm import Session
 
@@ -32,41 +32,13 @@ class Filter[FlagInstancesOptions : FlagInstancesOptionsBase,
     supports_decide : bool
     supports_apply : bool
 
-    def get_instance_schema(self) -> dict[Any, Any]:
-        """
-        Returns the schema of the instance type used by the filter.
-        """
-        ...
+    instance_schema : type[Instance]
+    context_schema : type[Context]
 
-    def get_context_schema(self) -> dict[Any, Any]:
-        """
-        Returns the schema of the context type used by the filter.
-        """
-        ...
-
-    def get_flag_instances_options_schema(self) -> dict[Any, Any]:
-        """
-        Returns the schema of the options type used by the filter.
-        """
-        ...
-
-    def get_get_contexts_options_schema(self) -> dict[Any, Any]:
-        """
-        Returns the schema of the options type used by the filter.
-        """
-        ...
-
-    def get_decide_instances_options_schema(self) -> dict[Any, Any]:
-        """
-        Returns the schema of the options type used by the filter.
-        """
-        ...
-
-    def get_apply_filter_options_schema(self) -> dict[Any, Any]:
-        """
-        Returns the schema of the options type used by the filter.
-        """
-        ...
+    flag_instances_options_schema : type[FlagInstancesOptions]
+    get_contexts_options_schema : type[GetContextsOptions]
+    decide_instances_options_schema : type[DecideInstancesOptions]
+    apply_filter_options_schema : type[ApplyFilterOptions]
 
     def flag_instances(self, db : Session, current_user : User, options : FlagInstancesOptions) -> list[Instance]:
         """
@@ -94,7 +66,7 @@ class Filter[FlagInstancesOptions : FlagInstancesOptionsBase,
         """
         ...
 
-    def decide_instances(self, db : Session, current_user : User, instance_contexts : list[tuple[Instance, Context]], options : DecideInstancesOptions) -> list[bool]:
+    def decide_instances(self, db : Session, current_user : User, instance_contexts : list[tuple[Instance, Context | None]], options : DecideInstancesOptions) -> list[bool]:
         """
         Decides whether an instance passes the filter in a given context. Returns True if the instance passes the filter (i.e., should be included in `apply_filter`), False otherwise.
 

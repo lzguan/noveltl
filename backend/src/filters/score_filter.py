@@ -1,4 +1,4 @@
-from typing import Any, Literal, Self
+from typing import Literal, Self
 
 from pydantic import Field, model_validator
 from sqlalchemy import delete, select, tuple_
@@ -79,23 +79,12 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
         self.supports_decide = True
         self.supports_apply = True
 
-    def get_instance_schema(self) -> dict[Any, Any]:
-        return SingleLabel.model_json_schema()
-
-    def get_context_schema(self) -> dict[Any, Any]:
-        return SentenceContext.model_json_schema()
-
-    def get_flag_instances_options_schema(self) -> dict[Any, Any]:
-        return ScoreFlagInstancesOptions.model_json_schema()
-
-    def get_get_contexts_options_schema(self) -> dict[Any, Any]:
-        return ScoreGetContextOptions.model_json_schema()
-
-    def get_decide_instances_options_schema(self) -> dict[Any, Any]:
-        return ScoreDecideInstancesOptions.model_json_schema()
-
-    def get_apply_filter_options_schema(self) -> dict[Any, Any]:
-        return ScoreApplyFilterOptions.model_json_schema()
+    context_schema = SentenceContext
+    instance_schema = SingleLabel
+    flag_instances_options_schema = ScoreFlagInstancesOptions
+    get_contexts_options_schema = ScoreGetContextOptions
+    decide_instances_options_schema = ScoreDecideInstancesOptions
+    apply_filter_options_schema = ScoreApplyFilterOptions
 
     def flag_instances(self, db : Session, current_user : User, options : ScoreFlagInstancesOptions) -> list[SingleLabel]:
         q = select(
@@ -160,7 +149,7 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
         return output
 
 
-    def decide_instances(self, db : Session, current_user : User, instance_contexts : list[tuple[SingleLabel, SentenceContext]], options : ScoreDecideInstancesOptions) -> list[bool]:
+    def decide_instances(self, db : Session, current_user : User, instance_contexts : list[tuple[SingleLabel, SentenceContext | None]], options : ScoreDecideInstancesOptions) -> list[bool]:
         """
         See the base class for method signature and docstring. The implementation should use the context text and the exclude_phrases option to automatically decide if an instance passes the filter when in auto mode, or use the decisions provided in options when in manual mode.
 

@@ -75,7 +75,7 @@ class SingleLabel(InstanceBase):
 # --------------------------------------
 
 class InstanceOptions(BaseModel):
-    instance: list[Any]
+    instances: list[Any]
     options : dict[Any, Any]
 
 class InstanceContextOptions(BaseModel):

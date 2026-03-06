@@ -3,8 +3,6 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from filters.schemas import InstanceContextOptions, InstanceOptions
-
 from ..auth.dependencies import get_current_user
 from ..auth.models import User
 from ..database import get_db
@@ -14,6 +12,7 @@ from .exceptions import (
     InstanceValidationException,
     OptionsValidationException,
 )
+from .schemas import InstanceContextOptions, InstanceOptions
 from .service import SchemaInfo, apply_filter, decide_instances, flag_instances, get_contexts, query_schemas
 
 router = APIRouter()
@@ -30,7 +29,7 @@ def read_filter_schemas():
 
 @router.post('/filters/{filter_name}/flag-instances', response_model=list[Any])
 def read_flagged_instances(
-        filter_name : Annotated[str, Query(description="The name of the filter to use for flagging instances.", alias="filterName")],
+        filter_name : str,
         options : dict[Any, Any],
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
@@ -53,7 +52,7 @@ def read_flagged_instances(
 
 @router.post('/filters/{filter_name}/get-contexts', response_model=list[Any])
 def read_contexts(
-        filter_name : Annotated[str, Query(description="The name of the filter to use for retrieving contexts.", alias="filterName")],
+        filter_name : str,
         body : InstanceOptions,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
@@ -68,7 +67,7 @@ def read_contexts(
         db: Database session for any necessary database access during context retrieval.
         current_user: The user making the request, which may be relevant for certain filters.
     """
-    instances = body.instance
+    instances = body.instances
     options = body.options
     try:
         return get_contexts(db, current_user, filter_name, instances, options)
@@ -81,7 +80,7 @@ def read_contexts(
 
 @router.post('/filters/{filter_name}/decide-instances', response_model=list[bool])
 def read_decisions(
-        filter_name : Annotated[str, Query(description="The name of the filter to use for deciding instances.", alias="filterName")],
+        filter_name : str,
         body : InstanceContextOptions,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
@@ -108,7 +107,7 @@ def read_decisions(
 
 @router.post('/filters/{filter_name}/apply', status_code=204)
 def apply_filter_to_label_group(
-        filter_name : Annotated[str, Query(description="The name of the filter to apply.", alias="filterName")],
+        filter_name : str,
         label_group_id : Annotated[int, Query(description="The ID of the label group to apply the filter to.", alias="labelGroupId")],
         body : InstanceOptions,
         db : Annotated[Session, Depends(get_db)],
@@ -124,7 +123,7 @@ def apply_filter_to_label_group(
         db: Database session for any necessary database access during filter application.
         current_user: The user making the request, which may be relevant for certain filters.
     """
-    instances = body.instance
+    instances = body.instances
     options = body.options
     try:
         apply_filter(db, current_user, filter_name, label_group_id, instances, options)

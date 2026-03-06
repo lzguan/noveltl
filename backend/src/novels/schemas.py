@@ -23,6 +23,8 @@ class Novel(BaseModel):
         novel_parent_id: Integer id of parent novel, if any.
         language_code: String code key to language of the novel.
     """
+    model_config = ConfigDict(from_attributes=True)
+
     novel_id : int
     novel_title : str
     novel_description : str | None = None
@@ -81,6 +83,8 @@ class RawChapter(BaseModel):
         raw_chapter_num: The chapter number.
         novel_id: Integer foreign key to the novel this chapter belongs to.
     """
+    model_config = ConfigDict(from_attributes=True)
+
     raw_chapter_id : int
     raw_chapter_num : int
 
@@ -107,6 +111,8 @@ class RawChapterRevision(BaseModel):
         raw_chapter_id: Integer foreign key to the parent raw chapter.
         raw_chapter_revision_text: The full text content of the revision.
     """
+    model_config = ConfigDict(from_attributes=True)
+
     raw_chapter_revision_id : int
     raw_chapter_revision_title : str
     raw_chapter_revision_is_primary : bool

@@ -31,3 +31,6 @@ class DeleteRawChapterRevisionFailedException(DeleteFailedException):
 
 class RawChapterRevisionNotFinalException(Exception):
     pass
+
+class NovelParentCircularReferenceException(Exception):
+    pass

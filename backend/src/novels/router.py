@@ -16,6 +16,7 @@ from . import schemas
 from .exceptions import (
     ChapterNumDuplicateException,
     NovelNotFoundException,
+    NovelParentCircularReferenceException,
     RawChapterNotFoundException,
     RawChapterRevisionMakePrimaryFailedException,
     RawChapterRevisionNotFoundException,
@@ -307,6 +308,11 @@ async def update_novel(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Data in some field exceeds the maximum possible length."
+        ) from e
+    except NovelParentCircularReferenceException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
         ) from e
     except InsufficientPermissionsException as e:
         raise HTTPException(

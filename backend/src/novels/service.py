@@ -5,8 +5,11 @@ Todo:
     Implement user permissions.
 """
 
+import logging
 from collections.abc import Sequence
 from typing import Any, cast
+
+logger = logging.getLogger(__name__)
 
 from psycopg2 import Error as PgError
 from psycopg2 import errorcodes
@@ -23,6 +26,7 @@ from .exceptions import (
     ChapterNumDuplicateException,
     DeleteRawChapterRevisionFailedException,
     NovelNotFoundException,
+    NovelParentCircularReferenceException,
     RawChapterNotFoundException,
     RawChapterRevisionMakePrimaryFailedException,
     RawChapterRevisionNotFoundException,
@@ -380,6 +384,7 @@ def insert_novel(
         raise UnknownError from e
     except Exception as e:
         db.rollback()
+        logger.exception("Unexpected error: %s", e)
         raise UnknownError from e
     return novel
 
@@ -399,10 +404,29 @@ def modify_novel(
         request: Proposed updated metadata.
 
     Raises:
-        NovelNotFoundException: Novel not found in database (or insufficient permissions to view it).
+        NovelNotFoundException: Novel not found in database (or insufficient permissions to view it), or a novel in the parent chain does not exist.
         InsufficientPermissionsException: User does not have permission to modify this novel.
         DataTooLongException: Data we are updating to is too long for some string field.
+        NovelParentCircularReferenceException: The proposed novel_parent_id would create a circular reference.
     """
+    if request.novel_parent_id is not None:
+        if request.novel_parent_id == novel_id:
+            raise NovelParentCircularReferenceException("A novel cannot be its own parent.")
+        # Walk the parent chain to detect cycles
+        visited: set[int] = {novel_id}
+        current_parent_id: int | None = request.novel_parent_id
+        while current_parent_id is not None:
+            if current_parent_id in visited:
+                raise NovelParentCircularReferenceException(
+                    f"Setting novel_parent_id={request.novel_parent_id} would create a circular reference."
+                )
+            visited.add(current_parent_id)
+            parent_row = db.execute(
+                select(models.Novel.novel_id, models.Novel.novel_parent_id).where(models.Novel.novel_id == current_parent_id)
+            ).one_or_none()
+            if parent_row is None:
+                raise NovelNotFoundException(f"Novel with id={current_parent_id} not found.")
+            current_parent_id = parent_row.novel_parent_id
     stmt = update(
         models.Novel
     ).where(
@@ -427,6 +451,7 @@ def modify_novel(
         raise InsufficientPermissionsException from e
     except Exception as e:
         db.rollback()
+        logger.exception("Unexpected error: %s", e)
         raise UnknownError from e
 
     return result_row
@@ -481,6 +506,7 @@ def insert_raw_chapter(
         raise InsufficientPermissionsException from e
     except Exception as e:
         db.rollback()
+        logger.exception("Unexpected error: %s", e)
         raise UnknownError from e
     return result_row
 
@@ -539,6 +565,7 @@ def insert_raw_chapter_revision(
         raise UnknownError from e
     except Exception as e:
         db.rollback()
+        logger.exception("Unexpected error: %s", e)
         raise UnknownError from e
     return new_revision
 
@@ -588,6 +615,7 @@ def modify_raw_chapter_revision(
         raise InsufficientPermissionsException from e
     except Exception as e:
         db.rollback()
+        logger.exception("Unexpected error: %s", e)
         raise UnknownError from e
     return revision
 
@@ -628,6 +656,7 @@ def publish_raw_chapter_revision(
         raise InsufficientPermissionsException from e
     except Exception as e:
         db.rollback()
+        logger.exception("Unexpected error: %s", e)
         raise UnknownError from e
     return revision
 
@@ -689,6 +718,7 @@ def make_primary_raw_chapter_revision(db : Session, current_user : User, raw_cha
         raise UnknownError from e
     except Exception as e:
         db.rollback()
+        logger.exception("Unexpected error: %s", e)
         raise UnknownError from e
     return revision
 
@@ -730,6 +760,7 @@ def make_final_raw_chapter_revision(
         raise InsufficientPermissionsException from e
     except Exception as e:
         db.rollback()
+        logger.exception("Unexpected error: %s", e)
         raise UnknownError from e
     return revision
 

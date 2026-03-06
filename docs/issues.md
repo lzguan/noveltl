@@ -7,7 +7,7 @@ This document tracks known bugs, technical debt, and planned improvements for th
 
 ## Missing `from_attributes=True` on some schemas
 
-**Status**: Verified ✓
+**Status**: Fixed ✓
 
 `Novel`, `RawChapter`, `RawChapterRevision` in [novels/schemas.py](../backend/src/novels/schemas.py) are missing `model_config = ConfigDict(from_attributes=True)`, which prevents Pydantic from converting SQLAlchemy ORM model instances to schema instances.
 
@@ -22,7 +22,7 @@ model_config = ConfigDict(from_attributes=True)
 
 ## Broad exception handling swallows debug info
 
-**Status**: Verified ✓
+**Status**: Fixed ✓
 
 [novels/service.py](../backend/src/novels/service.py) has 20+ instances of `except Exception as e:` that catch all exceptions and raise `UnknownError`, losing the original exception context and stack trace.
 
@@ -71,7 +71,7 @@ except Exception as e:
 
 ## Performance: Missing indexes
 
-**Status**: Verified ✓
+**Status**: Fixed ✓
 
 Migration [06741dac5042_initial.py](../backend/alembic/versions/06741dac5042_initial.py) is missing indexes on frequently queried columns:
 
@@ -151,7 +151,7 @@ API endpoints partially follow kebab-case convention but have inconsistencies:
 
 ## Validation: Circular novel parent references
 
-**Status**: Verified ✓
+**Status**: Fixed ✓
 
 [novels/service.py](../backend/src/novels/service.py) `modify_novel()` (line 386) accepts `novel_parent_id` without validation, allowing:
 1. **Self-reference**: Novel X → parent = X

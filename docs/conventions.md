@@ -90,10 +90,10 @@ ruff check --fix .
 # 3. Type check
 pyright
 
-# 4. Run tests
+# 4. Run default (non-slow) test suite
 pytest
 
-# If working on autolabeling features, run
+# To include slow autolabeling tests as well (overrides default -m "not slow"), run
 pytest -m "slow or not slow"
 ```
 

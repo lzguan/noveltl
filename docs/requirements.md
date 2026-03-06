@@ -1,5 +1,16 @@
 # Requirements for the edit novels page (STC)
 
+**Last Updated**: February 2026  
+**Status**: Outdated
+
+> ⚠️ **DEPRECATION NOTICE**: This document has been superseded by the following focused documentation:
+> - [filter-system.md](filter-system.md) - Filter abstraction and four-phase pipeline
+> - [ui-requirements.md](ui-requirements.md) - Frontend component specifications
+> 
+> This file is kept for historical reference. For current requirements, please refer to the above documents.
+
+---
+
 Emphasis on STC. The design will likely be revised once a prototype is built.
 
 ## Motivation

@@ -15,7 +15,7 @@ from ..autolabels.constants import AutoLabelProgress
 from ..exceptions import DataTooLongException, NotFoundException, UnknownError
 from ..novels import models as novel_models
 from ..novels.exceptions import NovelNotFoundException, RawChapterRevisionNotFoundException
-from ..novels.permissions import novel_mod_access_select, raw_chapter_revision_mod_access_select
+from ..novels.permissions import raw_chapter_revision_mod_access_select
 from . import models, schemas
 from .constants import LabelRole
 from .exceptions import (
@@ -46,7 +46,6 @@ def query_label_groups(db : Session, current_user : User, novel_id : int) -> Seq
     q = select(models.LabelGroup).where(models.LabelGroup.novel_id == novel_id)
     q = label_group_mod_access_select(q, current_user)
     q = q.join(novel_models.Novel, novel_models.Novel.novel_id == models.LabelGroup.novel_id)
-    q = novel_mod_access_select(q, current_user)
     result = db.execute(q)
     result_rows = result.scalars().all()
     return result_rows
@@ -66,7 +65,6 @@ def query_label_group_by_id(db : Session, current_user : User, label_group_id : 
     q = select(models.LabelGroup).where(models.LabelGroup.label_group_id == label_group_id)
     q = label_group_mod_access_select(q, current_user)
     q = q.join(novel_models.Novel, novel_models.Novel.novel_id == models.LabelGroup.novel_id)
-    q = novel_mod_access_select(q, current_user)
     try:
         result = db.execute(q)
         result_row = result.scalar_one()
@@ -96,7 +94,6 @@ def query_label_datas(db : Session, current_user : User, label_group_id : int, s
         novel_models.Novel, models.LabelGroup.novel_id == novel_models.Novel.novel_id
     )
     q = label_group_mod_access_select(q, current_user)
-    q = novel_mod_access_select(q, current_user)
     q = q.join(
         models.LabelData, models.LabelGroup.label_group_id == models.LabelData.label_group_id
     )
@@ -137,7 +134,6 @@ def query_label_data_by_id(db : Session, current_user : User, label_data_id : in
         models.LabelData.raw_chapter_revision_id == novel_models.RawChapterRevision.raw_chapter_revision_id
     )
     q = label_data_mod_access_select(q, current_user)
-    q = raw_chapter_revision_mod_access_select(q, current_user)
     try:
         result = db.execute(q)
         label_data = result.scalar_one()
@@ -412,7 +408,6 @@ def insert_label_datas_by_autolabels(
         novel_models.Novel.novel_id == models.LabelGroup.novel_id
     )
     q = label_group_mod_access_select(q, current_user)
-    q = novel_mod_access_select(q, current_user)
     if request.raw_chapter_ids is not None and len(request.raw_chapter_ids) > 0:
         q = q.where(novel_models.RawChapter.raw_chapter_id.in_(request.raw_chapter_ids))
     if request.raw_chapter_revision_ids is not None and len(request.raw_chapter_revision_ids) > 0:

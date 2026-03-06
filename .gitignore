@@ -6,3 +6,4 @@ private_issues.md
 .vscode/
 .pytest_cache/
 pytest.log
+.coverage

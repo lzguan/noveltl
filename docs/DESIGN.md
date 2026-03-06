@@ -1,5 +1,18 @@
 # Design document
 
+**Last Updated**: December 2025  
+**Status**: Outdated
+
+> ⚠️ **DEPRECATION NOTICE**: This document has been superseded by the following focused documentation:
+> - [architecture.md](architecture.md) - System architecture and microservices
+> - [database-schema.md](database-schema.md) - Database schema and design rationale
+> - [permissions.md](permissions.md) - Access control and permission system
+> - [background-jobs.md](background-jobs.md) - AutoLabel worker system
+> 
+> This file is kept for historical reference. For current design information, please refer to the above documents.
+
+---
+
 The goal with this project is to create a platform for a trusted group of users to assist in translations. Specifically, we aim to create tooling to assist in the following tasks:
 - Store and organize documents to be translated.
 - Provide a framework to be able to use Named Entity Recognition (NER) models to label data from documents automatically.

@@ -59,24 +59,48 @@ def raw_chapter_revision_mod_access_select[T : Select[tuple[Any, ...]]](q : T,  
     Takes a select statement on raw chapter revisions and returns a select statement that restricts permissions on raw chapter revisions.
     """
     if current_user is None:
-        return novel_mod_access_select(q, None).where(RawChapterRevision.raw_chapter_revision_is_public.is_(True))
+        sub_q = select(
+            1
+        ).select_from(RawChapterRevision).where(
+            RawChapterRevision.raw_chapter_revision_is_public.is_(True)
+        ).join(
+            RawChapter,
+            RawChapterRevision.raw_chapter_id == RawChapter.raw_chapter_id
+        ).join(
+            Novel,
+            RawChapter.novel_id == Novel.novel_id
+        ).correlate(RawChapterRevision)
+        sub_q = novel_mod_access_select(sub_q, None)
+        return q.where(exists(sub_q))
     elif current_user.user_type != UserType.ADMIN:
-        return q.where(or_(
-            and_(
-                Novel.novel_visibility >= Visibility.UNLISTED,
-                RawChapterRevision.raw_chapter_revision_is_public.is_(True)
-            ),
-            exists(
-                select(
-                    1
-                ).select_from(
-                    Contributor
-                ).where(and_(
-                    Contributor.novel_id == Novel.novel_id,
-                    Contributor.user_id == current_user.user_id
-                ))
+        sub_q = select(
+            1
+        ).select_from(RawChapterRevision).join(
+            RawChapter,
+            RawChapterRevision.raw_chapter_id == RawChapter.raw_chapter_id
+        ).join(
+            Novel,
+            RawChapter.novel_id == Novel.novel_id
+        ).where(
+            or_(
+                and_(
+                    Novel.novel_visibility >= Visibility.UNLISTED,
+                    RawChapterRevision.raw_chapter_revision_is_public.is_(True)
+                ),
+                exists(
+                    select(
+                        1
+                    ).select_from(
+                        Contributor
+                    ).where(
+                        Contributor.novel_id == Novel.novel_id
+                    ).where(
+                        Contributor.user_id == current_user.user_id
+                    )
+                )
             )
-        ))
+        ).correlate(RawChapterRevision)
+        return q.where(exists(sub_q))
     return q
 
 def novel_mod_access_update[T : Update](stmt : T, current_user : User) -> T:

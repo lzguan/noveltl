@@ -1,7 +1,7 @@
 # Filter System
 
 **Last Updated**: March 5, 2026  
-**Status**: Complete
+**Status**: Draft
 
 This document describes the Filter abstraction - a four-phase pipeline for processing and filtering labels with LLM-assisted decision-making.
 

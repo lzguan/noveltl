@@ -1,7 +1,7 @@
 # Permissions System
 
 **Last Updated**: March 5, 2026  
-**Status**: Complete
+**Status**: Draft
 
 This document describes the access control and permission system for NovelTL, including visibility levels, contributor roles, and authorization patterns.
 

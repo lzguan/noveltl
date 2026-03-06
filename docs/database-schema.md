@@ -1,7 +1,7 @@
 # Database Schema
 
 **Last Updated**: March 5, 2026  
-**Status**: Complete
+**Status**: Draft
 
 This document describes the PostgreSQL database schema for NovelTL, including tables, relationships, constraints, and design rationale.
 

@@ -1,7 +1,7 @@
 # UI Requirements
 
 **Last Updated**: March 5, 2026  
-**Status**: Complete
+**Status**: Draft
 
 This document specifies the frontend components for the NovelTL platform, including the chapter viewer, navigation, filters, and glossary management.
 

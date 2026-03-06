@@ -1,7 +1,7 @@
 # Background Jobs System
 
 **Last Updated**: March 5, 2026  
-**Status**: Complete
+**Status**: Draft
 
 This document describes the AutoLabel background processing system - a distributed framework for running ML inference on chapter text with race condition handling, job deduplication, and automatic retries.
 

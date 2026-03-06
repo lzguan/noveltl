@@ -1,7 +1,7 @@
 # System Architecture
 
 **Last Updated**: March 5, 2026  
-**Status**: Complete
+**Status**: Draft
 
 This document describes the high-level architecture of NovelTL - a collaborative platform for novel translation using Named Entity Recognition (NER) and LLM-assisted workflows.
 

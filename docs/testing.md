@@ -1,7 +1,7 @@
 # Testing Guide
 
 **Last Updated**: March 5, 2026  
-**Status**: Complete
+**Status**: Draft
 
 This document describes the testing framework and conventions for the NovelTL project.
 

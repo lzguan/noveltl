@@ -1,13 +1,13 @@
 # Backend Naming Conventions
 
 **Last Updated**: March 5, 2026  
-**Status**: Complete
+**Status**: Draft
 
 This document defines naming and structural conventions for the NovelTL backend codebase.
 
 ## General
 - Class names should be `PascalCase`.
-- Functions, class attributes and methods should be `snake_case`.
+- Functions, class attributes, variables and methods should be `snake_case`.
 
 ## Code Quality Tools
 
@@ -88,6 +88,9 @@ pyright
 
 # 4. Run tests
 pytest
+
+# If working on autolabeling features, run
+pytest -m "slow or not slow"
 ```
 
 ### VS Code Integration
@@ -184,14 +187,15 @@ Ruff will auto-format on save, and Pylance will show type errors as you code.
 # API Endpoints
 - As a general guideline, try to follow RESTful API naming conventions.
 - Separating words should be done with spaces.
-- Use `kebab-case`.
 - Retrieving objects specified by id should be done through the endpoint `GET objects/{object_id}`.
 - Inserting an object owned by another object should be done through the endpoint `POST owning-objects/{owning_object_id}/objects` (e.g. `novels/{novel_id}/raw_chapters`).
 - Inserting an object not owned by any other object should be done through the endpoint `POST /objects` (e.g. `POST /novels`).
 - Updating an object with specified id should be done through the endpoint `PATCH /objects/{object_id}`.
 - Deleting an object with specified id should be done through the endpoint `DELETE /objects/{object_id}`.
 - Bulk querying an object by some filters should be done throug the endpoint `GET /objects` (e.g. `GET /raw-chapter-revisions`).
+- Use `kebab-case` in query parameters. Backend should send json body keys as `snake_case`, .
 - Use your own judgement for anything else. We will keep updating this part.
+
 
 ## Relevant Files
 

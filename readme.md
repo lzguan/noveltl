@@ -254,14 +254,14 @@ After running `seed_admin.py`, use the credentials you entered during the intera
 - Component specifications documented in [docs/ui-requirements.md](docs/ui-requirements.md)
 - React conventions defined in [docs/conventions.md](docs/conventions.md#frontend-naming-conventions)
 
-**Known Issues**: See [docs/issues.md](docs/issues.md) for technical debt and planned improvements.
+**Known Issues**: See [GitHub Issues](https://github.com/lzguan/NovelTL_Dev/issues) for technical debt and planned improvements.
 
 ---
 
 ## 🤝 Contributing
 
 1. Read the [conventions](docs/conventions.md) for code style guidelines
-2. Check [issues.md](docs/issues.md) for known bugs and planned features
+2. Check [GitHub Issues](https://github.com/lzguan/NovelTL_Dev/issues) for known bugs and planned features
 3. Write tests for new features (see [testing.md](docs/testing.md))
 4. Ensure migrations are included for schema changes
 

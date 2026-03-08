@@ -74,11 +74,22 @@ Each file in `fixtures/populators/` creates a specific data scenario by composin
 
 ## Running Tests
 
+All `pytest` commands must be run from the **`backend/`** directory (where `pyproject.toml` is located):
+
 ```bash
+cd backend/
 pytest                          # Runs all non-slow tests (default via addopts)
 pytest -m slow                  # Only slow tests (worker integration)
 pytest -m implementation        # Only implementation tests
 pytest tests/filters/           # Specific service
+```
+
+Alternatively, run from the repo root via Docker Compose:
+
+```bash
+docker compose exec backend pytest
+docker compose exec backend pytest -m slow
+docker compose exec backend pytest tests/filters/
 ```
 
 Default behavior from pyproject.toml: `-ra -q -m 'not slow'` — shows summary of failures, quiet output, skips slow-marked tests.

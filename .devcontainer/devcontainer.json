@@ -36,7 +36,7 @@
 	// "shutdownAction": "none",
 
 	// Uncomment the next line to run commands after the container is created.
-	// "postCreateCommand": "pip install -e .[test]",
+	"postCreateCommand": "echo 'source /etc/bash_completion' >> ~/.bashrc",
 
 	// Configure tool-specific properties.
 	 "customizations": {
@@ -47,6 +47,7 @@
 				"ms-azuretools.vscode-docker",
 				"christian-kohler.npm-intellisense",
 				"charliermarsh.ruff",
+				"bierner.markdown-mermaid"
 			],
 			"settings": {
 				"python.defaultInterpreterPath": "/app/bin/python",

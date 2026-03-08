@@ -1,9 +1,21 @@
 # NovelTL Documentation
 
-**Last Updated**: March 5, 2026  
+**Last Updated**: March 7, 2026  
 **Status**: Complete
 
 This directory contains technical documentation for the NovelTL project - a collaborative platform for novel translation using Named Entity Recognition (NER) and LLM-assisted workflows.
+
+---
+
+## Table of Contents
+
+1. [Documentation Structure](#documentation-structure)
+2. [Document Format Standard](#document-format-standard)
+3. [Quick Start](#quick-start)
+4. [Migration Notes](#migration-notes)
+5. [Contributing to Documentation](#contributing-to-documentation)
+
+---
 
 ## Documentation Structure
 
@@ -21,7 +33,6 @@ This directory contains technical documentation for the NovelTL project - a coll
 ### Development
 - **[conventions.md](conventions.md)** - Code naming conventions, API patterns
 - **[testing.md](testing.md)** - Testing strategy, pytest usage, fixtures
-- **[deployment.md](deployment.md)** - Docker setup, environment configuration
 
 ### Reference
 - **[issues.md](issues.md)** - Known bugs, tech debt, future improvements
@@ -39,6 +50,10 @@ All documentation files should follow this format:
 **Status**: Complete | Draft | Outdated
 
 Brief introduction paragraph explaining what this document covers and who should read it.
+
+## Table of Contents
+
+[Table of contents here...]
 
 ## Main Content Sections
 

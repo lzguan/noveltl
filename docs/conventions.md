@@ -7,6 +7,38 @@ This document defines naming and structural conventions for the NovelTL codebase
 
 ---
 
+## Table of Contents
+
+**[Backend Naming Conventions](#backend-naming-conventions)**
+
+1. [General](#general)
+2. [Code Quality Tools](#code-quality-tools)
+3. [Database Models](#database-models)
+4. [Pydantic Schemas](#pydantic-schemas)
+5. [Service Modules](#service-modules)
+6. [Router Modules](#router-modules)
+7. [Exceptions](#exceptions)
+8. [Exception handling](#exception-handling)
+9. [URL Conventions](#url-conventions)
+10. [CRUD Patterns](#crud-patterns)
+11. [Filtering and Collection Queries](#filtering-and-collection-queries)
+12. [Actions on Resources](#actions-on-resources)
+13. [Route Definition Order](#route-definition-order)
+14. [Complex Queries via POST](#complex-queries-via-post)
+
+**[Frontend Naming Conventions](#frontend-naming-conventions)**
+
+1. [General](#general-1)
+2. [File Organization](#file-organization)
+3. [API Layer](#api-layer)
+4. [Components](#components)
+5. [Hooks](#hooks)
+6. [Type Definitions](#type-definitions)
+7. [State Management](#state-management)
+8. [Routing](#routing)
+
+---
+
 # Backend Naming Conventions
 
 ## General

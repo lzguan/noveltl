@@ -17,8 +17,9 @@ from .types import (
     SchemaInfo,
 )
 
+# use kebab-case for filter names in the registry to match URL path parameters
 FILTER_REGISTRY : dict[str, RegisteredFilter] = {
-    "score_filter": ScoreFilter(),
+    "score-filter": ScoreFilter(),
 }
 
 def query_schemas() -> dict[str, SchemaInfo]:

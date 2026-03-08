@@ -1,9 +1,23 @@
 # Database Schema
 
-**Last Updated**: March 5, 2026  
-**Status**: Draft
+**Last Updated**: March 8, 2026  
+**Status**: Complete
 
 This document describes the PostgreSQL database schema for NovelTL, including tables, relationships, constraints, and design rationale.
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Entity Relationship Diagram](#entity-relationship-diagram)
+3. [Tables](#tables)
+4. [Indexing Strategy](#indexing-strategy)
+5. [Common Query Patterns](#common-query-patterns)
+6. [Migration History](#migration-history)
+7. [Design Rationale](#design-rationale)
+
+---
 
 ## Overview
 
@@ -16,41 +30,20 @@ The database is organized around five main entity groups:
 
 ## Entity Relationship Diagram
 
-```
-┌─────────┐
-│  User   │
-└────┬────┘
-     │
-     ├──────────────┐
-     │              │
-     ▼              ▼
-┌─────────────┐  ┌──────────────┐
-│ Contributor │  │ LabelContrib │
-└──────┬──────┘  └───────┬──────┘
-       │                 │
-       ▼                 ▼
-    ┌──────┐       ┌────────────┐
-    │Novel │◄──────┤ LabelGroup │
-    └───┬──┘       └──────┬─────┘
-        │                 │
-        ▼                 ▼
-  ┌───────────┐     ┌──────────┐
-  │RawChapter │     │LabelData │
-  └─────┬─────┘     └────┬─────┘
-        │                │
-        ▼                ▼
-┌──────────────────┐  ┌───────┐
-│RawChapterRevision│◄─┤ Label │
-└────────┬─────────┘  └───────┘
-         │
-         ▼
-    ┌──────────┐
-    │AutoLabel │
-    └──────────┘
-
-┌──────────┐
-│ Language │
-└──────────┘
+```mermaid
+erDiagram
+    User ||--o{ Contributor : "has"
+    User ||--o{ LabelContributor : "has"
+    Contributor }o--|| Novel : "belongs to"
+    LabelContributor }o--|| LabelGroup : "belongs to"
+    Novel ||--o{ RawChapter : "has"
+    Novel ||--o{ LabelGroup : "has"
+    RawChapter ||--o{ RawChapterRevision : "has"
+    RawChapterRevision ||--o{ AutoLabel : "has"
+    RawChapterRevision ||--o{ LabelData : "referenced by"
+    LabelGroup ||--o{ LabelData : "has"
+    LabelData ||--o{ Label : "has"
+    Language ||--o{ Novel : "used by"
 ```
 
 ## Tables
@@ -171,7 +164,7 @@ Stores versioned chapter content. Revisions are immutable once marked public/fin
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `raw_chapter_revision_id` | INTEGER | PRIMARY KEY | Unique revision identifier |
-| `raw_chapter_revision_title` | VARCHAR(255) | NULL | Chapter title |
+| `raw_chapter_revision_title` | VARCHAR(255) | NOT NULL | Chapter title |
 | `raw_chapter_revision_text` | TEXT | NOT NULL | Full chapter text |
 | `raw_chapter_revision_is_public` | BOOLEAN | NOT NULL | Public visibility flag |
 | `raw_chapter_revision_is_final` | BOOLEAN | NOT NULL | Immutability flag |

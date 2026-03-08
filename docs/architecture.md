@@ -1,9 +1,24 @@
 # System Architecture
 
-**Last Updated**: March 5, 2026  
-**Status**: Draft
+**Last Updated**: March 7, 2026  
+**Status**: Complete
 
 This document describes the high-level architecture of NovelTL - a collaborative platform for novel translation using Named Entity Recognition (NER) and LLM-assisted workflows.
+
+---
+
+## Table of Contents
+
+1. [Project Goals](#project-goals)
+2. [Motivation](#motivation)
+3. [System Architecture](#system-architecture)
+4. [Service Descriptions](#service-descriptions)
+5. [Communication Patterns](#communication-patterns)
+6. [Deployment Architecture](#deployment-architecture)
+7. [Security Architecture](#security-architecture)
+8. [Data Flow Examples](#data-flow-examples)
+
+---
 
 ## Project Goals
 
@@ -32,35 +47,16 @@ The project is tailored specifically to novel translations, which explains many 
 
 NovelTL is divided into distinct backend services:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Frontend (React)                         │
-│                   Port 3000 (Development)                       │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ HTTP/REST
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     Backend API (FastAPI)                       │
-│                          Port 8000                              │
-│  ┌──────────┬──────────┬──────────┬───────────┬──────────────┐ │
-│  │  Auth    │  Novels  │  Labels  │AutoLabels │   Filters    │ │
-│  │ Service  │ Service  │ Service  │  Service  │   Service    │ │
-│  └──────────┴──────────┴──────────┴───────────┴──────────────┘ │
-└────────┬───────────────────────────┬────────────────────────────┘
-         │                           │
-         ▼                           ▼
-┌─────────────────┐         ┌─────────────────┐
-│   PostgreSQL    │         │  Redis Queue    │
-│   (Database)    │         │                 │
-│   Port 5432     │         │   Port 6379     │
-└─────────────────┘         └────────┬────────┘
-         ▲                           │
-         │                           ▼
-         │                  ┌─────────────────┐
-         │                  │  Worker (ARQ)   │
-         │                  │  NER Inference  │
-         └──────────────────┤                 │
-                            └─────────────────┘
+```mermaid
+flowchart TD
+    FE["Frontend (React, Port 5173)"]
+    BE["Backend (FastAPI, Port 8000)<br/>Auth · Novels · Labels · AutoLabels · Filters · Languages"]
+
+    FE -->|HTTP/REST| BE
+    BE --> DB[("PostgreSQL<br/>Port 5432")]
+    BE --> Redis[("Redis Queue<br/>Port 6379")]
+    Redis --> Worker["Worker (ARQ)<br/>NER Inference"]
+    Worker --> DB
 ```
 
 ### Technology Stack
@@ -76,6 +72,7 @@ NovelTL is divided into distinct backend services:
 **Frontend:**
 - **React 19** - UI framework
 - **React Router** - Client-side routing
+- **React Hook Form** - Form state management and validation
 - **Axios** - HTTP client
 - **Vite** - Build tool and dev server
 
@@ -220,7 +217,7 @@ services:
 
 ### Production Considerations
 
-At this date, we are not anywhere near deploying to production. Here are some ideas from Claude:
+Production deployment is not currently in scope. Placeholder ideas for future reference:
 
 - **Horizontal Scaling**: Multiple backend/worker instances behind load balancer
 - **Database**: Managed PostgreSQL (e.g., AWS RDS, Google Cloud SQL)
@@ -235,7 +232,7 @@ At this date, we are not anywhere near deploying to production. Here are some id
 
 1. User sends credentials to `/token` endpoint
 2. Backend validates credentials, generates JWT
-3. Client stores JWT (localStorage or memory)
+3. Client stores JWT in localStorage
 4. Client includes JWT in `Authorization` header for all requests
 5. Backend validates JWT on each request
 
@@ -249,42 +246,107 @@ See [permissions.md](permissions.md) for detailed access control.
 
 ## Data Flow Examples
 
-### Novel Creation
+### Authentication
 
-```
-1. User → Backend: POST /novels {title, description, ...}
-2. Backend: Validate user permissions
-3. Backend → DB: INSERT novel, INSERT contributor (user as owner)
-4. Backend → User: 201 Created {novel_id, ...}
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant B as Backend
+    participant DB as PostgreSQL
+
+    note over DB,C: Registration (must NOT be logged in)
+    C->>B: POST /register {user_name, user_password, user_type}
+    B->>B: get_optional_user — verify no JWT / no logged-in user
+    alt already logged in
+        B-->>C: 401 "User already logged in"
+    else user_type = ADMIN
+        B-->>C: 401 "Cannot create admin via registration"
+    else valid
+        B->>DB: INSERT user (hashed password, user_type from request)
+        DB-->>B: new User row
+        B-->>C: 200 User
+    end
+
+    note over DB,C: Login / Token
+    C->>B: POST /token (OAuth2 form: username + password)
+    B->>DB: SELECT user by user_name
+    DB-->>B: User row
+    B->>B: verify_password(plain, hashed)
+    alt authentication fails
+        B-->>C: 401 / 404
+    else success
+        B->>B: create_access_token(sub=user_name, exp)
+        B-->>C: 200 {access_token, token_type: "bearer"}
+    end
+
+    note over DB,C: Authenticated request (any protected endpoint)
+    C->>B: GET /users/me  [Authorization: Bearer <token>]
+    B->>B: get_current_user → decode JWT, extract "sub"
+    B->>DB: SELECT user by user_name
+    DB-->>B: User row
+    B-->>C: 200 User
 ```
 
-### AutoLabel Request
+### Typical Resource CRUD Pattern
 
-```
-1. User → Backend: POST /auto-labels/batch {chapter_ids, model, params}
-2. Backend → DB: INSERT/UPDATE auto_label records
-3. Backend → Redis: ENQUEUE jobs with job_ids
-4. Backend → User: 202 Accepted {auto_label_ids, statuses}
-5. Worker ← Redis: DEQUEUE job
-6. Worker → DB: UPDATE status = PROCESSING (with job_id match)
-7. Worker: Run NER inference
-8. Worker → DB: UPDATE status = DONE, results (with job_id match)
+Most services follow the same pattern. The diagram below shows the generic flow — specific permission helpers and error branches vary by resource. Not all read/update/delete endpoints are shown; see [api-design.md](api-design.md) for the full endpoint catalog.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant B as Backend
+    participant DB as PostgreSQL
+    
+
+    note over DB,C: Create (with auto-contributor setup)
+    C->>B: POST /{resources} {fields...} [Bearer token]
+    B->>B: get_current_user (JWT validation)
+    B->>DB: INSERT resource + INSERT contributor (role=OWNER)
+    B->>DB: COMMIT
+    B-->>C: 200 Resource
+
+    note over DB,C: Read (visibility + contributor check)
+    C->>B: GET /{resources}/{id} [Bearer token]
+    B->>B: get_current_user (JWT validation)
+    B->>DB: SELECT resource (mod_access_select — permission filtered)
+    alt not found / no permission
+        B-->>C: 404 / 401
+    else success
+        B-->>C: 200 Resource
+    end
+
+    note over DB,C: Update (owner/editor only)
+    C->>B: PATCH /{resources}/{id} {fields...} [Bearer token]
+    B->>B: get_current_user (JWT validation)
+    B->>DB: UPDATE resource (mod_access_update — role check)
+    alt not found / no permission
+        B-->>C: 404 / 401
+    else success
+        B-->>C: 200 Resource
+    end
+
+    note over DB,C: Action endpoint (state transition)
+    C->>B: POST /{resources}/{id}/{action} [Bearer token]
+    B->>B: get_current_user (JWT validation)
+    B->>DB: UPDATE resource state (permission check + precondition)
+    alt precondition not met
+        B-->>C: 403
+    else success
+        B-->>C: 200 Resource
+    end
 ```
 
-### Filter Application
+Resources following this pattern: **Novels**, **Chapters**, **Revisions** (with publish/make-primary/finalize actions), **Label Groups**, **Label Data**, **Users** (admin CRUD).
 
-```
-1. User → Backend: POST /filters/score/flag {options}
-2. Backend → DB: SELECT labels matching criteria
-3. Backend → User: 200 OK {instances}
-4. User → Backend: POST /filters/score/context {instances}
-5. Backend → DB: SELECT chapter text for contexts
-6. Backend → User: 200 OK {contexts}
-7. User reviews, decides which to keep
-8. User → Backend: POST /filters/score/apply {instances, decisions}
-9. Backend → DB: DELETE rejected labels
-10. Backend → User: 200 OK {status}
-```
+**Languages** are simpler: seeded via script, exposed as public read-only endpoints (no auth required).
+
+### Specialized Flows
+
+These flows have unique patterns documented in their respective docs:
+
+- **AutoLabel creation + background worker lifecycle** — See [background-jobs.md](background-jobs.md)
+- **Filter pipeline (flag → context → decide → apply)** — See [filter-system.md](filter-system.md)
+- **Label stream operations (PATCH /label-datas/{id})** — Applies per-operation permission checks (`label_mod_access_insert/update/delete`); see [api-design.md](api-design.md)
 
 ## Relevant Files
 

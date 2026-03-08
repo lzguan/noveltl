@@ -1,9 +1,30 @@
 # Known Issues and TODO
 
-**Last Updated**: March 5, 2026  
+**Last Updated**: March 7, 2026  
 **Status**: Draft
 
 This document tracks known bugs, technical debt, and planned improvements for the NovelTL platform.
+
+---
+
+## Table of Contents
+
+1. [Missing `from_attributes=True` on some schemas](#missing-from_attributestrue-on-some-schemas)
+2. [Broad exception handling swallows debug info](#broad-exception-handling-swallows-debug-info)
+3. [Security: No rate limiting on `/token` endpoint](#security-no-rate-limiting-on-token-endpoint)
+4. [Security: Consider refresh tokens](#security-consider-refresh-tokens)
+5. [Performance: Multiple sessions per worker task](#performance-multiple-sessions-per-worker-task)
+6. [Performance: Missing indexes](#performance-missing-indexes)
+7. [Technical Debt: "Raw" prefix on Chapter models is misleading](#technical-debt-raw-prefix-on-chapter-models-is-misleading)
+8. [Refactor: Replace `novel_parent_id` with Novel Relations association table](#refactor-replace-novel_parent_id-with-novel-relations-association-table)
+9. [API: Pagination on list endpoints](#api-pagination-on-list-endpoints)
+10. [Testing: Insufficient code coverage](#testing-insufficient-code-coverage)
+11. [Planned Feature: AutoLabel Job Timeout](#planned-feature-autolabel-job-timeout)
+12. [Planned Feature: Batch Inference Optimization](#planned-feature-batch-inference-optimization)
+13. [Planned Features (Permissions)](#planned-features-permissions)
+14. [Schema: Label Group Lineage Tracking](#schema-label-group-lineage-tracking)
+
+---
 
 ## Missing `from_attributes=True` on some schemas
 
@@ -24,7 +45,7 @@ model_config = ConfigDict(from_attributes=True)
 
 **Status**: Verified ✓
 
-[novels/service.py](../backend/src/novels/service.py) has 20+ instances of `except Exception as e:` that catch all exceptions and raise `UnknownError`, losing the original exception context and stack trace.
+[novels/service.py](../backend/src/novels/service.py) has 9 instances of `except Exception as e:` that catch all exceptions and raise `UnknownError`, losing the original exception context and stack trace.
 
 **Examples**:
 - Line 381: `insert_novel()` - catches everything after specific IntegrityError/DataError handling
@@ -100,7 +121,7 @@ The models `RawChapter` and `RawChapterRevision` use the "Raw" prefix from early
 - `RawChapterRevision` → `ChapterRevision`
 - Update all references in:
   - Database models (`backend/src/novels/models.py`)
-  - API endpoints (currently `/chapters`, `/revisions` - already using simplified names)
+  - API endpoints (currently `/chapters`, `/revisions` - done, corresponding changes in frontend done)
   - Schemas (`backend/src/novels/schemas.py`)
   - Service functions
   - Documentation
@@ -122,57 +143,38 @@ The models `RawChapter` and `RawChapterRevision` use the "Raw" prefix from early
 
 **Recommendation**: Schedule as part of larger refactoring before v1.0 release.
 
-## API Design: Inconsistent endpoint kebab-case usage
+## Refactor: Replace `novel_parent_id` with Novel Relations association table
 
-**Status**: Planning
+**Status**: Planned
 
-API endpoints partially follow kebab-case convention but have inconsistencies:
+[novels/models.py](../backend/src/novels/models.py) uses a `novel_parent_id` FK to model a single-parent tree of novels. This is too rigid (one parent, one relation type) and allows circular references (self-reference, A→B→A, deeper cycles) with no validation.
 
-**Current State**:
-- ✅ `/auto-labels/{id}` - kebab-case
-- ✅ `/label-groups/{id}` - kebab-case
-- ❌ `/chapters/{id}` - missing "raw-" prefix for consistency
-- ❌ `/revisions/{id}` - missing "chapter-" for clarity
+**Proposed replacement:** Drop `novel_parent_id` and add an association table:
 
-**Proposed Changes** (if pursuing full kebab-case consistency):
-- `/chapters/{id}` → `/raw-chapters/{id}` (or `/chapters/{id}` after renaming RawChapter)
-- `/revisions/{id}` → `/raw-chapter-revisions/{id}` (or `/chapter-revisions/{id}`)
-- `/novels/{novel_id}/chapters` → `/novels/{novel_id}/raw-chapters`
-- `/novels/{novel_id}/revisions` → `/novels/{novel_id}/raw-chapter-revisions`
-- `/chapters/{id}/revisions` → `/raw-chapters/{id}/revisions`
-
-**Alternative**: Keep current simplified endpoints (`/chapters`, `/revisions`) and update documentation to reflect that kebab-case is preferred but simplified names are used for commonly-accessed resources.
-
-**Impact**: Breaking API change. Frontend code would need updates.
-
-**Recommendation**: Decide on convention before implementing RawChapter → Chapter rename. Either:
-1. Rename models first, then use `/chapters` and `/chapter-revisions` (cleaner)
-2. Keep current endpoints and document as intentional simplification
-
-## Validation: Circular novel parent references
-
-**Status**: Verified ✓
-
-[novels/service.py](../backend/src/novels/service.py) `modify_novel()` (line 386) accepts `novel_parent_id` without validation, allowing:
-1. **Self-reference**: Novel X → parent = X
-2. **Circular chains**: Novel A → parent = B, Novel B → parent = A
-3. **Deep cycles**: A → B → C → A
-
-**Current Code**:
-```python
-stmt = update(models.Novel).where(...).values(
-    request.model_dump(exclude_unset=True)  # No validation
-)
+```sql
+CREATE TABLE novel_relations (
+    novel_relation_id SERIAL PRIMARY KEY,
+    novel_id_1 INT NOT NULL REFERENCES novels(novel_id),
+    novel_id_2 INT NOT NULL REFERENCES novels(novel_id),
+    relation VARCHAR NOT NULL,  -- enum/protocol TBD
+    CHECK (novel_id_1 != novel_id_2)
+);
 ```
 
-**Impact**: Could break traversal logic, cause infinite loops in parent chain queries, or violate business logic assumptions.
+**Design decisions needed:**
 
-**Fix**: Add validation before update:
-```python
-if request.novel_parent_id == novel_id:
-    raise ValueError("Novel cannot be its own parent")
-# Check for cycles by traversing parent chain
-```
+1. **Relation type protocol** — define the allowed values for `relation` and their semantics. Starting candidates:
+   - `translation` — novel_id_1 is the source, novel_id_2 is its translation (directed)
+   - `recommended` — symmetric suggestion between two novels
+   - Others TBD (`sequel`/`prequel`?, `alternate_version`?)
+
+2. **Directionality** — some relations are asymmetric (translation: source → target), others symmetric (recommended). Either encode this per-type in backend logic, or add a `directed: bool` column.
+
+3. **Uniqueness** — should `(A, B, translation)` be unique? If symmetric relations enforce canonical ordering (e.g., `novel_id_1 < novel_id_2`), a unique constraint on `(novel_id_1, novel_id_2, relation)` suffices. Directed relations allow both `(A, B)` and `(B, A)`.
+
+4. **Permission implications** — does a relation grant cross-novel access? E.g., can contributors of a source novel see a linked restricted translation? This interacts with the planned alias system (see [Planned Features: Permissions](#planned-features-permissions)).
+
+**Affected files:** `novels/models.py` (drop `novel_parent_id`, add `NovelRelation` model), `novels/schemas.py`, `novels/service.py` (new CRUD for relations), `novels/router.py` (new endpoints), new migration.
 
 ## API: Pagination on list endpoints
 
@@ -254,6 +256,92 @@ open htmlcov/index.html
 # Fail if coverage below 80%
 pytest --cov=src --cov-fail-under=80
 ```
+
+## Planned Feature: AutoLabel Job Timeout
+
+Worker tasks that hang (OOM, model deadlock, network partition) leave AutoLabel rows stuck in `PROCESSING` forever with no recovery path.
+
+**Proposed approach:**
+
+1. **Add `job_timeout` to `NERModelParamsBase`** — each model's param schema inherits a `job_timeout: int` field (seconds). Defaults can differ per model based on expected inference time. The worker wraps the inference call with `asyncio.wait_for` (or `asyncio.timeout` on Python 3.11+):
+   ```python
+   result = await asyncio.wait_for(
+       run_inference(text, params),
+       timeout=params.job_timeout
+   )
+   ```
+   On `TimeoutError`, write `status=FAILED`, `message="Job timed out."`.
+
+2. **Add `auto_label_timeout_time` column** — store the computed deadline (`enqueued_at + job_timeout`) on the AutoLabel row so it's visible to external observers without needing to re-derive it.
+
+3. **Cron job cleanup (lower priority)** — in case of worker crash/disconnect the `asyncio.timeout` path never runs. A cron job can sweep for rows where `auto_label_status = 'processing'` and `auto_label_timeout_time < now()`, resetting them to `PENDING` with a new `job_id` to invalidate any zombie worker that reconnects.
+
+**Affected files:** `autolabels/constants.py` (`NERModelParamsBase`), `autolabels/worker/tasks.py`, new migration for `auto_label_timeout_time` column.
+
+## Planned Feature: Batch Inference Optimization
+
+**Current:** One chapter per worker job (one ARQ task per AutoLabel row).  
+**Proposed:** Batch multiple chapters into a single worker task for a forward pass.
+
+**Benefits:**
+- Amortize model loading overhead (~500ms per job → ~500ms per batch)
+- Better GPU utilization
+- 5-10x throughput improvement at scale
+
+**Challenges:**
+- ARQ job granularity — current design is one job per `auto_label_id`; batching requires either a new job type or grouping logic at enqueue time
+- Error isolation — one chapter's failure shouldn't FAIL the entire batch; need per-row error tracking within a batch job
+- Variable chapter lengths affect optimal batch size
+
+## Planned Features (Permissions)
+
+### Alias System for Restricted Novels
+
+Novels can have multiple aliases (e.g., Chinese title, English title). When a user creates a novel, check for matching aliases against existing restricted novels and send collaboration requests to owners of matching novels. Reduces duplicate translation efforts. See [permissions.md](permissions.md#visibility-levels) for context on Restricted visibility.
+
+### Publicly Editable Label Groups
+
+Label groups will support a `publicly_editable` flag. When enabled, any user can contribute labels to the group (useful for community labeling projects). Requires the parent novel to also be public. Individual label `label_dirty` flag tracks manual edits.
+
+## Schema: Label Group Lineage Tracking
+
+**Status:** Discussion
+
+The `create_copy` option in `apply_filter` creates a new label group but doesn't record where it came from. We need a way to track which label group was derived from which, for provenance and potential undo.
+
+### Option A: Simple FK on `label_groups`
+
+Add a nullable self-referencing FK:
+
+```
+label_groups
+  ...
+  source_label_group_id  INTEGER  FK → label_groups  NULLABLE
+```
+
+- Copy → original backlink: `WHERE source_label_group_id = :original_id`
+- Provenance chain: follow `source_label_group_id` upward to root
+- Zero overhead for non-copy groups (just `NULL`)
+- Simple, sufficient if copies always have exactly one source
+
+### Option B: Association table with metadata
+
+```
+label_group_lineage
+  source_label_group_id   FK → label_groups  PK
+  derived_label_group_id  FK → label_groups  PK
+  operation               VARCHAR             -- e.g. "score_filter_apply"
+  created_at              TIMESTAMP
+```
+
+- Supports multiple sources per derived group (e.g., merging data from two groups)
+- Stores what operation created the copy and when
+- More flexible but heavier
+
+### Open questions
+
+- Is there a real use case for multiple-source derivation, or is single-parent always enough?
+- Should the UI expose lineage to users (transparent) or hide it (undo/redo chain)? Leaning toward transparent — just show all groups and let the user see "copied from X."
 
 ## Relevant Files
 

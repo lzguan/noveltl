@@ -1,9 +1,32 @@
 # UI Requirements
 
-**Last Updated**: March 5, 2026  
+**Last Updated**: March 7, 2026  
 **Status**: Draft
 
 This document specifies the frontend components for the NovelTL platform, including the chapter viewer, navigation, filters, and glossary management.
+
+**Implementation Status:** Most components described here are **design specifications** for planned features. The current frontend implements basic novel browsing, chapter reading, login, and simple label group management. Components marked with "✅ Implemented" exist in code; all others are planned.
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Core Components](#core-components)
+   - [Chapter Viewer](#chapter-viewer)
+   - [Chapter Navigator](#chapter-navigator)
+   - [Dual Chapter View](#dual-chapter-view)
+   - [Filter Workflow Panel](#filter-workflow-panel)
+   - [Label Sidebar](#label-sidebar)
+   - [Glossary Panel](#glossary-panel)
+3. [Component Hierarchy](#component-hierarchy)
+4. [Design Patterns](#design-patterns)
+5. [Responsive Design](#responsive-design)
+6. [Accessibility](#accessibility)
+7. [Performance Optimizations](#performance-optimizations)
+8. [Future Enhancements](#future-enhancements)
+
+---
 
 ## Overview
 
@@ -185,9 +208,9 @@ The UI for running and reviewing filter operations (see [filter-system.md](filte
 
 1. **Select filter** → Fetch filter schema
 2. **Configure options** → Fill form (min_score, chapter range, etc.)
-3. **Run filter** → POST to `/filters/{name}/flag`
+3. **Run filter** → POST to `/filters/{name}/flag-instances`
 4. **Preview instances** → Populate groups table
-5. **Expand group** → POST to `/filters/{name}/context` for sampled instances
+5. **Expand group** → POST to `/filters/{name}/get-contexts` for sampled instances
 6. **Approve/reject group** → Mark entire group or individual instances
 7. **Apply filter** → POST to `/filters/{name}/apply` with approved instances
 
@@ -236,14 +259,14 @@ Instead of showing all 10,000 flagged labels:
 **Example Group Display:**
 
 ```
-╔═══════════════════════════════════════════════════════════════╗
-║ 他 (200 occurrences)                              [Approve] [Reject] ║
-╠═══════════════════════════════════════════════════════════════╣
-║ Sample 1: "他说：「你好吗？」"                           ❌          ║
-║ Sample 2: "他们一起去了北京。"                          ❌          ║
-║ Sample 3: "他是一个好人。"                              ❌          ║
-║ ... [Show 7 more samples]                                       ║
-╚═══════════════════════════════════════════════════════════════╝
++---------------------------------------------------------------+
+| 他 (200 occurrences)                       [Approve] [Reject] |
++---------------------------------------------------------------+
+| Sample 1: "他说：「你好吗？」"                            ❌  |
+| Sample 2: "他们一起去了北京。"                           ❌  |
+| Sample 3: "他是一个好人。"                               ❌  |
+| ... [Show 7 more samples]                                     |
++---------------------------------------------------------------+
 ```
 
 ### Label Sidebar
@@ -475,14 +498,13 @@ Use React Context for:
 - Current novel ID
 - Current chapter/revision
 - User permissions
+- Language data (✅ implemented as `LanguageContext`)
 
 Use local state for:
 - Component-specific UI (expanded/collapsed, sort order)
 - Form inputs
 
-Use React Query for:
-- API data fetching (chapters, labels, glossary)
-- Caching and invalidation
+**Planned:** React Query (TanStack Query) for API data fetching, caching, and invalidation. Not yet installed.
 
 ### Keyboard Shortcuts
 
@@ -567,14 +589,23 @@ For long lists (labels, glossary entries):
 
 ## Relevant Files
 
+**Existing:**
+- `frontend/src/components/layout/` - Layout and Navbar components
+- `frontend/src/components/novels/` - Novel-related components (NovelCard, NovelHeader, CreateNovelForm, RevisionContentDisplay, RevisionSidebar)
+- `frontend/src/components/common/Modal.tsx` - Modal component
+- `frontend/src/pages/` - ChapterReaderPage, DashboardPage, EditNovelsPage, LoginPage, NovelDetailsPage, NovelsPage
+- `frontend/src/api/` - API client functions (auth, novels, labels, languages)
+- `frontend/src/types/` - TypeScript type definitions (label, language, novel)
+- `frontend/src/contexts/` - LanguageContext and LanguageProvider
+- `frontend/src/routes.ts` - Route definitions
+
+**Planned (not yet implemented):**
 - `frontend/src/components/ChapterViewer.tsx` - Chapter viewer component
 - `frontend/src/components/ChapterNavigator.tsx` - Chapter navigation
 - `frontend/src/components/FilterWorkflowPanel.tsx` - Filter UI
 - `frontend/src/components/LabelSidebar.tsx` - Label management
 - `frontend/src/components/GlossaryPanel.tsx` - Glossary interface
 - `frontend/src/pages/NovelWorkspace.tsx` - Main workspace layout
-- `frontend/src/api/` - API client functions
-- `frontend/src/types/` - TypeScript type definitions
 
 ## See Also
 

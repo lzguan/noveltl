@@ -84,14 +84,6 @@ pytest -m implementation        # Only implementation tests
 pytest tests/filters/           # Specific service
 ```
 
-Alternatively, run from the repo root via Docker Compose:
-
-```bash
-docker compose exec backend pytest
-docker compose exec backend pytest -m slow
-docker compose exec backend pytest tests/filters/
-```
-
 Default behavior from pyproject.toml: `-ra -q -m 'not slow'` — shows summary of failures, quiet output, skips slow-marked tests.
 
 ### Markers

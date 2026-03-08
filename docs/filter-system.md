@@ -367,7 +367,7 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     note over DB,C: Step 1 — Flag instances (score filter example)
-    C->>B: POST /filters/score/flag-instances<br/>{label_group_id, min_score, ...}<br/>[Bearer token]
+    C->>B: POST /filters/score-filter/flag-instances<br/>{label_group_id, min_score, ...}<br/>[Bearer token]
     B->>B: get_current_user (JWT validation)
     B->>B: Validate options dict against score filter schema
     B->>DB: SELECT Labels WHERE score < threshold<br/>+ label_data_mod_access_select<br/>(label contributor + novel visibility check)
@@ -375,7 +375,7 @@ sequenceDiagram
     B-->>C: 200 flagged instances
 
     note over DB,C: Step 2 — Get contexts for flagged instances
-    C->>B: POST /filters/score/get-contexts<br/>{instances, options: {delimiters, refresh}}<br/>[Bearer token]
+    C->>B: POST /filters/score-filter/get-contexts<br/>{instances, options: {delimiters, refresh}}<br/>[Bearer token]
     B->>B: get_current_user (JWT validation)
     B->>B: Validate InstanceOptions against filter schema
     B->>DB: SELECT revision text for each revision_id<br/>+ raw_chapter_revision_mod_access_select
@@ -384,7 +384,7 @@ sequenceDiagram
     B-->>C: 200 instance-context pairs
 
     note over DB,C: Step 3 — Decide which instances pass
-    C->>B: POST /filters/score/decide-instances<br/>{instance_contexts, options: {mode, exclude_phrases | decisions}}<br/>[Bearer token]
+    C->>B: POST /filters/score-filter/decide-instances<br/>{instance_contexts, options: {mode, exclude_phrases | decisions}}<br/>[Bearer token]
     B->>B: get_current_user (JWT validation)
     B->>B: Validate InstanceContextOptions against filter schema
     alt mode = "auto"
@@ -395,7 +395,7 @@ sequenceDiagram
     B-->>C: 200 bool[] (pass/fail per instance)
 
     note over DB,C: Step 4 — Apply filter (delete rejected labels)
-    C->>B: POST /filters/score/apply<br/>?label-group-id=…<br/>{instances (rejected), options: {create_copy?}}<br/>[Bearer token]
+    C->>B: POST /filters/score-filter/apply<br/>?label-group-id=…<br/>{instances (rejected), options: {create_copy?}}<br/>[Bearer token]
     B->>B: get_current_user (JWT validation)
     B->>B: Validate instances + options
     opt create_copy = true

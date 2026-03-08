@@ -514,7 +514,7 @@ SELECT * FROM auto_labels WHERE revision_id=123 AND model='bert-ner' AND params=
   "device": -1
 }
 ```
-Can be nested. Data bytesize cannot be greater than a certain threshold.
+Can be nested. The byte size of this JSONB value is limited by `MAX_PARAMS_SIZE_BYTES` (see `backend/src/autolabels/constants.py`).
 
 ## Testing Challenges
 

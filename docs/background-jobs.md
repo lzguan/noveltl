@@ -669,4 +669,4 @@ Response: 200 OK
 - [database-schema.md](database-schema.md) - AutoLabel table schema
 - [api-design.md](api-design.md) - AutoLabel API endpoints
 - [concepts/monkeypatching.md](concepts/monkeypatching.md) - Testing worker isolation
-- [issues.md](issues.md) - Known issues (worker session management, etc.)
+- [GitHub Issues](https://github.com/lzguan/NovelTL_Dev/issues) - Known issues (worker session management, etc.)

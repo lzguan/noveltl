@@ -35,7 +35,7 @@ This directory contains technical documentation for the NovelTL project - a coll
 - **[testing.md](testing.md)** - Testing strategy, pytest usage, fixtures
 
 ### Reference
-- **[issues.md](issues.md)** - Known bugs, tech debt, future improvements
+- **[GitHub Issues](https://github.com/lzguan/NovelTL_Dev/issues)** - Known bugs, tech debt, future improvements
 - **[private_issues.md](private_issues.md)** - Environment-specific troubleshooting
 - **[concepts/](concepts/)** - Implementation notes on specific technologies
 
@@ -141,7 +141,7 @@ When adding new documentation:
 When you notice outdated docs:
 1. Change status to "Outdated"
 2. Add a note at the top explaining what's changed
-3. Create an issue in [issues.md](issues.md) to update it
+3. Create a [GitHub Issue](https://github.com/lzguan/NovelTL_Dev/issues) to track the update
 
 ## Relevant Files
 - `docs/` - This directory
@@ -151,5 +151,5 @@ When you notice outdated docs:
 
 ## See Also
 - [conventions.md](conventions.md) - Coding standards referenced throughout
-- [issues.md](issues.md) - Known issues mentioned in various docs
+- [GitHub Issues](https://github.com/lzguan/NovelTL_Dev/issues) - Known issues and planned improvements
 - Project root README (if exists) - General project overview

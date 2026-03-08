@@ -306,7 +306,7 @@ Cached NER inference results.
 
 **Current Indexes:**
 - All primary keys have implicit indexes
-- All foreign keys recommended to have indexes (some missing - see [issues.md](issues.md))
+- All foreign keys recommended to have indexes (some missing - see [GitHub Issues](https://github.com/lzguan/NovelTL_Dev/issues))
 - Unique constraints create implicit indexes
 
 **Recommended Additions:**

@@ -24,7 +24,7 @@ This document covers the project-specific API design decisions for the NovelTL b
 - **Endpoint**: `POST /token` (form-encoded `username` + `password`)
 - **Response**: `{"access_token": "...", "token_type": "bearer"}`
 - **Expiration**: 30 minutes (`ACCESS_TOKEN_EXPIRE_MINUTES`)
-- **Refresh tokens**: Not implemented — client must re-authenticate after expiry (see [issues.md](issues.md))
+- **Refresh tokens**: Not implemented — client must re-authenticate after expiry (see [GitHub Issues](https://github.com/lzguan/NovelTL_Dev/issues))
 
 ### Authentication Dependencies
 

@@ -2,7 +2,6 @@
 *.egg-info/
 __pycache__
 .venv/
-private_issues.md
 .vscode/
 .pytest_cache/
 pytest.log

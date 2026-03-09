@@ -1,6 +1,7 @@
 # Monkeypatching
 
-Last updated: 2025-12-13
+**Last Updated**: 2025-12-13  
+**Status**: Draft
 
 This document is intended to summarize the author's experience with learning monkeypatching, as well as their experience with using it for testing in this project.
 
@@ -8,7 +9,16 @@ There will be various code snippets in this doc, along with links to files in th
 
 All code here is tested in python 3.12
 
-## &sect;1 - Motivation
+---
+
+## Table of Contents
+
+1. [Motivation](#motivation)
+2. [Python Namespaces](#python-namespaces)
+
+---
+
+## Motivation
 
 One functionality that we wish to add for this project is the ability for a user to call an api to automatically label a list of raw chapter revisions. This is a slow, blocking task and hence it is important that we have the ability to offload this capability to run in the background. Furthermore, due to the ML nature of autolabeling, it would be significantly faster for the autolabeling to be done on a machine specialized for processing ML tasks. 
 
@@ -27,11 +37,11 @@ It should be clear to the anyone that we do not want to test this function in th
 
 On the other hand, the worker process is designed to run in isolation in another container and its task `autolabel_infer` (found in the `src.autolabels.worker.tasks` module) must only take parameters that correspond to information that the backend server can send it through the `redis` queue. This means that the worker should manage its own connection to the database, which is done through the `src.autolabels.worker.config` module. In the testing environment, we need a worker process that connects to a different `redis` queue (this can be done by creating a `redis` connection with the optional parameter `database` set to `1`), as well as connect to `test_db` instead of `db`. This is the problem that this document aims to describe a solution to. 
 
-## &sect;2 - Python namespaces
+## Python namespaces
 
 `monkeypatch` is a `pytest` feature designed to override module imports. As such, it is important to understand how imports behave under the hood in python before we talk about `monkeypatch` specifically.
 
-### &sect;2.1 - A couple of interesting examples
+### A couple of interesting examples
 Demo files: `tests/demos/monkeypatching/basic_examples`
 
 In python, there are several ways to use the `import` directive.
@@ -185,7 +195,7 @@ Let's summarize what we have learned from these three examples.
 
 How does python enforce this behaviour?
 
-### &sect;2.2 - Namespaces and scopes
+### Namespaces and scopes
 Demo files: `tests/demos/monkeypatching/namespaces
 
 For every dynamic object there is an associated in-memory data structure. In this case, python dynamically keeps track of all available-to-use names in dictionaries called _namespaces_. Let us make these definitions clear:
@@ -207,3 +217,15 @@ Surprisingly, we can actually access these namespaces in python! We will list so
 Let's see some examples. 
 
 Test addition
+
+## Relevant Files
+
+- `backend/tests/demos/monkeypatching/` - Demo files referenced throughout this document
+- `backend/tests/conftest.py` - `worker_mock` fixture using monkeypatching
+- `backend/src/autolabels/worker/config.py` - Worker config that is monkeypatched in tests
+- `backend/src/autolabels/worker/tasks.py` - Worker task that requires monkeypatched DB session
+
+## See Also
+
+- [background-jobs.md](../background-jobs.md) - AutoLabel worker system that motivates monkeypatching
+- [testing.md](../testing.md) - Testing guide covering worker integration tests

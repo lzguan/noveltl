@@ -32,7 +32,7 @@ The ARQ worker creates its own `SessionLocal` independently of FastAPI's depende
 
 ### Password hashing fixtures
 
-`password_hash.py` provides two fixtures: `recommended_hash` (real bcrypt via pwdlib) and `no_hash` (identity function, for tests where hashing speed matters). Both conform to a `Hash` protocol so they're interchangeable. Population fixtures use `recommended_hash` by default.
+`password_hash.py` provides two fixtures: `recommended_hash` (real argon2 via pwdlib) and `no_hash` (identity function, for tests where hashing speed matters). Both conform to a `Hash` protocol so they're interchangeable. Population fixtures use `recommended_hash` by default.
 
 ### Async test mode
 

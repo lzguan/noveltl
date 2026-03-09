@@ -16,7 +16,7 @@ This document describes the Filter abstraction — a generic four-phase pipeline
 5. [API Design](#api-design)
 6. [Frontend Integration](#frontend-integration)
 7. [Schema Communication](#schema-communication)
-8. [Performance Considerations](#performance-considerations-ai-estimations-verify)
+8. [Performance Considerations](#performance-considerations)
 9. [Design Rationale](#design-rationale)
 
 ---
@@ -410,7 +410,7 @@ The HTTP examples below show the same flow with concrete request/response bodies
 
 **1. Flag instances:**
 ```http
-POST /filters/score_filter/flag-instances
+POST /filters/score-filter/flag-instances
 {
   "label_group_id": 42,
   "min_score": 0.85,
@@ -429,7 +429,7 @@ Response: 200 OK
 
 **2. Get contexts:**
 ```http
-POST /filters/score_filter/get-contexts
+POST /filters/score-filter/get-contexts
 {
   "instances": [
     {"type": "single_label", "label": {"label_word": "他", "label_start": 5, "label_end": 6, "label_score": 0.6, "label_entity_group": "PER", "label_dirty": false}, "raw_chapter_revision_id": 10}
@@ -452,7 +452,7 @@ Response: 200 OK
 
 **3. Decide (manual):**
 ```http
-POST /filters/score_filter/decide-instances
+POST /filters/score-filter/decide-instances
 {
   "instance_contexts": [
     [
@@ -469,7 +469,7 @@ Response: 200 OK
 
 **4. Apply:**
 ```http
-POST /filters/score_filter/apply?label-group-id=42
+POST /filters/score-filter/apply?label-group-id=42
 {
   "instances": [
     {"type": "single_label", "label": {"label_word": "他", "label_start": 5, "label_end": 6, "label_score": 0.6, "label_entity_group": "PER", "label_dirty": false}, "raw_chapter_revision_id": 10}
@@ -538,7 +538,9 @@ type: Literal["score_filter_flag_instance_options"]
 
 This solves type erasure at REST API boundary.
 
-## Performance Considerations (AI estimations, verify)
+## Performance Considerations
+
+Listed below are some estimations on performance. These can vary by filter. These estimates have not been verified in testing or production yet.
 
 ### Flag Phase
 

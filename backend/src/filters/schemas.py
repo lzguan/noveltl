@@ -2,7 +2,7 @@
 Common schemas for filters, including context and instance schemas. These are used across different filter implementations to standardize the data structures for contexts and instances.
 """
 
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -38,7 +38,7 @@ class ApplyFilterOptionsBase(BaseModel):
     )
 
     @model_validator(mode="after")
-    def check_new_label_group_name(self) -> "ApplyFilterOptionsBase":
+    def check_new_label_group_name(self) -> Self:
         if self.create_copy and self.new_label_group_name is None:
             raise ValueError("new_label_group_name must be provided when create_copy is True")
         return self

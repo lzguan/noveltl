@@ -1,11 +1,9 @@
-FROM python:3.12-slim
+FROM mcr.microsoft.com/devcontainers/python:3.12-trixie
 WORKDIR /project
-ADD https://astral.sh/uv/install.sh /install.sh
-RUN apt-get -y update; apt-get -y install curl
-
-RUN chmod -R 655 /install.sh && /install.sh && rm /install.sh
-ENV PATH="/root/.local/bin:$PATH"
+COPY --from=ghcr.io/astral-sh/uv:0.10.9 /uv /uvx /bin/
 ENV UV_PROJECT_ENVIRONMENT="/app"
+RUN mkdir -p /app && chown vscode:vscode /app
 COPY backend/pyproject.toml backend/uv.lock* ./
+USER vscode
 RUN --mount=type=cache,target=/root/.cache/uv\
-    uv sync --frozen --all-groups --no-install-project
+    uv sync --all-groups --no-install-project

@@ -16,7 +16,7 @@ This document describes the Filter abstraction — a generic four-phase pipeline
 5. [API Design](#api-design)
 6. [Frontend Integration](#frontend-integration)
 7. [Schema Communication](#schema-communication)
-8. [Performance Considerations](#performance-considerations-ai-estimations-verify)
+8. [Performance Considerations](#performance-considerations)
 9. [Design Rationale](#design-rationale)
 
 ---

@@ -14,11 +14,11 @@ export type NovelType = 'original' | 'translation' | 'other'
 export interface Novel {
     novelId : number
     novelTitle : string
-    novelDescription? : string
-    novelAuthor? : string
+    novelDescription : string | null
+    novelAuthor : string | null
     novelVisibility : Visibility
     novelType : NovelType
-    novelParentId? : number
+    novelParentId : number | null
     languageCode : string
 }
 

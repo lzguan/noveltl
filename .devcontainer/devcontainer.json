@@ -47,10 +47,11 @@
 				"ms-azuretools.vscode-docker",
 				"christian-kohler.npm-intellisense",
 				"charliermarsh.ruff",
-				"bierner.markdown-mermaid"
+				"bierner.markdown-mermaid",
+				"anthropic.claude-code"
 			],
 			"settings": {
-				"python.defaultInterpreterPath": "/app/bin/python",
+				"python.defaultInterpreterPath": "/.venv/bin/python",
 				"python.analysis.typeCheckingMode": "strict",
 				"python.analysis.include": ["backend/src"],
 				"python.analysis.extraPaths": ["backend/src"]

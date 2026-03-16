@@ -61,6 +61,25 @@ const mapCreateRevisionRequest = (data: NovelType.CreateRawChapterRevision) => (
     raw_chapter_revision_text: data.rawChapterRevisionText,
 })
 
+const mapUpdateNovelRequest = (data: NovelType.UpdateNovel) => ({
+    novel_title: data.novelTitle,
+    novel_description: data.novelDescription,
+    novel_author: data.novelAuthor,
+    novel_visibility: data.novelVisibility,
+    novel_type: data.novelType,
+    novel_parent_id: data.novelParentId,
+})
+
+const mapUpdateRevisionRequest = (data: NovelType.UpdateRawChapterRevision) => ({
+    raw_chapter_revision_title: data.rawChapterRevisionTitle,
+    raw_chapter_revision_text: data.rawChapterRevisionText,
+})
+
+const mapDeleteRevisionStatus = (data: any): NovelType.DeleteRawChapterRevisionStatus => ({
+    status: data.status,
+    detail: data.detail,
+})
+
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 // --- API functions ---
@@ -157,4 +176,34 @@ export const createChapterForNovel = async (novelId : number, request : NovelTyp
 export const createRevisionForChapter = async (chapterId : number, request : NovelType.CreateRawChapterRevision) : Promise<NovelType.RawChapterRevision> => {
     const result = await client.post(`/chapters/${chapterId}/revisions`, mapCreateRevisionRequest(request))
     return mapRevision(result.data)
+}
+
+export const updateNovel = async (novelId : number, request : NovelType.UpdateNovel) : Promise<NovelType.Novel> => {
+    const result = await client.patch(`/novels/${novelId}`, mapUpdateNovelRequest(request))
+    return mapNovel(result.data)
+}
+
+export const updateRevision = async (revisionId : number, request : NovelType.UpdateRawChapterRevision) : Promise<NovelType.RawChapterRevision> => {
+    const result = await client.patch(`/revisions/${revisionId}`, mapUpdateRevisionRequest(request))
+    return mapRevision(result.data)
+}
+
+export const publishRevision = async (revisionId : number) : Promise<NovelType.RawChapterRevision> => {
+    const result = await client.post(`/revisions/${revisionId}/publish`)
+    return mapRevision(result.data)
+}
+
+export const makeRevisionPrimary = async (revisionId : number) : Promise<NovelType.RawChapterRevision> => {
+    const result = await client.post(`/revisions/${revisionId}/make-primary`)
+    return mapRevision(result.data)
+}
+
+export const finalizeRevision = async (revisionId : number) : Promise<NovelType.RawChapterRevision> => {
+    const result = await client.post(`/revisions/${revisionId}/finalize`)
+    return mapRevision(result.data)
+}
+
+export const deleteRevision = async (revisionId : number) : Promise<NovelType.DeleteRawChapterRevisionStatus> => {
+    const result = await client.delete(`/revisions/${revisionId}`)
+    return mapDeleteRevisionStatus(result.data)
 }

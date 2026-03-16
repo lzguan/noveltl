@@ -25,7 +25,7 @@ NovelTL_Dev/
 ├── frontend/
 ├── docs/
 │   ├── README.md
-    ├── conventions.md
+│   ├── conventions.md
 │   ├── other doc files...
 ```
 

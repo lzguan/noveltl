@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { getNovelById, getChaptersByNovel, getChapterRevisionsByChapter, getChapterRevisionById } from "../api/novels";
-import { getLabelGroupsByNovel } from "../api/labels";
+import { getLabelGroupsByNovel, getLabelDatas, getLabelsByLabelData } from "../api/labels";
 import { type Novel, type RawChapter, type RawChapterRevisionMeta } from "../types/novel";
-import { type LabelGroup } from "../types/label";
+import { type LabelGroup, type LabelData, type Label } from "../types/label";
 import { SelectorsBar } from "../components/workspace/SelectorsBar";
 import { ChapterTextViewer } from "../components/workspace/ChapterTextViewer";
+import { AnnotatedText } from "../components/workspace/AnnotatedText";
 
 export const NovelWorkspacePage = () => {
     const { novel_id } = useParams<{ novel_id: string }>();
@@ -22,6 +23,10 @@ export const NovelWorkspacePage = () => {
     const [selectedRevisionId, setSelectedRevisionId] = useState<number | null>(null);
     const [revisionText, setRevisionText] = useState<string | null>(null);
     const [selectedLabelGroupId, setSelectedLabelGroupId] = useState<number | null>(null);
+
+    // Label data
+    const [, setLabelData] = useState<LabelData | null>(null);
+    const [labels, setLabels] = useState<Label[]>([]);
 
     // Loading/error
     const [loading, setLoading] = useState(true);
@@ -85,6 +90,30 @@ export const NovelWorkspacePage = () => {
             .finally(() => setTextLoading(false));
     }, [selectedRevisionId]);
 
+    // Fetch labels when label group + revision are both selected
+    useEffect(() => {
+        if (!selectedLabelGroupId || !selectedRevisionId) {
+            setLabelData(null);
+            setLabels([]);
+            return;
+        }
+        getLabelDatas(selectedLabelGroupId)
+            .then((allLabelDatas) => {
+                const match = allLabelDatas.find((ld) => ld.rawChapterRevisionId === selectedRevisionId);
+                if (!match) {
+                    setLabelData(null);
+                    setLabels([]);
+                    return;
+                }
+                setLabelData(match);
+                return getLabelsByLabelData(match.labelDataId).then(setLabels);
+            })
+            .catch(() => {
+                setLabelData(null);
+                setLabels([]);
+            });
+    }, [selectedLabelGroupId, selectedRevisionId]);
+
     // Sync state → query params
     useEffect(() => {
         const params = new URLSearchParams();
@@ -119,6 +148,8 @@ export const NovelWorkspacePage = () => {
     if (error) return <div style={{ padding: "20px", color: "red" }}>{error}</div>;
     if (!novel) return <div style={{ padding: "20px" }}>Novel not found.</div>;
 
+    const showAnnotated = revisionText !== null && labels.length > 0;
+
     return (
         <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 60px)" }}>
             <SelectorsBar
@@ -134,7 +165,11 @@ export const NovelWorkspacePage = () => {
                 onLabelGroupChange={handleLabelGroupChange}
                 onLabelGroupCreated={handleLabelGroupCreated}
             />
-            <ChapterTextViewer text={revisionText} loading={textLoading} />
+            {showAnnotated ? (
+                <AnnotatedText text={revisionText} labels={labels} />
+            ) : (
+                <ChapterTextViewer text={revisionText} loading={textLoading} />
+            )}
         </div>
     );
 };

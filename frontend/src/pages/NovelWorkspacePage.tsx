@@ -1,17 +1,19 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { getNovelById, getChaptersByNovel, getChapterRevisionsByChapter, getChapterRevisionById } from "../api/novels";
-import { getLabelGroupsByNovel, getLabelDatas, getLabelsByLabelData, updateLabelDataStream } from "../api/labels";
+import { getLabelGroupsByNovel, getLabelDatas, getLabelsByLabelData, updateLabelDataStream, createLabelDataForGroup } from "../api/labels";
 import { type Novel, type RawChapter, type RawChapterRevisionMeta } from "../types/novel";
-import { type LabelGroup, type LabelData, type Label, type LabelOp } from "../types/label";
+import { type LabelGroup, type LabelData, type Label, type LabelOp, type AddLabelOp } from "../types/label";
 import { applyOpToLabels } from "../components/workspace/labelOps";
 import { SelectorsBar } from "../components/workspace/SelectorsBar";
 import { ChapterTextViewer } from "../components/workspace/ChapterTextViewer";
 import { AnnotatedText } from "../components/workspace/AnnotatedText";
 import { LabelPopover } from "../components/workspace/LabelPopover";
+import { NewLabelPopover } from "../components/workspace/NewLabelPopover";
 
 type ActivePopover =
     | { type: "edit"; label: Label; rect: DOMRect }
+    | { type: "new"; startPos: number; endPos: number; text: string; rect: DOMRect }
     | null;
 
 export const NovelWorkspacePage = () => {
@@ -142,20 +144,30 @@ export const NovelWorkspacePage = () => {
         setSearchParams(params, { replace: true });
     }, [selectedChapterId, selectedRevisionId, selectedLabelGroupId, setSearchParams]);
 
+    // Ensure labelData exists, creating it if needed (for first label on empty revision/group)
+    const ensureLabelData = useCallback(async (): Promise<LabelData | null> => {
+        if (labelData) return labelData;
+        if (!selectedLabelGroupId || !selectedRevisionId) return null;
+        const created = await createLabelDataForGroup(selectedLabelGroupId, { rawChapterRevisionId: selectedRevisionId });
+        setLabelData(created);
+        return created;
+    }, [labelData, selectedLabelGroupId, selectedRevisionId]);
+
     // Optimistic label operation handler
     const handleLabelOp = useCallback(async (op: LabelOp) => {
-        if (!labelData) return;
+        const ld = await ensureLabelData();
+        if (!ld) return;
         const snapshot = labels;
         setLabels((prev) => applyOpToLabels(prev, op));
         setActivePopover(null);
         setPendingOpError(null);
         try {
-            await updateLabelDataStream(labelData.labelDataId, { ops: [op] });
+            await updateLabelDataStream(ld.labelDataId, { ops: [op] });
         } catch {
             setLabels(snapshot);
             setPendingOpError("Failed to save label change. Reverted.");
         }
-    }, [labelData, labels]);
+    }, [ensureLabelData, labels]);
 
     const handleChapterChange = (chapterId: number | null) => {
         setSelectedChapterId(chapterId);
@@ -182,11 +194,20 @@ export const NovelWorkspacePage = () => {
         setActivePopover({ type: "edit", label, rect });
     };
 
+    const handleTextSelect = (selection: { startPos: number; endPos: number; text: string; rect: DOMRect }) => {
+        if (!selectedLabelGroupId) return;
+        setActivePopover({ type: "new", ...selection });
+    };
+
+    const handleNewLabelConfirm = (op: AddLabelOp) => {
+        void handleLabelOp(op);
+    };
+
     if (loading) return <div style={{ padding: "20px" }}>Loading workspace...</div>;
     if (error) return <div style={{ padding: "20px", color: "red" }}>{error}</div>;
     if (!novel) return <div style={{ padding: "20px" }}>Novel not found.</div>;
 
-    const showAnnotated = revisionText !== null && labels.length > 0;
+    const showAnnotated = revisionText !== null && (labels.length > 0 || selectedLabelGroupId !== null);
 
     return (
         <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 60px)" }}>
@@ -209,7 +230,12 @@ export const NovelWorkspacePage = () => {
                 </div>
             )}
             {showAnnotated ? (
-                <AnnotatedText text={revisionText} labels={labels} onLabelClick={handleLabelClick} />
+                <AnnotatedText
+                    text={revisionText}
+                    labels={labels}
+                    onLabelClick={handleLabelClick}
+                    onTextSelect={handleTextSelect}
+                />
             ) : (
                 <ChapterTextViewer text={revisionText} loading={textLoading} />
             )}
@@ -220,6 +246,17 @@ export const NovelWorkspacePage = () => {
                     knownEntityGroups={knownEntityGroups}
                     onSave={(op) => void handleLabelOp(op)}
                     onDelete={(op) => void handleLabelOp(op)}
+                    onClose={() => setActivePopover(null)}
+                />
+            )}
+            {activePopover?.type === "new" && (
+                <NewLabelPopover
+                    selectedText={activePopover.text}
+                    startPos={activePopover.startPos}
+                    endPos={activePopover.endPos}
+                    anchorRect={activePopover.rect}
+                    knownEntityGroups={knownEntityGroups}
+                    onConfirm={handleNewLabelConfirm}
                     onClose={() => setActivePopover(null)}
                 />
             )}

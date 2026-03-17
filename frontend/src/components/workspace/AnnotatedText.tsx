@@ -1,6 +1,13 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { type Label } from "../../types/label";
 import { buildSegments, getEntityGroupColor } from "./labelOps";
+
+type TextSelection = {
+    startPos: number;
+    endPos: number;
+    text: string;
+    rect: DOMRect;
+};
 
 type AnnotatedTextProps = {
     text: string;
@@ -8,9 +15,20 @@ type AnnotatedTextProps = {
     scoreThreshold?: number;
     highlightedLabelId?: string | null;
     onLabelClick?: (label: Label, rect: DOMRect) => void;
+    onTextSelect?: (selection: TextSelection) => void;
 };
 
 const labelKey = (label: Label) => `${label.labelStart}-${label.labelEnd}`;
+
+const getCharOffset = (node: Node, offsetInNode: number): number | null => {
+    // Walk up to find nearest span with data-char-start
+    let el: HTMLElement | null = node instanceof HTMLElement ? node : node.parentElement;
+    while (el && !el.dataset.charStart) {
+        el = el.parentElement;
+    }
+    if (!el?.dataset.charStart) return null;
+    return parseInt(el.dataset.charStart) + offsetInNode;
+};
 
 export const AnnotatedText: React.FC<AnnotatedTextProps> = ({
     text,
@@ -18,11 +36,33 @@ export const AnnotatedText: React.FC<AnnotatedTextProps> = ({
     scoreThreshold = 0,
     highlightedLabelId = null,
     onLabelClick,
+    onTextSelect,
 }) => {
     const segments = buildSegments(text, labels);
 
+    const handleMouseUp = useCallback(() => {
+        if (!onTextSelect) return;
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed || !sel.anchorNode || !sel.focusNode) return;
+
+        const anchorOffset = getCharOffset(sel.anchorNode, sel.anchorOffset);
+        const focusOffset = getCharOffset(sel.focusNode, sel.focusOffset);
+        if (anchorOffset === null || focusOffset === null) return;
+
+        const startPos = Math.min(anchorOffset, focusOffset);
+        const endPos = Math.max(anchorOffset, focusOffset);
+        if (startPos === endPos) return;
+
+        const selectedText = text.slice(startPos, endPos);
+        const range = sel.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+
+        sel.removeAllRanges();
+        onTextSelect({ startPos, endPos, text: selectedText, rect });
+    }, [onTextSelect, text]);
+
     return (
-        <div style={{
+        <div onMouseUp={handleMouseUp} style={{
             flex: 1,
             overflow: "auto",
             padding: "20px",

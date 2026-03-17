@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { getNovelById, getChaptersByNovel, getChapterRevisionsByChapter, getChapterRevisionById } from "../api/novels";
 import { getLabelGroupsByNovel, getLabelDatas, getLabelsByLabelData, updateLabelDataStream, createLabelDataForGroup } from "../api/labels";
@@ -10,6 +10,8 @@ import { ChapterTextViewer } from "../components/workspace/ChapterTextViewer";
 import { AnnotatedText } from "../components/workspace/AnnotatedText";
 import { LabelPopover } from "../components/workspace/LabelPopover";
 import { NewLabelPopover } from "../components/workspace/NewLabelPopover";
+import { RightPanel } from "../components/workspace/RightPanel";
+import { LabelsPanel } from "../components/workspace/LabelsPanel";
 
 type ActivePopover =
     | { type: "edit"; label: Label; rect: DOMRect }
@@ -19,6 +21,7 @@ type ActivePopover =
 export const NovelWorkspacePage = () => {
     const { novel_id } = useParams<{ novel_id: string }>();
     const [searchParams, setSearchParams] = useSearchParams();
+    const textContainerRef = useRef<HTMLDivElement>(null);
 
     // Core data
     const [novel, setNovel] = useState<Novel | null>(null);
@@ -39,6 +42,14 @@ export const NovelWorkspacePage = () => {
     // Popover state
     const [activePopover, setActivePopover] = useState<ActivePopover>(null);
     const [pendingOpError, setPendingOpError] = useState<string | null>(null);
+
+    // Right panel state
+    const [activeRightPanel, setActiveRightPanel] = useState<"labels" | "ner" | "filters">("labels");
+    const [scoreThreshold, setScoreThreshold] = useState(0);
+    const [entityGroupFilter, setEntityGroupFilter] = useState<Set<string>>(new Set());
+    const [sortBy, setSortBy] = useState<"position" | "score" | "entityGroup" | "word">("position");
+    const [searchWord, setSearchWord] = useState("");
+    const [highlightedLabelId, setHighlightedLabelId] = useState<string | null>(null);
 
     // Loading/error
     const [loading, setLoading] = useState(true);
@@ -144,7 +155,7 @@ export const NovelWorkspacePage = () => {
         setSearchParams(params, { replace: true });
     }, [selectedChapterId, selectedRevisionId, selectedLabelGroupId, setSearchParams]);
 
-    // Ensure labelData exists, creating it if needed (for first label on empty revision/group)
+    // Ensure labelData exists, creating it if needed
     const ensureLabelData = useCallback(async (): Promise<LabelData | null> => {
         if (labelData) return labelData;
         if (!selectedLabelGroupId || !selectedRevisionId) return null;
@@ -203,6 +214,30 @@ export const NovelWorkspacePage = () => {
         void handleLabelOp(op);
     };
 
+    const handleEntityGroupFilterToggle = (group: string) => {
+        setEntityGroupFilter((prev) => {
+            const next = new Set(prev);
+            if (next.has(group)) {
+                next.delete(group);
+            } else {
+                next.add(group);
+            }
+            return next;
+        });
+    };
+
+    const handleScrollToLabel = (label: Label) => {
+        const container = textContainerRef.current;
+        if (!container) return;
+        const span = container.querySelector(`[data-label-start="${label.labelStart}"][data-label-end="${label.labelEnd}"]`);
+        if (span) {
+            span.scrollIntoView({ behavior: "smooth", block: "center" });
+            const key = `${label.labelStart}-${label.labelEnd}`;
+            setHighlightedLabelId(key);
+            setTimeout(() => setHighlightedLabelId(null), 1500);
+        }
+    };
+
     if (loading) return <div style={{ padding: "20px" }}>Loading workspace...</div>;
     if (error) return <div style={{ padding: "20px", color: "red" }}>{error}</div>;
     if (!novel) return <div style={{ padding: "20px" }}>Novel not found.</div>;
@@ -229,16 +264,46 @@ export const NovelWorkspacePage = () => {
                     {pendingOpError}
                 </div>
             )}
-            {showAnnotated ? (
-                <AnnotatedText
-                    text={revisionText}
-                    labels={labels}
-                    onLabelClick={handleLabelClick}
-                    onTextSelect={handleTextSelect}
-                />
-            ) : (
-                <ChapterTextViewer text={revisionText} loading={textLoading} />
-            )}
+            <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+                <div ref={textContainerRef} style={{ flex: 1, overflow: "auto" }}>
+                    {showAnnotated ? (
+                        <AnnotatedText
+                            text={revisionText}
+                            labels={labels}
+                            scoreThreshold={scoreThreshold}
+                            highlightedLabelId={highlightedLabelId}
+                            onLabelClick={handleLabelClick}
+                            onTextSelect={handleTextSelect}
+                        />
+                    ) : (
+                        <ChapterTextViewer text={revisionText} loading={textLoading} />
+                    )}
+                </div>
+                <div style={{ width: "320px", flexShrink: 0 }}>
+                    <RightPanel activeTab={activeRightPanel} onTabChange={setActiveRightPanel}>
+                        {activeRightPanel === "labels" && (
+                            <LabelsPanel
+                                labels={labels}
+                                scoreThreshold={scoreThreshold}
+                                onScoreThresholdChange={setScoreThreshold}
+                                entityGroupFilter={entityGroupFilter}
+                                onEntityGroupFilterToggle={handleEntityGroupFilterToggle}
+                                sortBy={sortBy}
+                                onSortByChange={setSortBy}
+                                searchWord={searchWord}
+                                onSearchWordChange={setSearchWord}
+                                onLabelClick={handleScrollToLabel}
+                            />
+                        )}
+                        {activeRightPanel === "ner" && (
+                            <div style={{ padding: "12px", color: "#888" }}>NER panel (step 6)</div>
+                        )}
+                        {activeRightPanel === "filters" && (
+                            <div style={{ padding: "12px", color: "#888" }}>Filters panel (deferred)</div>
+                        )}
+                    </RightPanel>
+                </div>
+            </div>
             {activePopover?.type === "edit" && (
                 <LabelPopover
                     label={activePopover.label}

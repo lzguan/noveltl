@@ -3,9 +3,11 @@ import { useParams, Link } from "react-router-dom";
 import { getNovelById, getChaptersByNovel, getChapterRevisionsByNovel } from "../api/novels";
 import { type Novel, type RawChapter, type RawChapterRevisionMeta } from '../types/novel';
 import { AppRoutes, routeTo } from "../routes";
+import { useNavigate } from "react-router-dom";
 
 export const NovelDetailsPage = () => {
     const { novel_id } = useParams<{ novel_id: string }>();
+    const navigate = useNavigate();
     const [novel, setNovel] = useState<Novel | null>(null);
     const [chapters, setChapters] = useState<RawChapter[]>([]);
     
@@ -51,11 +53,23 @@ export const NovelDetailsPage = () => {
                 <Link to={AppRoutes.VIEW.NOVELS} style={{ textDecoration: 'none', color: '#666' }}>&larr; Back to Library</Link>
                 <h1>{novel.novelTitle}</h1>
                 <p style={{ color: '#555' }}>Author: {novel.novelAuthor || 'Unknown'}</p>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <span style={{ background: '#eee', padding: '4px 8px', borderRadius: '4px' }}>
                         {novel.novelType}
                     </span>
-                    {/* Add more metadata badges here if needed */}
+                    <button
+                        onClick={() => navigate(routeTo.workspace(novel.novelId))}
+                        style={{
+                            padding: '6px 14px',
+                            backgroundColor: '#4a90d9',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        Open Workspace
+                    </button>
                 </div>
             </div>
 

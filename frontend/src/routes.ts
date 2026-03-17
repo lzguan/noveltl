@@ -10,7 +10,8 @@ export const AppRoutes = {
     EDIT: {
         NOVELS: '/edit/novels',
         NOVEL: '/edit/novels/:novel_id',
-    }
+    },
+    WORKSPACE: '/workspace/:novel_id',
 } as const;
 
 export const routeTo = {
@@ -32,5 +33,14 @@ export const routeTo = {
     edit: {
         novels: () => '/edit/novels',
         novel: (id: number) => `/edit/novels/${id}`,
-    }
+    },
+    workspace: (novelId: number, params?: { chapter?: number; revision?: number; group?: number }) => {
+        const base = `/workspace/${novelId}`;
+        const qs = new URLSearchParams();
+        if (params?.chapter) qs.set('chapter', String(params.chapter));
+        if (params?.revision) qs.set('revision', String(params.revision));
+        if (params?.group) qs.set('group', String(params.group));
+        const query = qs.toString();
+        return query ? `${base}?${query}` : base;
+    },
 };

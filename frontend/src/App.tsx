@@ -6,6 +6,7 @@ import { NovelDetailsPage } from './pages/NovelDetailsPage'
 import { ChapterReaderPage } from './pages/ChapterReaderPage'
 import { EditNovelsPage } from './pages/EditNovelsPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { NovelWorkspacePage } from './pages/NovelWorkspacePage'
 import { Layout } from './components/layout/Layout'
 import { AppRoutes } from './routes'
 import { LanguageProvider } from './contexts/LanguageProvider'
@@ -23,6 +24,7 @@ function App() {
                     <Route path={AppRoutes.VIEW.NOVEL_DETAILS} element={<NovelDetailsPage />} />
                     <Route path={AppRoutes.VIEW.CHAPTER} element={<ChapterReaderPage />} />
                     <Route path={AppRoutes.EDIT.NOVELS} element={<EditNovelsPage />} />
+                    <Route path={AppRoutes.WORKSPACE} element={<NovelWorkspacePage />} />
                 </Route>
                 
                 <Route path="/" element={<Navigate to={AppRoutes.DASHBOARD} replace />} />

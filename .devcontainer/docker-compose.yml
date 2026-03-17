@@ -14,6 +14,7 @@ services:
     volumes:
       # Update this to wherever you want VS Code to mount the folder of your project
       - ..:/workspaces:cached
+      - claude-code-config:/home/vscode/.claude
 
     # Uncomment the next four lines if you will use a ptrace-based debugger like C++, Go, and Rust.
     # cap_add:
@@ -23,4 +24,6 @@ services:
 
     # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
- 
+
+volumes:
+  claude-code-config:

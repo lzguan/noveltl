@@ -6,3 +6,4 @@ __pycache__
 .pytest_cache/
 pytest.log
 .coverage
+settings.local.json

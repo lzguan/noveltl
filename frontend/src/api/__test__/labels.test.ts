@@ -4,9 +4,10 @@ import client from '../client'
 import {
     getLabelGroupsByNovel,
     createLabelGroup,
-    getLabelGroupById
+    getLabelGroupById,
+    createLabelDataByAutoLabel
 } from '../labels'
-import { type LabelGroup } from '../../types/label'
+import { type LabelGroup, type CreateLabelDataByAutoLabelStatus } from '../../types/label'
 
 vi.mock('../client')
 
@@ -153,6 +154,60 @@ describe('Labels API', () => {
             )
 
             await expect(getLabelGroupById(999)).rejects.toThrow()
+        })
+    })
+
+    describe('createLabelDataByAutoLabel', () => {
+        it('should call POST /label-groups/{id}/label-datas/auto-labels with snake_case body', async () => {
+            vi.mocked(client.post).mockResolvedValue({
+                data: { success: [10], errors: [] }
+            })
+
+            await createLabelDataByAutoLabel(5, {
+                modelName: 'cluener',
+                modelParams: { lang: 'zh' },
+                rawChapterRevisionIds: [10],
+            })
+
+            expect(client.post).toHaveBeenCalledWith(
+                '/label-groups/5/label-datas/auto-labels',
+                {
+                    model_name: 'cluener',
+                    model_params: { lang: 'zh' },
+                    raw_chapter_ids: undefined,
+                    raw_chapter_revision_ids: [10],
+                    start: undefined,
+                    end: undefined,
+                }
+            )
+        })
+
+        it('should map response to CreateLabelDataByAutoLabelStatus', async () => {
+            vi.mocked(client.post).mockResolvedValue({
+                data: { success: [10, 11], errors: [[12, 'already exists']] }
+            })
+
+            const result = await createLabelDataByAutoLabel(5, {
+                modelName: 'cluener',
+                modelParams: {},
+            })
+
+            expectTypeOf(result).toEqualTypeOf<CreateLabelDataByAutoLabelStatus>()
+            expect(result).toEqual({
+                success: [10, 11],
+                errors: [[12, 'already exists']],
+            } satisfies CreateLabelDataByAutoLabelStatus)
+        })
+
+        it('should propagate 404 error when label group not found', async () => {
+            vi.mocked(client.post).mockRejectedValue(
+                makeAxiosError(404, { detail: 'Label group not found' })
+            )
+
+            await expect(createLabelDataByAutoLabel(999, {
+                modelName: 'test',
+                modelParams: {},
+            })).rejects.toThrow()
         })
     })
 })

@@ -82,3 +82,20 @@ export interface UpdateLabelDataStreamResponse {
     status : 'success' | 'fail'
     detail? : string | null
 }
+
+// --- Auto-Label Import ---
+
+export interface CreateLabelDataByAutoLabel {
+    modelName : string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    modelParams : Record<string, any>
+    rawChapterIds? : number[] | null
+    rawChapterRevisionIds? : number[] | null
+    start? : number | null
+    end? : number | null
+}
+
+export interface CreateLabelDataByAutoLabelStatus {
+    success : number[]
+    errors : [number, string][]
+}

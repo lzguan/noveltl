@@ -7,7 +7,9 @@ import {
     type CreateLabelData,
     type Label,
     type LabelOp,
-    type UpdateLabelDataStream
+    type UpdateLabelDataStream,
+    type CreateLabelDataByAutoLabel,
+    type CreateLabelDataByAutoLabelStatus
 } from "../types/label";
 
 // --- Response mappers (API snake_case → frontend camelCase) ---
@@ -86,6 +88,21 @@ const mapUpdateLabelDataStreamRequest = (data: UpdateLabelDataStream) => ({
     ops: data.ops.map(mapLabelOp),
 })
 
+const mapCreateLabelDataByAutoLabelRequest = (data: CreateLabelDataByAutoLabel) => ({
+    model_name: data.modelName,
+    model_params: data.modelParams,
+    raw_chapter_ids: data.rawChapterIds,
+    raw_chapter_revision_ids: data.rawChapterRevisionIds,
+    start: data.start,
+    end: data.end,
+})
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mapCreateLabelDataByAutoLabelStatus = (data: any): CreateLabelDataByAutoLabelStatus => ({
+    success: data.success,
+    errors: data.errors,
+})
+
 // --- API functions ---
 
 export const getLabelGroupsByNovel = async (novelId : number) : Promise<LabelGroup[]> => {
@@ -150,4 +167,15 @@ export const updateLabelDataStream = async (
     request : UpdateLabelDataStream
 ) : Promise<void> => {
     await client.patch(`/label-datas/${labelDataId}`, mapUpdateLabelDataStreamRequest(request))
+}
+
+export const createLabelDataByAutoLabel = async (
+    labelGroupId : number,
+    request : CreateLabelDataByAutoLabel
+) : Promise<CreateLabelDataByAutoLabelStatus> => {
+    const result = await client.post(
+        `/label-groups/${labelGroupId}/label-datas/auto-labels`,
+        mapCreateLabelDataByAutoLabelRequest(request)
+    )
+    return mapCreateLabelDataByAutoLabelStatus(result.data)
 }

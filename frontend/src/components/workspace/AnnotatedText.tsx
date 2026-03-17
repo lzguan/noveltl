@@ -12,6 +12,7 @@ type TextSelection = {
 type AnnotatedTextProps = {
     text: string;
     labels: Label[];
+    previewLabels?: Label[] | null;
     scoreThreshold?: number;
     highlightedLabelId?: string | null;
     onLabelClick?: (label: Label, rect: DOMRect) => void;
@@ -33,12 +34,14 @@ const getCharOffset = (node: Node, offsetInNode: number): number | null => {
 export const AnnotatedText: React.FC<AnnotatedTextProps> = ({
     text,
     labels,
+    previewLabels = null,
     scoreThreshold = 0,
     highlightedLabelId = null,
     onLabelClick,
     onTextSelect,
 }) => {
     const segments = buildSegments(text, labels);
+    const previewSegments = previewLabels ? buildSegments(text, previewLabels) : null;
 
     const handleMouseUp = useCallback(() => {
         if (!onTextSelect) return;
@@ -67,6 +70,7 @@ export const AnnotatedText: React.FC<AnnotatedTextProps> = ({
             overflow: "auto",
             padding: "20px",
             whiteSpace: "pre-wrap",
+            position: "relative",
             fontFamily: "serif",
             fontSize: "1.05rem",
             lineHeight: 1.8,
@@ -114,6 +118,41 @@ export const AnnotatedText: React.FC<AnnotatedTextProps> = ({
                     </span>
                 );
             })}
+            {previewSegments && (
+                <div style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    padding: "20px",
+                    whiteSpace: "pre-wrap",
+                    fontFamily: "serif",
+                    fontSize: "1.05rem",
+                    lineHeight: 1.8,
+                    pointerEvents: "none",
+                }}>
+                    {previewSegments.map((seg) => {
+                        if (seg.type === "plain") {
+                            return <span key={`pv-p-${seg.charStart}`} style={{ visibility: "hidden" }}>{seg.text}</span>;
+                        }
+                        const color = getEntityGroupColor(seg.label.labelEntityGroup);
+                        return (
+                            <span
+                                key={`pv-l-${seg.charStart}-${seg.charEnd}`}
+                                style={{
+                                    backgroundColor: `${color}22`,
+                                    borderBottom: `2px dashed ${color}`,
+                                    opacity: 0.6,
+                                    borderRadius: "2px",
+                                    padding: "1px 0",
+                                }}
+                            >
+                                {seg.text}
+                            </span>
+                        );
+                    })}
+                </div>
+            )}
             <style>{`
                 @keyframes label-flash {
                     0%, 30% { background-color: rgba(255, 255, 0, 0.5); }

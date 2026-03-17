@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { getNovelById, getChaptersByNovel, getChapterRevisionsByChapter, getChapterRevisionById } from "../api/novels";
-import { getLabelGroupsByNovel, getLabelDatas, getLabelsByLabelData, updateLabelDataStream, createLabelDataForGroup } from "../api/labels";
+import { getLabelGroupsByNovel, getLabelDatas, getLabelsByLabelData, updateLabelDataStream, createLabelDataForGroup, createLabelDataByAutoLabel } from "../api/labels";
+import { getAutoLabels, getAutoLabelById, createAutoLabels } from "../api/autolabels";
 import { type Novel, type RawChapter, type RawChapterRevisionMeta } from "../types/novel";
-import { type LabelGroup, type LabelData, type Label, type LabelOp, type AddLabelOp } from "../types/label";
+import { type LabelGroup, type LabelData, type Label, type LabelOp, type AddLabelOp, type CreateLabelDataByAutoLabelStatus } from "../types/label";
+import { type AutoLabelMeta, type AutoLabel } from "../types/autolabel";
 import { applyOpToLabels } from "../components/workspace/labelOps";
 import { SelectorsBar } from "../components/workspace/SelectorsBar";
 import { ChapterTextViewer } from "../components/workspace/ChapterTextViewer";
@@ -12,6 +14,7 @@ import { LabelPopover } from "../components/workspace/LabelPopover";
 import { NewLabelPopover } from "../components/workspace/NewLabelPopover";
 import { RightPanel } from "../components/workspace/RightPanel";
 import { LabelsPanel } from "../components/workspace/LabelsPanel";
+import { NerPanel } from "../components/workspace/NerPanel";
 
 type ActivePopover =
     | { type: "edit"; label: Label; rect: DOMRect }
@@ -51,6 +54,15 @@ export const NovelWorkspacePage = () => {
     const [searchWord, setSearchWord] = useState("");
     const [highlightedLabelId, setHighlightedLabelId] = useState<string | null>(null);
 
+    // NER state
+    const [autoLabelMeta, setAutoLabelMeta] = useState<AutoLabelMeta | null>(null);
+    const [autoLabelPreview, setAutoLabelPreview] = useState<AutoLabel | null>(null);
+    const [showAutoLabelPreview, setShowAutoLabelPreview] = useState(false);
+    const [nerModelName, setNerModelName] = useState("");
+    const [nerModelParams, setNerModelParams] = useState("{}");
+    const [isRunningNer, setIsRunningNer] = useState(false);
+    const [loadStatus, setLoadStatus] = useState<CreateLabelDataByAutoLabelStatus | null>(null);
+
     // Loading/error
     const [loading, setLoading] = useState(true);
     const [textLoading, setTextLoading] = useState(false);
@@ -64,6 +76,12 @@ export const NovelWorkspacePage = () => {
         }
         return [...groups].sort();
     }, [labels]);
+
+    // Derived: selected revision's isFinal flag
+    const selectedRevisionMeta = useMemo(
+        () => chapterRevisions.find((r) => r.rawChapterRevisionId === selectedRevisionId) ?? null,
+        [chapterRevisions, selectedRevisionId]
+    );
 
     // Sync query params → state on mount
     const initFromParams = useCallback(() => {
@@ -145,6 +163,45 @@ export const NovelWorkspacePage = () => {
                 setLabels([]);
             });
     }, [selectedLabelGroupId, selectedRevisionId]);
+
+    // Fetch auto-label meta when revision changes
+    useEffect(() => {
+        if (!selectedRevisionId || !novel) {
+            setAutoLabelMeta(null);
+            setAutoLabelPreview(null);
+            setShowAutoLabelPreview(false);
+            setLoadStatus(null);
+            return;
+        }
+        getAutoLabels(novel.novelId, null, [selectedRevisionId])
+            .then((result) => {
+                const meta = result[selectedRevisionId] ?? null;
+                setAutoLabelMeta(meta);
+            })
+            .catch(() => setAutoLabelMeta(null));
+    }, [selectedRevisionId, novel]);
+
+    // Poll auto-label status when pending/processing
+    useEffect(() => {
+        if (!autoLabelMeta || !novel) return;
+        const status = autoLabelMeta.autoLabelStatus;
+        if (status !== "pending" && status !== "processing") return;
+
+        const interval = setInterval(() => {
+            if (!selectedRevisionId) return;
+            getAutoLabels(novel.novelId, null, [selectedRevisionId])
+                .then((result) => {
+                    const meta = result[selectedRevisionId] ?? null;
+                    setAutoLabelMeta(meta);
+                    if (meta && meta.autoLabelStatus !== "pending" && meta.autoLabelStatus !== "processing") {
+                        clearInterval(interval);
+                    }
+                })
+                .catch(() => { /* keep polling */ });
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [autoLabelMeta?.autoLabelStatus, autoLabelMeta?.autoLabelId, novel, selectedRevisionId]);
 
     // Sync state → query params
     useEffect(() => {
@@ -238,11 +295,72 @@ export const NovelWorkspacePage = () => {
         }
     };
 
+    const handleRunNer = async () => {
+        if (!novel || !selectedRevisionId) return;
+        setIsRunningNer(true);
+        try {
+            let parsedParams = {};
+            try { parsedParams = JSON.parse(nerModelParams); } catch { /* use empty */ }
+            const results = await createAutoLabels({
+                novelId: novel.novelId,
+                autoLabelModelName: nerModelName.trim(),
+                autoLabelModelParams: parsedParams,
+                rawChapterRevisionIds: [selectedRevisionId],
+            });
+            if (results.length > 0) {
+                setAutoLabelMeta(results[0]);
+            }
+        } catch {
+            setPendingOpError("Failed to start NER.");
+        } finally {
+            setIsRunningNer(false);
+        }
+    };
+
+    const handleTogglePreview = async (show: boolean) => {
+        setShowAutoLabelPreview(show);
+        if (show && autoLabelMeta && !autoLabelPreview) {
+            try {
+                const full = await getAutoLabelById(autoLabelMeta.autoLabelId);
+                setAutoLabelPreview(full);
+            } catch {
+                setShowAutoLabelPreview(false);
+            }
+        }
+    };
+
+    const handleLoadIntoGroup = async () => {
+        if (!selectedLabelGroupId || !autoLabelMeta) return;
+        try {
+            let parsedParams = {};
+            try { parsedParams = JSON.parse(nerModelParams); } catch { /* use empty */ }
+            const status = await createLabelDataByAutoLabel(selectedLabelGroupId, {
+                modelName: autoLabelMeta.autoLabelModelName,
+                modelParams: parsedParams,
+                rawChapterRevisionIds: [autoLabelMeta.rawChapterRevisionId],
+            });
+            setLoadStatus(status);
+            // Reload labels after loading
+            if (selectedRevisionId && selectedLabelGroupId) {
+                const allLabelDatas = await getLabelDatas(selectedLabelGroupId);
+                const match = allLabelDatas.find((ld) => ld.rawChapterRevisionId === selectedRevisionId);
+                if (match) {
+                    setLabelData(match);
+                    const newLabels = await getLabelsByLabelData(match.labelDataId);
+                    setLabels(newLabels);
+                }
+            }
+        } catch {
+            setPendingOpError("Failed to load NER results into group.");
+        }
+    };
+
     if (loading) return <div style={{ padding: "20px" }}>Loading workspace...</div>;
     if (error) return <div style={{ padding: "20px", color: "red" }}>{error}</div>;
     if (!novel) return <div style={{ padding: "20px" }}>Novel not found.</div>;
 
     const showAnnotated = revisionText !== null && (labels.length > 0 || selectedLabelGroupId !== null);
+    const previewLabels = showAutoLabelPreview && autoLabelPreview?.autoLabelData ? autoLabelPreview.autoLabelData : null;
 
     return (
         <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 60px)" }}>
@@ -270,6 +388,7 @@ export const NovelWorkspacePage = () => {
                         <AnnotatedText
                             text={revisionText}
                             labels={labels}
+                            previewLabels={previewLabels}
                             scoreThreshold={scoreThreshold}
                             highlightedLabelId={highlightedLabelId}
                             onLabelClick={handleLabelClick}
@@ -296,7 +415,22 @@ export const NovelWorkspacePage = () => {
                             />
                         )}
                         {activeRightPanel === "ner" && (
-                            <div style={{ padding: "12px", color: "#888" }}>NER panel (step 6)</div>
+                            <NerPanel
+                                isFinal={selectedRevisionMeta?.rawChapterRevisionIsFinal ?? false}
+                                autoLabelMeta={autoLabelMeta}
+                                autoLabelPreview={autoLabelPreview}
+                                showPreview={showAutoLabelPreview}
+                                onTogglePreview={(show) => void handleTogglePreview(show)}
+                                nerModelName={nerModelName}
+                                onNerModelNameChange={setNerModelName}
+                                nerModelParams={nerModelParams}
+                                onNerModelParamsChange={setNerModelParams}
+                                isRunningNer={isRunningNer}
+                                onRunNer={() => void handleRunNer()}
+                                onLoadIntoGroup={() => void handleLoadIntoGroup()}
+                                loadStatus={loadStatus}
+                                hasSelectedGroup={selectedLabelGroupId !== null}
+                            />
                         )}
                         {activeRightPanel === "filters" && (
                             <div style={{ padding: "12px", color: "#888" }}>Filters panel (deferred)</div>

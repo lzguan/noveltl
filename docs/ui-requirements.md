@@ -1,615 +1,435 @@
-# UI Requirements
+# UI Requirements — Annotation Workspace
 
-**Last Updated**: March 7, 2026  
-**Status**: Draft
+**Last Updated**: 2026-03-17    
+**Status**: Approved
 
-This document specifies the frontend components for the NovelTL platform, including the chapter viewer, navigation, filters, and glossary management.
-
-**Implementation Status:** Most components described here are **design specifications** for planned features. The current frontend implements basic novel browsing, chapter reading, login, and simple label group management. Components marked with "✅ Implemented" exist in code; all others are planned.
+This document specifies the `NovelWorkspace` component — the primary annotation interface for NovelTL. It is the most complex component in the codebase and should be implemented incrementally.
 
 ---
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Core Components](#core-components)
-   - [Chapter Viewer](#chapter-viewer)
-   - [Chapter Navigator](#chapter-navigator)
-   - [Dual Chapter View](#dual-chapter-view)
-   - [Filter Workflow Panel](#filter-workflow-panel)
-   - [Label Sidebar](#label-sidebar)
-   - [Glossary Panel](#glossary-panel)
-3. [Component Hierarchy](#component-hierarchy)
-4. [Design Patterns](#design-patterns)
-5. [Responsive Design](#responsive-design)
-6. [Accessibility](#accessibility)
-7. [Performance Optimizations](#performance-optimizations)
-8. [Future Enhancements](#future-enhancements)
+1. [Purpose](#purpose)
+2. [Route](#route)
+3. [Layout (single instance)](#layout-single-instance)
+4. [Selectors Bar](#selectors-bar)
+5. [Chapter Text Viewer](#chapter-text-viewer)
+6. [Labels Panel](#labels-panel-right-sidebar-default-tab)
+7. [NER Panel](#ner-panel-right-sidebar-ner-tab)
+8. [Filters Panel](#filters-panel-right-sidebar-filters-tab)
+9. [State Model](#state-model)
+10. [Incremental Implementation Order](#incremental-implementation-order)
+11. [What This Document Does NOT Cover (yet)](#what-this-document-does-not-cover-yet)
+12. [Relevant Files](#relevant-files)
+13. [See Also](#see-also)
 
 ---
 
-## Overview
+## Purpose
 
-The frontend is built with React 19 and React Router v7, providing an interactive interface for:
-- Viewing and editing novel chapters
-- Managing labels (named entities)
-- Running automated filters
-- Maintaining glossaries and translations
+An Overleaf-style annotation workspace where a user can:
 
-All components emphasize keyboard navigation, tooltips, and responsive design.
+1. Load a novel, navigate chapters, and select a revision
+2. View the chapter text with NER labels rendered as inline coloured highlights
+3. Edit labels manually — add by selecting text, update entity group or drag span boundaries, delete
+4. Trigger autolabelling (NER) on a revision, preview raw results, and promote them into a label group
+5. Run filters on label data to bulk-approve or bulk-reject low-quality labels
 
-## Core Components
+The manage-novels section (`/edit/novels`) handles content management (uploading revisions, etc.). This workspace is for annotation and review.
 
-### Chapter Viewer
+---
 
-A rich text viewer for displaying novel chapters with inline labels (named entities).
+## Route
 
-**Display:**
+```
+/workspace/:novel_id
+```
 
-- Renders chapter text with labels highlighted (colorized by entity type)
-- Tooltip on hover: Shows entity group, confidence score, label ID
-- Visual indicators: Highlight current selection, dim low-confidence labels
-- Text formatting: Preserve whitespace, paragraph breaks
-- Label styling: Underline or border (configurable)
+The novel is fixed at route level. Chapter, revision, and label group are selected within the page. A `?chapter=N&revision=R&group=G` query string is kept in sync so users can bookmark or share a specific view.
 
-**Interactions:**
+> **Note on NER constraint:** The autolabel system only processes revisions where `is_final = true`. A revision must be finalized before NER can run on it.
 
-- **Click label** → Open label editor (entity group dropdown, delete button)
-- **Double-click text** → Create new label (select start/end positions)
-- **Hover** → Subtle highlight + tooltip with metadata
+---
 
-**Scroll sync:**
+## Layout (single instance)
 
-- Exposes `scrollTo(position)` method for external control
-- Emits `onScroll(position)` event for synchronization with other viewers
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Navbar                                                              │
+├─────────────────────────────────────────────────────────────────────┤
+│  Novel: My Novel   Chapter: [Ch 1 ▼]  Revision: [Draft v2 ▼]        │
+│  Label Group: [NER Run 1 ▼]  [+ New Group]      [Run NER ▼]         │
+├──────────────────────────────────────┬──────────────────────────────┤
+│                                      │  [Labels] [NER] [Filters]    │
+│  Chapter text with inline            ├──────────────────────────────┤
+│  highlighted spans…                  │                              │
+│                                      │  (active panel content)      │
+│  他来自[北京]₍LOC₎，是一名            │                               │
+│  [程序员]₍PER?₎。[刘备]₍PER₎说…       │                              │
+│                                      │                              │
+│  (scrollable)                        │  (scrollable)                │
+└──────────────────────────────────────┴──────────────────────────────┘
+```
 
-**Props:**
+Right panel is tabbed: **Labels** | **NER** | **Filters**. Default tab: Labels.
+
+---
+
+## Selectors Bar
+
+### Novel
+Fixed from the route param. Display the novel title as read-only text.
+
+### Chapter
+Dropdown of all chapters for the novel, sorted by `rawChapterNum`. Switching chapter resets revision selection, label data, and autolabel state.
+
+### Revision
+Dropdown of revisions for the selected chapter. Default: the primary revision (if one exists), otherwise the most recent. Only `rawChapterRevisionTitle` is shown; the revision ID drives all subsequent data loading.
+
+### Label Group
+Dropdown of all `LabelGroup` records for the novel. Switching label group reloads the label data for the current revision. A **"+ New Group"** button opens a small inline form (name only — reuse `createLabelGroup`). If no `LabelData` exists for the selected `(labelGroupId, revisionId)` pair yet, the labels panel is empty with a prompt to run NER or add labels manually.
+
+> **Data model reminder:** `LabelGroup` → `LabelData` (one per revision per group) → `Label[]`. A `LabelData` is created explicitly via `POST /label-groups/{id}/label-datas` before any ops can be sent.
+
+---
+
+## Chapter Text Viewer
+
+### Rendering labels as spans
+
+The chapter text is a plain string (`rawChapterRevisionText`). Labels carry `labelStart` and `labelEnd` character offsets into that string.
+
+> **Implementation decision:** Custom `<AnnotatedText>` component — no external annotation library. Splits `text` into plain runs and labelled spans based on character offsets, with draggable handles for resize. UTF-8 is safe for CJK content via standard JavaScript string slicing (Chinese/Japanese/Korean characters are BMP code points, single UTF-16 code units).
+
+**Span algorithm:**
+
+```
+1. Sort labels by labelStart ascending.
+2. Walk the text building a flat segment list:
+   - text run (plain string)
+   - label span (start, end, labelId, entityGroup, score, dirty)
+3. Overlapping labels: render outer label as span, overlap region as nested span.
+   Flag as a known edge case — keep simple for now.
+```
+
+Each entity group gets a consistent colour from a fixed palette keyed by entity group string
+(`PER` → blue, `LOC` → green, `ORG` → orange, unknown → grey).
+
+**Visual states:**
+- `labelDirty = true` → subtle dot/underline indicator ("manually edited / unverified")
+- `labelScore < scoreThreshold` → dimmed/greyed out (threshold set in Labels panel; default 0 = show all)
+- Active (currently hovered or selected in sidebar) → brightened border
+
+### Label editing: drag to resize / move
+
+Rather than clicking to get a popover for position changes, the user should be able to drag span boundaries directly in the text:
+
+- **Drag start handle** → adjusts `labelStart`
+- **Drag end handle** → adjusts `labelEnd`
+- **Drag span body** → moves the entire span (adjusts both start and end)
+
+**Snapping:** Drags should snap to word boundaries. Needs a word-boundary algorithm that works for CJK text (can't split on whitespace only — consider using `Intl.Segmenter` with `granularity: 'word'`).
+
+**Cursor:** Custom cursor during drag (resize cursor on handles, grab cursor on body).
+
+> **Implementation note:** This is the hardest single interaction in the workspace. It may need to be deferred to a later milestone after basic click-to-edit works. The data contract is clear: emit an `UpdateLabelOp` with `new_start_pos` / `new_end_pos` and derive the new word from `text.slice(new_start_pos, new_end_pos)`.
+
+### Text selection → new label
+
+When the user selects text in the viewer (`mouseup` event on the text container):
+
+1. Read `window.getSelection()` to get the selected range.
+2. Map the DOM selection back to character offsets in the raw string. Requires tracking which DOM node covers which character range.
+3. Show a **creation popover** anchored near the selection with:
+   - Selected text shown as read-only (the `word` is the slice, not user-editable)
+   - Entity group: free-text input with datalist suggestions drawn from distinct entity groups in current label data
+   - Confirm / Cancel
+4. On confirm:
+   - If no `LabelData` exists yet for this (revision, labelGroup): create one first via `POST /label-groups/{id}/label-datas`
+   - Then send `PATCH /label-datas/{id}` with `[AddLabelOp]`
+5. Apply optimistically to local state, reconcile on server response.
+
+### Click existing label → edit popover
+
+Clicking a labelled span opens a small inline popover (not a modal — dismisses on outside click or Escape):
+
+- **Entity group:** free-text input with datalist of existing groups — this is the main editable field
+- **Word:** read-only, showing `text.slice(labelStart, labelEnd)` — word is fully determined by position
+- **Dirty flag:** checkbox ("Mark as manually verified" — note: `dirty = true` means unverified/modified by hand; `false` means clean NER output)
+- **Save** → emit `UpdateLabelOp` with new `entity_group`, `dirty`, and derived `word` from current positions
+- **Delete** → emit `DeleteLabelOp`, close popover
+- **Cancel** → close without changes
+
+The popover is an absolutely-positioned div rendered via React portal (same pattern as `Modal`).
+
+### Optimistic updates
+
+Apply ops to local `labels` state immediately without waiting for the server round-trip, then reconcile with the server response:
 
 ```typescript
-interface ChapterViewerProps {
-  revisionId: number;
-  labels: Label[];
-  editable: boolean;
-  onLabelClick: (labelId: number) => void;
-  onLabelCreate: (start: number, end: number, word: string) => void;
-  onScroll?: (position: number) => void;
-  highlightLabelIds?: number[];  // External highlighting
+// Snapshot for rollback
+const snapshot = [...labels]
+
+// 1. Apply locally
+setLabels(applyOpToLabels(labels, op))
+setPendingOp(true)
+
+// 2. Send to server
+try {
+    await updateLabelDataStream(labelDataId, [op])
+    // PATCH returns 204 — trust local state; no re-fetch needed
+} catch {
+    // Roll back
+    setLabels(snapshot)
+    setPendingOpError('Failed to save — change rolled back')
+} finally {
+    setPendingOp(false)
 }
 ```
 
-**State:**
+`applyOpToLabels(labels, op)` is a pure function implementing the same logic as the server:
+- `add`: append new label
+- `delete`: remove label matching `start_pos`, `end_pos`, `word`
+- `update`: find label by `start_pos`/`end_pos`/`word`, replace fields
 
-- Current scroll position
-- Selected label ID
-- Hover state
+> **Future:** Server-side session UUID locking (client gets a session UUID on chapter navigation; stale writes rejected) is a planned enhancement. Defer until the basic optimistic approach causes problems.
 
-### Chapter Navigator
+---
 
-A sidebar or panel for navigating between chapters.
+## Labels Panel (right sidebar, default tab)
 
-**Display:**
+A scrollable list of all labels for the current revision + label group.
 
-- Dropdown list of chapters (by chapter number)
-- Previous/Next navigation buttons
-- Default behavior: Load primary revision, or most recent revision if primary doesn't exist
-- Status indicators:
-  - Has labels (icon or badge)
-  - Has revisions (icon or badge)
-  - Translation status (Draft/Review/Complete)
-- Current chapter highlighted
+**Columns:** Word · Entity Group · Score · Position (char offset)
 
-**Interactions:**
+**Controls:**
+- Sort by: position (default) | entity group | score | word
+- Filter by entity group: multi-select chips (one chip per distinct entity group in current labels)
+- Score threshold slider: dim labels below this score (does not hide — labels are still visible in the text but greyed out). Range 0–1, default 0.
+- Search by word: text input
 
-- Click chapter → Load chapter in viewer
-- Previous/Next buttons → Navigate sequentially
+**Row interactions:**
+- Click row → scroll chapter viewer to that span and briefly highlight it ("flash" the span)
+- Click entity group chip in row → open edit popover for that label
 
-**Props:**
+**Counter:** "42 labels · 3 below threshold"
+
+---
+
+## NER Panel (right sidebar, NER tab)
+
+Displays autolabel status for the current revision and allows triggering NER.
+
+> **Constraint reminder:** NER only runs on finalized (`is_final = true`) revisions. If the current revision is not finalized, show a warning instead of the Run NER button.
+
+> **Deduplication constraint:** The backend has a unique constraint on `(revision_id, model_name, model_params)`. Running NER twice with identical params returns `200 []` silently — no new autolabel is created. "Re-run NER" must change params slightly (e.g. bump a param) or the backend needs a retry endpoint (not yet implemented). Surface this constraint in the UI — disable "Re-run" if params have not changed and the existing run succeeded.
+
+**Status display:**
+- No autolabel for this revision → "No NER has been run for this revision."
+- `pending` → spinner + "Queued..."
+- `processing` → spinner + "Running NER..."
+- `done` → "✓ NER complete · model: cluener"
+- `failed` → "✗ NER failed" + `autoLabelMessage`
+
+**Run NER form:**
+- Model name: text input (default `'cluener'`)
+- Model params: collapsible JSON textarea (default `{}`)
+- **Run NER** button
+
+**Viewing results without creating a LabelData ("preview mode"):**
+
+After NER completes (`done`), the user can preview raw autolabel results in the text viewer without committing them to a label group. This overlays the autolabel spans in a distinct visual style (e.g. dashed border, lighter opacity) separate from the active label group's highlights. Toggle via a "Preview NER results" checkbox in the NER panel.
+
+This requires fetching the full `AutoLabel` (with `auto_label_data`) via `GET /auto-labels/{auto_label_id}` when preview is enabled. The preview renders read-only — no editing, no ops.
+
+**Load results into label group:**
+
+Once satisfied with the NER output, the user can promote it into the current label group:
+
+```
+POST /label-groups/{labelGroupId}/label-datas/auto-labels
+{
+    "model_name": "cluener",
+    "model_params": {},
+    "raw_chapter_revision_ids": [currentRevisionId]
+}
+```
+
+Returns `CreateLabelDataByAutoLabelStatus`:
+- `success`: list of revision IDs that were imported
+- `errors`: list of `[revisionId, errorMessage]` tuples
+
+Show a summary: "Imported N labels. X revisions failed." On success, reload label data and exit preview mode.
+
+Polling: 3s interval while status is `pending` or `processing`.
+
+---
+
+## Filters Panel (right sidebar, Filters tab)
+
+> **DEFERRED.** Implement last. The full spec is preserved below for reference but do not implement this until all other panels are working.
+
+Allows running filters from the `filters` API on the current label group.
+
+**Step 1 — Select filter**
+Dropdown populated from `GET /filters/schemas` → `Record<string, SchemaInfo>`.
+
+**Step 2 — Configure options**
+Render a dynamic form from the `flagInstancesOptionsSchema` JSON Schema field. Minimal recursive renderer:
+
+```
+number / integer  → <input type="number" min/max from schema>
+string            → enum present? <select> : <input type="text">
+boolean           → <input type="checkbox">
+array             → list of items with +/- row buttons
+unknown type      → raw JSON textarea fallback + console.warn
+```
+
+**Step 3 — Flag instances**
+"Run Filter" → `POST /filters/{filter_name}/flag-instances` with options. Returns list of instances.
+
+**Step 4 — Group and review**
+Group flagged instances by word. Per group: show word, count, entity group, context snippets (via `POST /filters/{filter_name}/get-contexts`). Per-group Approve / Reject.
+
+**Step 5 — Apply**
+"Apply" → `POST /filters/{filter_name}/apply` with approved instances and `label-group-id`. Reload label data.
+
+---
+
+## State Model
 
 ```typescript
-interface ChapterNavigatorProps {
-  novelId: number;
-  currentChapter: number;
-  onChapterChange: (chapterNum: number) => void;
-}
+// ── Route / navigation ──────────────────────────────────────────────
+novelId: number                               // from route param (:novel_id)
+
+// ── Novel-level data ─────────────────────────────────────────────────
+novel: Novel | null                           // fetched on mount
+chapters: RawChapter[]                        // all chapters, sorted by rawChapterNum
+labelGroups: LabelGroup[]                     // all label groups for this novel
+
+// ── Chapter selection ─────────────────────────────────────────────────
+selectedChapterId: number | null              // drives revision list + URL sync
+chapterRevisions: RawChapterRevisionMeta[]    // revisions for selected chapter
+
+// ── Revision selection ────────────────────────────────────────────────
+selectedRevisionId: number | null             // drives text + labelData + autoLabel
+revisionText: string | null                   // rawChapterRevisionText, fetched on change
+textContainerRef: React.RefObject<HTMLDivElement>  // DOM ref for offset mapping
+
+// ── Label group selection ─────────────────────────────────────────────
+selectedLabelGroupId: number | null
+
+// ── Label data (active annotation layer) ─────────────────────────────
+labelData: LabelData | null                   // null = no LabelData exists yet
+labels: Label[]                               // local mutable copy, updated optimistically
+pendingOp: boolean                            // true while PATCH is in-flight
+pendingOpError: string | null                 // shown inline, cleared on next op
+
+// ── Label interaction state ───────────────────────────────────────────
+activePopover:
+    | { type: 'new'; start: number; end: number; anchorRect: DOMRect }
+    | { type: 'edit'; label: Label; anchorRect: DOMRect }
+    | null
+dragState:
+    | { labelId: number; handle: 'start' | 'end' | 'body'; originX: number; originStart: number; originEnd: number }
+    | null
+highlightedLabelId: number | null             // label scroll-to'd from sidebar (flash animation)
+
+// ── Label display settings ─────────────────────────────────────────────
+scoreThreshold: number                        // 0–1, labels below this are dimmed
+entityGroupFilter: Set<string>                // empty = show all groups
+sortBy: 'position' | 'score' | 'entityGroup' | 'word'
+searchWord: string
+
+// ── NER (autolabel) state ──────────────────────────────────────────────
+autoLabelMeta: AutoLabelMeta | null           // for current revision (polled)
+autoLabelPreview: AutoLabel | null            // full AutoLabel with label data (preview mode)
+showAutoLabelPreview: boolean                 // overlay raw NER results on text
+nerModelName: string                          // default 'cluener'
+nerModelParams: Record<string, unknown>       // default {}
+
+// ── Right panel ────────────────────────────────────────────────────────
+activeRightPanel: 'labels' | 'ner' | 'filters'
+
+// ── Filters panel (deferred) ───────────────────────────────────────────
+// filterState: FilterWorkflowState            // spec TBD
+
+// ── Global loading / error ─────────────────────────────────────────────
+loading: boolean                              // initial data fetch
+error: string | null                          // fatal load error
 ```
 
-**API Integration:**
-
-```http
-GET /novels/{novel_id}/chapters
-Response: [
-  {
-    "chapter_num": 1,
-    "has_labels": true,
-    "has_revisions": true,
-    "status": "complete"
-  },
-  ...
-]
-```
-
-### Dual Chapter View
-
-A layout component that renders two ChapterViewer instances side by side for comparison.
-
-**Use Cases:**
-
-- Compare different revisions
-- View original vs. translation
-- Review before/after filter application
-
-**Properties:**
+### Derived values (computed, not stored)
 
 ```typescript
-interface DualChapterViewProps {
-  leftRevisionId: number;
-  rightRevisionId: number;
-  syncScroll: boolean;
-}
+// Entity groups seen in current labels (for datalist suggestions)
+const knownEntityGroups: string[] = useMemo(
+    () => [...new Set(labels.map(l => l.labelEntityGroup))].sort(),
+    [labels]
+)
+
+// Filtered + sorted label list for the sidebar
+const visibleLabels: Label[] = useMemo(
+    () => labels
+        .filter(l => entityGroupFilter.size === 0 || entityGroupFilter.has(l.labelEntityGroup))
+        .filter(l => !searchWord || l.labelWord.includes(searchWord))
+        .sort(sortComparators[sortBy]),
+    [labels, entityGroupFilter, searchWord, sortBy]
+)
+
+// Current revision is finalized (required for NER)
+const canRunNer: boolean = useMemo(
+    () => chapterRevisions.find(r => r.rawChapterRevisionId === selectedRevisionId)
+              ?.rawChapterRevisionIsFinal ?? false,
+    [chapterRevisions, selectedRevisionId]
+)
 ```
 
-**Sync Scrolling Approach:**
+### URL sync
 
-Three options considered:
+Keep `?chapter=`, `?revision=`, and `?group=` in sync using `useSearchParams` from React Router.
+On initial mount, read query params to restore state (e.g. from a bookmarked URL).
 
-1. **Option A: Pixel-based**
-   - Scroll positions match exactly (same pixel offset)
-   - Simplest to implement
-   - Breaks alignment if content lengths differ
+---
 
-2. **Option B: Paragraph-based** ✅ **Recommended**
-   - Align by paragraph index (e.g., paragraph 5 on left aligns with paragraph 5 on right)
-   - Handles different-length translations gracefully
-   - Good balance of precision and complexity
+## Incremental Implementation Order
 
-3. **Option C: Label-based**
-   - Align by label positions (precise semantic alignment)
-   - Complex implementation (requires label position mapping)
-   - Best for label-heavy workflows
+Build and test in this order. Each step is independently usable:
 
-**Current Status:** Option A implemented for simplicity. Option B is the sweet spot for future enhancement.
+1. **Selectors + plain text display** — fetch revision text and display as plain text. Chapter/revision/group dropdowns work. URL query sync works.
+2. **Read-only label highlighting** — fetch label data, render spans with entity group colours. No editing yet.
+3. **Click-to-edit popover** — update entity group and delete existing labels. No drag yet.
+4. **Text selection → new label** — add label creation. Requires DOM offset mapping.
+5. **Labels panel** — scrollable list with sort/filter/search, scroll-to-label flash.
+6. **NER panel** — trigger autolabel, poll status, preview mode, load into label group.
+7. **Drag-to-resize spans** — the hardest interaction. Implement after everything else works.
+8. **Filters panel** — deferred; implement last.
 
-**Implementation Notes:**
+---
 
-```typescript
-// Option A (current)
-const handleScroll = (position: number) => {
-  if (syncScroll) {
-    leftViewerRef.current.scrollTo(position);
-    rightViewerRef.current.scrollTo(position);
-  }
-};
+## What This Document Does NOT Cover (yet)
 
-// Option B (future)
-const handleScroll = (paragraphIndex: number) => {
-  if (syncScroll) {
-    leftViewerRef.current.scrollToParagraph(paragraphIndex);
-    rightViewerRef.current.scrollToParagraph(paragraphIndex);
-  }
-};
-```
+- **Side-by-side dual view**: deferred. Requires optional route query params `?novel2=`, `?chapter2=`, `?revision2=`, `?group2=` and a two-column layout variant. Architecture should support it (component takes explicit IDs as props), but multi-instance state sync is a separate spec.
+- **Glossary panel**: no backend support exists yet.
+- **Real-time collaboration**: no WebSocket support. Not in scope.
+- **Mobile / responsive**: not a priority.
+- **Undo/redo**: the immutable revision model makes undo non-trivial (requires inverse ops). Deferred.
 
-### Filter Workflow Panel
-
-The UI for running and reviewing filter operations (see [filter-system.md](filter-system.md)).
-
-**Display:**
-
-- **Filter selector** - Dropdown or list of available filters
-- **Options form** - Dynamic form rendered from filter schema
-- **Groups table** - Shows:
-  - Instance value (e.g., "他")
-  - Count (e.g., 200 occurrences)
-  - Sample decisions (preview of flagged instances)
-  - Status (Pending/Approved/Rejected)
-- **Expandable rows** - Click to show sampled contexts and decisions
-
-**Interactions:**
-
-1. **Select filter** → Fetch filter schema
-2. **Configure options** → Fill form (min_score, chapter range, etc.)
-3. **Run filter** → POST to `/filters/{name}/flag-instances`
-4. **Preview instances** → Populate groups table
-5. **Expand group** → POST to `/filters/{name}/get-contexts` for sampled instances
-6. **Approve/reject group** → Mark entire group or individual instances
-7. **Apply filter** → POST to `/filters/{name}/apply` with approved instances
-
-**Workflow States:**
-
-```mermaid
-graph LR
-    A[Configure] --> B[Flagged]
-    B --> C[Reviewing]
-    C --> D[Approved/Rejected]
-    D --> E[Applied]
-```
-
-**Props:**
-
-```typescript
-interface FilterWorkflowPanelProps {
-  novelId: number;
-  labelGroupId: number;
-  onFilterApplied: () => void;
-}
-```
-
-**State Management:**
-
-```typescript
-interface FilterWorkflowState {
-  selectedFilter: string | null;
-  flagOptions: Record<string, any>;
-  flaggedInstances: Instance[];
-  instanceGroups: Map<string, Instance[]>;  // Group by instance value
-  groupDecisions: Map<string, 'approved' | 'rejected' | 'pending'>;
-  expandedGroups: Set<string>;
-}
-```
-
-**Sampling Strategy:**
-
-Instead of showing all 10,000 flagged labels:
-
-1. **Group by instance value** - e.g., all instances of "他"
-2. **Sample O(log n)** - Show ~10 representative examples per group
-3. **User reviews samples** - If all samples look correct, assume group is correct
-4. **Apply to all** - Filter entire group, not just samples
-
-**Example Group Display:**
-
-```
-+---------------------------------------------------------------+
-| 他 (200 occurrences)                       [Approve] [Reject] |
-+---------------------------------------------------------------+
-| Sample 1: "他说：「你好吗？」"                            ❌  |
-| Sample 2: "他们一起去了北京。"                           ❌  |
-| Sample 3: "他是一个好人。"                               ❌  |
-| ... [Show 7 more samples]                                     |
-+---------------------------------------------------------------+
-```
-
-### Label Sidebar
-
-A panel showing all labels in the current chapter (or across chapters).
-
-**Display:**
-
-- List of labels with columns:
-  - Word (e.g., "张三")
-  - Entity group (e.g., "PER")
-  - Position (character offset)
-  - Score (confidence 0-1)
-- Sortable by: Position, entity group, score, word
-- Filters:
-  - Entity group (multi-select dropdown)
-  - Search by word (text input)
-  - Score threshold (slider)
-
-**Interactions:**
-
-- **Click label** → Scroll chapter viewer to that position
-- **Edit inline** → Editable fields for word, entity group
-- **Delete** → Delete button with confirmation
-
-**Props:**
-
-```typescript
-interface LabelSidebarProps {
-  revisionId: number;
-  labels: Label[];
-  onLabelClick: (labelId: number) => void;
-  onLabelUpdate: (labelId: number, updates: Partial<Label>) => void;
-  onLabelDelete: (labelId: number) => void;
-}
-```
-
-**State:**
-
-```typescript
-interface LabelSidebarState {
-  sortBy: 'position' | 'entity_group' | 'score' | 'word';
-  sortOrder: 'asc' | 'desc';
-  filterEntityGroups: string[];
-  searchQuery: string;
-  minScore: number;
-}
-```
-
-**Example Display:**
-
-```
-╔════════════════════════════════════════════════════════╗
-║ Labels (42)                         [+ New Label]      ║
-╠════════════════════════════════════════════════════════╣
-║ Filter: [PER] [LOC] [ORG]   Search: [____]            ║
-║ Sort by: [Position ▼]                                 ║
-╠════════════════════════════════════════════════════════╣
-║ 张三        PER    0.95   Ch1:150    [Edit] [Delete]  ║
-║ 北京        LOC    0.87   Ch1:230    [Edit] [Delete]  ║
-║ 清华大学    ORG    0.92   Ch1:310    [Edit] [Delete]  ║
-║ ...                                                    ║
-╚════════════════════════════════════════════════════════╝
-```
-
-### Glossary Panel
-
-Aggregated view of unique terms across the novel (step 3 in the translation pipeline).
-
-**Purpose:** 
-
-Manage translations for recurring terms, ensuring consistency across chapters.
-
-**Display:**
-
-- Table with columns:
-  - Term (original text)
-  - Entity group (PER/LOC/ORG/etc.)
-  - Occurrence count (across all chapters)
-  - Translation (user-provided)
-  - Status (Unreviewed/Reviewed/Verified)
-- Sortable by all columns
-- Filterable by:
-  - Entity group
-  - Status
-  - Has translation (yes/no)
-
-**Interactions:**
-
-- **Click term** → Show all contexts (across chapters) in modal
-- **Click context** → Jump to that position in chapter viewer
-- **Edit translation** → Inline editable field
-- **Mark as reviewed/verified** → Status toggle
-
-**Props:**
-
-```typescript
-interface GlossaryPanelProps {
-  novelId: number;
-  glossaryEntries: GlossaryEntry[];
-  onEntryUpdate: (entryId: number, updates: Partial<GlossaryEntry>) => void;
-  onShowContexts: (entryId: number) => void;
-}
-
-interface GlossaryEntry {
-  entry_id: number;
-  term: string;
-  entity_group: string;
-  occurrence_count: number;
-  translation: string | null;
-  status: 'unreviewed' | 'reviewed' | 'verified';
-}
-```
-
-**Context Modal:**
-
-When user clicks a term, show modal with all occurrences:
-
-```
-╔════════════════════════════════════════════════════════╗
-║ Contexts for "张三" (PER)                    [Close]   ║
-╠════════════════════════════════════════════════════════╣
-║ Ch1: "张三说：「你好吗？」"               [Jump]      ║
-║ Ch1: "张三和李四一起去了北京。"           [Jump]      ║
-║ Ch2: "「你就是张三吗？」王五问道。"       [Jump]      ║
-║ Ch5: "张三的父亲是一位著名的学者。"       [Jump]      ║
-║ ... (38 more)                                          ║
-╚════════════════════════════════════════════════════════╝
-```
-
-**API Integration:**
-
-```http
-GET /novels/{novel_id}/glossary
-Response: [
-  {
-    "entry_id": 1,
-    "term": "张三",
-    "entity_group": "PER",
-    "occurrence_count": 42,
-    "translation": "Zhang San",
-    "status": "reviewed"
-  },
-  ...
-]
-
-GET /novels/{novel_id}/glossary/{entry_id}/contexts
-Response: [
-  {
-    "chapter_num": 1,
-    "revision_id": 123,
-    "context": "张三说：「你好吗？」",
-    "position": 150
-  },
-  ...
-]
-```
-
-## Component Hierarchy
-
-```
-App
-├── Navbar
-│   ├── User menu
-│   └── Novel selector
-├── NovelWorkspace
-│   ├── ChapterNavigator (sidebar)
-│   ├── MainContent
-│   │   ├── ChapterViewer (single)
-│   │   └── DualChapterView (comparison mode)
-│   └── RightPanel (tabbed)
-│       ├── LabelSidebar
-│       ├── FilterWorkflowPanel
-│       └── GlossaryPanel
-└── Footer
-```
-
-## Design Patterns
-
-### Dynamic Form Rendering
-
-Filters expose Pydantic schemas via API. Frontend renders forms dynamically:
-
-```typescript
-interface FieldElement {
-  field_name: string;
-  field_type: 'int' | 'float' | 'string' | 'bool' | 'Label' | FieldElement[];
-  is_list: boolean;
-  options: FieldOptions;
-}
-
-interface FieldOptions {
-  default?: any;
-  min?: number;
-  max?: number;
-  enum?: string[];
-  description?: string;
-  // ... see filter-system.md for full list
-}
-```
-
-**Rendering Logic:**
-
-```typescript
-function renderField(field: FieldElement): JSX.Element {
-  switch (field.field_type) {
-    case 'int':
-    case 'float':
-      return <NumberInput {...field} />;
-    case 'string':
-      return field.options.enum 
-        ? <Dropdown options={field.options.enum} {...field} />
-        : <TextInput {...field} />;
-    case 'bool':
-      return <Checkbox {...field} />;
-    case 'Label':
-      return <LabelPicker {...field} />;
-    default:
-      if (Array.isArray(field.field_type)) {
-        return <NestedForm fields={field.field_type} {...field} />;
-      }
-  }
-}
-```
-
-### State Management
-
-Use React Context for:
-- Current novel ID
-- Current chapter/revision
-- User permissions
-- Language data (✅ implemented as `LanguageContext`)
-
-Use local state for:
-- Component-specific UI (expanded/collapsed, sort order)
-- Form inputs
-
-**Planned:** React Query (TanStack Query) for API data fetching, caching, and invalidation. Not yet installed.
-
-### Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+N` | Next chapter |
-| `Ctrl+P` | Previous chapter |
-| `Ctrl+F` | Focus search |
-| `Ctrl+L` | Focus label sidebar |
-| `Ctrl+G` | Focus glossary |
-| `Escape` | Close modal/cancel edit |
-| `Ctrl+S` | Save (if editing) |
-
-## Responsive Design
-
-**Breakpoints:**
-
-- Desktop (>1200px): Full layout with sidebar and right panel
-- Tablet (768-1200px): Collapsible panels
-- Mobile (<768px): Stacked layout, panels as bottom sheets
-
-**Mobile Adaptations:**
-
-- ChapterNavigator → Bottom sheet or dropdown
-- LabelSidebar → Swipe-up panel
-- GlossaryPanel → Full-screen modal
-- DualChapterView → Tabs instead of side-by-side
-
-## Accessibility
-
-- Semantic HTML (`<nav>`, `<main>`, `<aside>`)
-- ARIA labels for interactive elements
-- Keyboard navigation (tab order, focus management)
-- Color contrast (WCAG AA minimum)
-- Screen reader support (announce filter status, label changes)
-
-## Performance Optimizations
-
-### Virtualization
-
-For long lists (labels, glossary entries):
-- Use react-window or react-virtualized
-- Render only visible items
-- Lazy load contexts on demand
-
-### Code Splitting
-
-- Lazy load filters (only load ScoreFilter when selected)
-- Lazy load modals (context viewer, glossary details)
-- Route-based splitting (chapter view vs. novel list)
-
-### Debouncing
-
-- Search inputs (300ms debounce)
-- Scroll sync (throttle to 60fps)
-
-## Future Enhancements
-
-### Collaboration Features
-
-- Real-time label updates (WebSocket)
-- User cursors in chapter viewer
-- Comment threads on labels
-
-### Advanced Filtering
-
-- Visual filter builder (drag-and-drop)
-- Filter templates (save common configurations)
-- Batch operations (apply filter to multiple chapters)
-
-### Translation Assistance
-
-- Inline LLM suggestions
-- Translation memory integration
-- Glossary auto-population from translations
-
-### Undo/Redo
-
-- Track filter applications as operations
-- Rollback to previous state
-- Operation history panel
+---
 
 ## Relevant Files
 
-**Existing:**
-- `frontend/src/components/layout/` - Layout and Navbar components
-- `frontend/src/components/novels/` - Novel-related components (NovelCard, NovelHeader, CreateNovelForm, RevisionContentDisplay, RevisionSidebar)
-- `frontend/src/components/common/Modal.tsx` - Modal component
-- `frontend/src/pages/` - ChapterReaderPage, DashboardPage, EditNovelsPage, LoginPage, NovelDetailsPage, NovelsPage
-- `frontend/src/api/` - API client functions (auth, novels, labels, languages)
-- `frontend/src/types/` - TypeScript type definitions (label, language, novel)
-- `frontend/src/contexts/` - LanguageContext and LanguageProvider
-- `frontend/src/routes.ts` - Route definitions
-
-**Planned (not yet implemented):**
-- `frontend/src/components/ChapterViewer.tsx` - Chapter viewer component
-- `frontend/src/components/ChapterNavigator.tsx` - Chapter navigation
-- `frontend/src/components/FilterWorkflowPanel.tsx` - Filter UI
-- `frontend/src/components/LabelSidebar.tsx` - Label management
-- `frontend/src/components/GlossaryPanel.tsx` - Glossary interface
-- `frontend/src/pages/NovelWorkspace.tsx` - Main workspace layout
+- `frontend/src/api/labels.ts` - Label data CRUD + `updateLabelDataStream` (PATCH returns 204)
+- `frontend/src/api/autolabels.ts` - AutoLabel trigger + status polling
+- `frontend/src/api/novels.ts` - Chapter/revision fetching
+- `frontend/src/types/novel.ts` - `RawChapter`, `RawChapterRevisionMeta`
+- `frontend/src/types/label.ts` - `Label`, `LabelData`, `LabelGroup`, `LabelOp`
+- `frontend/src/types/autolabel.ts` - `AutoLabel`, `AutoLabelMeta`, `AutoLabelProgress`
+- `frontend/src/components/common/Modal.tsx` - Portal pattern reference for popover
 
 ## See Also
 
-- [filter-system.md](filter-system.md) - Filter abstraction and API design
-- [architecture.md](architecture.md) - Overall system architecture
-- [api-design.md](api-design.md) - REST API specifications
-- [database-schema.md](database-schema.md) - Database models
+- [architecture.md](architecture.md) - System overview
+- [background-jobs.md](background-jobs.md) - AutoLabel state machine, NER constraints
+- [api-design.md](api-design.md) - REST patterns (PATCH, POST action endpoints)
+- [conventions.md](conventions.md) - Frontend naming, component structure

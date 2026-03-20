@@ -7,7 +7,7 @@ from ..auth.dependencies import get_current_user
 from ..auth.models import User
 from ..database import get_db
 from ..exceptions import DataTooLongException, NotFoundException
-from ..novels.exceptions import NovelNotFoundException, RawChapterRevisionNotFoundException
+from ..novels.exceptions import NovelNotFoundException, RevisionNotFoundException
 from . import schemas
 from .exceptions import (
     LabelDataNotFoundException,
@@ -169,10 +169,10 @@ def create_label_data(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Label group not found."
         ) from e
-    except RawChapterRevisionNotFoundException as e:
+    except RevisionNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Raw chapter revision not found."
+            detail="Revision not found."
         ) from e
     except LabelDataRevisionDuplicateException as e:
         raise HTTPException(
@@ -182,7 +182,7 @@ def create_label_data(
     except NotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Label group or raw chapter revision not found."
+            detail="Label group or revision not found."
         ) from e
     return label_data
 
@@ -198,10 +198,10 @@ def update_label_data_stream(
     """
     try:
         modify_label_data_by_stream(db, current_user, label_data_id, request)
-    except (LabelDataNotFoundException, RawChapterRevisionNotFoundException) as e:
+    except (LabelDataNotFoundException, RevisionNotFoundException) as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Label Data {label_data_id} or its underlying Chapter Revision not found."
+            detail=f"Label Data {label_data_id} or its underlying Revision not found."
         ) from e
     except LabelWordMismatchInvalidOperationException as e:
         raise HTTPException(

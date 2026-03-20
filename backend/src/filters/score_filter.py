@@ -10,7 +10,7 @@ from ..labels import models as label_models
 from ..labels import schemas as label_schemas
 from ..labels.permissions import label_data_mod_access_select, label_mod_access_delete
 from ..novels import models as novel_models
-from ..novels.permissions import raw_chapter_revision_mod_access_select
+from ..novels.permissions import revision_mod_access_select
 from .filter_base import (
     ApplyFilterOptionsBase,
     DecideInstancesOptionsBase,
@@ -88,54 +88,54 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
 
     def flag_instances(self, db : Session, current_user : User, options : ScoreFlagInstancesOptions) -> list[SingleLabel]:
         q = select(
-            label_models.Label, novel_models.RawChapterRevision.raw_chapter_revision_id
+            label_models.Label, novel_models.Revision.revision_id
         ).where(
             label_models.Label.label_score < options.min_score
         ).join(
             label_models.LabelData,
             label_models.Label.label_data_id == label_models.LabelData.label_data_id
         ).join(
-            novel_models.RawChapterRevision,
-            label_models.LabelData.raw_chapter_revision_id == novel_models.RawChapterRevision.raw_chapter_revision_id
+            novel_models.Revision,
+            label_models.LabelData.revision_id == novel_models.Revision.revision_id
         ).join(
-            novel_models.RawChapter,
-            novel_models.RawChapterRevision.raw_chapter_id == novel_models.RawChapter.raw_chapter_id
+            novel_models.Chapter,
+            novel_models.Revision.chapter_id == novel_models.Chapter.chapter_id
         ).where(
             label_models.LabelData.label_group_id == options.label_group_id
         )
         if not options.flag_dirty:
             q = q.where(label_models.Label.label_dirty.is_(False))
         if options.start is not None:
-            q = q.where(novel_models.RawChapter.raw_chapter_num >= options.start)
+            q = q.where(novel_models.Chapter.chapter_num >= options.start)
         if options.end is not None:
-            q = q.where(novel_models.RawChapter.raw_chapter_num < options.end)
+            q = q.where(novel_models.Chapter.chapter_num < options.end)
         q = label_data_mod_access_select(q, current_user)
 
         result = db.execute(q)
         result_rows = result.all()
 
-        return [SingleLabel(label=label_schemas.Label.model_validate(label), raw_chapter_revision_id=id) for label, id in result_rows]
+        return [SingleLabel(label=label_schemas.Label.model_validate(label), revision_id=id) for label, id in result_rows]
 
     def get_contexts(self, db : Session, current_user : User, instances : list[SingleLabel], options : ScoreGetContextOptions) -> list[SentenceContext | None]:
-        revision_ids = list({instance.raw_chapter_revision_id for instance in instances})
+        revision_ids = list({instance.revision_id for instance in instances})
         q = select(
-            novel_models.RawChapterRevision
+            novel_models.Revision
         ).where(
-            novel_models.RawChapterRevision.raw_chapter_revision_id.in_(revision_ids)
+            novel_models.Revision.revision_id.in_(revision_ids)
         )
-        q = raw_chapter_revision_mod_access_select(q, current_user)
+        q = revision_mod_access_select(q, current_user)
         result = db.execute(q)
         result_rows = result.scalars().all()
-        revision_map = {rev.raw_chapter_revision_id: rev for rev in result_rows}
+        revision_map = {rev.revision_id: rev for rev in result_rows}
 
         output : list[SentenceContext | None] = []
         for instance in instances:
-            if instance.raw_chapter_revision_id not in revision_map:
+            if instance.revision_id not in revision_map:
                 output.append(None)
                 continue
-            revision = revision_map[instance.raw_chapter_revision_id]
+            revision = revision_map[instance.revision_id]
             sentence, label_start_rel, label_end_rel = find_sentence_around(
-                revision.raw_chapter_revision_text,
+                revision.revision_text,
                 instance.label.label_start,
                 instance.label.label_end,
                 options.delimiters
@@ -144,7 +144,7 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
                 text=sentence,
                 label_start_rel=label_start_rel,
                 label_end_rel=label_end_rel,
-                raw_chapter_revision_id=instance.raw_chapter_revision_id
+                revision_id=instance.revision_id
             ))
         return output
 
@@ -178,7 +178,7 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
 
         instance_tuples = [
             (
-                instance.raw_chapter_revision_id,
+                instance.revision_id,
                 instance.label.label_start,
                 instance.label.label_end,
                 instance.label.label_word,
@@ -197,7 +197,7 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
             )
         ).where(
             tuple_(
-                select(sub_q.c.raw_chapter_revision_id).where(
+                select(sub_q.c.revision_id).where(
                     sub_q.c.label_data_id == label_models.Label.label_data_id
                 ).correlate(label_models.Label).scalar_subquery(),
                 label_models.Label.label_start,

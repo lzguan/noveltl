@@ -8,7 +8,7 @@ from ..models import Base
 from .constants import MAX_MODEL_NAME_LEN, AutoLabelProgress
 
 if TYPE_CHECKING:
-    from src.novels.models import RawChapterRevision
+    from src.novels.models import Revision
 
 class AutoLabel(Base):
     """
@@ -22,10 +22,10 @@ class AutoLabel(Base):
         auto_label_status: Status of labeling task for this autolabel
         auto_label_last_job_id: Job id of last request to autogenerate this autolabel. Optional parameter.
         auto_label_message: Message about the status of this auto label (e.g. auto label failure reason). Optional parameter.
-        raw_chapter_revision_id: Chapter this AutoLabel is associated with.
+        revision_id: Chapter this AutoLabel is associated with.
 
     Notes:
-        Each raw chapter revision can only have one autolabel with a given model and parameters.
+        Each revision can only have one autolabel with a given model and parameters.
     """
     __tablename__ = 'auto_labels'
 
@@ -37,10 +37,10 @@ class AutoLabel(Base):
     auto_label_last_job_id : Mapped[str] = mapped_column(String(36), nullable=True)
     auto_label_message : Mapped[str] = mapped_column(Text, nullable=True)
 
-    raw_chapter_revision_id : Mapped[int] = mapped_column(ForeignKey('raw_chapter_revisions.raw_chapter_revision_id', name='fk_auto_labels_raw_chapter_revision_id_raw_chapter_revisions'), nullable=False)
-    raw_chapter_revision_of_auto_label : Mapped["RawChapterRevision"] = relationship(back_populates='auto_labels_with_raw_chapter_revision')
+    revision_id : Mapped[int] = mapped_column(ForeignKey('revisions.revision_id', name='fk_auto_labels_revision_id_revisions'), nullable=False)
+    revision_of_auto_label : Mapped["Revision"] = relationship(back_populates='auto_labels_with_revision')
 
     __table_args__ = (
-        UniqueConstraint(raw_chapter_revision_id, auto_label_model_name, auto_label_model_params, name="uq_model_name_params"),
+        UniqueConstraint(revision_id, auto_label_model_name, auto_label_model_params, name="uq_model_name_params"),
 
     )

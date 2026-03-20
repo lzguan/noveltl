@@ -8,10 +8,10 @@ from ..exceptions import DeleteFailedException, FieldInvalidException, NotFoundE
 class NovelNotFoundException(NotFoundException):
     pass
 
-class RawChapterNotFoundException(NotFoundException):
+class ChapterNotFoundException(NotFoundException):
     pass
 
-class RawChapterRevisionNotFoundException(NotFoundException):
+class RevisionNotFoundException(NotFoundException):
     pass
 
 class NovelTooManyFoundException(TooManyFoundException):
@@ -20,14 +20,14 @@ class NovelTooManyFoundException(TooManyFoundException):
 class ChapterNumDuplicateException(FieldInvalidException):
     pass
 
-class RawChapterRevisionMakePrimaryFailedException(Exception):
+class RevisionMakePrimaryFailedException(Exception):
     pass
 
-class RawChapterRevisionNotPublicException(Exception):
+class RevisionNotPublicException(Exception):
     pass
 
-class DeleteRawChapterRevisionFailedException(DeleteFailedException):
+class DeleteRevisionFailedException(DeleteFailedException):
     pass
 
-class RawChapterRevisionNotFinalException(Exception):
+class RevisionNotFinalException(Exception):
     pass

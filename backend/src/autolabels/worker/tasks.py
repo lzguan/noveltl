@@ -5,7 +5,7 @@ from pydantic import ValidationError
 from sqlalchemy import CursorResult, select, update
 from sqlalchemy.exc import NoResultFound
 
-from ...novels.models import RawChapterRevision
+from ...novels.models import Revision
 from ..constants import AutoLabelProgress
 from ..models import AutoLabel
 from .config import SessionLocal
@@ -74,9 +74,9 @@ async def autolabel_infer(ctx : Any, job_id : str, auto_label_id: int, model_nam
             db.rollback()
             raise e
         q = select(
-            RawChapterRevision.raw_chapter_revision_text
+            Revision.revision_text
         ).join(
-            AutoLabel, AutoLabel.raw_chapter_revision_id == RawChapterRevision.raw_chapter_revision_id
+            AutoLabel, AutoLabel.revision_id == Revision.revision_id
         ).where(AutoLabel.auto_label_id == auto_label_id)
         try:
             res = db.execute(q)

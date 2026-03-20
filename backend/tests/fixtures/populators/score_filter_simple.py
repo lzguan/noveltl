@@ -14,7 +14,7 @@ from src.labels.constants import LabelRole
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.languages.models import Language
 from src.novels.constants import NovelType, Role, Visibility
-from src.novels.models import Contributor, Novel, RawChapter, RawChapterRevision
+from src.novels.models import Chapter, Contributor, Novel, Revision
 
 
 class Hash(Protocol):
@@ -55,22 +55,22 @@ def sf_novel(test_db: Session, sf_language: Language, sf_user: User) -> Novel:
 
 
 @pytest.fixture
-def sf_chapter(test_db: Session, sf_novel: Novel) -> RawChapter:
-    chapter = RawChapter(novel_id=sf_novel.novel_id, raw_chapter_num=1)
+def sf_chapter(test_db: Session, sf_novel: Novel) -> Chapter:
+    chapter = Chapter(novel_id=sf_novel.novel_id, chapter_num=1)
     test_db.add(chapter)
     test_db.commit()
     return chapter
 
 
 @pytest.fixture
-def sf_revision(test_db: Session, sf_chapter: RawChapter) -> RawChapterRevision:
-    revision = RawChapterRevision(
-        raw_chapter_id=sf_chapter.raw_chapter_id,
-        raw_chapter_revision_text="Hello world. This is a test sentence. Another sentence here.",
-        raw_chapter_revision_title="Test Chapter",
-        raw_chapter_revision_is_public=True,
-        raw_chapter_revision_is_primary=True,
-        raw_chapter_revision_is_final=True
+def sf_revision(test_db: Session, sf_chapter: Chapter) -> Revision:
+    revision = Revision(
+        chapter_id=sf_chapter.chapter_id,
+        revision_text="Hello world. This is a test sentence. Another sentence here.",
+        revision_title="Test Chapter",
+        revision_is_public=True,
+        revision_is_primary=True,
+        revision_is_final=True
     )
     test_db.add(revision)
     test_db.commit()
@@ -95,10 +95,10 @@ def sf_label_group(test_db: Session, sf_novel: Novel, sf_user: User) -> LabelGro
 
 
 @pytest.fixture
-def sf_label_data(test_db: Session, sf_label_group: LabelGroup, sf_revision: RawChapterRevision) -> LabelData:
+def sf_label_data(test_db: Session, sf_label_group: LabelGroup, sf_revision: Revision) -> LabelData:
     label_data = LabelData(
         label_group_id=sf_label_group.label_group_id,
-        raw_chapter_revision_id=sf_revision.raw_chapter_revision_id
+        revision_id=sf_revision.revision_id
     )
     test_db.add(label_data)
     test_db.commit()

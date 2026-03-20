@@ -93,22 +93,22 @@ class LabelData(BaseModel):
     Attributes:
         label_data_id: Integer identifier for this LabelData.
         label_group_id: Label group this LabelData belongs to.
-        raw_chapter_revision_id: Chapter this LabelData is labelling.
+        revision_id: Chapter this LabelData is labelling.
     """
     model_config = ConfigDict(from_attributes=True)
     label_data_id : int
 
     label_group_id : int
-    raw_chapter_revision_id : int
+    revision_id : int
 
 class CreateLabelData(BaseModel):
     """
     Pydantic schema for validating create requests for label data.
 
     Attributes:
-        raw_chapter_revision_id: Id of chapter being labelled.
+        revision_id: Id of chapter being labelled.
     """
-    raw_chapter_revision_id : int
+    revision_id : int
 
 class LabelOpBase(BaseModel):
     """
@@ -227,15 +227,15 @@ class CreateLabelDataByAutoLabel(BaseModel):
     Attributes:
         model_name: Name of NER model that performed the autolabeling.
         model_params: Parameters of model used.
-        raw_chapter_ids: Optional filter on what chapters to include.
-        raw_chapter_revision_ids: Optional filter on what revisions to include.
+        chapter_ids: Optional filter on what chapters to include.
+        revision_ids: Optional filter on what revisions to include.
         start: Optional filter on the least chapter number to include.
         end: Optional filter on the greatest chapter number to include.
     """
     model_name : str
     model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
-    raw_chapter_ids : list[int] | None = None
-    raw_chapter_revision_ids : list[int] | None = None
+    chapter_ids : list[int] | None = None
+    revision_ids : list[int] | None = None
     start : int | None = None
     end : int | None = None
 
@@ -244,8 +244,8 @@ class CreateLabelDataByAutoLabelStatus(BaseModel):
     Return message for CreateLabelDataByAutoLabel.
 
     Attributes:
-        success: List of ids of RawChapterRevisions for successful inserts
-        errors: List of tuples of (RawChapterRevision ids for failed inserts, error message)
+        success: List of ids of Revisions for successful inserts
+        errors: List of tuples of (Revision ids for failed inserts, error message)
     """
     success : list[int]
     errors: list[tuple[int, str]]

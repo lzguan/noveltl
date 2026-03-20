@@ -72,96 +72,96 @@ class UpdateNovel(BaseModel):
     novel_type : NovelType | None = None
     novel_parent_id: int | None = None
 
-class RawChapter(BaseModel):
+class Chapter(BaseModel):
     """
-    Pydantic schema for raw chapter metadata. Represents a single "chapter" entry, which groups all its revisions.
+    Pydantic schema for chapter metadata. Represents a single "chapter" entry, which groups all its revisions.
 
     Attributes:
-        raw_chapter_id: Integer primary key identifier.
-        raw_chapter_num: The chapter number.
+        chapter_id: Integer primary key identifier.
+        chapter_num: The chapter number.
         novel_id: Integer foreign key to the novel this chapter belongs to.
     """
-    raw_chapter_id : int
-    raw_chapter_num : int
+    chapter_id : int
+    chapter_num : int
 
     novel_id : int
 
-class CreateRawChapter(BaseModel):
+class CreateChapter(BaseModel):
     """
-    Pydantic schema to validate data for creating a new raw chapter. The novel_id is expected to be passed via the URL path.
+    Pydantic schema to validate data for creating a new chapter. The novel_id is expected to be passed via the URL path.
 
     Attributes:
-        raw_chapter_num: The chapter number to create.
+        chapter_num: The chapter number to create.
     """
-    raw_chapter_num : int
+    chapter_num : int
 
-class RawChapterRevision(BaseModel):
+class Revision(BaseModel):
     """
-    Pydantic schema for a full raw chapter revision, including text.
+    Pydantic schema for a full chapter revision, including text.
 
     Attributes:
-        raw_chapter_revision_id: Integer primary key identifier.
-        raw_chapter_revision_title: The title of this specific revision.
-        raw_chapter_revision_is_primary: Boolean flag for the 'finalized' revision.
-        raw_chapter_revision_is_public: Boolean flag for whether this revision is public and immutable.
-        raw_chapter_id: Integer foreign key to the parent raw chapter.
-        raw_chapter_revision_text: The full text content of the revision.
+        revision_id: Integer primary key identifier.
+        revision_title: The title of this specific revision.
+        revision_is_primary: Boolean flag for the 'finalized' revision.
+        revision_is_public: Boolean flag for whether this revision is public and immutable.
+        chapter_id: Integer foreign key to the parent chapter.
+        revision_text: The full text content of the revision.
     """
-    raw_chapter_revision_id : int
-    raw_chapter_revision_title : str
-    raw_chapter_revision_is_primary : bool
-    raw_chapter_revision_is_public : bool
-    raw_chapter_revision_is_final : bool
+    revision_id : int
+    revision_title : str
+    revision_is_primary : bool
+    revision_is_public : bool
+    revision_is_final : bool
 
-    raw_chapter_id : int
-    raw_chapter_revision_text : str
+    chapter_id : int
+    revision_text : str
 
-class RawChapterRevisionMeta(BaseModel):
+class RevisionMeta(BaseModel):
     """
-    Pydantic schema for raw chapter revision metadata (excludes text). Used for list endpoints to avoid sending large text payloads.
+    Pydantic schema for chapter revision metadata (excludes text). Used for list endpoints to avoid sending large text payloads.
 
     Attributes:
-        raw_chapter_revision_id: Integer primary key identifier.
-        raw_chapter_revision_title: The title of this specific revision.
-        raw_chapter_revision_is_primary: Boolean flag for the 'finalized' revision.
-        raw_chapter_revision_is_public: Boolean flag for whether this revision is public and immutable.
-        raw_chapter_id: Integer foreign key to the parent raw chapter.
+        revision_id: Integer primary key identifier.
+        revision_title: The title of this specific revision.
+        revision_is_primary: Boolean flag for the 'finalized' revision.
+        revision_is_public: Boolean flag for whether this revision is public and immutable.
+        chapter_id: Integer foreign key to the parent chapter.
     """
     model_config = ConfigDict(from_attributes=True)
 
-    raw_chapter_revision_id : int
-    raw_chapter_revision_title : str
-    raw_chapter_revision_is_primary : bool
-    raw_chapter_revision_is_public : bool
-    raw_chapter_revision_is_final : bool
+    revision_id : int
+    revision_title : str
+    revision_is_primary : bool
+    revision_is_public : bool
+    revision_is_final : bool
 
-    raw_chapter_id : int
+    chapter_id : int
 
-class CreateRawChapterRevision(BaseModel):
+class CreateRevision(BaseModel):
     """
-    Pydantic schema to validate data for creating a new raw chapter revision. The raw_chapter_id is expected to be passed via the URL path.
+    Pydantic schema to validate data for creating a new chapter revision. The chapter_id is expected to be passed via the URL path.
 
     Attributes:
-        raw_chapter_revision_title: The title for the new revision.
-        raw_chapter_revision_text: The full text content for the new revision. Defaults to None.
+        revision_title: The title for the new revision.
+        revision_text: The full text content for the new revision. Defaults to None.
     """
-    raw_chapter_revision_title : str
-    raw_chapter_revision_text : str | None = None
+    revision_title : str
+    revision_text : str | None = None
 
-class UpdateRawChapterRevision(BaseModel):
+class UpdateRevision(BaseModel):
     """
-    Pydantic schema to validate data for updating a raw chapter revision. All fields are optional to support partial updates (PATCH). The revision_id is expected to be passed via the URL path.
+    Pydantic schema to validate data for updating a chapter revision. All fields are optional to support partial updates (PATCH). The revision_id is expected to be passed via the URL path.
 
     Attributes:
-        raw_chapter_revision_title: The new title for the revision.
-        raw_chapter_revision_text: The new full text content for the revision.
+        revision_title: The new title for the revision.
+        revision_text: The new full text content for the revision.
     """
-    raw_chapter_revision_title : str | None = None
-    raw_chapter_revision_text : str | None = None
+    revision_title : str | None = None
+    revision_text : str | None = None
 
-class DeleteRawChapterRevisionStatus(BaseModel):
+class DeleteRevisionStatus(BaseModel):
     """
-    Pydantic model to signal return status of delete operation for raw chapter revision.
+    Pydantic model to signal return status of delete operation for chapter revision.
 
     Attributes:
         status: One of "success", "fail".

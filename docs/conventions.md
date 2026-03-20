@@ -1,6 +1,6 @@
 # Conventions
 
-**Last Updated**: March 6, 2026  
+**Last Updated**: March 19, 2026  
 **Status**: Complete
 
 This document defines naming and structural conventions for the NovelTL codebase.
@@ -199,6 +199,7 @@ Ruff will auto-format on save, and Pylance will show type errors as you code.
     - `delete_object` for DELETE requests
     - Use plural for functions corresponding to endpoints that operate on a collection.
     - Use singular for functions corresponding to endpoints that operate on a single item.
+    - Try to use different actions from service modules.
 - Parameters should go in the order of
     1. Path parameters
     2. Required query parameters (if applicable)

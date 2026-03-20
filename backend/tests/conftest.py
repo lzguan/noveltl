@@ -21,6 +21,7 @@ pytest_plugins = [
     "tests.fixtures.populators.chinese_xianxia_small_test",
     "tests.fixtures.populators.permissions_one",
     "tests.fixtures.populators.label_permissions",
+    "tests.fixtures.populators.novel_permissions",
     "tests.fixtures.password_hash",
     "tests.fixtures.populators.score_filter_simple",
     "tests.fixtures.filters"

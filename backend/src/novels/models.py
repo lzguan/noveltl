@@ -90,7 +90,7 @@ class Novel(Base):
     language_code : Mapped[str] = mapped_column(ForeignKey("languages.language_code", name='fk_novels_language_code_languages'), nullable=False)
     language_of_novel : Mapped["Language"] = relationship(back_populates="novels_with_language")
 
-    raw_chapters_with_novel : Mapped[list["RawChapter"]] = relationship(back_populates='novel_of_raw_chapter')
+    chapters_with_novel : Mapped[list["Chapter"]] = relationship(back_populates='novel_of_chapter')
     label_groups_with_novel : Mapped[list["LabelGroup"]] = relationship(back_populates='novel_of_label_group')
     contributors_with_novel : Mapped[list["Contributor"]] = relationship(back_populates='novel_of_contributor')
 
@@ -115,70 +115,70 @@ class Contributor(Base):
     user_of_contributor : Mapped["User"] = relationship(back_populates='contributors_with_user')
 
 
-class RawChapter(Base):
+class Chapter(Base):
     """
     Database model for metadata for a specific chapter number in the novel.
 
     Attributes:
-        raw_chapter_id: Integer primary key identifier.
-        raw_chapter_num: Integer chapter numbering. For example, a value of 5 would correspond to chapter 5.
+        chapter_id: Integer primary key identifier.
+        chapter_num: Integer chapter numbering. For example, a value of 5 would correspond to chapter 5.
         novel_id: Integer foreign key identifier to the novel this chapter belongs to.
 
     Note:
-        Each pair (raw_chapter_num, novel_id) should be unique.
-        raw_chapter_num and novel_id are non-nullable.
+        Each pair (chapter_num, novel_id) should be unique.
+        chapter_num and novel_id are non-nullable.
     """
-    __tablename__ = 'raw_chapters'
+    __tablename__ = 'chapters'
 
-    raw_chapter_id : Mapped[int] = mapped_column(primary_key=True)
-    raw_chapter_num : Mapped[int] = mapped_column(Integer, nullable=False)
+    chapter_id : Mapped[int] = mapped_column(primary_key=True)
+    chapter_num : Mapped[int] = mapped_column(Integer, nullable=False)
 
-    novel_id = mapped_column(ForeignKey('novels.novel_id', name='fk_raw_chapters_novel_id_novels'), nullable=False)
-    novel_of_raw_chapter : Mapped[Novel] = relationship(back_populates='raw_chapters_with_novel')
+    novel_id = mapped_column(ForeignKey('novels.novel_id', name='fk_chapters_novel_id_novels'), nullable=False)
+    novel_of_chapter : Mapped[Novel] = relationship(back_populates='chapters_with_novel')
 
-    raw_chapter_revisions_with_raw_chapter : Mapped[list["RawChapterRevision"]] = relationship(back_populates='raw_chapter_of_raw_chapter_revision')
+    revisions_with_chapter : Mapped[list["Revision"]] = relationship(back_populates='chapter_of_revision')
 
     __table_args__ = (
-        UniqueConstraint('raw_chapter_num', 'novel_id', name="raw_chapter_per_novel"),
+        UniqueConstraint('chapter_num', 'novel_id', name="chapter_per_novel"),
     )
 
-class RawChapterRevision(Base):
+class Revision(Base):
     """
-    Database model for a revision of a chapter of a novel. Each revision corresponds to a RawChapter and contains the text of that chapter for a specific revision. Once a revision is flagged as public, the revision should no longer be able to be made private or modified.
+    Database model for a revision of a chapter of a novel. Each revision corresponds to a Chapter and contains the text of that chapter for a specific revision. Once a revision is flagged as public, the revision should no longer be able to be made private or modified.
 
     Attributes:
-        raw_chapter_revision_id: Integer primary key identifier.
-        raw_chapter_revision_text: Text contained in this revision of the chapter.
-        raw_chapter_revision_title: Chapter title. Different revisions of the same chapter can have different titles.
-        raw_chapter_revision_is_primary: Boolean mark for whether a revision is the primary chapter (the 'finalized' chapter)
-        raw_chapter_revision_is_public: Boolean mark for whether a revision is marked as public.
-        raw_chapter_revision_is_final: Boolean mark for whether a revision is marked as final. Final revisions should be immutable.
-        raw_chapter_id: Id of chapter this revision belongs to.
+        revision_id: Integer primary key identifier.
+        revision_text: Text contained in this revision of the chapter.
+        revision_title: Chapter title. Different revisions of the same chapter can have different titles.
+        revision_is_primary: Boolean mark for whether a revision is the primary chapter (the 'finalized' chapter)
+        revision_is_public: Boolean mark for whether a revision is marked as public.
+        revision_is_final: Boolean mark for whether a revision is marked as final. Final revisions should be immutable.
+        chapter_id: Id of chapter this revision belongs to.
 
     Note:
-        raw_chapter_revision_title must have length at most MAX_CHAPTER_TITLE_LEN.
+        revision_title must have length at most MAX_CHAPTER_TITLE_LEN.
         Both public and primary flags are non-nullable.
-        raw_chapter_id is non-nullable.
-        For each raw_chapter_id, only one RawChapterRevision can be marked as primary.
-        If a RawChapterRevision is marked as primary, it must be marked as public.
+        chapter_id is non-nullable.
+        For each chapter_id, only one Revision can be marked as primary.
+        If a Revision is marked as primary, it must be marked as public.
     """
-    __tablename__ = 'raw_chapter_revisions'
+    __tablename__ = 'revisions'
 
-    raw_chapter_revision_id : Mapped[int] = mapped_column(primary_key=True)
-    raw_chapter_revision_text : Mapped[str] = mapped_column(Text)
-    raw_chapter_revision_title : Mapped[str] = mapped_column(String(MAX_CHAPTER_TITLE_LEN))
-    raw_chapter_revision_is_primary : Mapped[bool] = mapped_column(Boolean, nullable=False)
-    raw_chapter_revision_is_public : Mapped[bool] = mapped_column(Boolean, nullable=False)
-    raw_chapter_revision_is_final : Mapped[bool] = mapped_column(Boolean, nullable=False)
+    revision_id : Mapped[int] = mapped_column(primary_key=True)
+    revision_text : Mapped[str] = mapped_column(Text)
+    revision_title : Mapped[str] = mapped_column(String(MAX_CHAPTER_TITLE_LEN))
+    revision_is_primary : Mapped[bool] = mapped_column(Boolean, nullable=False)
+    revision_is_public : Mapped[bool] = mapped_column(Boolean, nullable=False)
+    revision_is_final : Mapped[bool] = mapped_column(Boolean, nullable=False)
 
-    raw_chapter_of_raw_chapter_revision : Mapped["RawChapter"] = relationship(back_populates="raw_chapter_revisions_with_raw_chapter")
-    raw_chapter_id = mapped_column(ForeignKey('raw_chapters.raw_chapter_id', name='fk_raw_chapter_revisions_raw_chapter_id_raw_chapters'), nullable=False)
+    chapter_of_revision : Mapped["Chapter"] = relationship(back_populates="revisions_with_chapter")
+    chapter_id = mapped_column(ForeignKey('chapters.chapter_id', name='fk_revisions_chapter_id_chapters'), nullable=False)
 
-    label_datas_with_raw_chapter_revision : Mapped[list["LabelData"]] = relationship(back_populates='raw_chapter_revision_of_label_data')
+    label_datas_with_revision : Mapped[list["LabelData"]] = relationship(back_populates='revision_of_label_data')
 
-    auto_labels_with_raw_chapter_revision : Mapped[list["AutoLabel"]] = relationship(back_populates='raw_chapter_revision_of_auto_label', cascade='all, delete-orphan')
+    auto_labels_with_revision : Mapped[list["AutoLabel"]] = relationship(back_populates='revision_of_auto_label', cascade='all, delete-orphan')
 
     __table_args__ = (
-        Index('ix_one_primary_revision_per_chapter', 'raw_chapter_id', unique=True, postgresql_where=raw_chapter_revision_is_primary.is_(True)),
-        CheckConstraint(or_(raw_chapter_revision_is_public, not_(raw_chapter_revision_is_primary)), name="primary_must_be_public_check")
+        Index('ix_one_primary_revision_per_chapter', 'chapter_id', unique=True, postgresql_where=revision_is_primary.is_(True)),
+        CheckConstraint(or_(revision_is_public, not_(revision_is_primary)), name="primary_must_be_public_check")
     )

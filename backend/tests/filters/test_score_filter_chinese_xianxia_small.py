@@ -29,7 +29,7 @@ from src.filters.score_filter import (
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.labels.schemas import CreateLabelDataByAutoLabel
 from src.labels.service import insert_label_datas_by_autolabels
-from src.novels.models import Contributor, RawChapter, RawChapterRevision
+from src.novels.models import Chapter, Contributor, Revision
 
 pytestmark = pytest.mark.dependency(
     depends=["insert_label_datas_by_autolabels"],
@@ -41,7 +41,7 @@ def cxst_labels_populated(
     test_db: Session,
     chinese_xianxia_small_test_autolabels_cluener: list[AutoLabel],
     chinese_xianxia_small_test_label_group: LabelGroup,
-    chinese_xianxia_small_test_chapters: list[tuple[RawChapter, RawChapterRevision]],
+    chinese_xianxia_small_test_chapters: list[tuple[Chapter, Revision]],
     chinese_xianxia_small_test_user: User,
     chinese_xianxia_small_test_label_contributor: LabelContributor,
     chinese_xianxia_small_test_contributor: Contributor,

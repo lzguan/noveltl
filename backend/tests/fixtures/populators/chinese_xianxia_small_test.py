@@ -12,7 +12,7 @@ from src.labels.constants import LabelRole
 from src.labels.models import LabelContributor, LabelGroup
 from src.languages.models import Language
 from src.novels.constants import NovelType, Role, Visibility
-from src.novels.models import Contributor, Novel, RawChapter, RawChapterRevision
+from src.novels.models import Chapter, Contributor, Novel, Revision
 
 
 @pytest.fixture
@@ -87,21 +87,21 @@ def chinese_xianxia_small_test_chapters(
     chinese_xianxia_small_test_novel : Novel,
     chapter_loader : Loader,
     test_db : Session
-) -> list[tuple[RawChapter, RawChapterRevision]]:
+) -> list[tuple[Chapter, Revision]]:
     texts = chapter_loader('chinese/chinese_xianxia/small_test')
-    out : list[tuple[RawChapter, RawChapterRevision]] = []
+    out : list[tuple[Chapter, Revision]] = []
     i = 0
     for text in texts:
-        chapter = RawChapter(raw_chapter_num=i, novel_id=chinese_xianxia_small_test_novel.novel_id)
+        chapter = Chapter(chapter_num=i, novel_id=chinese_xianxia_small_test_novel.novel_id)
         test_db.add(chapter)
         test_db.commit()
-        revision = RawChapterRevision(
-            raw_chapter_revision_text=text,
-            raw_chapter_revision_title=f"chapter {i}",
-            raw_chapter_revision_is_primary=True,
-            raw_chapter_revision_is_public=True,
-            raw_chapter_revision_is_final=True,
-            raw_chapter_id=chapter.raw_chapter_id
+        revision = Revision(
+            revision_text=text,
+            revision_title=f"chapter {i}",
+            revision_is_primary=True,
+            revision_is_public=True,
+            revision_is_final=True,
+            chapter_id=chapter.chapter_id
         )
         test_db.add(revision)
         test_db.commit() # can optimize this
@@ -118,14 +118,14 @@ def chinese_xianxia_small_test_default_params_cluener() -> dict[str, Any]:
 @pytest.fixture
 def chinese_xianxia_small_test_autolabels_cluener(
     test_db : Session,
-    chinese_xianxia_small_test_chapters : list[tuple[RawChapter, RawChapterRevision]],
+    chinese_xianxia_small_test_chapters : list[tuple[Chapter, Revision]],
     autolabel_loader : Loader
 ) -> list[AutoLabel]:
     autolabels_gen = (json.loads(lab) for lab in autolabel_loader('chinese/chinese_xianxia/small_test/cluener'))
     out : list[AutoLabel]= []
     i = 0
     for autolabel in autolabels_gen:
-        a = AutoLabel(**autolabel, raw_chapter_revision_id=chinese_xianxia_small_test_chapters[i][1].raw_chapter_revision_id)
+        a = AutoLabel(**autolabel, revision_id=chinese_xianxia_small_test_chapters[i][1].revision_id)
         test_db.add(a)
         test_db.commit() # can optimize this
         i = i + 1

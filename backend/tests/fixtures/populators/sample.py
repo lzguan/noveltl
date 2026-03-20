@@ -9,7 +9,7 @@ from src.labels.constants import LabelRole
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.languages.models import Language
 from src.novels.constants import NovelType, Role, Visibility
-from src.novels.models import Contributor, Novel, RawChapter, RawChapterRevision
+from src.novels.models import Chapter, Contributor, Novel, Revision
 
 
 class Hash(Protocol):
@@ -69,10 +69,10 @@ def sample_contributors(test_db: Session, sample_novels: list[Novel], sample_use
     return [c1, c2]
 
 @pytest.fixture
-def sample_chapters(test_db: Session, sample_novels: list[Novel]) -> list[RawChapter]:
+def sample_chapters(test_db: Session, sample_novels: list[Novel]) -> list[Chapter]:
     # Add chapters to Novel 1
-    ch1 = RawChapter(novel_id=sample_novels[0].novel_id, raw_chapter_num=1)
-    ch2 = RawChapter(novel_id=sample_novels[0].novel_id, raw_chapter_num=2)
+    ch1 = Chapter(novel_id=sample_novels[0].novel_id, chapter_num=1)
+    ch2 = Chapter(novel_id=sample_novels[0].novel_id, chapter_num=2)
 
     test_db.add_all([ch1, ch2])
     test_db.commit()
@@ -81,25 +81,25 @@ def sample_chapters(test_db: Session, sample_novels: list[Novel]) -> list[RawCha
     return [ch1, ch2]
 
 @pytest.fixture
-def sample_chapter_revisions(test_db: Session, sample_chapters: list[RawChapter]) -> list[RawChapterRevision]:
+def sample_revisions(test_db: Session, sample_chapters: list[Chapter]) -> list[Revision]:
     # Create revisions for Chapter 1
     # We use specific text here so we can create a valid Label for it later.
-    rev1 = RawChapterRevision(
-        raw_chapter_id=sample_chapters[0].raw_chapter_id,
-        raw_chapter_revision_title="Chapter 1: The Beginning",
-        raw_chapter_revision_text="Alice went to the market.",
-        raw_chapter_revision_is_primary=True,
-        raw_chapter_revision_is_public=True,
-        raw_chapter_revision_is_final=False
+    rev1 = Revision(
+        chapter_id=sample_chapters[0].chapter_id,
+        revision_title="Chapter 1: The Beginning",
+        revision_text="Alice went to the market.",
+        revision_is_primary=True,
+        revision_is_public=True,
+        revision_is_final=False
     )
     # Create a non-primary, non-public draft
-    rev2 = RawChapterRevision(
-        raw_chapter_id=sample_chapters[0].raw_chapter_id,
-        raw_chapter_revision_title="Chapter 1: Draft",
-        raw_chapter_revision_text="This is a draft text.",
-        raw_chapter_revision_is_primary=False,
-        raw_chapter_revision_is_public=False,
-        raw_chapter_revision_is_final=False
+    rev2 = Revision(
+        chapter_id=sample_chapters[0].chapter_id,
+        revision_title="Chapter 1: Draft",
+        revision_text="This is a draft text.",
+        revision_is_primary=False,
+        revision_is_public=False,
+        revision_is_final=False
     )
 
     test_db.add_all([rev1, rev2])
@@ -133,11 +133,11 @@ def sample_label_contributors(test_db: Session, sample_label_groups: list[LabelG
     return [lc1]
 
 @pytest.fixture
-def sample_label_datas(test_db: Session, sample_label_groups: list[LabelGroup], sample_chapter_revisions: list[RawChapterRevision]) -> list[LabelData]:
+def sample_label_datas(test_db: Session, sample_label_groups: list[LabelGroup], sample_revisions: list[Revision]) -> list[LabelData]:
     # Link the Label Data to the Primary Revision of Chapter 1
     ld1 = LabelData(
         label_group_id=sample_label_groups[0].label_group_id,
-        raw_chapter_revision_id=sample_chapter_revisions[0].raw_chapter_revision_id
+        revision_id=sample_revisions[0].revision_id
     )
     test_db.add(ld1)
     test_db.commit()

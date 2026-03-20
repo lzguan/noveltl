@@ -123,11 +123,11 @@ def copy_label_group(
 
     # label datas
     cols = [
-        label_models.LabelData.raw_chapter_revision_id,
+        label_models.LabelData.revision_id,
         label_models.LabelData.label_group_id
     ]
     q_label_datas = select(
-        label_models.LabelData.raw_chapter_revision_id,
+        label_models.LabelData.revision_id,
         literal(new_label_group.label_group_id)
     ).select_from(
         label_models.LabelData
@@ -170,7 +170,7 @@ def copy_label_group(
         old_ld.label_group_id == original_label_group.label_group_id
     ).join(
         label_models.LabelData,
-        label_models.LabelData.raw_chapter_revision_id == old_ld.raw_chapter_revision_id
+        label_models.LabelData.revision_id == old_ld.revision_id
     ).where(
         label_models.LabelData.label_group_id == new_label_group.label_group_id
     )

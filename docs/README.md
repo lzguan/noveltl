@@ -27,6 +27,7 @@ This directory contains technical documentation for the NovelTL project - a coll
 
 ### Features & Implementation
 - **[background-jobs.md](background-jobs.md)** - AutoLabel worker system, Redis queues, state machines
+- **[editable-with-labels.md](editable-with-labels.md)** - Removing `is_final` flag, label offset adjustment, concurrency control
 - **[filter-system.md](filter-system.md)** - Filter abstraction, 4-phase pipeline, implementations
 - **[ui-requirements.md](ui-requirements.md)** - Frontend component specs, UX workflows
 

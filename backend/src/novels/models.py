@@ -2,6 +2,7 @@
 Database models for novels and chapters.
 """
 
+import uuid
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
@@ -15,9 +16,11 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    func,
     not_,
     or_,
 )
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
 
@@ -148,11 +151,9 @@ class Revision(Base):
 
     Attributes:
         revision_id: Integer primary key identifier.
-        revision_text: Text contained in this revision of the chapter.
         revision_title: Chapter title. Different revisions of the same chapter can have different titles.
         revision_is_primary: Boolean mark for whether a revision is the primary chapter (the 'finalized' chapter)
         revision_is_public: Boolean mark for whether a revision is marked as public.
-        revision_is_final: Boolean mark for whether a revision is marked as final. Final revisions should be immutable.
         chapter_id: Id of chapter this revision belongs to.
 
     Note:
@@ -165,20 +166,44 @@ class Revision(Base):
     __tablename__ = 'revisions'
 
     revision_id : Mapped[int] = mapped_column(primary_key=True)
-    revision_text : Mapped[str] = mapped_column(Text)
     revision_title : Mapped[str] = mapped_column(String(MAX_CHAPTER_TITLE_LEN))
     revision_is_primary : Mapped[bool] = mapped_column(Boolean, nullable=False)
     revision_is_public : Mapped[bool] = mapped_column(Boolean, nullable=False)
-    revision_is_final : Mapped[bool] = mapped_column(Boolean, nullable=False)
 
     chapter_of_revision : Mapped["Chapter"] = relationship(back_populates="revisions_with_chapter")
     chapter_id = mapped_column(ForeignKey('chapters.chapter_id', name='fk_revisions_chapter_id_chapters'), nullable=False)
 
-    label_datas_with_revision : Mapped[list["LabelData"]] = relationship(back_populates='revision_of_label_data')
-
-    auto_labels_with_revision : Mapped[list["AutoLabel"]] = relationship(back_populates='revision_of_auto_label', cascade='all, delete-orphan')
+    revision_texts_with_revision : Mapped[list["RevisionText"]] = relationship(back_populates='revision_of_revision_text', cascade='all, delete-orphan')
 
     __table_args__ = (
         Index('ix_one_primary_revision_per_chapter', 'chapter_id', unique=True, postgresql_where=revision_is_primary.is_(True)),
         CheckConstraint(or_(revision_is_public, not_(revision_is_primary)), name="primary_must_be_public_check")
+    )
+
+class RevisionText(Base):
+    """
+    Database model for the text of a specific revision. RevisionText are versioned separately from the metadata of a revision (for example, whether it is public or primary) since we want to be able to update the metadata of a revision without modifying the text, and we want to be able to store the text in a separate table for organizational purposes.
+
+    Attributes:
+        revision_text_uuid: UUID for the revision text, used for uniquely identifying a specific revision text across different versions. For each revision_id, the pair (revision_id, revision_text_uuid) should be unique.
+        revision_text_content: Text content of the revision.
+        revision_text_version: Integer version number for the revision text. For each revision_id, the pair (revision_id, revision_text_version) should be unique.
+
+        revision_id: Integer foreign key identifier to the revision this text corresponds to.
+    """
+    __tablename__ = 'revision_texts'
+
+    revision_text_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
+    revision_text_content : Mapped[str] = mapped_column(Text, nullable=False)
+    revision_text_version : Mapped[int] = mapped_column(Integer, nullable=False)
+
+    revision_of_revision_text : Mapped["Revision"] = relationship(back_populates="revision_texts_with_revision")
+    revision_id = mapped_column(ForeignKey('revisions.revision_id', name='fk_revision_texts_revision_id_revisions'), nullable=False)
+
+    label_datas_with_revision_text : Mapped[list["LabelData"]] = relationship(back_populates='revision_text_of_label_data')
+
+    auto_labels_with_revision_text : Mapped[list["AutoLabel"]] = relationship(back_populates='revision_text_of_auto_label', cascade='all, delete-orphan')
+
+    __table_args__ = (
+        UniqueConstraint('revision_id', 'revision_text_version', name="uq_revision_text_version_per_revision"),
     )

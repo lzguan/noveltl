@@ -2,6 +2,7 @@
 Database models for labels.
 """
 
+import uuid
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, CheckConstraint, Enum, Float, ForeignKey, Integer, String, UniqueConstraint, and_, func
@@ -13,7 +14,7 @@ from .constants import MAX_LABEL_ENTITY_GROUP_NAME_LEN, MAX_LABEL_GROUP_NAME_LEN
 
 if TYPE_CHECKING:
     from src.auth.models import User
-    from src.novels.models import Novel, Revision
+    from src.novels.models import Novel, RevisionText
 
 class LabelGroup(Base):
     """
@@ -60,7 +61,7 @@ class LabelData(Base):
     Attributes:
         label_data_id: Integer identifier.
         label_group_id: Label group that label_data belongs to.
-        revision_id: id of chapter revision this label data corresponds to.
+        revision_text_id: UUID of chapter revision text this label data corresponds to.
 
     Note:
         Each label group can only have 1 label data corresponding to a given chapter.
@@ -73,13 +74,13 @@ class LabelData(Base):
     label_group_id : Mapped[int] = mapped_column(ForeignKey('label_groups.label_group_id', name='fk_label_datas_label_group_id_label_groups'), nullable=False)
     label_group_of_label_data : Mapped[LabelGroup] = relationship(back_populates='label_datas_with_label_group')
 
-    revision_id : Mapped[int] = mapped_column(ForeignKey('revisions.revision_id', name='fk_label_datas_revision_id_revisions'), nullable=False)
-    revision_of_label_data : Mapped["Revision"] = relationship(back_populates='label_datas_with_revision')
+    revision_text_id : Mapped[uuid.UUID] = mapped_column(ForeignKey('revision_texts.revision_text_id', name='fk_label_datas_revision_text_id_revision_texts'), nullable=False)
+    revision_text_of_label_data : Mapped["RevisionText"] = relationship(back_populates='label_datas_with_revision_text')
 
     labels_with_label_data : Mapped[list["Label"]] = relationship(back_populates='label_data_of_label', cascade='all, delete-orphan')
 
     __table_args__ = (
-        UniqueConstraint('label_group_id', 'revision_id', name='one_label_group_per_chapter'),
+        UniqueConstraint('label_group_id', 'revision_text_id', name='one_label_group_per_chapter'),
     )
 
 class Label(Base):

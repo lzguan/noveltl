@@ -16,6 +16,17 @@ from src.main import app
 from src.models import Base
 from src.redis import get_redis_for_app
 
+def pytest_configure(config):
+    """Drop all tables in test_db before test session begins."""
+    url = os.getenv("TEST_URL")
+    if url is None:
+        return
+    engine = create_engine(url)
+    with engine.connect() as conn:
+        conn.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public;"))
+        conn.commit()
+    engine.dispose()
+
 pytest_plugins = [
     "tests.fixtures.populators.sample",
     "tests.fixtures.populators.chinese_xianxia_small_test",

@@ -1,7 +1,7 @@
 # UI Requirements — Annotation Workspace
 
-**Last Updated**: 2026-03-17    
-**Status**: Approved
+**Last Updated**: March 20, 2026
+**Status**: Complete
 
 This document specifies the `NovelWorkspace` component — the primary annotation interface for NovelTL. It is the most complex component in the codebase and should be implemented incrementally.
 
@@ -81,10 +81,10 @@ Right panel is tabbed: **Labels** | **NER** | **Filters**. Default tab: Labels.
 Fixed from the route param. Display the novel title as read-only text.
 
 ### Chapter
-Dropdown of all chapters for the novel, sorted by `rawChapterNum`. Switching chapter resets revision selection, label data, and autolabel state.
+Dropdown of all chapters for the novel, sorted by `chapterNum`. Switching chapter resets revision selection, label data, and autolabel state.
 
 ### Revision
-Dropdown of revisions for the selected chapter. Default: the primary revision (if one exists), otherwise the most recent. Only `rawChapterRevisionTitle` is shown; the revision ID drives all subsequent data loading.
+Dropdown of revisions for the selected chapter. Default: the primary revision (if one exists), otherwise the most recent. Only `revisionTitle` is shown; the revision ID drives all subsequent data loading.
 
 ### Label Group
 Dropdown of all `LabelGroup` records for the novel. Switching label group reloads the label data for the current revision. A **"+ New Group"** button opens a small inline form (name only — reuse `createLabelGroup`). If no `LabelData` exists for the selected `(labelGroupId, revisionId)` pair yet, the labels panel is empty with a prompt to run NER or add labels manually.
@@ -97,7 +97,7 @@ Dropdown of all `LabelGroup` records for the novel. Switching label group reload
 
 ### Rendering labels as spans
 
-The chapter text is a plain string (`rawChapterRevisionText`). Labels carry `labelStart` and `labelEnd` character offsets into that string.
+The chapter text is a plain string (`revisionText`). Labels carry `labelStart` and `labelEnd` character offsets into that string.
 
 > **Implementation decision:** Custom `<AnnotatedText>` component — no external annotation library. Splits `text` into plain runs and labelled spans based on character offsets, with draggable handles for resize. UTF-8 is safe for CJK content via standard JavaScript string slicing (Chinese/Japanese/Korean characters are BMP code points, single UTF-16 code units).
 
@@ -251,7 +251,7 @@ POST /label-groups/{labelGroupId}/label-datas/auto-labels
 {
     "model_name": "cluener",
     "model_params": {},
-    "raw_chapter_revision_ids": [currentRevisionId]
+    "revision_ids": [currentRevisionId]
 }
 ```
 
@@ -304,16 +304,16 @@ novelId: number                               // from route param (:novel_id)
 
 // ── Novel-level data ─────────────────────────────────────────────────
 novel: Novel | null                           // fetched on mount
-chapters: RawChapter[]                        // all chapters, sorted by rawChapterNum
+chapters: Chapter[]                            // all chapters, sorted by chapterNum
 labelGroups: LabelGroup[]                     // all label groups for this novel
 
 // ── Chapter selection ─────────────────────────────────────────────────
 selectedChapterId: number | null              // drives revision list + URL sync
-chapterRevisions: RawChapterRevisionMeta[]    // revisions for selected chapter
+revisions: RevisionMeta[]                     // revisions for selected chapter
 
 // ── Revision selection ────────────────────────────────────────────────
 selectedRevisionId: number | null             // drives text + labelData + autoLabel
-revisionText: string | null                   // rawChapterRevisionText, fetched on change
+revisionText: string | null                   // revisionText, fetched on change
 textContainerRef: React.RefObject<HTMLDivElement>  // DOM ref for offset mapping
 
 // ── Label group selection ─────────────────────────────────────────────
@@ -379,9 +379,9 @@ const visibleLabels: Label[] = useMemo(
 
 // Current revision is finalized (required for NER)
 const canRunNer: boolean = useMemo(
-    () => chapterRevisions.find(r => r.rawChapterRevisionId === selectedRevisionId)
-              ?.rawChapterRevisionIsFinal ?? false,
-    [chapterRevisions, selectedRevisionId]
+    () => revisions.find(r => r.revisionId === selectedRevisionId)
+              ?.revisionIsFinal ?? false,
+    [revisions, selectedRevisionId]
 )
 ```
 
@@ -422,7 +422,7 @@ Build and test in this order. Each step is independently usable:
 - `frontend/src/api/labels.ts` - Label data CRUD + `updateLabelDataStream` (PATCH returns 204)
 - `frontend/src/api/autolabels.ts` - AutoLabel trigger + status polling
 - `frontend/src/api/novels.ts` - Chapter/revision fetching
-- `frontend/src/types/novel.ts` - `RawChapter`, `RawChapterRevisionMeta`
+- `frontend/src/types/novel.ts` - `Chapter`, `RevisionMeta`
 - `frontend/src/types/label.ts` - `Label`, `LabelData`, `LabelGroup`, `LabelOp`
 - `frontend/src/types/autolabel.ts` - `AutoLabel`, `AutoLabelMeta`, `AutoLabelProgress`
 - `frontend/src/components/common/Modal.tsx` - Portal pattern reference for popover

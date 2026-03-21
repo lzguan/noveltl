@@ -1,6 +1,6 @@
 # Frontend Testing Guide
 
-**Last Updated**: March 10, 2026  
+**Last Updated**: March 20, 2026  
 **Status**: Complete
 
 This document defines standards and expected test cases for frontend API integration tests. These tests verify that each API function in `src/api/` correctly calls the backend, maps data between `snake_case` and `camelCase`, and handles errors appropriately.
@@ -48,6 +48,8 @@ frontend/src/api/
 ├── novels.ts
 ├── languages.ts
 ├── labels.ts
+├── autolabels.ts
+├── filters.ts
 ├── users.ts
 ├── token.ts
 ├── errors.ts
@@ -56,6 +58,8 @@ frontend/src/api/
     ├── novels.test.ts
     ├── languages.test.ts
     ├── labels.test.ts
+    ├── autolabels.test.ts
+    ├── filters.test.ts
     └── users.test.ts
 ```
 
@@ -407,8 +411,8 @@ Each section lists the required test cases per API function. Categories:
 | # | Category | Test Case |
 |---|----------|-----------|
 | 1 | Call | Calls `GET /revisions/{revisionId}` |
-| 2 | Response mapping | Maps all revision fields including `raw_chapter_revision_text` |
-| 3 | Response mapping | Returns full `RawChapterRevision` (not meta — includes text field) |
+| 2 | Response mapping | Maps all revision fields including `revision_text` |
+| 3 | Response mapping | Returns full `Revision` (not meta — includes text field) |
 | 4 | Error | Propagates 404 |
 
 #### `getChapterRevisionsByNovel(novelId, start?, end?, isPublic?, isPrimary?, isFinal?)`
@@ -416,7 +420,7 @@ Each section lists the required test cases per API function. Categories:
 | # | Category | Test Case |
 |---|----------|-----------|
 | 1 | Call | Calls `GET /novels/{novelId}/revisions` with all query params (kebab-case aliases) |
-| 2 | Response mapping | Maps each item as `RawChapterRevisionMeta` (no text field) |
+| 2 | Response mapping | Maps each item as `RevisionMeta` (no text field) |
 | 3 | Edge | All optional params omitted → passed as `undefined` |
 | 4 | Edge | Boolean query params serialized correctly |
 | 5 | Error | Propagates 404 |
@@ -426,7 +430,7 @@ Each section lists the required test cases per API function. Categories:
 | # | Category | Test Case |
 |---|----------|-----------|
 | 1 | Call | Calls `GET /chapters/{chapterId}/revisions` with query params |
-| 2 | Response mapping | Maps each item as `RawChapterRevisionMeta` |
+| 2 | Response mapping | Maps each item as `RevisionMeta` |
 | 3 | Error | Propagates 404 |
 
 #### `createNovel(request)`
@@ -444,7 +448,7 @@ Each section lists the required test cases per API function. Categories:
 | # | Category | Test Case |
 |---|----------|-----------|
 | 1 | Call | Calls `POST /novels/{novelId}/chapters` |
-| 2 | Request mapping | Maps `{ rawChapterNum }` → `{ raw_chapter_num }` |
+| 2 | Request mapping | Maps `{ chapterNum }` → `{ chapter_num }` |
 | 3 | Response mapping | Maps chapter response from snake_case to camelCase |
 | 4 | Error | Propagates 404 (novel not found) |
 | 5 | Error | Propagates 409 (duplicate chapter number) |
@@ -454,7 +458,7 @@ Each section lists the required test cases per API function. Categories:
 | # | Category | Test Case |
 |---|----------|-----------|
 | 1 | Call | Calls `POST /chapters/{chapterId}/revisions` |
-| 2 | Request mapping | Maps `{ rawChapterRevisionTitle, rawChapterRevisionText }` → snake_case |
+| 2 | Request mapping | Maps `{ revisionTitle, revisionText }` → snake_case |
 | 3 | Response mapping | Maps full revision response from snake_case to camelCase |
 | 4 | Error | Propagates 404 (chapter not found) |
 | 5 | Error | Propagates 400 (data too long) |

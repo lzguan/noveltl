@@ -1,11 +1,9 @@
 # Removing `is_final` flag
 
-**Last Updated**: March 19, 2026    
-**Status**: Complete
+**Last Updated**: March 21, 2026
+**Status**: Draft
 
 ---
-
-## Summary
 
 This doc outlines the migration from forcing revisions to be immutable before editing labels to being able to mutate revisions even after adding labels. It will try to outline the design decisions, patterns, and algorithms involved in the implementation of this feature.
 
@@ -22,10 +20,11 @@ This doc outlines the migration from forcing revisions to be immutable before ed
      - [Filters](#filters)
 3. [Relevant Files](#relevant-files)
 4. [See Also](#see-also)
+5. [Appendix A — Scrapped: Recursive longest common substring approach](#appendix-a--scrapped-recursive-longest-common-substring-approach)
 
 ## Background
 
-We briefly describe the current implementation and state some assumptions about the use case. Currently, the `RawChapterRevision` data model comes equipped with an `is_final` class. This is initialized to `False` by default and acts as a lock against database updates - when set to `False`, it is impossible to label the revision; when set to `True`, it is impossible to edit the chapter. Furthermore, once set to `True`, it cannot be set to `False` again. This greatly simplifies the system design - once a chapter is finalized, we have an easy way to check that all labels are valid for that revision. Furthermore, we do not need to add any concurrency features to ensure that the database contains only valid data - the backend ensures that inserted labels match text boundaries and the database handles race conditions and label overlaps. This ensures that the backend has a consistent view of the data at all times, even if multiple simultaneous users may have slight inconsistencies with their view of the labels.
+We briefly describe the current implementation and state some assumptions about the use case. Currently, the `Revision` data model comes equipped with an `is_final` class. This is initialized to `False` by default and acts as a lock against database updates - when set to `False`, it is impossible to label the revision; when set to `True`, it is impossible to edit the chapter. Furthermore, once set to `True`, it cannot be set to `False` again. This greatly simplifies the system design - once a chapter is finalized, we have an easy way to check that all labels are valid for that revision. Furthermore, we do not need to add any concurrency features to ensure that the database contains only valid data - the backend ensures that inserted labels match text boundaries and the database handles race conditions and label overlaps. This ensures that the backend has a consistent view of the data at all times, even if multiple simultaneous users may have slight inconsistencies with their view of the labels.
 
 There are a couple of assumptions we have made in designing the data model this way:
 1. We prioritize having a consistent view of the data on the server.
@@ -321,53 +320,58 @@ To make this happen, we will need to attach certain event listeners to the front
 
 Consider a scenario where a user decides to perform some edits on another platform and copy paste the results back into the editor. We will maintain the same assumption that edits tend to be composed of few additions and deletions in a small number of places. Notice that using event based updates will remove all labels, which may be unintentional. Hence we consider a different method of updating labels for editing text.
 
-The idea here is given an original string and a modified string, return a sequence of text operations that preserves as many labels as possible. Note that the linux `diff` tool is a fairly close approximation for what we want - it scans for lines that differ and returns ways to replace these lines with each other. We will implement something similar using longest common substring instead of longest common subsequence. This is reasonable in the sense that we want labels within a large block of unchanged text to remain unchanged. Note that the user may copy paste one part of the text to another - in this case we don't have a solution for preserving labels yet.
+The idea here is given an original string and a modified string, return a sequence of text operations that preserves as many labels as possible. We use the longest common subsequence (LCS) to find the optimal alignment between the two strings. The LCS identifies the maximum set of characters that appear in both strings in the same order. When the matched characters are chunked into contiguous runs, each run is a block of unchanged text — and any labels falling entirely within an unchanged block are preserved. The gaps between blocks become the delete/insert operations.
 
-We will assume that we have a function `lcs(a : str, b : str) -> (range1 : tuple[int, int], range2 : tuple[int, int])` which takes two strings and returns the range of the common substring in string `a` and the range of the common subsequence in `b`, or `((0,0), (0,0))` if no such range is found (note this allows us to specify thresholds on the minimum length of a common substring). We define a function `f(a : str, b : str) -> list[TextOp]` as follows:
+##### Why LCS over longest common substring
 
+An earlier approach (see [Appendix A](#appendix-a--scrapped-recursive-longest-common-substring-approach)) used recursive longest common substring, which greedily anchors on the single largest contiguous match at each level. This is a heuristic — the greedy choice at each level is not guaranteed to be globally optimal, and can miss better alignments that preserve more text. LCS finds the globally optimal character alignment and therefore preserves the maximum amount of text, which in turn preserves the maximum number of labels.
+
+##### Implementation via `diff-match-patch-es`
+
+[`diff-match-patch-es`](https://github.com/antfu/diff-match-patch-es) is a TypeScript rewrite of Google's `diff-match-patch` library. It implements Myers' diff algorithm (optimal minimum edit script) and works correctly on CJK text and all BMP Unicode characters (standard Chinese characters, Japanese brackets `「」『』`, etc.) without modification. The only known issues are with characters outside the BMP (some emoji, rare CJK Extension B+ characters), which are not relevant for novel text.
+
+`diff(oldText, newText)` returns an array of `[operation, text]` tuples:
+
+| Operation | Value | Meaning |
+|-----------|-------|---------|
+| `DIFF_EQUAL` | `0` | Text unchanged in both strings |
+| `DIFF_DELETE` | `-1` | Text exists in old but not new |
+| `DIFF_INSERT` | `1` | Text exists in new but not old |
+
+The EQUAL chunks are the anchored common subsequence blocks; DELETE and INSERT chunks between them are the edits. To convert this into `TextOp`s for the event-based label shifting algorithm:
+
+```typescript
+import { diff, DIFF_EQUAL, DIFF_DELETE, DIFF_INSERT } from 'diff-match-patch-es'
+
+function diffToOps(oldText: string, newText: string): TextOp[] {
+    const diffs = diff(oldText, newText, { timeout: 0 })
+
+    const ops: TextOp[] = []
+    let offset = 0
+    for (const [op, text] of diffs) {
+        if (op === DIFF_EQUAL) {
+            offset += text.length
+        } else if (op === DIFF_DELETE) {
+            ops.push({ op: 'delete', start: offset, text })
+            // don't advance offset — text is removed
+        } else if (op === DIFF_INSERT) {
+            ops.push({ op: 'insert', start: offset, text })
+            offset += text.length
+        }
+    }
+    return ops.reverse()
+}
 ```
-def f(a, b):
-    if len(a) == 0 and len(b) == 0:
-        return []
-    if len(a) == 0:
-        return [{"op" : "insert", "start" : 0, "text" : b}]
-    if len(b) == 0:
-        return [{"op" : "delete", "start" : 0, "text" : a}]
-    range1, range2 = lcs(a, b)
-    if range1[1] - range1[0] == 0:
-        return [{"op" : "delete", "start" : 0, "text" : a}, {"op" : "insert", "start" : 0, "text" : b}]
-    left_ops = f(a[:range1[0]], b[:range2[0]])
-    right_ops = f(a[range1[1]:], b[range2[1]:])
 
-    for op in right_ops:
-        op["start"] += range1[1]
-    return right_ops + left_ops
-```
+The ops are reversed so they are sorted by descending `start` position — applying them in this order ensures earlier offsets are not affected by later operations, matching the contract of the event-based update algorithm.
 
-The following diagram illustrates the recursive structure:
+> **Note — do NOT use `cleanupSemantic`.** This post-processing function merges small coincidental equalities into larger edits for human readability, which would destroy small matching blocks that could otherwise anchor labels. We want to preserve every EQUAL chunk, no matter how small.
 
-```mermaid
-flowchart TD
-    A["f(a, b)"] --> B["lcs(a, b) → common substring"]
-    B --> C{Common substring found?}
-    C -- No --> D["delete all of a, insert all of b"]
-    C -- Yes --> E["Split around common substring"]
-    E --> F["f(a_left, b_left) — left of match"]
-    E --> G["Common substring — no ops needed"]
-    E --> H["f(a_right, b_right) — right of match"]
-    F --> I["left_ops"]
-    H --> J["right_ops (offsets shifted)"]
-    I --> K["return right_ops + left_ops\n(reverse-sorted by start)"]
-    J --> K
-```
+> **Note — `timeout`:** Setting `timeout: 0` guarantees an optimal result. The default timeout is 1 second — if the diff takes longer, the library falls back to a valid but non-optimal result. For chapter-length text (~5K–50K characters) with small edits, `timeout: 0` should be fast enough. If performance becomes an issue, a non-zero timeout still produces a correct diff, just with potentially fewer labels preserved.
 
-Note that `f` will always return a list of ops sorted in reverse order by the `start` key (easy induction proof). To prove correctness, we use the inductive hypothesis that applying text operations from `f(a,b)` onto `a` always yields `b`. The base cases are clearly true. If `left_ops` turn `a[:range1[0]]` into `b[:range2[0]]` and same for `right_ops`, then applying all the modified `right_ops` to `a` is equivalent to applying the unmodified `right_ops` to `a[range1[1]:]` and then appending that result to then end of `a[:range1[1]]`, which is just `a[:range1[1]] + b[range2[1]:]`. Then applying `left_ops` will turn `a[:range1[0]]` into `b[:range2[0]]` and leave the remainder of the current string untouched. We end up with `b[:range2[0]] + a[range1[0]:range1[1]] + b[range2[1]:] = b[:range2[0]] + b[range2[0]:range2[1]] + b[range2[1]:] = b`, as desired. As to why this is an approximate solution for keeping existing labels, that is purely a heuristic.
+> **Note — complexity:** Myers' algorithm is `O(N * D)` where `N` is the sum of input lengths and `D` is the edit distance. For typical chapter edits (small `D`), this is effectively linear. Worst case (completely different texts) is `O(N^2)`, but this is also the case where there are no labels to preserve.
 
-> **Note — LCS complexity:** Standard longest common substring via dynamic programming is `O(n*m)`. An `O(n+m)` algorithm exists using suffix arrays + LCP arrays, but is non-trivial to implement. The complexity analysis below assumes `O(n+m)` — if using the DP approach, substitute accordingly. In practice, Python's `difflib.SequenceMatcher.find_longest_match` or Google's `diff-match-patch` library (available in both Python and JS) are reasonable off-the-shelf choices.
-
-For a rough time complexity analysis, let `n = len(a)` and `m = len(b)`. We assume `lcs` takes `O(n+m)` time. Then `f(a, b)` takes `O(n+m) + T(n-l1, m-l2) + T(n-r1, m-r2)` where `l1, l2` are the lengths of the left half of `a` and `b` after splitting respectively, and similarly for `r1, r2`. If there is some constant `0<=k<1` such that `l1, l2 >= ka` and `r1, r2 >= kb`, then the time complexity ends up being `O(n+m) + T((1-k)n, (1-k)m) + T((1-k)n, (1-k)m)`. We can use the master theorem here to get polynomial runtime (or `O((n+m)log(n+m)))` if `k` is sufficiently large). This is somewhat safe to assume.
-
-In terms of implementation, this is work that can be done on the frontend, which allows us to reduce load on the backend.
+This work can be done on the frontend, which allows us to reduce load on the backend.
 
 ---
 
@@ -622,9 +626,59 @@ However, this is actually acceptable — **data integrity is preserved**. The "H
 
 **Mitigation — frontend mode lock:** As an additional UX improvement, the frontend should **block text editing while label update requests are in flight**. When the user switches from label editing mode to text editing mode, the frontend must wait for all pending label requests to complete (or fail) before allowing the text edit to be submitted. This ensures the backend has a consistent label set before any text edit reads and shifts it, avoiding the "lost label" scenario for the common single-user case. The reverse (blocking label edits during text edits) is already handled by the version check — a text edit creates a new version, and in-flight label updates against the old version will be rejected with a 409.
 
+## Appendix A — Scrapped: Recursive longest common substring approach
+
+> This section documents a previously considered approach that was replaced by LCS-based diffing via `diff-match-patch-es`. It is preserved for historical reference.
+
+The original idea was to recursively find the longest common substring between the old and new text, anchor on it, and process the left and right halves. This is a greedy heuristic — it does not guarantee a globally optimal alignment and can miss better decompositions that preserve more labels.
+
+We assumed a function `lcs(a : str, b : str) -> (range1 : tuple[int, int], range2 : tuple[int, int])` which takes two strings and returns the range of the common substring in string `a` and the range of the common substring in `b`, or `((0,0), (0,0))` if no such range is found. We defined a function `f(a : str, b : str) -> list[TextOp]` as follows:
+
+```
+def f(a, b):
+    if len(a) == 0 and len(b) == 0:
+        return []
+    if len(a) == 0:
+        return [{"op" : "insert", "start" : 0, "text" : b}]
+    if len(b) == 0:
+        return [{"op" : "delete", "start" : 0, "text" : a}]
+    range1, range2 = lcs(a, b)
+    if range1[1] - range1[0] == 0:
+        return [{"op" : "delete", "start" : 0, "text" : a}, {"op" : "insert", "start" : 0, "text" : b}]
+    left_ops = f(a[:range1[0]], b[:range2[0]])
+    right_ops = f(a[range1[1]:], b[range2[1]:])
+
+    for op in right_ops:
+        op["start"] += range1[1]
+    return right_ops + left_ops
+```
+
+```mermaid
+flowchart TD
+    A["f(a, b)"] --> B["lcs(a, b) → common substring"]
+    B --> C{Common substring found?}
+    C -- No --> D["delete all of a, insert all of b"]
+    C -- Yes --> E["Split around common substring"]
+    E --> F["f(a_left, b_left) — left of match"]
+    E --> G["Common substring — no ops needed"]
+    E --> H["f(a_right, b_right) — right of match"]
+    F --> I["left_ops"]
+    H --> J["right_ops (offsets shifted)"]
+    I --> K["return right_ops + left_ops\n(reverse-sorted by start)"]
+    J --> K
+```
+
+`f` always returns ops sorted in reverse order by `start`. Correctness follows by induction: if `left_ops` turn `a[:range1[0]]` into `b[:range2[0]]` and `right_ops` turn `a[range1[1]:]` into `b[range2[1]:]`, then applying all ops (right first, then left) transforms `a` into `b`.
+
+**Why this was scrapped:** The greedy choice of the single longest common substring at each recursion level is not guaranteed to be globally optimal. LCS (longest common subsequence) finds the optimal alignment, preserving the maximum number of characters and therefore the maximum number of labels. Additionally, `diff-match-patch-es` provides an optimized, well-tested implementation of Myers' diff, making the custom recursive approach unnecessary.
+
+**Complexity of the scrapped approach:** Assuming `lcs` takes `O(n+m)` via suffix arrays, the recursion gives `O((n+m) log(n+m))` when the common substring splits the input roughly evenly, but degrades to `O((n+m)^2)` in adversarial cases.
+
+---
+
 ## Relevant Files
 
-- `backend/src/novels/models.py` — `RawChapterRevision` model (where `is_final` lives today)
+- `backend/src/novels/models.py` — `Revision` model (where `is_final` lives today)
 - `backend/src/labels/models.py` — `LabelData` model (will need new FK to `RevisionText`)
 - `backend/src/labels/service.py` — label CRUD operations
 - `backend/src/autolabels/` — AutoLabel worker and porting logic

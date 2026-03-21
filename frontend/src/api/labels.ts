@@ -23,7 +23,7 @@ const mapLabelGroup = (data: any): LabelGroup => ({
 const mapLabelData = (data: any): LabelData => ({
     labelDataId: data.label_data_id,
     labelGroupId: data.label_group_id,
-    rawChapterRevisionId: data.raw_chapter_revision_id,
+    revisionId: data.revision_id,
 })
 
 const mapLabel = (data: any): Label => ({
@@ -49,7 +49,7 @@ const mapUpdateLabelGroupRequest = (data: UpdateLabelGroup) => ({
 })
 
 const mapCreateLabelDataRequest = (data: CreateLabelData) => ({
-    raw_chapter_revision_id: data.rawChapterRevisionId,
+    revision_id: data.revisionId,
 })
 
 const mapLabelOp = (op: LabelOp) => {

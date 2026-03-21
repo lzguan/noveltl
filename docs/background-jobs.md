@@ -1,6 +1,6 @@
 # Background Jobs System
 
-**Last Updated**: March 7, 2026  
+**Last Updated**: March 20, 2026  
 **Status**: Complete
 
 This document describes the AutoLabel background processing system - a distributed framework for running ML inference on chapter text with race condition handling, job deduplication, and automatic retries.
@@ -56,7 +56,7 @@ sequenceDiagram
     note over DB,C: AutoLabel Creation
     C->>B: POST /auto-labels {novel_id, model_name, model_params, filters...}<br/>[Bearer token]
     B->>B: get_current_user (JWT validation)
-    B->>DB: INSERT AutoLabel rows via INSERT…FROM SELECT<br/>+ raw_chapter_revision_mod_access_select<br/>(only final revisions the user can see)<br/>+ skip duplicates (same revision + model + params)
+    B->>DB: INSERT AutoLabel rows via INSERT…FROM SELECT<br/>+ revision_mod_access_select<br/>(only final revisions the user can see)<br/>+ skip duplicates (same revision + model + params)
     DB-->>B: new AutoLabel rows (status=PENDING)
     B->>DB: COMMIT
 
@@ -90,7 +90,7 @@ sequenceDiagram
 
     note over DB,C: Poll for status
     C->>B: GET /auto-labels?novel-id=…<br/>[Bearer token]
-    B->>DB: SELECT AutoLabels<br/>+ raw_chapter_revision_mod_access_select
+    B->>DB: SELECT AutoLabels<br/>+ revision_mod_access_select
     B-->>C: 200 {revision_id: AutoLabelMeta}
 
     note over DB,C: Populate labels from auto-label results
@@ -334,14 +334,14 @@ Worker 2's results are preserved, Worker 1's stale results are discarded.
 
 **Problem:** Users might request autolabels for the same chapters multiple times.
 
-**Solution:** Unique constraint on `(raw_chapter_revision_id, auto_label_model_name, auto_label_model_params)`
+**Solution:** Unique constraint on `(revision_id, auto_label_model_name, auto_label_model_params)`
 
 From `backend/src/autolabels/service.py`:
 
 ```python
 # Check if autolabel already exists before inserting
 q = q.where(not_(exists(select(AutoLabel).where(and_(
-    AutoLabel.raw_chapter_revision_id == RawChapterRevision.raw_chapter_revision_id,
+    AutoLabel.revision_id == Revision.revision_id,
     AutoLabel.auto_label_model_name == request.auto_label_model_name,
     AutoLabel.auto_label_model_params == request.auto_label_model_params
 )))))
@@ -468,14 +468,14 @@ class AutoLabel(Base):
     auto_label_status: AutoLabelProgress  # State machine
     auto_label_last_job_id: str  # UUID for optimistic locking
     auto_label_message: str | None  # Error messages for FAILED state
-    raw_chapter_revision_id: int  # Foreign key to chapter
+    revision_id: int  # Foreign key to chapter
 ```
 
 ### Unique Constraint: Result Caching
 
 ```python
 UniqueConstraint(
-    raw_chapter_revision_id, 
+    revision_id, 
     auto_label_model_name, 
     auto_label_model_params, 
     name="uq_model_name_params"
@@ -556,7 +556,7 @@ Content-Type: application/json
   "novel_id": 1,
   "auto_label_model_name": "cluener",
   "auto_label_model_params": {"chunk_size": 500},
-  "raw_chapter_revision_ids": [1, 2, 3, 4, 5]
+  "revision_ids": [1, 2, 3, 4, 5]
 }
 
 Response: 200 OK
@@ -567,7 +567,7 @@ Response: 200 OK
     "auto_label_model_name": "cluener",
     "auto_label_model_params": {"chunk_size": 500},
     "auto_label_message": "Job queued.",
-    "raw_chapter_revision_id": 1,
+    "revision_id": 1,
     "auto_label_last_job_id": "a1b2c3d4-..."
   }
 ]
@@ -579,10 +579,10 @@ Response: 200 OK
 - `auto_label_model_params` — Model-specific parameter dict (see below). The dict is validated and defaults are applied server-side.
 
 **Optional chapter filters** (all default to `null` = no filter):
-- `raw_chapter_ids` — Restrict to revisions belonging to these raw chapter IDs.
-- `raw_chapter_revision_ids` — Restrict to these specific revision IDs.
-- `start` — Restrict to revisions with `raw_chapter_num >= start` (inclusive).
-- `end` — Restrict to revisions with `raw_chapter_num < end` (exclusive).
+- `chapter_ids` — Restrict to revisions belonging to these chapter IDs.
+- `revision_ids` — Restrict to these specific revision IDs.
+- `start` — Restrict to revisions with `chapter_num >= start` (inclusive).
+- `end` — Restrict to revisions with `chapter_num < end` (exclusive).
 - `is_primary` — Restrict to revisions with this `is_primary` flag value.
 - `is_public` — Restrict to revisions with this `is_public` flag value.
 
@@ -615,7 +615,7 @@ Response: 200 OK
   "auto_label_model_name": "cluener",
   "auto_label_model_params": {"chunk_size": 500},
   "auto_label_message": null,
-  "raw_chapter_revision_id": 1,
+  "revision_id": 1,
   "auto_label_last_job_id": "a1b2c3d4-..."
 }
 ```
@@ -633,7 +633,7 @@ Response: 200 OK
     "auto_label_status": "done",
     "auto_label_model_name": "cluener",
     "auto_label_model_params": {"chunk_size": 500},
-    "raw_chapter_revision_id": 1,
+    "revision_id": 1,
     "auto_label_last_job_id": "...",
     "auto_label_message": null
   }
@@ -642,8 +642,8 @@ Response: 200 OK
 
 **Query Parameters:**
 - `novel-id` (required) - Novel to query autolabels for
-- `raw-chapter-ids` (optional) - Filter by chapter IDs
-- `raw-chapter-revision-ids` (optional) - Filter by revision IDs
+- `chapter-ids` (optional) - Filter by chapter IDs
+- `revision-ids` (optional) - Filter by revision IDs
 - `start` (optional) - Start chapter number
 - `end` (optional) - End chapter number  
 - `model-names` (optional) - Filter by model names

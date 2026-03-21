@@ -1,6 +1,6 @@
 # Database Schema
 
-**Last Updated**: March 8, 2026  
+**Last Updated**: March 20, 2026  
 **Status**: Complete
 
 This document describes the PostgreSQL database schema for NovelTL, including tables, relationships, constraints, and design rationale.
@@ -36,11 +36,11 @@ erDiagram
     User ||--o{ LabelContributor : "has"
     Contributor }o--|| Novel : "belongs to"
     LabelContributor }o--|| LabelGroup : "belongs to"
-    Novel ||--o{ RawChapter : "has"
+    Novel ||--o{ Chapter : "has"
     Novel ||--o{ LabelGroup : "has"
-    RawChapter ||--o{ RawChapterRevision : "has"
-    RawChapterRevision ||--o{ AutoLabel : "has"
-    RawChapterRevision ||--o{ LabelData : "referenced by"
+    Chapter ||--o{ Revision : "has"
+    Revision ||--o{ AutoLabel : "has"
+    Revision ||--o{ LabelData : "referenced by"
     LabelGroup ||--o{ LabelData : "has"
     LabelData ||--o{ Label : "has"
     Language ||--o{ Novel : "used by"
@@ -139,45 +139,45 @@ Association table for many-to-many relationship between users and novels.
 - **editor** - Edit chapters, manage labels
 - **viewer** - Read-only access to private novels
 
-### raw_chapters
+### chapters
 
 Stores chapter metadata (chapter number within a novel).
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `raw_chapter_id` | INTEGER | PRIMARY KEY | Unique chapter identifier |
-| `raw_chapter_num` | INTEGER | NOT NULL | Chapter number (1, 2, 3, ...) |
+| `chapter_id` | INTEGER | PRIMARY KEY | Unique chapter identifier |
+| `chapter_num` | INTEGER | NOT NULL | Chapter number (1, 2, 3, ...) |
 | `novel_id` | INTEGER | NOT NULL, FK → novels | Parent novel |
 | `created_at` | TIMESTAMP | NOT NULL | Creation time |
 | `updated_at` | TIMESTAMP | NOT NULL | Last update time |
 
-**Unique Constraint:** (`raw_chapter_num`, `novel_id`) - one chapter per number per novel
+**Unique Constraint:** (`chapter_num`, `novel_id`) - one chapter per number per novel
 
 **Notes:**
 - Acts as a container for chapter revisions
-- `raw_chapter_num` allows chapters to be ordered
+- `chapter_num` allows chapters to be ordered
 
-### raw_chapter_revisions
+### revisions
 
 Stores versioned chapter content. Revisions are immutable once marked public/final.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `raw_chapter_revision_id` | INTEGER | PRIMARY KEY | Unique revision identifier |
-| `raw_chapter_revision_title` | VARCHAR(255) | NOT NULL | Chapter title |
-| `raw_chapter_revision_text` | TEXT | NOT NULL | Full chapter text |
-| `raw_chapter_revision_is_public` | BOOLEAN | NOT NULL | Public visibility flag |
-| `raw_chapter_revision_is_final` | BOOLEAN | NOT NULL | Immutability flag |
-| `raw_chapter_revision_is_primary` | BOOLEAN | NOT NULL | Primary revision flag |
-| `raw_chapter_id` | INTEGER | NOT NULL, FK → raw_chapters | Parent chapter |
+| `revision_id` | INTEGER | PRIMARY KEY | Unique revision identifier |
+| `revision_title` | VARCHAR(255) | NOT NULL | Chapter title |
+| `revision_text` | TEXT | NOT NULL | Full chapter text |
+| `revision_is_public` | BOOLEAN | NOT NULL | Public visibility flag |
+| `revision_is_final` | BOOLEAN | NOT NULL | Immutability flag |
+| `revision_is_primary` | BOOLEAN | NOT NULL | Primary revision flag |
+| `chapter_id` | INTEGER | NOT NULL, FK → chapters | Parent chapter |
 | `created_at` | TIMESTAMP | NOT NULL | Creation time |
 | `updated_at` | TIMESTAMP | NOT NULL | Last update time |
 
 **Indexes:**
-- `ix_one_primary_revision_per_chapter` - Partial unique index on (`raw_chapter_id`) WHERE `raw_chapter_revision_is_primary = TRUE`
+- `ix_one_primary_revision_per_chapter` - Partial unique index on (`chapter_id`) WHERE `revision_is_primary = TRUE`
 
 **Constraints:**
-- `CHECK (raw_chapter_revision_is_public OR NOT raw_chapter_revision_is_primary)` (name: `primary_must_be_public_check`) - Primary revisions must be public
+- `CHECK (revision_is_public OR NOT revision_is_primary)` (name: `primary_must_be_public_check`) - Primary revisions must be public
 
 **Flags:**
 - **is_public** - Visible to users with novel access (vs. contributors-only)
@@ -230,11 +230,11 @@ Container for labels within a label group for a specific chapter revision.
 |--------|------|-------------|-------------|
 | `label_data_id` | INTEGER | PRIMARY KEY | Unique label data identifier |
 | `label_group_id` | INTEGER | NOT NULL, FK → label_groups | Parent label group |
-| `raw_chapter_revision_id` | INTEGER | NOT NULL, FK → raw_chapter_revisions | Chapter revision |
+| `revision_id` | INTEGER | NOT NULL, FK → revisions | Chapter revision |
 | `created_at` | TIMESTAMP | NOT NULL | Creation time |
 | `updated_at` | TIMESTAMP | NOT NULL | Last update time |
 
-**Unique Constraint:** (`label_group_id`, `raw_chapter_revision_id`) - one label data per chapter revision per group
+**Unique Constraint:** (`label_group_id`, `revision_id`) - one label data per chapter revision per group
 
 **Notes:**
 - Links label group to specific chapter revision
@@ -286,12 +286,12 @@ Cached NER inference results.
 | `auto_label_status` | VARCHAR(10) | NOT NULL, DEFAULT 'pending' | 'pending', 'processing', 'done', 'failed' (CHECK constraint) |
 | `auto_label_last_job_id` | VARCHAR(36) | NULL | UUID for optimistic locking |
 | `auto_label_message` | TEXT | NULL | Error message (if FAILED) |
-| `raw_chapter_revision_id` | INTEGER | NOT NULL, FK → raw_chapter_revisions | Target chapter |
+| `revision_id` | INTEGER | NOT NULL, FK → revisions | Target chapter |
 | `created_at` | TIMESTAMP | NOT NULL | Creation time |
 | `updated_at` | TIMESTAMP | NOT NULL | Last update time |
 
 **Constraints:**
-- `UNIQUE (raw_chapter_revision_id, auto_label_model_name, auto_label_model_params)` (name: `uq_model_name_params`) - Ensures one cached result per (chapter, model, params) combination
+- `UNIQUE (revision_id, auto_label_model_name, auto_label_model_params)` (name: `uq_model_name_params`) - Ensures one cached result per (chapter, model, params) combination
 
 **JSONB Schemas:**
 - `auto_label_data`: Array of `{word, start, end, entity_group, score}`
@@ -310,7 +310,7 @@ Cached NER inference results.
 - Unique constraints create implicit indexes
 
 **Recommended Additions:**
-- `raw_chapters(raw_chapter_num)` - For chapter ordering queries
+- `chapters(chapter_num)` - For chapter ordering queries
 - `novel_contributors(user_id)` - For "my novels" queries
 - `labels(label_entity_group)` - For filtering by entity type
 - `labels(label_score)` - For score-based filtering
@@ -329,7 +329,7 @@ WHERE novel_contributors.user_id = :user_id
 ```sql
 SELECT labels.* FROM labels
 JOIN label_datas ON labels.label_data_id = label_datas.label_data_id
-WHERE label_datas.raw_chapter_revision_id = :revision_id
+WHERE label_datas.revision_id = :revision_id
   AND label_datas.label_group_id = :group_id
 ORDER BY labels.label_start;
 ```
@@ -337,7 +337,7 @@ ORDER BY labels.label_start;
 ### Check for cached autolabel
 ```sql
 SELECT * FROM auto_labels
-WHERE raw_chapter_revision_id = :revision_id
+WHERE revision_id = :revision_id
   AND auto_label_model_name = :model
   AND auto_label_model_params = :params::jsonb
   AND auto_label_status = 'DONE';

@@ -212,8 +212,8 @@ Ruff will auto-format on save, and Pylance will show type errors as you code.
 ## Exceptions
 - Base exception classes should be defined in the top-level `exceptions.py` file (e.g. `DuplicateException`, `NotFoundException`, etc.)
 - Exceptions for specific services should be defined in the service-specific `exceptions.py` module.
-- Exceptions that describe a certain object matching the description of a top-level exception should follow the format `ObjectTopLevelException` (e.g. `UserNameDuplicateException`, `RawChapterRevisionNotFoundException`) and should inherit from the top-level exception.
-- For exceptions that do not fall under a top-level exception, just be descriptive enough and do not match the suffix to a top-level exception (e.g. `RawChapterRevisionMakePrimaryFailedException`).
+- Exceptions that describe a certain object matching the description of a top-level exception should follow the format `ObjectTopLevelException` (e.g. `UserNameDuplicateException`, `RevisionNotFoundException`) and should inherit from the top-level exception.
+- For exceptions that do not fall under a top-level exception, just be descriptive enough and do not match the suffix to a top-level exception (e.g. `RevisionMakePrimaryFailedException`).
 - For service-specific describing an error that occurs to a specific type of object, top-level exceptions should follow the convention `ObjectTopLevelException` (e.g. `LabelInvalidOperationException`). Inherited exceptions should have `Object` as a prefix, as well as `TopLevelException` as a suffix (e.g. `LabelWordMismatchInvalidOperationException`).
 
 ## Exception handling

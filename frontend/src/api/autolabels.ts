@@ -25,7 +25,7 @@ const mapAutoLabel = (data: any): AutoLabel => ({
     autoLabelModelParams: data.auto_label_model_params,
     autoLabelStatus: data.auto_label_status,
     autoLabelMessage: data.auto_label_message,
-    rawChapterRevisionId: data.raw_chapter_revision_id,
+    revisionId: data.revision_id,
     autoLabelLastJobId: data.auto_label_last_job_id,
 })
 
@@ -35,7 +35,7 @@ const mapAutoLabelMeta = (data: any): AutoLabelMeta => ({
     autoLabelModelParams: data.auto_label_model_params,
     autoLabelStatus: data.auto_label_status,
     autoLabelMessage: data.auto_label_message,
-    rawChapterRevisionId: data.raw_chapter_revision_id,
+    revisionId: data.revision_id,
     autoLabelLastJobId: data.auto_label_last_job_id,
 })
 
@@ -47,8 +47,8 @@ const mapCreateAutoLabelsRequest = (data: CreateAutoLabels) => ({
     novel_id: data.novelId,
     auto_label_model_name: data.autoLabelModelName,
     auto_label_model_params: data.autoLabelModelParams,
-    raw_chapter_ids: data.rawChapterIds,
-    raw_chapter_revision_ids: data.rawChapterRevisionIds,
+    chapter_ids: data.chapterIds,
+    revision_ids: data.revisionIds,
     start: data.start,
     end: data.end,
     is_primary: data.isPrimary,
@@ -64,8 +64,8 @@ export const getAutoLabelById = async (autoLabelId: number): Promise<AutoLabel> 
 
 export const getAutoLabels = async (
     novelId: number,
-    rawChapterIds?: number[] | null,
-    rawChapterRevisionIds?: number[] | null,
+    chapterIds?: number[] | null,
+    revisionIds?: number[] | null,
     start?: number | null,
     end?: number | null,
     modelNames?: string[] | null
@@ -73,8 +73,8 @@ export const getAutoLabels = async (
     const result = await client.get('/auto-labels', {
         params: {
             'novel-id': novelId,
-            'raw-chapter-ids': rawChapterIds,
-            'raw-chapter-revision-ids': rawChapterRevisionIds,
+            'chapter-ids': chapterIds,
+            'revision-ids': revisionIds,
             start,
             end,
             'model-names': modelNames,

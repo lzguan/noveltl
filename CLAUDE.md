@@ -84,7 +84,7 @@ For inserts that depend on parent permissions, the pattern is an atomic `INSERT 
 The backend uses `snake_case`; the frontend uses `camelCase`. **Conversion is done manually in `frontend/src/api/*.ts`** — there is no automatic transformation middleware. Each API function maps `response.data.snake_key` → `camelKey` on the way out and `camelKey` → `snake_key` on the way in.
 
 ### Immutable Revisions
-Chapter content is never edited in-place. New `RawChapterRevision` records are created; old ones are immutable. This applies to label data as well.
+Chapter content is never edited in-place. New `Revision` records are created; old ones are immutable. This applies to label data as well.
 
 ### Frontend API Tests
 Tests live in `frontend/src/api/__test__/`. They mock `src/api/client.ts` at the module level and verify:

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getChapterRevisionById } from "../../api/novels";
-import { type RawChapterRevision } from "../../types/novel";
+import { type Revision } from "../../types/novel";
 
 interface RevisionContentDisplayProps {
     revisionId: number | null;
@@ -10,7 +10,7 @@ export const RevisionContentDisplay = ({ revisionId }: RevisionContentDisplayPro
     // 1. Initialize state based on props. 
     // If revisionId exists, we are loading. If null, we are not.
     const [loading, setLoading] = useState(!!revisionId);
-    const [revision, setRevision] = useState<RawChapterRevision | null>(null);
+    const [revision, setRevision] = useState<Revision | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -81,8 +81,8 @@ export const RevisionContentDisplay = ({ revisionId }: RevisionContentDisplayPro
             boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
             borderRadius: '4px'
         }}>
-            <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>{revision.rawChapterRevisionTitle}</h2>
-            <div style={{ whiteSpace: 'pre-wrap' }}>{revision.rawChapterRevisionText}</div>
+            <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>{revision.revisionTitle}</h2>
+            <div style={{ whiteSpace: 'pre-wrap' }}>{revision.revisionText}</div>
         </div>
     );
 };

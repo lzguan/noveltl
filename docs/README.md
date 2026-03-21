@@ -37,8 +37,7 @@ This directory contains technical documentation for the NovelTL project - a coll
 
 ### Reference
 - **[GitHub Issues](https://github.com/lzguan/NovelTL_Dev/issues)** - Known bugs, tech debt, future improvements
-- **[private_issues.md](private_issues.md)** - Environment-specific troubleshooting
-- **[concepts/](concepts/)** - Implementation notes on specific technologies
+- **[concepts/monkeypatching.md](concepts/monkeypatching.md)** - Worker testing via monkeypatching
 
 ## Document Format Standard
 
@@ -47,7 +46,7 @@ All documentation files should follow this format:
 ```markdown
 # Document Title
 
-**Last Updated**: YYYY-MM-DD  
+**Last Updated**: Month DD, YYYY
 **Status**: Complete | Draft | Outdated
 
 Brief introduction paragraph explaining what this document covers and who should read it.

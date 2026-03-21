@@ -25,7 +25,7 @@ describe('AutoLabels API', () => {
                     auto_label_model_params: {},
                     auto_label_status: 'pending',
                     auto_label_message: null,
-                    raw_chapter_revision_id: 10,
+                    revision_id: 10,
                     auto_label_last_job_id: 'job123'
                 }
             })
@@ -53,7 +53,7 @@ describe('AutoLabels API', () => {
                     auto_label_model_params: { chunk_size: 500 },
                     auto_label_status: 'done',
                     auto_label_message: 'Completed',
-                    raw_chapter_revision_id: 20,
+                    revision_id: 20,
                     auto_label_last_job_id: 'job456'
                 }
             })
@@ -77,7 +77,7 @@ describe('AutoLabels API', () => {
                 autoLabelModelParams: { chunk_size: 500 },
                 autoLabelStatus: 'done',
                 autoLabelMessage: 'Completed',
-                rawChapterRevisionId: 20,
+                revisionId: 20,
                 autoLabelLastJobId: 'job456'
             } satisfies AutoLabel)
         })
@@ -108,8 +108,8 @@ describe('AutoLabels API', () => {
             expect(client.get).toHaveBeenCalledWith('/auto-labels', {
                 params: {
                     'novel-id': 5,
-                    'raw-chapter-ids': [1, 2],
-                    'raw-chapter-revision-ids': [10, 20],
+                    'chapter-ids': [1, 2],
+                    'revision-ids': [10, 20],
                     start: 1,
                     end: 100,
                     'model-names': ['cluener']
@@ -126,7 +126,7 @@ describe('AutoLabels API', () => {
                         auto_label_model_params: {},
                         auto_label_status: 'pending',
                         auto_label_message: null,
-                        raw_chapter_revision_id: 10,
+                        revision_id: 10,
                         auto_label_last_job_id: 'job1'
                     },
                     '2': {
@@ -135,7 +135,7 @@ describe('AutoLabels API', () => {
                         auto_label_model_params: { chunk_size: 400 },
                         auto_label_status: 'done',
                         auto_label_message: 'Done',
-                        raw_chapter_revision_id: 20,
+                        revision_id: 20,
                         auto_label_last_job_id: 'job2'
                     }
                 }
@@ -151,7 +151,7 @@ describe('AutoLabels API', () => {
                     autoLabelModelParams: {},
                     autoLabelStatus: 'pending',
                     autoLabelMessage: null,
-                    rawChapterRevisionId: 10,
+                    revisionId: 10,
                     autoLabelLastJobId: 'job1'
                 },
                 2: {
@@ -160,7 +160,7 @@ describe('AutoLabels API', () => {
                     autoLabelModelParams: { chunk_size: 400 },
                     autoLabelStatus: 'done',
                     autoLabelMessage: 'Done',
-                    rawChapterRevisionId: 20,
+                    revisionId: 20,
                     autoLabelLastJobId: 'job2'
                 }
             })
@@ -174,8 +174,8 @@ describe('AutoLabels API', () => {
             expect(client.get).toHaveBeenCalledWith('/auto-labels', {
                 params: {
                     'novel-id': 10,
-                    'raw-chapter-ids': undefined,
-                    'raw-chapter-revision-ids': undefined,
+                    'chapter-ids': undefined,
+                    'revision-ids': undefined,
                     start: undefined,
                     end: undefined,
                     'model-names': undefined
@@ -208,7 +208,7 @@ describe('AutoLabels API', () => {
                 novelId: 10,
                 autoLabelModelName: 'cluener',
                 autoLabelModelParams: { chunk_size: 500 },
-                rawChapterIds: [1, 2, 3],
+                chapterIds: [1, 2, 3],
                 start: 1,
                 end: 10,
                 isPrimary: true,
@@ -219,8 +219,8 @@ describe('AutoLabels API', () => {
                 novel_id: 10,
                 auto_label_model_name: 'cluener',
                 auto_label_model_params: { chunk_size: 500 },
-                raw_chapter_ids: [1, 2, 3],
-                raw_chapter_revision_ids: undefined,
+                chapter_ids: [1, 2, 3],
+                revision_ids: undefined,
                 start: 1,
                 end: 10,
                 is_primary: true,
@@ -237,7 +237,7 @@ describe('AutoLabels API', () => {
                         auto_label_model_params: {},
                         auto_label_status: 'pending',
                         auto_label_message: null,
-                        raw_chapter_revision_id: 10,
+                        revision_id: 10,
                         auto_label_last_job_id: 'job100'
                     }
                 ]
@@ -257,7 +257,7 @@ describe('AutoLabels API', () => {
                     autoLabelModelParams: {},
                     autoLabelStatus: 'pending',
                     autoLabelMessage: null,
-                    rawChapterRevisionId: 10,
+                    revisionId: 10,
                     autoLabelLastJobId: 'job100'
                 }
             ] satisfies AutoLabelMeta[])

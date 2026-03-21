@@ -1,6 +1,6 @@
 # System Architecture
 
-**Last Updated**: March 7, 2026  
+**Last Updated**: March 20, 2026  
 **Status**: Complete
 
 This document describes the high-level architecture of NovelTL - a collaborative platform for novel translation using Named Entity Recognition (NER) and LLM-assisted workflows.
@@ -111,8 +111,8 @@ Stores novel metadata and chapter content.
 
 **Key Concepts:**
 - **Novels** - Top-level containers
-- **Raw Chapters** - Chapter metadata (number, novel reference)
-- **Raw Chapter Revisions** - Immutable chapter content versions
+- **Chapters** - Chapter metadata (number, novel reference)
+- **Revisions** - Immutable chapter content versions
 - **Contributors** - Users with specific roles on novels
 
 ### 3. Labels Service

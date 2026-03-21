@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getChapterRevisionsByChapter } from "../../api/novels";
-import { type RawChapterRevisionMeta } from "../../types/novel";
+import { type RevisionMeta } from "../../types/novel";
 import { routeTo } from "../../routes";
 
 interface RevisionSidebarProps {
@@ -12,7 +12,7 @@ interface RevisionSidebarProps {
 export const RevisionSidebar = ({ chapterId, activeRevisionId }: RevisionSidebarProps) => {
     // Initialize loading to true. The key prop in parent resets this on change.
     const [loading, setLoading] = useState(true);
-    const [revisions, setRevisions] = useState<RawChapterRevisionMeta[]>([]);
+    const [revisions, setRevisions] = useState<RevisionMeta[]>([]);
 
     useEffect(() => {
         let mounted = true;
@@ -43,11 +43,11 @@ export const RevisionSidebar = ({ chapterId, activeRevisionId }: RevisionSidebar
             ) : (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                     {revisions.map((rev) => {
-                        const isActive = rev.rawChapterRevisionId === activeRevisionId;
+                        const isActive = rev.revisionId === activeRevisionId;
                         return (
-                            <li key={rev.rawChapterRevisionId} style={{ marginBottom: '8px' }}>
+                            <li key={rev.revisionId} style={{ marginBottom: '8px' }}>
                                 <Link 
-                                    to={routeTo.view.chapter(chapterId, { revisionId: rev.rawChapterRevisionId })}
+                                    to={routeTo.view.chapter(chapterId, { revisionId: rev.revisionId })}
                                     style={{ 
                                         textDecoration: 'none',
                                         display: 'block',
@@ -60,8 +60,8 @@ export const RevisionSidebar = ({ chapterId, activeRevisionId }: RevisionSidebar
                                         transition: 'background-color 0.2s'
                                     }}
                                 >
-                                    {rev.rawChapterRevisionTitle || '(Untitled)'}
-                                    {rev.rawChapterRevisionIsPrimary && ' ⭐'}
+                                    {rev.revisionTitle || '(Untitled)'}
+                                    {rev.revisionIsPrimary && ' ⭐'}
                                 </Link>
                             </li>
                         );

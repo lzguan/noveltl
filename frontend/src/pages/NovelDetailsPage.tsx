@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getNovelById, getChaptersByNovel, getChapterRevisionsByNovel } from "../api/novels";
-import { type Novel, type RawChapter, type RawChapterRevisionMeta } from '../types/novel';
+import { type Novel, type Chapter, type RevisionMeta } from '../types/novel';
 import { AppRoutes, routeTo } from "../routes";
 
 export const NovelDetailsPage = () => {
     const { novel_id } = useParams<{ novel_id: string }>();
     const [novel, setNovel] = useState<Novel | null>(null);
-    const [chapters, setChapters] = useState<RawChapter[]>([]);
-    
+    const [chapters, setChapters] = useState<Chapter[]>([]);
+
     // Using a Map to store revisions: ChapterID -> List of Revisions
-    const [chapterRevisions, setChapterRevisions] = useState<Map<number, RawChapterRevisionMeta[]>>(new Map());
+    const [chapterRevisions, setChapterRevisions] = useState<Map<number, RevisionMeta[]>>(new Map());
 
     useEffect(() => {
         if (typeof novel_id === "undefined") return;
@@ -30,11 +30,11 @@ export const NovelDetailsPage = () => {
                 setChapters(fetchedChapters);
 
                 // 3. Process Revisions into the Map
-                const map = new Map<number, RawChapterRevisionMeta[]>();
+                const map = new Map<number, RevisionMeta[]>();
                 fetchedRevisions.forEach((rev) => {
-                    const existing = map.get(rev.rawChapterId) || [];
+                    const existing = map.get(rev.chapterId) || [];
                     existing.push(rev);
-                    map.set(rev.rawChapterId, existing);
+                    map.set(rev.chapterId, existing);
                 });
                 setChapterRevisions(map);
             });
@@ -67,11 +67,11 @@ export const NovelDetailsPage = () => {
 
                 {chapters.map((chapter) => {
                     // Look up revisions for this chapter
-                    const revs = chapterRevisions.get(chapter.rawChapterId) || [];
-                    const primaryRev = revs.find(r => r.rawChapterRevisionIsPrimary);
+                    const revs = chapterRevisions.get(chapter.chapterId) || [];
+                    const primaryRev = revs.find(r => r.revisionIsPrimary);
 
                     return (
-                        <div key={chapter.rawChapterId} style={{ 
+                        <div key={chapter.chapterId} style={{ 
                             border: '1px solid #eee', 
                             padding: '15px', 
                             borderRadius: '8px',
@@ -79,9 +79,9 @@ export const NovelDetailsPage = () => {
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <h3 style={{ margin: 0, fontSize: '1.1rem' }}>
-                                    Chapter {chapter.rawChapterNum}
+                                    Chapter {chapter.chapterNum}
                                     {/* Show title if available, otherwise fallback */}
-                                    {primaryRev && `: ${primaryRev.rawChapterRevisionTitle}`}
+                                    {primaryRev && `: ${primaryRev.revisionTitle}`}
                                 </h3>
                             </div>
 
@@ -94,14 +94,14 @@ export const NovelDetailsPage = () => {
                                 ) : (
                                     <ul style={{ margin: 0, paddingLeft: '20px' }}>
                                         {revs.map(rev => (
-                                            <li key={rev.rawChapterRevisionId} style={{ marginBottom: '4px' }}>
-                                                <Link to={routeTo.view.chapter(rev.rawChapterId, { revisionId: rev.rawChapterRevisionId })} style={{ color: rev.rawChapterRevisionIsPrimary ? 'green' : 'blue' }}>
-                                                    {rev.rawChapterRevisionTitle || 'Untitled Revision'}
+                                            <li key={rev.revisionId} style={{ marginBottom: '4px' }}>
+                                                <Link to={routeTo.view.chapter(rev.chapterId, { revisionId: rev.revisionId })} style={{ color: rev.revisionIsPrimary ? 'green' : 'blue' }}>
+                                                    {rev.revisionTitle || 'Untitled Revision'}
                                                 </Link>
-                                                {rev.rawChapterRevisionIsPrimary && 
+                                                {rev.revisionIsPrimary && 
                                                     <span style={{ fontSize: '0.7rem', marginLeft: '8px', background: '#d4edda', padding: '2px 4px', borderRadius: '4px' }}>PRIMARY</span>
                                                 }
-                                                {(rev.rawChapterRevisionIsPublic && !rev.rawChapterRevisionIsPrimary) && 
+                                                {(rev.revisionIsPublic && !rev.revisionIsPrimary) && 
                                                     <span style={{ fontSize: '0.7rem', marginLeft: '4px', background: '#cce5ff', padding: '2px 4px', borderRadius: '4px' }}>PUBLIC</span>
                                                 }
                                             </li>

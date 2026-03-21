@@ -31,11 +31,11 @@ export interface Label {
 export interface LabelData {
     labelDataId : number
     labelGroupId : number
-    rawChapterRevisionId : number
+    revisionId : number
 }
 
 export interface CreateLabelData {
-    rawChapterRevisionId : number
+    revisionId : number
 }
 
 // --- Label Operations ---

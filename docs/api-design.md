@@ -1,6 +1,6 @@
 # API Design Guide
 
-**Last Updated**: March 8, 2026  
+**Last Updated**: March 20, 2026  
 **Status**: Complete
 
 This document covers the project-specific API design decisions for the NovelTL backend. For standard REST/FastAPI patterns (HTTP methods, Pydantic validation, error response format), see the auto-generated OpenAPI docs at `http://localhost:8000/docs`.
@@ -80,8 +80,8 @@ Resources with large payloads (e.g., chapter revision text can be 100KB+) have t
 
 | Schema | Used by | Includes large fields |
 |--------|---------|----------------------|
-| `RawChapterRevision` | `GET /revisions/{id}` | Yes (`raw_chapter_revision_text`) |
-| `RawChapterRevisionMeta` | `GET /chapters/{id}/revisions`, `GET /novels/{id}/revisions` | No |
+| `Revision` | `GET /revisions/{id}` | Yes (`revision_text`) |
+| `RevisionMeta` | `GET /chapters/{id}/revisions`, `GET /novels/{id}/revisions` | No |
 
 Same pattern applies to `AutoLabel` (full, includes `auto_label_data` JSONB) vs `AutoLabelMeta` (list endpoints, no inference data).
 

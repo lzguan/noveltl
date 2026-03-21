@@ -40,39 +40,39 @@ export interface UpdateNovel {
     novelParentId? : number
 }
 
-export interface RawChapter {
-    rawChapterId : number
-    rawChapterNum : number
+export interface Chapter {
+    chapterId : number
+    chapterNum : number
     novelId : number
 }
 
-export interface CreateRawChapter {
-    rawChapterNum : number
+export interface CreateChapter {
+    chapterNum : number
 }
 
-export interface RawChapterRevision {
-    rawChapterRevisionId : number
-    rawChapterRevisionTitle : string
-    rawChapterRevisionIsPrimary : boolean
-    rawChapterRevisionIsPublic : boolean
-    rawChapterRevisionIsFinal : boolean
-    rawChapterId : number
-    rawChapterRevisionText : string
+export interface Revision {
+    revisionId : number
+    revisionTitle : string
+    revisionIsPrimary : boolean
+    revisionIsPublic : boolean
+    revisionIsFinal : boolean
+    chapterId : number
+    revisionText : string
 }
 
-export type RawChapterRevisionMeta = Omit<RawChapterRevision, 'rawChapterRevisionText'>
+export type RevisionMeta = Omit<Revision, 'revisionText'>
 
-export interface CreateRawChapterRevision {
-    rawChapterRevisionTitle : string
-    rawChapterRevisionText? : string
+export interface CreateRevision {
+    revisionTitle : string
+    revisionText? : string
 }
 
-export interface UpdateRawChapterRevision {
-    rawChapterRevisionTitle? : string
-    rawChapterRevisionText? : string
+export interface UpdateRevision {
+    revisionTitle? : string
+    revisionText? : string
 }
 
-export interface DeleteRawChapterRevisionStatus {
+export interface DeleteRevisionStatus {
     status : 'success' | 'fail'
     detail? : string
 }

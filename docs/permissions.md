@@ -1,6 +1,6 @@
 # Permissions System
 
-**Last Updated**: March 7, 2026     
+**Last Updated**: March 20, 2026     
 **Status**: Complete
 
 This document describes the access control and permission system for NovelTL, including visibility levels, contributor roles, permission helper design, and authorization patterns.
@@ -127,10 +127,10 @@ def novel_mod_access_select[T : Select[tuple[Any, ...]]](q : T, current_user : U
 def novel_mod_access_update[T : Update](stmt : T, current_user : User) -> T:
     ...
 
-def raw_chapter_mod_access_insert[T : Select[tuple[Any, ...]]](stmt : T, current_user : User, novel_id : int) -> T:
+def chapter_mod_access_insert[T : Select[tuple[Any, ...]]](stmt : T, current_user : User, novel_id : int) -> T:
     ...
 
-def raw_chapter_revision_mod_access_delete[T : Delete](stmt : T, current_user : User) -> T:
+def revision_mod_access_delete[T : Delete](stmt : T, current_user : User) -> T:
     ...
 ```
 
@@ -175,7 +175,7 @@ The insert helpers do not modify INSERT statements directly. Instead, they modif
 
 ```python
 # Actual pattern from the codebase:
-def insert_raw_chapter(db, current_user, novel_id, request):
+def insert_chapter(db, current_user, novel_id, request):
     data = list(request.model_dump().items())
     data.append(('novel_id', novel_id))
     cols = [k for k, _ in data]
@@ -184,17 +184,17 @@ def insert_raw_chapter(db, current_user, novel_id, request):
     vals = select(*[literal(v) for _, v in data])
 
     # Attach permission WHERE clauses to the SELECT
-    vals = raw_chapter_mod_access_insert(vals, current_user, novel_id)
+    vals = chapter_mod_access_insert(vals, current_user, novel_id)
 
     # Atomically: SELECT checks permissions, INSERT creates the row
-    stmt = insert(RawChapter).from_select(cols, vals).returning(RawChapter)
+    stmt = insert(Chapter).from_select(cols, vals).returning(Chapter)
     result = db.execute(stmt)
 ```
 
 **What the helper does internally:**
 
 ```python
-def raw_chapter_mod_access_insert[T : Select[tuple[Any, ...]]](
+def chapter_mod_access_insert[T : Select[tuple[Any, ...]]](
     stmt : T, current_user : User, novel_id : int
 ) -> T:
     if current_user.user_type != UserType.ADMIN:
@@ -259,14 +259,14 @@ Each novel has contributors stored in the `novel_contributors` table:
 
 ### Chapter Revision Visibility
 
-Chapter revisions have a `raw_chapter_revision_is_public` boolean flag:
+Chapter revisions have a `revision_is_public` boolean flag:
 
 - **Public (`true`)** — Visible to all users who have access to the parent novel
 - **Private (`false`)** — Visible only to novel contributors
 
-Chapter revisions also have a `raw_chapter_revision_is_final` boolean flag. Final revisions are intended to be **immutable** — once marked as final, the revision content should not be modified. This is enforced at the application level, not via database constraints.
+Chapter revisions also have a `revision_is_final` boolean flag. Final revisions are intended to be **immutable** — once marked as final, the revision content should not be modified. This is enforced at the application level, not via database constraints.
 
-> **Note:** The `raw_chapter_revision_is_final` flag simplifies labeling (labels attach to revisions, not chapters) but limits flexibility. It may be removed in the future, which would require significant refactoring.
+> **Note:** The `revision_is_final` flag simplifies labeling (labels attach to revisions, not chapters) but limits flexibility. It may be removed in the future, which would require significant refactoring.
 
 **Access matrix:**
 
@@ -286,15 +286,15 @@ Defined in `backend/src/novels/permissions.py`:
 |--------|---------------|-------------|
 | `novel_mod_access_select` | Select | Public/unlisted, or contributor |
 | `novel_mod_access_update` | Update | Owner or editor |
-| `raw_chapter_mod_access_select` | Select | Same as novel select (checks parent novel) |
-| `raw_chapter_mod_access_insert` | Select (for insert-from-select) | Owner or editor of parent novel |
-| `raw_chapter_mod_access_update` | Update | Owner or editor of parent novel |
-| `raw_chapter_revision_mod_access_select` | Select | Novel access + revision public, or contributor |
-| `raw_chapter_revision_mod_access_insert` | Select (for insert-from-select) | Owner or editor of parent novel (via chapter) |
-| `raw_chapter_revision_mod_access_update` | Update | Owner or editor of parent novel |
-| `raw_chapter_revision_mod_access_delete` | Delete | Owner of parent novel only |
+| `chapter_mod_access_select` | Select | Same as novel select (checks parent novel) |
+| `chapter_mod_access_insert` | Select (for insert-from-select) | Owner or editor of parent novel |
+| `chapter_mod_access_update` | Update | Owner or editor of parent novel |
+| `revision_mod_access_select` | Select | Novel access + revision public, or contributor |
+| `revision_mod_access_insert` | Select (for insert-from-select) | Owner or editor of parent novel (via chapter) |
+| `revision_mod_access_update` | Update | Owner or editor of parent novel |
+| `revision_mod_access_delete` | Delete | Owner of parent novel only |
 
-**Not yet implemented:** `novel_mod_access_delete`, `raw_chapter_mod_access_delete`.
+**Not yet implemented:** `novel_mod_access_delete`, `chapter_mod_access_delete`.
 
 ---
 
@@ -403,9 +403,9 @@ Current approach:
 
 | Function | Method |
 |----------|--------|
-| `query_auto_label_by_id` | Manual check: joins to revision, checks `raw_chapter_revision_is_public`, raises `InsufficientPermissionsException` if user is not admin and revision is not public |
-| `query_auto_labels` | Uses `raw_chapter_revision_mod_access_select()` from novels |
-| `insert_auto_labels` | Uses `raw_chapter_revision_mod_access_select()` on the SELECT portion of an insert-from-select |
+| `query_auto_label_by_id` | Manual check: joins to revision, checks `revision_is_public`, raises `InsufficientPermissionsException` if user is not admin and revision is not public |
+| `query_auto_labels` | Uses `revision_mod_access_select()` from novels |
+| `insert_auto_labels` | Uses `revision_mod_access_select()` on the SELECT portion of an insert-from-select |
 
 See `background-jobs.md` for more details.
 
@@ -419,7 +419,7 @@ The filter system does not have its own `permissions.py` because filters do not 
 - `label_data_mod_access_select` — controls read access to label data during filtering
 - `label_data_mod_access_insert` — controls write access when filters copy label data
 - `label_mod_access_delete` — controls deletion of labels by filters
-- `raw_chapter_revision_mod_access_select` — used within individual filter implementations for revision access
+- `revision_mod_access_select` — used within individual filter implementations for revision access
 
 Filter permissions cascade through the same **novel → label group → label** stack as regular label operations.
 
@@ -478,15 +478,15 @@ def insert_novel(db: Session, current_user: User, request: CreateNovel) -> Novel
 Resources with a parent resource use the **insert-from-select** pattern. A `select(literal(...))` query is built with permission WHERE clauses, then fed into `insert(...).from_select(...)`:
 
 ```python
-def insert_raw_chapter(db: Session, current_user: User, novel_id: int, request: CreateRawChapter) -> RawChapter:
+def insert_chapter(db: Session, current_user: User, novel_id: int, request: CreateChapter) -> Chapter:
     data = list(request.model_dump().items())
     data.append(('novel_id', novel_id))
     cols = [k for k, _ in data]
 
     vals = select(*[literal(v) for _, v in data])
-    vals = raw_chapter_mod_access_insert(vals, current_user, novel_id)
+    vals = chapter_mod_access_insert(vals, current_user, novel_id)
 
-    stmt = insert(RawChapter).from_select(cols, vals).returning(RawChapter)
+    stmt = insert(Chapter).from_select(cols, vals).returning(Chapter)
     result = db.execute(stmt)
     result_row = result.scalar_one()  # NoResultFound if permission denied
     db.commit()
@@ -497,14 +497,14 @@ def insert_raw_chapter(db: Session, current_user: User, novel_id: int, request: 
 
 ```python
 def remove_chapter_revision(db: Session, current_user: User, revision_id: int) -> None:
-    stmt = delete(RawChapterRevision).where(
-        RawChapterRevision.raw_chapter_revision_id == revision_id
+    stmt = delete(Revision).where(
+        Revision.revision_id == revision_id
     )
-    stmt = raw_chapter_revision_mod_access_delete(stmt, current_user)
+    stmt = revision_mod_access_delete(stmt, current_user)
     result = db.execute(stmt)
     db.commit()
     if result.rowcount == 0:
-        raise RawChapterRevisionNotFoundException
+        raise RevisionNotFoundException
 ```
 
 ---
@@ -564,7 +564,7 @@ if current_user.user_type == UserType.ADMIN:
 | `backend/src/auth/models.py` | `User` model |
 | `backend/src/auth/dependencies.py` | `get_current_user`, `get_optional_user` |
 | `backend/src/novels/constants.py` | `Visibility` enum, `Role` enum |
-| `backend/src/novels/models.py` | `Novel`, `Contributor`, `RawChapter`, `RawChapterRevision` models |
+| `backend/src/novels/models.py` | `Novel`, `Contributor`, `Chapter`, `Revision` models |
 | `backend/src/novels/permissions.py` | Novel/chapter/revision permission helpers |
 | `backend/src/labels/constants.py` | `LabelRole` enum |
 | `backend/src/labels/models.py` | `LabelGroup`, `LabelContributor`, `Label`, `LabelData` models |

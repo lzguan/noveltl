@@ -1,6 +1,6 @@
 # Filter System
 
-**Last Updated**: March 8, 2026  
+**Last Updated**: March 20, 2026  
 **Status**: Complete
 
 This document describes the Filter abstraction — a generic four-phase pipeline for processing and filtering labels, with support for automated (rule-based or LLM-assisted) and manual decision-making.
@@ -216,10 +216,10 @@ def flag_instances(
     options: ScoreFlagInstancesOptions
 ) -> list[SingleLabel]:
     # SELECT Labels WHERE score < options.min_score
-    # JOIN LabelData, RawChapterRevision, RawChapter
+    # JOIN LabelData, Revision, Chapter
     # Filter by label_group_id, start/end chapter range, flag_dirty
     # Apply label_data_mod_access_select (permission check)
-    return [SingleLabel(label=..., raw_chapter_revision_id=...) for ...]
+    return [SingleLabel(label=..., revision_id=...) for ...]
 ```
 
 Flags labels with `score < min_score` within a target label group and optional chapter range.
@@ -235,7 +235,7 @@ def get_contexts(
     options: ScoreGetContextOptions
 ) -> list[SentenceContext | None]:
     # Batch-fetch revision texts for unique revision IDs
-    # (with raw_chapter_revision_mod_access_select permission check)
+    # (with revision_mod_access_select permission check)
     # For each instance, call find_sentence_around(text, label_start, label_end, delimiters)
     # Returns None if user doesn't have access to the revision
     return contexts
@@ -299,7 +299,7 @@ def apply_filter(
 
     # Build tuple list for matching: (revision_id, start, end, word)
     instance_tuples = [
-        (inst.raw_chapter_revision_id, inst.label.label_start, inst.label.label_end, inst.label.label_word)
+        (inst.revision_id, inst.label.label_start, inst.label.label_end, inst.label.label_word)
         for inst in instances
     ]
     # DELETE Labels WHERE label_data in target group AND (revision, start, end, word) matches
@@ -378,7 +378,7 @@ sequenceDiagram
     C->>B: POST /filters/score-filter/get-contexts<br/>{instances, options: {delimiters, refresh}}<br/>[Bearer token]
     B->>B: get_current_user (JWT validation)
     B->>B: Validate InstanceOptions against filter schema
-    B->>DB: SELECT revision text for each revision_id<br/>+ raw_chapter_revision_mod_access_select
+    B->>DB: SELECT revision text for each revision_id<br/>+ revision_mod_access_select
     DB-->>B: revision texts
     B->>B: Extract sentence around each label (delimiter-based)
     B-->>C: 200 instance-context pairs
@@ -422,7 +422,7 @@ Response: 200 OK
   {
     "type": "single_label",
     "label": {"label_word": "他", "label_start": 5, "label_end": 6, "label_score": 0.6, "label_entity_group": "PER", "label_dirty": false},
-    "raw_chapter_revision_id": 10
+    "revision_id": 10
   }
 ]
 ```
@@ -432,7 +432,7 @@ Response: 200 OK
 POST /filters/score-filter/get-contexts
 {
   "instances": [
-    {"type": "single_label", "label": {"label_word": "他", "label_start": 5, "label_end": 6, "label_score": 0.6, "label_entity_group": "PER", "label_dirty": false}, "raw_chapter_revision_id": 10}
+    {"type": "single_label", "label": {"label_word": "他", "label_start": 5, "label_end": 6, "label_score": 0.6, "label_entity_group": "PER", "label_dirty": false}, "revision_id": 10}
   ],
   "options": {"type": "score_filter_get_context_options", "delimiters": "。！？"}
 }
@@ -445,7 +445,7 @@ Response: 200 OK
     "label_start_rel": 0,
     "label_end_rel": 1,
     "label": null,
-    "raw_chapter_revision_id": 10
+    "revision_id": 10
   }
 ]
 ```
@@ -456,8 +456,8 @@ POST /filters/score-filter/decide-instances
 {
   "instance_contexts": [
     [
-      {"type": "single_label", "label": {"label_word": "他", "label_start": 5, "label_end": 6, "label_score": 0.6, "label_entity_group": "PER", "label_dirty": false}, "raw_chapter_revision_id": 10},
-      {"type": "sentence", "text": "他说：「你好吗？」", "label_start_rel": 0, "label_end_rel": 1, "label": null, "raw_chapter_revision_id": 10}
+      {"type": "single_label", "label": {"label_word": "他", "label_start": 5, "label_end": 6, "label_score": 0.6, "label_entity_group": "PER", "label_dirty": false}, "revision_id": 10},
+      {"type": "sentence", "text": "他说：「你好吗？」", "label_start_rel": 0, "label_end_rel": 1, "label": null, "revision_id": 10}
     ]
   ],
   "options": {"type": "score_filter_decide_instances_options", "mode": "manual", "decisions": [true]}
@@ -472,7 +472,7 @@ Response: 200 OK
 POST /filters/score-filter/apply?label-group-id=42
 {
   "instances": [
-    {"type": "single_label", "label": {"label_word": "他", "label_start": 5, "label_end": 6, "label_score": 0.6, "label_entity_group": "PER", "label_dirty": false}, "raw_chapter_revision_id": 10}
+    {"type": "single_label", "label": {"label_word": "他", "label_start": 5, "label_end": 6, "label_score": 0.6, "label_entity_group": "PER", "label_dirty": false}, "revision_id": 10}
   ],
   "options": {"type": "score_filter_apply_filter_options", "create_copy": false}
 }

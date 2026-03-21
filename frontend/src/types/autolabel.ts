@@ -12,7 +12,7 @@ export interface AutoLabel {
     autoLabelModelParams : Record<string, any>
     autoLabelStatus : AutoLabelProgress
     autoLabelMessage : string | null
-    rawChapterRevisionId : number
+    revisionId : number
     autoLabelLastJobId : string
 }
 
@@ -23,8 +23,8 @@ export interface CreateAutoLabels {
     autoLabelModelName : string
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     autoLabelModelParams : Record<string, any>
-    rawChapterIds? : number[] | null
-    rawChapterRevisionIds? : number[] | null
+    chapterIds? : number[] | null
+    revisionIds? : number[] | null
     start? : number | null
     end? : number | null
     isPrimary? : boolean | null

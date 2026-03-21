@@ -31,7 +31,7 @@ services:
     command: sleep infinity
 
   db:
-    image: postgres
+    image: postgres:18
     restart: always
     
     ports:
@@ -48,7 +48,7 @@ services:
       - db_data:/var/lib/postgresql/data
 
   test_db:
-    image: postgres
+    image: postgres:18
     restart: always
     
     ports:

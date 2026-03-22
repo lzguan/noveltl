@@ -2,9 +2,11 @@
 Database models for labels.
 """
 
+import uuid
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, CheckConstraint, Enum, Float, ForeignKey, Integer, String, UniqueConstraint, and_, func
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -25,7 +27,7 @@ class LabelGroup(Base):
         novel_id: Novel this label group is referring to.
     """
     __tablename__ = 'label_groups'
-    label_group_id : Mapped[int] = mapped_column(primary_key=True)
+    label_group_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
     label_group_name : Mapped[str] = mapped_column(String(MAX_LABEL_GROUP_NAME_LEN))
 
     novel_id = mapped_column(ForeignKey('novels.novel_id', name='fk_label_groups_novel_id_novels'), nullable=False)
@@ -47,7 +49,7 @@ class LabelContributor(Base):
 
     label_contributor_role : Mapped[LabelRole] = mapped_column(Enum(LabelRole, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False) # type: ignore
 
-    label_group_id : Mapped[int] = mapped_column(ForeignKey('label_groups.label_group_id'), primary_key=True)
+    label_group_id = mapped_column(ForeignKey('label_groups.label_group_id'), primary_key=True)
     label_group_of_label_contributor : Mapped[LabelGroup] = relationship(back_populates='label_contributors_with_label_group')
 
     user_id = mapped_column(ForeignKey('users.user_id'), primary_key=True)

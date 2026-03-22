@@ -105,7 +105,7 @@ class Label(Base):
     """
     __tablename__ = 'labels'
 
-    label_id : Mapped[int] = mapped_column(primary_key=True)
+    label_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
     label_entity_group : Mapped[str] = mapped_column(String(MAX_LABEL_ENTITY_GROUP_NAME_LEN), default="MISC", nullable=False)
     label_score : Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
     label_word : Mapped[str] = mapped_column(String(MAX_LABEL_WORD_LEN), nullable=False)

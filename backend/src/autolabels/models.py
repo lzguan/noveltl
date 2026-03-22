@@ -38,7 +38,7 @@ class AutoLabel(Base):
     auto_label_last_job_id : Mapped[str] = mapped_column(String(36), nullable=True)
     auto_label_message : Mapped[str] = mapped_column(Text, nullable=True)
 
-    revision_text_id : Mapped[uuid.UUID] = mapped_column(ForeignKey('revision_texts.revision_text_id', name='fk_auto_labels_revision_text_id_revision_texts'), nullable=False)
+    revision_text_id = mapped_column(ForeignKey('revision_texts.revision_text_id', name='fk_auto_labels_revision_text_id_revision_texts'), nullable=False)
     revision_text_of_auto_label : Mapped["RevisionText"] = relationship(back_populates='auto_labels_with_revision_text')
 
     __table_args__ = (

@@ -79,14 +79,13 @@ class Novel(Base):
     """
     __tablename__ = "novels"
 
-    novel_id : Mapped[int] = mapped_column(primary_key=True)
+    novel_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
     novel_title : Mapped[str] = mapped_column(String(MAX_NOVEL_TITLE_LEN), nullable=False)
     novel_description : Mapped[str] = mapped_column(Text, nullable=True)
     novel_author : Mapped[str] = mapped_column(String(MAX_AUTHOR_LENGTH), nullable=True)
     novel_visibility : Mapped[Visibility] = mapped_column(EnumAsInteger(Visibility), nullable=False)
     novel_type : Mapped[NovelType] = mapped_column(Enum(NovelType, native_enum=False, length=16, values_callable=lambda x : [str(e.value) for e in x]), nullable=False) # type: ignore
 
-    novel_parent_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id', name='fk_novels_novel_parent_id_novels'), nullable=True)
     novel_parent : Mapped["Novel"] = relationship("Novel", back_populates="novel_children", remote_side=[novel_id])
     novel_children : Mapped[list["Novel"]] = relationship("Novel", back_populates="novel_parent")
 
@@ -111,10 +110,10 @@ class Contributor(Base):
 
     contributor_role : Mapped[Role] = mapped_column(Enum(Role, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False) # type: ignore
 
-    novel_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id', ), primary_key=True)
+    novel_id = mapped_column(ForeignKey('novels.novel_id'), primary_key=True)
     novel_of_contributor : Mapped["Novel"] = relationship(back_populates='contributors_with_novel')
 
-    user_id : Mapped[uuid.UUID] = mapped_column(ForeignKey('users.user_id'), primary_key=True)
+    user_id = mapped_column(ForeignKey('users.user_id'), primary_key=True)
     user_of_contributor : Mapped["User"] = relationship(back_populates='contributors_with_user')
 
 
@@ -133,7 +132,7 @@ class Chapter(Base):
     """
     __tablename__ = 'chapters'
 
-    chapter_id : Mapped[int] = mapped_column(primary_key=True)
+    chapter_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
     chapter_num : Mapped[int] = mapped_column(Integer, nullable=False)
 
     novel_id = mapped_column(ForeignKey('novels.novel_id', name='fk_chapters_novel_id_novels'), nullable=False)
@@ -165,7 +164,7 @@ class Revision(Base):
     """
     __tablename__ = 'revisions'
 
-    revision_id : Mapped[int] = mapped_column(primary_key=True)
+    revision_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
     revision_title : Mapped[str] = mapped_column(String(MAX_CHAPTER_TITLE_LEN))
     revision_is_primary : Mapped[bool] = mapped_column(Boolean, nullable=False)
     revision_is_public : Mapped[bool] = mapped_column(Boolean, nullable=False)

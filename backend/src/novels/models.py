@@ -114,7 +114,7 @@ class Contributor(Base):
     novel_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id', ), primary_key=True)
     novel_of_contributor : Mapped["Novel"] = relationship(back_populates='contributors_with_novel')
 
-    user_id : Mapped[int] = mapped_column(ForeignKey('users.user_id'), primary_key=True)
+    user_id : Mapped[uuid.UUID] = mapped_column(ForeignKey('users.user_id'), primary_key=True)
     user_of_contributor : Mapped["User"] = relationship(back_populates='contributors_with_user')
 
 

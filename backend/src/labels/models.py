@@ -51,7 +51,7 @@ class LabelContributor(Base):
     label_group_id : Mapped[int] = mapped_column(ForeignKey('label_groups.label_group_id'), primary_key=True)
     label_group_of_label_contributor : Mapped[LabelGroup] = relationship(back_populates='label_contributors_with_label_group')
 
-    user_id : Mapped[int] = mapped_column(ForeignKey('users.user_id'), primary_key=True)
+    user_id : Mapped[uuid.UUID] = mapped_column(ForeignKey('users.user_id'), primary_key=True)
     user_of_label_contributor : Mapped["User"] = relationship(back_populates='label_contributors_with_user')
 
 class LabelData(Base):

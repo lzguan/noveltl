@@ -7,4 +7,4 @@ __pycache__
 pytest.log
 .coverage
 settings.local.json
-db_backups/backup_*.sql
+database/db_backups/backup_*.sql

@@ -39,7 +39,7 @@ Make a summary of the key points from the style guide that you will use to evalu
 
 ### Step 2: Identify the relevant documentation
 
-Based on the user's request, determine which documentation files are relevant. For example, if they ask about testing practices, focus on `docs/testing.md`. If they ask about API design, focus on `docs/api-design.md`. The `conventions.md` file is always relevant. Make a list of the relevant files to review in detail.
+Based on the user's request, determine which documentation files are relevant. For example, if they ask about testing practices, focus on `docs/backend-testing.md`. If they ask about API design, focus on `docs/api-design.md`. The `conventions.md` file is always relevant. Make a list of the relevant files to review in detail.
 
 **Deprecation handling:** If a document contains a deprecation notice, it is invalid and does not need to be audited. Skip the audit and confirm that the documentation is deprecated. However, verify that the replacement documents listed in the deprecation notice actually exist and link back to (or cover) the deprecated content. This ensures the migration is complete in both directions.
 
@@ -67,7 +67,7 @@ _(Skip this step for **quick** audits.)_
 
 ### Step 5: Review that the content is accurate and up to date
 
-For each document, make a list of relevant source code files. This list can be found in the "Relevant Files" section of the documentation, or you can identify them based on your knowledge of the codebase and the topic of the documentation. For example, if reviewing `docs/testing.md`, relevant files might include `backend/tests/conftest.py` and `backend/tests/fixtures/password_hash.py`. If you identify any additional relevant files that are not listed in the documentation, add them to your list. You can dynamically update this list as you review the documentation and identify more relevant files.
+For each document, make a list of relevant source code files. This list can be found in the "Relevant Files" section of the documentation, or you can identify them based on your knowledge of the codebase and the topic of the documentation. For example, if reviewing `docs/backend-testing.md`, relevant files might include `backend/tests/conftest.py` and `backend/tests/fixtures/password_hash.py`. If you identify any additional relevant files that are not listed in the documentation, add them to your list. You can dynamically update this list as you review the documentation and identify more relevant files.
 
 For each relevant documentation file, read the corresponding relevant source code files. Review the content and compare it against the current state of the codebase. Check for any discrepancies, outdated information, or missing details that should be included to accurately reflect the current implementation and best practices. Pay special attention to any sections that describe architecture decisions, design patterns, or specific implementation details, as these are more likely to become outdated as the code evolves.
 

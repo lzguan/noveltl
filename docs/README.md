@@ -33,7 +33,7 @@ This directory contains technical documentation for the NovelTL project - a coll
 
 ### Development
 - **[conventions.md](conventions.md)** - Code naming conventions, API patterns
-- **[testing.md](testing.md)** - Testing strategy, pytest usage, fixtures
+- **[backend-testing.md](backend-testing.md)** - Testing strategy, pytest usage, fixtures
 
 ### Reference
 - **[GitHub Issues](https://github.com/lzguan/NovelTL_Dev/issues)** - Known bugs, tech debt, future improvements
@@ -124,7 +124,7 @@ The documentation was reorganized for better separation of concerns:
   - `filter-system.md` (filter abstraction and API)
   - `ui-requirements.md` (frontend specs)
 
-- `tests.md` → Expanded into `testing.md`
+- `tests.md` → Expanded into `backend-testing.md`
 
 **Deprecated Files:**
 - `DESIGN.md` - Marked as outdated, refer to new split documents

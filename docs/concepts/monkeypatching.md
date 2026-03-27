@@ -228,4 +228,4 @@ Test addition
 ## See Also
 
 - [background-jobs.md](../background-jobs.md) - AutoLabel worker system that motivates monkeypatching
-- [testing.md](../testing.md) - Testing guide covering worker integration tests
+- [backend-testing.md](../backend-testing.md) - Testing guide covering worker integration tests

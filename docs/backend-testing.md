@@ -1,4 +1,4 @@
-# Testing Guide
+# Backend Testing Guide
 
 **Last Updated**: March 8, 2026  
 **Status**: Complete
@@ -85,6 +85,20 @@ pytest tests/filters/           # Specific service
 ```
 
 Default behavior from pyproject.toml: `-ra -q -m 'not slow'` — shows summary of failures, quiet output, skips slow-marked tests.
+
+### Coverage
+
+`coverage` is installed. Wrap pytest with `coverage run` to collect data, then use `coverage report` or `coverage html` to view results:
+
+```bash
+coverage run -m pytest                              # Collect coverage for full test run
+coverage run --source=src -m pytest                  # Restrict to src/ only
+coverage run --source=src/novels -m pytest tests/novels/  # Single service
+coverage report -m                                   # Terminal report with missing lines
+coverage html                                        # HTML report in htmlcov/
+```
+
+The HTML report (`htmlcov/index.html`) is useful for exploring uncovered branches visually. Combine pytest flags as usual (e.g., `coverage run -m pytest -m "not slow"`).
 
 ### Markers
 

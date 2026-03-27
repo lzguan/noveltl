@@ -5,7 +5,7 @@
 
 This document defines standards and expected test cases for frontend API integration tests. These tests verify that each API function in `src/api/` correctly calls the backend, maps data between `snake_case` and `camelCase`, and handles errors appropriately.
 
-For backend testing, see [testing.md](testing.md). For API design context, see [api-design.md](api-design.md).
+For backend testing, see [backend-testing.md](backend-testing.md). For API design context, see [api-design.md](api-design.md).
 
 ---
 
@@ -522,6 +522,6 @@ Each section lists the required test cases per API function. Categories:
 
 ## See Also
 
-- [testing.md](testing.md) — Backend testing guide
+- [backend-testing.md](backend-testing.md) — Backend testing guide
 - [conventions.md](conventions.md) — Naming conventions and API layer patterns
 - [api-design.md](api-design.md) — REST API design decisions

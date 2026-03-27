@@ -605,10 +605,11 @@ def insert_revision(
         new_revision = result.scalar_one()
         vals = select(
             literal(new_revision.revision_id),
-            literal("")
+            literal(""),
+            literal(1)
         )
         vals = revision_text_mod_access_insert(vals, current_user, new_revision.revision_id)
-        cols = ['revision_id', 'revision_text_content']
+        cols = ['revision_id', 'revision_text_content', 'revision_text_version']
         stmt = insert(models.RevisionText).from_select(cols, vals).returning(models.RevisionText)
         new_revision_text = db.execute(stmt).scalar_one()
         db.commit()

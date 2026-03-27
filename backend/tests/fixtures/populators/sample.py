@@ -9,7 +9,7 @@ from src.labels.constants import LabelRole
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.languages.models import Language
 from src.novels.constants import NovelType, Role, Visibility
-from src.novels.models import Chapter, Contributor, Novel, Revision
+from src.novels.models import Chapter, Contributor, Novel, Revision, RevisionText
 
 
 class Hash(Protocol):
@@ -81,32 +81,32 @@ def sample_chapters(test_db: Session, sample_novels: list[Novel]) -> list[Chapte
     return [ch1, ch2]
 
 @pytest.fixture
-def sample_revisions(test_db: Session, sample_chapters: list[Chapter]) -> list[Revision]:
+def sample_revisions(test_db: Session, sample_chapters: list[Chapter]) -> list[tuple[Revision, RevisionText]]:
     # Create revisions for Chapter 1
     # We use specific text here so we can create a valid Label for it later.
     rev1 = Revision(
         chapter_id=sample_chapters[0].chapter_id,
         revision_title="Chapter 1: The Beginning",
-        revision_text="Alice went to the market.",
         revision_is_primary=True,
         revision_is_public=True,
-        revision_is_final=False
     )
     # Create a non-primary, non-public draft
     rev2 = Revision(
         chapter_id=sample_chapters[0].chapter_id,
         revision_title="Chapter 1: Draft",
-        revision_text="This is a draft text.",
         revision_is_primary=False,
         revision_is_public=False,
-        revision_is_final=False
     )
 
     test_db.add_all([rev1, rev2])
     test_db.commit()
-    test_db.refresh(rev1)
-    test_db.refresh(rev2)
-    return [rev1, rev2]
+
+    rt1 = RevisionText(revision_id=rev1.revision_id, revision_text_content="Alice went to the market.", revision_text_version=1)
+    rt2 = RevisionText(revision_id=rev2.revision_id, revision_text_content="This is a draft text.", revision_text_version=1)
+    test_db.add_all([rt1, rt2])
+    test_db.commit()
+
+    return [(rev1, rt1), (rev2, rt2)]
 
 @pytest.fixture
 def sample_label_groups(test_db: Session, sample_novels: list[Novel], sample_users: list[User]) -> list[LabelGroup]:
@@ -133,11 +133,12 @@ def sample_label_contributors(test_db: Session, sample_label_groups: list[LabelG
     return [lc1]
 
 @pytest.fixture
-def sample_label_datas(test_db: Session, sample_label_groups: list[LabelGroup], sample_revisions: list[Revision]) -> list[LabelData]:
+def sample_label_datas(test_db: Session, sample_label_groups: list[LabelGroup], sample_revisions: list[tuple[Revision, RevisionText]]) -> list[LabelData]:
     # Link the Label Data to the Primary Revision of Chapter 1
+    _, rt1 = sample_revisions[0]
     ld1 = LabelData(
         label_group_id=sample_label_groups[0].label_group_id,
-        revision_id=sample_revisions[0].revision_id
+        revision_text_id=rt1.revision_text_id
     )
     test_db.add(ld1)
     test_db.commit()

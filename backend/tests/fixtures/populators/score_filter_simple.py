@@ -14,7 +14,7 @@ from src.labels.constants import LabelRole
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.languages.models import Language
 from src.novels.constants import NovelType, Role, Visibility
-from src.novels.models import Chapter, Contributor, Novel, Revision
+from src.novels.models import Chapter, Contributor, Novel, Revision, RevisionText
 
 
 class Hash(Protocol):
@@ -63,18 +63,23 @@ def sf_chapter(test_db: Session, sf_novel: Novel) -> Chapter:
 
 
 @pytest.fixture
-def sf_revision(test_db: Session, sf_chapter: Chapter) -> Revision:
+def sf_revision(test_db: Session, sf_chapter: Chapter) -> tuple[Revision, RevisionText]:
     revision = Revision(
         chapter_id=sf_chapter.chapter_id,
-        revision_text="Hello world. This is a test sentence. Another sentence here.",
         revision_title="Test Chapter",
         revision_is_public=True,
         revision_is_primary=True,
-        revision_is_final=True
     )
     test_db.add(revision)
     test_db.commit()
-    return revision
+    rt = RevisionText(
+        revision_id=revision.revision_id,
+        revision_text_content="Hello world. This is a test sentence. Another sentence here.",
+        revision_text_version=1
+    )
+    test_db.add(rt)
+    test_db.commit()
+    return revision, rt
 
 
 @pytest.fixture
@@ -95,10 +100,11 @@ def sf_label_group(test_db: Session, sf_novel: Novel, sf_user: User) -> LabelGro
 
 
 @pytest.fixture
-def sf_label_data(test_db: Session, sf_label_group: LabelGroup, sf_revision: Revision) -> LabelData:
+def sf_label_data(test_db: Session, sf_label_group: LabelGroup, sf_revision: tuple[Revision, RevisionText]) -> LabelData:
+    _, rt = sf_revision
     label_data = LabelData(
         label_group_id=sf_label_group.label_group_id,
-        revision_id=sf_revision.revision_id
+        revision_text_id=rt.revision_text_id
     )
     test_db.add(label_data)
     test_db.commit()

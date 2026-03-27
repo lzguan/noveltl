@@ -12,7 +12,7 @@ from src.labels.constants import LabelRole
 from src.labels.models import LabelContributor, LabelGroup
 from src.languages.models import Language
 from src.novels.constants import NovelType, Role, Visibility
-from src.novels.models import Chapter, Contributor, Novel, Revision
+from src.novels.models import Chapter, Contributor, Novel, Revision, RevisionText
 
 
 @pytest.fixture
@@ -87,25 +87,30 @@ def chinese_xianxia_small_test_chapters(
     chinese_xianxia_small_test_novel : Novel,
     chapter_loader : Loader,
     test_db : Session
-) -> list[tuple[Chapter, Revision]]:
+) -> list[tuple[Chapter, Revision, RevisionText]]:
     texts = chapter_loader('chinese/chinese_xianxia/small_test')
-    out : list[tuple[Chapter, Revision]] = []
+    out : list[tuple[Chapter, Revision, RevisionText]] = []
     i = 0
     for text in texts:
         chapter = Chapter(chapter_num=i, novel_id=chinese_xianxia_small_test_novel.novel_id)
         test_db.add(chapter)
         test_db.commit()
         revision = Revision(
-            revision_text=text,
             revision_title=f"chapter {i}",
             revision_is_primary=True,
             revision_is_public=True,
-            revision_is_final=True,
             chapter_id=chapter.chapter_id
         )
         test_db.add(revision)
-        test_db.commit() # can optimize this
-        out.append((chapter, revision))
+        test_db.commit()
+        rt = RevisionText(
+            revision_id=revision.revision_id,
+            revision_text_content=text,
+            revision_text_version=1
+        )
+        test_db.add(rt)
+        test_db.commit()
+        out.append((chapter, revision, rt))
         i = i + 1
     return out
 
@@ -118,14 +123,14 @@ def chinese_xianxia_small_test_default_params_cluener() -> dict[str, Any]:
 @pytest.fixture
 def chinese_xianxia_small_test_autolabels_cluener(
     test_db : Session,
-    chinese_xianxia_small_test_chapters : list[tuple[Chapter, Revision]],
+    chinese_xianxia_small_test_chapters : list[tuple[Chapter, Revision, RevisionText]],
     autolabel_loader : Loader
 ) -> list[AutoLabel]:
     autolabels_gen = (json.loads(lab) for lab in autolabel_loader('chinese/chinese_xianxia/small_test/cluener'))
     out : list[AutoLabel]= []
     i = 0
     for autolabel in autolabels_gen:
-        a = AutoLabel(**autolabel, revision_id=chinese_xianxia_small_test_chapters[i][1].revision_id)
+        a = AutoLabel(**autolabel, revision_text_id=chinese_xianxia_small_test_chapters[i][2].revision_text_id)
         test_db.add(a)
         test_db.commit() # can optimize this
         i = i + 1

@@ -1,6 +1,6 @@
 from typing import Any, Protocol, TypedDict, cast
 
-from ...labels.schemas import Label
+from ...labels.schemas import LabelBase
 from ..schemas import CluenerModelParams, NERModelParamsBase
 from .interfaces import NERModel, Tokenizer
 from .utils import chunk_text
@@ -39,9 +39,9 @@ class CluenerModel(NERModel[CluenerModelParams]):
         self.is_deterministic = True
         self.tokenizer = CluenerTokenizer(pipeline.tokenizer)
 
-    def predict(self, text: str, params: CluenerModelParams) -> tuple[list[Label], list[CluenerRawNERResult]]:
+    def predict(self, text: str, params: CluenerModelParams) -> tuple[list[LabelBase], list[CluenerRawNERResult]]:
         chunks = chunk_text(text, params.separators, self.tokenizer, params.chunk_size, force_chunk=params.force_chunk)
-        ret : list[Label] = []
+        ret : list[LabelBase] = []
         err : list[CluenerRawNERResult]= []
         for txt, start in chunks:
             result : list[CluenerRawNERResult] = cast(list[CluenerRawNERResult], self.pipeline(txt))
@@ -52,7 +52,7 @@ class CluenerModel(NERModel[CluenerModelParams]):
                 if self.normalize(text[label['start']:label['end']]) != label['word']:
                     err.append(label)
                 else:
-                    ret.append(Label(
+                    ret.append(LabelBase(
                         label_word=label["word"],
                         label_start=label["start"],
                         label_end=label["end"],

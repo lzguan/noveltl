@@ -9,7 +9,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from src.auth.models import User
-from src.novels.models import Chapter, Novel, Revision
+from src.novels.models import Chapter, Novel, Revision, RevisionText
 from src.novels.permissions import (
     chapter_mod_access_insert,
     chapter_mod_access_select,
@@ -387,9 +387,9 @@ class TestRevisionModAccessSelect:
 
     def test_guest_sees_public_revision_on_public_novel(
         self, test_db: Session,
-        p1_revision_public: Revision,
+        p1_revision_public: tuple[Revision, RevisionText],
     ):
-        q = select(Revision).where(Revision.revision_id == p1_revision_public.revision_id)
+        q = select(Revision).where(Revision.revision_id == p1_revision_public[0].revision_id)
         q = q.join(Chapter, Chapter.chapter_id == Revision.chapter_id)
         q = q.join(Novel, Novel.novel_id == Chapter.novel_id)
         q = revision_mod_access_select(q, None)
@@ -398,9 +398,9 @@ class TestRevisionModAccessSelect:
 
     def test_guest_cannot_see_draft_on_public_novel(
         self, test_db: Session,
-        p1_revision_draft_on_public: Revision,
+        p1_revision_draft_on_public: tuple[Revision, RevisionText],
     ):
-        q = select(Revision).where(Revision.revision_id == p1_revision_draft_on_public.revision_id)
+        q = select(Revision).where(Revision.revision_id == p1_revision_draft_on_public[0].revision_id)
         q = q.join(Chapter, Chapter.chapter_id == Revision.chapter_id)
         q = q.join(Novel, Novel.novel_id == Chapter.novel_id)
         q = revision_mod_access_select(q, None)
@@ -409,9 +409,9 @@ class TestRevisionModAccessSelect:
 
     def test_guest_cannot_see_public_revision_on_restricted_novel(
         self, test_db: Session,
-        p1_revision_restricted: Revision,
+        p1_revision_restricted: tuple[Revision, RevisionText],
     ):
-        q = select(Revision).where(Revision.revision_id == p1_revision_restricted.revision_id)
+        q = select(Revision).where(Revision.revision_id == p1_revision_restricted[0].revision_id)
         q = q.join(Chapter, Chapter.chapter_id == Revision.chapter_id)
         q = q.join(Novel, Novel.novel_id == Chapter.novel_id)
         q = revision_mod_access_select(q, None)
@@ -421,10 +421,10 @@ class TestRevisionModAccessSelect:
     def test_non_contributor_cannot_see_draft_on_public_novel(
         self, test_db: Session,
         p1_user_2: User,
-        p1_revision_draft_on_public: Revision,
+        p1_revision_draft_on_public: tuple[Revision, RevisionText],
     ):
         """Non-contributor can see public revisions on public novels, but not drafts."""
-        q = select(Revision).where(Revision.revision_id == p1_revision_draft_on_public.revision_id)
+        q = select(Revision).where(Revision.revision_id == p1_revision_draft_on_public[0].revision_id)
         q = q.join(Chapter, Chapter.chapter_id == Revision.chapter_id)
         q = q.join(Novel, Novel.novel_id == Chapter.novel_id)
         q = revision_mod_access_select(q, p1_user_2)
@@ -434,9 +434,9 @@ class TestRevisionModAccessSelect:
     def test_non_contributor_sees_public_revision_on_public_novel(
         self, test_db: Session,
         p1_user_2: User,
-        p1_revision_public: Revision,
+        p1_revision_public: tuple[Revision, RevisionText],
     ):
-        q = select(Revision).where(Revision.revision_id == p1_revision_public.revision_id)
+        q = select(Revision).where(Revision.revision_id == p1_revision_public[0].revision_id)
         q = q.join(Chapter, Chapter.chapter_id == Revision.chapter_id)
         q = q.join(Novel, Novel.novel_id == Chapter.novel_id)
         q = revision_mod_access_select(q, p1_user_2)
@@ -446,10 +446,10 @@ class TestRevisionModAccessSelect:
     def test_contributor_sees_draft_on_own_novel(
         self, test_db: Session,
         p1_user_1: User,
-        p1_revision_draft_on_public: Revision,
+        p1_revision_draft_on_public: tuple[Revision, RevisionText],
     ):
         """Owner can see non-public revisions on their own novel."""
-        q = select(Revision).where(Revision.revision_id == p1_revision_draft_on_public.revision_id)
+        q = select(Revision).where(Revision.revision_id == p1_revision_draft_on_public[0].revision_id)
         q = q.join(Chapter, Chapter.chapter_id == Revision.chapter_id)
         q = q.join(Novel, Novel.novel_id == Chapter.novel_id)
         q = revision_mod_access_select(q, p1_user_1)
@@ -459,9 +459,9 @@ class TestRevisionModAccessSelect:
     def test_contributor_sees_revision_on_restricted_novel(
         self, test_db: Session,
         p1_user_1: User,
-        p1_revision_restricted: Revision,
+        p1_revision_restricted: tuple[Revision, RevisionText],
     ):
-        q = select(Revision).where(Revision.revision_id == p1_revision_restricted.revision_id)
+        q = select(Revision).where(Revision.revision_id == p1_revision_restricted[0].revision_id)
         q = q.join(Chapter, Chapter.chapter_id == Revision.chapter_id)
         q = q.join(Novel, Novel.novel_id == Chapter.novel_id)
         q = revision_mod_access_select(q, p1_user_1)
@@ -471,9 +471,9 @@ class TestRevisionModAccessSelect:
     def test_contributor_sees_revision_on_private_novel(
         self, test_db: Session,
         p1_user_1: User,
-        p1_revision_private: Revision,
+        p1_revision_private: tuple[Revision, RevisionText],
     ):
-        q = select(Revision).where(Revision.revision_id == p1_revision_private.revision_id)
+        q = select(Revision).where(Revision.revision_id == p1_revision_private[0].revision_id)
         q = q.join(Chapter, Chapter.chapter_id == Revision.chapter_id)
         q = q.join(Novel, Novel.novel_id == Chapter.novel_id)
         q = revision_mod_access_select(q, p1_user_1)
@@ -483,9 +483,9 @@ class TestRevisionModAccessSelect:
     def test_non_contributor_cannot_see_revision_on_private_novel(
         self, test_db: Session,
         p1_user_2: User,
-        p1_revision_private: Revision,
+        p1_revision_private: tuple[Revision, RevisionText],
     ):
-        q = select(Revision).where(Revision.revision_id == p1_revision_private.revision_id)
+        q = select(Revision).where(Revision.revision_id == p1_revision_private[0].revision_id)
         q = q.join(Chapter, Chapter.chapter_id == Revision.chapter_id)
         q = q.join(Novel, Novel.novel_id == Chapter.novel_id)
         q = revision_mod_access_select(q, p1_user_2)
@@ -495,12 +495,12 @@ class TestRevisionModAccessSelect:
     def test_admin_sees_everything(
         self, test_db: Session,
         p1_admin: User,
-        p1_revision_private: Revision,
-        p1_revision_draft_on_public: Revision,
+        p1_revision_private: tuple[Revision, RevisionText],
+        p1_revision_draft_on_public: tuple[Revision, RevisionText],
     ):
         q = select(Revision).where(Revision.revision_id.in_([
-            p1_revision_private.revision_id,
-            p1_revision_draft_on_public.revision_id,
+            p1_revision_private[0].revision_id,
+            p1_revision_draft_on_public[0].revision_id,
         ]))
         q = revision_mod_access_select(q, p1_admin)
         results = test_db.execute(q).scalars().all()
@@ -509,9 +509,9 @@ class TestRevisionModAccessSelect:
     def test_editor_sees_draft_on_shared_novel(
         self, test_db: Session,
         p1_user_2: User,
-        p1_revision_owner_editor: Revision,
+        p1_revision_owner_editor: tuple[Revision, RevisionText],
     ):
-        q = select(Revision).where(Revision.revision_id == p1_revision_owner_editor.revision_id)
+        q = select(Revision).where(Revision.revision_id == p1_revision_owner_editor[0].revision_id)
         q = q.join(Chapter, Chapter.chapter_id == Revision.chapter_id)
         q = q.join(Novel, Novel.novel_id == Chapter.novel_id)
         q = revision_mod_access_select(q, p1_user_2)
@@ -521,10 +521,10 @@ class TestRevisionModAccessSelect:
     def test_viewer_sees_draft_on_shared_novel(
         self, test_db: Session,
         p1_user_2: User,
-        p1_revision_owner_viewer: Revision,
+        p1_revision_owner_viewer: tuple[Revision, RevisionText],
     ):
         """Viewer is a contributor, so can see non-public revisions."""
-        q = select(Revision).where(Revision.revision_id == p1_revision_owner_viewer.revision_id)
+        q = select(Revision).where(Revision.revision_id == p1_revision_owner_viewer[0].revision_id)
         q = q.join(Chapter, Chapter.chapter_id == Revision.chapter_id)
         q = q.join(Novel, Novel.novel_id == Chapter.novel_id)
         q = revision_mod_access_select(q, p1_user_2)
@@ -598,10 +598,10 @@ class TestRevisionModAccessUpdate:
     def test_owner_can_update(
         self, test_db: Session,
         p1_user_1: User,
-        p1_revision_restricted: Revision,
+        p1_revision_restricted: tuple[Revision, RevisionText],
     ):
         stmt = update(Revision).where(
-            Revision.revision_id == p1_revision_restricted.revision_id
+            Revision.revision_id == p1_revision_restricted[0].revision_id
         ).values(revision_title="Updated").returning(Revision)
         stmt = revision_mod_access_update(stmt, p1_user_1)
         result = test_db.execute(stmt).scalar_one_or_none()
@@ -610,10 +610,10 @@ class TestRevisionModAccessUpdate:
     def test_editor_can_update(
         self, test_db: Session,
         p1_user_2: User,
-        p1_revision_owner_editor: Revision,
+        p1_revision_owner_editor: tuple[Revision, RevisionText],
     ):
         stmt = update(Revision).where(
-            Revision.revision_id == p1_revision_owner_editor.revision_id
+            Revision.revision_id == p1_revision_owner_editor[0].revision_id
         ).values(revision_title="Editor Updated").returning(Revision)
         stmt = revision_mod_access_update(stmt, p1_user_2)
         result = test_db.execute(stmt).scalar_one_or_none()
@@ -622,10 +622,10 @@ class TestRevisionModAccessUpdate:
     def test_viewer_cannot_update(
         self, test_db: Session,
         p1_user_2: User,
-        p1_revision_owner_viewer: Revision,
+        p1_revision_owner_viewer: tuple[Revision, RevisionText],
     ):
         stmt = update(Revision).where(
-            Revision.revision_id == p1_revision_owner_viewer.revision_id
+            Revision.revision_id == p1_revision_owner_viewer[0].revision_id
         ).values(revision_title="Viewer Updated").returning(Revision)
         stmt = revision_mod_access_update(stmt, p1_user_2)
         result = test_db.execute(stmt).scalar_one_or_none()
@@ -634,10 +634,10 @@ class TestRevisionModAccessUpdate:
     def test_non_contributor_cannot_update(
         self, test_db: Session,
         p1_user_2: User,
-        p1_revision_private: Revision,
+        p1_revision_private: tuple[Revision, RevisionText],
     ):
         stmt = update(Revision).where(
-            Revision.revision_id == p1_revision_private.revision_id
+            Revision.revision_id == p1_revision_private[0].revision_id
         ).values(revision_title="Hacked").returning(Revision)
         stmt = revision_mod_access_update(stmt, p1_user_2)
         result = test_db.execute(stmt).scalar_one_or_none()
@@ -646,10 +646,10 @@ class TestRevisionModAccessUpdate:
     def test_admin_can_update_any(
         self, test_db: Session,
         p1_admin: User,
-        p1_revision_private: Revision,
+        p1_revision_private: tuple[Revision, RevisionText],
     ):
         stmt = update(Revision).where(
-            Revision.revision_id == p1_revision_private.revision_id
+            Revision.revision_id == p1_revision_private[0].revision_id
         ).values(revision_title="Admin").returning(Revision)
         stmt = revision_mod_access_update(stmt, p1_admin)
         result = test_db.execute(stmt).scalar_one_or_none()
@@ -665,80 +665,80 @@ class TestRevisionModAccessDelete:
     def test_owner_can_delete(
         self, test_db: Session,
         p1_user_1: User,
-        p1_revision_restricted: Revision,
+        p1_revision_restricted: tuple[Revision, RevisionText],
     ):
         stmt = delete(Revision).where(
-            Revision.revision_id == p1_revision_restricted.revision_id
+            Revision.revision_id == p1_revision_restricted[0].revision_id
         )
         stmt = revision_mod_access_delete(stmt, p1_user_1)
         test_db.execute(stmt)
         test_db.commit()
         remaining = test_db.execute(
-            select(Revision).where(Revision.revision_id == p1_revision_restricted.revision_id)
+            select(Revision).where(Revision.revision_id == p1_revision_restricted[0].revision_id)
         ).scalar_one_or_none()
         assert remaining is None
 
     def test_editor_cannot_delete(
         self, test_db: Session,
         p1_user_2: User,
-        p1_revision_owner_editor: Revision,
+        p1_revision_owner_editor: tuple[Revision, RevisionText],
     ):
         """Delete requires OWNER role, not EDITOR."""
         stmt = delete(Revision).where(
-            Revision.revision_id == p1_revision_owner_editor.revision_id
+            Revision.revision_id == p1_revision_owner_editor[0].revision_id
         )
         stmt = revision_mod_access_delete(stmt, p1_user_2)
         test_db.execute(stmt)
         test_db.commit()
         remaining = test_db.execute(
-            select(Revision).where(Revision.revision_id == p1_revision_owner_editor.revision_id)
+            select(Revision).where(Revision.revision_id == p1_revision_owner_editor[0].revision_id)
         ).scalar_one_or_none()
         assert remaining is not None
 
     def test_viewer_cannot_delete(
         self, test_db: Session,
         p1_user_2: User,
-        p1_revision_owner_viewer: Revision,
+        p1_revision_owner_viewer: tuple[Revision, RevisionText],
     ):
         stmt = delete(Revision).where(
-            Revision.revision_id == p1_revision_owner_viewer.revision_id
+            Revision.revision_id == p1_revision_owner_viewer[0].revision_id
         )
         stmt = revision_mod_access_delete(stmt, p1_user_2)
         test_db.execute(stmt)
         test_db.commit()
         remaining = test_db.execute(
-            select(Revision).where(Revision.revision_id == p1_revision_owner_viewer.revision_id)
+            select(Revision).where(Revision.revision_id == p1_revision_owner_viewer[0].revision_id)
         ).scalar_one_or_none()
         assert remaining is not None
 
     def test_non_contributor_cannot_delete(
         self, test_db: Session,
         p1_user_2: User,
-        p1_revision_private: Revision,
+        p1_revision_private: tuple[Revision, RevisionText],
     ):
         stmt = delete(Revision).where(
-            Revision.revision_id == p1_revision_private.revision_id
+            Revision.revision_id == p1_revision_private[0].revision_id
         )
         stmt = revision_mod_access_delete(stmt, p1_user_2)
         test_db.execute(stmt)
         test_db.commit()
         remaining = test_db.execute(
-            select(Revision).where(Revision.revision_id == p1_revision_private.revision_id)
+            select(Revision).where(Revision.revision_id == p1_revision_private[0].revision_id)
         ).scalar_one_or_none()
         assert remaining is not None
 
     def test_admin_can_delete_any(
         self, test_db: Session,
         p1_admin: User,
-        p1_revision_private: Revision,
+        p1_revision_private: tuple[Revision, RevisionText],
     ):
         stmt = delete(Revision).where(
-            Revision.revision_id == p1_revision_private.revision_id
+            Revision.revision_id == p1_revision_private[0].revision_id
         )
         stmt = revision_mod_access_delete(stmt, p1_admin)
         test_db.execute(stmt)
         test_db.commit()
         remaining = test_db.execute(
-            select(Revision).where(Revision.revision_id == p1_revision_private.revision_id)
+            select(Revision).where(Revision.revision_id == p1_revision_private[0].revision_id)
         ).scalar_one_or_none()
         assert remaining is None

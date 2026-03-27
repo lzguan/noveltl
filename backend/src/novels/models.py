@@ -194,7 +194,7 @@ class RevisionText(Base):
     revision_text_version : Mapped[int] = mapped_column(Integer, nullable=False)
 
     revision_of_revision_text : Mapped["Revision"] = relationship(back_populates="revision_texts_with_revision")
-    revision_id = mapped_column(ForeignKey('revisions.revision_id', name='fk_revision_texts_revision_id_revisions'), nullable=False)
+    revision_id = mapped_column(ForeignKey('revisions.revision_id', name='fk_revision_texts_revision_id_revisions', ondelete='CASCADE'), nullable=False)
 
     label_datas_with_revision_text : Mapped[list["LabelData"]] = relationship(back_populates='revision_text_of_label_data')
 

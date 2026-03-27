@@ -6,7 +6,7 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ..labels.schemas import Label
+from ..labels.schemas import LabelBase
 from ..schemas import SkipDefaultModel
 from .constants import MAX_PARAMS_FIELDS, AutoLabelProgress, SepPriority
 from .validators import SmallDict
@@ -74,7 +74,7 @@ class AutoLabel(BaseModel):
     """
     model_config = ConfigDict(from_attributes=True)
     auto_label_id : uuid.UUID
-    auto_label_data : list[Label] | None
+    auto_label_data : list[LabelBase] | None
     auto_label_model_name : str
     auto_label_model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
     auto_label_status : AutoLabelProgress

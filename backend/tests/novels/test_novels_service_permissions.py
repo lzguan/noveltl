@@ -119,8 +119,7 @@ def test_chapters_query_permissions(
             p1_user_1,
             chapter.chapter_id,
             schemas.CreateRevision(
-                revision_text=f"Text {chapter.chapter_num}",
-                revision_title=f"Title {chapter.chapter_num}",
+                    revision_title=f"Title {chapter.chapter_num}",
             ),
         )
         for chapter in rt_chapters
@@ -147,7 +146,6 @@ def test_chapters_query_permissions(
         rt.novel_id,
         is_public=None,
         is_primary=None,
-        is_final=None,
         start=None,
         end=None,
     )
@@ -158,13 +156,12 @@ def test_chapters_query_permissions(
         rt.novel_id,
         is_public=None,
         is_primary=None,
-        is_final=None,
         start=None,
         end=None,
     )
     assert len(rt_revisions_u_1) == 3
 
-    for revision in rt_revisions:
+    for revision, _ in rt_revisions:
         with pytest.raises(RevisionNotFoundException):
             query_revision_by_id(
                 test_db, p1_user_2, revision.revision_id
@@ -187,7 +184,6 @@ def test_chapters_query_permissions(
         p1_user_1,
         oe_chapter_1.chapter_id,
         schemas.CreateRevision(
-            revision_text="Owner Editor Text",
             revision_title="Owner Editor Title",
         ),
     )
@@ -196,7 +192,7 @@ def test_chapters_query_permissions(
 
     query_chapter_by_id(test_db, p1_user_1, oe_chapter_1.chapter_id)
     query_revision_by_id(
-        test_db, p1_user_1, oe_revision_1.revision_id
+        test_db, p1_user_1, oe_revision_1[0].revision_id
     )
     assert (
         len(
@@ -206,8 +202,7 @@ def test_chapters_query_permissions(
                 oe.novel_id,
                 is_public=None,
                 is_primary=None,
-                is_final=None,
-                start=None,
+                        start=None,
                 end=None,
             )
         )
@@ -216,7 +211,7 @@ def test_chapters_query_permissions(
 
     query_chapter_by_id(test_db, p1_user_2, oe_chapter_1.chapter_id)
     query_revision_by_id(
-        test_db, p1_user_2, oe_revision_1.revision_id
+        test_db, p1_user_2, oe_revision_1[0].revision_id
     )
     assert (
         len(
@@ -226,8 +221,7 @@ def test_chapters_query_permissions(
                 oe.novel_id,
                 is_public=None,
                 is_primary=None,
-                is_final=None,
-                start=None,
+                        start=None,
                 end=None,
             )
         )
@@ -242,7 +236,6 @@ def test_chapters_query_permissions(
         p1_user_2,
         oe_chapter_2.chapter_id,
         schemas.CreateRevision(
-            revision_text="Shared Editor Text",
             revision_title="Shared Editor Title",
         ),
     )
@@ -250,7 +243,7 @@ def test_chapters_query_permissions(
     assert len(test_db.execute(select(Revision)).scalars().all()) == 5
     query_chapter_by_id(test_db, p1_user_1, oe_chapter_2.chapter_id)
     query_revision_by_id(
-        test_db, p1_user_1, oe_revision_2.revision_id
+        test_db, p1_user_1, oe_revision_2[0].revision_id
     )
     assert (
         len(
@@ -260,8 +253,7 @@ def test_chapters_query_permissions(
                 oe.novel_id,
                 is_public=None,
                 is_primary=None,
-                is_final=None,
-                start=None,
+                        start=None,
                 end=None,
             )
         )
@@ -270,7 +262,7 @@ def test_chapters_query_permissions(
 
     query_chapter_by_id(test_db, p1_user_2, oe_chapter_2.chapter_id)
     query_revision_by_id(
-        test_db, p1_user_2, oe_revision_2.revision_id
+        test_db, p1_user_2, oe_revision_2[0].revision_id
     )
     assert (
         len(
@@ -280,8 +272,7 @@ def test_chapters_query_permissions(
                 oe.novel_id,
                 is_public=None,
                 is_primary=None,
-                is_final=None,
-                start=None,
+                        start=None,
                 end=None,
             )
         )
@@ -294,14 +285,14 @@ def test_chapters_query_permissions(
         query_chapter_by_id(test_db, None, oe_chapter_1.chapter_id)
     with pytest.raises(RevisionNotFoundException):
         query_revision_by_id(
-            test_db, None, oe_revision_1.revision_id
+            test_db, None, oe_revision_1[0].revision_id
         )
 
     # assert admin can access
     query_chapters_by_novel(test_db, p1_admin, oe.novel_id, start=None, end=None)
     query_chapter_by_id(test_db, p1_admin, oe_chapter_1.chapter_id)
     query_revision_by_id(
-        test_db, p1_admin, oe_revision_1.revision_id
+        test_db, p1_admin, oe_revision_1[0].revision_id
     )
 
     ov = p1_novels["ov"]
@@ -313,14 +304,13 @@ def test_chapters_query_permissions(
         p1_user_1,
         ov_chapter_1.chapter_id,
         schemas.CreateRevision(
-            revision_text="Owner Viewer Text",
             revision_title="Owner Viewer Title",
         ),
     )
     query_chapters_by_novel(test_db, p1_user_2, ov.novel_id, start=None, end=None)
     query_chapter_by_id(test_db, p1_user_2, ov_chapter_1.chapter_id)
     query_revision_by_id(
-        test_db, p1_user_2, ov_revision_1.revision_id
+        test_db, p1_user_2, ov_revision_1[0].revision_id
     )
     with pytest.raises(NovelNotFoundException):
         query_chapters_by_novel(test_db, None, ov.novel_id, start=None, end=None)
@@ -328,7 +318,7 @@ def test_chapters_query_permissions(
         query_chapter_by_id(test_db, None, ov_chapter_1.chapter_id)
     with pytest.raises(RevisionNotFoundException):
         query_revision_by_id(
-            test_db, None, ov_revision_1.revision_id
+            test_db, None, ov_revision_1[0].revision_id
         )
 
     # assert p1_user_2 cannot create chapters or revisions
@@ -342,7 +332,6 @@ def test_chapters_query_permissions(
             p1_user_2,
             ov_chapter_1.chapter_id,
             schemas.CreateRevision(
-                revision_text="Should not work",
                 revision_title="Should not work",
             ),
         )
@@ -356,12 +345,11 @@ def test_chapters_query_permissions(
         p1_admin,
         ov_chapter_2.chapter_id,
         schemas.CreateRevision(
-            revision_text="Admin Text",
             revision_title="Admin Title",
         ),
     )
     assert ov_chapter_2.chapter_id is not None
-    assert ov_revision_2.revision_id is not None
+    assert ov_revision_2[0].revision_id is not None
 
     # check overall number of revisions
     assert len(test_db.execute(select(Revision)).scalars().all()) == 7

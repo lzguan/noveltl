@@ -62,9 +62,10 @@ class LabelData(BaseModel):
     label_group_id : uuid.UUID
     revision_text_id : uuid.UUID
 
-class Label(BaseModel):
+class LabelBase(BaseModel):
     """
-    Pydantic schema for a single label.
+    Pydantic schema for a single label without a parent LabelData reference.
+    Used by autolabels and other contexts where labels exist independently of a LabelData.
 
     Attributes:
         label_entity_group: Some arbitrary string denoting the entity group this label belongs to (e.g. PERSON, LOCATION, etc.).
@@ -85,7 +86,6 @@ class Label(BaseModel):
     label_start : int = Field(ge=0)
     label_end : int = Field(ge=0)
     label_dirty : bool
-    label_data_id : uuid.UUID
 
     @model_validator(mode='after')
     def check_start_lt_end(self) -> Self:
@@ -101,6 +101,13 @@ class Label(BaseModel):
 
     def __repr__(self) -> str:
         return f"{{label_word : {self.label_word},label_entity_group : {self.label_entity_group},label_start : {self.label_start},label_end : {self.label_end},label_score : {self.label_score},label_entity_group : {self.label_entity_group}}}"
+
+class Label(LabelBase):
+    """
+    Pydantic schema for a label that belongs to a LabelData.
+    Extends LabelBase with a label_data_id foreign key.
+    """
+    label_data_id : uuid.UUID
 
 class CreateLabelData(BaseModel):
     """

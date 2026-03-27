@@ -157,7 +157,7 @@ class TestCopyLabelGroup:
         ).scalars().all()
 
         assert len(label_datas) == 1
-        assert label_datas[0].revision_id == lp_label_data_owner_only.revision_id
+        assert label_datas[0].revision_text_id == lp_label_data_owner_only.revision_text_id
 
     def test_copy_includes_labels(
         self,

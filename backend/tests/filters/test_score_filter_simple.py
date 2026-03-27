@@ -9,6 +9,8 @@ Tests cover:
 
 Note: These tests are AI generated and may not cover all edge cases or be fully comprehensive. It is recommended to review and modify the tests as needed to ensure they align with the specific requirements and constraints of your application.
 """
+import uuid
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -24,7 +26,7 @@ from src.filters.score_filter import (
     ScoreGetContextOptions,
 )
 from src.labels.models import Label, LabelData, LabelGroup
-from src.novels.models import Revision
+from src.novels.models import Revision, RevisionText
 
 # --- Tests for flag_instances ---
 
@@ -95,7 +97,7 @@ class TestGetContexts:
         sf_user: User,
         sf_label_group: LabelGroup,
         sf_labels: list[Label],
-        sf_revision: Revision,
+        sf_revision: tuple[Revision, RevisionText],
         score_filter: ScoreFilter,
     ):
         options = ScoreFlagInstancesOptions(
@@ -131,9 +133,10 @@ class TestGetContexts:
                 label_start=0,
                 label_end=4,
                 label_score=1.0,
-                label_dirty=False
+                label_dirty=False,
+                label_data_id=uuid.uuid4()
             ),
-            revision_id=999999
+            revision_text_id=uuid.uuid4()
         )
 
         context_options = ScoreGetContextOptions()
@@ -270,8 +273,8 @@ class TestApplyFilter:
         assert len(instances) == 2  # Only "world" with score 0.5 and "test" with score 0.3
 
         # Apply filter (delete the flagged labels)
-        apply_options = ScoreApplyFilterOptions(create_copy=False)
-        score_filter.apply_filter(test_db, sf_user, sf_label_group.label_group_id, instances, apply_options)
+        apply_options = ScoreApplyFilterOptions(create_copy=False, label_group_id=sf_label_group.label_group_id)
+        score_filter.apply_filter(test_db, sf_user, instances, apply_options)
 
         # Verify "Hello" is deleted
         remaining = test_db.execute(
@@ -302,8 +305,8 @@ class TestApplyFilter:
         assert len(instances) == 3
 
         # Apply filter with copy
-        apply_options = ScoreApplyFilterOptions(create_copy=True, new_label_group_name="Filtered Copy")
-        score_filter.apply_filter(test_db, sf_user, sf_label_group.label_group_id, instances, apply_options)
+        apply_options = ScoreApplyFilterOptions(create_copy=True, new_label_group_name="Filtered Copy", label_group_id=sf_label_group.label_group_id)
+        score_filter.apply_filter(test_db, sf_user, instances, apply_options)
 
         # Original group should still have all labels
         original_labels = test_db.execute(
@@ -327,8 +330,8 @@ class TestApplyFilter:
         score_filter: ScoreFilter,
     ):
         # Apply filter with empty list
-        apply_options = ScoreApplyFilterOptions(create_copy=False)
-        score_filter.apply_filter(test_db, sf_user, sf_label_group.label_group_id, [], apply_options)
+        apply_options = ScoreApplyFilterOptions(create_copy=False, label_group_id=sf_label_group.label_group_id)
+        score_filter.apply_filter(test_db, sf_user, [], apply_options)
 
         # All labels should remain
         remaining = test_db.execute(

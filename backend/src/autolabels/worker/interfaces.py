@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Protocol, TypeVar
 
-from ...labels.schemas import Label
+from ...labels.schemas import LabelBase
 from .. import schemas
 
 my_logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ class NERModel(Protocol[P]):
     model_name : str
     is_deterministic : bool
 
-    def predict(self, text : str, params : P) -> tuple[list[Label], Any]:
+    def predict(self, text : str, params : P) -> tuple[list[LabelBase], Any]:
         """
         Returns a list of named entities in text in the format
             ```

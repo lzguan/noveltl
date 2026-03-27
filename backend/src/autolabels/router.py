@@ -1,3 +1,4 @@
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -6,7 +7,6 @@ from sqlalchemy.orm import Session
 from ..auth.dependencies import get_current_user
 from ..auth.models import User
 from ..database import get_db
-from ..exceptions import InsufficientPermissionsException
 from . import schemas
 from .dependencies import get_arq_dispatcher
 from .exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
@@ -20,7 +20,7 @@ router = APIRouter()
     response_model=schemas.AutoLabel
 )
 async def read_autolabel_by_id(
-        auto_label_id : int,
+        auto_label_id : uuid.UUID,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
@@ -28,7 +28,7 @@ async def read_autolabel_by_id(
     Endpoint for retrieving autolabel from database.
 
     Args:
-        auto_label_id: Integer id for auto label.
+        auto_label_id: UUID for auto label.
         db: Database dependency.
         current_user: Current user dependency.
     """
@@ -39,20 +39,15 @@ async def read_autolabel_by_id(
             status.HTTP_404_NOT_FOUND,
             detail=f"No autolabel with id {auto_label_id} found."
         ) from e
-    except InsufficientPermissionsException as e:
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions to view this resource."
-        ) from e
     return autolabel
 
 @router.get('/auto-labels', response_model=list[schemas.AutoLabelMeta])
 async def read_autolabels(
-        novel_id : Annotated[int, Query(alias="novel-id")],
+        novel_id : Annotated[uuid.UUID, Query(alias="novel-id")],
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)],
-        chapter_ids : Annotated[list[int] | None, Query(alias="chapter-ids")] = None,
-        revision_ids : Annotated[list[int] | None, Query(alias="revision-ids")] = None,
+        chapter_ids : Annotated[list[uuid.UUID] | None, Query(alias="chapter-ids")] = None,
+        revision_ids : Annotated[list[uuid.UUID] | None, Query(alias="revision-ids")] = None,
         start : int | None = None,
         end : int | None = None,
         model_names : Annotated[list[str] | None, Query(alias="model-names")] = None,

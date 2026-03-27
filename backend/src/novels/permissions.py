@@ -1,3 +1,4 @@
+import uuid
 from typing import Any
 
 from sqlalchemy import Delete, Select, Update, and_, exists, or_, select
@@ -5,7 +6,7 @@ from sqlalchemy import Delete, Select, Update, and_, exists, or_, select
 from ..auth.constants import UserType
 from ..auth.models import User
 from .constants import Role, Visibility
-from .models import Chapter, Contributor, Novel, Revision
+from .models import Chapter, Contributor, Novel, Revision, RevisionText
 
 
 def novel_mod_access_select[T : Select[tuple[Any, ...]]](q : T, current_user : User | None) -> T:
@@ -96,6 +97,13 @@ def revision_mod_access_select[T : Select[tuple[Any, ...]]](q : T,  current_user
         return q.where(exists(sub_q))
     return q
 
+def revision_text_mod_access_select[T : Select[tuple[Any, ...]]](q : T, current_user : User | None) -> T:
+    subq = select(1).select_from(Revision).where(
+        Revision.revision_id == RevisionText.revision_id
+    ).correlate(RevisionText)
+    subq = revision_mod_access_select(subq, current_user)
+    return q.where(exists(subq))
+
 def novel_mod_access_update[T : Update](stmt : T, current_user : User) -> T:
     """
     Takes an update statement for novels and returns an update statement that restricts permissions on stmt.
@@ -118,7 +126,7 @@ def novel_mod_access_update[T : Update](stmt : T, current_user : User) -> T:
         )
     return stmt
 
-def chapter_mod_access_insert[T : Select[tuple[Any, ...]]](stmt : T, current_user : User, novel_id : int) -> T:
+def chapter_mod_access_insert[T : Select[tuple[Any, ...]]](stmt : T, current_user : User, novel_id : uuid.UUID) -> T:
     """
     Takes an select statement used for an insert from select statement for chapter and returns a select statement for a chapter that restrict permissions on stmt.
     """
@@ -159,7 +167,7 @@ def chapter_mod_access_update[T : Update](stmt : T, current_user : User) -> T:
         )
     return stmt
 
-def revision_mod_access_insert[T : Select[tuple[Any, ...]]](stmt : T, current_user : User, chapter_id : int) -> T:
+def revision_mod_access_insert[T : Select[tuple[Any, ...]]](stmt : T, current_user : User, chapter_id : uuid.UUID) -> T:
     if current_user.user_type != UserType.ADMIN:
         return stmt.where(
             exists(
@@ -226,4 +234,20 @@ def revision_mod_access_delete[T : Delete](stmt : T, current_user : User) -> T:
                 )
             )
         )
+    return stmt
+
+def revision_text_mod_access_insert[T : Select[tuple[Any, ...]]](stmt : T, current_user : User, revision_id : uuid.UUID) -> T:
+    if current_user.user_type != UserType.ADMIN:
+        return stmt.where(exists(
+            select(1).select_from(Contributor).where(
+                Contributor.novel_id == select(Chapter.novel_id).where(
+                    Chapter.chapter_id == select(Revision.chapter_id).where(
+                        Revision.revision_id == revision_id
+                    ).scalar_subquery()).scalar_subquery()
+            ).where(
+                Contributor.user_id == current_user.user_id
+            ).where(
+                Contributor.contributor_role.in_([Role.OWNER, Role.EDITOR])
+            )
+        ))
     return stmt

@@ -8,7 +8,7 @@ import pytest
 from src.autolabels.constants import SepPriority
 from src.autolabels.exceptions import ChunkTooLargeException, TokenDoesNotExistException
 from src.autolabels.worker.interfaces import Tokenizer
-from src.autolabels.worker.utils import _chunk_blocks, _chunk_paragraph, chunk_text
+from src.autolabels.worker.utils import _chunk_blocks, _chunk_paragraph, chunk_text  # type: ignore
 
 
 def test_chunk_blocks():
@@ -19,7 +19,7 @@ def test_chunk_blocks():
     }
     text = "Hello, world. This is a test"
     chunks = list(_chunk_blocks(text, separators))
-    expected_chunks = [
+    expected_chunks : list[tuple[str, int, SepPriority | None]] = [
         ("Hello,", 0, SepPriority.MED),
         (" ", 6, SepPriority.LOW),
         ("world.", 7, SepPriority.HIGH),
@@ -189,7 +189,7 @@ class TokenizerTestWrong(Tokenizer):
     def tokenize_words(self, text: str) -> list[tuple[str, int]]:
         return [("a", 2) for char in text if char in ['a', 'A']]
 
-    def tokenize(self, text : str): return []
+    def tokenize(self, text : str) -> list[str]: return []
 
 def test_chunk_paragraph_no_match():
     text = "A"
@@ -206,8 +206,8 @@ def test_chunk_text_no_match():
 
 
 class TokenizerTestZero(Tokenizer):
-    def tokenize(self, text : str): return []
-    def tokenize_words(self, text : str): return [(text, 0)]
+    def tokenize(self, text : str) -> list[str]: return []
+    def tokenize_words(self, text : str) -> list[tuple[str, int]]: return [(text, 0)]
 
 def test_chunk_text_zero_token_infinite_loop():
     separators = {

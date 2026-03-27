@@ -1,11 +1,12 @@
 import asyncio
+import uuid
 from typing import Any, cast
 
 from pydantic import ValidationError
 from sqlalchemy import CursorResult, select, update
 from sqlalchemy.exc import NoResultFound
 
-from ...novels.models import Revision
+from ...novels.models import RevisionText
 from ..constants import AutoLabelProgress
 from ..models import AutoLabel
 from .config import SessionLocal
@@ -19,7 +20,7 @@ def get_ner_model(model_name : str) -> NERModel[Any]:
 
     raise ValueError(f"Model {model_name} not found in registry.")
 
-async def autolabel_infer(ctx : Any, job_id : str, auto_label_id: int, model_name: str, model_params: dict[str, Any]) -> None:
+async def autolabel_infer(ctx : Any, job_id : str, auto_label_id: uuid.UUID, model_name: str, model_params: dict[str, Any]) -> None:
     base_update = update(
         AutoLabel
     ).where(
@@ -74,9 +75,11 @@ async def autolabel_infer(ctx : Any, job_id : str, auto_label_id: int, model_nam
             db.rollback()
             raise e
         q = select(
-            Revision.revision_text
+            RevisionText.revision_text_content
+        ).select_from(
+            RevisionText
         ).join(
-            AutoLabel, AutoLabel.revision_id == Revision.revision_id
+            AutoLabel, AutoLabel.revision_text_id == RevisionText.revision_text_id
         ).where(AutoLabel.auto_label_id == auto_label_id)
         try:
             res = db.execute(q)

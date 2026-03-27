@@ -19,12 +19,12 @@ These files are the source of truth for conventions, expected test cases, and ar
 
 | Purpose | File |
 |---------|------|
-| Frontend testing standards | `docs/frontend-testing.md` |
+| Frontend testing standards | `docs/frontend-backend-testing.md` |
 | Naming & API conventions | `docs/conventions.md` (especially "Frontend Naming Conventions" → "API Layer") |
 | API design decisions | `docs/api-design.md` |
-| Backend testing patterns | `docs/testing.md` |
+| Backend testing patterns | `docs/backend-testing.md` |
 
-**Always read `docs/frontend-testing.md` and `docs/conventions.md` at the start of any stage.** These are the authoritative references for what tests should exist, how API functions should be structured, and what conventions to follow. Do not rely solely on the instructions in this skill file — the docs may have been updated since this skill was written.
+**Always read `docs/frontend-backend-testing.md` and `docs/conventions.md` at the start of any stage.** These are the authoritative references for what tests should exist, how API functions should be structured, and what conventions to follow. Do not rely solely on the instructions in this skill file — the docs may have been updated since this skill was written.
 
 ---
 
@@ -81,11 +81,11 @@ Also list every request and response schema with their fields and types.
 
 ## Stage 2: Frontend Test Audit
 
-**Goal:** Compare existing frontend tests against the expected test cases defined in `docs/frontend-testing.md`, and flag tests that are incorrect or missing.
+**Goal:** Compare existing frontend tests against the expected test cases defined in `docs/frontend-backend-testing.md`, and flag tests that are incorrect or missing.
 
 ### Steps
 
-1. **Read `docs/frontend-testing.md`** — specifically the "Test Cases by Module" section. This defines the required test cases per API function.
+1. **Read `docs/frontend-backend-testing.md`** — specifically the "Test Cases by Module" section. This defines the required test cases per API function.
 
 2. **Read each existing test file** in `frontend/src/api/__test__/`:
    - For each `describe`/`it` block, determine which test case from the doc it corresponds to.
@@ -139,7 +139,7 @@ Produce three lists:
    - Fix the test to match the expected behavior from the doc
 
 2. **Generate missing tests** for existing API functions. For each missing test case:
-   - Follow the test patterns defined in `docs/frontend-testing.md` (mock setup, arrange/act/assert structure)
+   - Follow the test patterns defined in `docs/frontend-backend-testing.md` (mock setup, arrange/act/assert structure)
    - Use the same file organization (`__test__/` directory, one test file per API module)
    - Follow these conventions from the doc:
      - `vi.mock('../client')` at the module level
@@ -329,7 +329,7 @@ Stubs will fail at runtime — that's expected. But all existing tests must pass
 ## General Guidelines
 
 ### When in doubt, check the docs
-The `docs/frontend-testing.md` file defines the exact test cases. The `docs/conventions.md` file defines naming rules. Always defer to these over patterns you infer from existing code — the docs may have been updated to fix issues in the existing code.
+The `docs/frontend-backend-testing.md` file defines the exact test cases. The `docs/conventions.md` file defines naming rules. Always defer to these over patterns you infer from existing code — the docs may have been updated to fix issues in the existing code.
 
 ### Don't skip error cases
 Error propagation tests (`mockRejectedValue` with `AxiosError`) catch real bugs. The API functions currently don't do custom error handling (they let Axios errors propagate), but tests should still verify this behavior because:

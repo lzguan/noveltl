@@ -1,3 +1,4 @@
+import uuid
 from typing import Protocol
 
 from arq import ArqRedis
@@ -13,7 +14,7 @@ class AutoLabelDispatcher(Protocol):
     async def enqueue(
         self,
         job_id : str,
-        auto_label_id : int,
+        auto_label_id : uuid.UUID,
         model_name : str,
         model_params : dict[str, str | int | float | bool],
     ) -> None:
@@ -39,7 +40,7 @@ class ArqDispatcher(AutoLabelDispatcher):
     async def enqueue(
             self,
             job_id : str,
-            auto_label_id: int,
+            auto_label_id: uuid.UUID,
             model_name: str,
             model_params: dict[str, str | int | float | bool],
         ) -> None:

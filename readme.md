@@ -134,7 +134,7 @@ NovelTL_Dev/
 │   ├── background-jobs.md  # AutoLabel worker details
 │   ├── filter-system.md    # Filter abstraction
 │   ├── conventions.md      # Code style & naming
-│   └── testing.md          # Testing guide
+│   └── backend-testing.md          # Testing guide
 └── compose.yaml            # Docker orchestration
 ```
 
@@ -176,7 +176,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[Background Jobs](docs/background-jobs.md)** - AutoLabel worker and state machine
 - **[Filter System](docs/filter-system.md)** - Four-phase label filtering pipeline
 - **[Conventions](docs/conventions.md)** - Code style and naming standards
-- **[Testing Guide](docs/testing.md)** - How to write and run tests
+- **[Testing Guide](docs/backend-testing.md)** - How to write and run tests
 
 **For new contributors**: Start with [docs/README.md](docs/README.md) for a guided tour.
 
@@ -262,7 +262,7 @@ After running `seed_admin.py`, use the credentials you entered during the intera
 
 1. Read the [conventions](docs/conventions.md) for code style guidelines
 2. Check [GitHub Issues](https://github.com/lzguan/NovelTL_Dev/issues) for known bugs and planned features
-3. Write tests for new features (see [testing.md](docs/testing.md))
+3. Write tests for new features (see [backend-testing.md](docs/backend-testing.md))
 4. Ensure migrations are included for schema changes
 
 ---

@@ -115,4 +115,4 @@ This prevents resource enumeration — a client cannot probe whether a private n
 - [permissions.md](permissions.md) - Permission helpers referenced above
 - [database-schema.md](database-schema.md) - Database models
 - [conventions.md](conventions.md) - Full naming conventions
-- [testing.md](testing.md) - API testing strategies
+- [backend-testing.md](backend-testing.md) - API testing strategies

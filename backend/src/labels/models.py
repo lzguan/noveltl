@@ -2,9 +2,11 @@
 Database models for labels.
 """
 
+import uuid
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, CheckConstraint, Enum, Float, ForeignKey, Integer, String, UniqueConstraint, and_, func
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,7 +15,7 @@ from .constants import MAX_LABEL_ENTITY_GROUP_NAME_LEN, MAX_LABEL_GROUP_NAME_LEN
 
 if TYPE_CHECKING:
     from src.auth.models import User
-    from src.novels.models import Novel, Revision
+    from src.novels.models import Novel, RevisionText
 
 class LabelGroup(Base):
     """
@@ -25,10 +27,10 @@ class LabelGroup(Base):
         novel_id: Novel this label group is referring to.
     """
     __tablename__ = 'label_groups'
-    label_group_id : Mapped[int] = mapped_column(primary_key=True)
+    label_group_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
     label_group_name : Mapped[str] = mapped_column(String(MAX_LABEL_GROUP_NAME_LEN))
 
-    novel_id : Mapped[int] = mapped_column(ForeignKey('novels.novel_id', name='fk_label_groups_novel_id_novels'), nullable=False)
+    novel_id = mapped_column(ForeignKey('novels.novel_id', name='fk_label_groups_novel_id_novels'), nullable=False)
     novel_of_label_group : Mapped["Novel"] = relationship(back_populates='label_groups_with_novel')
 
     label_datas_with_label_group : Mapped[list["LabelData"]] = relationship(back_populates='label_group_of_label_data', cascade='all, delete-orphan')
@@ -47,10 +49,10 @@ class LabelContributor(Base):
 
     label_contributor_role : Mapped[LabelRole] = mapped_column(Enum(LabelRole, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False) # type: ignore
 
-    label_group_id : Mapped[int] = mapped_column(ForeignKey('label_groups.label_group_id'), primary_key=True)
+    label_group_id = mapped_column(ForeignKey('label_groups.label_group_id'), primary_key=True)
     label_group_of_label_contributor : Mapped[LabelGroup] = relationship(back_populates='label_contributors_with_label_group')
 
-    user_id : Mapped[int] = mapped_column(ForeignKey('users.user_id'), primary_key=True)
+    user_id = mapped_column(ForeignKey('users.user_id'), primary_key=True)
     user_of_label_contributor : Mapped["User"] = relationship(back_populates='label_contributors_with_user')
 
 class LabelData(Base):
@@ -60,7 +62,7 @@ class LabelData(Base):
     Attributes:
         label_data_id: Integer identifier.
         label_group_id: Label group that label_data belongs to.
-        revision_id: id of chapter revision this label data corresponds to.
+        revision_text_id: UUID of chapter revision text this label data corresponds to.
 
     Note:
         Each label group can only have 1 label data corresponding to a given chapter.
@@ -68,18 +70,18 @@ class LabelData(Base):
     """
     __tablename__ = 'label_datas'
 
-    label_data_id : Mapped[int] = mapped_column(primary_key=True)
+    label_data_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
 
-    label_group_id : Mapped[int] = mapped_column(ForeignKey('label_groups.label_group_id', name='fk_label_datas_label_group_id_label_groups'), nullable=False)
+    label_group_id = mapped_column(ForeignKey('label_groups.label_group_id', name='fk_label_datas_label_group_id_label_groups'), nullable=False)
     label_group_of_label_data : Mapped[LabelGroup] = relationship(back_populates='label_datas_with_label_group')
 
-    revision_id : Mapped[int] = mapped_column(ForeignKey('revisions.revision_id', name='fk_label_datas_revision_id_revisions'), nullable=False)
-    revision_of_label_data : Mapped["Revision"] = relationship(back_populates='label_datas_with_revision')
+    revision_text_id = mapped_column(ForeignKey('revision_texts.revision_text_id', name='fk_label_datas_revision_text_id_revision_texts'), nullable=False)
+    revision_text_of_label_data : Mapped["RevisionText"] = relationship(back_populates='label_datas_with_revision_text')
 
     labels_with_label_data : Mapped[list["Label"]] = relationship(back_populates='label_data_of_label', cascade='all, delete-orphan')
 
     __table_args__ = (
-        UniqueConstraint('label_group_id', 'revision_id', name='one_label_group_per_chapter'),
+        UniqueConstraint('label_group_id', 'revision_text_id', name='one_label_group_per_chapter'),
     )
 
 class Label(Base):
@@ -103,7 +105,7 @@ class Label(Base):
     """
     __tablename__ = 'labels'
 
-    label_id : Mapped[int] = mapped_column(primary_key=True)
+    label_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
     label_entity_group : Mapped[str] = mapped_column(String(MAX_LABEL_ENTITY_GROUP_NAME_LEN), default="MISC", nullable=False)
     label_score : Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
     label_word : Mapped[str] = mapped_column(String(MAX_LABEL_WORD_LEN), nullable=False)
@@ -111,7 +113,7 @@ class Label(Base):
     label_end : Mapped[int] = mapped_column(Integer, nullable=False)
     label_dirty : Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    label_data_id : Mapped[int] = mapped_column(ForeignKey('label_datas.label_data_id', name='fk_labels_label_data_id_label_datas'), nullable=False)
+    label_data_id = mapped_column(ForeignKey('label_datas.label_data_id', name='fk_labels_label_data_id_label_datas'), nullable=False)
     label_data_of_label : Mapped["LabelData"] = relationship(back_populates='labels_with_label_data')
 
     __table_args__ = (

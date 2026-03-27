@@ -2,6 +2,7 @@
 Common schemas for filters, including context and instance schemas. These are used across different filter implementations to standardize the data structures for contexts and instances.
 """
 
+import uuid
 from typing import Any, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
@@ -54,7 +55,7 @@ class SentenceContext(ContextBase):
     label_start_rel : int = Field(..., description="The start index of the label within the sentence text.")
     label_end_rel : int = Field(..., description="The end index of the label within the sentence text.")
     label : label_schemas.Label | None = Field(default=None, description="The label associated with this context, if flagged to return.")
-    revision_id : int
+    revision_text_id : uuid.UUID
 
 class ParagraphContext(ContextBase):
     type : Literal["paragraph"] = "paragraph"
@@ -62,12 +63,12 @@ class ParagraphContext(ContextBase):
     label_start_rel : int = Field(..., description="The start index of the label within the paragraph text.")
     label_end_rel : int = Field(..., description="The end index of the label within the paragraph text.")
     label : label_schemas.Label | None = Field(default=None, description="The label associated with this context, if flagged to return.")
-    revision_id : int
+    revision_text_id : uuid.UUID
 
 class SingleLabel(InstanceBase):
     type : Literal["single_label"] = "single_label"
     label : label_schemas.Label
-    revision_id : int
+    revision_text_id : uuid.UUID
 
 
 # --------------------------------------

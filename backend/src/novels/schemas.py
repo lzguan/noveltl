@@ -2,9 +2,10 @@
 Pydantic models for novels and chapters.
 """
 
+import uuid
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from .constants import NovelType, Visibility
 
@@ -14,22 +15,20 @@ class Novel(BaseModel):
     Pydantic schema for novel.
 
     Attributes:
-        novel_id: Integer id of novel in db.
+        novel_id: UUID id of novel in db.
         novel_title: String title of novel.
         novel_description: String summary or description of novel.
         novel_author: String author or description of novel.
         novel_visibility: Visibility enum of novel.
         novel_type: NovelType enum of novel.
-        novel_parent_id: Integer id of parent novel, if any.
         language_code: String code key to language of the novel.
     """
-    novel_id : int
+    novel_id : uuid.UUID
     novel_title : str
     novel_description : str | None = None
     novel_author : str | None = None
     novel_visibility : Visibility
     novel_type : NovelType
-    novel_parent_id : int | None = None
 
     language_code : str
 
@@ -63,28 +62,26 @@ class UpdateNovel(BaseModel):
         novel_author: Author of novel we are creating. If None, then do not update.
         novel_visibility: Updated visibility level of novel we are updating. If None, then do not update.
         novel_type: Updated novel type. If None, then do not update.
-        novel_parent_id: Updated novel parent id. Will use this parameter if and only if explicitly set in the user request (even if the user request contains null).
     """
     novel_title : str | None = None
     novel_description : str | None = None
     novel_author : str | None = None
     novel_visibility : Visibility | None = None
     novel_type : NovelType | None = None
-    novel_parent_id: int | None = None
 
 class Chapter(BaseModel):
     """
     Pydantic schema for chapter metadata. Represents a single "chapter" entry, which groups all its revisions.
 
     Attributes:
-        chapter_id: Integer primary key identifier.
+        chapter_id: UUID primary key identifier.
         chapter_num: The chapter number.
-        novel_id: Integer foreign key to the novel this chapter belongs to.
+        novel_id: UUID foreign key to the novel this chapter belongs to.
     """
-    chapter_id : int
+    chapter_id : uuid.UUID
     chapter_num : int
 
-    novel_id : int
+    novel_id : uuid.UUID
 
 class CreateChapter(BaseModel):
     """
@@ -97,45 +94,21 @@ class CreateChapter(BaseModel):
 
 class Revision(BaseModel):
     """
-    Pydantic schema for a full chapter revision, including text.
+    Pydantic schema for chapter revision metadata.
 
     Attributes:
-        revision_id: Integer primary key identifier.
+        revision_id: UUID primary key identifier.
         revision_title: The title of this specific revision.
         revision_is_primary: Boolean flag for the 'finalized' revision.
         revision_is_public: Boolean flag for whether this revision is public and immutable.
-        chapter_id: Integer foreign key to the parent chapter.
-        revision_text: The full text content of the revision.
+        chapter_id: UUID foreign key to the parent chapter.
     """
-    revision_id : int
+    revision_id : uuid.UUID
     revision_title : str
     revision_is_primary : bool
     revision_is_public : bool
-    revision_is_final : bool
 
-    chapter_id : int
-    revision_text : str
-
-class RevisionMeta(BaseModel):
-    """
-    Pydantic schema for chapter revision metadata (excludes text). Used for list endpoints to avoid sending large text payloads.
-
-    Attributes:
-        revision_id: Integer primary key identifier.
-        revision_title: The title of this specific revision.
-        revision_is_primary: Boolean flag for the 'finalized' revision.
-        revision_is_public: Boolean flag for whether this revision is public and immutable.
-        chapter_id: Integer foreign key to the parent chapter.
-    """
-    model_config = ConfigDict(from_attributes=True)
-
-    revision_id : int
-    revision_title : str
-    revision_is_primary : bool
-    revision_is_public : bool
-    revision_is_final : bool
-
-    chapter_id : int
+    chapter_id : uuid.UUID
 
 class CreateRevision(BaseModel):
     """
@@ -143,10 +116,43 @@ class CreateRevision(BaseModel):
 
     Attributes:
         revision_title: The title for the new revision.
-        revision_text: The full text content for the new revision. Defaults to None.
     """
     revision_title : str
-    revision_text : str | None = None
+
+class RevisionText(BaseModel):
+    """
+    Pydantic schema for the text content of a chapter revision.
+
+    Attributes:
+        revision_text_content: The full text content of the chapter revision.
+        revision_text_version: The version number of the text content, used for optimistic concurrency control when updating text.
+        revision_text_id: The UUID of the text content, used for optimistic concurrency control when updating text.
+    """
+    revision_text_content : str
+    revision_text_version : int
+    revision_text_id : uuid.UUID
+
+class RevisionTextMeta(BaseModel):
+    """
+    Metadata for a RevisionText.
+
+    Attributes:
+        revision_text_version: The version number of the text content, used for optimistic concurrency control when updating text.
+        revision_text_id: The UUID of the text content, used for optimistic concurrency control when updating text.
+    """
+    revision_text_version : int
+    revision_text_id : uuid.UUID
+
+class RevisionData(BaseModel):
+    """
+    Pydantic schema for aggregating a Revision and a RevisionText together.
+
+    Attributes:
+        metadata: The metadata of the revision, such as title and whether it's primary.
+        content: The text content of the revision.
+    """
+    metadata: Revision
+    content: RevisionText
 
 class UpdateRevision(BaseModel):
     """
@@ -154,21 +160,29 @@ class UpdateRevision(BaseModel):
 
     Attributes:
         revision_title: The new title for the revision.
-        revision_text: The new full text content for the revision.
     """
-    revision_title : str | None = None
-    revision_text : str | None = None
+    revision_title : str
 
-class DeleteRevisionStatus(BaseModel):
+class TextOp(BaseModel):
     """
-    Pydantic model to signal return status of delete operation for chapter revision.
+    Pydantic schema to update text content of a chapter revision.
 
     Attributes:
-        status: One of "success", "fail".
-        detail: Details on operation.
-
-    Notes:
-        Unless under exceptional circumstances, should not return fail and just raise an exception.
+        op: The text operation, either "insert" or "delete".
+        start: The starting index in the text content where the operation should be applied.
+        text: The text to insert (for insert operations) or the text to delete (for delete operations).
     """
-    status : Literal["success", "fail"]
-    detail : str | None = None
+    op : Literal["insert", "delete"]
+    start : int
+    text : str
+
+class UpdateRevisionText(BaseModel):
+    """
+    Pydantic schema to validate data for updating the text content of a chapter revision. The revision_id is expected to be passed via the URL path.
+
+    Attributes:
+        text_ops: A list of text operations (insertions or deletions) to apply to the existing text content.
+        revision_text_id: The UUID of the text content, used for optimistic concurrency control when updating text.
+    """
+    text_ops : list[TextOp]
+    revision_text_id : uuid.UUID

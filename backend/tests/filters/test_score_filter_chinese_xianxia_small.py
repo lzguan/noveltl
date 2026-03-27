@@ -29,7 +29,7 @@ from src.filters.score_filter import (
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.labels.schemas import CreateLabelDataByAutoLabel
 from src.labels.service import insert_label_datas_by_autolabels
-from src.novels.models import Chapter, Contributor, Revision
+from src.novels.models import Chapter, Contributor, Revision, RevisionText
 
 pytestmark = pytest.mark.dependency(
     depends=["insert_label_datas_by_autolabels"],
@@ -41,7 +41,7 @@ def cxst_labels_populated(
     test_db: Session,
     chinese_xianxia_small_test_autolabels_cluener: list[AutoLabel],
     chinese_xianxia_small_test_label_group: LabelGroup,
-    chinese_xianxia_small_test_chapters: list[tuple[Chapter, Revision]],
+    chinese_xianxia_small_test_chapters: list[tuple[Chapter, Revision, RevisionText]],
     chinese_xianxia_small_test_user: User,
     chinese_xianxia_small_test_label_contributor: LabelContributor,
     chinese_xianxia_small_test_contributor: Contributor,
@@ -261,11 +261,10 @@ class TestApplyFilterPreservation:
         assert len(instances) > 0
 
         # Apply with copy
-        apply_options = ScoreApplyFilterOptions(create_copy=True, new_label_group_name="Filtered Copy")
+        apply_options = ScoreApplyFilterOptions(create_copy=True, new_label_group_name="Filtered Copy", label_group_id=cxst_labels_populated.label_group_id)
         score_filter.apply_filter(
             test_db,
             chinese_xianxia_small_test_user,
-            cxst_labels_populated.label_group_id,
             instances,
             apply_options
         )
@@ -318,11 +317,10 @@ class TestApplyFilterDeletion:
         assert flagged_count > 0
 
         # Apply filter (delete flagged)
-        apply_options = ScoreApplyFilterOptions(create_copy=False)
+        apply_options = ScoreApplyFilterOptions(create_copy=False, label_group_id=cxst_labels_populated.label_group_id)
         score_filter.apply_filter(
             test_db,
             chinese_xianxia_small_test_user,
-            cxst_labels_populated.label_group_id,
             instances,
             apply_options
         )
@@ -361,11 +359,10 @@ class TestApplyFilterDeletion:
         )
         instances = score_filter.flag_instances(test_db, chinese_xianxia_small_test_user, options)
 
-        apply_options = ScoreApplyFilterOptions(create_copy=False)
+        apply_options = ScoreApplyFilterOptions(create_copy=False, label_group_id=cxst_labels_populated.label_group_id)
         score_filter.apply_filter(
             test_db,
             chinese_xianxia_small_test_user,
-            cxst_labels_populated.label_group_id,
             instances,
             apply_options
         )

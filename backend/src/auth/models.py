@@ -1,9 +1,11 @@
 """
 Database models related to users/user authentication
 """
+import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Enum, String, UniqueConstraint
+from sqlalchemy import Enum, String, UniqueConstraint, func
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..models import Base
@@ -25,7 +27,7 @@ class User(Base):
     """
     __tablename__ = "users"
 
-    user_id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
     user_name : Mapped[str] = mapped_column(
         String(MAX_USER_NAME_LEN),
         nullable=False

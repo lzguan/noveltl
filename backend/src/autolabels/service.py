@@ -3,29 +3,29 @@ Service functions for auto labeling.
 """
 
 import asyncio
+import uuid
 from collections.abc import Coroutine
 from typing import Any
 from uuid import uuid4
 
 from psycopg2 import Error as PgError
 from psycopg2 import errorcodes
-from sqlalchemy import and_, exists, insert, literal, not_, select
+from sqlalchemy import and_, exists, func, insert, literal, not_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session, defer
 
-from ..auth.constants import UserType
 from ..auth.models import User
-from ..exceptions import InsufficientPermissionsException, UnknownError
+from ..exceptions import UnknownError
 from ..novels import models as novel_models
-from ..novels.permissions import revision_mod_access_select
 from . import models, schemas
 from .constants import AutoLabelProgress
 from .exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
+from .permissions import auto_label_mod_access_insert, auto_label_mod_access_select
 from .utils import AutoLabelDispatcher
 
 
-def query_auto_label_by_id(db : Session, current_user : User, auto_label_id : int) -> models.AutoLabel:
+def query_auto_label_by_id(db : Session, current_user : User, auto_label_id : uuid.UUID) -> models.AutoLabel:
     """
     Query an autolabel with a specific id from database.
 
@@ -36,33 +36,26 @@ def query_auto_label_by_id(db : Session, current_user : User, auto_label_id : in
 
     Raises:
         AutoLabelNotFoundException: Auto label not found in database.
-        InsufficientPermissionsException: User does not have sufficient permissions to view this autolabel.
     """
     q = select(
-        models.AutoLabel, novel_models.Revision.revision_is_public
-    ).join(
-        novel_models.Revision,
-        novel_models.Revision.revision_id == models.AutoLabel.revision_id
+        models.AutoLabel
     ).where(
         models.AutoLabel.auto_label_id == auto_label_id
     )
+    q = auto_label_mod_access_select(q, current_user)
     try:
         result = db.execute(q)
-        a, p = result.one()
-        auto_label : models.AutoLabel = a
-        is_public : bool = p
+        autolabel = result.scalar_one()
     except NoResultFound as e:
         raise AutoLabelNotFoundException from e
-    if current_user.user_type != UserType.ADMIN and not is_public:
-        raise InsufficientPermissionsException
-    return auto_label
+    return autolabel
 
 def query_auto_labels(
         db : Session,
         current_user : User,
-        novel_id : int,
-        chapter_ids : list[int] | None,
-        revision_ids : list[int] | None,
+        novel_id : uuid.UUID,
+        chapter_ids : list[uuid.UUID] | None,
+        revision_ids : list[uuid.UUID] | None,
         start : int | None,
         end : int | None,
         model_names : list[str] | None,
@@ -85,16 +78,17 @@ def query_auto_labels(
     ).options(
         defer(models.AutoLabel.auto_label_data)
     ).join(
+        novel_models.RevisionText,
+        novel_models.RevisionText.revision_text_id == models.AutoLabel.revision_text_id
+    ).join(
         novel_models.Revision,
-        novel_models.Revision.revision_id == models.AutoLabel.revision_id
+        novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
     ).join(
         novel_models.Chapter,
         novel_models.Chapter.chapter_id == novel_models.Revision.chapter_id
     ).join(
         novel_models.Novel,
         novel_models.Novel.novel_id == novel_models.Chapter.novel_id
-    ).where(
-        novel_models.Revision.revision_is_final.is_(True)
     ).where(novel_models.Novel.novel_id == novel_id)
     if chapter_ids is not None and len(chapter_ids) > 0:
         q = q.where(novel_models.Chapter.chapter_id.in_(chapter_ids))
@@ -106,7 +100,7 @@ def query_auto_labels(
         q = q.where(novel_models.Chapter.chapter_num < end)
     if model_names is not None and len(model_names) > 0:
         q = q.where(models.AutoLabel.auto_label_model_name.in_(model_names))
-    q = revision_mod_access_select(q, current_user)
+    q = auto_label_mod_access_select(q, current_user)
     result = db.execute(q)
     result_rows = result.scalars().all()
     return [schemas.AutoLabelMeta.model_validate(row) for row in result_rows]
@@ -124,31 +118,38 @@ async def insert_auto_labels(db : Session, current_user : User, dispatcher : Aut
         AutoLabelDuplicateException: If insertion violates a unique constraint. Will most likely occur when there is a race condition.
 
     Notes:
-        This function ignores all revision IDs that do not exist, revisions that are not final, and revisions that the user has insufficient permissions for.
+        This function ignores all revision text IDs that do not exist and revisions that the user has insufficient permissions for.
     """
     columns : list[Any] = [
         models.AutoLabel.auto_label_model_name,
         models.AutoLabel.auto_label_model_params,
         models.AutoLabel.auto_label_status,
         models.AutoLabel.auto_label_message,
-        models.AutoLabel.revision_id
+        models.AutoLabel.revision_text_id
     ]
     q = select(
         literal(request.auto_label_model_name),
         literal(request.auto_label_model_params, type_=JSONB),
         literal(AutoLabelProgress.PENDING),
         literal("Waiting to be queued."),
-        novel_models.Revision.revision_id
+        novel_models.RevisionText.revision_text_id
     ).select_from(
-        novel_models.Revision
-    ).where(
-        novel_models.Revision.revision_is_final.is_(True)
+        novel_models.RevisionText
+    ).join(
+        novel_models.Revision,
+        novel_models.Revision.revision_id == novel_models.RevisionText.revision_id
     ).join(
         novel_models.Chapter,
         novel_models.Chapter.chapter_id == novel_models.Revision.chapter_id
     ).join(
         novel_models.Novel,
         novel_models.Novel.novel_id == novel_models.Chapter.novel_id
+    ).where(
+        novel_models.RevisionText.revision_text_version == select(
+            func.max(novel_models.RevisionText.revision_text_version)
+        ).where(
+            novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
+        ).correlate(novel_models.Revision).scalar_subquery()
     )
     if request.chapter_ids:
         q = q.where(novel_models.Chapter.chapter_id.in_(request.chapter_ids))
@@ -162,9 +163,9 @@ async def insert_auto_labels(db : Session, current_user : User, dispatcher : Aut
         q = q.where(novel_models.Revision.revision_is_primary == request.is_primary)
     if request.is_public is not None:
         q = q.where(novel_models.Revision.revision_is_public == request.is_public)
-    q = revision_mod_access_select(q, current_user)
+    q = auto_label_mod_access_insert(q, current_user)
     q = q.where(not_(exists(select(models.AutoLabel).where(and_(
-        models.AutoLabel.revision_id == novel_models.Revision.revision_id,
+        models.AutoLabel.revision_text_id == novel_models.RevisionText.revision_text_id,
         models.AutoLabel.auto_label_model_name == request.auto_label_model_name,
         models.AutoLabel.auto_label_model_params == request.auto_label_model_params
     )))))

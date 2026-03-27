@@ -2,6 +2,7 @@
 Pydantic schemas for User models
 """
 
+import uuid
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -20,7 +21,7 @@ class User(BaseModel):
     """
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
-    user_id : int
+    user_id : uuid.UUID
     user_name : str
     user_type : UserType
 

@@ -29,5 +29,8 @@ class RevisionNotPublicException(Exception):
 class DeleteRevisionFailedException(DeleteFailedException):
     pass
 
-class RevisionNotFinalException(Exception):
+class RevisionTextNotFoundException(NotFoundException):
+    pass
+
+class RevisionTextOutdatedException(Exception):
     pass

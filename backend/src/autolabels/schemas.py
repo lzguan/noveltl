@@ -1,11 +1,12 @@
 """
 Pydantic schemas for autolabels.
 """
+import uuid
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ..labels.schemas import Label
+from ..labels.schemas import LabelBase
 from ..schemas import SkipDefaultModel
 from .constants import MAX_PARAMS_FIELDS, AutoLabelProgress, SepPriority
 from .validators import SmallDict
@@ -62,23 +63,23 @@ class AutoLabel(BaseModel):
     Pydantic schema for an auto-labeled data entry.
 
     Attributes:
-        auto_label_id: Integer identifier for this AutoLabel.
+        auto_label_id: UUID identifier for this AutoLabel.
         auto_label_data: Dictionary containing the auto-labeled data.
         auto_label_model_name: Name of the model used to generate the auto labels.
         auto_label_model_params: Parameters used for the model to generate the auto labels.
         auto_label_status: Labeling progress for this autolabel.
         auto_label_message: Details on status.
-        revision_id: Chapter this AutoLabel is associated with.
+        revision_text_id: UUID of revision text this AutoLabel is associated with.
         auto_label_last_job_id: Job id of last job that was run on this AutoLabel.
     """
     model_config = ConfigDict(from_attributes=True)
-    auto_label_id : int
-    auto_label_data : list[Label] | None
+    auto_label_id : uuid.UUID
+    auto_label_data : list[LabelBase] | None
     auto_label_model_name : str
     auto_label_model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
     auto_label_status : AutoLabelProgress
     auto_label_message : str | None = None
-    revision_id : int
+    revision_text_id : uuid.UUID
     auto_label_last_job_id : str
 
 class AutoLabelMeta(BaseModel):
@@ -86,22 +87,22 @@ class AutoLabelMeta(BaseModel):
     Pydantic schema for auto-label metadata.
 
     Attributes:
-        auto_label_id: Integer identifier for this AutoLabel.
+        auto_label_id: UUID identifier for this AutoLabel.
         auto_label_model_name: Name of the model used to generate the auto labels.
         auto_label_model_params: Parameters used for the model to generate the auto labels.
         auto_label_status: Labeling progress for this autolabel.
         auto_label_message: Details on status.
-        revision_id: Chapter this AutoLabel is associated with.
+        revision_text_id: UUID of revision text this AutoLabel is associated with.
         auto_label_last_job_id: Job id of last job that was run on this AutoLabel.
     """
     model_config = ConfigDict(from_attributes=True)
 
-    auto_label_id : int
+    auto_label_id : uuid.UUID
     auto_label_model_name : str
     auto_label_model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
     auto_label_status : AutoLabelProgress
     auto_label_message : str | None = None
-    revision_id : int
+    revision_text_id : uuid.UUID
     auto_label_last_job_id : str
 
 class CreateAutoLabels(BaseModel):
@@ -109,22 +110,22 @@ class CreateAutoLabels(BaseModel):
     Pydantic schema for creating an auto-labeled data entry.
 
     Attributes:
-        novel_id: Id of novel to create auto labels for.
+        novel_id: UUID of novel to create auto labels for.
         auto_label_model_name: Name of the model used to generate the auto labels.
         auto_label_model_params: Parameters used for the model to generate the auto labels.
-        chapter_ids: Optional parameter. Restrict to revisions with specific chapter ids.
-        revision_ids: Optional parameter. Restrict to revisions with specific revision ids.
+        chapter_ids: Optional parameter. Restrict to revisions with specific chapter UUIDs.
+        revision_ids: Optional parameter. Restrict to revisions with specific revision UUIDs.
         start: Optional parameter. Restrict to revisions with chapter num >= start.
         end: Optional parameter. Restrict to revisions with chapter num < end.
-        is_primary: Optional paremter. Restrict to revisions with this specific primary flag.
+        is_primary: Optional parameter. Restrict to revisions with this specific primary flag.
         is_public: Optional parameter. Restrict to revisions with this specific public flag.
 
     """
-    novel_id : int
+    novel_id : uuid.UUID
     auto_label_model_name : str
     auto_label_model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
-    chapter_ids : list[int] | None = None
-    revision_ids : list[int] | None = None
+    chapter_ids : list[uuid.UUID] | None = None
+    revision_ids : list[uuid.UUID] | None = None
     start : int | None = None
     end : int | None = None
     is_primary : bool | None = None

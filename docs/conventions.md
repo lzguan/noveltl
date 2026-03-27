@@ -429,5 +429,5 @@ export function ChapterViewer({ revisionId, labels, editable, onLabelClick }: Ch
 - [ui-requirements.md](ui-requirements.md) - Component specifications and UX requirements
 - [api-design.md](api-design.md) - Backend API contracts
 - [architecture.md](architecture.md) - System architecture overview
-- [testing.md](testing.md) - Backend testing
-- [frontend-testing.md](frontend-testing.md) - Frontend testing
+- [backend-testing.md](backend-testing.md) - Backend testing
+- [frontend-backend-testing.md](frontend-backend-testing.md) - Frontend testing

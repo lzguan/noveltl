@@ -1,6 +1,7 @@
 """
 Utilities for label services.
 """
+import uuid
 from typing import Any
 
 from psycopg2 import Error as PgError
@@ -23,7 +24,7 @@ from .exceptions import (
 from .permissions import label_mod_access_delete, label_mod_access_insert, label_mod_access_update
 
 
-def _apply_add(db : Session, current_user : User, label_data_id : int, text : str, op : schemas.AddLabelOp) -> None:
+def _apply_add(db : Session, current_user : User, label_data_id : uuid.UUID, text : str, op : schemas.AddLabelOp) -> None:
     """
     Applies a label add operation to database. Does not commit. Secure operation.
 
@@ -81,7 +82,7 @@ def _apply_add(db : Session, current_user : User, label_data_id : int, text : st
         db.rollback()
         raise UnknownError from e
 
-def _apply_update(db : Session, current_user : User, label_data_id : int, text : str, op : schemas.UpdateLabelOp) -> None:
+def _apply_update(db : Session, current_user : User, label_data_id : uuid.UUID, text : str, op : schemas.UpdateLabelOp) -> None:
     """
     Applies a label update operation to database. Does not commit. Secure operation.
 
@@ -161,7 +162,7 @@ def _apply_update(db : Session, current_user : User, label_data_id : int, text :
         db.rollback()
         raise UnknownError from e
 
-def _apply_delete(db : Session, current_user : User, label_data_id : int, text : str, op : schemas.DeleteLabelOp) -> None:
+def _apply_delete(db : Session, current_user : User, label_data_id : uuid.UUID, text : str, op : schemas.DeleteLabelOp) -> None:
     """
     Applies a label delete operation. Does not commit.
 
@@ -204,7 +205,7 @@ def _apply_delete(db : Session, current_user : User, label_data_id : int, text :
         db.rollback()
         raise UnknownError from e
 
-def apply_operation(db : Session, current_user : User, label_data_id : int, text : str, op : schemas.LabelOpBase) -> None:
+def apply_operation(db : Session, current_user : User, label_data_id : uuid.UUID, text : str, op : schemas.LabelOpBase) -> None:
     """
     Applies a single label operation.
 

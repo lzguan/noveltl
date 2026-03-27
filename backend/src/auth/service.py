@@ -1,3 +1,5 @@
+import uuid
+
 from psycopg2 import Error as PgError
 from psycopg2 import errorcodes
 from sqlalchemy import select
@@ -39,7 +41,7 @@ def query_user_by_user_name(
 
 def query_user_by_id(
         db : Session,
-        user_id : int
+        user_id : uuid.UUID
     ) -> models.User:
     """
     Finds exactly one user in the database with user_id, or raises an exception
@@ -128,7 +130,7 @@ def insert_user(
         raise UnknownError from e
     return new_user
 
-def remove_user(db : Session, current_user : schemas.User, user_id : int) -> schemas.DeleteUserStatus:
+def remove_user(db : Session, current_user : schemas.User, user_id : uuid.UUID) -> schemas.DeleteUserStatus:
     """
     Removes a user with user_id from the database. The user performing the remove is current_user.
 

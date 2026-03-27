@@ -4,6 +4,7 @@ Router endpoints for auth.
 Todo: Come up with a proper api.
 """
 
+import uuid
 from datetime import timedelta
 from typing import Annotated
 
@@ -202,7 +203,7 @@ async def delete_user_me(
     response_model=schemas.DeleteUserStatus
 )
 async def delete_user(
-        user_id : int,
+        user_id : uuid.UUID,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[schemas.User, Depends(get_current_user)]
     ):

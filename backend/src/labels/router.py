@@ -1,3 +1,4 @@
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -7,7 +8,7 @@ from ..auth.dependencies import get_current_user
 from ..auth.models import User
 from ..database import get_db
 from ..exceptions import DataTooLongException, NotFoundException
-from ..novels.exceptions import NovelNotFoundException, RevisionNotFoundException
+from ..novels.exceptions import NovelNotFoundException, RevisionTextNotFoundException
 from . import schemas
 from .exceptions import (
     LabelDataNotFoundException,
@@ -36,26 +37,27 @@ router = APIRouter()
 
 @router.get('/label-groups', response_model=list[schemas.LabelGroup])
 def read_label_groups(
-        novel_id : Annotated[int, Query(alias="novel-id")],
+        novel_id : Annotated[uuid.UUID, Query(alias="novel-id")],
         db: Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
     """
-    Gets all label groups of the current user
-
-    Args:
-        db: Database dependency.
-        current_user: Current user dependency.
-        novel_id: id of novel to query label groups for.
+    Gets all label groups of the current user for a novel.
     """
     return query_label_groups(db, current_user, novel_id)
 
 @router.get('/label-groups/{label_group_id}', response_model=schemas.LabelGroup)
 def read_label_group(
-        label_group_id : int,
+        label_group_id : uuid.UUID,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
+    """
+    Gets a label group by id.
+
+    Raises:
+        404: Label group not found (or insufficient permissions).
+    """
     try:
         label_group = query_label_group_by_id(db, current_user, label_group_id)
     except LabelGroupNotFoundException as e:
@@ -67,22 +69,30 @@ def read_label_group(
 
 @router.get('/label-datas', response_model=list[schemas.LabelData])
 def read_label_datas_by_group_chapters(
-        label_group_id : Annotated[int, Query(alias="label-group-id")],
+        label_group_id : Annotated[uuid.UUID, Query(alias="label-group-id")],
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)],
         start : int | None = None,
         end : int | None = None
     ):
+    """
+    Gets all label datas in a label group, optionally filtered by chapter range.
+    """
     label_datas = query_label_datas(db, current_user, label_group_id, start, end)
-
     return label_datas
 
 @router.get('/label-datas/{label_data_id}', response_model=schemas.LabelData)
 def read_label_data(
-        label_data_id : int,
+        label_data_id : uuid.UUID,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
+    """
+    Gets a label data by id.
+
+    Raises:
+        404: Label data not found (or insufficient permissions).
+    """
     try:
         label_data = query_label_data_by_id(db, current_user, label_data_id)
     except LabelDataNotFoundException as e:
@@ -94,7 +104,7 @@ def read_label_data(
 
 @router.get('/label-datas/{label_data_id}/labels', response_model=list[schemas.Label])
 def read_labels_by_label_data(
-        label_data_id : int,
+        label_data_id : uuid.UUID,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
@@ -112,6 +122,10 @@ def create_label_group(
     ):
     """
     Creates a new label group.
+
+    Raises:
+        404: Novel not found.
+        400: Label group name is too long.
     """
     try:
         label_group = insert_label_group(db, current_user, request)
@@ -129,13 +143,17 @@ def create_label_group(
 
 @router.patch('/label-groups/{label_group_id}', response_model=schemas.LabelGroup)
 def update_label_group(
-        label_group_id: int,
+        label_group_id: uuid.UUID,
         request: schemas.UpdateLabelGroup,
         db: Annotated[Session, Depends(get_db)],
         current_user: Annotated[User, Depends(get_current_user)]
     ):
     """
     Updates a label group (e.g. rename).
+
+    Raises:
+        404: Label group not found.
+        400: Label group name is too long.
     """
     try:
         label_group = modify_label_group(db, current_user, label_group_id, request)
@@ -153,14 +171,17 @@ def update_label_group(
 
 @router.post('/label-groups/{label_group_id}/label-datas', response_model=schemas.LabelData)
 def create_label_data(
-        label_group_id: int,
+        label_group_id: uuid.UUID,
         request: schemas.CreateLabelData,
         db: Annotated[Session, Depends(get_db)],
         current_user: Annotated[User, Depends(get_current_user)]
     ):
     """
-    Creates a label data entry.
-    Requires the chapter revision to be Final.
+    Creates a label data entry for a revision text in a label group.
+
+    Raises:
+        404: Label group or revision text not found.
+        409: Label data for this revision text already exists in this group.
     """
     try:
         label_data = insert_label_data(db, current_user, label_group_id, request)
@@ -169,39 +190,39 @@ def create_label_data(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Label group not found."
         ) from e
-    except RevisionNotFoundException as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Revision not found."
-        ) from e
     except LabelDataRevisionDuplicateException as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Label data for this chapter already exists in this group."
+            detail="Label data for this revision text already exists in this group."
         ) from e
     except NotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Label group or revision not found."
+            detail="Label group or revision text not found."
         ) from e
     return label_data
 
 @router.patch('/label-datas/{label_data_id}', status_code=status.HTTP_204_NO_CONTENT)
 def update_label_data_stream(
-        label_data_id: int,
+        label_data_id: uuid.UUID,
         request: schemas.UpdateLabelDataStream,
         db: Annotated[Session, Depends(get_db)],
         current_user: Annotated[User, Depends(get_current_user)]
     ):
     """
     Applies a stream of edit operations to labels.
+
+    Raises:
+        404: Label data or its underlying revision text not found, or target label does not exist.
+        409: Word mismatch or label overlap detected.
+        400: Operation positions out of bounds or invalid operation.
     """
     try:
         modify_label_data_by_stream(db, current_user, label_data_id, request)
-    except (LabelDataNotFoundException, RevisionNotFoundException) as e:
+    except (LabelDataNotFoundException, RevisionTextNotFoundException) as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Label Data {label_data_id} or its underlying Revision not found."
+            detail=f"Label data {label_data_id} or its underlying revision text not found."
         ) from e
     except LabelWordMismatchInvalidOperationException as e:
         raise HTTPException(
@@ -235,19 +256,13 @@ def update_label_data_stream(
     response_model=schemas.CreateLabelDataByAutoLabelStatus
 )
 def create_label_datas_by_auto_labels(
-        label_group_id : int,
+        label_group_id : uuid.UUID,
         request : schemas.CreateLabelDataByAutoLabel,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
     """
-    Creates label datas and populates its labels using the request to filter which label datas to use.
-
-    Args:
-        label_group_id: id for label group we are populating.
-        request: Request for things to filter on.
-        db: Database dependency.
-        current_user: Current user dependency.
+    Creates label datas and populates labels from autolabel results.
     """
     result = insert_label_datas_by_autolabels(db, current_user, label_group_id, request)
     return result

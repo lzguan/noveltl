@@ -17,7 +17,7 @@ class AutoLabel(Base):
     Database model for storing automatically labeled data.
 
     Attributes:
-        auto_label_id: Integer identifier for this AutoLabel.
+        auto_label_id: UUID identifier for this AutoLabel.
         auto_label_data: JSONB column containing the auto-labeled data. Optional parameter.
         auto_label_model_name: Name of the model used to generate the auto labels.
         auto_label_model_params: Parameters used for the model to generate the auto labels.

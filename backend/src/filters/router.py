@@ -1,11 +1,12 @@
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..auth.dependencies import get_current_user
 from ..auth.models import User
 from ..database import get_db
+from ..novels.exceptions import RevisionTextOutdatedException
 from . import service
 from .exceptions import (
     FilterNotFoundException,
@@ -105,11 +106,12 @@ def read_decisions(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except InstanceContextValidationException as e:
         raise HTTPException(status_code=400, detail=f"Instance/context validation error: {e}") from e
+    except RevisionTextOutdatedException as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
 @router.post('/filters/{filter_name}/apply', status_code=204)
 def apply_filter(
         filter_name : str,
-        label_group_id : Annotated[int, Query(description="The ID of the label group to apply the filter to.", alias="label-group-id")],
         body : InstanceOptions,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
@@ -119,7 +121,6 @@ def apply_filter(
 
     Args:
         filter_name: The name of the filter to apply.
-        label_group_id: The ID of the label group to apply the filter to.
         body: An InstanceOptions object containing the list of instances and the options for applying the filter. Each instance will be validated against the filter's instance schema, and the options will be validated against the filter's apply filter options schema.
         db: Database session for any necessary database access during filter application.
         current_user: The user making the request, which may be relevant for certain filters.
@@ -127,10 +128,12 @@ def apply_filter(
     instances = body.instances
     options = body.options
     try:
-        service.apply_filter(db, current_user, filter_name, label_group_id, instances, options)
+        service.apply_filter(db, current_user, filter_name, instances, options)
     except FilterNotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except OptionsValidationException as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except InstanceValidationException as e:
         raise HTTPException(status_code=400, detail=f"Instance validation error: {e}") from e
+    except RevisionTextOutdatedException as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e

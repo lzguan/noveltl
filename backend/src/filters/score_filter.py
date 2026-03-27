@@ -1,7 +1,8 @@
+import uuid
 from typing import Literal, Self
 
 from pydantic import Field, model_validator
-from sqlalchemy import delete, select, tuple_
+from sqlalchemy import delete, func, select, tuple_
 from sqlalchemy.orm import Session
 
 from ..auth.models import User
@@ -10,7 +11,8 @@ from ..labels import models as label_models
 from ..labels import schemas as label_schemas
 from ..labels.permissions import label_data_mod_access_select, label_mod_access_delete
 from ..novels import models as novel_models
-from ..novels.permissions import revision_mod_access_select
+from ..novels.exceptions import RevisionTextOutdatedException
+from ..novels.permissions import revision_text_mod_access_select
 from .filter_base import (
     ApplyFilterOptionsBase,
     DecideInstancesOptionsBase,
@@ -27,7 +29,7 @@ class DecideLengthError(ValueError):
 
 class ScoreFlagInstancesOptions(FlagInstancesOptionsBase):
     type : Literal["score_filter_flag_instance_options"] = "score_filter_flag_instance_options"
-    label_group_id : int = Field(..., description="ID of the label group to consider.")
+    label_group_id : uuid.UUID = Field(..., description="ID of the label group to consider.")
     start : int | None = Field(default=None, ge=0, description="Minimum chapter number (inclusive) to consider.")
     end : int | None = Field(default=None, ge=0, description="Maximum chapter number (exclusive) to consider.")
     flag_dirty : bool = Field(
@@ -71,6 +73,7 @@ class ScoreDecideInstancesOptions(DecideInstancesOptionsBase):
 
 class ScoreApplyFilterOptions(ApplyFilterOptionsBase):
     type : Literal["score_filter_apply_filter_options"] = "score_filter_apply_filter_options"
+    label_group_id : uuid.UUID = Field(..., description="ID of the label group to apply the filter to.")
 
 
 class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, ScoreDecideInstancesOptions, ScoreApplyFilterOptions, SingleLabel, SentenceContext]):
@@ -88,20 +91,29 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
 
     def flag_instances(self, db : Session, current_user : User, options : ScoreFlagInstancesOptions) -> list[SingleLabel]:
         q = select(
-            label_models.Label, novel_models.Revision.revision_id
+            label_models.Label, novel_models.RevisionText.revision_text_id
         ).where(
             label_models.Label.label_score < options.min_score
         ).join(
             label_models.LabelData,
             label_models.Label.label_data_id == label_models.LabelData.label_data_id
         ).join(
+            novel_models.RevisionText,
+            label_models.LabelData.revision_text_id == novel_models.RevisionText.revision_text_id
+        ).join(
             novel_models.Revision,
-            label_models.LabelData.revision_id == novel_models.Revision.revision_id
+            novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
         ).join(
             novel_models.Chapter,
             novel_models.Revision.chapter_id == novel_models.Chapter.chapter_id
         ).where(
             label_models.LabelData.label_group_id == options.label_group_id
+        ).where(
+            novel_models.RevisionText.revision_text_version == select(
+                func.max(novel_models.RevisionText.revision_text_version)
+            ).where(
+                novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
+            ).correlate(novel_models.Revision).scalar_subquery()
         )
         if not options.flag_dirty:
             q = q.where(label_models.Label.label_dirty.is_(False))
@@ -114,28 +126,37 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
         result = db.execute(q)
         result_rows = result.all()
 
-        return [SingleLabel(label=label_schemas.Label.model_validate(label), revision_id=id) for label, id in result_rows]
+        return [SingleLabel(label=label_schemas.Label.model_validate(label), revision_text_id=id) for label, id in result_rows]
 
     def get_contexts(self, db : Session, current_user : User, instances : list[SingleLabel], options : ScoreGetContextOptions) -> list[SentenceContext | None]:
-        revision_ids = list({instance.revision_id for instance in instances})
+        revision_text_ids = list({instance.revision_text_id for instance in instances})
         q = select(
-            novel_models.Revision
+            novel_models.RevisionText
         ).where(
-            novel_models.Revision.revision_id.in_(revision_ids)
+            novel_models.RevisionText.revision_text_id.in_(revision_text_ids)
+        ).join(
+            novel_models.Revision,
+            novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
+        ).where(
+            novel_models.RevisionText.revision_text_version == select(
+                func.max(novel_models.RevisionText.revision_text_version)
+            ).where(
+                novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
+            ).correlate(novel_models.Revision).scalar_subquery()
         )
-        q = revision_mod_access_select(q, current_user)
+        q = revision_text_mod_access_select(q, current_user)
         result = db.execute(q)
         result_rows = result.scalars().all()
-        revision_map = {rev.revision_id: rev for rev in result_rows}
+        revision_map = {rev_text.revision_text_id: rev_text for rev_text in result_rows}
 
         output : list[SentenceContext | None] = []
         for instance in instances:
-            if instance.revision_id not in revision_map:
+            if instance.revision_text_id not in revision_map:
                 output.append(None)
                 continue
-            revision = revision_map[instance.revision_id]
+            revision_text = revision_map[instance.revision_text_id]
             sentence, label_start_rel, label_end_rel = find_sentence_around(
-                revision.revision_text,
+                revision_text.revision_text_content,
                 instance.label.label_start,
                 instance.label.label_end,
                 options.delimiters
@@ -144,10 +165,36 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
                 text=sentence,
                 label_start_rel=label_start_rel,
                 label_end_rel=label_end_rel,
-                revision_id=instance.revision_id
+                revision_text_id=instance.revision_text_id
             ))
         return output
 
+
+    def _check_instances_not_stale(self, db : Session, current_user : User, revision_text_ids : set[uuid.UUID]) -> None:
+        """Check that all revision_text_ids are still the latest version. Raises RevisionTextOutdatedException if any are stale."""
+        if not revision_text_ids:
+            return
+        q = select(
+            novel_models.RevisionText.revision_text_id
+        ).join(
+            novel_models.Revision,
+            novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
+        ).where(
+            novel_models.RevisionText.revision_text_id.in_(revision_text_ids)
+        ).where(
+            novel_models.RevisionText.revision_text_version == select(
+                func.max(novel_models.RevisionText.revision_text_version)
+            ).where(
+                novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
+            ).correlate(novel_models.Revision).scalar_subquery()
+        )
+        q = revision_text_mod_access_select(q, current_user)
+        current_ids = set(db.execute(q).scalars().all())
+        stale_ids = revision_text_ids - current_ids
+        if stale_ids:
+            raise RevisionTextOutdatedException(
+                f"Instances reference stale revision text version(s): {stale_ids}. Please refresh and try again."
+            )
 
     def decide_instances(self, db : Session, current_user : User, instance_contexts : list[tuple[SingleLabel, SentenceContext | None]], options : ScoreDecideInstancesOptions) -> list[bool]:
         """
@@ -155,8 +202,9 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
 
         Raises:
             DecideLengthError: If in manual mode and the length of options.decisions does not match the length of instance_contexts.
+            RevisionTextOutdatedException: If any instances reference a stale revision text version.
         """
-        # Implementation to decide if a label instance passes the filter based on its context
+        self._check_instances_not_stale(db, current_user, {inst.revision_text_id for inst, _ in instance_contexts})
         if options.mode == "auto":
             decisions : list[bool] = []
             for instance, _ in instance_contexts:
@@ -170,15 +218,15 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
                 raise DecideLengthError("Length of decisions must match length of instance_contexts in manual mode")
             return options.decisions
 
-    def apply_filter(self, db : Session, current_user : User, label_group_id : int, instances : list[SingleLabel], options : ScoreApplyFilterOptions) -> None:
-
+    def apply_filter(self, db : Session, current_user : User, instances : list[SingleLabel], options : ScoreApplyFilterOptions) -> None:
+        label_group_id = options.label_group_id
         if options.create_copy:
             new_label_group = copy_label_group(db, current_user, label_group_id, str(options.new_label_group_name))
             label_group_id = new_label_group.label_group_id
 
         instance_tuples = [
             (
-                instance.revision_id,
+                instance.revision_text_id,
                 instance.label.label_start,
                 instance.label.label_end,
                 instance.label.label_word,
@@ -197,7 +245,7 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
             )
         ).where(
             tuple_(
-                select(sub_q.c.revision_id).where(
+                select(sub_q.c.revision_text_id).where(
                     sub_q.c.label_data_id == label_models.Label.label_data_id
                 ).correlate(label_models.Label).scalar_subquery(),
                 label_models.Label.label_start,
@@ -207,8 +255,12 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
         )
         stmt = label_mod_access_delete(stmt, current_user)
         try:
+            self._check_instances_not_stale(db, current_user, {inst.revision_text_id for inst in instances})
             db.execute(stmt)
             db.commit()
+        except RevisionTextOutdatedException:
+            db.rollback()
+            raise
         except Exception as e:
             db.rollback()
             raise UnknownError("An error occurred while applying the filter. Please try again later.") from e

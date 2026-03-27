@@ -1,11 +1,12 @@
 """
 Service functions for labels.
 """
+import uuid
 from collections.abc import Sequence
 
 from psycopg2 import Error as PgError
 from psycopg2 import errorcodes
-from sqlalchemy import insert, literal, select, update
+from sqlalchemy import func, insert, literal, select, update
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
@@ -14,8 +15,8 @@ from ..autolabels import models as autolabel_models
 from ..autolabels.constants import AutoLabelProgress
 from ..exceptions import DataTooLongException, NotFoundException, UnknownError
 from ..novels import models as novel_models
-from ..novels.exceptions import NovelNotFoundException, RevisionNotFoundException
-from ..novels.permissions import revision_mod_access_select
+from ..novels.exceptions import NovelNotFoundException, RevisionTextNotFoundException
+from ..novels.permissions import revision_text_mod_access_select
 from . import models, schemas
 from .constants import LabelRole
 from .exceptions import (
@@ -34,7 +35,7 @@ from .permissions import (
 from .utils import apply_operation
 
 
-def query_label_groups(db : Session, current_user : User, novel_id : int) -> Sequence[models.LabelGroup]:
+def query_label_groups(db : Session, current_user : User, novel_id : uuid.UUID) -> Sequence[models.LabelGroup]:
     """
     Queries all label groups that belong to current_user.
 
@@ -45,12 +46,11 @@ def query_label_groups(db : Session, current_user : User, novel_id : int) -> Seq
     """
     q = select(models.LabelGroup).where(models.LabelGroup.novel_id == novel_id)
     q = label_group_mod_access_select(q, current_user)
-    q = q.join(novel_models.Novel, novel_models.Novel.novel_id == models.LabelGroup.novel_id)
     result = db.execute(q)
     result_rows = result.scalars().all()
     return result_rows
 
-def query_label_group_by_id(db : Session, current_user : User, label_group_id : int) -> models.LabelGroup:
+def query_label_group_by_id(db : Session, current_user : User, label_group_id : uuid.UUID) -> models.LabelGroup:
     """
     Queries a label group with specified id.
 
@@ -64,7 +64,6 @@ def query_label_group_by_id(db : Session, current_user : User, label_group_id : 
     """
     q = select(models.LabelGroup).where(models.LabelGroup.label_group_id == label_group_id)
     q = label_group_mod_access_select(q, current_user)
-    q = q.join(novel_models.Novel, novel_models.Novel.novel_id == models.LabelGroup.novel_id)
     try:
         result = db.execute(q)
         result_row = result.scalar_one()
@@ -72,10 +71,9 @@ def query_label_group_by_id(db : Session, current_user : User, label_group_id : 
         raise LabelGroupNotFoundException from e
     return result_row
 
-def query_label_datas(db : Session, current_user : User, label_group_id : int, start : int | None, end : int | None) -> Sequence[models.LabelData]:
+def query_label_datas(db : Session, current_user : User, label_group_id : uuid.UUID, start : int | None, end : int | None) -> Sequence[models.LabelData]:
     """
-    Query all label datas in some label_group_id with certain criteria. Return in dictionary in the format
-        `revision_id : LabelData`
+    Query all label datas in some label_group_id with certain criteria.
 
     Args:
         db: Database to query from.
@@ -86,24 +84,24 @@ def query_label_datas(db : Session, current_user : User, label_group_id : int, s
     """
     q = select(
         models.LabelData
-    ).select_from(
-        models.LabelGroup
     ).where(
-        models.LabelGroup.label_group_id == label_group_id
+        models.LabelData.label_group_id == label_group_id
     ).join(
-        novel_models.Novel, models.LabelGroup.novel_id == novel_models.Novel.novel_id
-    )
-    q = label_group_mod_access_select(q, current_user)
-    q = q.join(
-        models.LabelData, models.LabelGroup.label_group_id == models.LabelData.label_group_id
-    )
-    q = q.join(
-        novel_models.Revision,
-        models.LabelData.revision_id == novel_models.Revision.revision_id
+        novel_models.RevisionText,
+        novel_models.RevisionText.revision_text_id == models.LabelData.revision_text_id
+   ).join(novel_models.Revision,
+        novel_models.Revision.revision_id == novel_models.RevisionText.revision_id
     ).join(
         novel_models.Chapter,
-        novel_models.Revision.chapter_id == novel_models.Chapter.chapter_id
+        novel_models.Chapter.chapter_id == novel_models.Revision.chapter_id
+    ).where(
+        novel_models.RevisionText.revision_text_version == select(
+            func.max(novel_models.RevisionText.revision_text_version)
+        ).where(
+            novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
+        ).correlate(novel_models.Revision).scalar_subquery()
     )
+    q = label_group_mod_access_select(q, current_user)
     if start is not None:
         q = q.where(novel_models.Chapter.chapter_num >= start)
     if end is not None:
@@ -113,7 +111,7 @@ def query_label_datas(db : Session, current_user : User, label_group_id : int, s
     result_rows = result.scalars().all()
     return result_rows
 
-def query_label_data_by_id(db : Session, current_user : User, label_data_id : int) -> models.LabelData:
+def query_label_data_by_id(db : Session, current_user : User, label_data_id : uuid.UUID) -> models.LabelData:
     """
     Query a label data by id.
 
@@ -129,9 +127,6 @@ def query_label_data_by_id(db : Session, current_user : User, label_data_id : in
         models.LabelData
     ).where(
         models.LabelData.label_data_id == label_data_id
-    ).join(
-        novel_models.Revision,
-        models.LabelData.revision_id == novel_models.Revision.revision_id
     )
     q = label_data_mod_access_select(q, current_user)
     try:
@@ -141,7 +136,7 @@ def query_label_data_by_id(db : Session, current_user : User, label_data_id : in
         raise LabelDataNotFoundException from e
     return label_data
 
-def query_labels_by_label_data_id(db : Session, current_user : User, label_data_id : int) -> Sequence[models.Label]:
+def query_labels_by_label_data_id(db : Session, current_user : User, label_data_id : uuid.UUID) -> Sequence[models.Label]:
     """
     Returns a list of all labels corresponding to a label data.
 
@@ -161,11 +156,6 @@ def query_labels_by_label_data_id(db : Session, current_user : User, label_data_
         models.LabelData.label_data_id == models.Label.label_data_id
     ).order_by(models.Label.label_start)
     q = label_data_mod_access_select(q, current_user)
-    q = q.join(
-        novel_models.Revision,
-        models.LabelData.revision_id == novel_models.Revision.revision_id
-    )
-    q = revision_mod_access_select(q, current_user)
     result = db.execute(q)
     result_rows = result.scalars().all()
     return result_rows
@@ -227,7 +217,7 @@ def insert_label_group(db : Session, current_user : User, request : schemas.Crea
         raise UnknownError from e
     return label_group
 
-def modify_label_group(db : Session, current_user : User, label_group_id : int, request : schemas.UpdateLabelGroup) -> models.LabelGroup:
+def modify_label_group(db : Session, current_user : User, label_group_id : uuid.UUID, request : schemas.UpdateLabelGroup) -> models.LabelGroup:
     """
     Modifies a label group with specified id.
 
@@ -268,7 +258,7 @@ def modify_label_group(db : Session, current_user : User, label_group_id : int, 
         raise UnknownError from e
     return label_group
 
-def insert_label_data(db : Session, current_user : User, label_group_id : int, request : schemas.CreateLabelData) -> models.LabelData:
+def insert_label_data(db : Session, current_user : User, label_group_id : uuid.UUID, request : schemas.CreateLabelData) -> models.LabelData:
     """
     Inserts a label data object into the database.
 
@@ -279,7 +269,7 @@ def insert_label_data(db : Session, current_user : User, label_group_id : int, r
         request: Metadata for label data.
 
     Raises:
-        RevisionNotFoundException: If revision with request.revision_id not found.
+        NotFoundException: If revision with request.revision_id not found.
         LabelGroupNotFoundException: If label group with label_group_id not found.
         LabelDataRevisionDuplicateException: If a label data with this revision in this label group already exists.
         NotFoundException: Either revision or label group not found.
@@ -317,7 +307,7 @@ def insert_label_data(db : Session, current_user : User, label_group_id : int, r
         raise UnknownError from e
     return label_data
 
-def modify_label_data_by_stream(db : Session, current_user : User, label_data_id : int, request : schemas.UpdateLabelDataStream) -> None:
+def modify_label_data_by_stream(db : Session, current_user : User, label_data_id : uuid.UUID, request : schemas.UpdateLabelDataStream) -> None:
     """
     Processes a stream of label datas
 
@@ -327,7 +317,7 @@ def modify_label_data_by_stream(db : Session, current_user : User, label_data_id
         label_data_id: id of label data being modified
 
     Raises:
-        RevisionNotFoundException: If the revision associated with the label data not found.
+        RevisionTextNotFoundException: If the revision text associated with the label data is not found.
         LabelOutOfBoundsInvalidOperationException: If an operation refers to positions outside the text bounds.
         LabelWordMismatchInvalidOperationException: If the word provided in an operation does not match the text at the specified positions.
         LabelDataNotFoundException: If the LabelData does not exist or the user lacks permissions.
@@ -336,21 +326,21 @@ def modify_label_data_by_stream(db : Session, current_user : User, label_data_id
         LabelInvalidOperationException: If an update operation is malformed (e.g. setting a new word without moving the label).
     """
     q = select(
-        novel_models.Revision.revision_text
+        novel_models.RevisionText.revision_text_content
     ).select_from(
         models.LabelData
     ).where(
         models.LabelData.label_data_id == label_data_id
     ).join(
-        novel_models.Revision,
-        novel_models.Revision.revision_id == models.LabelData.revision_id
+        novel_models.RevisionText,
+        novel_models.RevisionText.revision_text_id == models.LabelData.revision_text_id
     )
-    q = revision_mod_access_select(q, current_user)
+    q = revision_text_mod_access_select(q, current_user)
     try:
         result = db.execute(q)
         text = result.scalar_one()
     except NoResultFound as e:
-        raise RevisionNotFoundException from e
+        raise RevisionTextNotFoundException from e
     except Exception as e:
         raise UnknownError from e
     try:
@@ -364,7 +354,7 @@ def modify_label_data_by_stream(db : Session, current_user : User, label_data_id
 def insert_label_datas_by_autolabels(
         db : Session,
         current_user : User,
-        label_group_id : int,
+        label_group_id : uuid.UUID,
         request : schemas.CreateLabelDataByAutoLabel
     ) -> schemas.CreateLabelDataByAutoLabelStatus:
     """
@@ -382,15 +372,18 @@ def insert_label_datas_by_autolabels(
         Note this can probably be optimized further, but not sure if it's worth it.
     """
     q = select(
-        autolabel_models.AutoLabel, novel_models.Revision
+        autolabel_models.AutoLabel, novel_models.RevisionText
     ).select_from(
         autolabel_models.AutoLabel
     ).join(
         models.LabelGroup,
         models.LabelGroup.label_group_id == label_group_id
     ).join(
+        novel_models.RevisionText,
+        novel_models.RevisionText.revision_text_id == autolabel_models.AutoLabel.revision_text_id
+    ).join(
         novel_models.Revision,
-        novel_models.Revision.revision_id == autolabel_models.AutoLabel.revision_id
+        novel_models.Revision.revision_id == novel_models.RevisionText.revision_id
     ).join(
         novel_models.Chapter,
         novel_models.Chapter.chapter_id == novel_models.Revision.chapter_id
@@ -405,35 +398,41 @@ def insert_label_datas_by_autolabels(
         autolabel_models.AutoLabel.auto_label_status == AutoLabelProgress.DONE
     ).where(
         novel_models.Novel.novel_id == models.LabelGroup.novel_id
+    ).where(
+        novel_models.RevisionText.revision_text_version == select(
+            func.max(novel_models.RevisionText.revision_text_version)
+        ).where(
+            novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
+        ).correlate(novel_models.Revision).scalar_subquery()
     )
     q = label_group_mod_access_select(q, current_user)
     if request.chapter_ids is not None and len(request.chapter_ids) > 0:
         q = q.where(novel_models.Chapter.chapter_id.in_(request.chapter_ids))
     if request.revision_ids is not None and len(request.revision_ids) > 0:
-        q = q.where(novel_models.Revision.revision_id.in_(request.revision_ids))
+        q = q.where(novel_models.RevisionText.revision_text_id.in_(request.revision_ids))
     if request.start is not None:
         q = q.where(novel_models.Chapter.chapter_num >= request.start)
     if request.end is not None:
         q = q.where(novel_models.Chapter.chapter_num < request.end)
     result = db.execute(q)
 
-    success : list[int] = []
-    errors : list[tuple[int, str]] = []
+    success : list[uuid.UUID] = []
+    errors : list[tuple[uuid.UUID, str]] = []
 
     for a, r in result:
         autolabel : autolabel_models.AutoLabel = a
-        revision : novel_models.Revision = r
+        revision_text : novel_models.RevisionText = r
         try:
-            if not all(revision.revision_text[label['label_start']:label['label_end']] == label['label_word'] for label in autolabel.auto_label_data):
+            if not all(revision_text.revision_text_content[label['label_start']:label['label_end']] == label['label_word'] for label in autolabel.auto_label_data):
                 raise LabelWordMismatchInvalidOperationException("Text mismatch between autolabel and chapter")
             with db.begin_nested():
                 vals = select(
                     literal(label_group_id),
-                    literal(autolabel.revision_id)
+                    literal(autolabel.revision_text_id)
                 )
                 cols = [
                     models.LabelData.label_group_id,
-                    models.LabelData.revision_id
+                    models.LabelData.revision_text_id
                 ]
                 vals = label_data_mod_access_insert(vals, current_user, label_group_id)
                 stmt = insert(models.LabelData).from_select(
@@ -446,22 +445,22 @@ def insert_label_datas_by_autolabels(
                 if autolabel.auto_label_data:
                     stmt = insert(models.Label).values([{**label, 'label_data_id' : label_data_id} for label in autolabel.auto_label_data])
                     db.execute(stmt)
-                success.append(autolabel.revision_id)
+                success.append(autolabel.revision_text_id)
         except IntegrityError as e:
             if isinstance(e.orig, PgError):
                 pgcode = e.orig.pgcode
                 if pgcode == errorcodes.UNIQUE_VIOLATION:
-                    errors.append((autolabel.revision_id, f"Failed insert for revision with id {autolabel.revision_id}, autolabel id {autolabel.auto_label_id} due to label data for label group already existing."))
+                    errors.append((autolabel.revision_text_id, f"Failed insert for revision text with id {autolabel.revision_text_id}, autolabel id {autolabel.auto_label_id} due to label data for label group already existing."))
                 elif pgcode == errorcodes.EXCLUSION_VIOLATION:
-                    errors.append((autolabel.revision_id, f"Failed insert for revision with id {autolabel.revision_id}, autolabel id {autolabel.auto_label_id} due to labels in autolabel data overlapping."))
+                    errors.append((autolabel.revision_text_id, f"Failed insert for revision text with id {autolabel.revision_text_id}, autolabel id {autolabel.auto_label_id} due to labels in autolabel data overlapping."))
                 else:
-                    errors.append((autolabel.revision_id, f"Failed insert for revision with id {autolabel.revision_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e.orig)}"))
+                    errors.append((autolabel.revision_text_id, f"Failed insert for revision text with id {autolabel.revision_text_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e.orig)}"))
             else:
-                errors.append((autolabel.revision_id, f"Failed insert for revision with id {autolabel.revision_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}"))
+                errors.append((autolabel.revision_text_id, f"Failed insert for revision text with id {autolabel.revision_text_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}"))
         except NoResultFound as e:
-            errors.append((autolabel.revision_id, f"Failed insert for revision with id {autolabel.revision_id}, autolabel id {autolabel.auto_label_id} due to insufficient permissions: {str(e)}"))
+            errors.append((autolabel.revision_text_id, f"Failed insert for revision text with id {autolabel.revision_text_id}, autolabel id {autolabel.auto_label_id} due to insufficient permissions: {str(e)}"))
         except Exception as e:
-            errors.append((autolabel.revision_id, f"Failed insert for revision with id {autolabel.revision_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}"))
+            errors.append((autolabel.revision_text_id, f"Failed insert for revision text with id {autolabel.revision_text_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}"))
     try:
         db.commit()
     except Exception as e:

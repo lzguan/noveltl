@@ -78,14 +78,13 @@ class Filter[FlagInstancesOptions : FlagInstancesOptionsBase,
         """
         ...
 
-    def apply_filter(self, db : Session, current_user : User, label_group_id : int, instances : list[Instance], options : ApplyFilterOptions) -> None:
+    def apply_filter(self, db : Session, current_user : User, instances : list[Instance], options : ApplyFilterOptions) -> None:
         """
         Applies the filter to each instance in a list of instances.
 
         Args:
             db: SQLAlchemy session for database access.
             current_user: The user requesting the filter application.
-            label_group_id: The ID of the label group to apply the filter to.
             instances: List of instances to apply the filter to.
             options: Options for applying the filter.
         """

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ValidationInfo, model_validator
 
@@ -18,3 +18,17 @@ class SkipDefaultModel(BaseModel):
                 raise ValueError(f"Fields not set: {missing}")
 
         return data # pyright: ignore[reportUnknownVariableType]
+
+class OperationStatus(BaseModel):
+    """
+    Pydantic model to signal return status of operation.
+
+    Attributes:
+        status: One of "success", "fail".
+        detail: Details on operation.
+
+    Notes:
+        Unless under exceptional circumstances, should not return fail and just raise an exception.
+    """
+    status : Literal["success", "fail"]
+    detail : str | None = None

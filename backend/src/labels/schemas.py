@@ -2,6 +2,7 @@
 Pydantic schemas for labels.
 """
 
+import uuid
 from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -16,16 +17,15 @@ class LabelGroup(BaseModel):
     Pydantic schema for a label group.
 
     Attributes:
-        label_group_id: Integer identifier for this label group.
+        label_group_id: UUID identifier for this label group.
         label_group_name: Name of this label group.
-        user_id: id of user owning this label group.
-        novel_id: id of novel this label group belongs to.
+        novel_id: UUID of novel this label group belongs to.
     """
     model_config = ConfigDict(from_attributes=True)
 
-    label_group_id : int
+    label_group_id : uuid.UUID
     label_group_name : str = Field(max_length=MAX_LABEL_GROUP_NAME_LEN)
-    novel_id : int
+    novel_id : uuid.UUID
 
 class CreateLabelGroup(BaseModel):
     """
@@ -33,10 +33,10 @@ class CreateLabelGroup(BaseModel):
 
     Attributes:
         label_group_name: Name of label group to create.
-        novel_id: id of novel this label group belongs to.
+        novel_id: UUID of novel this label group belongs to.
     """
     label_group_name : str = Field(max_length=MAX_LABEL_GROUP_NAME_LEN)
-    novel_id : int
+    novel_id : uuid.UUID
 
 class UpdateLabelGroup(BaseModel):
     """
@@ -46,6 +46,21 @@ class UpdateLabelGroup(BaseModel):
         label_group_name: New name of label group.
     """
     label_group_name : str = Field(max_length=MAX_LABEL_GROUP_NAME_LEN)
+
+class LabelData(BaseModel):
+    """
+    Pydantic schema for a list of labels in some text.
+
+    Attributes:
+        label_data_id: UUID identifier for this LabelData.
+        label_group_id: UUID of label group this LabelData belongs to.
+        revision_text_id: UUID of revision text this LabelData is labelling.
+    """
+    model_config = ConfigDict(from_attributes=True)
+    label_data_id : uuid.UUID
+
+    label_group_id : uuid.UUID
+    revision_text_id : uuid.UUID
 
 class Label(BaseModel):
     """
@@ -70,6 +85,7 @@ class Label(BaseModel):
     label_start : int = Field(ge=0)
     label_end : int = Field(ge=0)
     label_dirty : bool
+    label_data_id : uuid.UUID
 
     @model_validator(mode='after')
     def check_start_lt_end(self) -> Self:
@@ -86,29 +102,14 @@ class Label(BaseModel):
     def __repr__(self) -> str:
         return f"{{label_word : {self.label_word},label_entity_group : {self.label_entity_group},label_start : {self.label_start},label_end : {self.label_end},label_score : {self.label_score},label_entity_group : {self.label_entity_group}}}"
 
-class LabelData(BaseModel):
-    """
-    Pydantic schema for a list of labels in some text.
-
-    Attributes:
-        label_data_id: Integer identifier for this LabelData.
-        label_group_id: Label group this LabelData belongs to.
-        revision_id: Chapter this LabelData is labelling.
-    """
-    model_config = ConfigDict(from_attributes=True)
-    label_data_id : int
-
-    label_group_id : int
-    revision_id : int
-
 class CreateLabelData(BaseModel):
     """
     Pydantic schema for validating create requests for label data.
 
     Attributes:
-        revision_id: Id of chapter being labelled.
+        revision_text_id: UUID of revision text being labelled.
     """
-    revision_id : int
+    revision_text_id : uuid.UUID
 
 class LabelOpBase(BaseModel):
     """
@@ -234,8 +235,8 @@ class CreateLabelDataByAutoLabel(BaseModel):
     """
     model_name : str
     model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
-    chapter_ids : list[int] | None = None
-    revision_ids : list[int] | None = None
+    chapter_ids : list[uuid.UUID] | None = None
+    revision_ids : list[uuid.UUID] | None = None
     start : int | None = None
     end : int | None = None
 
@@ -244,8 +245,8 @@ class CreateLabelDataByAutoLabelStatus(BaseModel):
     Return message for CreateLabelDataByAutoLabel.
 
     Attributes:
-        success: List of ids of Revisions for successful inserts
-        errors: List of tuples of (Revision ids for failed inserts, error message)
+        success: List of UUIDs of Revisions for successful inserts.
+        errors: List of tuples of (Revision UUID for failed inserts, error message).
     """
-    success : list[int]
-    errors: list[tuple[int, str]]
+    success : list[uuid.UUID]
+    errors: list[tuple[uuid.UUID, str]]

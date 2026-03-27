@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+
+PGPASSWORD="$DB_PASSWORD" \
+  psql -h "$DB_HOST" -p "${DB_INTERNAL_PORT:-5432}" -U "$DB_USER" "$DB_NAME"

@@ -95,7 +95,7 @@ def decide_instances(db : Session, current_user : User, filter_name : str, insta
         raise InstanceContextValidationException(f"Invalid instances or contexts for filter {filter_name}: {e}") from e
     return list(filter.decide_instances(db, current_user, validated_instance_contexts, validated_options))
 
-def apply_filter(db : Session, current_user : User, filter_name : str, label_group_id : int, instances : list[Any], options : Any) -> None:
+def apply_filter(db : Session, current_user : User, filter_name : str, instances : list[Any], options : Any) -> None:
     if filter_name not in FILTER_REGISTRY:
         raise FilterNotFoundException(f"Filter {filter_name} not found in registry")
     filter = FILTER_REGISTRY[filter_name]
@@ -107,4 +107,4 @@ def apply_filter(db : Session, current_user : User, filter_name : str, label_gro
         validated_instances = [filter.instance_schema.model_validate(instance) for instance in instances]
     except ValueError as e:
         raise InstanceValidationException(f"Invalid instances for filter {filter_name}: {e}") from e
-    return filter.apply_filter(db, current_user, label_group_id, validated_instances, validated_options)
+    return filter.apply_filter(db, current_user, validated_instances, validated_options)

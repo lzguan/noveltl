@@ -86,9 +86,6 @@ class Novel(Base):
     novel_visibility : Mapped[Visibility] = mapped_column(EnumAsInteger(Visibility), nullable=False)
     novel_type : Mapped[NovelType] = mapped_column(Enum(NovelType, native_enum=False, length=16, values_callable=lambda x : [str(e.value) for e in x]), nullable=False) # type: ignore
 
-    novel_parent : Mapped["Novel"] = relationship("Novel", back_populates="novel_children", remote_side=[novel_id])
-    novel_children : Mapped[list["Novel"]] = relationship("Novel", back_populates="novel_parent")
-
     language_code : Mapped[str] = mapped_column(ForeignKey("languages.language_code", name='fk_novels_language_code_languages'), nullable=False)
     language_of_novel : Mapped["Language"] = relationship(back_populates="novels_with_language")
 
@@ -184,11 +181,11 @@ class RevisionText(Base):
     Database model for the text of a specific revision. RevisionText are versioned separately from the metadata of a revision (for example, whether it is public or primary) since we want to be able to update the metadata of a revision without modifying the text, and we want to be able to store the text in a separate table for organizational purposes.
 
     Attributes:
-        revision_text_uuid: UUID for the revision text, used for uniquely identifying a specific revision text across different versions. For each revision_id, the pair (revision_id, revision_text_uuid) should be unique.
+        revision_text_id: UUID primary key for the revision text, used for uniquely identifying a specific revision text across different versions.
         revision_text_content: Text content of the revision.
         revision_text_version: Integer version number for the revision text. For each revision_id, the pair (revision_id, revision_text_version) should be unique.
 
-        revision_id: Integer foreign key identifier to the revision this text corresponds to.
+        revision_id: UUID foreign key identifier to the revision this text corresponds to.
     """
     __tablename__ = 'revision_texts'
 

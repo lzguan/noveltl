@@ -1,4 +1,5 @@
 import logging
+import uuid
 from typing import Any
 
 from sqlalchemy import insert, literal, select
@@ -46,7 +47,7 @@ def find_sentence_around(text: str, label_start: int, label_end: int, delimiters
 def copy_label_group(
         db : Session,
         current_user : User,
-        label_group_id : int,
+        label_group_id : uuid.UUID,
         new_label_group_name : str,
         keep_contributors : bool = True
     ) -> label_models.LabelGroup:
@@ -123,11 +124,11 @@ def copy_label_group(
 
     # label datas
     cols = [
-        label_models.LabelData.revision_id,
+        label_models.LabelData.revision_text_id,
         label_models.LabelData.label_group_id
     ]
     q_label_datas = select(
-        label_models.LabelData.revision_id,
+        label_models.LabelData.revision_text_id,
         literal(new_label_group.label_group_id)
     ).select_from(
         label_models.LabelData
@@ -170,7 +171,7 @@ def copy_label_group(
         old_ld.label_group_id == original_label_group.label_group_id
     ).join(
         label_models.LabelData,
-        label_models.LabelData.revision_id == old_ld.revision_id
+        label_models.LabelData.revision_text_id == old_ld.revision_text_id
     ).where(
         label_models.LabelData.label_group_id == new_label_group.label_group_id
     )

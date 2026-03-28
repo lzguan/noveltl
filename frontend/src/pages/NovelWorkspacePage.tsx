@@ -39,6 +39,7 @@ export const NovelWorkspacePage = () => {
     const { novel_id } = useParams<{ novel_id: string }>();
     const [searchParams, setSearchParams] = useSearchParams();
     const textContainerRef = useRef<HTMLDivElement>(null);
+    const revisionCacheRef = useRef<Map<string, string>>(new Map());
 
     // Mode
     const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("label");
@@ -216,10 +217,20 @@ export const NovelWorkspacePage = () => {
         getChapterRevisionsByChapter(selectedChapterId)
             .then((revisions) => {
                 setChapterRevisions(revisions);
-                const primary = revisions.find((r) => r.revisionIsPrimary);
-                const latest = revisions.length > 0 ? revisions[revisions.length - 1] : null;
-                const autoSelect = primary ?? latest;
-                if (autoSelect) setSelectedRevisionId(autoSelect.revisionId);
+                // Check cache first, fall back to primary/latest
+                const cached = revisionCacheRef.current.get(selectedChapterId);
+                const cachedExists = cached && revisions.some((r) => r.revisionId === cached);
+                if (cachedExists) {
+                    setSelectedRevisionId(cached);
+                } else {
+                    const primary = revisions.find((r) => r.revisionIsPrimary);
+                    const latest = revisions.length > 0 ? revisions[revisions.length - 1] : null;
+                    const autoSelect = primary ?? latest;
+                    if (autoSelect) {
+                        setSelectedRevisionId(autoSelect.revisionId);
+                        revisionCacheRef.current.set(selectedChapterId, autoSelect.revisionId);
+                    }
+                }
             })
             .catch(() => setChapterRevisions([]));
     }, [selectedChapterId]);
@@ -361,6 +372,9 @@ export const NovelWorkspacePage = () => {
 
     const handleRevisionChange = (revisionId: string | null) => {
         setSelectedRevisionId(revisionId);
+        if (revisionId && selectedChapterId) {
+            revisionCacheRef.current.set(selectedChapterId, revisionId);
+        }
         if (!revisionId) {
             setRevisionText(null);
             setRevisionTextId(null);
@@ -557,6 +571,11 @@ export const NovelWorkspacePage = () => {
                     setSelectedRevisionId(null);
                     setRevisionText(null);
                     setRevisionTextId(null);
+                    // Clear cache if deleted revision was cached
+                    const cached = revisionCacheRef.current.get(selectedChapterId);
+                    if (cached === revisionId) {
+                        revisionCacheRef.current.delete(selectedChapterId);
+                    }
                 }
             }
         } catch {

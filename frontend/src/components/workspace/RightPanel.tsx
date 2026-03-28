@@ -1,13 +1,39 @@
 import React from "react";
 
+type TabDef = { key: string; label: string };
+
 type RightPanelProps = {
-    tabs: { key: string; label: string }[];
+    topTabs?: TabDef[];
+    tabs: TabDef[];
     activeTab: string;
     onTabChange: (tab: string) => void;
     children: React.ReactNode;
 };
 
-export const RightPanel: React.FC<RightPanelProps> = ({ tabs, activeTab, onTabChange, children }) => {
+const TabRow: React.FC<{ tabs: TabDef[]; activeTab: string; onTabChange: (tab: string) => void }> = ({ tabs, activeTab, onTabChange }) => (
+    <div style={{ display: "flex", borderBottom: "1px solid #ddd" }}>
+        {tabs.map((tab) => (
+            <button
+                key={tab.key}
+                onClick={() => onTabChange(tab.key)}
+                style={{
+                    flex: 1,
+                    padding: "8px 12px",
+                    border: "none",
+                    borderBottom: activeTab === tab.key ? "2px solid #4a90d9" : "2px solid transparent",
+                    backgroundColor: activeTab === tab.key ? "#fff" : "transparent",
+                    fontWeight: activeTab === tab.key ? 600 : 400,
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                }}
+            >
+                {tab.label}
+            </button>
+        ))}
+    </div>
+);
+
+export const RightPanel: React.FC<RightPanelProps> = ({ topTabs, tabs, activeTab, onTabChange, children }) => {
     return (
         <div style={{
             display: "flex",
@@ -16,29 +42,10 @@ export const RightPanel: React.FC<RightPanelProps> = ({ tabs, activeTab, onTabCh
             borderLeft: "1px solid #ddd",
             backgroundColor: "#fafafa",
         }}>
-            <div style={{
-                display: "flex",
-                borderBottom: "1px solid #ddd",
-            }}>
-                {tabs.map((tab) => (
-                    <button
-                        key={tab.key}
-                        onClick={() => onTabChange(tab.key)}
-                        style={{
-                            flex: 1,
-                            padding: "8px 12px",
-                            border: "none",
-                            borderBottom: activeTab === tab.key ? "2px solid #4a90d9" : "2px solid transparent",
-                            backgroundColor: activeTab === tab.key ? "#fff" : "transparent",
-                            fontWeight: activeTab === tab.key ? 600 : 400,
-                            cursor: "pointer",
-                            fontSize: "0.85rem",
-                        }}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
+            {topTabs && topTabs.length > 0 && (
+                <TabRow tabs={topTabs} activeTab={activeTab} onTabChange={onTabChange} />
+            )}
+            <TabRow tabs={tabs} activeTab={activeTab} onTabChange={onTabChange} />
             <div style={{ flex: 1, overflow: "auto" }}>
                 {children}
             </div>

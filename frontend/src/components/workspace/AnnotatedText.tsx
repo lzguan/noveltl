@@ -62,6 +62,7 @@ export const AnnotatedText: React.FC<AnnotatedTextProps> = ({
             overflow: "auto",
             padding: "20px",
             whiteSpace: "pre-wrap",
+            textAlign: "left",
             position: "relative",
             fontFamily: "serif",
             fontSize: "1.05rem",

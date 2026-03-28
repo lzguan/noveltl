@@ -30,9 +30,9 @@ type ActivePopover =
 
 type WorkspaceMode = "edit" | "label";
 
-const NOVEL_TAB = { key: "novel", label: "Novel" };
-const EDIT_TABS = [NOVEL_TAB, { key: "editor", label: "Editor" }, { key: "editLabels", label: "Labels" }];
-const LABEL_TABS = [NOVEL_TAB, { key: "labels", label: "Labels" }, { key: "ner", label: "NER" }, { key: "filters", label: "Filters" }];
+const TOP_TABS = [{ key: "novel", label: "Novel" }];
+const EDIT_TABS = [{ key: "editor", label: "Editor" }, { key: "editLabels", label: "Labels" }];
+const LABEL_TABS = [{ key: "labels", label: "Labels" }, { key: "ner", label: "NER" }, { key: "filters", label: "Filters" }];
 
 export const NovelWorkspacePage = () => {
     const { novel_id } = useParams<{ novel_id: string }>();
@@ -41,7 +41,7 @@ export const NovelWorkspacePage = () => {
 
     // Mode
     const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("label");
-    const workspaceTabs = workspaceMode === "edit" ? EDIT_TABS : LABEL_TABS;
+    const modeTabs = workspaceMode === "edit" ? EDIT_TABS : LABEL_TABS;
 
     // Core data
     const [novel, setNovel] = useState<Novel | null>(null);
@@ -97,15 +97,21 @@ export const NovelWorkspacePage = () => {
     const [saving, setSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
-    // Editor tab state
+    // Editor tab state — newChapterNum defaults to max+1 once chapters load
     const [newChapterNum, setNewChapterNum] = useState("");
     const [newRevisionTitle, setNewRevisionTitle] = useState("");
-    const [newRevisionText, setNewRevisionText] = useState("");
+    // newRevisionText removed — text editing happens inline once edit mode is toggled
 
     // Loading/error
     const [loading, setLoading] = useState(true);
     const [textLoading, setTextLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Derived: next chapter number
+    const nextChapterNum = useMemo(() => {
+        if (chapters.length === 0) return 1;
+        return Math.max(...chapters.map((c) => c.chapterNum)) + 1;
+    }, [chapters]);
 
     // Derived: known entity groups from labels-tab labels
     const knownEntityGroups = useMemo(() => {
@@ -116,10 +122,16 @@ export const NovelWorkspacePage = () => {
         return [...groups].sort();
     }, [labelsTabLabels]);
 
-    // Derived: currently selected auto-label meta
+    // Derived: auto-label metas filtered to current revision text
+    const filteredAutoLabelMetas = useMemo(
+        () => revisionTextId ? autoLabelMetas.filter((m) => m.revisionTextId === revisionTextId) : [],
+        [autoLabelMetas, revisionTextId]
+    );
+
+    // Derived: currently selected auto-label meta (from filtered set)
     const autoLabelMeta = useMemo(
-        () => autoLabelMetas.find((m) => m.autoLabelId === selectedAutoLabelId) ?? null,
-        [autoLabelMetas, selectedAutoLabelId]
+        () => filteredAutoLabelMetas.find((m) => m.autoLabelId === selectedAutoLabelId) ?? null,
+        [filteredAutoLabelMetas, selectedAutoLabelId]
     );
 
     // Shared fetch helper for loading labels for a group
@@ -254,17 +266,23 @@ export const NovelWorkspacePage = () => {
         getAutoLabels(novel.novelId, null, [selectedRevisionId])
             .then((metas) => {
                 setAutoLabelMetas(metas);
-                if (metas.length > 0) {
-                    setSelectedAutoLabelId(metas[0].autoLabelId);
-                } else {
-                    setSelectedAutoLabelId(null);
-                }
+                // Auto-select is handled reactively via filteredAutoLabelMetas effect
             })
             .catch(() => {
                 setAutoLabelMetas([]);
                 setSelectedAutoLabelId(null);
             });
     }, [selectedRevisionId, novel]);
+
+    // Auto-select first NER run when filtered list changes
+    useEffect(() => {
+        if (filteredAutoLabelMetas.length > 0) {
+            const current = filteredAutoLabelMetas.find((m) => m.autoLabelId === selectedAutoLabelId);
+            if (!current) setSelectedAutoLabelId(filteredAutoLabelMetas[0].autoLabelId);
+        } else {
+            setSelectedAutoLabelId(null);
+        }
+    }, [filteredAutoLabelMetas, selectedAutoLabelId]);
 
     // Poll auto-label status when pending/processing
     useEffect(() => {
@@ -325,7 +343,8 @@ export const NovelWorkspacePage = () => {
 
     const handleModeChange = (mode: WorkspaceMode) => {
         setWorkspaceMode(mode);
-        // Keep "novel" tab if active, otherwise reset to first mode-specific tab
+        // Novel is top-level now; when switching modes, reset to first mode-specific tab
+        // unless the user is already on the novel tab
         if (activeRightPanel !== "novel") {
             setActiveRightPanel(mode === "edit" ? "editor" : "labels");
         }
@@ -479,10 +498,11 @@ export const NovelWorkspacePage = () => {
 
     // Editor tab handlers
     const handleCreateChapter = async () => {
-        if (!novel || !newChapterNum.trim()) return;
+        if (!novel) return;
+        const num = newChapterNum.trim() ? Number(newChapterNum) : nextChapterNum;
         try {
             const created = await createChapterForNovel(novel.novelId, {
-                chapterNum: Number(newChapterNum),
+                chapterNum: num,
             });
             setChapters((prev) => [...prev, created]);
             setNewChapterNum("");
@@ -503,7 +523,6 @@ export const NovelWorkspacePage = () => {
             // Auto-select the newly created revision
             setSelectedRevisionId(result.metadata.revisionId);
             setNewRevisionTitle("");
-            setNewRevisionText("");
         } catch {
             setSaveMessage("Failed to create revision.");
         }
@@ -668,7 +687,7 @@ export const NovelWorkspacePage = () => {
                     )}
                 </div>
                 <div style={{ width: "380px", flexShrink: 0 }}>
-                    <RightPanel tabs={workspaceTabs} activeTab={activeRightPanel} onTabChange={setActiveRightPanel}>
+                    <RightPanel topTabs={TOP_TABS} tabs={modeTabs} activeTab={activeRightPanel} onTabChange={setActiveRightPanel}>
                         {/* Novel tab — always available */}
                         {activeRightPanel === "novel" && (
                             <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -740,12 +759,12 @@ export const NovelWorkspacePage = () => {
                                 <div style={{ borderTop: "1px solid #ddd", paddingTop: "10px", display: "flex", gap: "6px", alignItems: "center" }}>
                                     <input
                                         type="number"
-                                        placeholder="Chapter #"
+                                        placeholder={String(nextChapterNum)}
                                         value={newChapterNum}
                                         onChange={(e) => setNewChapterNum(e.target.value)}
                                         style={{ width: "80px", padding: "4px" }}
                                     />
-                                    <button onClick={() => void handleCreateChapter()} disabled={!newChapterNum.trim()}>
+                                    <button onClick={() => void handleCreateChapter()}>
                                         Add Chapter
                                     </button>
                                 </div>
@@ -793,13 +812,6 @@ export const NovelWorkspacePage = () => {
                                                     placeholder="Revision title"
                                                     value={newRevisionTitle}
                                                     onChange={(e) => setNewRevisionTitle(e.target.value)}
-                                                    style={{ padding: "4px" }}
-                                                />
-                                                <textarea
-                                                    placeholder="Revision text (optional)"
-                                                    rows={4}
-                                                    value={newRevisionText}
-                                                    onChange={(e) => setNewRevisionText(e.target.value)}
                                                     style={{ padding: "4px" }}
                                                 />
                                                 <button onClick={() => void handleCreateRevision()} disabled={!newRevisionTitle.trim()}>
@@ -858,7 +870,7 @@ export const NovelWorkspacePage = () => {
                                 labelGroups={labelGroups}
                                 selectedGroupId={nerTabGroupId}
                                 onGroupChange={setNerTabGroupId}
-                                autoLabelMetas={autoLabelMetas}
+                                autoLabelMetas={filteredAutoLabelMetas}
                                 selectedAutoLabelId={selectedAutoLabelId}
                                 onAutoLabelSelect={handleAutoLabelSelect}
                                 autoLabelMeta={autoLabelMeta}

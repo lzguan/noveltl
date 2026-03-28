@@ -24,6 +24,7 @@ export const ChapterTextViewer: React.FC<ChapterTextViewerProps> = ({ text, load
             overflow: "auto",
             padding: "20px",
             whiteSpace: "pre-wrap",
+            textAlign: "left",
             fontFamily: "serif",
             fontSize: "1.05rem",
             lineHeight: 1.8,

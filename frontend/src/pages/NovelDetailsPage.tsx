@@ -50,11 +50,13 @@ export const NovelDetailsPage = () => {
                 <Link to={AppRoutes.VIEW.NOVELS} style={{ textDecoration: 'none', color: '#666' }}>&larr; Back to Library</Link>
                 <h1>{novel.novelTitle}</h1>
                 <p style={{ color: '#555' }}>Author: {novel.novelAuthor || 'Unknown'}</p>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <span style={{ background: '#eee', padding: '4px 8px', borderRadius: '4px' }}>
                         {novel.novelType}
                     </span>
-                    {/* Add more metadata badges here if needed */}
+                    <Link to={routeTo.workspace(novel.novelId)} style={{ padding: '6px 12px', backgroundColor: '#4a90d9', color: '#fff', borderRadius: '4px', textDecoration: 'none', fontSize: '0.85rem' }}>
+                        Open Workspace
+                    </Link>
                 </div>
             </div>
 

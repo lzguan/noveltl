@@ -81,6 +81,7 @@ If you're using **VS Code** or **GitHub Codespaces**, the project includes a dev
 - Pre-configured Python environment with all dependencies
 - Integrated database, Redis, and worker services
 - VS Code extensions and settings already configured
+- GitHub CLI (`gh`) pre-installed with auth config mounted from host
 - No need to install Python, Node, or other tools locally
 
 **To use:**
@@ -259,6 +260,19 @@ After running `seed_admin.py`, use the credentials you entered during the intera
 ---
 
 ## 🤝 Contributing
+
+### Branch Protection
+
+The `master` branch is protected — direct pushes are not allowed. All changes must go through a pull request with at least one approval.
+
+### Workflow
+
+1. Create a feature branch from `master`
+2. Make your changes and push the branch
+3. Open a pull request via `gh pr create` or the GitHub UI
+4. Get at least one approval, then merge
+
+### Guidelines
 
 1. Read the [conventions](docs/conventions.md) for code style guidelines
 2. Check [GitHub Issues](https://github.com/lzguan/NovelTL_Dev/issues) for known bugs and planned features

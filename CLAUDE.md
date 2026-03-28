@@ -8,7 +8,7 @@ NovelTL is a collaborative web platform for novel translation. LLMs struggle wit
 
 ## Development Environment
 
-The project runs in Docker Compose. The devcontainer uses `compose.yaml` + `.devcontainer/docker-compose.yml` and starts the `dev`, `db`, `redis`, and `worker` services.
+The project runs in Docker Compose. The devcontainer uses `compose.yaml` + `.devcontainer/docker-compose.yml` and starts the `dev`, `db`, `redis`, and `worker` services. The GitHub CLI (`gh`) is pre-installed and auth is mounted from the host.
 
 ```bash
 source /.venv/bin/activate          # Activate backend venv (always do this first)
@@ -16,6 +16,10 @@ cd backend && alembic upgrade head  # Apply DB migrations
 python scripts/seed_admin.py        # Create admin user
 python scripts/seed_languages.py    # Seed language codes
 ```
+
+### Branch Protection
+
+The `master` branch is protected. All changes must go through a pull request with at least one approval — never push directly to `master`. Use `gh pr create` to open PRs.
 
 ## Commands
 

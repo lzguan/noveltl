@@ -22,6 +22,7 @@ import { RightPanel } from "../components/workspace/RightPanel";
 import { LabelsPanel } from "../components/workspace/LabelsPanel";
 import { NerPanel } from "../components/workspace/NerPanel";
 import { LabelGroupSelector } from "../components/workspace/LabelGroupSelector";
+import { InlineTextEditor } from "../components/workspace/InlineTextEditor";
 
 type ActivePopover =
     | { type: "edit"; label: Label; rect: DOMRect }
@@ -474,6 +475,20 @@ export const NovelWorkspacePage = () => {
         }
     };
 
+    // Text editing handlers
+    const handleTextSaveSuccess = useCallback((newText: string, newRevisionTextId: string) => {
+        setRevisionText(newText);
+        setRevisionTextId(newRevisionTextId);
+        setSaveMessage("Text saved successfully.");
+        // Reload labels — backend ported them to the new revisionTextId
+        void loadLabelsForGroup(labelsTabGroupId, newRevisionTextId, setLabelsTabLabelData, setLabelsTabLabels);
+        void loadLabelsForGroup(nerTabGroupId, newRevisionTextId, setNerTabLabelData, setNerTabLabels);
+    }, [labelsTabGroupId, nerTabGroupId, loadLabelsForGroup]);
+
+    const handleTextSaveError = useCallback((message: string) => {
+        setPendingOpError(message);
+    }, []);
+
     // Novel metadata handlers
     const handleSaveNovel = async () => {
         if (!novel) return;
@@ -674,7 +689,16 @@ export const NovelWorkspacePage = () => {
             )}
             <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
                 <div ref={textContainerRef} style={{ flex: 1, overflow: "auto" }}>
-                    {showAnnotated ? (
+                    {workspaceMode === "edit" && revisionText !== null && selectedRevisionId && revisionTextId ? (
+                        <InlineTextEditor
+                            text={revisionText}
+                            revisionTextId={revisionTextId}
+                            revisionId={selectedRevisionId}
+                            onSaveSuccess={handleTextSaveSuccess}
+                            onSaveError={handleTextSaveError}
+                            loading={textLoading}
+                        />
+                    ) : showAnnotated ? (
                         <AnnotatedText
                             text={revisionText}
                             sources={sources}

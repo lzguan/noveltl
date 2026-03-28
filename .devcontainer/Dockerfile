@@ -11,4 +11,3 @@ COPY backend/pyproject.toml backend/uv.lock* ./
 USER vscode
 RUN --mount=type=cache,target=/root/.cache/uv\
     uv sync --all-groups --no-install-project
-RUN curl -fsSL https://claude.ai/install.sh | bash

@@ -433,3 +433,4 @@ Build and test in this order. Each step is independently usable:
 - [background-jobs.md](background-jobs.md) - AutoLabel state machine, NER constraints
 - [api-design.md](api-design.md) - REST patterns (PATCH, POST action endpoints)
 - [conventions.md](conventions.md) - Frontend naming, component structure
+- [workspace-implementation.md](workspace-implementation.md) - How the workspace is actually built (component architecture, React patterns)

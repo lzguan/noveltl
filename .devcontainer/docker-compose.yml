@@ -28,3 +28,4 @@ services:
 
 volumes:
   claude-code-config:
+  gh-cli-config:

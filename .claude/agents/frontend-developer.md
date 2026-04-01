@@ -61,7 +61,7 @@ const mapCreateGlossaryRequest = (data: GlossaryType.CreateGlossary) => ({
 
 - **Ask the backend-developer** for endpoint URLs and request/response field names before writing your API functions — do not guess
 - Share your type definitions and function signatures with the **test-developer** so they know what to test
-- Ask the **business-owner** if you're unsure about UI-facing behavior
+- Ask the **team lead** if you're unsure about UI-facing behavior or requirements
 
 ## Type Definition Guidelines
 

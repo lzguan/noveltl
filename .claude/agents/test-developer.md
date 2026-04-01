@@ -85,7 +85,7 @@ describe('Glossary API', () => {
 
 - **Ask backend-developer** for: endpoint URLs, request/response schemas, service function signatures, exception types
 - **Ask frontend-developer** for: TypeScript type definitions, API function signatures, mapper implementations
-- Ask the **business-owner** if acceptance criteria are unclear
+- Ask the **team lead** if acceptance criteria are unclear
 
 ## Running Tests
 

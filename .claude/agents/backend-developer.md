@@ -84,5 +84,5 @@ from ..exceptions import NotFoundException
 ## Communication
 
 - Share your endpoint URLs, request/response shapes, and model field names with the **frontend-developer** and **test-developer** teammates so they can build against your API
-- Ask the **business-owner** teammate when requirements are unclear
+- Ask the **team lead** when requirements are unclear
 - When you create the Alembic migration, run it with: `source /.venv/bin/activate && cd backend && alembic revision --autogenerate -m "description"`

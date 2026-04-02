@@ -1,6 +1,6 @@
 # Database Schema
 
-**Last Updated**: March 20, 2026  
+**Last Updated**: April 1, 2026  
 **Status**: Complete
 
 This document describes the PostgreSQL database schema for NovelTL, including tables, relationships, constraints, and design rationale.
@@ -23,10 +23,12 @@ This document describes the PostgreSQL database schema for NovelTL, including ta
 
 The database is organized around five main entity groups:
 1. **Users** - Authentication and user management
-2. **Novels** - Novel metadata and chapter revisions
+2. **Novels** - Novel metadata, chapters, and versioned revision text
 3. **Labels** - Manual and AI-generated entity labels
 4. **AutoLabels** - Cached NER inference results
 5. **Languages** - Supported language metadata
+
+All base entity tables use single-column UUID primary keys (via `postgresql.UUID` with `server_default=gen_random_uuid()`); join/association tables use composite primary keys composed of UUID foreign key columns; the `languages` table uses a 2-character string code. All tables inherit `created_at` and `updated_at` timestamps from the base model.
 
 ## Entity Relationship Diagram
 
@@ -39,8 +41,9 @@ erDiagram
     Novel ||--o{ Chapter : "has"
     Novel ||--o{ LabelGroup : "has"
     Chapter ||--o{ Revision : "has"
-    Revision ||--o{ AutoLabel : "has"
-    Revision ||--o{ LabelData : "referenced by"
+    Revision ||--o{ RevisionText : "has"
+    RevisionText ||--o{ AutoLabel : "has"
+    RevisionText ||--o{ LabelData : "referenced by"
     LabelGroup ||--o{ LabelData : "has"
     LabelData ||--o{ Label : "has"
     Language ||--o{ Novel : "used by"
@@ -54,7 +57,7 @@ Stores user authentication and profile information.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `user_id` | INTEGER | PRIMARY KEY | Unique user identifier |
+| `user_id` | UUID | PRIMARY KEY, DEFAULT `gen_random_uuid()` | Unique user identifier |
 | `user_name` | VARCHAR(31) | NOT NULL | Username for login |
 | `user_hashed_password` | VARCHAR(256) | NOT NULL | Argon2 hashed password |
 | `user_type` | VARCHAR(10) | NOT NULL | 'admin' or 'user' (CHECK constraint) |
@@ -95,13 +98,12 @@ Stores novel metadata and visibility settings.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `novel_id` | INTEGER | PRIMARY KEY | Unique novel identifier |
+| `novel_id` | UUID | PRIMARY KEY, DEFAULT `gen_random_uuid()` | Unique novel identifier |
 | `novel_title` | VARCHAR(255) | NOT NULL | Novel title |
 | `novel_description` | TEXT | NULL | Synopsis/description |
 | `novel_author` | VARCHAR(31) | NULL | Author name |
-| `novel_visibility` | INTEGER | NOT NULL | Visibility level (0-3) |
+| `novel_visibility` | INTEGER | NOT NULL | Visibility level (0-3), stored via EnumAsInteger |
 | `novel_type` | VARCHAR(16) | NOT NULL | 'original', 'translation', 'other' (CHECK constraint) |
-| `novel_parent_id` | INTEGER | NULL, FK → novels | Parent novel (for translations) |
 | `language_code` | VARCHAR(2) | NOT NULL, FK → languages | Novel language |
 | `created_at` | TIMESTAMP | NOT NULL | Creation time |
 | `updated_at` | TIMESTAMP | NOT NULL | Last update time |
@@ -113,12 +115,11 @@ Stores novel metadata and visibility settings.
 - `3` = Public (fully accessible)
 
 **Relationships:**
-- Self-referencing FK: `novel_parent_id` → `novels.novel_id` (for translation chains)
-- FK: `language_code` → `languages.language_code`
+- FK: `language_code` → `languages.language_code` (constraint: `fk_novels_language_code_languages`)
 
 **Notes:**
-- Novels can form parent-child hierarchies (e.g., translation links to original)
 - `novel_type` distinguishes original works from translations
+- The `novel_parent_id` self-referencing FK for translation chains has been removed
 
 ### novel_contributors
 
@@ -126,8 +127,8 @@ Association table for many-to-many relationship between users and novels.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `novel_id` | INTEGER | PRIMARY KEY, FK → novels | Novel reference |
-| `user_id` | INTEGER | PRIMARY KEY, FK → users | User reference |
+| `novel_id` | UUID | PRIMARY KEY, FK → novels | Novel reference |
+| `user_id` | UUID | PRIMARY KEY, FK → users | User reference |
 | `contributor_role` | VARCHAR(10) | NOT NULL | 'owner', 'editor', 'viewer' (CHECK constraint) |
 | `created_at` | TIMESTAMP | NOT NULL | Contribution start time |
 | `updated_at` | TIMESTAMP | NOT NULL | Last update time |
@@ -145,13 +146,14 @@ Stores chapter metadata (chapter number within a novel).
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `chapter_id` | INTEGER | PRIMARY KEY | Unique chapter identifier |
+| `chapter_id` | UUID | PRIMARY KEY, DEFAULT `gen_random_uuid()` | Unique chapter identifier |
 | `chapter_num` | INTEGER | NOT NULL | Chapter number (1, 2, 3, ...) |
-| `novel_id` | INTEGER | NOT NULL, FK → novels | Parent novel |
+| `novel_id` | UUID | NOT NULL, FK → novels | Parent novel |
 | `created_at` | TIMESTAMP | NOT NULL | Creation time |
 | `updated_at` | TIMESTAMP | NOT NULL | Last update time |
 
-**Unique Constraint:** (`chapter_num`, `novel_id`) - one chapter per number per novel
+**Constraints:**
+- `UNIQUE (chapter_num, novel_id)` (name: `chapter_per_novel`) - one chapter per number per novel
 
 **Notes:**
 - Acts as a container for chapter revisions
@@ -159,17 +161,15 @@ Stores chapter metadata (chapter number within a novel).
 
 ### revisions
 
-Stores versioned chapter content. Revisions are immutable once marked public/final.
+Stores revision metadata. Revisions hold flags and a title; text content is stored separately in `revision_texts` to support versioned text.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `revision_id` | INTEGER | PRIMARY KEY | Unique revision identifier |
+| `revision_id` | UUID | PRIMARY KEY, DEFAULT `gen_random_uuid()` | Unique revision identifier |
 | `revision_title` | VARCHAR(255) | NOT NULL | Chapter title |
-| `revision_text` | TEXT | NOT NULL | Full chapter text |
-| `revision_is_public` | BOOLEAN | NOT NULL | Public visibility flag |
-| `revision_is_final` | BOOLEAN | NOT NULL | Immutability flag |
 | `revision_is_primary` | BOOLEAN | NOT NULL | Primary revision flag |
-| `chapter_id` | INTEGER | NOT NULL, FK → chapters | Parent chapter |
+| `revision_is_public` | BOOLEAN | NOT NULL | Public visibility flag |
+| `chapter_id` | UUID | NOT NULL, FK → chapters | Parent chapter |
 | `created_at` | TIMESTAMP | NOT NULL | Creation time |
 | `updated_at` | TIMESTAMP | NOT NULL | Last update time |
 
@@ -181,13 +181,35 @@ Stores versioned chapter content. Revisions are immutable once marked public/fin
 
 **Flags:**
 - **is_public** - Visible to users with novel access (vs. contributors-only)
-- **is_final** - Immutable, cannot be edited or deleted
 - **is_primary** - Main/canonical revision for this chapter
 
 **Notes:**
-- Multiple revisions allow editing without breaking existing labels
-- Labels reference specific revisions, not chapters
 - Only one revision per chapter can be marked primary (enforced by partial unique index)
+- Text content lives in the `revision_texts` table, not on this table
+
+### revision_texts
+
+Stores versioned text content for revisions. Each revision can have multiple text versions; labels and autolabels reference specific text versions.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `revision_text_id` | UUID | PRIMARY KEY, DEFAULT `gen_random_uuid()` | Unique text version identifier |
+| `revision_text_content` | TEXT | NOT NULL | Full chapter text |
+| `revision_text_version` | INTEGER | NOT NULL | Version number within revision |
+| `revision_id` | UUID | NOT NULL, FK → revisions (ON DELETE CASCADE) | Parent revision |
+| `created_at` | TIMESTAMP | NOT NULL | Creation time |
+| `updated_at` | TIMESTAMP | NOT NULL | Last update time |
+
+**Constraints:**
+- `UNIQUE (revision_id, revision_text_version)` (name: `uq_revision_text_version_per_revision`) - one version number per revision
+
+**Relationships:**
+- FK: `revision_id` → `revisions.revision_id` (constraint: `fk_revision_texts_revision_id_revisions`, ON DELETE CASCADE)
+
+**Notes:**
+- Text is separated from revision metadata to support versioned content
+- Labels and autolabels reference `revision_text_id`, not `revision_id`
+- Cascading delete ensures text versions are removed when the parent revision is deleted
 
 ### label_groups
 
@@ -195,14 +217,14 @@ Groups labels for a novel. Users can have multiple label groups per novel.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `label_group_id` | INTEGER | PRIMARY KEY | Unique label group identifier |
+| `label_group_id` | UUID | PRIMARY KEY, DEFAULT `gen_random_uuid()` | Unique label group identifier |
 | `label_group_name` | VARCHAR(31) | NOT NULL | User-defined name |
-| `novel_id` | INTEGER | NOT NULL, FK → novels | Associated novel |
+| `novel_id` | UUID | NOT NULL, FK → novels | Associated novel |
 | `created_at` | TIMESTAMP | NOT NULL | Creation time |
 | `updated_at` | TIMESTAMP | NOT NULL | Last update time |
 
 **Relationships:**
-- FK: `novel_id` → `novels.novel_id`
+- FK: `novel_id` → `novels.novel_id` (constraint: `fk_label_groups_novel_id_novels`)
 
 ### label_group_contributors
 
@@ -210,8 +232,8 @@ Association table for label group contributors.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `label_group_id` | INTEGER | PRIMARY KEY, FK → label_groups | Label group reference |
-| `user_id` | INTEGER | PRIMARY KEY, FK → users | User reference |
+| `label_group_id` | UUID | PRIMARY KEY, FK → label_groups | Label group reference |
+| `user_id` | UUID | PRIMARY KEY, FK → users | User reference |
 | `label_contributor_role` | VARCHAR(10) | NOT NULL | 'owner', 'editor', 'viewer' (CHECK constraint) |
 | `created_at` | TIMESTAMP | NOT NULL | Contribution start time |
 | `updated_at` | TIMESTAMP | NOT NULL | Last update time |
@@ -220,25 +242,25 @@ Association table for label group contributors.
 
 **Notes:**
 - Similar role system to novel contributors
-- Future feature: `publicly_editable` flag on label groups
 
 ### label_datas
 
-Container for labels within a label group for a specific chapter revision.
+Container for labels within a label group for a specific revision text version.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `label_data_id` | INTEGER | PRIMARY KEY | Unique label data identifier |
-| `label_group_id` | INTEGER | NOT NULL, FK → label_groups | Parent label group |
-| `revision_id` | INTEGER | NOT NULL, FK → revisions | Chapter revision |
+| `label_data_id` | UUID | PRIMARY KEY, DEFAULT `gen_random_uuid()` | Unique label data identifier |
+| `label_group_id` | UUID | NOT NULL, FK → label_groups | Parent label group |
+| `revision_text_id` | UUID | NOT NULL, FK → revision_texts | Revision text version |
 | `created_at` | TIMESTAMP | NOT NULL | Creation time |
 | `updated_at` | TIMESTAMP | NOT NULL | Last update time |
 
-**Unique Constraint:** (`label_group_id`, `revision_id`) - one label data per chapter revision per group
+**Constraints:**
+- `UNIQUE (label_group_id, revision_text_id)` (name: `one_label_group_per_chapter`) - one label data per text version per group
 
 **Notes:**
-- Links label group to specific chapter revision
-- Allows same label group to label multiple chapter revisions
+- Links label group to a specific revision text version
+- Allows same label group to label multiple chapter revision texts
 
 ### labels
 
@@ -246,14 +268,14 @@ Individual entity labels (position, word, type, confidence).
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `label_id` | INTEGER | PRIMARY KEY | Unique label identifier |
+| `label_id` | UUID | PRIMARY KEY, DEFAULT `gen_random_uuid()` | Unique label identifier |
 | `label_entity_group` | VARCHAR(64) | NOT NULL, DEFAULT 'MISC' | Entity type (PER, LOC, ORG, etc.) |
 | `label_score` | FLOAT | NOT NULL, DEFAULT 1.0 | Confidence score (0.0-1.0) |
 | `label_word` | VARCHAR(128) | NOT NULL | Labeled text |
 | `label_start` | INTEGER | NOT NULL | Start character index (inclusive) |
 | `label_end` | INTEGER | NOT NULL | End character index (exclusive) |
 | `label_dirty` | BOOLEAN | NOT NULL, DEFAULT TRUE | Manual edit flag |
-| `label_data_id` | INTEGER | NOT NULL, FK → label_datas | Parent label data |
+| `label_data_id` | UUID | NOT NULL, FK → label_datas | Parent label data |
 | `created_at` | TIMESTAMP | NOT NULL | Creation time |
 | `updated_at` | TIMESTAMP | NOT NULL | Last update time |
 
@@ -279,19 +301,19 @@ Cached NER inference results.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| `auto_label_id` | INTEGER | PRIMARY KEY | Unique autolabel identifier |
+| `auto_label_id` | UUID | PRIMARY KEY, DEFAULT `gen_random_uuid()` | Unique autolabel identifier |
 | `auto_label_data` | JSONB | NULL | NER inference results |
 | `auto_label_model_name` | VARCHAR(128) | NOT NULL | Model identifier |
 | `auto_label_model_params` | JSONB | NOT NULL | Model hyperparameters |
 | `auto_label_status` | VARCHAR(10) | NOT NULL, DEFAULT 'pending' | 'pending', 'processing', 'done', 'failed' (CHECK constraint) |
 | `auto_label_last_job_id` | VARCHAR(36) | NULL | UUID for optimistic locking |
 | `auto_label_message` | TEXT | NULL | Error message (if FAILED) |
-| `revision_id` | INTEGER | NOT NULL, FK → revisions | Target chapter |
+| `revision_text_id` | UUID | NOT NULL, FK → revision_texts | Target revision text version |
 | `created_at` | TIMESTAMP | NOT NULL | Creation time |
 | `updated_at` | TIMESTAMP | NOT NULL | Last update time |
 
 **Constraints:**
-- `UNIQUE (revision_id, auto_label_model_name, auto_label_model_params)` (name: `uq_model_name_params`) - Ensures one cached result per (chapter, model, params) combination
+- `UNIQUE (revision_text_id, auto_label_model_name, auto_label_model_params)` (name: `uq_model_name_params`) - Ensures one cached result per (text version, model, params) combination
 
 **JSONB Schemas:**
 - `auto_label_data`: Array of `{word, start, end, entity_group, score}`
@@ -325,11 +347,11 @@ WHERE novel_contributors.user_id = :user_id
   AND novel_contributors.contributor_role IN ('owner', 'editor', 'viewer');
 ```
 
-### Get labels for chapter revision
+### Get labels for a revision text version
 ```sql
 SELECT labels.* FROM labels
 JOIN label_datas ON labels.label_data_id = label_datas.label_data_id
-WHERE label_datas.revision_id = :revision_id
+WHERE label_datas.revision_text_id = :revision_text_id
   AND label_datas.label_group_id = :group_id
 ORDER BY labels.label_start;
 ```
@@ -337,10 +359,10 @@ ORDER BY labels.label_start;
 ### Check for cached autolabel
 ```sql
 SELECT * FROM auto_labels
-WHERE revision_id = :revision_id
+WHERE revision_text_id = :revision_text_id
   AND auto_label_model_name = :model
   AND auto_label_model_params = :params::jsonb
-  AND auto_label_status = 'DONE';
+  AND auto_label_status = 'done';
 ```
 
 ## Migration History
@@ -364,10 +386,17 @@ Labels reference specific character positions in text. If chapter text changes, 
 2. Allowing new revisions without breaking existing labels
 3. Supporting A/B testing of chapter edits
 
+### Why separate revision_texts from revisions?
+
+Revision metadata (title, flags) and text content have different lifecycles. Separating them allows:
+- Versioned text content within a single revision
+- Labels and autolabels to reference a specific text version
+- Metadata changes (e.g., toggling `is_primary`) without affecting labeled text
+
 ### Why separate label_groups and label_datas?
 
 - **Label Group** - User's labeling project for entire novel
-- **Label Data** - Labels for one specific chapter
+- **Label Data** - Labels for one specific revision text version
 - Separation allows:
   - Bulk operations on entire label group
   - Efficient queries for single chapter
@@ -393,7 +422,7 @@ Exclusion constraint enforces non-overlapping ranges at database level, preventi
 
 - `backend/src/models.py` - Base model with timestamps
 - `backend/src/auth/models.py` - User model
-- `backend/src/novels/models.py` - Novel, Chapter, Revision models
+- `backend/src/novels/models.py` - Novel, Chapter, Revision, RevisionText models
 - `backend/src/labels/models.py` - Label models
 - `backend/src/autolabels/models.py` - AutoLabel model
 - `backend/src/languages/models.py` - Language model

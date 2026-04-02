@@ -166,7 +166,7 @@ Stores revision metadata. Revisions hold flags and a title; text content is stor
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `revision_id` | UUID | PRIMARY KEY, DEFAULT `gen_random_uuid()` | Unique revision identifier |
-| `revision_title` | VARCHAR(255) | NULL | Chapter title |
+| `revision_title` | VARCHAR(255) | NOT NULL | Chapter title |
 | `revision_is_primary` | BOOLEAN | NOT NULL | Primary revision flag |
 | `revision_is_public` | BOOLEAN | NOT NULL | Public visibility flag |
 | `chapter_id` | UUID | NOT NULL, FK → chapters | Parent chapter |

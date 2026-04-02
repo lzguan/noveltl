@@ -64,8 +64,8 @@ describe('Filters API', () => {
         it('should return array of flagged instances', async () => {
             vi.mocked(client.post).mockResolvedValue({
                 data: [
-                    { type: 'single_label', label: {}, revisionId: 1 },
-                    { type: 'single_label', label: {}, revisionId: 2 }
+                    { type: 'single_label', label: {}, revisionTextId: 'uuid-rt-1' },
+                    { type: 'single_label', label: {}, revisionTextId: 'uuid-rt-2' }
                 ]
             })
 
@@ -97,7 +97,7 @@ describe('Filters API', () => {
         it('should call POST /filters/{filterName}/get-contexts with instances and options', async () => {
             vi.mocked(client.post).mockResolvedValue({ data: [] })
 
-            const instances = [{ type: 'single_label', label: {}, revisionId: 1 }]
+            const instances = [{ type: 'single_label', label: {}, revisionTextId: 'uuid-rt-1' }]
             await getContexts('score_filter', instances, { option: 'value' })
 
             expect(client.post).toHaveBeenCalledWith(
@@ -117,7 +117,7 @@ describe('Filters API', () => {
                         text: 'This is a sentence.',
                         labelStartRel: 0,
                         labelEndRel: 4,
-                        revisionId: 1
+                        revisionTextId: 'uuid-rt-1'
                     }
                 ]
             })
@@ -199,7 +199,7 @@ describe('Filters API', () => {
             vi.mocked(client.post).mockResolvedValue({ data: null })
 
             const instances = [{ type: 'single_label' }]
-            await applyFilter('score_filter', 10, instances, { createCopy: false })
+            await applyFilter('score_filter', 'uuid-lg-10', instances, { createCopy: false })
 
             expect(client.post).toHaveBeenCalledWith(
                 '/filters/score_filter/apply',
@@ -208,7 +208,7 @@ describe('Filters API', () => {
                     options: { createCopy: false }
                 },
                 {
-                    params: { 'label-group-id': 10 }
+                    params: { 'label-group-id': 'uuid-lg-10' }
                 }
             )
         })
@@ -216,7 +216,7 @@ describe('Filters API', () => {
         it('should return void (204 No Content)', async () => {
             vi.mocked(client.post).mockResolvedValue({ data: null })
 
-            const result = await applyFilter('score_filter', 5, [], {})
+            const result = await applyFilter('score_filter', 'uuid-lg-5', [], {})
 
             expect(result).toBeUndefined()
         })
@@ -226,7 +226,7 @@ describe('Filters API', () => {
                 makeAxiosError(404, { detail: 'Filter not found' })
             )
 
-            await expect(applyFilter('invalid', 1, [], {})).rejects.toThrow()
+            await expect(applyFilter('invalid', 'uuid-lg-1', [], {})).rejects.toThrow()
         })
 
         it('should propagate 400 error for validation errors', async () => {
@@ -234,7 +234,7 @@ describe('Filters API', () => {
                 makeAxiosError(400, { detail: 'Instance validation error' })
             )
 
-            await expect(applyFilter('score_filter', 1, [{ bad: true }], {})).rejects.toThrow()
+            await expect(applyFilter('score_filter', 'uuid-lg-1', [{ bad: true }], {})).rejects.toThrow()
         })
     })
 })

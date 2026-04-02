@@ -111,6 +111,10 @@ See `docs/frontend-testing.md` for the full testing standard.
 - Named exports only — no default exports
 - Pages named `{Feature}Page.tsx` and placed in `src/pages/`
 
+## GitHub Issues
+
+Issues are the source of truth for planned work, bugs, and suggestions. When you have a suggestion or notice something worth improving during development, create a GitHub issue for it rather than implementing it immediately. After merging any PR, check open issues and close any that were resolved by the changes.
+
 ## Key Documentation
 - `docs/conventions.md` — full naming conventions (backend + frontend)
 - `docs/architecture.md` — service design, communication patterns

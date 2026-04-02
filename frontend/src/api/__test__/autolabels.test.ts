@@ -19,26 +19,26 @@ describe('AutoLabels API', () => {
         it('should call GET /auto-labels/{autoLabelId}', async () => {
             vi.mocked(client.get).mockResolvedValue({
                 data: {
-                    auto_label_id: 1,
+                    auto_label_id: 'uuid-al-1',
                     auto_label_data: null,
                     auto_label_model_name: 'cluener',
                     auto_label_model_params: {},
                     auto_label_status: 'pending',
                     auto_label_message: null,
-                    revision_id: 10,
+                    revision_text_id: 'uuid-rt-10',
                     auto_label_last_job_id: 'job123'
                 }
             })
 
-            await getAutoLabelById(1)
+            await getAutoLabelById('uuid-al-1')
 
-            expect(client.get).toHaveBeenCalledWith('/auto-labels/1')
+            expect(client.get).toHaveBeenCalledWith('/auto-labels/uuid-al-1')
         })
 
         it('should map response from snake_case to camelCase', async () => {
             vi.mocked(client.get).mockResolvedValue({
                 data: {
-                    auto_label_id: 5,
+                    auto_label_id: 'uuid-al-5',
                     auto_label_data: [
                         {
                             label_entity_group: 'PERSON',
@@ -53,16 +53,16 @@ describe('AutoLabels API', () => {
                     auto_label_model_params: { chunk_size: 500 },
                     auto_label_status: 'done',
                     auto_label_message: 'Completed',
-                    revision_id: 20,
+                    revision_text_id: 'uuid-rt-20',
                     auto_label_last_job_id: 'job456'
                 }
             })
 
-            const result = await getAutoLabelById(5)
+            const result = await getAutoLabelById('uuid-al-5')
 
             expectTypeOf(result).toEqualTypeOf<AutoLabel>()
             expect(result).toEqual({
-                autoLabelId: 5,
+                autoLabelId: 'uuid-al-5',
                 autoLabelData: [
                     {
                         labelEntityGroup: 'PERSON',
@@ -77,7 +77,7 @@ describe('AutoLabels API', () => {
                 autoLabelModelParams: { chunk_size: 500 },
                 autoLabelStatus: 'done',
                 autoLabelMessage: 'Completed',
-                revisionId: 20,
+                revisionTextId: 'uuid-rt-20',
                 autoLabelLastJobId: 'job456'
             } satisfies AutoLabel)
         })
@@ -87,7 +87,7 @@ describe('AutoLabels API', () => {
                 makeAxiosError(404, { detail: 'AutoLabel not found' })
             )
 
-            await expect(getAutoLabelById(999)).rejects.toThrow()
+            await expect(getAutoLabelById('uuid-al-999')).rejects.toThrow()
         })
 
         it('should propagate 403 error for insufficient permissions', async () => {
@@ -95,21 +95,21 @@ describe('AutoLabels API', () => {
                 makeAxiosError(403, { detail: 'Insufficient permissions' })
             )
 
-            await expect(getAutoLabelById(10)).rejects.toThrow()
+            await expect(getAutoLabelById('uuid-al-10')).rejects.toThrow()
         })
     })
 
     describe('getAutoLabels', () => {
         it('should call GET /auto-labels with all query params', async () => {
-            vi.mocked(client.get).mockResolvedValue({ data: {} })
+            vi.mocked(client.get).mockResolvedValue({ data: [] })
 
-            await getAutoLabels(5, [1, 2], [10, 20], 1, 100, ['cluener'])
+            await getAutoLabels('uuid-novel-5', ['uuid-ch-1', 'uuid-ch-2'], ['uuid-rev-10', 'uuid-rev-20'], 1, 100, ['cluener'])
 
             expect(client.get).toHaveBeenCalledWith('/auto-labels', {
                 params: {
-                    'novel-id': 5,
-                    'chapter-ids': [1, 2],
-                    'revision-ids': [10, 20],
+                    'novel-id': 'uuid-novel-5',
+                    'chapter-ids': ['uuid-ch-1', 'uuid-ch-2'],
+                    'revision-ids': ['uuid-rev-10', 'uuid-rev-20'],
                     start: 1,
                     end: 100,
                     'model-names': ['cluener']
@@ -117,63 +117,63 @@ describe('AutoLabels API', () => {
             })
         })
 
-        it('should map dictionary values from snake_case to camelCase', async () => {
+        it('should map array values from snake_case to camelCase', async () => {
             vi.mocked(client.get).mockResolvedValue({
-                data: {
-                    '1': {
-                        auto_label_id: 1,
+                data: [
+                    {
+                        auto_label_id: 'uuid-al-1',
                         auto_label_model_name: 'cluener',
                         auto_label_model_params: {},
                         auto_label_status: 'pending',
                         auto_label_message: null,
-                        revision_id: 10,
+                        revision_text_id: 'uuid-rt-10',
                         auto_label_last_job_id: 'job1'
                     },
-                    '2': {
-                        auto_label_id: 2,
+                    {
+                        auto_label_id: 'uuid-al-2',
                         auto_label_model_name: 'cluener',
                         auto_label_model_params: { chunk_size: 400 },
                         auto_label_status: 'done',
                         auto_label_message: 'Done',
-                        revision_id: 20,
+                        revision_text_id: 'uuid-rt-20',
                         auto_label_last_job_id: 'job2'
                     }
-                }
+                ]
             })
 
-            const result = await getAutoLabels(5)
+            const result = await getAutoLabels('uuid-novel-5')
 
-            expectTypeOf(result).toEqualTypeOf<Record<number, AutoLabelMeta>>()
-            expect(result).toEqual({
-                1: {
-                    autoLabelId: 1,
+            expectTypeOf(result).toEqualTypeOf<AutoLabelMeta[]>()
+            expect(result).toEqual([
+                {
+                    autoLabelId: 'uuid-al-1',
                     autoLabelModelName: 'cluener',
                     autoLabelModelParams: {},
                     autoLabelStatus: 'pending',
                     autoLabelMessage: null,
-                    revisionId: 10,
+                    revisionTextId: 'uuid-rt-10',
                     autoLabelLastJobId: 'job1'
                 },
-                2: {
-                    autoLabelId: 2,
+                {
+                    autoLabelId: 'uuid-al-2',
                     autoLabelModelName: 'cluener',
                     autoLabelModelParams: { chunk_size: 400 },
                     autoLabelStatus: 'done',
                     autoLabelMessage: 'Done',
-                    revisionId: 20,
+                    revisionTextId: 'uuid-rt-20',
                     autoLabelLastJobId: 'job2'
                 }
-            })
+            ] satisfies AutoLabelMeta[])
         })
 
         it('should pass optional params as undefined when omitted', async () => {
-            vi.mocked(client.get).mockResolvedValue({ data: {} })
+            vi.mocked(client.get).mockResolvedValue({ data: [] })
 
-            await getAutoLabels(10)
+            await getAutoLabels('uuid-novel-10')
 
             expect(client.get).toHaveBeenCalledWith('/auto-labels', {
                 params: {
-                    'novel-id': 10,
+                    'novel-id': 'uuid-novel-10',
                     'chapter-ids': undefined,
                     'revision-ids': undefined,
                     start: undefined,
@@ -189,7 +189,7 @@ describe('AutoLabels API', () => {
             vi.mocked(client.post).mockResolvedValue({ data: [] })
 
             await createAutoLabels({
-                novelId: 5,
+                novelId: 'uuid-novel-5',
                 autoLabelModelName: 'cluener',
                 autoLabelModelParams: {}
             })
@@ -205,10 +205,10 @@ describe('AutoLabels API', () => {
             vi.mocked(client.post).mockResolvedValue({ data: [] })
 
             await createAutoLabels({
-                novelId: 10,
+                novelId: 'uuid-novel-10',
                 autoLabelModelName: 'cluener',
                 autoLabelModelParams: { chunk_size: 500 },
-                chapterIds: [1, 2, 3],
+                chapterIds: ['uuid-ch-1', 'uuid-ch-2', 'uuid-ch-3'],
                 start: 1,
                 end: 10,
                 isPrimary: true,
@@ -216,10 +216,10 @@ describe('AutoLabels API', () => {
             })
 
             expect(client.post).toHaveBeenCalledWith('/auto-labels', {
-                novel_id: 10,
+                novel_id: 'uuid-novel-10',
                 auto_label_model_name: 'cluener',
                 auto_label_model_params: { chunk_size: 500 },
-                chapter_ids: [1, 2, 3],
+                chapter_ids: ['uuid-ch-1', 'uuid-ch-2', 'uuid-ch-3'],
                 revision_ids: undefined,
                 start: 1,
                 end: 10,
@@ -232,19 +232,19 @@ describe('AutoLabels API', () => {
             vi.mocked(client.post).mockResolvedValue({
                 data: [
                     {
-                        auto_label_id: 1,
+                        auto_label_id: 'uuid-al-1',
                         auto_label_model_name: 'cluener',
                         auto_label_model_params: {},
                         auto_label_status: 'pending',
                         auto_label_message: null,
-                        revision_id: 10,
+                        revision_text_id: 'uuid-rt-10',
                         auto_label_last_job_id: 'job100'
                     }
                 ]
             })
 
             const result = await createAutoLabels({
-                novelId: 5,
+                novelId: 'uuid-novel-5',
                 autoLabelModelName: 'cluener',
                 autoLabelModelParams: {}
             })
@@ -252,12 +252,12 @@ describe('AutoLabels API', () => {
             expectTypeOf(result).toEqualTypeOf<AutoLabelMeta[]>()
             expect(result).toEqual([
                 {
-                    autoLabelId: 1,
+                    autoLabelId: 'uuid-al-1',
                     autoLabelModelName: 'cluener',
                     autoLabelModelParams: {},
                     autoLabelStatus: 'pending',
                     autoLabelMessage: null,
-                    revisionId: 10,
+                    revisionTextId: 'uuid-rt-10',
                     autoLabelLastJobId: 'job100'
                 }
             ] satisfies AutoLabelMeta[])
@@ -269,7 +269,7 @@ describe('AutoLabels API', () => {
             )
 
             await expect(createAutoLabels({
-                novelId: 5,
+                novelId: 'uuid-novel-5',
                 autoLabelModelName: 'cluener',
                 autoLabelModelParams: {}
             })).rejects.toThrow()
@@ -281,7 +281,7 @@ describe('AutoLabels API', () => {
             )
 
             await expect(createAutoLabels({
-                novelId: 5,
+                novelId: 'uuid-novel-5',
                 autoLabelModelName: 'cluener',
                 autoLabelModelParams: {}
             })).rejects.toThrow()

@@ -1,14 +1,14 @@
 // --- Label Group ---
 
 export interface LabelGroup {
-    labelGroupId : number
+    labelGroupId : string
     labelGroupName : string
-    novelId : number
+    novelId : string
 }
 
 export interface CreateLabelGroup {
     labelGroupName : string
-    novelId : number
+    novelId : string
 }
 
 export interface UpdateLabelGroup {
@@ -18,6 +18,7 @@ export interface UpdateLabelGroup {
 // --- Label ---
 
 export interface Label {
+    labelDataId? : string
     labelEntityGroup : string | null
     labelScore : number
     labelWord : string
@@ -29,13 +30,13 @@ export interface Label {
 // --- Label Data ---
 
 export interface LabelData {
-    labelDataId : number
-    labelGroupId : number
-    revisionId : number
+    labelDataId : string
+    labelGroupId : string
+    revisionTextId : string
 }
 
 export interface CreateLabelData {
-    revisionId : number
+    revisionTextId : string
 }
 
 // --- Label Operations ---
@@ -81,4 +82,21 @@ export interface UpdateLabelDataStream {
 export interface UpdateLabelDataStreamResponse {
     status : 'success' | 'fail'
     detail? : string | null
+}
+
+// --- Auto-Label Import ---
+
+export interface CreateLabelDataByAutoLabel {
+    modelName : string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    modelParams : Record<string, any>
+    chapterIds? : string[] | null
+    revisionIds? : string[] | null
+    start? : number | null
+    end? : number | null
+}
+
+export interface CreateLabelDataByAutoLabelStatus {
+    success : string[]
+    errors : [string, string][]
 }

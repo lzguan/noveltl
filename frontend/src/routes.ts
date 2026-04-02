@@ -4,13 +4,13 @@ export const AppRoutes = {
     VIEW: {
         NOVELS: '/view/novels',
         NOVEL_DETAILS: '/view/novels/:novel_id',
-        // FIX: Match the pattern used in routeTo below
-        CHAPTER: '/view/chapters/:chapter_id', 
+        CHAPTER: '/view/chapters/:chapter_id',
     },
     EDIT: {
         NOVELS: '/edit/novels',
         NOVEL: '/edit/novels/:novel_id',
-    }
+    },
+    WORKSPACE: '/workspace/:novel_id',
 } as const;
 
 export const routeTo = {
@@ -22,8 +22,8 @@ export const routeTo = {
             const query = params.toString();
             return query ? `/view/novels?${query}` : '/view/novels';
         },
-        novel: (id: number) => `/view/novels/${id}`,
-        chapter: (chapterId: number, options?: { revisionId?: number }) => {
+        novel: (id: string) => `/view/novels/${id}`,
+        chapter: (chapterId: string, options?: { revisionId?: string }) => {
             const base = `/view/chapters/${chapterId}`;
             if (options?.revisionId) return `${base}?revision_id=${options.revisionId}`;
             return base;
@@ -31,6 +31,16 @@ export const routeTo = {
     },
     edit: {
         novels: () => '/edit/novels',
-        novel: (id: number) => `/edit/novels/${id}`,
-    }
+        novel: (id: string) => `/workspace/${id}`,
+    },
+    workspace: (novelId: string, params?: { chapter?: string; revision?: string; labelsGroup?: string; nerGroup?: string }) => {
+        const base = `/workspace/${novelId}`;
+        const qs = new URLSearchParams();
+        if (params?.chapter) qs.set('chapter', params.chapter);
+        if (params?.revision) qs.set('revision', params.revision);
+        if (params?.labelsGroup) qs.set('labelsGroup', params.labelsGroup);
+        if (params?.nerGroup) qs.set('nerGroup', params.nerGroup);
+        const query = qs.toString();
+        return query ? `${base}?${query}` : base;
+    },
 };

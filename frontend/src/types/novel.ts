@@ -12,13 +12,13 @@ export type Role = 'owner' | 'viewer' | 'editor'
 export type NovelType = 'original' | 'translation' | 'other'
 
 export interface Novel {
-    novelId : number
+    novelId : string
     novelTitle : string
     novelDescription : string | null
     novelAuthor : string | null
     novelVisibility : Visibility
     novelType : NovelType
-    novelParentId : number | null
+    novelParentId : string | null
     languageCode : string
 }
 
@@ -37,13 +37,13 @@ export interface UpdateNovel {
     novelAuthor? : string
     novelVisibility? : Visibility
     novelType? : NovelType
-    novelParentId? : number
+    novelParentId? : string
 }
 
 export interface Chapter {
-    chapterId : number
+    chapterId : string
     chapterNum : number
-    novelId : number
+    novelId : string
 }
 
 export interface CreateChapter {
@@ -51,28 +51,51 @@ export interface CreateChapter {
 }
 
 export interface Revision {
-    revisionId : number
+    revisionId : string
     revisionTitle : string
     revisionIsPrimary : boolean
     revisionIsPublic : boolean
-    revisionIsFinal : boolean
-    chapterId : number
-    revisionText : string
+    chapterId : string
 }
 
-export type RevisionMeta = Omit<Revision, 'revisionText'>
+export type RevisionMeta = Revision
+
+export interface RevisionText {
+    revisionTextId : string
+    revisionTextContent : string
+    revisionTextVersion : number
+}
+
+export interface RevisionTextMeta {
+    revisionTextId : string
+    revisionTextVersion : number
+}
+
+export interface RevisionData {
+    metadata : Revision
+    content : RevisionText
+}
 
 export interface CreateRevision {
     revisionTitle : string
-    revisionText? : string
 }
 
 export interface UpdateRevision {
     revisionTitle? : string
-    revisionText? : string
 }
 
-export interface DeleteRevisionStatus {
+export interface TextOp {
+    op : 'insert' | 'delete'
+    start : number
+    text : string
+}
+
+export interface UpdateRevisionText {
+    textOps : TextOp[]
+    revisionTextId : string
+}
+
+export interface OperationStatus {
     status : 'success' | 'fail'
-    detail? : string
+    detail? : string | null
 }

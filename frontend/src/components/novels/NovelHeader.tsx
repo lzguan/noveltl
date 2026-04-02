@@ -5,7 +5,7 @@ import { type Novel } from "../../types/novel";
 import { routeTo } from "../../routes";
 
 interface NovelHeaderProps {
-    novelId: number;
+    novelId: string;
 }
 
 export const NovelHeader = ({ novelId }: NovelHeaderProps) => {

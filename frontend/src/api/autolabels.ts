@@ -25,7 +25,7 @@ const mapAutoLabel = (data: any): AutoLabel => ({
     autoLabelModelParams: data.auto_label_model_params,
     autoLabelStatus: data.auto_label_status,
     autoLabelMessage: data.auto_label_message,
-    revisionId: data.revision_id,
+    revisionTextId: data.revision_text_id,
     autoLabelLastJobId: data.auto_label_last_job_id,
 })
 
@@ -35,7 +35,7 @@ const mapAutoLabelMeta = (data: any): AutoLabelMeta => ({
     autoLabelModelParams: data.auto_label_model_params,
     autoLabelStatus: data.auto_label_status,
     autoLabelMessage: data.auto_label_message,
-    revisionId: data.revision_id,
+    revisionTextId: data.revision_text_id,
     autoLabelLastJobId: data.auto_label_last_job_id,
 })
 
@@ -57,19 +57,19 @@ const mapCreateAutoLabelsRequest = (data: CreateAutoLabels) => ({
 
 // --- API functions ---
 
-export const getAutoLabelById = async (autoLabelId: number): Promise<AutoLabel> => {
+export const getAutoLabelById = async (autoLabelId: string): Promise<AutoLabel> => {
     const result = await client.get(`/auto-labels/${autoLabelId}`)
     return mapAutoLabel(result.data)
 }
 
 export const getAutoLabels = async (
-    novelId: number,
-    chapterIds?: number[] | null,
-    revisionIds?: number[] | null,
+    novelId: string,
+    chapterIds?: string[] | null,
+    revisionIds?: string[] | null,
     start?: number | null,
     end?: number | null,
     modelNames?: string[] | null
-): Promise<Record<number, AutoLabelMeta>> => {
+): Promise<AutoLabelMeta[]> => {
     const result = await client.get('/auto-labels', {
         params: {
             'novel-id': novelId,
@@ -80,13 +80,7 @@ export const getAutoLabels = async (
             'model-names': modelNames,
         }
     })
-    
-    // Map the dictionary values
-    const mapped: Record<number, AutoLabelMeta> = {}
-    for (const [key, value] of Object.entries(result.data)) {
-        mapped[Number(key)] = mapAutoLabelMeta(value)
-    }
-    return mapped
+    return result.data.map(mapAutoLabelMeta)
 }
 
 export const createAutoLabels = async (request: CreateAutoLabels): Promise<AutoLabelMeta[]> => {

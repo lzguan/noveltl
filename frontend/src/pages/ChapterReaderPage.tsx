@@ -8,22 +8,20 @@ import { routeTo } from "../routes";
 
 export const ChapterReaderPage = () => {
     const { chapter_id } = useParams<{ chapter_id: string }>();
-    const chapterId = Number(chapter_id);
+    const chapterId = chapter_id!;
 
     const [searchParams] = useSearchParams();
-    const urlRevisionId = searchParams.get("revision_id") ? Number(searchParams.get("revision_id")) : null;
+    const urlRevisionId = searchParams.get("revision_id");
 
     const [chapter, setChapter] = useState<Chapter | null>(null);
     const [revisionList, setRevisionList] = useState<RevisionMeta[]>([]);
-    
-    // Derived State: We are "loading" if we don't have a chapter, 
+
+    // Derived State: We are "loading" if we don't have a chapter,
     // OR if the chapter we have doesn't match the URL ID (stale data).
     const isLoading = !chapter || chapter.chapterId !== chapterId;
 
     useEffect(() => {
         if (!chapterId) return;
-
-        // NO setLoading(true) here! The 'isLoading' derived check handles it.
 
         Promise.all([
             getChapterById(chapterId),
@@ -32,7 +30,7 @@ export const ChapterReaderPage = () => {
             setChapter(chapData);
             setRevisionList(revList);
         }).catch(console.error);
-        
+
     }, [chapterId]);
 
     // Fallback active ID logic
@@ -54,21 +52,17 @@ export const ChapterReaderPage = () => {
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                 <div style={{ width: '260px', borderRight: '1px solid #ddd', overflowY: 'auto' }}>
-                    {/* KEY PROP MAGIC: passing key={chapterId} forces this component to 
-                        unmount/remount when the chapter changes. This resets its internal 
-                        'loading' state to true automatically. */}
-                    <RevisionSidebar 
+                    <RevisionSidebar
                         key={chapterId}
-                        chapterId={chapterId} 
-                        activeRevisionId={activeRevisionId} 
+                        chapterId={chapterId}
+                        activeRevisionId={activeRevisionId}
                     />
                 </div>
 
                 <div style={{ flex: 1, overflowY: 'auto', backgroundColor: '#f5f5f5', padding: '20px' }}>
-                     {/* KEY PROP MAGIC: same here. When ID changes, it remounts fresh. */}
-                    <RevisionContentDisplay 
+                    <RevisionContentDisplay
                         key={activeRevisionId ?? 'empty'}
-                        revisionId={activeRevisionId} 
+                        revisionId={activeRevisionId}
                     />
                 </div>
             </div>

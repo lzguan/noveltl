@@ -10,27 +10,26 @@ export const NovelDetailsPage = () => {
     const [chapters, setChapters] = useState<Chapter[]>([]);
 
     // Using a Map to store revisions: ChapterID -> List of Revisions
-    const [chapterRevisions, setChapterRevisions] = useState<Map<number, RevisionMeta[]>>(new Map());
+    const [chapterRevisions, setChapterRevisions] = useState<Map<string, RevisionMeta[]>>(new Map());
 
     useEffect(() => {
         if (typeof novel_id === "undefined") return;
-        const novelId = Number(novel_id);
 
         // 1. Fetch the Novel
-        getNovelById(novelId).then((fetchedNovel) => {
+        getNovelById(novel_id).then((fetchedNovel) => {
             setNovel(fetchedNovel);
 
             // 2. ONLY after we have the novel (or just using the ID), fetch the rest
             // We can run these two in parallel
             Promise.all([
-                getChaptersByNovel(novelId),
-                getChapterRevisionsByNovel(novelId)
+                getChaptersByNovel(novel_id),
+                getChapterRevisionsByNovel(novel_id)
             ]).then(([fetchedChapters, fetchedRevisions]) => {
-                
+
                 setChapters(fetchedChapters);
 
                 // 3. Process Revisions into the Map
-                const map = new Map<number, RevisionMeta[]>();
+                const map = new Map<string, RevisionMeta[]>();
                 fetchedRevisions.forEach((rev) => {
                     const existing = map.get(rev.chapterId) || [];
                     existing.push(rev);
@@ -45,23 +44,25 @@ export const NovelDetailsPage = () => {
 
     return (
         <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-            
+
             {/* Header Section */}
             <div style={{ borderBottom: '1px solid #ddd', paddingBottom: '20px', marginBottom: '20px' }}>
                 <Link to={AppRoutes.VIEW.NOVELS} style={{ textDecoration: 'none', color: '#666' }}>&larr; Back to Library</Link>
                 <h1>{novel.novelTitle}</h1>
                 <p style={{ color: '#555' }}>Author: {novel.novelAuthor || 'Unknown'}</p>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <span style={{ background: '#eee', padding: '4px 8px', borderRadius: '4px' }}>
                         {novel.novelType}
                     </span>
-                    {/* Add more metadata badges here if needed */}
+                    <Link to={routeTo.workspace(novel.novelId)} style={{ padding: '6px 12px', backgroundColor: '#4a90d9', color: '#fff', borderRadius: '4px', textDecoration: 'none', fontSize: '0.85rem' }}>
+                        Open Workspace
+                    </Link>
                 </div>
             </div>
 
             {/* Chapters List */}
             <h2>Chapters ({chapters.length})</h2>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 {chapters.length === 0 && <p>No chapters yet.</p>}
 
@@ -71,9 +72,9 @@ export const NovelDetailsPage = () => {
                     const primaryRev = revs.find(r => r.revisionIsPrimary);
 
                     return (
-                        <div key={chapter.chapterId} style={{ 
-                            border: '1px solid #eee', 
-                            padding: '15px', 
+                        <div key={chapter.chapterId} style={{
+                            border: '1px solid #eee',
+                            padding: '15px',
                             borderRadius: '8px',
                             backgroundColor: '#fafafa'
                         }}>
@@ -88,7 +89,7 @@ export const NovelDetailsPage = () => {
                             {/* Revisions List */}
                             <div style={{ marginTop: '10px', paddingLeft: '10px', borderLeft: '2px solid #ddd' }}>
                                 <p style={{ fontSize: '0.8rem', color: '#888', margin: '0 0 5px 0' }}>Revisions:</p>
-                                
+
                                 {revs.length === 0 ? (
                                     <span style={{ color: '#999', fontSize: '0.9rem' }}>No revisions found.</span>
                                 ) : (
@@ -98,10 +99,10 @@ export const NovelDetailsPage = () => {
                                                 <Link to={routeTo.view.chapter(rev.chapterId, { revisionId: rev.revisionId })} style={{ color: rev.revisionIsPrimary ? 'green' : 'blue' }}>
                                                     {rev.revisionTitle || 'Untitled Revision'}
                                                 </Link>
-                                                {rev.revisionIsPrimary && 
+                                                {rev.revisionIsPrimary &&
                                                     <span style={{ fontSize: '0.7rem', marginLeft: '8px', background: '#d4edda', padding: '2px 4px', borderRadius: '4px' }}>PRIMARY</span>
                                                 }
-                                                {(rev.revisionIsPublic && !rev.revisionIsPrimary) && 
+                                                {(rev.revisionIsPublic && !rev.revisionIsPrimary) &&
                                                     <span style={{ fontSize: '0.7rem', marginLeft: '4px', background: '#cce5ff', padding: '2px 4px', borderRadius: '4px' }}>PUBLIC</span>
                                                 }
                                             </li>

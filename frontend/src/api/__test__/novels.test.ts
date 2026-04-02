@@ -12,7 +12,12 @@ import {
     getChapterRevisionsByChapter,
     createNovel,
     createChapterForNovel,
-    createRevisionForChapter
+    createRevisionForChapter,
+    getRevisionText,
+    getRevisionTextById,
+    getRevisionTextVersions,
+    updateRevisionText,
+    deleteRevision
 } from '../novels'
 import * as NovelType from '../../types/novel'
 
@@ -40,7 +45,7 @@ describe('Novels API', () => {
             vi.mocked(client.get).mockResolvedValue({
                 data: [
                     {
-                        novel_id: 1,
+                        novel_id: 'uuid-novel-1',
                         novel_title: 'Test Novel',
                         novel_description: 'A test',
                         novel_author: 'Author',
@@ -57,7 +62,7 @@ describe('Novels API', () => {
             expectTypeOf(result).toEqualTypeOf<NovelType.Novel[]>()
             expect(result).toEqual([
                 {
-                    novelId: 1,
+                    novelId: 'uuid-novel-1',
                     novelTitle: 'Test Novel',
                     novelDescription: 'A test',
                     novelAuthor: 'Author',
@@ -103,13 +108,13 @@ describe('Novels API', () => {
             vi.mocked(client.get).mockResolvedValue({
                 data: [
                     {
-                        novel_id: 2,
+                        novel_id: 'uuid-novel-2',
                         novel_title: 'My Novel',
                         novel_description: null,
                         novel_author: null,
                         novel_visibility: 0,
                         novel_type: 'translation',
-                        novel_parent_id: 1,
+                        novel_parent_id: 'uuid-novel-1',
                         language_code: 'zh'
                     }
                 ]
@@ -119,13 +124,13 @@ describe('Novels API', () => {
 
             expect(result).toEqual([
                 {
-                    novelId: 2,
+                    novelId: 'uuid-novel-2',
                     novelTitle: 'My Novel',
                     novelDescription: null,
                     novelAuthor: null,
                     novelVisibility: 0,
                     novelType: 'translation',
-                    novelParentId: 1,
+                    novelParentId: 'uuid-novel-1',
                     languageCode: 'zh'
                 }
             ] satisfies NovelType.Novel[])
@@ -146,7 +151,7 @@ describe('Novels API', () => {
         it('should call GET /novels/{novelId}', async () => {
             vi.mocked(client.get).mockResolvedValue({
                 data: {
-                    novel_id: 5,
+                    novel_id: 'uuid-novel-5',
                     novel_title: 'Test',
                     novel_description: null,
                     novel_author: null,
@@ -157,36 +162,36 @@ describe('Novels API', () => {
                 }
             })
 
-            await getNovelById(5)
+            await getNovelById('uuid-novel-5')
 
-            expect(client.get).toHaveBeenCalledWith('/novels/5')
+            expect(client.get).toHaveBeenCalledWith('/novels/uuid-novel-5')
         })
 
         it('should map all novel fields from snake_case to camelCase', async () => {
             vi.mocked(client.get).mockResolvedValue({
                 data: {
-                    novel_id: 10,
+                    novel_id: 'uuid-novel-10',
                     novel_title: 'Full Novel',
                     novel_description: 'Description here',
                     novel_author: 'John Doe',
                     novel_visibility: 3,
                     novel_type: 'other',
-                    novel_parent_id: 8,
+                    novel_parent_id: 'uuid-novel-8',
                     language_code: 'jp'
                 }
             })
 
-            const result = await getNovelById(10)
+            const result = await getNovelById('uuid-novel-10')
 
             expectTypeOf(result).toEqualTypeOf<NovelType.Novel>()
             expect(result).toEqual({
-                novelId: 10,
+                novelId: 'uuid-novel-10',
                 novelTitle: 'Full Novel',
                 novelDescription: 'Description here',
                 novelAuthor: 'John Doe',
                 novelVisibility: 3,
                 novelType: 'other',
-                novelParentId: 8,
+                novelParentId: 'uuid-novel-8',
                 languageCode: 'jp'
             } satisfies NovelType.Novel)
         })
@@ -194,7 +199,7 @@ describe('Novels API', () => {
         it('should handle nullable fields correctly when null', async () => {
             vi.mocked(client.get).mockResolvedValue({
                 data: {
-                    novel_id: 7,
+                    novel_id: 'uuid-novel-7',
                     novel_title: 'Minimal',
                     novel_description: null,
                     novel_author: null,
@@ -205,7 +210,7 @@ describe('Novels API', () => {
                 }
             })
 
-            const result = await getNovelById(7)
+            const result = await getNovelById('uuid-novel-7')
 
             expect(result.novelDescription).toBeNull()
             expect(result.novelAuthor).toBeNull()
@@ -217,7 +222,7 @@ describe('Novels API', () => {
                 makeAxiosError(404, { detail: 'Novel not found' })
             )
 
-            await expect(getNovelById(999)).rejects.toThrow()
+            await expect(getNovelById('uuid-novel-999')).rejects.toThrow()
         })
     })
 
@@ -225,37 +230,37 @@ describe('Novels API', () => {
         it('should call GET /chapters with novel-id, start, end query params', async () => {
             vi.mocked(client.get).mockResolvedValue({ data: [] })
 
-            await getChaptersByNovel(3, 10, 20)
+            await getChaptersByNovel('uuid-novel-3', 10, 20)
 
             expect(client.get).toHaveBeenCalledWith('/chapters', {
-                params: { 'novel-id': 3, start: 10, end: 20 }
+                params: { 'novel-id': 'uuid-novel-3', start: 10, end: 20 }
             })
         })
 
         it('should map each chapter from snake_case to camelCase', async () => {
             vi.mocked(client.get).mockResolvedValue({
                 data: [
-                    { chapter_id: 100, chapter_num: 1, novel_id: 5 },
-                    { chapter_id: 101, chapter_num: 2, novel_id: 5 }
+                    { chapter_id: 'uuid-ch-100', chapter_num: 1, novel_id: 'uuid-novel-5' },
+                    { chapter_id: 'uuid-ch-101', chapter_num: 2, novel_id: 'uuid-novel-5' }
                 ]
             })
 
-            const result = await getChaptersByNovel(5)
+            const result = await getChaptersByNovel('uuid-novel-5')
 
             expectTypeOf(result).toEqualTypeOf<NovelType.Chapter[]>()
             expect(result).toEqual([
-                { chapterId: 100, chapterNum: 1, novelId: 5 },
-                { chapterId: 101, chapterNum: 2, novelId: 5 }
+                { chapterId: 'uuid-ch-100', chapterNum: 1, novelId: 'uuid-novel-5' },
+                { chapterId: 'uuid-ch-101', chapterNum: 2, novelId: 'uuid-novel-5' }
             ] satisfies NovelType.Chapter[])
         })
 
         it('should pass start and end as undefined when omitted', async () => {
             vi.mocked(client.get).mockResolvedValue({ data: [] })
 
-            await getChaptersByNovel(1)
+            await getChaptersByNovel('uuid-novel-1')
 
             expect(client.get).toHaveBeenCalledWith('/chapters', {
-                params: { 'novel-id': 1, start: undefined, end: undefined }
+                params: { 'novel-id': 'uuid-novel-1', start: undefined, end: undefined }
             })
         })
 
@@ -264,33 +269,33 @@ describe('Novels API', () => {
                 makeAxiosError(404, { detail: 'Novel not found' })
             )
 
-            await expect(getChaptersByNovel(999)).rejects.toThrow()
+            await expect(getChaptersByNovel('uuid-novel-999')).rejects.toThrow()
         })
     })
 
     describe('getChapterById', () => {
         it('should call GET /chapters/{chapterId}', async () => {
             vi.mocked(client.get).mockResolvedValue({
-                data: { chapter_id: 50, chapter_num: 5, novel_id: 2 }
+                data: { chapter_id: 'uuid-ch-50', chapter_num: 5, novel_id: 'uuid-novel-2' }
             })
 
-            await getChapterById(50)
+            await getChapterById('uuid-ch-50')
 
-            expect(client.get).toHaveBeenCalledWith('/chapters/50')
+            expect(client.get).toHaveBeenCalledWith('/chapters/uuid-ch-50')
         })
 
         it('should map chapter fields from snake_case to camelCase', async () => {
             vi.mocked(client.get).mockResolvedValue({
-                data: { chapter_id: 75, chapter_num: 10, novel_id: 3 }
+                data: { chapter_id: 'uuid-ch-75', chapter_num: 10, novel_id: 'uuid-novel-3' }
             })
 
-            const result = await getChapterById(75)
+            const result = await getChapterById('uuid-ch-75')
 
             expectTypeOf(result).toEqualTypeOf<NovelType.Chapter>()
             expect(result).toEqual({
-                chapterId: 75,
+                chapterId: 'uuid-ch-75',
                 chapterNum: 10,
-                novelId: 3
+                novelId: 'uuid-novel-3'
             } satisfies NovelType.Chapter)
         })
 
@@ -299,7 +304,7 @@ describe('Novels API', () => {
                 makeAxiosError(404, { detail: 'Chapter not found' })
             )
 
-            await expect(getChapterById(999)).rejects.toThrow()
+            await expect(getChapterById('uuid-ch-999')).rejects.toThrow()
         })
     })
 
@@ -307,65 +312,40 @@ describe('Novels API', () => {
         it('should call GET /revisions/{revisionId}', async () => {
             vi.mocked(client.get).mockResolvedValue({
                 data: {
-                    revision_id: 200,
+                    revision_id: 'uuid-rev-200',
                     revision_title: 'Rev 1',
                     revision_is_primary: true,
                     revision_is_public: true,
-                    revision_is_final: false,
-                    chapter_id: 50,
-                    revision_text: 'Full text here'
+                    chapter_id: 'uuid-ch-50'
                 }
             })
 
-            await getChapterRevisionById(200)
+            await getChapterRevisionById('uuid-rev-200')
 
-            expect(client.get).toHaveBeenCalledWith('/revisions/200')
+            expect(client.get).toHaveBeenCalledWith('/revisions/uuid-rev-200')
         })
 
-        it('should map all revision fields including text field', async () => {
+        it('should map revision fields from snake_case to camelCase', async () => {
             vi.mocked(client.get).mockResolvedValue({
                 data: {
-                    revision_id: 300,
+                    revision_id: 'uuid-rev-300',
                     revision_title: 'Final Draft',
                     revision_is_primary: false,
                     revision_is_public: false,
-                    revision_is_final: true,
-                    chapter_id: 60,
-                    revision_text: 'Chapter content'
+                    chapter_id: 'uuid-ch-60'
                 }
             })
 
-            const result = await getChapterRevisionById(300)
+            const result = await getChapterRevisionById('uuid-rev-300')
 
             expectTypeOf(result).toEqualTypeOf<NovelType.Revision>()
             expect(result).toEqual({
-                revisionId: 300,
+                revisionId: 'uuid-rev-300',
                 revisionTitle: 'Final Draft',
                 revisionIsPrimary: false,
                 revisionIsPublic: false,
-                revisionIsFinal: true,
-                chapterId: 60,
-                revisionText: 'Chapter content'
+                chapterId: 'uuid-ch-60'
             } satisfies NovelType.Revision)
-        })
-
-        it('should return full Revision with text field', async () => {
-            vi.mocked(client.get).mockResolvedValue({
-                data: {
-                    revision_id: 400,
-                    revision_title: 'Test',
-                    revision_is_primary: true,
-                    revision_is_public: true,
-                    revision_is_final: true,
-                    chapter_id: 70,
-                    revision_text: 'Text content'
-                }
-            })
-
-            const result = await getChapterRevisionById(400)
-
-            expect(result).toHaveProperty('revisionText')
-            expect(result.revisionText).toBe('Text content')
         })
 
         it('should propagate 404 error when revision not found', async () => {
@@ -373,7 +353,7 @@ describe('Novels API', () => {
                 makeAxiosError(404, { detail: 'Revision not found' })
             )
 
-            await expect(getChapterRevisionById(999)).rejects.toThrow()
+            await expect(getChapterRevisionById('uuid-rev-999')).rejects.toThrow()
         })
     })
 
@@ -381,61 +361,56 @@ describe('Novels API', () => {
         it('should call GET /novels/{novelId}/revisions with all query params', async () => {
             vi.mocked(client.get).mockResolvedValue({ data: [] })
 
-            await getChapterRevisionsByNovel(5, 1, 10, true, false, true)
+            await getChapterRevisionsByNovel('uuid-novel-5', 1, 10, true, false)
 
-            expect(client.get).toHaveBeenCalledWith('/novels/5/revisions', {
+            expect(client.get).toHaveBeenCalledWith('/novels/uuid-novel-5/revisions', {
                 params: {
                     start: 1,
                     end: 10,
                     'is-public': true,
-                    'is-primary': false,
-                    'is-final': true
+                    'is-primary': false
                 }
             })
         })
 
-        it('should map each item as RevisionMeta without text field', async () => {
+        it('should map each item as RevisionMeta', async () => {
             vi.mocked(client.get).mockResolvedValue({
                 data: [
                     {
-                        revision_id: 500,
+                        revision_id: 'uuid-rev-500',
                         revision_title: 'Meta 1',
                         revision_is_primary: true,
                         revision_is_public: true,
-                        revision_is_final: false,
-                        chapter_id: 80
+                        chapter_id: 'uuid-ch-80'
                     }
                 ]
             })
 
-            const result = await getChapterRevisionsByNovel(5)
+            const result = await getChapterRevisionsByNovel('uuid-novel-5')
 
             expectTypeOf(result).toEqualTypeOf<NovelType.RevisionMeta[]>()
             expect(result).toEqual([
                 {
-                    revisionId: 500,
+                    revisionId: 'uuid-rev-500',
                     revisionTitle: 'Meta 1',
                     revisionIsPrimary: true,
                     revisionIsPublic: true,
-                    revisionIsFinal: false,
-                    chapterId: 80
+                    chapterId: 'uuid-ch-80'
                 }
             ] satisfies NovelType.RevisionMeta[])
-            expect(result[0]).not.toHaveProperty('revisionText')
         })
 
         it('should pass all optional params as undefined when omitted', async () => {
             vi.mocked(client.get).mockResolvedValue({ data: [] })
 
-            await getChapterRevisionsByNovel(10)
+            await getChapterRevisionsByNovel('uuid-novel-10')
 
-            expect(client.get).toHaveBeenCalledWith('/novels/10/revisions', {
+            expect(client.get).toHaveBeenCalledWith('/novels/uuid-novel-10/revisions', {
                 params: {
                     start: undefined,
                     end: undefined,
                     'is-public': undefined,
-                    'is-primary': undefined,
-                    'is-final': undefined
+                    'is-primary': undefined
                 }
             })
         })
@@ -443,15 +418,14 @@ describe('Novels API', () => {
         it('should serialize boolean query params correctly', async () => {
             vi.mocked(client.get).mockResolvedValue({ data: [] })
 
-            await getChapterRevisionsByNovel(3, undefined, undefined, false, true, false)
+            await getChapterRevisionsByNovel('uuid-novel-3', undefined, undefined, false, true)
 
-            expect(client.get).toHaveBeenCalledWith('/novels/3/revisions', {
+            expect(client.get).toHaveBeenCalledWith('/novels/uuid-novel-3/revisions', {
                 params: {
                     start: undefined,
                     end: undefined,
                     'is-public': false,
-                    'is-primary': true,
-                    'is-final': false
+                    'is-primary': true
                 }
             })
         })
@@ -461,7 +435,7 @@ describe('Novels API', () => {
                 makeAxiosError(404, { detail: 'Novel not found' })
             )
 
-            await expect(getChapterRevisionsByNovel(999)).rejects.toThrow()
+            await expect(getChapterRevisionsByNovel('uuid-novel-999')).rejects.toThrow()
         })
     })
 
@@ -469,9 +443,9 @@ describe('Novels API', () => {
         it('should call GET /chapters/{chapterId}/revisions with query params', async () => {
             vi.mocked(client.get).mockResolvedValue({ data: [] })
 
-            await getChapterRevisionsByChapter(50, true, false)
+            await getChapterRevisionsByChapter('uuid-ch-50', true, false)
 
-            expect(client.get).toHaveBeenCalledWith('/chapters/50/revisions', {
+            expect(client.get).toHaveBeenCalledWith('/chapters/uuid-ch-50/revisions', {
                 params: { 'is-public': true, 'is-primary': false }
             })
         })
@@ -480,27 +454,25 @@ describe('Novels API', () => {
             vi.mocked(client.get).mockResolvedValue({
                 data: [
                     {
-                        revision_id: 600,
+                        revision_id: 'uuid-rev-600',
                         revision_title: 'Ch Rev',
                         revision_is_primary: false,
                         revision_is_public: false,
-                        revision_is_final: true,
-                        chapter_id: 90
+                        chapter_id: 'uuid-ch-90'
                     }
                 ]
             })
 
-            const result = await getChapterRevisionsByChapter(90)
+            const result = await getChapterRevisionsByChapter('uuid-ch-90')
 
             expectTypeOf(result).toEqualTypeOf<NovelType.RevisionMeta[]>()
             expect(result).toEqual([
                 {
-                    revisionId: 600,
+                    revisionId: 'uuid-rev-600',
                     revisionTitle: 'Ch Rev',
                     revisionIsPrimary: false,
                     revisionIsPublic: false,
-                    revisionIsFinal: true,
-                    chapterId: 90
+                    chapterId: 'uuid-ch-90'
                 }
             ] satisfies NovelType.RevisionMeta[])
         })
@@ -510,7 +482,7 @@ describe('Novels API', () => {
                 makeAxiosError(404, { detail: 'Chapter not found' })
             )
 
-            await expect(getChapterRevisionsByChapter(999)).rejects.toThrow()
+            await expect(getChapterRevisionsByChapter('uuid-ch-999')).rejects.toThrow()
         })
     })
 
@@ -518,7 +490,7 @@ describe('Novels API', () => {
         it('should call POST /novels', async () => {
             vi.mocked(client.post).mockResolvedValue({
                 data: {
-                    novel_id: 1,
+                    novel_id: 'uuid-novel-1',
                     novel_title: 'New',
                     novel_description: null,
                     novel_author: null,
@@ -546,7 +518,7 @@ describe('Novels API', () => {
         it('should map camelCase request to snake_case body', async () => {
             vi.mocked(client.post).mockResolvedValue({
                 data: {
-                    novel_id: 2,
+                    novel_id: 'uuid-novel-2',
                     novel_title: 'My Novel',
                     novel_description: 'A great story',
                     novel_author: 'Me',
@@ -579,13 +551,13 @@ describe('Novels API', () => {
         it('should map response novel from snake_case to camelCase', async () => {
             vi.mocked(client.post).mockResolvedValue({
                 data: {
-                    novel_id: 100,
+                    novel_id: 'uuid-novel-100',
                     novel_title: 'Created',
                     novel_description: 'Desc',
                     novel_author: 'Auth',
                     novel_visibility: 2,
                     novel_type: 'other',
-                    novel_parent_id: 50,
+                    novel_parent_id: 'uuid-novel-50',
                     language_code: 'jp'
                 }
             })
@@ -601,13 +573,13 @@ describe('Novels API', () => {
 
             expectTypeOf(result).toEqualTypeOf<NovelType.Novel>()
             expect(result).toEqual({
-                novelId: 100,
+                novelId: 'uuid-novel-100',
                 novelTitle: 'Created',
                 novelDescription: 'Desc',
                 novelAuthor: 'Auth',
                 novelVisibility: 2,
                 novelType: 'other',
-                novelParentId: 50,
+                novelParentId: 'uuid-novel-50',
                 languageCode: 'jp'
             } satisfies NovelType.Novel)
         })
@@ -642,42 +614,42 @@ describe('Novels API', () => {
     describe('createChapterForNovel', () => {
         it('should call POST /novels/{novelId}/chapters', async () => {
             vi.mocked(client.post).mockResolvedValue({
-                data: { chapter_id: 1, chapter_num: 1, novel_id: 5 }
+                data: { chapter_id: 'uuid-ch-1', chapter_num: 1, novel_id: 'uuid-novel-5' }
             })
 
-            await createChapterForNovel(5, { chapterNum: 1 })
+            await createChapterForNovel('uuid-novel-5', { chapterNum: 1 })
 
             expect(client.post).toHaveBeenCalled()
             expect(client.post).toHaveBeenCalledWith(
-                '/novels/5/chapters',
+                '/novels/uuid-novel-5/chapters',
                 expect.any(Object)
             )
         })
 
         it('should map camelCase request to snake_case body', async () => {
             vi.mocked(client.post).mockResolvedValue({
-                data: { chapter_id: 10, chapter_num: 5, novel_id: 3 }
+                data: { chapter_id: 'uuid-ch-10', chapter_num: 5, novel_id: 'uuid-novel-3' }
             })
 
-            await createChapterForNovel(3, { chapterNum: 5 })
+            await createChapterForNovel('uuid-novel-3', { chapterNum: 5 })
 
-            expect(client.post).toHaveBeenCalledWith('/novels/3/chapters', {
+            expect(client.post).toHaveBeenCalledWith('/novels/uuid-novel-3/chapters', {
                 chapter_num: 5
             })
         })
 
         it('should map chapter response from snake_case to camelCase', async () => {
             vi.mocked(client.post).mockResolvedValue({
-                data: { chapter_id: 20, chapter_num: 10, novel_id: 7 }
+                data: { chapter_id: 'uuid-ch-20', chapter_num: 10, novel_id: 'uuid-novel-7' }
             })
 
-            const result = await createChapterForNovel(7, { chapterNum: 10 })
+            const result = await createChapterForNovel('uuid-novel-7', { chapterNum: 10 })
 
             expectTypeOf(result).toEqualTypeOf<NovelType.Chapter>()
             expect(result).toEqual({
-                chapterId: 20,
+                chapterId: 'uuid-ch-20',
                 chapterNum: 10,
-                novelId: 7
+                novelId: 'uuid-novel-7'
             } satisfies NovelType.Chapter)
         })
 
@@ -686,7 +658,7 @@ describe('Novels API', () => {
                 makeAxiosError(404, { detail: 'Novel not found' })
             )
 
-            await expect(createChapterForNovel(999, { chapterNum: 1 })).rejects.toThrow()
+            await expect(createChapterForNovel('uuid-novel-999', { chapterNum: 1 })).rejects.toThrow()
         })
 
         it('should propagate 409 error when duplicate chapter number', async () => {
@@ -694,7 +666,7 @@ describe('Novels API', () => {
                 makeAxiosError(409, { detail: 'Duplicate chapter number' })
             )
 
-            await expect(createChapterForNovel(5, { chapterNum: 1 })).rejects.toThrow()
+            await expect(createChapterForNovel('uuid-novel-5', { chapterNum: 1 })).rejects.toThrow()
         })
     })
 
@@ -702,24 +674,28 @@ describe('Novels API', () => {
         it('should call POST /chapters/{chapterId}/revisions', async () => {
             vi.mocked(client.post).mockResolvedValue({
                 data: {
-                    revision_id: 1,
-                    revision_title: 'Rev 1',
-                    revision_is_primary: false,
-                    revision_is_public: false,
-                    revision_is_final: false,
-                    chapter_id: 10,
-                    revision_text: 'Text'
+                    metadata: {
+                        revision_id: 'uuid-rev-1',
+                        revision_title: 'Rev 1',
+                        revision_is_primary: false,
+                        revision_is_public: false,
+                        chapter_id: 'uuid-ch-10'
+                    },
+                    content: {
+                        revision_text_id: 'uuid-rt-1',
+                        revision_text_content: '',
+                        revision_text_version: 1
+                    }
                 }
             })
 
-            await createRevisionForChapter(10, {
-                revisionTitle: 'Rev 1',
-                revisionText: 'Text'
+            await createRevisionForChapter('uuid-ch-10', {
+                revisionTitle: 'Rev 1'
             })
 
             expect(client.post).toHaveBeenCalled()
             expect(client.post).toHaveBeenCalledWith(
-                '/chapters/10/revisions',
+                '/chapters/uuid-ch-10/revisions',
                 expect.any(Object)
             )
         })
@@ -727,55 +703,67 @@ describe('Novels API', () => {
         it('should map camelCase request to snake_case body', async () => {
             vi.mocked(client.post).mockResolvedValue({
                 data: {
-                    revision_id: 2,
-                    revision_title: 'Draft',
-                    revision_is_primary: false,
-                    revision_is_public: false,
-                    revision_is_final: false,
-                    chapter_id: 15,
-                    revision_text: 'Content here'
+                    metadata: {
+                        revision_id: 'uuid-rev-2',
+                        revision_title: 'Draft',
+                        revision_is_primary: false,
+                        revision_is_public: false,
+                        chapter_id: 'uuid-ch-15'
+                    },
+                    content: {
+                        revision_text_id: 'uuid-rt-2',
+                        revision_text_content: '',
+                        revision_text_version: 1
+                    }
                 }
             })
 
-            await createRevisionForChapter(15, {
-                revisionTitle: 'Draft',
-                revisionText: 'Content here'
+            await createRevisionForChapter('uuid-ch-15', {
+                revisionTitle: 'Draft'
             })
 
-            expect(client.post).toHaveBeenCalledWith('/chapters/15/revisions', {
-                revision_title: 'Draft',
-                revision_text: 'Content here'
+            expect(client.post).toHaveBeenCalledWith('/chapters/uuid-ch-15/revisions', {
+                revision_title: 'Draft'
             })
         })
 
-        it('should map full revision response from snake_case to camelCase', async () => {
+        it('should map RevisionData response from snake_case to camelCase', async () => {
             vi.mocked(client.post).mockResolvedValue({
                 data: {
-                    revision_id: 100,
-                    revision_title: 'Final',
-                    revision_is_primary: true,
-                    revision_is_public: true,
-                    revision_is_final: true,
-                    chapter_id: 50,
-                    revision_text: 'Final text'
+                    metadata: {
+                        revision_id: 'uuid-rev-100',
+                        revision_title: 'Final',
+                        revision_is_primary: false,
+                        revision_is_public: false,
+                        chapter_id: 'uuid-ch-50'
+                    },
+                    content: {
+                        revision_text_id: 'uuid-rt-100',
+                        revision_text_content: '',
+                        revision_text_version: 1
+                    }
                 }
             })
 
-            const result = await createRevisionForChapter(50, {
-                revisionTitle: 'Final',
-                revisionText: 'Final text'
+            const result = await createRevisionForChapter('uuid-ch-50', {
+                revisionTitle: 'Final'
             })
 
-            expectTypeOf(result).toEqualTypeOf<NovelType.Revision>()
+            expectTypeOf(result).toEqualTypeOf<NovelType.RevisionData>()
             expect(result).toEqual({
-                revisionId: 100,
-                revisionTitle: 'Final',
-                revisionIsPrimary: true,
-                revisionIsPublic: true,
-                revisionIsFinal: true,
-                chapterId: 50,
-                revisionText: 'Final text'
-            } satisfies NovelType.Revision)
+                metadata: {
+                    revisionId: 'uuid-rev-100',
+                    revisionTitle: 'Final',
+                    revisionIsPrimary: false,
+                    revisionIsPublic: false,
+                    chapterId: 'uuid-ch-50'
+                },
+                content: {
+                    revisionTextId: 'uuid-rt-100',
+                    revisionTextContent: '',
+                    revisionTextVersion: 1
+                }
+            } satisfies NovelType.RevisionData)
         })
 
         it('should propagate 404 error when chapter not found', async () => {
@@ -783,7 +771,7 @@ describe('Novels API', () => {
                 makeAxiosError(404, { detail: 'Chapter not found' })
             )
 
-            await expect(createRevisionForChapter(999, {
+            await expect(createRevisionForChapter('uuid-ch-999', {
                 revisionTitle: 'Test'
             })).rejects.toThrow()
         })
@@ -793,9 +781,167 @@ describe('Novels API', () => {
                 makeAxiosError(400, { detail: 'Data too long' })
             )
 
-            await expect(createRevisionForChapter(10, {
+            await expect(createRevisionForChapter('uuid-ch-10', {
                 revisionTitle: 'T'.repeat(10000)
             })).rejects.toThrow()
+        })
+    })
+
+    describe('getRevisionText', () => {
+        it('should call GET /revisions/{revisionId}/text', async () => {
+            vi.mocked(client.get).mockResolvedValue({
+                data: {
+                    revision_text_id: 'uuid-rt-1',
+                    revision_text_content: 'Chapter text here',
+                    revision_text_version: 3
+                }
+            })
+
+            await getRevisionText('uuid-rev-1')
+
+            expect(client.get).toHaveBeenCalledWith('/revisions/uuid-rev-1/text')
+        })
+
+        it('should map response from snake_case to camelCase', async () => {
+            vi.mocked(client.get).mockResolvedValue({
+                data: {
+                    revision_text_id: 'uuid-rt-5',
+                    revision_text_content: 'Full text content',
+                    revision_text_version: 2
+                }
+            })
+
+            const result = await getRevisionText('uuid-rev-5')
+
+            expectTypeOf(result).toEqualTypeOf<NovelType.RevisionText>()
+            expect(result).toEqual({
+                revisionTextId: 'uuid-rt-5',
+                revisionTextContent: 'Full text content',
+                revisionTextVersion: 2
+            } satisfies NovelType.RevisionText)
+        })
+    })
+
+    describe('getRevisionTextById', () => {
+        it('should call GET /revision-texts/{revisionTextId}', async () => {
+            vi.mocked(client.get).mockResolvedValue({
+                data: {
+                    revision_text_id: 'uuid-rt-10',
+                    revision_text_content: 'Specific version',
+                    revision_text_version: 1
+                }
+            })
+
+            await getRevisionTextById('uuid-rt-10')
+
+            expect(client.get).toHaveBeenCalledWith('/revision-texts/uuid-rt-10')
+        })
+
+        it('should map response from snake_case to camelCase', async () => {
+            vi.mocked(client.get).mockResolvedValue({
+                data: {
+                    revision_text_id: 'uuid-rt-10',
+                    revision_text_content: 'Specific version',
+                    revision_text_version: 1
+                }
+            })
+
+            const result = await getRevisionTextById('uuid-rt-10')
+
+            expectTypeOf(result).toEqualTypeOf<NovelType.RevisionText>()
+            expect(result).toEqual({
+                revisionTextId: 'uuid-rt-10',
+                revisionTextContent: 'Specific version',
+                revisionTextVersion: 1
+            } satisfies NovelType.RevisionText)
+        })
+    })
+
+    describe('getRevisionTextVersions', () => {
+        it('should call GET /revisions/{revisionId}/text-versions', async () => {
+            vi.mocked(client.get).mockResolvedValue({ data: [] })
+
+            await getRevisionTextVersions('uuid-rev-1')
+
+            expect(client.get).toHaveBeenCalledWith('/revisions/uuid-rev-1/text-versions')
+        })
+
+        it('should map response array from snake_case to camelCase', async () => {
+            vi.mocked(client.get).mockResolvedValue({
+                data: [
+                    { revision_text_id: 'uuid-rt-1', revision_text_version: 1 },
+                    { revision_text_id: 'uuid-rt-2', revision_text_version: 2 }
+                ]
+            })
+
+            const result = await getRevisionTextVersions('uuid-rev-1')
+
+            expectTypeOf(result).toEqualTypeOf<NovelType.RevisionTextMeta[]>()
+            expect(result).toEqual([
+                { revisionTextId: 'uuid-rt-1', revisionTextVersion: 1 },
+                { revisionTextId: 'uuid-rt-2', revisionTextVersion: 2 }
+            ] satisfies NovelType.RevisionTextMeta[])
+        })
+    })
+
+    describe('updateRevisionText', () => {
+        it('should call PATCH /revisions/{revisionId}/text with mapped body', async () => {
+            vi.mocked(client.patch).mockResolvedValue({
+                data: { status: 'success', detail: null }
+            })
+
+            await updateRevisionText('uuid-rev-1', {
+                textOps: [{ op: 'insert', start: 0, text: 'Hello' }],
+                revisionTextId: 'uuid-rt-1'
+            })
+
+            expect(client.patch).toHaveBeenCalledWith('/revisions/uuid-rev-1/text', {
+                text_ops: [{ op: 'insert', start: 0, text: 'Hello' }],
+                revision_text_id: 'uuid-rt-1'
+            })
+        })
+
+        it('should map response from snake_case to camelCase', async () => {
+            vi.mocked(client.patch).mockResolvedValue({
+                data: { status: 'success', detail: null }
+            })
+
+            const result = await updateRevisionText('uuid-rev-1', {
+                textOps: [{ op: 'delete', start: 5, text: 'world' }],
+                revisionTextId: 'uuid-rt-1'
+            })
+
+            expectTypeOf(result).toEqualTypeOf<NovelType.OperationStatus>()
+            expect(result).toEqual({
+                status: 'success',
+                detail: null
+            } satisfies NovelType.OperationStatus)
+        })
+    })
+
+    describe('deleteRevision', () => {
+        it('should call DELETE /revisions/{revisionId}', async () => {
+            vi.mocked(client.delete).mockResolvedValue({
+                data: { status: 'success', detail: null }
+            })
+
+            await deleteRevision('uuid-rev-1')
+
+            expect(client.delete).toHaveBeenCalledWith('/revisions/uuid-rev-1')
+        })
+
+        it('should map response to OperationStatus', async () => {
+            vi.mocked(client.delete).mockResolvedValue({
+                data: { status: 'success', detail: 'Deleted' }
+            })
+
+            const result = await deleteRevision('uuid-rev-1')
+
+            expectTypeOf(result).toEqualTypeOf<NovelType.OperationStatus>()
+            expect(result).toEqual({
+                status: 'success',
+                detail: 'Deleted'
+            } satisfies NovelType.OperationStatus)
         })
     })
 })

@@ -43,7 +43,7 @@ export const decideInstances = async (
 
 export const applyFilter = async (
     filterName: string,
-    labelGroupId: number,
+    labelGroupId: string,
     instances: any[],
     options: Record<string, any>
 ): Promise<void> => {

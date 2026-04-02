@@ -5,8 +5,8 @@ import { type RevisionMeta } from "../../types/novel";
 import { routeTo } from "../../routes";
 
 interface RevisionSidebarProps {
-    chapterId: number;
-    activeRevisionId: number | null;
+    chapterId: string;
+    activeRevisionId: string | null;
 }
 
 export const RevisionSidebar = ({ chapterId, activeRevisionId }: RevisionSidebarProps) => {
@@ -16,7 +16,6 @@ export const RevisionSidebar = ({ chapterId, activeRevisionId }: RevisionSidebar
 
     useEffect(() => {
         let mounted = true;
-        // Do NOT call setLoading(true) here.
 
         getChapterRevisionsByChapter(chapterId)
             .then(data => {
@@ -46,9 +45,9 @@ export const RevisionSidebar = ({ chapterId, activeRevisionId }: RevisionSidebar
                         const isActive = rev.revisionId === activeRevisionId;
                         return (
                             <li key={rev.revisionId} style={{ marginBottom: '8px' }}>
-                                <Link 
+                                <Link
                                     to={routeTo.view.chapter(chapterId, { revisionId: rev.revisionId })}
-                                    style={{ 
+                                    style={{
                                         textDecoration: 'none',
                                         display: 'block',
                                         padding: '8px',

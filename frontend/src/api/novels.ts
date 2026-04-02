@@ -51,6 +51,13 @@ const mapOperationStatus = (data: any): NovelType.OperationStatus => ({
     detail: data.detail,
 })
 
+const mapNovelAssociation = (data: any): NovelType.NovelAssociation => ({
+    associationId: data.association_id,
+    sourceNovelId: data.source_novel_id,
+    targetNovelId: data.target_novel_id,
+    associationType: data.association_type,
+})
+
 // --- Request mappers (frontend camelCase → API snake_case) ---
 
 const mapCreateNovelRequest = (data: NovelType.CreateNovel) => ({
@@ -211,6 +218,28 @@ export const makeRevisionPrimary = async (revisionId : string) : Promise<NovelTy
 export const deleteRevision = async (revisionId : string) : Promise<NovelType.OperationStatus> => {
     const result = await client.delete(`/revisions/${revisionId}`)
     return mapOperationStatus(result.data)
+}
+
+// --- Novel Association endpoints ---
+
+export const getNovelAssociations = async (sourceNovelId: string): Promise<NovelType.NovelAssociation[]> => {
+    const result = await client.get('/novel-associations', {
+        params: { 'source-novel-id': sourceNovelId }
+    })
+    return result.data.map(mapNovelAssociation)
+}
+
+export const createNovelAssociation = async (request: NovelType.CreateNovelAssociation): Promise<NovelType.NovelAssociation> => {
+    const result = await client.post('/novel-associations', {
+        source_novel_id: request.sourceNovelId,
+        target_novel_id: request.targetNovelId,
+        association_type: request.associationType,
+    })
+    return mapNovelAssociation(result.data)
+}
+
+export const deleteNovelAssociation = async (associationId: string): Promise<void> => {
+    await client.delete(`/novel-associations/${associationId}`)
 }
 
 // --- Revision Text endpoints ---

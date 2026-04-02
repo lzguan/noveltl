@@ -7,7 +7,7 @@ from collections.abc import Sequence
 
 from psycopg2 import Error as PgError
 from psycopg2 import errorcodes
-from sqlalchemy import delete, insert, literal, select, update
+from sqlalchemy import delete, func, insert, literal, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
@@ -17,6 +17,8 @@ from ..exceptions import DataTooLongException, NotFoundException, UnknownError
 from ..labels.models import Label, LabelData, LabelGroup
 from ..labels.permissions import label_group_mod_access_select
 from ..novels.exceptions import NovelNotFoundException
+from ..novels.models import Chapter, Revision, RevisionText
+from ..novels.permissions import revision_text_mod_access_select
 from . import models, schemas
 from .constants import GlossaryRole
 from .exceptions import (
@@ -25,6 +27,7 @@ from .exceptions import (
     GlossaryContributorNotFoundException,
     GlossaryEntryNotFoundException,
     GlossaryNotFoundException,
+    InvalidSearchModeException,
 )
 from .permissions import (
     glossary_entry_mod_access_delete,
@@ -603,3 +606,180 @@ def import_from_labels(
         entries_updated=entries_updated,
         entries_skipped=entries_skipped,
     )
+
+
+# --- Term Search ---
+
+
+def search_term_occurrences(
+    db: Session,
+    glossary_entry_id: uuid.UUID,
+    request: schemas.SearchTermRequest,
+    current_user: User | None,
+) -> schemas.SearchTermResponse:
+    """
+    Search for occurrences of a glossary entry's source_term across chapters of the associated novel.
+
+    Two modes are supported:
+    - 'string': Uses SQL POSITION() to find term in the primary revision text for each chapter.
+    - 'label': Queries Labels where label_word == source_term within the specified label_group_id.
+      Requires an authenticated user (guest access is not supported for label mode).
+
+    Args:
+        db: Database session.
+        glossary_entry_id: UUID of the glossary entry whose source_term to search.
+        request: Search request containing mode and optional label_group_id.
+        current_user: User performing the search. Can be None for guest access (string mode only).
+
+    Raises:
+        GlossaryEntryNotFoundException: Entry not found or insufficient permissions.
+        InvalidSearchModeException: mode is 'label' but label_group_id is not provided,
+            or mode is 'label' but current_user is None (guest access not allowed).
+        NotFoundException: label_group_id does not exist or is inaccessible (label mode).
+    """
+    # Verify the glossary entry is accessible and get source_term + novel_id
+    entry = query_glossary_entry(db, glossary_entry_id, current_user)
+    glossary = query_glossary(db, entry.glossary_id, current_user)
+    source_term = entry.source_term
+    novel_id = glossary.novel_id
+
+    if request.mode == "string":
+        return _search_term_string_mode(db, current_user, novel_id, source_term)
+    elif request.mode == "label":
+        if request.label_group_id is None:
+            raise InvalidSearchModeException("label_group_id is required for label mode.")
+        if current_user is None:
+            raise InvalidSearchModeException("Authentication is required for label mode.")
+        return _search_term_label_mode(db, current_user, novel_id, source_term, request.label_group_id)
+    else:
+        raise InvalidSearchModeException(f"Unknown search mode: {request.mode}")
+
+
+def _search_term_string_mode(
+    db: Session,
+    current_user: User | None,
+    novel_id: uuid.UUID,
+    source_term: str,
+) -> schemas.SearchTermResponse:
+    """
+    Search for source_term using SQL POSITION() on the latest primary revision text for each chapter.
+    Returns chapters ordered by chapter_num.
+    """
+    # Subquery to find the latest revision_text_version per revision
+    max_version_subq = (
+        select(func.max(RevisionText.revision_text_version))
+        .where(RevisionText.revision_id == Revision.revision_id)
+        .correlate(Revision)
+        .scalar_subquery()
+    )
+
+    # Query: chapters → primary revision → latest revision text
+    q = (
+        select(
+            Chapter.chapter_id,
+            Chapter.chapter_num,
+            RevisionText.revision_text_id,
+            RevisionText.revision_text_content,
+        )
+        .select_from(Chapter)
+        .join(Revision, Revision.chapter_id == Chapter.chapter_id)
+        .join(RevisionText, RevisionText.revision_id == Revision.revision_id)
+        .where(Chapter.novel_id == novel_id)
+        .where(Revision.revision_is_primary.is_(True))
+        .where(RevisionText.revision_text_version == max_version_subq)
+        .order_by(Chapter.chapter_num.asc())
+    )
+    # Apply revision text permission
+    q = revision_text_mod_access_select(q, current_user)
+
+    rows = db.execute(q).all()
+
+    occurrences: list[schemas.TermOccurrence] = []
+    total_count = 0
+
+    for chapter_id, chapter_num, revision_text_id, content in rows:
+        positions: list[schemas.TermPosition] = []
+        if source_term and content:
+            term_len = len(source_term)
+            start = 0
+            while True:
+                idx = content.find(source_term, start)
+                if idx == -1:
+                    break
+                positions.append(schemas.TermPosition(start=idx, end=idx + term_len))
+                start = idx + 1
+
+        if positions:
+            occurrences.append(
+                schemas.TermOccurrence(
+                    chapter_id=chapter_id,
+                    chapter_num=chapter_num,
+                    revision_text_id=revision_text_id,
+                    positions=positions,
+                )
+            )
+            total_count += len(positions)
+
+    return schemas.SearchTermResponse(occurrences=occurrences, total_count=total_count)
+
+
+def _search_term_label_mode(
+    db: Session,
+    current_user: User,
+    novel_id: uuid.UUID,
+    source_term: str,
+    label_group_id: uuid.UUID,
+) -> schemas.SearchTermResponse:
+    """
+    Search for source_term using Labels where label_word == source_term, within a label_group_id.
+    Returns chapters ordered by chapter_num.
+    """
+    # Verify read access to the label group
+    q_label_group = select(LabelGroup.label_group_id).where(LabelGroup.label_group_id == label_group_id)
+    q_label_group = label_group_mod_access_select(q_label_group, current_user)
+    try:
+        db.execute(q_label_group).scalar_one()
+    except NoResultFound as e:
+        raise NotFoundException("Label group not found.") from e
+
+    # Query: labels → label_data → revision_text → revision → chapter
+    q = (
+        select(
+            Chapter.chapter_id,
+            Chapter.chapter_num,
+            RevisionText.revision_text_id,
+            Label.label_start,
+            Label.label_end,
+        )
+        .select_from(Label)
+        .join(LabelData, LabelData.label_data_id == Label.label_data_id)
+        .join(RevisionText, RevisionText.revision_text_id == LabelData.revision_text_id)
+        .join(Revision, Revision.revision_id == RevisionText.revision_id)
+        .join(Chapter, Chapter.chapter_id == Revision.chapter_id)
+        .where(LabelData.label_group_id == label_group_id)
+        .where(Chapter.novel_id == novel_id)
+        .where(Label.label_word == source_term)
+        .order_by(Chapter.chapter_num.asc(), Label.label_start.asc())
+    )
+
+    rows = db.execute(q).all()
+
+    # Group positions by chapter
+    chapter_map: dict[uuid.UUID, schemas.TermOccurrence] = {}
+    chapter_order: list[uuid.UUID] = []
+
+    for chapter_id, chapter_num, revision_text_id, label_start, label_end in rows:
+        if chapter_id not in chapter_map:
+            chapter_map[chapter_id] = schemas.TermOccurrence(
+                chapter_id=chapter_id,
+                chapter_num=chapter_num,
+                revision_text_id=revision_text_id,
+                positions=[],
+            )
+            chapter_order.append(chapter_id)
+        chapter_map[chapter_id].positions.append(schemas.TermPosition(start=label_start, end=label_end))
+
+    occurrences = [chapter_map[cid] for cid in chapter_order]
+    total_count = sum(len(occ.positions) for occ in occurrences)
+
+    return schemas.SearchTermResponse(occurrences=occurrences, total_count=total_count)

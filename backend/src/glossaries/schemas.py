@@ -3,6 +3,7 @@ Pydantic schemas for glossaries.
 """
 
 import uuid
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -135,3 +136,59 @@ class ImportResult(BaseModel):
     entries_created: int
     entries_updated: int
     entries_skipped: int
+
+
+class TermPosition(BaseModel):
+    """
+    A single occurrence of a term within chapter text.
+
+    Attributes:
+        start: Start character index (inclusive).
+        end: End character index (exclusive).
+    """
+
+    start: int
+    end: int
+
+
+class TermOccurrence(BaseModel):
+    """
+    All occurrences of a term within a single chapter.
+
+    Attributes:
+        chapter_id: UUID of the chapter.
+        chapter_num: Chapter number for ordering.
+        revision_text_id: UUID of the revision text that was searched.
+        positions: List of (start, end) positions where the term was found.
+    """
+
+    chapter_id: uuid.UUID
+    chapter_num: int
+    revision_text_id: uuid.UUID
+    positions: list[TermPosition]
+
+
+class SearchTermRequest(BaseModel):
+    """
+    Pydantic schema for searching term occurrences.
+
+    Attributes:
+        mode: Search mode — 'string' for SQL POSITION-based search, 'label' for label-based search.
+        label_group_id: Required when mode is 'label'. The label group to search within.
+    """
+
+    mode: Literal["string", "label"]
+    label_group_id: uuid.UUID | None = None
+
+
+class SearchTermResponse(BaseModel):
+    """
+    Pydantic schema for term search results.
+
+    Attributes:
+        occurrences: List of per-chapter term occurrences.
+        total_count: Total number of position matches across all chapters.
+    """
+
+    occurrences: list[TermOccurrence]
+    total_count: int

@@ -35,6 +35,23 @@ const mapImportResult = (data: any): GlossaryType.ImportResult => ({
     entriesSkipped: data.entries_skipped,
 })
 
+const mapTermPosition = (data: any): GlossaryType.TermPosition => ({
+    start: data.start,
+    end: data.end,
+})
+
+const mapTermOccurrence = (data: any): GlossaryType.TermOccurrence => ({
+    chapterId: data.chapter_id,
+    chapterNum: data.chapter_num,
+    revisionTextId: data.revision_text_id,
+    positions: (data.positions || []).map(mapTermPosition),
+})
+
+const mapSearchTermResponse = (data: any): GlossaryType.SearchTermResponse => ({
+    occurrences: (data.occurrences || []).map(mapTermOccurrence),
+    totalCount: data.total_count,
+})
+
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 // --- Request mappers (frontend camelCase → API snake_case) ---
@@ -165,6 +182,22 @@ export const updateGlossaryContributor = async (
 
 export const deleteGlossaryContributor = async (glossaryId: string, userId: string): Promise<void> => {
     await client.delete(`/glossaries/${glossaryId}/contributors/${userId}`)
+}
+
+// Term Search
+
+export const searchTermOccurrences = async (
+    glossaryEntryId: string,
+    request: GlossaryType.SearchTermRequest,
+): Promise<GlossaryType.SearchTermResponse> => {
+    const response = await client.post(
+        `/glossary-entries/${glossaryEntryId}/search-occurrences`,
+        {
+            mode: request.mode,
+            label_group_id: request.labelGroupId ?? null,
+        },
+    )
+    return mapSearchTermResponse(response.data)
 }
 
 // Import

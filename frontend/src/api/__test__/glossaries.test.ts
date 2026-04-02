@@ -17,12 +17,14 @@ import {
     updateGlossaryContributor,
     deleteGlossaryContributor,
     importGlossaryFromLabels,
+    searchTermOccurrences,
 } from '../glossaries'
 import {
     type Glossary,
     type GlossaryEntry,
     type GlossaryContributor,
     type ImportResult,
+    type SearchTermResponse,
 } from '../../types/glossary'
 
 vi.mock('../client')
@@ -1012,6 +1014,123 @@ describe('Glossary API', () => {
                 labelGroupId: 'uuid-lg-1',
                 overwriteExisting: false,
             })).rejects.toThrow()
+        })
+    })
+
+    // --- Term Search ---
+
+    describe('searchTermOccurrences', () => {
+        it('should call POST /glossary-entries/{glossaryEntryId}/search-occurrences', async () => {
+            vi.mocked(client.post).mockResolvedValue({
+                data: { occurrences: [], total_count: 0 }
+            })
+
+            await searchTermOccurrences('uuid-ge-1', { mode: 'string' })
+
+            expect(client.post).toHaveBeenCalledWith(
+                '/glossary-entries/uuid-ge-1/search-occurrences',
+                expect.any(Object)
+            )
+        })
+
+        it('should map camelCase request to snake_case body for string mode', async () => {
+            vi.mocked(client.post).mockResolvedValue({
+                data: { occurrences: [], total_count: 0 }
+            })
+
+            await searchTermOccurrences('uuid-ge-1', { mode: 'string' })
+
+            expect(client.post).toHaveBeenCalledWith(
+                '/glossary-entries/uuid-ge-1/search-occurrences',
+                { mode: 'string', label_group_id: null }
+            )
+        })
+
+        it('should map camelCase request to snake_case body for label mode with labelGroupId', async () => {
+            vi.mocked(client.post).mockResolvedValue({
+                data: { occurrences: [], total_count: 0 }
+            })
+
+            await searchTermOccurrences('uuid-ge-2', {
+                mode: 'label',
+                labelGroupId: 'uuid-lg-1',
+            })
+
+            expect(client.post).toHaveBeenCalledWith(
+                '/glossary-entries/uuid-ge-2/search-occurrences',
+                { mode: 'label', label_group_id: 'uuid-lg-1' }
+            )
+        })
+
+        it('should map snake_case response to camelCase with occurrences', async () => {
+            vi.mocked(client.post).mockResolvedValue({
+                data: {
+                    occurrences: [
+                        {
+                            chapter_id: 'uuid-ch-1',
+                            chapter_num: 1,
+                            revision_text_id: 'uuid-rt-1',
+                            positions: [
+                                { start: 5, end: 7 },
+                                { start: 20, end: 22 },
+                            ],
+                        },
+                    ],
+                    total_count: 2,
+                }
+            })
+
+            const result = await searchTermOccurrences('uuid-ge-1', { mode: 'string' })
+
+            expectTypeOf(result).toEqualTypeOf<SearchTermResponse>()
+            expect(result).toEqual({
+                occurrences: [
+                    {
+                        chapterId: 'uuid-ch-1',
+                        chapterNum: 1,
+                        revisionTextId: 'uuid-rt-1',
+                        positions: [
+                            { start: 5, end: 7 },
+                            { start: 20, end: 22 },
+                        ],
+                    },
+                ],
+                totalCount: 2,
+            } satisfies SearchTermResponse)
+        })
+
+        it('should return empty occurrences when no matches found', async () => {
+            vi.mocked(client.post).mockResolvedValue({
+                data: { occurrences: [], total_count: 0 }
+            })
+
+            const result = await searchTermOccurrences('uuid-ge-1', { mode: 'string' })
+
+            expectTypeOf(result).toEqualTypeOf<SearchTermResponse>()
+            expect(result).toEqual({
+                occurrences: [],
+                totalCount: 0,
+            } satisfies SearchTermResponse)
+        })
+
+        it('should propagate 404 when glossary entry not found', async () => {
+            vi.mocked(client.post).mockRejectedValue(
+                makeAxiosError(404, { detail: 'Glossary entry not found' })
+            )
+
+            await expect(
+                searchTermOccurrences('uuid-ge-999', { mode: 'string' })
+            ).rejects.toThrow()
+        })
+
+        it('should propagate 400 when label mode is missing label_group_id', async () => {
+            vi.mocked(client.post).mockRejectedValue(
+                makeAxiosError(400, { detail: 'label_group_id is required for label mode.' })
+            )
+
+            await expect(
+                searchTermOccurrences('uuid-ge-1', { mode: 'label' })
+            ).rejects.toThrow()
         })
     })
 })

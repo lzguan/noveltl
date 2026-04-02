@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useLanguages } from "../../contexts/LanguageContext";
 import { Modal } from "../common/Modal";
 import {
@@ -11,6 +11,7 @@ import {
     updateGlossaryEntry,
     deleteGlossaryEntry,
     importGlossaryFromLabels,
+    searchTermOccurrences,
 } from "../../api/glossaries";
 import { getLabelGroupsByNovel } from "../../api/labels";
 import type * as GlossaryType from "../../types/glossary";
@@ -281,15 +282,166 @@ const ImportFromLabelsForm = ({ glossaryId, novelId, onImported, onClose }: Impo
     );
 };
 
+// ---- Term Search Popover ----
+
+interface TermSearchPopoverProps {
+    glossaryEntryId: string;
+    novelId: string;
+    anchorRef: React.RefObject<HTMLElement | null>;
+    onClose: () => void;
+    onNavigateToOccurrence?: (chapterId: string, position: GlossaryType.TermPosition) => void;
+}
+
+const TermSearchPopover = ({ glossaryEntryId, novelId, anchorRef, onClose, onNavigateToOccurrence }: TermSearchPopoverProps) => {
+    const [mode, setMode] = useState<'string' | 'label'>('string');
+    const [labelGroupId, setLabelGroupId] = useState<string>('');
+    const [labelGroups, setLabelGroups] = useState<LabelGroup[]>([]);
+    const [searching, setSearching] = useState(false);
+    const [searchResult, setSearchResult] = useState<GlossaryType.SearchTermResponse | null>(null);
+    const [error, setError] = useState('');
+    const popoverRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        getLabelGroupsByNovel(novelId).then(setLabelGroups).catch(() => {/* ignore */});
+    }, [novelId]);
+
+    // Close on outside click
+    useEffect(() => {
+        const handleMouseDown = (e: MouseEvent) => {
+            if (
+                popoverRef.current &&
+                !popoverRef.current.contains(e.target as Node) &&
+                anchorRef.current &&
+                !anchorRef.current.contains(e.target as Node)
+            ) {
+                onClose();
+            }
+        };
+        document.addEventListener("mousedown", handleMouseDown);
+        return () => document.removeEventListener("mousedown", handleMouseDown);
+    }, [anchorRef, onClose]);
+
+    const handleSearch = async () => {
+        setSearching(true);
+        setError('');
+        try {
+            const result = await searchTermOccurrences(glossaryEntryId, {
+                mode,
+                labelGroupId: mode === 'label' && labelGroupId ? labelGroupId : null,
+            });
+            setSearchResult(result);
+        } catch (err) {
+            console.error(err);
+            setError('Search failed.');
+        } finally {
+            setSearching(false);
+        }
+    };
+
+    const anchorRect = anchorRef.current?.getBoundingClientRect();
+    const popoverStyle: React.CSSProperties = {
+        position: 'fixed',
+        top: anchorRect ? anchorRect.bottom + 4 : 0,
+        left: anchorRect ? Math.max(0, anchorRect.right - 260) : 0,
+        width: '260px',
+        background: '#fff',
+        border: '1px solid #ccc',
+        borderRadius: '6px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        zIndex: 1000,
+        padding: '12px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        fontSize: '0.82rem',
+    };
+
+    return (
+        <div ref={popoverRef} style={popoverStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600 }}>Find Occurrences</span>
+                <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: '1rem', lineHeight: 1 }}>&times;</button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                    <input type="radio" value="string" checked={mode === 'string'} onChange={() => setMode('string')} />
+                    String
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                    <input type="radio" value="label" checked={mode === 'label'} onChange={() => setMode('label')} />
+                    Label
+                </label>
+            </div>
+
+            {mode === 'label' && (
+                <select
+                    value={labelGroupId}
+                    onChange={(e) => setLabelGroupId(e.target.value)}
+                    style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '0.82rem' }}
+                >
+                    <option value="">Any label group...</option>
+                    {labelGroups.map((g) => (
+                        <option key={g.labelGroupId} value={g.labelGroupId}>{g.labelGroupName}</option>
+                    ))}
+                </select>
+            )}
+
+            <button
+                onClick={() => void handleSearch()}
+                disabled={searching}
+                style={{ padding: '4px 10px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: '#4a90d9', color: '#fff', fontWeight: 500, fontSize: '0.82rem' }}
+            >
+                {searching ? 'Searching...' : 'Search'}
+            </button>
+
+            {error && <div style={{ color: '#c00' }}>{error}</div>}
+
+            {searchResult && (
+                <div>
+                    <div style={{ color: '#666', marginBottom: '4px' }}>{searchResult.totalCount} match{searchResult.totalCount !== 1 ? 'es' : ''}</div>
+                    {searchResult.occurrences.length === 0 ? (
+                        <div style={{ color: '#888' }}>No occurrences found.</div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '160px', overflowY: 'auto' }}>
+                            {searchResult.occurrences.map((occ) => (
+                                <div
+                                    key={occ.chapterId}
+                                    style={{
+                                        padding: '4px 8px',
+                                        border: '1px solid #eee',
+                                        borderRadius: '4px',
+                                        background: '#f9f9f9',
+                                        cursor: onNavigateToOccurrence ? 'pointer' : 'default',
+                                    }}
+                                    onClick={() => {
+                                        if (onNavigateToOccurrence && occ.positions.length > 0) {
+                                            onNavigateToOccurrence(occ.chapterId, occ.positions[0]);
+                                        }
+                                    }}
+                                >
+                                    <span style={{ fontWeight: 500 }}>Chapter {occ.chapterNum}</span>
+                                    <span style={{ color: '#888', marginLeft: '6px' }}>({occ.positions.length} match{occ.positions.length !== 1 ? 'es' : ''})</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 // ---- Glossary Detail View ----
 
 interface GlossaryDetailProps {
     glossaryId: string;
     novelId: string;
     onBack: () => void;
+    onNavigateToOccurrence?: (chapterId: string, position: GlossaryType.TermPosition) => void;
 }
 
-const GlossaryDetail = ({ glossaryId, novelId, onBack }: GlossaryDetailProps) => {
+const GlossaryDetail = ({ glossaryId, novelId, onBack, onNavigateToOccurrence }: GlossaryDetailProps) => {
     const [glossary, setGlossary] = useState<GlossaryType.Glossary | null>(null);
     const [entries, setEntries] = useState<GlossaryType.GlossaryEntry[]>([]);
     const [loading, setLoading] = useState(true);
@@ -300,6 +452,9 @@ const GlossaryDetail = ({ glossaryId, novelId, onBack }: GlossaryDetailProps) =>
     const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
     const [editFields, setEditFields] = useState<{ translatedTerm: string; contextNotes: string; entityType: string }>({ translatedTerm: "", contextNotes: "", entityType: "" });
     const [savingEdit, setSavingEdit] = useState(false);
+    const [findOpenEntryId, setFindOpenEntryId] = useState<string | null>(null);
+    const findButtonRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
+    const findAnchorRef = useRef<HTMLElement | null>(null);
 
     const loadEntries = useCallback(async () => {
         try {
@@ -446,6 +601,16 @@ const GlossaryDetail = ({ glossaryId, novelId, onBack }: GlossaryDetailProps) =>
                                             </>
                                         ) : (
                                             <>
+                                                <button
+                                                    ref={(el) => { findButtonRefs.current.set(entry.glossaryEntryId, el); }}
+                                                    onClick={() => {
+                                                        const btn = findButtonRefs.current.get(entry.glossaryEntryId);
+                                                        findAnchorRef.current = btn ?? null;
+                                                        setFindOpenEntryId(findOpenEntryId === entry.glossaryEntryId ? null : entry.glossaryEntryId);
+                                                    }}
+                                                    style={{ padding: "2px 7px", borderRadius: "3px", border: "1px solid #4a90d9", cursor: "pointer", background: findOpenEntryId === entry.glossaryEntryId ? "#e3f0ff" : "#fff", color: "#4a90d9", fontSize: "0.75rem" }}>
+                                                    Find
+                                                </button>
                                                 <button onClick={() => startEdit(entry)}
                                                     style={{ padding: "2px 7px", borderRadius: "3px", border: "1px solid #ccc", cursor: "pointer", background: "#fff", fontSize: "0.75rem" }}>
                                                     Edit
@@ -480,6 +645,16 @@ const GlossaryDetail = ({ glossaryId, novelId, onBack }: GlossaryDetailProps) =>
                     onClose={() => setImportOpen(false)}
                 />
             </Modal>
+
+            {findOpenEntryId && (
+                <TermSearchPopover
+                    glossaryEntryId={findOpenEntryId}
+                    novelId={novelId}
+                    anchorRef={findAnchorRef}
+                    onClose={() => setFindOpenEntryId(null)}
+                    onNavigateToOccurrence={onNavigateToOccurrence}
+                />
+            )}
         </div>
     );
 };
@@ -570,9 +745,10 @@ const GlossaryList = ({ novelId, onSelect }: GlossaryListProps) => {
 
 interface GlossaryPanelProps {
     novelId: string;
+    onNavigateToOccurrence?: (chapterId: string, position: GlossaryType.TermPosition) => void;
 }
 
-export const GlossaryPanel = ({ novelId }: GlossaryPanelProps) => {
+export const GlossaryPanel = ({ novelId, onNavigateToOccurrence }: GlossaryPanelProps) => {
     const [selectedGlossaryId, setSelectedGlossaryId] = useState<string | null>(null);
 
     const handleSelect = useCallback((glossaryId: string) => {
@@ -589,6 +765,7 @@ export const GlossaryPanel = ({ novelId }: GlossaryPanelProps) => {
                 glossaryId={selectedGlossaryId}
                 novelId={novelId}
                 onBack={handleBack}
+                onNavigateToOccurrence={onNavigateToOccurrence}
             />
         );
     }

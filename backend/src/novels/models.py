@@ -25,25 +25,36 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
 
 from ..models import Base
-from .constants import MAX_AUTHOR_LENGTH, MAX_CHAPTER_TITLE_LEN, MAX_NOVEL_TITLE_LEN, NovelType, Role, Visibility
+from .constants import (
+    MAX_AUTHOR_LENGTH,
+    MAX_CHAPTER_TITLE_LEN,
+    MAX_NOVEL_TITLE_LEN,
+    AssociationType,
+    NovelType,
+    Role,
+    Visibility,
+)
 
 if TYPE_CHECKING:
     from src.auth.models import User
     from src.autolabels.models import AutoLabel
+    from src.glossaries.models import Glossary
     from src.labels.models import LabelData, LabelGroup
     from src.languages.models import Language
 
-class EnumAsInteger(TypeDecorator): # type: ignore
+
+class EnumAsInteger(TypeDecorator):  # type: ignore
     """
     Custom SQLAlchemy type to store Python Enums as integers in the database.
 
     Copied off stackoverflow.
     https://stackoverflow.com/questions/32287299/sqlalchemy-database-int-to-python-enum
     """
+
     impl = Integer
     cache_ok = True
 
-    def __init__(self, enum_type): # type: ignore
+    def __init__(self, enum_type):  # type: ignore
         super().__init__()
         self.enum_type = enum_type
 
@@ -53,10 +64,10 @@ class EnumAsInteger(TypeDecorator): # type: ignore
         raise ValueError(f"Invalid value {value} for enum {self.enum_type}")
 
     def process_result_value(self, value: Any | None, dialect: Dialect) -> Any | None:
-        return self.enum_type(value) # type: ignore
+        return self.enum_type(value)  # type: ignore
 
-    def copy(self, **kwargs): # type: ignore
-        return EnumAsInteger(self.enum_type) # type: ignore
+    def copy(self, **kwargs):  # type: ignore
+        return EnumAsInteger(self.enum_type)  # type: ignore
 
 
 class Novel(Base):
@@ -77,21 +88,84 @@ class Novel(Base):
         novel_title is non-nullable.
         novel_author must have length at most MAX_AUTHOR_LENGTH.
     """
+
     __tablename__ = "novels"
 
-    novel_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
-    novel_title : Mapped[str] = mapped_column(String(MAX_NOVEL_TITLE_LEN), nullable=False)
-    novel_description : Mapped[str] = mapped_column(Text, nullable=True)
-    novel_author : Mapped[str] = mapped_column(String(MAX_AUTHOR_LENGTH), nullable=True)
-    novel_visibility : Mapped[Visibility] = mapped_column(EnumAsInteger(Visibility), nullable=False)
-    novel_type : Mapped[NovelType] = mapped_column(Enum(NovelType, native_enum=False, length=16, values_callable=lambda x : [str(e.value) for e in x]), nullable=False) # type: ignore
+    novel_id: Mapped[uuid.UUID] = mapped_column(
+        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
+    )
+    novel_title: Mapped[str] = mapped_column(String(MAX_NOVEL_TITLE_LEN), nullable=False)
+    novel_description: Mapped[str] = mapped_column(Text, nullable=True)
+    novel_author: Mapped[str] = mapped_column(String(MAX_AUTHOR_LENGTH), nullable=True)
+    novel_visibility: Mapped[Visibility] = mapped_column(EnumAsInteger(Visibility), nullable=False)
+    novel_type: Mapped[NovelType] = mapped_column(
+        Enum(NovelType, native_enum=False, length=16, values_callable=lambda x: [str(e.value) for e in x]),
+        nullable=False,
+    )  # type: ignore
 
-    language_code : Mapped[str] = mapped_column(ForeignKey("languages.language_code", name='fk_novels_language_code_languages'), nullable=False)
-    language_of_novel : Mapped["Language"] = relationship(back_populates="novels_with_language")
+    language_code: Mapped[str] = mapped_column(
+        ForeignKey("languages.language_code", name="fk_novels_language_code_languages"), nullable=False
+    )
+    language_of_novel: Mapped["Language"] = relationship(back_populates="novels_with_language")
 
-    chapters_with_novel : Mapped[list["Chapter"]] = relationship(back_populates='novel_of_chapter')
-    label_groups_with_novel : Mapped[list["LabelGroup"]] = relationship(back_populates='novel_of_label_group')
-    contributors_with_novel : Mapped[list["Contributor"]] = relationship(back_populates='novel_of_contributor')
+    chapters_with_novel: Mapped[list["Chapter"]] = relationship(back_populates="novel_of_chapter")
+    label_groups_with_novel: Mapped[list["LabelGroup"]] = relationship(back_populates="novel_of_label_group")
+    contributors_with_novel: Mapped[list["Contributor"]] = relationship(back_populates="novel_of_contributor")
+    glossaries_with_novel: Mapped[list["Glossary"]] = relationship(back_populates="novel_of_glossary")
+    source_associations_with_novel: Mapped[list["NovelAssociation"]] = relationship(
+        back_populates="source_novel_of_association",
+        foreign_keys="NovelAssociation.source_novel_id",
+        cascade="all, delete-orphan",
+    )
+    target_associations_with_novel: Mapped[list["NovelAssociation"]] = relationship(
+        back_populates="target_novel_of_association",
+        foreign_keys="NovelAssociation.target_novel_id",
+        cascade="all, delete-orphan",
+    )
+
+
+class NovelAssociation(Base):
+    """
+    Database model for an association between two novels.
+
+    Attributes:
+        association_id: UUID primary key.
+        source_novel_id: UUID foreign key to the source novel.
+        target_novel_id: UUID foreign key to the target novel.
+        association_type: The type of relationship (e.g. 'translation').
+
+    Note:
+        The triple (source_novel_id, target_novel_id, association_type) must be unique.
+    """
+
+    __tablename__ = "novel_associations"
+
+    association_id: Mapped[uuid.UUID] = mapped_column(
+        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
+    )
+    association_type: Mapped[AssociationType] = mapped_column(
+        Enum(AssociationType, native_enum=False, length=32, values_callable=lambda x: [str(e.value) for e in x]),
+        nullable=False,
+    )  # type: ignore
+
+    source_novel_id = mapped_column(
+        ForeignKey("novels.novel_id", name="fk_novel_associations_source_novel_id_novels"), nullable=False
+    )
+    source_novel_of_association: Mapped["Novel"] = relationship(
+        back_populates="source_associations_with_novel", foreign_keys=[source_novel_id]
+    )
+
+    target_novel_id = mapped_column(
+        ForeignKey("novels.novel_id", name="fk_novel_associations_target_novel_id_novels"), nullable=False
+    )
+    target_novel_of_association: Mapped["Novel"] = relationship(
+        back_populates="target_associations_with_novel", foreign_keys=[target_novel_id]
+    )
+
+    __table_args__ = (
+        UniqueConstraint("source_novel_id", "target_novel_id", "association_type", name="uq_novel_association"),
+    )
+
 
 class Contributor(Base):
     """
@@ -103,15 +177,18 @@ class Contributor(Base):
         novel_id: Integer foreign key identifier to the novel this contributor contributes to.
         user_id: Integer foreign key identifier to the user who is the contributor.
     """
-    __tablename__ = 'novel_contributors'
 
-    contributor_role : Mapped[Role] = mapped_column(Enum(Role, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False) # type: ignore
+    __tablename__ = "novel_contributors"
 
-    novel_id = mapped_column(ForeignKey('novels.novel_id'), primary_key=True)
-    novel_of_contributor : Mapped["Novel"] = relationship(back_populates='contributors_with_novel')
+    contributor_role: Mapped[Role] = mapped_column(
+        Enum(Role, native_enum=False, length=10, values_callable=lambda x: [str(e.value) for e in x]), nullable=False
+    )  # type: ignore
 
-    user_id = mapped_column(ForeignKey('users.user_id'), primary_key=True)
-    user_of_contributor : Mapped["User"] = relationship(back_populates='contributors_with_user')
+    novel_id = mapped_column(ForeignKey("novels.novel_id"), primary_key=True)
+    novel_of_contributor: Mapped["Novel"] = relationship(back_populates="contributors_with_novel")
+
+    user_id = mapped_column(ForeignKey("users.user_id"), primary_key=True)
+    user_of_contributor: Mapped["User"] = relationship(back_populates="contributors_with_user")
 
 
 class Chapter(Base):
@@ -127,19 +204,21 @@ class Chapter(Base):
         Each pair (chapter_num, novel_id) should be unique.
         chapter_num and novel_id are non-nullable.
     """
-    __tablename__ = 'chapters'
 
-    chapter_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
-    chapter_num : Mapped[int] = mapped_column(Integer, nullable=False)
+    __tablename__ = "chapters"
 
-    novel_id = mapped_column(ForeignKey('novels.novel_id', name='fk_chapters_novel_id_novels'), nullable=False)
-    novel_of_chapter : Mapped[Novel] = relationship(back_populates='chapters_with_novel')
-
-    revisions_with_chapter : Mapped[list["Revision"]] = relationship(back_populates='chapter_of_revision')
-
-    __table_args__ = (
-        UniqueConstraint('chapter_num', 'novel_id', name="chapter_per_novel"),
+    chapter_id: Mapped[uuid.UUID] = mapped_column(
+        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
     )
+    chapter_num: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    novel_id = mapped_column(ForeignKey("novels.novel_id", name="fk_chapters_novel_id_novels"), nullable=False)
+    novel_of_chapter: Mapped[Novel] = relationship(back_populates="chapters_with_novel")
+
+    revisions_with_chapter: Mapped[list["Revision"]] = relationship(back_populates="chapter_of_revision")
+
+    __table_args__ = (UniqueConstraint("chapter_num", "novel_id", name="chapter_per_novel"),)
+
 
 class Revision(Base):
     """
@@ -159,22 +238,35 @@ class Revision(Base):
         For each chapter_id, only one Revision can be marked as primary.
         If a Revision is marked as primary, it must be marked as public.
     """
-    __tablename__ = 'revisions'
 
-    revision_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
-    revision_title : Mapped[str] = mapped_column(String(MAX_CHAPTER_TITLE_LEN))
-    revision_is_primary : Mapped[bool] = mapped_column(Boolean, nullable=False)
-    revision_is_public : Mapped[bool] = mapped_column(Boolean, nullable=False)
+    __tablename__ = "revisions"
 
-    chapter_of_revision : Mapped["Chapter"] = relationship(back_populates="revisions_with_chapter")
-    chapter_id = mapped_column(ForeignKey('chapters.chapter_id', name='fk_revisions_chapter_id_chapters'), nullable=False)
+    revision_id: Mapped[uuid.UUID] = mapped_column(
+        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
+    )
+    revision_title: Mapped[str] = mapped_column(String(MAX_CHAPTER_TITLE_LEN))
+    revision_is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    revision_is_public: Mapped[bool] = mapped_column(Boolean, nullable=False)
 
-    revision_texts_with_revision : Mapped[list["RevisionText"]] = relationship(back_populates='revision_of_revision_text', cascade='all, delete-orphan')
+    chapter_of_revision: Mapped["Chapter"] = relationship(back_populates="revisions_with_chapter")
+    chapter_id = mapped_column(
+        ForeignKey("chapters.chapter_id", name="fk_revisions_chapter_id_chapters"), nullable=False
+    )
+
+    revision_texts_with_revision: Mapped[list["RevisionText"]] = relationship(
+        back_populates="revision_of_revision_text", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
-        Index('ix_one_primary_revision_per_chapter', 'chapter_id', unique=True, postgresql_where=revision_is_primary.is_(True)),
-        CheckConstraint(or_(revision_is_public, not_(revision_is_primary)), name="primary_must_be_public_check")
+        Index(
+            "ix_one_primary_revision_per_chapter",
+            "chapter_id",
+            unique=True,
+            postgresql_where=revision_is_primary.is_(True),
+        ),
+        CheckConstraint(or_(revision_is_public, not_(revision_is_primary)), name="primary_must_be_public_check"),
     )
+
 
 class RevisionText(Base):
     """
@@ -187,19 +279,29 @@ class RevisionText(Base):
 
         revision_id: UUID foreign key identifier to the revision this text corresponds to.
     """
-    __tablename__ = 'revision_texts'
 
-    revision_text_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
-    revision_text_content : Mapped[str] = mapped_column(Text, nullable=False)
-    revision_text_version : Mapped[int] = mapped_column(Integer, nullable=False)
+    __tablename__ = "revision_texts"
 
-    revision_of_revision_text : Mapped["Revision"] = relationship(back_populates="revision_texts_with_revision")
-    revision_id = mapped_column(ForeignKey('revisions.revision_id', name='fk_revision_texts_revision_id_revisions', ondelete='CASCADE'), nullable=False)
+    revision_text_id: Mapped[uuid.UUID] = mapped_column(
+        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
+    )
+    revision_text_content: Mapped[str] = mapped_column(Text, nullable=False)
+    revision_text_version: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    label_datas_with_revision_text : Mapped[list["LabelData"]] = relationship(back_populates='revision_text_of_label_data')
+    revision_of_revision_text: Mapped["Revision"] = relationship(back_populates="revision_texts_with_revision")
+    revision_id = mapped_column(
+        ForeignKey("revisions.revision_id", name="fk_revision_texts_revision_id_revisions", ondelete="CASCADE"),
+        nullable=False,
+    )
 
-    auto_labels_with_revision_text : Mapped[list["AutoLabel"]] = relationship(back_populates='revision_text_of_auto_label', cascade='all, delete-orphan')
+    label_datas_with_revision_text: Mapped[list["LabelData"]] = relationship(
+        back_populates="revision_text_of_label_data"
+    )
+
+    auto_labels_with_revision_text: Mapped[list["AutoLabel"]] = relationship(
+        back_populates="revision_text_of_auto_label", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
-        UniqueConstraint('revision_id', 'revision_text_version', name="uq_revision_text_version_per_revision"),
+        UniqueConstraint("revision_id", "revision_text_version", name="uq_revision_text_version_per_revision"),
     )

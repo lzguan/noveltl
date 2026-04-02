@@ -99,3 +99,18 @@ export interface OperationStatus {
     status : 'success' | 'fail'
     detail? : string | null
 }
+
+// --- Novel Associations ---
+
+export interface NovelAssociation {
+    associationId : string
+    sourceNovelId : string
+    targetNovelId : string
+    associationType : string
+}
+
+export interface CreateNovelAssociation {
+    sourceNovelId : string
+    targetNovelId : string
+    associationType : string
+}

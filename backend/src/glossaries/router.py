@@ -16,6 +16,7 @@ from .exceptions import (
     GlossaryContributorNotFoundException,
     GlossaryEntryNotFoundException,
     GlossaryNotFoundException,
+    InvalidSearchModeException,
 )
 from .service import (
     import_from_labels,
@@ -33,6 +34,7 @@ from .service import (
     remove_glossary,
     remove_glossary_contributor,
     remove_glossary_entry,
+    search_term_occurrences,
 )
 
 router = APIRouter()
@@ -401,4 +403,44 @@ def action_import_from_labels(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred.",
+        ) from e
+
+
+# --- Term Search ---
+
+
+@router.post("/glossary-entries/{glossary_entry_id}/search-occurrences", response_model=schemas.SearchTermResponse)
+def read_term_occurrences(
+    glossary_entry_id: uuid.UUID,
+    request: schemas.SearchTermRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_optional_user)],
+):
+    """
+    Search for occurrences of a glossary entry's source_term across chapters.
+
+    Two modes:
+    - 'string': Searches the primary revision text for each chapter using string matching.
+    - 'label': Searches labels where label_word matches the source_term within a label group.
+
+    Raises:
+        404: Glossary entry not found or label group not found (label mode).
+        400: Invalid request (e.g. label_group_id missing in label mode).
+    """
+    try:
+        return search_term_occurrences(db, glossary_entry_id, request, current_user)
+    except GlossaryEntryNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Glossary entry with id {glossary_entry_id} not found.",
+        ) from e
+    except InvalidSearchModeException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except NotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e) or "Label group not found.",
         ) from e

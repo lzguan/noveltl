@@ -942,7 +942,12 @@ export const NovelWorkspacePage = () => {
                             </div>
                         )}
                         {activeRightPanel === "glossary" && (
-                            <GlossaryPanel novelId={novel.novelId} />
+                            <GlossaryPanel
+                                novelId={novel.novelId}
+                                onNavigateToOccurrence={(chapterId) => {
+                                    handleChapterChange(chapterId);
+                                }}
+                            />
                         )}
                     </RightPanel>
                 </div>

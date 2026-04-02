@@ -17,7 +17,10 @@ import {
     getRevisionTextById,
     getRevisionTextVersions,
     updateRevisionText,
-    deleteRevision
+    deleteRevision,
+    getNovelAssociations,
+    createNovelAssociation,
+    deleteNovelAssociation,
 } from '../novels'
 import * as NovelType from '../../types/novel'
 
@@ -942,6 +945,175 @@ describe('Novels API', () => {
                 status: 'success',
                 detail: 'Deleted'
             } satisfies NovelType.OperationStatus)
+        })
+    })
+
+    // --- Novel Associations ---
+
+    describe('getNovelAssociations', () => {
+        it('should call GET /novel-associations with source-novel-id query param', async () => {
+            vi.mocked(client.get).mockResolvedValue({ data: [] })
+
+            await getNovelAssociations('uuid-novel-1')
+
+            expect(client.get).toHaveBeenCalledWith('/novel-associations', {
+                params: { 'source-novel-id': 'uuid-novel-1' }
+            })
+        })
+
+        it('should map each association from snake_case to camelCase', async () => {
+            vi.mocked(client.get).mockResolvedValue({
+                data: [
+                    {
+                        association_id: 'uuid-assoc-1',
+                        source_novel_id: 'uuid-novel-1',
+                        target_novel_id: 'uuid-novel-2',
+                        association_type: 'translation',
+                    },
+                ]
+            })
+
+            const result = await getNovelAssociations('uuid-novel-1')
+
+            expectTypeOf(result).toEqualTypeOf<NovelType.NovelAssociation[]>()
+            expect(result).toEqual([
+                {
+                    associationId: 'uuid-assoc-1',
+                    sourceNovelId: 'uuid-novel-1',
+                    targetNovelId: 'uuid-novel-2',
+                    associationType: 'translation',
+                },
+            ] satisfies NovelType.NovelAssociation[])
+        })
+
+        it('should return empty array when novel has no associations', async () => {
+            vi.mocked(client.get).mockResolvedValue({ data: [] })
+
+            const result = await getNovelAssociations('uuid-novel-1')
+
+            expect(result).toEqual([])
+        })
+
+        it('should propagate 404 when novel not found', async () => {
+            vi.mocked(client.get).mockRejectedValue(
+                makeAxiosError(404, { detail: 'Novel not found' })
+            )
+
+            await expect(getNovelAssociations('uuid-novel-999')).rejects.toThrow()
+        })
+    })
+
+    describe('createNovelAssociation', () => {
+        it('should call POST /novel-associations', async () => {
+            vi.mocked(client.post).mockResolvedValue({
+                data: {
+                    association_id: 'uuid-assoc-1',
+                    source_novel_id: 'uuid-novel-1',
+                    target_novel_id: 'uuid-novel-2',
+                    association_type: 'translation',
+                }
+            })
+
+            await createNovelAssociation({
+                sourceNovelId: 'uuid-novel-1',
+                targetNovelId: 'uuid-novel-2',
+                associationType: 'translation',
+            })
+
+            expect(client.post).toHaveBeenCalledWith(
+                '/novel-associations',
+                expect.any(Object)
+            )
+        })
+
+        it('should map camelCase request to snake_case body', async () => {
+            vi.mocked(client.post).mockResolvedValue({
+                data: {
+                    association_id: 'uuid-assoc-2',
+                    source_novel_id: 'uuid-novel-3',
+                    target_novel_id: 'uuid-novel-4',
+                    association_type: 'translation',
+                }
+            })
+
+            await createNovelAssociation({
+                sourceNovelId: 'uuid-novel-3',
+                targetNovelId: 'uuid-novel-4',
+                associationType: 'translation',
+            })
+
+            expect(client.post).toHaveBeenCalledWith('/novel-associations', {
+                source_novel_id: 'uuid-novel-3',
+                target_novel_id: 'uuid-novel-4',
+                association_type: 'translation',
+            })
+        })
+
+        it('should map snake_case response to camelCase', async () => {
+            vi.mocked(client.post).mockResolvedValue({
+                data: {
+                    association_id: 'uuid-assoc-10',
+                    source_novel_id: 'uuid-novel-5',
+                    target_novel_id: 'uuid-novel-6',
+                    association_type: 'translation',
+                }
+            })
+
+            const result = await createNovelAssociation({
+                sourceNovelId: 'uuid-novel-5',
+                targetNovelId: 'uuid-novel-6',
+                associationType: 'translation',
+            })
+
+            expectTypeOf(result).toEqualTypeOf<NovelType.NovelAssociation>()
+            expect(result).toEqual({
+                associationId: 'uuid-assoc-10',
+                sourceNovelId: 'uuid-novel-5',
+                targetNovelId: 'uuid-novel-6',
+                associationType: 'translation',
+            } satisfies NovelType.NovelAssociation)
+        })
+
+        it('should propagate 409 when duplicate association exists', async () => {
+            vi.mocked(client.post).mockRejectedValue(
+                makeAxiosError(409, { detail: 'An association of this type between these novels already exists.' })
+            )
+
+            await expect(createNovelAssociation({
+                sourceNovelId: 'uuid-novel-1',
+                targetNovelId: 'uuid-novel-2',
+                associationType: 'translation',
+            })).rejects.toThrow()
+        })
+
+        it('should propagate 401 when user lacks permission', async () => {
+            vi.mocked(client.post).mockRejectedValue(
+                makeAxiosError(401, { detail: 'Insufficient permissions to perform this action.' })
+            )
+
+            await expect(createNovelAssociation({
+                sourceNovelId: 'uuid-novel-1',
+                targetNovelId: 'uuid-novel-2',
+                associationType: 'translation',
+            })).rejects.toThrow()
+        })
+    })
+
+    describe('deleteNovelAssociation', () => {
+        it('should call DELETE /novel-associations/{associationId}', async () => {
+            vi.mocked(client.delete).mockResolvedValue({ data: null })
+
+            await deleteNovelAssociation('uuid-assoc-1')
+
+            expect(client.delete).toHaveBeenCalledWith('/novel-associations/uuid-assoc-1')
+        })
+
+        it('should propagate 404 when association not found', async () => {
+            vi.mocked(client.delete).mockRejectedValue(
+                makeAxiosError(404, { detail: 'Novel association not found.' })
+            )
+
+            await expect(deleteNovelAssociation('uuid-assoc-999')).rejects.toThrow()
         })
     })
 })

@@ -72,6 +72,30 @@ export interface UpdateGlossaryContributor {
     glossaryContributorRole : GlossaryRole
 }
 
+// --- Term Search ---
+
+export interface TermPosition {
+    start: number
+    end: number
+}
+
+export interface TermOccurrence {
+    chapterId: string
+    chapterNum: number
+    revisionTextId: string
+    positions: TermPosition[]
+}
+
+export interface SearchTermRequest {
+    mode: 'string' | 'label'
+    labelGroupId?: string | null
+}
+
+export interface SearchTermResponse {
+    occurrences: TermOccurrence[]
+    totalCount: number
+}
+
 // --- Import ---
 
 export interface ImportFromLabels {

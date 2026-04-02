@@ -23,3 +23,7 @@ class DuplicateGlossaryEntryException(DuplicateException):
 
 class DuplicateGlossaryContributorException(DuplicateException):
     pass
+
+
+class InvalidSearchModeException(Exception):
+    pass

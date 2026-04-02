@@ -28,6 +28,8 @@ from .exceptions import (
     ChapterNotFoundException,
     ChapterNumDuplicateException,
     DeleteRevisionFailedException,
+    DuplicateNovelAssociationException,
+    NovelAssociationNotFoundException,
     NovelNotFoundException,
     RevisionMakePrimaryFailedException,
     RevisionNotFoundException,
@@ -50,11 +52,7 @@ from .permissions import (
 from .utils import apply_text_ops
 
 
-def query_novels_by_title(
-        db : Session,
-        current_user : User | None,
-        novel_title : str | None
-    ) -> Sequence[models.Novel]:
+def query_novels_by_title(db: Session, current_user: User | None, novel_title: str | None) -> Sequence[models.Novel]:
     """
     Queries novels with novel_title as substring. Selects only public novels.
 
@@ -67,18 +65,20 @@ def query_novels_by_title(
         search_term = "%"
     else:
         search_term = f"%{novel_title}%"
-    q = select(models.Novel).where(models.Novel.novel_title.ilike(search_term)).where(models.Novel.novel_visibility == Visibility.PUBLIC)
+    q = (
+        select(models.Novel)
+        .where(models.Novel.novel_title.ilike(search_term))
+        .where(models.Novel.novel_visibility == Visibility.PUBLIC)
+    )
     result = db.execute(q)
     result_scalars = result.scalars().all()
 
     return result_scalars
 
+
 def query_novels_by_current_user(
-        db : Session,
-        current_user : User,
-        editable : bool,
-        title_contains : str | None
-    ) -> list[models.Novel]:
+    db: Session, current_user: User, editable: bool, title_contains: str | None
+) -> list[models.Novel]:
     """
     Queries all novels that the current user has special access to.
 
@@ -87,15 +87,12 @@ def query_novels_by_current_user(
         current_user: User that is querying.
         editable: If True, only select novels that the user can edit. Otherwise select all such novels.
     """
-    subq = select(models.Contributor).where(and_(
-        models.Contributor.novel_id == models.Novel.novel_id,
-        models.Contributor.user_id == current_user.user_id
-    ))
+    subq = select(models.Contributor).where(
+        and_(models.Contributor.novel_id == models.Novel.novel_id, models.Contributor.user_id == current_user.user_id)
+    )
     if editable:
         subq = subq.where(models.Contributor.contributor_role.in_([Role.EDITOR, Role.OWNER]))
-    q = select(
-        models.Novel
-    ).where(exists(subq))
+    q = select(models.Novel).where(exists(subq))
 
     if title_contains:
         q = q.where(models.Novel.novel_title.ilike(f"%{title_contains}%"))
@@ -104,11 +101,8 @@ def query_novels_by_current_user(
     result_scalars = result.scalars().all()
     return list(result_scalars)
 
-def query_novel_by_id(
-        db : Session,
-        current_user : User | None,
-        novel_id : uuid.UUID
-    ) -> models.Novel:
+
+def query_novel_by_id(db: Session, current_user: User | None, novel_id: uuid.UUID) -> models.Novel:
     """
     Queries a novel by id. Will return a novel if the user has permission to view it and throws an exception otherwise.
 
@@ -129,13 +123,10 @@ def query_novel_by_id(
         raise NovelNotFoundException from e
     return result_scalar
 
+
 def query_chapters_by_novel(
-        db : Session,
-        current_user : User | None,
-        novel_id : uuid.UUID,
-        start : int | None,
-        end : int | None
-    ) -> Sequence[models.Chapter]:
+    db: Session, current_user: User | None, novel_id: uuid.UUID, start: int | None, end: int | None
+) -> Sequence[models.Chapter]:
     """
     Query all chapters of a specific novel satisfying certain conditions. Only returns chapters that the user has permission to view.
 
@@ -149,15 +140,11 @@ def query_chapters_by_novel(
     Raises:
         NovelNotFoundException: novel with corresponding novel_id is not in database (or insufficient permissions to view it).
     """
-    q = select(
-        models.Chapter
-    ).select_from(
-        models.Novel
-    ).where(
-        models.Novel.novel_id == novel_id
-    ).join(
-        models.Chapter,
-        models.Chapter.novel_id == models.Novel.novel_id
+    q = (
+        select(models.Chapter)
+        .select_from(models.Novel)
+        .where(models.Novel.novel_id == novel_id)
+        .join(models.Chapter, models.Chapter.novel_id == models.Novel.novel_id)
     )
     if start is not None:
         q = q.where(models.Chapter.chapter_num >= start)
@@ -171,11 +158,8 @@ def query_chapters_by_novel(
         query_novel_by_id(db, current_user, novel_id)
     return result_scalars
 
-def query_chapter_by_id(
-        db : Session,
-        current_user : User | None,
-        chapter_id : uuid.UUID
-    ) -> models.Chapter:
+
+def query_chapter_by_id(db: Session, current_user: User | None, chapter_id: uuid.UUID) -> models.Chapter:
     """
     Query a chapter by id.
 
@@ -187,13 +171,10 @@ def query_chapter_by_id(
     Raises:
         ChapterNotFoundException: Chapter not found in database (or insufficient permissions to view it).
     """
-    q = select(
-        models.Chapter
-    ).where(
-        models.Chapter.chapter_id == chapter_id
-    ).join(
-        models.Novel,
-        models.Chapter.novel_id == models.Novel.novel_id
+    q = (
+        select(models.Chapter)
+        .where(models.Chapter.chapter_id == chapter_id)
+        .join(models.Novel, models.Chapter.novel_id == models.Novel.novel_id)
     )
     q = chapter_mod_access_select(q, current_user)
     result = db.execute(q)
@@ -203,11 +184,8 @@ def query_chapter_by_id(
         raise ChapterNotFoundException from e
     return result_scalar
 
-def query_revision_by_id(
-        db : Session,
-        current_user : User | None,
-        revision_id : uuid.UUID
-    ) -> models.Revision:
+
+def query_revision_by_id(db: Session, current_user: User | None, revision_id: uuid.UUID) -> models.Revision:
     """
     Query a chapter revision by id.
 
@@ -219,16 +197,11 @@ def query_revision_by_id(
     Raises:
         RevisionNotFoundException: Chapter revision not found in database (or insufficient permissions to view it).
     """
-    q = select(
-        models.Revision
-    ).where(
-        models.Revision.revision_id == revision_id
-    ).join(
-        models.Chapter,
-        models.Chapter.chapter_id == models.Revision.chapter_id
-    ).join(
-        models.Novel,
-        models.Novel.novel_id == models.Chapter.novel_id
+    q = (
+        select(models.Revision)
+        .where(models.Revision.revision_id == revision_id)
+        .join(models.Chapter, models.Chapter.chapter_id == models.Revision.chapter_id)
+        .join(models.Novel, models.Novel.novel_id == models.Chapter.novel_id)
     )
     q = revision_mod_access_select(q, current_user)
     result = db.execute(q)
@@ -238,13 +211,10 @@ def query_revision_by_id(
         raise RevisionNotFoundException from e
     return result_scalar
 
+
 def query_revisions_by_chapter(
-        db : Session,
-        current_user : User | None,
-        chapter_id : uuid.UUID,
-        is_public : bool | None,
-        is_primary : bool | None
-    ) -> list[models.Revision]:
+    db: Session, current_user: User | None, chapter_id: uuid.UUID, is_public: bool | None, is_primary: bool | None
+) -> list[models.Revision]:
     """
     Query all chapter revisions from a chapter_id satisfying certain requirements.
 
@@ -260,20 +230,16 @@ def query_revisions_by_chapter(
     Notes:
         The caller should be responsible for converting to the best pydantic model for the use case.
     """
-    q = select(
-        models.Revision
-    ).where(
-        models.Revision.chapter_id == chapter_id
-    ).join(
-        models.Chapter,
-        models.Chapter.chapter_id == models.Revision.chapter_id
-    ).join(
-        models.Novel,
-        models.Novel.novel_id == models.Chapter.novel_id
-    ).order_by(
-        models.Revision.revision_is_primary.desc(),
-        models.Revision.revision_is_public.desc(),
-        models.Revision.updated_at.desc()
+    q = (
+        select(models.Revision)
+        .where(models.Revision.chapter_id == chapter_id)
+        .join(models.Chapter, models.Chapter.chapter_id == models.Revision.chapter_id)
+        .join(models.Novel, models.Novel.novel_id == models.Chapter.novel_id)
+        .order_by(
+            models.Revision.revision_is_primary.desc(),
+            models.Revision.revision_is_public.desc(),
+            models.Revision.updated_at.desc(),
+        )
     )
     if is_public is not None:
         q = q.where(models.Revision.revision_is_public == is_public)
@@ -287,16 +253,15 @@ def query_revisions_by_chapter(
     return list(result_rows)
 
 
-
 def query_revisions_by_novel(
-        db : Session,
-        current_user : User | None,
-        novel_id : uuid.UUID,
-        start : int | None,
-        end : int | None,
-        is_public : bool | None,
-        is_primary : bool | None,
-    ) -> list[models.Revision]:
+    db: Session,
+    current_user: User | None,
+    novel_id: uuid.UUID,
+    start: int | None,
+    end: int | None,
+    is_public: bool | None,
+    is_primary: bool | None,
+) -> list[models.Revision]:
     """
     Query all chapter revisions from novel novel_id satisfying certain restrictions. Returns a dictionary in the format
         `chapter_num : List[RevisionMeta]`
@@ -313,18 +278,17 @@ def query_revisions_by_novel(
     Raises:
         NovelNotFoundException: novel with corresponding novel_id is not in database (or insufficient permissions to view it).
     """
-    q = select(models.Revision).join(
-        models.Chapter, models.Chapter.chapter_id == models.Revision.chapter_id
-    ).join(
-        models.Novel,
-        models.Novel.novel_id == models.Chapter.novel_id
-    ).where(
-        models.Novel.novel_id == novel_id
-    ).order_by(
-        models.Chapter.chapter_num.asc(),
-        models.Revision.revision_is_primary.desc(),
-        models.Revision.revision_is_public.desc(),
-        models.Revision.updated_at.desc()
+    q = (
+        select(models.Revision)
+        .join(models.Chapter, models.Chapter.chapter_id == models.Revision.chapter_id)
+        .join(models.Novel, models.Novel.novel_id == models.Chapter.novel_id)
+        .where(models.Novel.novel_id == novel_id)
+        .order_by(
+            models.Chapter.chapter_num.asc(),
+            models.Revision.revision_is_primary.desc(),
+            models.Revision.revision_is_public.desc(),
+            models.Revision.updated_at.desc(),
+        )
     )
     if start is not None:
         q = q.where(models.Chapter.chapter_num >= start)
@@ -336,16 +300,15 @@ def query_revisions_by_novel(
         q = q.where(models.Revision.revision_is_primary == is_primary)
     q = revision_mod_access_select(q, current_user)
     result = db.execute(q)
-    result_rows  = result.scalars().all()
+    result_rows = result.scalars().all()
     if len(result_rows) == 0:
         query_novel_by_id(db, current_user, novel_id)
     return list(result_rows)
 
+
 def query_revision_text_by_most_recent(
-        db : Session,
-        current_user : User | None,
-        revision_id : uuid.UUID
-    ) -> models.RevisionText:
+    db: Session, current_user: User | None, revision_id: uuid.UUID
+) -> models.RevisionText:
     """
     Query the most recent version of text of a specific revision.
 
@@ -362,10 +325,17 @@ def query_revision_text_by_most_recent(
         RevisionTextNotFoundException: Text for the specified revision is not found.
     """
     rt = aliased(models.RevisionText)
-    q = select(models.RevisionText).where(
-        models.RevisionText.revision_id == revision_id
-    ).where(
-        models.RevisionText.revision_text_version == select(rt.revision_text_version).where(rt.revision_id == revision_id).order_by(rt.revision_text_version.desc()).limit(1).scalar_subquery()
+    q = (
+        select(models.RevisionText)
+        .where(models.RevisionText.revision_id == revision_id)
+        .where(
+            models.RevisionText.revision_text_version
+            == select(rt.revision_text_version)
+            .where(rt.revision_id == revision_id)
+            .order_by(rt.revision_text_version.desc())
+            .limit(1)
+            .scalar_subquery()
+        )
     )
     try:
         q = revision_text_mod_access_select(q, current_user)
@@ -376,10 +346,9 @@ def query_revision_text_by_most_recent(
         raise RevisionTextNotFoundException from e
     return result_row
 
+
 def query_revision_text_by_id(
-    db : Session,
-    current_user : User | None,
-    revision_text_id : uuid.UUID
+    db: Session, current_user: User | None, revision_text_id: uuid.UUID
 ) -> models.RevisionText:
     """
     Query a specific version of text of a specific revision by the text's id.
@@ -392,9 +361,7 @@ def query_revision_text_by_id(
     Raises:
         RevisionTextNotFoundException: Text with corresponding ID is not found in database (or insufficient permissions to view it).
     """
-    q = select(models.RevisionText).where(
-        models.RevisionText.revision_text_id == revision_text_id
-    )
+    q = select(models.RevisionText).where(models.RevisionText.revision_text_id == revision_text_id)
     q = revision_text_mod_access_select(q, current_user)
     try:
         result = db.execute(q)
@@ -403,11 +370,12 @@ def query_revision_text_by_id(
         raise RevisionTextNotFoundException from e
     return result_row
 
+
 def query_revision_text_status(
-    db : Session,
-    current_user : User | None,
-    revision_id : uuid.UUID,
-    revision_text_id : uuid.UUID,
+    db: Session,
+    current_user: User | None,
+    revision_id: uuid.UUID,
+    revision_text_id: uuid.UUID,
 ) -> OperationStatus:
     """
     Check whether a revision_text_id is the latest version for its revision.
@@ -424,14 +392,15 @@ def query_revision_text_status(
         RevisionTextNotFoundException: No revision text found for revision_id (or insufficient read permissions).
         RevisionTextOutdatedException: Revision text exists but revision_text_id is not the latest version.
     """
-    q = select(models.RevisionText.revision_text_id).where(
-        models.RevisionText.revision_id == revision_id
-    ).where(
-        models.RevisionText.revision_text_version == select(func.max(
+    q = (
+        select(models.RevisionText.revision_text_id)
+        .where(models.RevisionText.revision_id == revision_id)
+        .where(
             models.RevisionText.revision_text_version
-        )).where(
-            models.RevisionText.revision_id == revision_id
-        ).scalar_subquery()
+            == select(func.max(models.RevisionText.revision_text_version))
+            .where(models.RevisionText.revision_id == revision_id)
+            .scalar_subquery()
+        )
     )
     q = revision_text_mod_access_select(q, current_user)
     try:
@@ -442,10 +411,9 @@ def query_revision_text_status(
         raise RevisionTextOutdatedException("Revision text is outdated. Please refresh and try again.")
     return OperationStatus(status="success", detail="Revision text is current.")
 
+
 def query_revision_text_ids_by_revision_id(
-    db : Session,
-    current_user : User,
-    revision_id : uuid.UUID
+    db: Session, current_user: User, revision_id: uuid.UUID
 ) -> list[schemas.RevisionTextMeta]:
     """
     Query all text ids of a specific revision.
@@ -455,19 +423,18 @@ def query_revision_text_ids_by_revision_id(
         current_user: User that is querying.
         revision_id: ID of the revision whose text ids we want to retrieve.
     """
-    q = select(models.RevisionText).options(defer(models.RevisionText.revision_text_content)).where(
-        models.RevisionText.revision_id == revision_id
+    q = (
+        select(models.RevisionText)
+        .options(defer(models.RevisionText.revision_text_content))
+        .where(models.RevisionText.revision_id == revision_id)
     )
     q = revision_text_mod_access_select(q, current_user)
     result = db.execute(q)
     result_rows = result.scalars().all()
     return [schemas.RevisionTextMeta.model_validate(row) for row in result_rows]
 
-def insert_novel(
-        db : Session,
-        current_user : User,
-        request : schemas.CreateNovel
-    ) -> models.Novel:
+
+def insert_novel(db: Session, current_user: User, request: schemas.CreateNovel) -> models.Novel:
     """
     Insert a novel into the database.
 
@@ -485,7 +452,9 @@ def insert_novel(
     try:
         db.add(novel)
         db.flush()
-        contributor = models.Contributor(contributor_role=Role.OWNER, novel_id=novel.novel_id, user_id=current_user.user_id)
+        contributor = models.Contributor(
+            contributor_role=Role.OWNER, novel_id=novel.novel_id, user_id=current_user.user_id
+        )
         db.add(contributor)
         db.commit()
     except IntegrityError as e:
@@ -507,12 +476,8 @@ def insert_novel(
         raise UnknownError from e
     return novel
 
-def modify_novel(
-        db : Session,
-        current_user : User,
-        novel_id : uuid.UUID,
-        request : schemas.UpdateNovel
-    ) -> models.Novel:
+
+def modify_novel(db: Session, current_user: User, novel_id: uuid.UUID, request: schemas.UpdateNovel) -> models.Novel:
     """
     Modifies novel with novel_id.
 
@@ -527,11 +492,7 @@ def modify_novel(
         InsufficientPermissionsException: User does not have permission to modify this novel.
         DataTooLongException: Data we are updating to is too long for some string field.
     """
-    stmt = update(
-        models.Novel
-    ).where(
-        models.Novel.novel_id == novel_id
-    ).values(request.model_dump(exclude_unset=True))
+    stmt = update(models.Novel).where(models.Novel.novel_id == novel_id).values(request.model_dump(exclude_unset=True))
     stmt = novel_mod_access_update(stmt, current_user)
     stmt = stmt.returning(models.Novel)
     try:
@@ -555,12 +516,10 @@ def modify_novel(
 
     return result_row
 
+
 def insert_chapter(
-        db : Session,
-        current_user : User,
-        novel_id : uuid.UUID,
-        request : schemas.CreateChapter
-    ) -> models.Chapter:
+    db: Session, current_user: User, novel_id: uuid.UUID, request: schemas.CreateChapter
+) -> models.Chapter:
     """
     Insert a chapter into a database.
 
@@ -577,12 +536,10 @@ def insert_chapter(
         UnknownError: Some other error occured.
     """
     data = list(request.model_dump().items())
-    data.append(('novel_id', novel_id))
+    data.append(("novel_id", novel_id))
     cols = [k for k, _ in data]
 
-    vals = select(
-        *[literal(v) for _, v in data]
-    )
+    vals = select(*[literal(v) for _, v in data])
     vals = chapter_mod_access_insert(vals, current_user, novel_id)
     stmt = insert(models.Chapter).from_select(cols, vals).returning(models.Chapter)
 
@@ -608,12 +565,10 @@ def insert_chapter(
         raise UnknownError from e
     return result_row
 
+
 def insert_revision(
-        db : Session,
-        current_user : User,
-        chapter_id : uuid.UUID,
-        request : schemas.CreateRevision
-    ) -> tuple[models.Revision, models.RevisionText]:
+    db: Session, current_user: User, chapter_id: uuid.UUID, request: schemas.CreateRevision
+) -> tuple[models.Revision, models.RevisionText]:
     """
     Insert a chapter revision into the database.
 
@@ -630,25 +585,19 @@ def insert_revision(
         UnknownError: Some other error occured.
     """
     data = list(request.model_dump().items())
-    data.extend([('chapter_id', chapter_id), ('revision_is_primary', False), ('revision_is_public', False)])
+    data.extend([("chapter_id", chapter_id), ("revision_is_primary", False), ("revision_is_public", False)])
     cols = [k for k, _ in data]
 
-    vals = select(
-        *[literal(v) for _, v in data]
-    )
+    vals = select(*[literal(v) for _, v in data])
     vals = revision_mod_access_insert(vals, current_user, chapter_id)
 
     stmt = insert(models.Revision).from_select(cols, vals).returning(models.Revision)
     try:
         result = db.execute(stmt)
         new_revision = result.scalar_one()
-        vals = select(
-            literal(new_revision.revision_id),
-            literal(""),
-            literal(1)
-        )
+        vals = select(literal(new_revision.revision_id), literal(""), literal(1))
         vals = revision_text_mod_access_insert(vals, current_user, new_revision.revision_id)
-        cols = ['revision_id', 'revision_text_content', 'revision_text_version']
+        cols = ["revision_id", "revision_text_content", "revision_text_version"]
         stmt = insert(models.RevisionText).from_select(cols, vals).returning(models.RevisionText)
         new_revision_text = db.execute(stmt).scalar_one()
         db.commit()
@@ -675,12 +624,13 @@ def insert_revision(
         raise UnknownError from e
     return new_revision, new_revision_text
 
+
 def modify_revision(
-        db : Session,
-        current_user : User,
-        revision_id : uuid.UUID,
-        request : schemas.UpdateRevision,
-    ) -> models.Revision:
+    db: Session,
+    current_user: User,
+    revision_id: uuid.UUID,
+    request: schemas.UpdateRevision,
+) -> models.Revision:
     """
     Modifies data of revision with revision_id. Cannot modify public revisions.
 
@@ -695,12 +645,10 @@ def modify_revision(
         DataTooLongException: String we are trying to modify is too long.
         UnknownError: Some other error occured.
     """
-    stmt = update(
-        models.Revision
-    ).where(
-        models.Revision.revision_id == revision_id
-    ).values(
-        request.model_dump(exclude_unset=True)
+    stmt = (
+        update(models.Revision)
+        .where(models.Revision.revision_id == revision_id)
+        .values(request.model_dump(exclude_unset=True))
     )
     stmt = revision_mod_access_update(stmt, current_user)
     stmt = stmt.returning(models.Revision)
@@ -724,11 +672,8 @@ def modify_revision(
         raise UnknownError from e
     return revision
 
-def make_public_revision(
-        db : Session,
-        current_user : User,
-        revision_id : uuid.UUID
-) -> models.Revision:
+
+def make_public_revision(db: Session, current_user: User, revision_id: uuid.UUID) -> models.Revision:
     """
     Make a revision public.
 
@@ -742,13 +687,7 @@ def make_public_revision(
         InsufficientPermissionsException: Current user does not have permissions to perform this action.
         UnknownError: Some other error occured.
     """
-    stmt = update(
-        models.Revision
-    ).where(
-        models.Revision.revision_id == revision_id
-    ).values(
-        revision_is_public = True
-    )
+    stmt = update(models.Revision).where(models.Revision.revision_id == revision_id).values(revision_is_public=True)
     stmt = revision_mod_access_update(stmt, current_user)
     stmt = stmt.returning(models.Revision)
     try:
@@ -764,7 +703,8 @@ def make_public_revision(
         raise UnknownError from e
     return revision
 
-def make_primary_revision(db : Session, current_user : User, revision_id : uuid.UUID) -> models.Revision:
+
+def make_primary_revision(db: Session, current_user: User, revision_id: uuid.UUID) -> models.Revision:
     """
     Mark a revision as primary. Returns the revision marked as primary.
 
@@ -780,28 +720,19 @@ def make_primary_revision(db : Session, current_user : User, revision_id : uuid.
         InsufficientPermissionsException: Current user does not have permissions to perform this action.
         UnknownError: Some other error occured.
     """
-    stmt = update(
-        models.Revision
-    ).where(
-        models.Revision.revision_id != revision_id
-    ).where(
-        models.Revision.revision_is_primary.is_(True)
-    ).where(
-        models.Revision.chapter_id == select(
+    stmt = (
+        update(models.Revision)
+        .where(models.Revision.revision_id != revision_id)
+        .where(models.Revision.revision_is_primary.is_(True))
+        .where(
             models.Revision.chapter_id
-        ).where(
-            models.Revision.revision_id == revision_id
-        ).scalar_subquery()
-    ).values(revision_is_primary=False)
+            == select(models.Revision.chapter_id).where(models.Revision.revision_id == revision_id).scalar_subquery()
+        )
+        .values(revision_is_primary=False)
+    )
     stmt = revision_mod_access_update(stmt, current_user)
 
-    stmt2 = update(
-        models.Revision
-    ).where(
-        models.Revision.revision_id == revision_id
-    ).values(
-        revision_is_primary = True
-    )
+    stmt2 = update(models.Revision).where(models.Revision.revision_id == revision_id).values(revision_is_primary=True)
     stmt2 = revision_mod_access_update(stmt2, current_user)
     stmt2 = stmt2.returning(models.Revision)
     try:
@@ -817,7 +748,7 @@ def make_primary_revision(db : Session, current_user : User, revision_id : uuid.
         if isinstance(e.orig, PgError):
             if e.orig.pgcode == errorcodes.UNIQUE_VIOLATION:
                 raise RevisionMakePrimaryFailedException("Only one primary revision allowed per chapter.") from e
-            if e.orig.pgcode == errorcodes.CHECK_VIOLATION: # extra check
+            if e.orig.pgcode == errorcodes.CHECK_VIOLATION:  # extra check
                 raise RevisionNotPublicException from e
         raise UnknownError from e
     except Exception as e:
@@ -825,12 +756,13 @@ def make_primary_revision(db : Session, current_user : User, revision_id : uuid.
         raise UnknownError from e
     return revision
 
+
 def modify_revision_text(
-        db : Session,
-        current_user : User,
-        revision_id : uuid.UUID,
-        revision_text_id : uuid.UUID,
-        ops : list[schemas.TextOp],
+    db: Session,
+    current_user: User,
+    revision_id: uuid.UUID,
+    revision_text_id: uuid.UUID,
+    ops: list[schemas.TextOp],
 ) -> OperationStatus:
     """
     Modify the text of a revision and port all label datas over, including those the current user does not have access to.
@@ -847,14 +779,15 @@ def modify_revision_text(
         RevisionTextOutdatedException: Revision text is outdated.
         UnknownError: Some other error occured.
     """
-    q = select(models.RevisionText).where(
-        models.RevisionText.revision_id == revision_id
-    ).where(
-        models.RevisionText.revision_text_version == select(func.max(
+    q = (
+        select(models.RevisionText)
+        .where(models.RevisionText.revision_id == revision_id)
+        .where(
             models.RevisionText.revision_text_version
-        )).where(
-            models.RevisionText.revision_id == revision_id
-        ).scalar_subquery()
+            == select(func.max(models.RevisionText.revision_text_version))
+            .where(models.RevisionText.revision_id == revision_id)
+            .scalar_subquery()
+        )
     )
     q = revision_text_mod_access_select(q, current_user)
     try:
@@ -867,10 +800,11 @@ def modify_revision_text(
 
     content = revision_text.revision_text_content
 
-    q = select(label_models.Label).join(
-        label_models.LabelData,
-        label_models.Label.label_data_id == label_models.LabelData.label_data_id
-    ).where(label_models.LabelData.revision_text_id == revision_text.revision_text_id)
+    q = (
+        select(label_models.Label)
+        .join(label_models.LabelData, label_models.Label.label_data_id == label_models.LabelData.label_data_id)
+        .where(label_models.LabelData.revision_text_id == revision_text.revision_text_id)
+    )
     label_result = db.execute(q).scalars().all()
 
     labels = [label_schemas.Label.model_validate(label) for label in label_result]
@@ -878,11 +812,9 @@ def modify_revision_text(
     new_content, new_labels = apply_text_ops(content, ops, labels)
 
     vals = select(
-        literal(revision_text.revision_id),
-        literal(new_content),
-        literal(revision_text.revision_text_version + 1)
+        literal(revision_text.revision_id), literal(new_content), literal(revision_text.revision_text_version + 1)
     )
-    cols = ['revision_id', 'revision_text_content', 'revision_text_version']
+    cols = ["revision_id", "revision_text_content", "revision_text_version"]
     vals = revision_text_mod_access_insert(vals, current_user, revision_id)
     stmt = insert(models.RevisionText).from_select(cols, vals).returning(models.RevisionText.revision_text_id)
 
@@ -902,19 +834,25 @@ def modify_revision_text(
         raise UnknownError from e
 
     # port label datas
-    label_data_map : dict[uuid.UUID, list[label_schemas.Label]] = defaultdict(list)
+    label_data_map: dict[uuid.UUID, list[label_schemas.Label]] = defaultdict(list)
 
     for label in new_labels:
         label_data_map[label.label_data_id].append(label)
 
     for label_data_id, labels in label_data_map.items():
-        label_data_q = select(label_models.LabelData.label_group_id).where(label_models.LabelData.label_data_id == label_data_id)
+        label_data_q = select(label_models.LabelData.label_group_id).where(
+            label_models.LabelData.label_data_id == label_data_id
+        )
         label_group_id = db.execute(label_data_q).scalar_one()
-        stmt = insert(label_models.LabelData).values(label_group_id=label_group_id, revision_text_id=new_revision_text_id).returning(label_models.LabelData)
+        stmt = (
+            insert(label_models.LabelData)
+            .values(label_group_id=label_group_id, revision_text_id=new_revision_text_id)
+            .returning(label_models.LabelData)
+        )
         label_data = db.execute(stmt).scalar_one()
         label_vals = [label.model_dump() for label in labels]
         for label in label_vals:
-            label['label_data_id'] = label_data.label_data_id
+            label["label_data_id"] = label_data.label_data_id
         stmt = insert(label_models.Label).values(label_vals)
         db.execute(stmt)
     db.commit()
@@ -922,11 +860,7 @@ def modify_revision_text(
     return OperationStatus(status="success", detail="Revision text modified successfully.")
 
 
-def remove_revision(
-        db : Session,
-        current_user : User,
-        revision_id : uuid.UUID
-    ) -> OperationStatus:
+def remove_revision(db: Session, current_user: User, revision_id: uuid.UUID) -> OperationStatus:
     """
     Remove a revision from the database.
 
@@ -940,11 +874,7 @@ def remove_revision(
         InsufficientPermissionsException: Current user has insufficient permissions to delete this chapter.
         DeleteRevisionFailedException: Delete failed for other reasons.
     """
-    stmt = delete(
-        models.Revision
-    ).where(
-        models.Revision.revision_id == revision_id
-    )
+    stmt = delete(models.Revision).where(models.Revision.revision_id == revision_id)
     stmt = revision_mod_access_delete(stmt, current_user)
     try:
         result = db.execute(stmt)
@@ -962,3 +892,116 @@ def remove_revision(
         db.rollback()
         raise DeleteRevisionFailedException from e
     return OperationStatus(status="success", detail="Delete succeeded.")
+
+
+# --- Novel Association ---
+
+
+def query_novel_associations(
+    db: Session, current_user: User | None, source_novel_id: uuid.UUID
+) -> list[models.NovelAssociation]:
+    """
+    Query all novel associations for a given source novel.
+
+    Args:
+        db: Database from which we are querying.
+        current_user: User that is querying. Can be None for guest access.
+        source_novel_id: UUID of the source novel.
+
+    Raises:
+        NovelNotFoundException: Source novel not found or insufficient permissions.
+    """
+    # Verify the source novel is accessible
+    query_novel_by_id(db, current_user, source_novel_id)
+
+    q = select(models.NovelAssociation).where(models.NovelAssociation.source_novel_id == source_novel_id)
+    result = db.execute(q)
+    return list(result.scalars().all())
+
+
+def insert_novel_association(
+    db: Session, current_user: User, request: schemas.CreateNovelAssociation
+) -> models.NovelAssociation:
+    """
+    Insert a novel association into the database. Requires owner or editor role on the source novel.
+
+    Args:
+        db: Database into which we are inserting.
+        current_user: User performing the insert.
+        request: Data for the association to create.
+
+    Raises:
+        NovelNotFoundException: Source or target novel not found or insufficient permissions.
+        DuplicateNovelAssociationException: Association with same (source, target, type) already exists.
+        UnknownError: Some other error occurred.
+    """
+    # Verify source novel is accessible and user has edit rights
+    vals = select(
+        literal(request.source_novel_id),
+        literal(request.target_novel_id),
+        literal(str(request.association_type)),
+    )
+    vals = chapter_mod_access_insert(vals, current_user, request.source_novel_id)
+
+    cols = ["source_novel_id", "target_novel_id", "association_type"]
+    stmt = insert(models.NovelAssociation).from_select(cols, vals).returning(models.NovelAssociation)
+
+    try:
+        result = db.execute(stmt)
+        association = result.scalar_one()
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        if isinstance(e.orig, PgError):
+            if e.orig.pgcode == errorcodes.UNIQUE_VIOLATION:
+                raise DuplicateNovelAssociationException from e
+            if e.orig.pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
+                raise NovelNotFoundException from e
+        raise UnknownError from e
+    except NoResultFound as e:
+        db.rollback()
+        query_novel_by_id(db, current_user, request.source_novel_id)
+        raise InsufficientPermissionsException from e
+    except Exception as e:
+        db.rollback()
+        raise UnknownError from e
+    return association
+
+
+def remove_novel_association(db: Session, current_user: User, association_id: uuid.UUID) -> None:
+    """
+    Remove a novel association from the database. Requires owner or editor role on the source novel.
+
+    Args:
+        db: Database to remove from.
+        current_user: User performing the removal.
+        association_id: UUID of the association to remove.
+
+    Raises:
+        NovelAssociationNotFoundException: Association not found or insufficient permissions.
+        UnknownError: Some other error occurred.
+    """
+    from ..auth.constants import UserType
+
+    stmt = delete(models.NovelAssociation).where(models.NovelAssociation.association_id == association_id)
+    if current_user.user_type != UserType.ADMIN:
+        stmt = stmt.where(
+            exists(
+                select(1)
+                .select_from(models.Contributor)
+                .where(models.Contributor.novel_id == models.NovelAssociation.source_novel_id)
+                .where(models.Contributor.user_id == current_user.user_id)
+                .where(models.Contributor.contributor_role.in_([Role.OWNER, Role.EDITOR]))
+            )
+        )
+    stmt = stmt.returning(models.NovelAssociation.association_id)
+    try:
+        result = db.execute(stmt)
+        _ = result.scalar_one()
+        db.commit()
+    except NoResultFound as e:
+        db.rollback()
+        raise NovelAssociationNotFoundException from e
+    except Exception as e:
+        db.rollback()
+        raise UnknownError from e

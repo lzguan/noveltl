@@ -362,7 +362,7 @@ SELECT * FROM auto_labels
 WHERE revision_text_id = :revision_text_id
   AND auto_label_model_name = :model
   AND auto_label_model_params = :params::jsonb
-  AND auto_label_status = 'DONE';
+  AND auto_label_status = 'done';
 ```
 
 ## Migration History

@@ -16,6 +16,7 @@ services:
       - ..:/workspaces:cached
       - claude-code-config:/home/vscode/.claude
       - gh-cli-config:/home/vscode/.config/gh
+      - codex-cli-config:/home/vscode/.codex
 
     # Uncomment the next four lines if you will use a ptrace-based debugger like C++, Go, and Rust.
     # cap_add:
@@ -29,3 +30,4 @@ services:
 volumes:
   claude-code-config:
   gh-cli-config:
+  codex-cli-config:

@@ -97,7 +97,7 @@ services:
     volumes:
       - ./backend:/project
     ports:
-      - 8000:8000
+      - "${BACKEND_PORT}:8000"
 
   frontend:
     build:
@@ -106,7 +106,7 @@ services:
     volumes:
       - ./frontend:/project
     ports:
-      - 5173:5173
+      - "${FRONTEND_PORT}:5173"
 
 volumes:
   db_data:

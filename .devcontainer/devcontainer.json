@@ -36,7 +36,7 @@
 	// Uncomment the next line if you want to keep your containers running after VS Code shuts down.
 	// "shutdownAction": "none",
 
-	"postCreateCommand": "curl -fsSL https://claude.ai/install.sh | bash",
+	"postCreateCommand": "sudo chown -R vscode:vscode /home/vscode && curl -fsSL https://claude.ai/install.sh | bash && npm install -g @openai/codex",
 
 	// Configure tool-specific properties.
 	 "customizations": {
@@ -48,7 +48,8 @@
 				"christian-kohler.npm-intellisense",
 				"charliermarsh.ruff",
 				"bierner.markdown-mermaid",
-				"anthropic.claude-code"
+				"anthropic.claude-code",
+				"openai.chatgpt"
 			],
 			"settings": {
 				"python.defaultInterpreterPath": "/.venv/bin/python",

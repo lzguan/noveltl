@@ -27,6 +27,4 @@ def get_redis() -> ArqRedis:
 def get_redis_for_app() -> ArqRedis:
     if redis is not None:
         return redis
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Request queueing down."
-    )
+    raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Request queueing down.")

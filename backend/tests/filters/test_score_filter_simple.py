@@ -9,6 +9,7 @@ Tests cover:
 
 Note: These tests are AI generated and may not cover all edge cases or be fully comprehensive. It is recommended to review and modify the tests as needed to ensure they align with the specific requirements and constraints of your application.
 """
+
 import uuid
 
 import pytest
@@ -30,8 +31,8 @@ from src.novels.models import Revision, RevisionText
 
 # --- Tests for flag_instances ---
 
-class TestFlagInstances:
 
+class TestFlagInstances:
     def test_flag_instances_filters_by_min_score(
         self,
         test_db: Session,
@@ -40,10 +41,7 @@ class TestFlagInstances:
         sf_labels: list[Label],
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=sf_label_group.label_group_id,
-            min_score=0.8
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=sf_label_group.label_group_id, min_score=0.8)
         results = score_filter.flag_instances(test_db, sf_user, options)
 
         assert len(results) == 2
@@ -58,10 +56,7 @@ class TestFlagInstances:
         sf_labels: list[Label],
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=sf_label_group.label_group_id,
-            min_score=0.4
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=sf_label_group.label_group_id, min_score=0.4)
         results = score_filter.flag_instances(test_db, sf_user, options)
 
         assert len(results) == 1
@@ -76,10 +71,7 @@ class TestFlagInstances:
         sf_labels: list[Label],
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=sf_label_group.label_group_id,
-            min_score=0.95
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=sf_label_group.label_group_id, min_score=0.95)
         results = score_filter.flag_instances(test_db, sf_user, options)
 
         assert len(results) == 3
@@ -89,8 +81,8 @@ class TestFlagInstances:
 
 # --- Tests for get_contexts ---
 
-class TestGetContexts:
 
+class TestGetContexts:
     def test_get_contexts_extracts_sentence(
         self,
         test_db: Session,
@@ -100,10 +92,7 @@ class TestGetContexts:
         sf_revision: tuple[Revision, RevisionText],
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=sf_label_group.label_group_id,
-            min_score=0.8
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=sf_label_group.label_group_id, min_score=0.8)
         instances = score_filter.flag_instances(test_db, sf_user, options)
 
         context_options = ScoreGetContextOptions()
@@ -112,8 +101,8 @@ class TestGetContexts:
         assert len(contexts) == 2
         assert contexts is not None
         assert all(context is not None for context in contexts)
-        assert "Hello world." in [context.text.strip() for context in contexts] # type: ignore
-        assert "This is a test sentence." in [context.text.strip() for context in contexts] # type: ignore
+        assert "Hello world." in [context.text.strip() for context in contexts]  # type: ignore
+        assert "This is a test sentence." in [context.text.strip() for context in contexts]  # type: ignore
 
     def test_get_contexts_returns_none_for_inaccessible_revision(
         self,
@@ -134,9 +123,9 @@ class TestGetContexts:
                 label_end=4,
                 label_score=1.0,
                 label_dirty=False,
-                label_data_id=uuid.uuid4()
+                label_data_id=uuid.uuid4(),
             ),
-            revision_text_id=uuid.uuid4()
+            revision_text_id=uuid.uuid4(),
         )
 
         context_options = ScoreGetContextOptions()
@@ -148,8 +137,8 @@ class TestGetContexts:
 
 # --- Tests for decide_instances ---
 
-class TestDecideInstances:
 
+class TestDecideInstances:
     def test_decide_auto_mode_passes_all_without_exclude(
         self,
         test_db: Session,
@@ -158,10 +147,7 @@ class TestDecideInstances:
         sf_labels: list[Label],
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=sf_label_group.label_group_id,
-            min_score=0.0
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=sf_label_group.label_group_id, min_score=0.0)
         instances = score_filter.flag_instances(test_db, sf_user, options)
 
         context_options = ScoreGetContextOptions()
@@ -183,10 +169,7 @@ class TestDecideInstances:
         sf_labels: list[Label],
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=sf_label_group.label_group_id,
-            min_score=1.0
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=sf_label_group.label_group_id, min_score=1.0)
         instances = score_filter.flag_instances(test_db, sf_user, options)
 
         context_options = ScoreGetContextOptions()
@@ -209,10 +192,7 @@ class TestDecideInstances:
         sf_labels: list[Label],
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=sf_label_group.label_group_id,
-            min_score=1.0
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=sf_label_group.label_group_id, min_score=1.0)
         instances = score_filter.flag_instances(test_db, sf_user, options)
 
         context_options = ScoreGetContextOptions()
@@ -220,7 +200,7 @@ class TestDecideInstances:
 
         instance_contexts = [(i, c) for i, c in zip(instances, contexts, strict=False)]
 
-        manual_decisions = [True, False, True][:len(instance_contexts)]
+        manual_decisions = [True, False, True][: len(instance_contexts)]
         decide_options = ScoreDecideInstancesOptions(mode="manual", decisions=manual_decisions)
         decisions = score_filter.decide_instances(test_db, sf_user, instance_contexts, decide_options)
 
@@ -234,10 +214,7 @@ class TestDecideInstances:
         sf_labels: list[Label],
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=sf_label_group.label_group_id,
-            min_score=1.0
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=sf_label_group.label_group_id, min_score=1.0)
         instances = score_filter.flag_instances(test_db, sf_user, options)
 
         context_options = ScoreGetContextOptions()
@@ -253,8 +230,8 @@ class TestDecideInstances:
 
 # --- Tests for apply_filter ---
 
-class TestApplyFilter:
 
+class TestApplyFilter:
     def test_apply_filter_deletes_specified_labels(
         self,
         test_db: Session,
@@ -265,10 +242,7 @@ class TestApplyFilter:
         score_filter: ScoreFilter,
     ):
         # Flag low-score labels
-        options = ScoreFlagInstancesOptions(
-            label_group_id=sf_label_group.label_group_id,
-            min_score=0.8
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=sf_label_group.label_group_id, min_score=0.8)
         instances = score_filter.flag_instances(test_db, sf_user, options)
         assert len(instances) == 2  # Only "world" with score 0.5 and "test" with score 0.3
 
@@ -277,9 +251,9 @@ class TestApplyFilter:
         score_filter.apply_filter(test_db, sf_user, instances, apply_options)
 
         # Verify "Hello" is deleted
-        remaining = test_db.execute(
-            select(Label).where(Label.label_data_id == sf_label_data.label_data_id)
-        ).scalars().all()
+        remaining = (
+            test_db.execute(select(Label).where(Label.label_data_id == sf_label_data.label_data_id)).scalars().all()
+        )
 
         assert len(remaining) == 1
         remaining_words = {lab.label_word for lab in remaining}
@@ -297,21 +271,20 @@ class TestApplyFilter:
         score_filter: ScoreFilter,
     ):
         # Flag all labels
-        options = ScoreFlagInstancesOptions(
-            label_group_id=sf_label_group.label_group_id,
-            min_score=1.0
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=sf_label_group.label_group_id, min_score=1.0)
         instances = score_filter.flag_instances(test_db, sf_user, options)
         assert len(instances) == 3
 
         # Apply filter with copy
-        apply_options = ScoreApplyFilterOptions(create_copy=True, new_label_group_name="Filtered Copy", label_group_id=sf_label_group.label_group_id)
+        apply_options = ScoreApplyFilterOptions(
+            create_copy=True, new_label_group_name="Filtered Copy", label_group_id=sf_label_group.label_group_id
+        )
         score_filter.apply_filter(test_db, sf_user, instances, apply_options)
 
         # Original group should still have all labels
-        original_labels = test_db.execute(
-            select(Label).where(Label.label_data_id == sf_label_data.label_data_id)
-        ).scalars().all()
+        original_labels = (
+            test_db.execute(select(Label).where(Label.label_data_id == sf_label_data.label_data_id)).scalars().all()
+        )
         assert len(original_labels) == 3
 
         # New group should exist and have labels deleted from it
@@ -334,7 +307,7 @@ class TestApplyFilter:
         score_filter.apply_filter(test_db, sf_user, [], apply_options)
 
         # All labels should remain
-        remaining = test_db.execute(
-            select(Label).where(Label.label_data_id == sf_label_data.label_data_id)
-        ).scalars().all()
+        remaining = (
+            test_db.execute(select(Label).where(Label.label_data_id == sf_label_data.label_data_id)).scalars().all()
+        )
         assert len(remaining) == 3

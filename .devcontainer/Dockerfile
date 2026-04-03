@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y postgresql-common && \
     yes | /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh && \
     apt-get install -y postgresql-client-18 && \
     rm -rf /var/lib/apt/lists/*
-COPY backend/pyproject.toml backend/uv.lock* ./
+COPY --chown=vscode:vscode backend/pyproject.toml backend/uv.lock* ./
 USER vscode
 RUN --mount=type=cache,target=/root/.cache/uv\
     uv sync --all-groups --no-install-project

@@ -7,8 +7,9 @@ Create Date: 2026-04-01 22:40:38.251758+00:00
 """
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "72ff918c4e2f"
@@ -42,9 +43,7 @@ def upgrade():
     )
     op.create_table(
         "glossary_entries",
-        sa.Column(
-            "glossary_entry_id", postgresql.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False
-        ),
+        sa.Column("glossary_entry_id", postgresql.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
         sa.Column("source_term", sa.String(length=128), nullable=False),
         sa.Column("translated_term", sa.String(length=128), nullable=True),
         sa.Column("context_notes", sa.Text(), nullable=True),

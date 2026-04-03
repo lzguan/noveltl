@@ -3,6 +3,7 @@ Tests for copy_label_group function.
 
 Note: This test is AI generated and may not cover all edge cases or be fully comprehensive. It is recommended to review and modify the tests as needed to ensure they align with the specific requirements and constraints of your application.
 """
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -25,12 +26,7 @@ class TestCopyLabelGroup:
         lp_label_data_owner_only: label_models.LabelData,
         lp_labels_owner_only: list[label_models.Label],
     ):
-        new_group = copy_label_group(
-            test_db,
-            lp_user_1,
-            lp_label_group_owner_only.label_group_id,
-            "Copied Group"
-        )
+        new_group = copy_label_group(test_db, lp_user_1, lp_label_group_owner_only.label_group_id, "Copied Group")
 
         assert new_group.label_group_name == "Copied Group"
         assert new_group.novel_id == lp_label_group_owner_only.novel_id
@@ -44,12 +40,7 @@ class TestCopyLabelGroup:
         lp_label_data_with_editor: label_models.LabelData,
         lp_labels_with_editor: list[label_models.Label],
     ):
-        new_group = copy_label_group(
-            test_db,
-            lp_user_2,
-            lp_label_group_with_editor.label_group_id,
-            "Editor Copy"
-        )
+        new_group = copy_label_group(test_db, lp_user_2, lp_label_group_with_editor.label_group_id, "Editor Copy")
         assert new_group is not None
         assert new_group.label_group_name == "Editor Copy"
 
@@ -61,12 +52,7 @@ class TestCopyLabelGroup:
         lp_label_data_with_viewer: label_models.LabelData,
     ):
         with pytest.raises(LabelGroupNotFoundException):
-            copy_label_group(
-                test_db,
-                lp_user_2,
-                lp_label_group_with_viewer.label_group_id,
-                "Should Fail"
-            )
+            copy_label_group(test_db, lp_user_2, lp_label_group_with_viewer.label_group_id, "Should Fail")
 
     def test_non_contributor_cannot_copy(
         self,
@@ -75,12 +61,7 @@ class TestCopyLabelGroup:
         lp_label_group_owner_only: label_models.LabelGroup,
     ):
         with pytest.raises(LabelGroupNotFoundException):
-            copy_label_group(
-                test_db,
-                lp_user_3,
-                lp_label_group_owner_only.label_group_id,
-                "Should Fail"
-            )
+            copy_label_group(test_db, lp_user_3, lp_label_group_owner_only.label_group_id, "Should Fail")
 
     def test_copy_preserves_contributors(
         self,
@@ -91,18 +72,18 @@ class TestCopyLabelGroup:
         lp_label_data_with_editor: label_models.LabelData,
     ):
         new_group = copy_label_group(
-            test_db,
-            lp_user_1,
-            lp_label_group_with_editor.label_group_id,
-            "With Contributors",
-            keep_contributors=True
+            test_db, lp_user_1, lp_label_group_with_editor.label_group_id, "With Contributors", keep_contributors=True
         )
 
-        contributors = test_db.execute(
-            select(label_models.LabelContributor).where(
-                label_models.LabelContributor.label_group_id == new_group.label_group_id
+        contributors = (
+            test_db.execute(
+                select(label_models.LabelContributor).where(
+                    label_models.LabelContributor.label_group_id == new_group.label_group_id
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         assert len(contributors) == 2
         user_ids = {c.user_id for c in contributors}
@@ -118,18 +99,18 @@ class TestCopyLabelGroup:
         lp_label_data_with_editor: label_models.LabelData,
     ):
         new_group = copy_label_group(
-            test_db,
-            lp_user_1,
-            lp_label_group_with_editor.label_group_id,
-            "New Owner Only",
-            keep_contributors=False
+            test_db, lp_user_1, lp_label_group_with_editor.label_group_id, "New Owner Only", keep_contributors=False
         )
 
-        contributors = test_db.execute(
-            select(label_models.LabelContributor).where(
-                label_models.LabelContributor.label_group_id == new_group.label_group_id
+        contributors = (
+            test_db.execute(
+                select(label_models.LabelContributor).where(
+                    label_models.LabelContributor.label_group_id == new_group.label_group_id
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         assert len(contributors) == 1
         assert contributors[0].user_id == lp_user_1.user_id
@@ -143,18 +124,15 @@ class TestCopyLabelGroup:
         lp_label_data_owner_only: label_models.LabelData,
         lp_labels_owner_only: list[label_models.Label],
     ):
-        new_group = copy_label_group(
-            test_db,
-            lp_user_1,
-            lp_label_group_owner_only.label_group_id,
-            "With Data"
-        )
+        new_group = copy_label_group(test_db, lp_user_1, lp_label_group_owner_only.label_group_id, "With Data")
 
-        label_datas = test_db.execute(
-            select(label_models.LabelData).where(
-                label_models.LabelData.label_group_id == new_group.label_group_id
+        label_datas = (
+            test_db.execute(
+                select(label_models.LabelData).where(label_models.LabelData.label_group_id == new_group.label_group_id)
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         assert len(label_datas) == 1
         assert label_datas[0].revision_text_id == lp_label_data_owner_only.revision_text_id
@@ -167,27 +145,26 @@ class TestCopyLabelGroup:
         lp_label_data_owner_only: label_models.LabelData,
         lp_labels_owner_only: list[label_models.Label],
     ):
-        new_group = copy_label_group(
-            test_db,
-            lp_user_1,
-            lp_label_group_owner_only.label_group_id,
-            "With Labels"
-        )
+        new_group = copy_label_group(test_db, lp_user_1, lp_label_group_owner_only.label_group_id, "With Labels")
 
         new_label_data = test_db.execute(
-            select(label_models.LabelData).where(
-                label_models.LabelData.label_group_id == new_group.label_group_id
-            )
+            select(label_models.LabelData).where(label_models.LabelData.label_group_id == new_group.label_group_id)
         ).scalar_one()
 
-        new_labels = test_db.execute(
-            select(label_models.Label).where(
-                label_models.Label.label_data_id == new_label_data.label_data_id
-            ).order_by(label_models.Label.label_start)
-        ).scalars().all()
+        new_labels = (
+            test_db.execute(
+                select(label_models.Label)
+                .where(label_models.Label.label_data_id == new_label_data.label_data_id)
+                .order_by(label_models.Label.label_start)
+            )
+            .scalars()
+            .all()
+        )
 
         assert len(new_labels) == len(lp_labels_owner_only)
-        for new_label, orig_label in zip(new_labels, sorted(lp_labels_owner_only, key=lambda x: x.label_start), strict=False):
+        for new_label, orig_label in zip(
+            new_labels, sorted(lp_labels_owner_only, key=lambda x: x.label_start), strict=False
+        ):
             assert new_label.label_word == orig_label.label_word
             assert new_label.label_start == orig_label.label_start
             assert new_label.label_end == orig_label.label_end
@@ -203,18 +180,17 @@ class TestCopyLabelGroup:
     ):
         original_label_count = len(lp_labels_owner_only)
 
-        copy_label_group(
-            test_db,
-            lp_user_1,
-            lp_label_group_owner_only.label_group_id,
-            "Copy"
-        )
+        copy_label_group(test_db, lp_user_1, lp_label_group_owner_only.label_group_id, "Copy")
 
         # Verify original still intact
-        original_labels = test_db.execute(
-            select(label_models.Label).where(
-                label_models.Label.label_data_id == lp_label_data_owner_only.label_data_id
+        original_labels = (
+            test_db.execute(
+                select(label_models.Label).where(
+                    label_models.Label.label_data_id == lp_label_data_owner_only.label_data_id
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         assert len(original_labels) == original_label_count

@@ -37,11 +37,13 @@ def dd_label_group(
     )
     test_db.add(group)
     test_db.commit()
-    test_db.add(LabelContributor(
-        label_group_id=group.label_group_id,
-        user_id=chinese_xianxia_small_test_user.user_id,
-        label_contributor_role=LabelRole.OWNER,
-    ))
+    test_db.add(
+        LabelContributor(
+            label_group_id=group.label_group_id,
+            user_id=chinese_xianxia_small_test_user.user_id,
+            label_contributor_role=LabelRole.OWNER,
+        )
+    )
     test_db.commit()
     return group
 
@@ -73,7 +75,7 @@ def dd_chapter_0_labels(
     test_db.commit()
 
     # Create Labels from autolabel data
-    labels : list[LabelModel] = []
+    labels: list[LabelModel] = []
     for al in auto_labels:
         label = LabelModel(
             label_data_id=ld.label_data_id,
@@ -92,7 +94,6 @@ def dd_chapter_0_labels(
 
 
 class TestDataDrivenModifyRevisionText:
-
     def test_delete_substring_matches_in_memory(
         self,
         test_db: Session,
@@ -113,15 +114,16 @@ class TestDataDrivenModifyRevisionText:
         ops = [TextOp(op="delete", start=0, text=first_line)]
 
         # In-memory computation
-        in_memory_labels = [
-            LabelSchema.model_validate(lb) for lb in db_labels
-        ]
+        in_memory_labels = [LabelSchema.model_validate(lb) for lb in db_labels]
         expected_text, expected_labels = apply_text_ops(original_text, ops, in_memory_labels)
 
         # Service function
         modify_revision_text(
-            test_db, chinese_xianxia_small_test_user,
-            revision.revision_id, rt.revision_text_id, ops,
+            test_db,
+            chinese_xianxia_small_test_user,
+            revision.revision_id,
+            rt.revision_text_id,
+            ops,
         )
 
         # Read back from DB
@@ -135,15 +137,15 @@ class TestDataDrivenModifyRevisionText:
         assert new_rt.revision_text_content == expected_text
 
         # Compare label positions
-        new_lds = test_db.execute(
-            select(LabelData).where(LabelData.revision_text_id == new_rt.revision_text_id)
-        ).scalars().all()
-        new_db_labels : list[LabelModel] = []
+        new_lds = (
+            test_db.execute(select(LabelData).where(LabelData.revision_text_id == new_rt.revision_text_id))
+            .scalars()
+            .all()
+        )
+        new_db_labels: list[LabelModel] = []
         for ld in new_lds:
             new_db_labels.extend(
-                test_db.execute(
-                    select(LabelModel).where(LabelModel.label_data_id == ld.label_data_id)
-                ).scalars().all()
+                test_db.execute(select(LabelModel).where(LabelModel.label_data_id == ld.label_data_id)).scalars().all()
             )
 
         assert len(new_db_labels) == len(expected_labels)
@@ -181,8 +183,11 @@ class TestDataDrivenModifyRevisionText:
 
         # Service
         modify_revision_text(
-            test_db, chinese_xianxia_small_test_user,
-            revision.revision_id, rt.revision_text_id, ops,
+            test_db,
+            chinese_xianxia_small_test_user,
+            revision.revision_id,
+            rt.revision_text_id,
+            ops,
         )
 
         new_rt = test_db.execute(
@@ -195,15 +200,15 @@ class TestDataDrivenModifyRevisionText:
         assert new_rt.revision_text_content == expected_text
         assert new_rt.revision_text_content.startswith(insert_text)
 
-        new_lds = test_db.execute(
-            select(LabelData).where(LabelData.revision_text_id == new_rt.revision_text_id)
-        ).scalars().all()
-        new_db_labels : list[LabelModel] = []
+        new_lds = (
+            test_db.execute(select(LabelData).where(LabelData.revision_text_id == new_rt.revision_text_id))
+            .scalars()
+            .all()
+        )
+        new_db_labels: list[LabelModel] = []
         for ld in new_lds:
             new_db_labels.extend(
-                test_db.execute(
-                    select(LabelModel).where(LabelModel.label_data_id == ld.label_data_id)
-                ).scalars().all()
+                test_db.execute(select(LabelModel).where(LabelModel.label_data_id == ld.label_data_id)).scalars().all()
             )
 
         assert len(new_db_labels) == len(expected_labels)
@@ -243,8 +248,11 @@ class TestDataDrivenModifyRevisionText:
 
         # Service
         modify_revision_text(
-            test_db, chinese_xianxia_small_test_user,
-            revision.revision_id, rt.revision_text_id, ops,
+            test_db,
+            chinese_xianxia_small_test_user,
+            revision.revision_id,
+            rt.revision_text_id,
+            ops,
         )
 
         new_rt = test_db.execute(
@@ -256,15 +264,15 @@ class TestDataDrivenModifyRevisionText:
 
         assert new_rt.revision_text_content == expected_text
 
-        new_lds = test_db.execute(
-            select(LabelData).where(LabelData.revision_text_id == new_rt.revision_text_id)
-        ).scalars().all()
-        new_db_labels : list[LabelModel] = []
+        new_lds = (
+            test_db.execute(select(LabelData).where(LabelData.revision_text_id == new_rt.revision_text_id))
+            .scalars()
+            .all()
+        )
+        new_db_labels: list[LabelModel] = []
         for ld in new_lds:
             new_db_labels.extend(
-                test_db.execute(
-                    select(LabelModel).where(LabelModel.label_data_id == ld.label_data_id)
-                ).scalars().all()
+                test_db.execute(select(LabelModel).where(LabelModel.label_data_id == ld.label_data_id)).scalars().all()
             )
 
         assert len(new_db_labels) == len(expected_labels)

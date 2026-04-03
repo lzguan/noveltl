@@ -45,7 +45,7 @@ services:
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
       
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql
 
   test_db:
     image: postgres:18

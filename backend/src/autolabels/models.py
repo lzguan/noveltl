@@ -12,6 +12,7 @@ from .constants import MAX_MODEL_NAME_LEN, AutoLabelProgress
 if TYPE_CHECKING:
     from src.novels.models import RevisionText
 
+
 class AutoLabel(Base):
     """
     Database model for storing automatically labeled data.
@@ -29,20 +30,29 @@ class AutoLabel(Base):
     Notes:
         Each revision can only have one autolabel with a given model and parameters.
     """
-    __tablename__ = 'auto_labels'
 
-    auto_label_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
-    auto_label_data : Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
-    auto_label_model_name : Mapped[str] = mapped_column(String(MAX_MODEL_NAME_LEN), nullable=False)
-    auto_label_model_params : Mapped[dict[Any, Any]] = mapped_column(JSONB, nullable=False)
-    auto_label_status : Mapped[AutoLabelProgress] = mapped_column(Enum(AutoLabelProgress, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False, default=AutoLabelProgress.PENDING) # type: ignore
-    auto_label_last_job_id : Mapped[str] = mapped_column(String(36), nullable=True)
-    auto_label_message : Mapped[str] = mapped_column(Text, nullable=True)
+    __tablename__ = "auto_labels"
 
-    revision_text_id = mapped_column(ForeignKey('revision_texts.revision_text_id', name='fk_auto_labels_revision_text_id_revision_texts'), nullable=False)
-    revision_text_of_auto_label : Mapped["RevisionText"] = relationship(back_populates='auto_labels_with_revision_text')
+    auto_label_id: Mapped[uuid.UUID] = mapped_column(
+        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
+    )
+    auto_label_data: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    auto_label_model_name: Mapped[str] = mapped_column(String(MAX_MODEL_NAME_LEN), nullable=False)
+    auto_label_model_params: Mapped[dict[Any, Any]] = mapped_column(JSONB, nullable=False)
+    auto_label_status: Mapped[AutoLabelProgress] = mapped_column(
+        Enum(AutoLabelProgress, native_enum=False, length=10, values_callable=lambda x: [str(e.value) for e in x]),
+        nullable=False,
+        default=AutoLabelProgress.PENDING,
+    )  # type: ignore
+    auto_label_last_job_id: Mapped[str] = mapped_column(String(36), nullable=True)
+    auto_label_message: Mapped[str] = mapped_column(Text, nullable=True)
+
+    revision_text_id = mapped_column(
+        ForeignKey("revision_texts.revision_text_id", name="fk_auto_labels_revision_text_id_revision_texts"),
+        nullable=False,
+    )
+    revision_text_of_auto_label: Mapped["RevisionText"] = relationship(back_populates="auto_labels_with_revision_text")
 
     __table_args__ = (
         UniqueConstraint(revision_text_id, auto_label_model_name, auto_label_model_params, name="uq_model_name_params"),
-
     )

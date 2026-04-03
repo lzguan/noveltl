@@ -10,11 +10,9 @@ from .service import query_all_languages, query_language_by_code
 
 router = APIRouter()
 
-@router.get('/languages/{language_code}', response_model=schemas.Language)
-def read_language_by_code(
-        language_code : str,
-        db : Annotated[Session, Depends(get_db)]
-    ):
+
+@router.get("/languages/{language_code}", response_model=schemas.Language)
+def read_language_by_code(language_code: str, db: Annotated[Session, Depends(get_db)]):
     """
     Retrieves a language by its code.
 
@@ -25,16 +23,12 @@ def read_language_by_code(
     try:
         lang = query_language_by_code(db, language_code)
     except LanguageNotFoundException as e:
-        raise HTTPException(
-            status_code=404,
-            detail="Language not found"
-        ) from e
+        raise HTTPException(status_code=404, detail="Language not found") from e
     return lang
 
-@router.get('/languages', response_model=list[schemas.Language])
-def read_all_languages(
-        db : Annotated[Session, Depends(get_db)]
-    ):
+
+@router.get("/languages", response_model=list[schemas.Language])
+def read_all_languages(db: Annotated[Session, Depends(get_db)]):
     """
     Retrieves all languages in the database.
 

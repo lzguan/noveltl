@@ -1,2 +1,1 @@
-
-model_names : set[str] = {'cluener'}
+model_names: set[str] = {"cluener"}

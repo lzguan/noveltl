@@ -113,16 +113,19 @@ def to_revision_text(test_db: Session, to_revision: Revision) -> RevisionText:
 
 # --- Label group 1: three labels ---
 
+
 @pytest.fixture
 def to_label_group_1(test_db: Session, to_novel: Novel, to_user: User) -> LabelGroup:
     group = LabelGroup(label_group_name="Group 1", novel_id=to_novel.novel_id)
     test_db.add(group)
     test_db.commit()
-    test_db.add(LabelContributor(
-        label_group_id=group.label_group_id,
-        user_id=to_user.user_id,
-        label_contributor_role=LabelRole.OWNER,
-    ))
+    test_db.add(
+        LabelContributor(
+            label_group_id=group.label_group_id,
+            user_id=to_user.user_id,
+            label_contributor_role=LabelRole.OWNER,
+        )
+    )
     test_db.commit()
     return group
 
@@ -173,16 +176,19 @@ def to_labels_1(test_db: Session, to_label_data_1: LabelData) -> list[Label]:
 
 # --- Label group 2: one label ---
 
+
 @pytest.fixture
 def to_label_group_2(test_db: Session, to_novel: Novel, to_user: User) -> LabelGroup:
     group = LabelGroup(label_group_name="Group 2", novel_id=to_novel.novel_id)
     test_db.add(group)
     test_db.commit()
-    test_db.add(LabelContributor(
-        label_group_id=group.label_group_id,
-        user_id=to_user.user_id,
-        label_contributor_role=LabelRole.OWNER,
-    ))
+    test_db.add(
+        LabelContributor(
+            label_group_id=group.label_group_id,
+            user_id=to_user.user_id,
+            label_contributor_role=LabelRole.OWNER,
+        )
+    )
     test_db.commit()
     return group
 

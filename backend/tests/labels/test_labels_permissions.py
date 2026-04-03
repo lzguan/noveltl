@@ -3,6 +3,7 @@ Tests for label permission functions.
 
 Note: These tests are AI generated and may not cover all edge cases or be fully comprehensive. It is recommended to review and modify the tests as needed to ensure they align with the specific requirements and constraints of your application.
 """
+
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
@@ -281,17 +282,17 @@ class TestLabelDelete:
         lp_label_data_owner_only: label_models.LabelData,
     ):
         label_ids = [lab.label_id for lab in lp_labels_owner_only]
-        stmt = delete(label_models.Label).where(
-            label_models.Label.label_id.in_(label_ids)
-        )
+        stmt = delete(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
         stmt = label_mod_access_delete(stmt, lp_user_1)
         test_db.execute(stmt)
         test_db.commit()
 
         # Verify deleted
-        remaining = test_db.execute(
-            select(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
-        ).scalars().all()
+        remaining = (
+            test_db.execute(select(label_models.Label).where(label_models.Label.label_id.in_(label_ids)))
+            .scalars()
+            .all()
+        )
         assert len(remaining) == 0
 
     def test_editor_can_delete_labels(
@@ -301,16 +302,16 @@ class TestLabelDelete:
         lp_labels_with_editor: list[label_models.Label],
     ):
         label_ids = [lab.label_id for lab in lp_labels_with_editor]
-        stmt = delete(label_models.Label).where(
-            label_models.Label.label_id.in_(label_ids)
-        )
+        stmt = delete(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
         stmt = label_mod_access_delete(stmt, lp_user_2)
         test_db.execute(stmt)
         test_db.commit()
 
-        remaining = test_db.execute(
-            select(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
-        ).scalars().all()
+        remaining = (
+            test_db.execute(select(label_models.Label).where(label_models.Label.label_id.in_(label_ids)))
+            .scalars()
+            .all()
+        )
         assert len(remaining) == 0
 
     def test_viewer_cannot_delete_labels(
@@ -320,17 +321,17 @@ class TestLabelDelete:
         lp_labels_with_viewer: list[label_models.Label],
     ):
         label_ids = [lab.label_id for lab in lp_labels_with_viewer]
-        stmt = delete(label_models.Label).where(
-            label_models.Label.label_id.in_(label_ids)
-        )
+        stmt = delete(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
         stmt = label_mod_access_delete(stmt, lp_user_2)
         test_db.execute(stmt)
         test_db.commit()
 
         # Verify NOT deleted
-        remaining = test_db.execute(
-            select(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
-        ).scalars().all()
+        remaining = (
+            test_db.execute(select(label_models.Label).where(label_models.Label.label_id.in_(label_ids)))
+            .scalars()
+            .all()
+        )
         assert len(remaining) == len(lp_labels_with_viewer)
 
     def test_non_contributor_cannot_delete_labels(
@@ -340,17 +341,17 @@ class TestLabelDelete:
         lp_labels_owner_only: list[label_models.Label],
     ):
         label_ids = [lab.label_id for lab in lp_labels_owner_only]
-        stmt = delete(label_models.Label).where(
-            label_models.Label.label_id.in_(label_ids)
-        )
+        stmt = delete(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
         stmt = label_mod_access_delete(stmt, lp_user_3)
         test_db.execute(stmt)
         test_db.commit()
 
         # Verify NOT deleted
-        remaining = test_db.execute(
-            select(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
-        ).scalars().all()
+        remaining = (
+            test_db.execute(select(label_models.Label).where(label_models.Label.label_id.in_(label_ids)))
+            .scalars()
+            .all()
+        )
         assert len(remaining) == len(lp_labels_owner_only)
 
     def test_admin_can_delete_any_labels(
@@ -360,14 +361,14 @@ class TestLabelDelete:
         lp_labels_owner_only: list[label_models.Label],
     ):
         label_ids = [lab.label_id for lab in lp_labels_owner_only]
-        stmt = delete(label_models.Label).where(
-            label_models.Label.label_id.in_(label_ids)
-        )
+        stmt = delete(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
         stmt = label_mod_access_delete(stmt, lp_admin)
         test_db.execute(stmt)
         test_db.commit()
 
-        remaining = test_db.execute(
-            select(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
-        ).scalars().all()
+        remaining = (
+            test_db.execute(select(label_models.Label).where(label_models.Label.label_id.in_(label_ids)))
+            .scalars()
+            .all()
+        )
         assert len(remaining) == 0

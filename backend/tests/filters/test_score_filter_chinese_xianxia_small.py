@@ -12,6 +12,7 @@ Invariants tested:
 - PRESERVATION: apply_filter with create_copy leaves original unchanged
 - DELETION: apply_filter without create_copy removes exactly the specified labels
 """
+
 from typing import Any
 
 import pytest
@@ -36,6 +37,7 @@ pytestmark = pytest.mark.dependency(
     scope="session",
 )
 
+
 @pytest.fixture
 def cxst_labels_populated(
     test_db: Session,
@@ -52,14 +54,10 @@ def cxst_labels_populated(
     Returns the label group after population.
     """
     request = CreateLabelDataByAutoLabel(
-        model_name='cluener',
-        model_params=chinese_xianxia_small_test_default_params_cluener
+        model_name="cluener", model_params=chinese_xianxia_small_test_default_params_cluener
     )
     result = insert_label_datas_by_autolabels(
-        test_db,
-        chinese_xianxia_small_test_user,
-        chinese_xianxia_small_test_label_group.label_group_id,
-        request
+        test_db, chinese_xianxia_small_test_user, chinese_xianxia_small_test_label_group.label_group_id, request
     )
     assert len(result.errors) == 0
     return chinese_xianxia_small_test_label_group
@@ -82,25 +80,19 @@ class TestFlagInstancesCompleteness:
 
         # Get expected count from database
         expected_count = test_db.execute(
-            select(func.count()).select_from(Label).join(
-                LabelData, Label.label_data_id == LabelData.label_data_id
-            ).where(
-                LabelData.label_group_id == cxst_labels_populated.label_group_id
-            ).where(
-                Label.label_score < min_score
-            )
+            select(func.count())
+            .select_from(Label)
+            .join(LabelData, Label.label_data_id == LabelData.label_data_id)
+            .where(LabelData.label_group_id == cxst_labels_populated.label_group_id)
+            .where(Label.label_score < min_score)
         ).scalar()
 
         # Flag instances
-        options = ScoreFlagInstancesOptions(
-            label_group_id=cxst_labels_populated.label_group_id,
-            min_score=min_score
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=cxst_labels_populated.label_group_id, min_score=min_score)
         results = score_filter.flag_instances(test_db, chinese_xianxia_small_test_user, options)
 
         assert len(results) == expected_count, (
-            f"Expected {expected_count} labels with score < {min_score}, "
-            f"but flag_instances returned {len(results)}"
+            f"Expected {expected_count} labels with score < {min_score}, but flag_instances returned {len(results)}"
         )
 
     def test_all_labels_returned_at_zero_threshold(
@@ -115,22 +107,17 @@ class TestFlagInstancesCompleteness:
         """
         # Get total label count
         total_count = test_db.execute(
-            select(func.count()).select_from(Label).join(
-                LabelData, Label.label_data_id == LabelData.label_data_id
-            ).where(
-                LabelData.label_group_id == cxst_labels_populated.label_group_id
-            )
+            select(func.count())
+            .select_from(Label)
+            .join(LabelData, Label.label_data_id == LabelData.label_data_id)
+            .where(LabelData.label_group_id == cxst_labels_populated.label_group_id)
         ).scalar()
 
-        options = ScoreFlagInstancesOptions(
-            label_group_id=cxst_labels_populated.label_group_id,
-            min_score=1.0
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=cxst_labels_populated.label_group_id, min_score=1.0)
         results = score_filter.flag_instances(test_db, chinese_xianxia_small_test_user, options)
 
         assert len(results) == total_count, (
-            f"Expected all {total_count} labels with min_score=1.0, "
-            f"but got {len(results)}"
+            f"Expected all {total_count} labels with min_score=1.0, but got {len(results)}"
         )
 
 
@@ -149,10 +136,7 @@ class TestFlagInstancesCorrectness:
         """
         min_score = 0.7
 
-        options = ScoreFlagInstancesOptions(
-            label_group_id=cxst_labels_populated.label_group_id,
-            min_score=min_score
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=cxst_labels_populated.label_group_id, min_score=min_score)
         results = score_filter.flag_instances(test_db, chinese_xianxia_small_test_user, options)
 
         for result in results:
@@ -171,10 +155,7 @@ class TestFlagInstancesCorrectness:
         """
         CORRECTNESS: If min_score < min score in data, return empty list.
         """
-        options = ScoreFlagInstancesOptions(
-            label_group_id=cxst_labels_populated.label_group_id,
-            min_score=0.0
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=cxst_labels_populated.label_group_id, min_score=0.0)
         results = score_filter.flag_instances(test_db, chinese_xianxia_small_test_user, options)
 
         assert len(results) == 0
@@ -198,29 +179,23 @@ class TestFlagInstancesScorePartition:
 
         # Get total count
         total_count = test_db.execute(
-            select(func.count()).select_from(Label).join(
-                LabelData, Label.label_data_id == LabelData.label_data_id
-            ).where(
-                LabelData.label_group_id == cxst_labels_populated.label_group_id
-            )
+            select(func.count())
+            .select_from(Label)
+            .join(LabelData, Label.label_data_id == LabelData.label_data_id)
+            .where(LabelData.label_group_id == cxst_labels_populated.label_group_id)
         ).scalar()
 
         # Get count below threshold
         below_threshold_count = test_db.execute(
-            select(func.count()).select_from(Label).join(
-                LabelData, Label.label_data_id == LabelData.label_data_id
-            ).where(
-                LabelData.label_group_id == cxst_labels_populated.label_group_id
-            ).where(
-                Label.label_score >= min_score
-            )
+            select(func.count())
+            .select_from(Label)
+            .join(LabelData, Label.label_data_id == LabelData.label_data_id)
+            .where(LabelData.label_group_id == cxst_labels_populated.label_group_id)
+            .where(Label.label_score >= min_score)
         ).scalar()
 
         # Flag instances
-        options = ScoreFlagInstancesOptions(
-            label_group_id=cxst_labels_populated.label_group_id,
-            min_score=min_score
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=cxst_labels_populated.label_group_id, min_score=min_score)
         results = score_filter.flag_instances(test_db, chinese_xianxia_small_test_user, options)
 
         assert isinstance(below_threshold_count, int)
@@ -245,37 +220,29 @@ class TestApplyFilterPreservation:
         """
         # Get original count
         original_count = test_db.execute(
-            select(func.count()).select_from(Label).join(
-                LabelData, Label.label_data_id == LabelData.label_data_id
-            ).where(
-                LabelData.label_group_id == cxst_labels_populated.label_group_id
-            )
+            select(func.count())
+            .select_from(Label)
+            .join(LabelData, Label.label_data_id == LabelData.label_data_id)
+            .where(LabelData.label_group_id == cxst_labels_populated.label_group_id)
         ).scalar()
 
         # Flag some labels
-        options = ScoreFlagInstancesOptions(
-            label_group_id=cxst_labels_populated.label_group_id,
-            min_score=0.7
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=cxst_labels_populated.label_group_id, min_score=0.7)
         instances = score_filter.flag_instances(test_db, chinese_xianxia_small_test_user, options)
         assert len(instances) > 0
 
         # Apply with copy
-        apply_options = ScoreApplyFilterOptions(create_copy=True, new_label_group_name="Filtered Copy", label_group_id=cxst_labels_populated.label_group_id)
-        score_filter.apply_filter(
-            test_db,
-            chinese_xianxia_small_test_user,
-            instances,
-            apply_options
+        apply_options = ScoreApplyFilterOptions(
+            create_copy=True, new_label_group_name="Filtered Copy", label_group_id=cxst_labels_populated.label_group_id
         )
+        score_filter.apply_filter(test_db, chinese_xianxia_small_test_user, instances, apply_options)
 
         # Original should be unchanged
         final_count = test_db.execute(
-            select(func.count()).select_from(Label).join(
-                LabelData, Label.label_data_id == LabelData.label_data_id
-            ).where(
-                LabelData.label_group_id == cxst_labels_populated.label_group_id
-            )
+            select(func.count())
+            .select_from(Label)
+            .join(LabelData, Label.label_data_id == LabelData.label_data_id)
+            .where(LabelData.label_group_id == cxst_labels_populated.label_group_id)
         ).scalar()
 
         assert final_count == original_count, (
@@ -300,38 +267,28 @@ class TestApplyFilterDeletion:
 
         # Get initial counts
         initial_total = test_db.execute(
-            select(func.count()).select_from(Label).join(
-                LabelData, Label.label_data_id == LabelData.label_data_id
-            ).where(
-                LabelData.label_group_id == cxst_labels_populated.label_group_id
-            )
+            select(func.count())
+            .select_from(Label)
+            .join(LabelData, Label.label_data_id == LabelData.label_data_id)
+            .where(LabelData.label_group_id == cxst_labels_populated.label_group_id)
         ).scalar()
 
         # Flag labels above threshold
-        options = ScoreFlagInstancesOptions(
-            label_group_id=cxst_labels_populated.label_group_id,
-            min_score=min_score
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=cxst_labels_populated.label_group_id, min_score=min_score)
         instances = score_filter.flag_instances(test_db, chinese_xianxia_small_test_user, options)
         flagged_count = len(instances)
         assert flagged_count > 0
 
         # Apply filter (delete flagged)
         apply_options = ScoreApplyFilterOptions(create_copy=False, label_group_id=cxst_labels_populated.label_group_id)
-        score_filter.apply_filter(
-            test_db,
-            chinese_xianxia_small_test_user,
-            instances,
-            apply_options
-        )
+        score_filter.apply_filter(test_db, chinese_xianxia_small_test_user, instances, apply_options)
 
         # Check final count
         final_total = test_db.execute(
-            select(func.count()).select_from(Label).join(
-                LabelData, Label.label_data_id == LabelData.label_data_id
-            ).where(
-                LabelData.label_group_id == cxst_labels_populated.label_group_id
-            )
+            select(func.count())
+            .select_from(Label)
+            .join(LabelData, Label.label_data_id == LabelData.label_data_id)
+            .where(LabelData.label_group_id == cxst_labels_populated.label_group_id)
         ).scalar()
 
         assert isinstance(initial_total, int)
@@ -353,34 +310,22 @@ class TestApplyFilterDeletion:
         min_score = 0.7
 
         # Flag and delete labels above threshold
-        options = ScoreFlagInstancesOptions(
-            label_group_id=cxst_labels_populated.label_group_id,
-            min_score=min_score
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=cxst_labels_populated.label_group_id, min_score=min_score)
         instances = score_filter.flag_instances(test_db, chinese_xianxia_small_test_user, options)
 
         apply_options = ScoreApplyFilterOptions(create_copy=False, label_group_id=cxst_labels_populated.label_group_id)
-        score_filter.apply_filter(
-            test_db,
-            chinese_xianxia_small_test_user,
-            instances,
-            apply_options
-        )
+        score_filter.apply_filter(test_db, chinese_xianxia_small_test_user, instances, apply_options)
 
         # Check all remaining labels are below threshold
         remaining_above = test_db.execute(
-            select(func.count()).select_from(Label).join(
-                LabelData, Label.label_data_id == LabelData.label_data_id
-            ).where(
-                LabelData.label_group_id == cxst_labels_populated.label_group_id
-            ).where(
-                Label.label_score < min_score
-            )
+            select(func.count())
+            .select_from(Label)
+            .join(LabelData, Label.label_data_id == LabelData.label_data_id)
+            .where(LabelData.label_group_id == cxst_labels_populated.label_group_id)
+            .where(Label.label_score < min_score)
         ).scalar()
 
-        assert remaining_above == 0, (
-            f"Found {remaining_above} labels with score < {min_score} after deletion"
-        )
+        assert remaining_above == 0, f"Found {remaining_above} labels with score < {min_score} after deletion"
 
 
 class TestGetContextsRealData:
@@ -398,7 +343,7 @@ class TestGetContextsRealData:
         """
         options = ScoreFlagInstancesOptions(
             label_group_id=cxst_labels_populated.label_group_id,
-            min_score=0.9  # High threshold for fewer results
+            min_score=0.9,  # High threshold for fewer results
         )
         instances = score_filter.flag_instances(test_db, chinese_xianxia_small_test_user, options)
 
@@ -408,8 +353,7 @@ class TestGetContextsRealData:
         for instance, context in zip(instances, contexts, strict=False):
             if context is not None:
                 # The label word should appear in the context at the relative position
-                extracted_word = context.text[context.label_start_rel:context.label_end_rel]
+                extracted_word = context.text[context.label_start_rel : context.label_end_rel]
                 assert extracted_word == instance.label.label_word, (
-                    f"Context extraction mismatch: expected '{instance.label.label_word}' "
-                    f"but got '{extracted_word}'"
+                    f"Context extraction mismatch: expected '{instance.label.label_word}' but got '{extracted_word}'"
                 )

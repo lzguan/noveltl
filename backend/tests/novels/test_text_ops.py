@@ -29,8 +29,8 @@ def _label(word: str, start: int, end: int, score: float = 1.0) -> Label:
 # apply_text_op — delete
 # -------------------------------------------------------
 
-class TestDeleteOp:
 
+class TestDeleteOp:
     def test_delete_middle_shifts_labels(self):
         # "Hello world. Test." with labels on "Hello" [0,5) and "Test" [13,17)
         text = "Hello world. Test."
@@ -46,7 +46,7 @@ class TestDeleteOp:
         assert hello.label_start == 0
         assert hello.label_end == 5
         assert test.label_start == 7  # 13 - 6
-        assert test.label_end == 11   # 17 - 6
+        assert test.label_end == 11  # 17 - 6
 
     def test_delete_at_start(self):
         text = "Hello world."
@@ -159,8 +159,8 @@ class TestDeleteOp:
 # apply_text_op — insert
 # -------------------------------------------------------
 
-class TestInsertOp:
 
+class TestInsertOp:
     def test_insert_middle_shifts_labels(self):
         text = "Hello world."
         labels = [_label("Hello", 0, 5), _label("world", 6, 11)]
@@ -175,7 +175,7 @@ class TestInsertOp:
         assert hello.label_start == 0
         assert hello.label_end == 5
         assert world.label_start == 11  # 6 + 5
-        assert world.label_end == 16   # 11 + 5
+        assert world.label_end == 16  # 11 + 5
 
     def test_insert_at_start(self):
         text = "Hello world."
@@ -266,8 +266,8 @@ class TestInsertOp:
 # apply_text_ops — sequential
 # -------------------------------------------------------
 
-class TestApplyTextOps:
 
+class TestApplyTextOps:
     def test_sequential_delete_then_insert(self):
         text = "Hello world."
         labels = [_label("Hello", 0, 5), _label("world", 6, 11)]

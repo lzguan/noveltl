@@ -12,5 +12,6 @@ class UserNotFoundException(NotFoundException):
 class UserAuthenticationFailedException(Exception):
     pass
 
+
 class UserNameDuplicateException(DuplicateException):
     pass

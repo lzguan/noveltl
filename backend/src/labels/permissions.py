@@ -3,6 +3,7 @@ Module for putting permission restrictions on database queries.
 
 If a function from this module is called, the permissions on the novel are automatically restricted as well. As of right now, the permissions on the novel/revision are checked only by whether the current user can view it.
 """
+
 import uuid
 from typing import Any
 
@@ -17,35 +18,40 @@ from .constants import LabelRole
 from .models import Label, LabelContributor, LabelData, LabelGroup
 
 
-def label_group_mod_access_select[T : Select[tuple[Any, ...]]](q : T, current_user : User, only_editors : bool = False) -> T:
+def label_group_mod_access_select[T: Select[tuple[Any, ...]]](
+    q: T, current_user: User, only_editors: bool = False
+) -> T:
     """
     Takes a select statement for label groups and returns a select statement that restricts permissions on q.
     """
-    q_exists_novel = select(novel_models.Novel.novel_id).where(novel_models.Novel.novel_id == LabelGroup.novel_id).correlate(LabelGroup)
+    q_exists_novel = (
+        select(novel_models.Novel.novel_id)
+        .where(novel_models.Novel.novel_id == LabelGroup.novel_id)
+        .correlate(LabelGroup)
+    )
     q_exists_novel = novel_mod_access_select(q_exists_novel, current_user)
     q = q.where(exists(q_exists_novel))
     if current_user.user_type != UserType.ADMIN:
         return q.where(
             exists(
-                select(
-                    1
-                ).select_from(
-                    LabelContributor
-                ).where(
+                select(1)
+                .select_from(LabelContributor)
+                .where(
                     and_(
                         LabelContributor.label_group_id == LabelGroup.label_group_id,
                         LabelContributor.user_id == current_user.user_id,
                         or_(
                             literal(only_editors is False),
-                            LabelContributor.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR])
-                        )
+                            LabelContributor.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR]),
+                        ),
                     )
                 )
             )
         )
     return q
 
-def label_group_mod_access_insert[T : Select[tuple[Any, ...]]](q : T, current_user : User, novel_id : uuid.UUID) -> T:
+
+def label_group_mod_access_insert[T: Select[tuple[Any, ...]]](q: T, current_user: User, novel_id: uuid.UUID) -> T:
     """
     Takes a select statement used for an insert statement for label groups and returns a select statement that restricts permissions on q.
     """
@@ -54,81 +60,91 @@ def label_group_mod_access_insert[T : Select[tuple[Any, ...]]](q : T, current_us
     q = q.where(exists(q_exists_novel))
     return q
 
-def label_group_mod_access_update[T : Update](q : T, current_user : User) -> T:
+
+def label_group_mod_access_update[T: Update](q: T, current_user: User) -> T:
     """
     Takes an update statement for label groups and returns an update statement that restricts permissions on q.
     """
-    q_exists_novel = select(novel_models.Novel.novel_id).where(novel_models.Novel.novel_id == LabelGroup.novel_id).correlate(LabelGroup)
+    q_exists_novel = (
+        select(novel_models.Novel.novel_id)
+        .where(novel_models.Novel.novel_id == LabelGroup.novel_id)
+        .correlate(LabelGroup)
+    )
     q_exists_novel = novel_mod_access_select(q_exists_novel, current_user)
     q = q.where(exists(q_exists_novel))
     if current_user.user_type != UserType.ADMIN:
         return q.where(
             exists(
-                select(
-                    1
-                ).select_from(
-                    LabelContributor
-                ).where(
+                select(1)
+                .select_from(LabelContributor)
+                .where(
                     and_(
                         LabelContributor.label_group_id == LabelGroup.label_group_id,
                         LabelContributor.user_id == current_user.user_id,
-                        LabelContributor.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR])
+                        LabelContributor.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR]),
                     )
                 )
             )
         )
     return q
 
-def label_data_mod_access_select[T : Select[tuple[Any, ...]]](q : T, current_user : User) -> T:
+
+def label_data_mod_access_select[T: Select[tuple[Any, ...]]](q: T, current_user: User) -> T:
     """
     Takes a select statement for label datas and returns a select statement that restricts permissions on q.
     """
-    q_exists_revision_text = select(novel_models.RevisionText.revision_text_id).where(novel_models.RevisionText.revision_text_id == LabelData.revision_text_id).correlate(LabelData)
+    q_exists_revision_text = (
+        select(novel_models.RevisionText.revision_text_id)
+        .where(novel_models.RevisionText.revision_text_id == LabelData.revision_text_id)
+        .correlate(LabelData)
+    )
     q_exists_revision_text = revision_text_mod_access_select(q_exists_revision_text, current_user)
     q = q.where(exists(q_exists_revision_text))
     if current_user.user_type != UserType.ADMIN:
         return q.where(
             exists(
-                select(
-                    1
-                ).select_from(
-                    LabelContributor
-                ).where(
-                    and_(
-                        LabelContributor.label_group_id == LabelData.label_group_id,
-                        LabelContributor.user_id == current_user.user_id
-                    )
-                )
-            )
-        )
-    return q
-
-def label_data_mod_access_update[T : Update](q : T, current_user : User) -> T:
-    """
-    Takes an update statement for label datas and returns an update statement that restricts permissions on q.
-    """
-    q_exists_revision_text = select(novel_models.RevisionText.revision_text_id).where(novel_models.RevisionText.revision_text_id == LabelData.revision_text_id).correlate(LabelData)
-    q_exists_revision_text = revision_text_mod_access_select(q_exists_revision_text, current_user)
-    q = q.where(exists(q_exists_revision_text))
-    if current_user.user_type != UserType.ADMIN:
-        return q.where(
-            exists(
-                select(
-                    1
-                ).select_from(
-                    LabelContributor
-                ).where(
+                select(1)
+                .select_from(LabelContributor)
+                .where(
                     and_(
                         LabelContributor.label_group_id == LabelData.label_group_id,
                         LabelContributor.user_id == current_user.user_id,
-                        LabelContributor.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR])
                     )
                 )
             )
         )
     return q
 
-def label_data_mod_access_insert[T : Select[tuple[Any, ...]]](q : T, current_user : User, label_group_id : uuid.UUID) -> T:
+
+def label_data_mod_access_update[T: Update](q: T, current_user: User) -> T:
+    """
+    Takes an update statement for label datas and returns an update statement that restricts permissions on q.
+    """
+    q_exists_revision_text = (
+        select(novel_models.RevisionText.revision_text_id)
+        .where(novel_models.RevisionText.revision_text_id == LabelData.revision_text_id)
+        .correlate(LabelData)
+    )
+    q_exists_revision_text = revision_text_mod_access_select(q_exists_revision_text, current_user)
+    q = q.where(exists(q_exists_revision_text))
+    if current_user.user_type != UserType.ADMIN:
+        return q.where(
+            exists(
+                select(1)
+                .select_from(LabelContributor)
+                .where(
+                    and_(
+                        LabelContributor.label_group_id == LabelData.label_group_id,
+                        LabelContributor.user_id == current_user.user_id,
+                        LabelContributor.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR]),
+                    )
+                )
+            )
+        )
+    return q
+
+
+def label_data_mod_access_insert[T: Select[tuple[Any, ...]]](q: T, current_user: User, label_group_id: uuid.UUID) -> T:
     """
     Takes a select statement used for an insert from select statement for label datas and returns a select statement for a label data that restricts permissions on q.
 
@@ -137,161 +153,129 @@ def label_data_mod_access_insert[T : Select[tuple[Any, ...]]](q : T, current_use
     if current_user.user_type != UserType.ADMIN:
         return q.where(
             exists(
-                select(
-                    1
-                ).select_from(
-                    LabelContributor
-                ).where(
+                select(1)
+                .select_from(LabelContributor)
+                .where(
                     and_(
                         LabelContributor.label_group_id == label_group_id,
                         LabelContributor.user_id == current_user.user_id,
-                        LabelContributor.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR])
+                        LabelContributor.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR]),
                     )
                 )
             )
         ).where(
             or_(
                 exists(
-                    select(
-                        1
-                    ).select_from(
-                        LabelGroup
-                    ).where(
-                        LabelGroup.label_group_id == label_group_id
-                    ).join(
-                        novel_models.Novel, LabelGroup.novel_id == novel_models.Novel.novel_id
-                    ).join(
-                        novel_models.Contributor,
-                        novel_models.Contributor.novel_id == novel_models.Novel.novel_id
-                    ).where(
-                        novel_models.Contributor.user_id == current_user.user_id
-                    )
+                    select(1)
+                    .select_from(LabelGroup)
+                    .where(LabelGroup.label_group_id == label_group_id)
+                    .join(novel_models.Novel, LabelGroup.novel_id == novel_models.Novel.novel_id)
+                    .join(novel_models.Contributor, novel_models.Contributor.novel_id == novel_models.Novel.novel_id)
+                    .where(novel_models.Contributor.user_id == current_user.user_id)
                 ),
-                select(
-                    novel_models.Novel.novel_visibility
-                ).select_from(
-                    LabelGroup
-                ).where(
-                    LabelGroup.label_group_id == label_group_id
-                ).join(
-                    novel_models.Novel,
-                    novel_models.Novel.novel_id == LabelGroup.novel_id
-                ).scalar_subquery() >= Visibility.UNLISTED
+                select(novel_models.Novel.novel_visibility)
+                .select_from(LabelGroup)
+                .where(LabelGroup.label_group_id == label_group_id)
+                .join(novel_models.Novel, novel_models.Novel.novel_id == LabelGroup.novel_id)
+                .scalar_subquery()
+                >= Visibility.UNLISTED,
             )
         )
     return q
 
-def label_mod_access_insert[T : Select[tuple[Any, ...]]](q : T, current_user : User, label_data_id : uuid.UUID) -> T:
+
+def label_mod_access_insert[T: Select[tuple[Any, ...]]](q: T, current_user: User, label_data_id: uuid.UUID) -> T:
     """
     Takes a select statement used for an insert from select statement for labels and returns a select statement for a label that restricts permissions on q.
     """
-    q_exists_revision_text = select(
-        1
-    ).select_from(
-        LabelData
-    ).where(
-        LabelData.label_data_id == label_data_id
-    ).join(
-        novel_models.RevisionText,
-        novel_models.RevisionText.revision_text_id == LabelData.revision_text_id
+    q_exists_revision_text = (
+        select(1)
+        .select_from(LabelData)
+        .where(LabelData.label_data_id == label_data_id)
+        .join(novel_models.RevisionText, novel_models.RevisionText.revision_text_id == LabelData.revision_text_id)
     )
     q_exists_revision_text = revision_text_mod_access_select(q_exists_revision_text, current_user)
     q = q.where(exists(q_exists_revision_text))
     if current_user.user_type != UserType.ADMIN:
         return q.where(
             exists(
-                select(
-                    1
-                ).select_from(
-                    LabelData
-                ).where(
-                    LabelData.label_data_id == label_data_id
-                ).join(
-                    LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id
-                ).join(
-                    LabelContributor, LabelGroup.label_group_id == LabelContributor.label_group_id
-                ).where(
+                select(1)
+                .select_from(LabelData)
+                .where(LabelData.label_data_id == label_data_id)
+                .join(LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id)
+                .join(LabelContributor, LabelGroup.label_group_id == LabelContributor.label_group_id)
+                .where(
                     and_(
                         LabelContributor.user_id == current_user.user_id,
-                        LabelContributor.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
+                        LabelContributor.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER]),
                     )
                 )
             )
         )
     return q
 
-def label_mod_access_update[T : Update](q : T, current_user : User) -> T:
+
+def label_mod_access_update[T: Update](q: T, current_user: User) -> T:
     """
     Takes an update statement for labels and returns an update statement that restricts permissions on q.
     """
-    q_exists_revision_text = select(
-        1
-    ).select_from(
-        LabelData
-    ).where(
-        LabelData.label_data_id == Label.label_data_id  # Correlates to outer Label
-    ).join(
-        novel_models.RevisionText,
-        LabelData.revision_text_id == novel_models.RevisionText.revision_text_id
-    ).correlate(Label)
+    q_exists_revision_text = (
+        select(1)
+        .select_from(LabelData)
+        .where(
+            LabelData.label_data_id == Label.label_data_id  # Correlates to outer Label
+        )
+        .join(novel_models.RevisionText, LabelData.revision_text_id == novel_models.RevisionText.revision_text_id)
+        .correlate(Label)
+    )
     q_exists_revision_text = revision_text_mod_access_select(q_exists_revision_text, current_user)
     q = q.where(exists(q_exists_revision_text))
     if current_user.user_type != UserType.ADMIN:
         return q.where(
             exists(
-                select(
-                    1
-                ).select_from(
-                    LabelData
-                ).where(
-                    LabelData.label_data_id == Label.label_data_id
-                ).join(
-                    LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id
-                ).join(
-                    LabelContributor, LabelGroup.label_group_id == LabelContributor.label_group_id
-                ).where(
+                select(1)
+                .select_from(LabelData)
+                .where(LabelData.label_data_id == Label.label_data_id)
+                .join(LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id)
+                .join(LabelContributor, LabelGroup.label_group_id == LabelContributor.label_group_id)
+                .where(
                     and_(
                         LabelContributor.user_id == current_user.user_id,
-                        LabelContributor.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
+                        LabelContributor.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER]),
                     )
                 )
             )
         )
     return q
 
-def label_mod_access_delete[T : Delete](q : T, current_user : User) -> T:
+
+def label_mod_access_delete[T: Delete](q: T, current_user: User) -> T:
     """
     Takes a delete statement for labels and returns a delete statement that restricts permissions on q.
     """
-    q_exists_revision_text = select(
-        1
-    ).select_from(
-        LabelData
-    ).where(
-        LabelData.label_data_id == Label.label_data_id  # Correlates to outer Label
-    ).join(
-        novel_models.RevisionText,
-        LabelData.revision_text_id == novel_models.RevisionText.revision_text_id
-    ).correlate(Label)
+    q_exists_revision_text = (
+        select(1)
+        .select_from(LabelData)
+        .where(
+            LabelData.label_data_id == Label.label_data_id  # Correlates to outer Label
+        )
+        .join(novel_models.RevisionText, LabelData.revision_text_id == novel_models.RevisionText.revision_text_id)
+        .correlate(Label)
+    )
     q_exists_revision_text = revision_text_mod_access_select(q_exists_revision_text, current_user)
     q = q.where(exists(q_exists_revision_text))
     if current_user.user_type != UserType.ADMIN:
         return q.where(
             exists(
-                select(
-                    1
-                ).select_from(
-                    LabelData
-                ).where(
-                    LabelData.label_data_id == Label.label_data_id
-                ).join(
-                    LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id
-                ).join(
-                    LabelContributor, LabelGroup.label_group_id == LabelContributor.label_group_id
-                ).where(
+                select(1)
+                .select_from(LabelData)
+                .where(LabelData.label_data_id == Label.label_data_id)
+                .join(LabelGroup, LabelData.label_group_id == LabelGroup.label_group_id)
+                .join(LabelContributor, LabelGroup.label_group_id == LabelContributor.label_group_id)
+                .where(
                     and_(
                         LabelContributor.user_id == current_user.user_id,
-                        LabelContributor.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
+                        LabelContributor.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER]),
                     )
                 )
             )

@@ -35,7 +35,6 @@ def _create_v2(test_db: Session, revision: Revision, old_rt: RevisionText) -> Re
 
 
 class TestDecideInstancesStaleness:
-
     def test_stale_instances_rejected(
         self,
         test_db: Session,
@@ -95,7 +94,6 @@ class TestDecideInstancesStaleness:
 
 
 class TestApplyFilterStaleness:
-
     def test_stale_instances_rejected(
         self,
         test_db: Session,

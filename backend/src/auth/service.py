@@ -17,10 +17,7 @@ from .exceptions import (
 from .utils import hash_password, verify_password
 
 
-def query_user_by_user_name(
-        db : Session,
-        user_name : str
-    ) -> models.User:
+def query_user_by_user_name(db: Session, user_name: str) -> models.User:
     """
     Finds exactly one user in the database with user_name, or raises an exception
 
@@ -39,10 +36,8 @@ def query_user_by_user_name(
         raise UserNotFoundException from e
     return result_user
 
-def query_user_by_id(
-        db : Session,
-        user_id : uuid.UUID
-    ) -> models.User:
+
+def query_user_by_id(db: Session, user_id: uuid.UUID) -> models.User:
     """
     Finds exactly one user in the database with user_id, or raises an exception
 
@@ -61,11 +56,8 @@ def query_user_by_id(
         raise UserNotFoundException from e
     return result_user
 
-def authenticate_user(
-        db : Session,
-        user_name : str,
-        password : str
-    ) -> models.User:
+
+def authenticate_user(db: Session, user_name: str, password: str) -> models.User:
     """
     Authenticates a user login and returns a User object if successful.
 
@@ -83,11 +75,8 @@ def authenticate_user(
         raise UserAuthenticationFailedException
     return db_user
 
-def insert_user(
-        db : Session,
-        current_user : schemas.User | None,
-        request : schemas.CreateUser
-    ) -> models.User:
+
+def insert_user(db: Session, current_user: schemas.User | None, request: schemas.CreateUser) -> models.User:
     """
     Inserts a new user into the database, under the assumption that the current_user is doing the insertion.
 
@@ -105,12 +94,14 @@ def insert_user(
     if current_user is None:
         if request.user_type == UserType.ADMIN:
             raise InsufficientPermissionsException
-    elif current_user.user_type == UserType.USER: # if user logged in, should not allow to create
+    elif current_user.user_type == UserType.USER:  # if user logged in, should not allow to create
         raise InsufficientPermissionsException
 
     # add new user into db
     hashed_password = hash_password(request.user_password)
-    new_user = models.User(user_name=request.user_name, user_hashed_password=hashed_password, user_type=request.user_type)
+    new_user = models.User(
+        user_name=request.user_name, user_hashed_password=hashed_password, user_type=request.user_type
+    )
     try:
         db.add(new_user)
         db.commit()
@@ -130,7 +121,8 @@ def insert_user(
         raise UnknownError from e
     return new_user
 
-def remove_user(db : Session, current_user : schemas.User, user_id : uuid.UUID) -> schemas.DeleteUserStatus:
+
+def remove_user(db: Session, current_user: schemas.User, user_id: uuid.UUID) -> schemas.DeleteUserStatus:
     """
     Removes a user with user_id from the database. The user performing the remove is current_user.
 

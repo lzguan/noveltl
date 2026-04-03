@@ -18,19 +18,20 @@ from src.novels.models import Chapter, Novel, Revision, RevisionText
 
 logger = logging.getLogger(__name__)
 
+
 class Loader(Protocol):
-    def __call__(self, pathname : str, recursive : bool = False) -> Generator[str, None, None]:
-        ...
+    def __call__(self, pathname: str, recursive: bool = False) -> Generator[str, None, None]: ...
+
 
 @pytest.mark.asyncio
 @pytest.mark.slow
 async def test_insert_auto_labels_basic(
-    chinese_xianxia_small_test_novel : Novel,
-    chinese_xianxia_small_test_chapters : list[tuple[Chapter, Revision, RevisionText]],
-    redis : ArqRedis,
-    test_db : Session,
-    chinese_xianxia_small_test_user : User,
-    worker_mock : Worker
+    chinese_xianxia_small_test_novel: Novel,
+    chinese_xianxia_small_test_chapters: list[tuple[Chapter, Revision, RevisionText]],
+    redis: ArqRedis,
+    test_db: Session,
+    chinese_xianxia_small_test_user: User,
+    worker_mock: Worker,
 ):
     ret = await insert_auto_labels(
         test_db,
@@ -38,12 +39,12 @@ async def test_insert_auto_labels_basic(
         ArqDispatcher(redis),
         CreateAutoLabels(
             revision_ids=[revision.revision_id for _, revision, _ in chinese_xianxia_small_test_chapters],
-            auto_label_model_name='cluener',
+            auto_label_model_name="cluener",
             auto_label_model_params={},
-            novel_id=chinese_xianxia_small_test_novel.novel_id
-        )
+            novel_id=chinese_xianxia_small_test_novel.novel_id,
+        ),
     )
-    assert len(chinese_xianxia_small_test_chapters) > 0 # move this to fixture test sometime in the future
+    assert len(chinese_xianxia_small_test_chapters) > 0  # move this to fixture test sometime in the future
     assert len(ret) == len(chinese_xianxia_small_test_chapters)
     logger.info("ret.inserts: %s", ret)
     assert all(a.auto_label_status == AutoLabelProgress.PENDING for a in ret)
@@ -55,12 +56,13 @@ async def test_insert_auto_labels_basic(
         logger.info("AutoLabel row: %s", row.__dict__)
         assert row.auto_label_status == AutoLabelProgress.DONE
 
+
 async def test_insert_auto_labels_set_params(
-    chinese_xianxia_small_test_novel : Novel,
-    chinese_xianxia_small_test_chapters : list[tuple[Chapter, Revision, RevisionText]],
-    redis : ArqRedis,
-    test_db : Session,
-    chinese_xianxia_small_test_user : User
+    chinese_xianxia_small_test_novel: Novel,
+    chinese_xianxia_small_test_chapters: list[tuple[Chapter, Revision, RevisionText]],
+    redis: ArqRedis,
+    test_db: Session,
+    chinese_xianxia_small_test_user: User,
 ):
     await insert_auto_labels(
         test_db,
@@ -68,18 +70,19 @@ async def test_insert_auto_labels_set_params(
         ArqDispatcher(redis),
         CreateAutoLabels(
             revision_ids=[revision.revision_id for _, revision, _ in chinese_xianxia_small_test_chapters],
-            auto_label_model_name='cluener',
+            auto_label_model_name="cluener",
             auto_label_model_params={"separators": {"\n": SepPriority.HIGH}},
-            novel_id=chinese_xianxia_small_test_novel.novel_id
-        )
+            novel_id=chinese_xianxia_small_test_novel.novel_id,
+        ),
     )
 
+
 async def test_insert_auto_labels_twice(
-    chinese_xianxia_small_test_novel : Novel,
-    chinese_xianxia_small_test_chapters : list[tuple[Chapter, Revision, RevisionText]],
-    redis : ArqRedis,
-    test_db : Session,
-    chinese_xianxia_small_test_user : User
+    chinese_xianxia_small_test_novel: Novel,
+    chinese_xianxia_small_test_chapters: list[tuple[Chapter, Revision, RevisionText]],
+    redis: ArqRedis,
+    test_db: Session,
+    chinese_xianxia_small_test_user: User,
 ):
     ret = await insert_auto_labels(
         test_db,
@@ -87,10 +90,10 @@ async def test_insert_auto_labels_twice(
         ArqDispatcher(redis),
         CreateAutoLabels(
             revision_ids=[revision.revision_id for _, revision, _ in chinese_xianxia_small_test_chapters],
-            auto_label_model_name='cluener',
+            auto_label_model_name="cluener",
             auto_label_model_params={"separators": {"\n": SepPriority.HIGH}},
-            novel_id=chinese_xianxia_small_test_novel.novel_id
-        )
+            novel_id=chinese_xianxia_small_test_novel.novel_id,
+        ),
     )
     q = select(AutoLabel)
     result_rows = test_db.execute(q).scalars().all()
@@ -103,10 +106,10 @@ async def test_insert_auto_labels_twice(
         ArqDispatcher(redis),
         CreateAutoLabels(
             revision_ids=[revision.revision_id for _, revision, _ in chinese_xianxia_small_test_chapters],
-            auto_label_model_name='cluener',
+            auto_label_model_name="cluener",
             auto_label_model_params={"separators": {"\n": SepPriority.HIGH}},
-            novel_id=chinese_xianxia_small_test_novel.novel_id
-        )
+            novel_id=chinese_xianxia_small_test_novel.novel_id,
+        ),
     )
     assert len(ret) == 0
     result_rows = test_db.execute(q).scalars().all()

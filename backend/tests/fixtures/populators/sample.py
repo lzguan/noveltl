@@ -13,14 +13,13 @@ from src.novels.models import Chapter, Contributor, Novel, Revision, RevisionTex
 
 
 class Hash(Protocol):
-    def hash(self, password : str | bytes, *args : Any, **kwargs : Any) -> str:
-        ...
+    def hash(self, password: str | bytes, *args: Any, **kwargs: Any) -> str: ...
 
-    def verify(self, password : str | bytes, hash : str | bytes) -> bool:
-        ...
+    def verify(self, password: str | bytes, hash: str | bytes) -> bool: ...
+
 
 @pytest.fixture
-def sample_languages(test_db : Session) -> dict[str, Language]:
+def sample_languages(test_db: Session) -> dict[str, Language]:
     # Create the standard languages needed for most tests
     en = Language(language_name="English", language_code="en")
     zh = Language(language_name="Chinese", language_code="zh")
@@ -34,21 +33,47 @@ def sample_languages(test_db : Session) -> dict[str, Language]:
     test_db.refresh(jp)
     return {"en": en, "zh": zh, "kr": kr, "jp": jp}
 
+
 @pytest.fixture
-def sample_users(test_db : Session, recommended_hash : Hash) -> list[User]:
-    test_admin = User(user_name="admin", user_hashed_password = recommended_hash.hash('123'), user_type=UserType.ADMIN)
-    test_user = User(user_name="user", user_hashed_password = recommended_hash.hash('456'), user_type=UserType.USER)
+def sample_users(test_db: Session, recommended_hash: Hash) -> list[User]:
+    test_admin = User(user_name="admin", user_hashed_password=recommended_hash.hash("123"), user_type=UserType.ADMIN)
+    test_user = User(user_name="user", user_hashed_password=recommended_hash.hash("456"), user_type=UserType.USER)
     test_db.add_all([test_admin, test_user])
     test_db.commit()
     return [test_admin, test_user]
 
+
 @pytest.fixture
-def sample_novels(sample_languages : dict[str, Language], test_db : Session) -> list[Novel]:
+def sample_novels(sample_languages: dict[str, Language], test_db: Session) -> list[Novel]:
     # Create some sample novels
-    novel0 = Novel(novel_title="Sample Novel 1", language_code=sample_languages['en'].language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
-    novel1 = Novel(novel_title="Sample Novel 2", language_code=sample_languages['zh'].language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
-    novel2 = Novel(novel_title="Sample Novel 3", language_code=sample_languages['kr'].language_code, novel_description="A description.", novel_author="An Author", novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
-    novel3 = Novel(novel_title="Smample Novel 4", language_code=sample_languages['zh'].language_code, novel_description="Another description.", novel_author="Another Author", novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
+    novel0 = Novel(
+        novel_title="Sample Novel 1",
+        language_code=sample_languages["en"].language_code,
+        novel_type=NovelType.ORIGINAL,
+        novel_visibility=Visibility.PUBLIC,
+    )
+    novel1 = Novel(
+        novel_title="Sample Novel 2",
+        language_code=sample_languages["zh"].language_code,
+        novel_type=NovelType.ORIGINAL,
+        novel_visibility=Visibility.PUBLIC,
+    )
+    novel2 = Novel(
+        novel_title="Sample Novel 3",
+        language_code=sample_languages["kr"].language_code,
+        novel_description="A description.",
+        novel_author="An Author",
+        novel_type=NovelType.ORIGINAL,
+        novel_visibility=Visibility.PUBLIC,
+    )
+    novel3 = Novel(
+        novel_title="Smample Novel 4",
+        language_code=sample_languages["zh"].language_code,
+        novel_description="Another description.",
+        novel_author="Another Author",
+        novel_type=NovelType.ORIGINAL,
+        novel_visibility=Visibility.PUBLIC,
+    )
     test_db.add_all([novel0, novel1, novel2, novel3])
     test_db.commit()
     test_db.refresh(novel0)
@@ -57,6 +82,7 @@ def sample_novels(sample_languages : dict[str, Language], test_db : Session) -> 
     test_db.refresh(novel2)
     test_db.refresh(novel3)
     return [novel0, novel1, novel2, novel3]
+
 
 @pytest.fixture
 def sample_contributors(test_db: Session, sample_novels: list[Novel], sample_users: list[User]) -> list[Contributor]:
@@ -67,6 +93,7 @@ def sample_contributors(test_db: Session, sample_novels: list[Novel], sample_use
     test_db.add_all([c1, c2])
     test_db.commit()
     return [c1, c2]
+
 
 @pytest.fixture
 def sample_chapters(test_db: Session, sample_novels: list[Novel]) -> list[Chapter]:
@@ -79,6 +106,7 @@ def sample_chapters(test_db: Session, sample_novels: list[Novel]) -> list[Chapte
     test_db.refresh(ch1)
     test_db.refresh(ch2)
     return [ch1, ch2]
+
 
 @pytest.fixture
 def sample_revisions(test_db: Session, sample_chapters: list[Chapter]) -> list[tuple[Revision, RevisionText]]:
@@ -101,12 +129,17 @@ def sample_revisions(test_db: Session, sample_chapters: list[Chapter]) -> list[t
     test_db.add_all([rev1, rev2])
     test_db.commit()
 
-    rt1 = RevisionText(revision_id=rev1.revision_id, revision_text_content="Alice went to the market.", revision_text_version=1)
-    rt2 = RevisionText(revision_id=rev2.revision_id, revision_text_content="This is a draft text.", revision_text_version=1)
+    rt1 = RevisionText(
+        revision_id=rev1.revision_id, revision_text_content="Alice went to the market.", revision_text_version=1
+    )
+    rt2 = RevisionText(
+        revision_id=rev2.revision_id, revision_text_content="This is a draft text.", revision_text_version=1
+    )
     test_db.add_all([rt1, rt2])
     test_db.commit()
 
     return [(rev1, rt1), (rev2, rt2)]
+
 
 @pytest.fixture
 def sample_label_groups(test_db: Session, sample_novels: list[Novel], sample_users: list[User]) -> list[LabelGroup]:
@@ -120,30 +153,34 @@ def sample_label_groups(test_db: Session, sample_novels: list[Novel], sample_use
     test_db.refresh(lg1)
     return [lg1]
 
+
 @pytest.fixture
-def sample_label_contributors(test_db: Session, sample_label_groups: list[LabelGroup], sample_users: list[User]) -> list[LabelContributor]:
+def sample_label_contributors(
+    test_db: Session, sample_label_groups: list[LabelGroup], sample_users: list[User]
+) -> list[LabelContributor]:
     # Assign Admin as OWNER of the label group
     lc1 = LabelContributor(
         label_group_id=sample_label_groups[0].label_group_id,
         user_id=sample_users[0].user_id,
-        label_contributor_role=LabelRole.OWNER
+        label_contributor_role=LabelRole.OWNER,
     )
     test_db.add(lc1)
     test_db.commit()
     return [lc1]
 
+
 @pytest.fixture
-def sample_label_datas(test_db: Session, sample_label_groups: list[LabelGroup], sample_revisions: list[tuple[Revision, RevisionText]]) -> list[LabelData]:
+def sample_label_datas(
+    test_db: Session, sample_label_groups: list[LabelGroup], sample_revisions: list[tuple[Revision, RevisionText]]
+) -> list[LabelData]:
     # Link the Label Data to the Primary Revision of Chapter 1
     _, rt1 = sample_revisions[0]
-    ld1 = LabelData(
-        label_group_id=sample_label_groups[0].label_group_id,
-        revision_text_id=rt1.revision_text_id
-    )
+    ld1 = LabelData(label_group_id=sample_label_groups[0].label_group_id, revision_text_id=rt1.revision_text_id)
     test_db.add(ld1)
     test_db.commit()
     test_db.refresh(ld1)
     return [ld1]
+
 
 @pytest.fixture
 def sample_labels(test_db: Session, sample_label_datas: list[LabelData]) -> list[Label]:
@@ -158,7 +195,7 @@ def sample_labels(test_db: Session, sample_label_datas: list[LabelData]) -> list
         label_start=0,
         label_end=5,
         label_score=1.0,
-        label_dirty=False
+        label_dirty=False,
     )
     test_db.add(l1)
     test_db.commit()

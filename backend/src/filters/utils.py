@@ -18,6 +18,7 @@ from ..labels.permissions import (
 
 logger = logging.getLogger(__name__)
 
+
 def find_sentence_around(text: str, label_start: int, label_end: int, delimiters: str) -> tuple[str, int, int]:
     """
     Finds the sentence surrounding a labeled segment in the text. Returns in the format (sentence, label_start, label_end).
@@ -39,18 +40,21 @@ def find_sentence_around(text: str, label_start: int, label_end: int, delimiters
     if end - start > 500:
         logger.warning(
             "find_sentence_around returned %d chars (label: %d-%d). Possibly missing delimiter.",
-            end - start, label_start, label_end
+            end - start,
+            label_start,
+            label_end,
         )
 
     return text[start:end].strip(), label_start - start, label_end - start
 
+
 def copy_label_group(
-        db : Session,
-        current_user : User,
-        label_group_id : uuid.UUID,
-        new_label_group_name : str,
-        keep_contributors : bool = True
-    ) -> label_models.LabelGroup:
+    db: Session,
+    current_user: User,
+    label_group_id: uuid.UUID,
+    new_label_group_name: str,
+    keep_contributors: bool = True,
+) -> label_models.LabelGroup:
     """
     Copies a label group with a new name. Only editors may copy label groups. The new label group will have the same novel association as the original. The label data and labels associated with the original label group will also be copied to the new label group.
 
@@ -68,11 +72,7 @@ def copy_label_group(
     """
 
     # label group
-    q = select(
-        label_models.LabelGroup
-    ).where(
-        label_models.LabelGroup.label_group_id == label_group_id
-    )
+    q = select(label_models.LabelGroup).where(label_models.LabelGroup.label_group_id == label_group_id)
     q = label_group_mod_access_select(q, current_user, only_editors=True)
     try:
         result = db.execute(q)
@@ -82,10 +82,11 @@ def copy_label_group(
     except Exception as e:
         raise UnknownError("An error occurred while retrieving the label group. Please try again later.") from e
 
-    stmt = insert(label_models.LabelGroup).values(
-        label_group_name=new_label_group_name,
-        novel_id=original_label_group.novel_id
-    ).returning(label_models.LabelGroup)
+    stmt = (
+        insert(label_models.LabelGroup)
+        .values(label_group_name=new_label_group_name, novel_id=original_label_group.novel_id)
+        .returning(label_models.LabelGroup)
+    )
     try:
         new_label_group = db.execute(stmt).scalar_one()
     except Exception as e:
@@ -94,26 +95,26 @@ def copy_label_group(
 
     # contributors
     if keep_contributors:
-        cols : list[Any] = [
+        cols: list[Any] = [
             label_models.LabelContributor.user_id,
             label_models.LabelContributor.label_group_id,
-            label_models.LabelContributor.label_contributor_role
+            label_models.LabelContributor.label_contributor_role,
         ]
-        q = select(
-            label_models.LabelContributor.user_id,
-            literal(new_label_group.label_group_id),
-            label_models.LabelContributor.label_contributor_role
-        ).select_from(
-            label_models.LabelContributor
-        ).where(
-            label_models.LabelContributor.label_group_id == original_label_group.label_group_id
+        q = (
+            select(
+                label_models.LabelContributor.user_id,
+                literal(new_label_group.label_group_id),
+                label_models.LabelContributor.label_contributor_role,
+            )
+            .select_from(label_models.LabelContributor)
+            .where(label_models.LabelContributor.label_group_id == original_label_group.label_group_id)
         )
         stmt = insert(label_models.LabelContributor).from_select(cols, q)
     else:
         stmt = insert(label_models.LabelContributor).values(
             user_id=current_user.user_id,
             label_group_id=new_label_group.label_group_id,
-            label_contributor_role=LabelRole.OWNER
+            label_contributor_role=LabelRole.OWNER,
         )
 
     try:
@@ -123,17 +124,11 @@ def copy_label_group(
         raise UnknownError("An error occurred while copying label group contributors. Please try again later.") from e
 
     # label datas
-    cols = [
-        label_models.LabelData.revision_text_id,
-        label_models.LabelData.label_group_id
-    ]
-    q_label_datas = select(
-        label_models.LabelData.revision_text_id,
-        literal(new_label_group.label_group_id)
-    ).select_from(
-        label_models.LabelData
-    ).where(
-        label_models.LabelData.label_group_id == original_label_group.label_group_id
+    cols = [label_models.LabelData.revision_text_id, label_models.LabelData.label_group_id]
+    q_label_datas = (
+        select(label_models.LabelData.revision_text_id, literal(new_label_group.label_group_id))
+        .select_from(label_models.LabelData)
+        .where(label_models.LabelData.label_group_id == original_label_group.label_group_id)
     )
     q_label_datas = label_data_mod_access_insert(q_label_datas, current_user, original_label_group.label_group_id)
     stmt = insert(label_models.LabelData).from_select(cols, q_label_datas).returning(label_models.LabelData)
@@ -151,29 +146,24 @@ def copy_label_group(
         label_models.Label.label_start,
         label_models.Label.label_end,
         label_models.Label.label_score,
-        label_models.Label.label_dirty
+        label_models.Label.label_dirty,
     ]
     old_ld = aliased(label_models.LabelData)
-    q_labels = select(
-        label_models.LabelData.label_data_id,
-        label_models.Label.label_entity_group,
-        label_models.Label.label_word,
-        label_models.Label.label_start,
-        label_models.Label.label_end,
-        label_models.Label.label_score,
-        label_models.Label.label_dirty
-    ).select_from(
-        label_models.Label
-    ).join(
-        old_ld,
-        label_models.Label.label_data_id == old_ld.label_data_id
-    ).where(
-        old_ld.label_group_id == original_label_group.label_group_id
-    ).join(
-        label_models.LabelData,
-        label_models.LabelData.revision_text_id == old_ld.revision_text_id
-    ).where(
-        label_models.LabelData.label_group_id == new_label_group.label_group_id
+    q_labels = (
+        select(
+            label_models.LabelData.label_data_id,
+            label_models.Label.label_entity_group,
+            label_models.Label.label_word,
+            label_models.Label.label_start,
+            label_models.Label.label_end,
+            label_models.Label.label_score,
+            label_models.Label.label_dirty,
+        )
+        .select_from(label_models.Label)
+        .join(old_ld, label_models.Label.label_data_id == old_ld.label_data_id)
+        .where(old_ld.label_group_id == original_label_group.label_group_id)
+        .join(label_models.LabelData, label_models.LabelData.revision_text_id == old_ld.revision_text_id)
+        .where(label_models.LabelData.label_group_id == new_label_group.label_group_id)
     )
     # add permissions? stc
     stmt = insert(label_models.Label).from_select(cols, q_labels)
@@ -182,7 +172,6 @@ def copy_label_group(
     except Exception as e:
         db.rollback()
         raise UnknownError("An error occurred while copying labels. Please try again later.") from e
-
 
     db.commit()
     db.refresh(new_label_group)

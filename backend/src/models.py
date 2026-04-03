@@ -25,7 +25,7 @@ class Base(DeclarativeBase):
 # imports for other models
 from .auth.models import *  # noqa: E402, F403
 from .autolabels.models import *  # noqa: E402, F403
+from .glossaries.models import *  # noqa: E402, F403
 from .labels.models import *  # noqa: E402, F403
 from .languages.models import *  # noqa: E402, F403
 from .novels.models import *  # noqa: E402, F403
-from .glossaries.models import *  # noqa: E402, F403

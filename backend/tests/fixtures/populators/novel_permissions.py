@@ -12,6 +12,7 @@ from src.novels.models import Chapter, Novel, Revision, RevisionText
 
 # --- Chapters ---
 
+
 @pytest.fixture
 def p1_chapter_public(test_db: Session, p1_novel_public_tyrone: Novel) -> Chapter:
     """Chapter on a PUBLIC novel owned by user_1."""
@@ -59,6 +60,7 @@ def p1_chapter_owner_viewer(test_db: Session, p1_novel_owner_viewer: Novel) -> C
 
 # --- Revisions ---
 
+
 @pytest.fixture
 def p1_revision_public(test_db: Session, p1_chapter_public: Chapter) -> tuple[Revision, RevisionText]:
     """Public revision on a PUBLIC novel."""
@@ -70,7 +72,9 @@ def p1_revision_public(test_db: Session, p1_chapter_public: Chapter) -> tuple[Re
     )
     test_db.add(rev)
     test_db.commit()
-    rt = RevisionText(revision_id=rev.revision_id, revision_text_content="Public chapter text.", revision_text_version=1)
+    rt = RevisionText(
+        revision_id=rev.revision_id, revision_text_content="Public chapter text.", revision_text_version=1
+    )
     test_db.add(rt)
     test_db.commit()
     return rev, rt
@@ -87,7 +91,9 @@ def p1_revision_draft_on_public(test_db: Session, p1_chapter_public: Chapter) ->
     )
     test_db.add(rev)
     test_db.commit()
-    rt = RevisionText(revision_id=rev.revision_id, revision_text_content="Draft text on public novel.", revision_text_version=1)
+    rt = RevisionText(
+        revision_id=rev.revision_id, revision_text_content="Draft text on public novel.", revision_text_version=1
+    )
     test_db.add(rt)
     test_db.commit()
     return rev, rt
@@ -104,7 +110,9 @@ def p1_revision_restricted(test_db: Session, p1_chapter_restricted: Chapter) -> 
     )
     test_db.add(rev)
     test_db.commit()
-    rt = RevisionText(revision_id=rev.revision_id, revision_text_content="Restricted novel text.", revision_text_version=1)
+    rt = RevisionText(
+        revision_id=rev.revision_id, revision_text_content="Restricted novel text.", revision_text_version=1
+    )
     test_db.add(rt)
     test_db.commit()
     return rev, rt
@@ -138,7 +146,9 @@ def p1_revision_owner_editor(test_db: Session, p1_chapter_owner_editor: Chapter)
     )
     test_db.add(rev)
     test_db.commit()
-    rt = RevisionText(revision_id=rev.revision_id, revision_text_content="Owner-editor novel text.", revision_text_version=1)
+    rt = RevisionText(
+        revision_id=rev.revision_id, revision_text_content="Owner-editor novel text.", revision_text_version=1
+    )
     test_db.add(rt)
     test_db.commit()
     return rev, rt
@@ -155,7 +165,9 @@ def p1_revision_owner_viewer(test_db: Session, p1_chapter_owner_viewer: Chapter)
     )
     test_db.add(rev)
     test_db.commit()
-    rt = RevisionText(revision_id=rev.revision_id, revision_text_content="Owner-viewer novel text.", revision_text_version=1)
+    rt = RevisionText(
+        revision_id=rev.revision_id, revision_text_content="Owner-viewer novel text.", revision_text_version=1
+    )
     test_db.add(rt)
     test_db.commit()
     return rev, rt

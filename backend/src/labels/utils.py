@@ -1,6 +1,7 @@
 """
 Utilities for label services.
 """
+
 import uuid
 from typing import Any
 
@@ -24,7 +25,7 @@ from .exceptions import (
 from .permissions import label_mod_access_delete, label_mod_access_insert, label_mod_access_update
 
 
-def _apply_add(db : Session, current_user : User, label_data_id : uuid.UUID, text : str, op : schemas.AddLabelOp) -> None:
+def _apply_add(db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.AddLabelOp) -> None:
     """
     Applies a label add operation to database. Does not commit. Secure operation.
 
@@ -52,16 +53,16 @@ def _apply_add(db : Session, current_user : User, label_data_id : uuid.UUID, tex
         literal(op.start_pos),
         literal(op.end_pos),
         literal(op.dirty),
-        literal(label_data_id)
+        literal(label_data_id),
     )
     cols = [
-        'label_entity_group',
-        'label_score',
-        'label_word',
-        'label_start',
-        'label_end',
-        'label_dirty',
-        'label_data_id'
+        "label_entity_group",
+        "label_score",
+        "label_word",
+        "label_start",
+        "label_end",
+        "label_dirty",
+        "label_data_id",
     ]
     vals = label_mod_access_insert(vals, current_user, label_data_id)
     stmt = insert(models.Label).from_select(cols, vals).returning(models.Label)
@@ -82,7 +83,10 @@ def _apply_add(db : Session, current_user : User, label_data_id : uuid.UUID, tex
         db.rollback()
         raise UnknownError from e
 
-def _apply_update(db : Session, current_user : User, label_data_id : uuid.UUID, text : str, op : schemas.UpdateLabelOp) -> None:
+
+def _apply_update(
+    db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.UpdateLabelOp
+) -> None:
     """
     Applies a label update operation to database. Does not commit. Secure operation.
 
@@ -102,7 +106,7 @@ def _apply_update(db : Session, current_user : User, label_data_id : uuid.UUID, 
     """
     if op.end_pos > len(text):
         raise LabelOutOfBoundsInvalidOperationException
-    if text[op.start_pos:op.end_pos] != op.word:
+    if text[op.start_pos : op.end_pos] != op.word:
         raise LabelWordMismatchInvalidOperationException
     if op.new_end_pos is not None and op.new_end_pos > len(text):
         raise LabelOutOfBoundsInvalidOperationException
@@ -116,33 +120,32 @@ def _apply_update(db : Session, current_user : User, label_data_id : uuid.UUID, 
     elif op.new_start_pos is None and op.new_end_pos is None:
         if op.new_word is not None:
             raise LabelInvalidOperationException("New word should not be set.")
-    vals : dict[str, Any] = {}
+    vals: dict[str, Any] = {}
     if op.new_start_pos is not None:
-        vals['label_start'] = op.new_start_pos
+        vals["label_start"] = op.new_start_pos
     if op.new_end_pos is not None:
-        vals['label_end'] = op.new_end_pos
+        vals["label_end"] = op.new_end_pos
     if op.new_start_pos is not None or op.new_end_pos is not None:
-        vals['label_word'] = op.new_word
+        vals["label_word"] = op.new_word
     if op.dirty is not None:
-        vals['label_dirty'] = op.dirty
+        vals["label_dirty"] = op.dirty
     if op.entity_group is not None:
-        vals['label_entity_group'] = op.entity_group
+        vals["label_entity_group"] = op.entity_group
     if op.score is not None:
-        vals['label_score'] = op.score
+        vals["label_score"] = op.score
 
-    stmt = update(
-        models.Label
-    ).values(
-        vals
-    ).where(
-        and_(
-            models.Label.label_start == op.start_pos,
-            models.Label.label_end == op.end_pos,
-            models.Label.label_data_id == label_data_id,
-            models.Label.label_word == op.word
+    stmt = (
+        update(models.Label)
+        .values(vals)
+        .where(
+            and_(
+                models.Label.label_start == op.start_pos,
+                models.Label.label_end == op.end_pos,
+                models.Label.label_data_id == label_data_id,
+                models.Label.label_word == op.word,
+            )
         )
-    ).returning(
-        models.Label
+        .returning(models.Label)
     )
     stmt = label_mod_access_update(stmt, current_user)
     try:
@@ -162,7 +165,10 @@ def _apply_update(db : Session, current_user : User, label_data_id : uuid.UUID, 
         db.rollback()
         raise UnknownError from e
 
-def _apply_delete(db : Session, current_user : User, label_data_id : uuid.UUID, text : str, op : schemas.DeleteLabelOp) -> None:
+
+def _apply_delete(
+    db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.DeleteLabelOp
+) -> None:
     """
     Applies a label delete operation. Does not commit.
 
@@ -180,20 +186,18 @@ def _apply_delete(db : Session, current_user : User, label_data_id : uuid.UUID, 
     """
     if op.end_pos > len(text):
         raise LabelOutOfBoundsInvalidOperationException
-    if text[op.start_pos:op.end_pos] != op.word:
+    if text[op.start_pos : op.end_pos] != op.word:
         raise LabelWordMismatchInvalidOperationException
     stmt = delete(models.Label).where(
         and_(
             models.Label.label_start == op.start_pos,
             models.Label.label_end == op.end_pos,
             models.Label.label_data_id == label_data_id,
-            models.Label.label_word == op.word
+            models.Label.label_word == op.word,
         )
     )
     stmt = label_mod_access_delete(stmt, current_user)
-    stmt = stmt.returning(
-        models.Label
-    )
+    stmt = stmt.returning(models.Label)
 
     try:
         result = db.execute(stmt)
@@ -205,7 +209,10 @@ def _apply_delete(db : Session, current_user : User, label_data_id : uuid.UUID, 
         db.rollback()
         raise UnknownError from e
 
-def apply_operation(db : Session, current_user : User, label_data_id : uuid.UUID, text : str, op : schemas.LabelOpBase) -> None:
+
+def apply_operation(
+    db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.LabelOpBase
+) -> None:
     """
     Applies a single label operation.
 
@@ -235,4 +242,3 @@ def apply_operation(db : Session, current_user : User, label_data_id : uuid.UUID
         _apply_delete(db, current_user, label_data_id, text, op)
     else:
         raise UnknownError(f"Unknown operation type: {type(op)}")
-

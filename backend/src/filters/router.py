@@ -19,7 +19,8 @@ from .service import SchemaInfo
 
 router = APIRouter()
 
-@router.get('/filters/schemas', response_model=dict[str, SchemaInfo])
+
+@router.get("/filters/schemas", response_model=dict[str, SchemaInfo])
 def read_filter_schemas():
     """
     Retrieves the schemas for all registered filters, including the instance, context, and options schemas for each filter.
@@ -29,13 +30,14 @@ def read_filter_schemas():
     """
     return service.query_schemas()
 
-@router.post('/filters/{filter_name}/flag-instances', response_model=list[Any])
+
+@router.post("/filters/{filter_name}/flag-instances", response_model=list[Any])
 def read_flagged_instances(
-        filter_name : str,
-        options : dict[Any, Any],
-        db : Annotated[Session, Depends(get_db)],
-        current_user : Annotated[User, Depends(get_current_user)]
-    ):
+    filter_name: str,
+    options: dict[Any, Any],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     """
     Flags instances using a specified filter and options.
 
@@ -52,13 +54,14 @@ def read_flagged_instances(
     except OptionsValidationException as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-@router.post('/filters/{filter_name}/get-contexts', response_model=list[Any])
+
+@router.post("/filters/{filter_name}/get-contexts", response_model=list[Any])
 def read_contexts(
-        filter_name : str,
-        body : InstanceOptions,
-        db : Annotated[Session, Depends(get_db)],
-        current_user : Annotated[User, Depends(get_current_user)]
-    ):
+    filter_name: str,
+    body: InstanceOptions,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     """
     Retrieves contexts for a list of instances using a specified filter and options.
 
@@ -80,13 +83,14 @@ def read_contexts(
     except InstanceValidationException as e:
         raise HTTPException(status_code=400, detail=f"Instance validation error: {e}") from e
 
-@router.post('/filters/{filter_name}/decide-instances', response_model=list[bool])
+
+@router.post("/filters/{filter_name}/decide-instances", response_model=list[bool])
 def read_decisions(
-        filter_name : str,
-        body : InstanceContextOptions,
-        db : Annotated[Session, Depends(get_db)],
-        current_user : Annotated[User, Depends(get_current_user)]
-    ):
+    filter_name: str,
+    body: InstanceContextOptions,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     """
     Decides whether instances pass a filter in given contexts using specified options.
 
@@ -109,13 +113,14 @@ def read_decisions(
     except RevisionTextOutdatedException as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
 
-@router.post('/filters/{filter_name}/apply', status_code=204)
+
+@router.post("/filters/{filter_name}/apply", status_code=204)
 def apply_filter(
-        filter_name : str,
-        body : InstanceOptions,
-        db : Annotated[Session, Depends(get_db)],
-        current_user : Annotated[User, Depends(get_current_user)]
-    ):
+    filter_name: str,
+    body: InstanceOptions,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     """
     Applies a filter to a label group for a list of instances using specified options.
 

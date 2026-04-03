@@ -35,6 +35,7 @@ This directory contains technical documentation for the NovelTL project - a coll
 ### Development
 - **[conventions.md](conventions.md)** - Code naming conventions, API patterns
 - **[backend-testing.md](backend-testing.md)** - Testing strategy, pytest usage, fixtures
+- **[docker-troubleshooting.md](docker-troubleshooting.md)** - Docker and Dev Container issue log
 
 ### Reference
 - **[GitHub Issues](https://github.com/lzguan/NovelTL_Dev/issues)** - Known bugs, tech debt, future improvements

@@ -1,6 +1,5 @@
 x-db-env: &db-env
   DB_HOST: db
-  DB_PORT: ${DB_PORT}
   DB_NAME: ${DB_NAME}
   DB_USER: ${DB_USER}
   DB_PASSWORD: ${DB_PASSWORD}
@@ -8,7 +7,6 @@ x-db-env: &db-env
 
 x-test-db-env: &test-db-env
   TEST_HOST: test_db
-  TEST_PORT: ${TEST_PORT}
   TEST_USER: ${TEST_USER}
   TEST_PASSWORD: ${TEST_PASSWORD}
   TEST_NAME: ${TEST_NAME}
@@ -33,10 +31,7 @@ services:
   db:
     image: postgres:18
     restart: always
-    
-    ports:
-      - "${DB_PORT}:5432" 
-      
+
     environment:
       POSTGRES_USER: "${DB_USER}"
       POSTGRES_PASSWORD: "${DB_PASSWORD}"
@@ -45,14 +40,11 @@ services:
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
       
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql
 
   test_db:
     image: postgres:18
     restart: always
-    
-    ports:
-      - "${TEST_PORT}:5432" 
       
     environment:
       POSTGRES_USER: "${TEST_USER}"
@@ -64,8 +56,6 @@ services:
       - test
   redis:
     image: redis
-    ports:
-      - "${REDIS_PORT}:6379"
 
   worker:
     build: 

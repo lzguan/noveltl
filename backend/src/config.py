@@ -15,7 +15,6 @@ class BaseConfig(BaseSettings):
 class DatabaseSettings(BaseConfig):
     """Settings class for global config variables."""
     DB_HOST : str = Field(default="", min_length=1)
-    DB_PORT : str = Field(default="", min_length=1)
     DB_USER : str = Field(default="", min_length=1)
     DB_PASSWORD : str = Field(default="", min_length=1)
     DB_NAME : str = Field(default="", min_length=1)

@@ -18,6 +18,9 @@ import {
     deleteGlossaryContributor,
     importGlossaryFromLabels,
     searchTermOccurrences,
+    triggerTranslation,
+    getTranslationJobs,
+    getTranslationJob,
 } from '../glossaries'
 import {
     type Glossary,
@@ -25,6 +28,7 @@ import {
     type GlossaryContributor,
     type ImportResult,
     type SearchTermResponse,
+    type GlossaryTranslationJob,
 } from '../../types/glossary'
 
 vi.mock('../client')
@@ -1131,6 +1135,254 @@ describe('Glossary API', () => {
             await expect(
                 searchTermOccurrences('uuid-ge-1', { mode: 'label' })
             ).rejects.toThrow()
+        })
+    })
+
+    // --- Translation Jobs ---
+
+    describe('triggerTranslation', () => {
+        const mockJobResponse = {
+            job_id: 'uuid-job-1',
+            glossary_id: 'uuid-g-1',
+            status: 'pending',
+            job_model_name: null,
+            job_last_job_id: null,
+            job_message: null,
+            entries_translated: 0,
+            entries_total: 3,
+            created_at: '2026-04-01T00:00:00Z',
+            updated_at: '2026-04-01T00:00:00Z',
+        }
+
+        it('should call POST /glossaries/{glossaryId}/translate', async () => {
+            vi.mocked(client.post).mockResolvedValue({ data: mockJobResponse })
+
+            await triggerTranslation('uuid-g-1', {})
+
+            expect(client.post).toHaveBeenCalledWith(
+                '/glossaries/uuid-g-1/translate',
+                expect.any(Object)
+            )
+        })
+
+        it('should map camelCase request to snake_case body (modelName → model_name)', async () => {
+            vi.mocked(client.post).mockResolvedValue({ data: mockJobResponse })
+
+            await triggerTranslation('uuid-g-1', { modelName: 'openai' })
+
+            expect(client.post).toHaveBeenCalledWith('/glossaries/uuid-g-1/translate', {
+                model_name: 'openai',
+            })
+        })
+
+        it('should send model_name as null when modelName is not provided', async () => {
+            vi.mocked(client.post).mockResolvedValue({ data: mockJobResponse })
+
+            await triggerTranslation('uuid-g-1', {})
+
+            expect(client.post).toHaveBeenCalledWith('/glossaries/uuid-g-1/translate', {
+                model_name: null,
+            })
+        })
+
+        it('should map response from snake_case to camelCase', async () => {
+            vi.mocked(client.post).mockResolvedValue({
+                data: {
+                    job_id: 'uuid-job-2',
+                    glossary_id: 'uuid-g-1',
+                    status: 'pending',
+                    job_model_name: 'openai',
+                    job_last_job_id: 'uuid-job-2',
+                    job_message: null,
+                    entries_translated: 0,
+                    entries_total: 5,
+                    created_at: '2026-04-01T12:00:00Z',
+                    updated_at: '2026-04-01T12:00:00Z',
+                }
+            })
+
+            const result = await triggerTranslation('uuid-g-1', { modelName: 'openai' })
+
+            expectTypeOf(result).toEqualTypeOf<GlossaryTranslationJob>()
+            expect(result).toEqual({
+                jobId: 'uuid-job-2',
+                glossaryId: 'uuid-g-1',
+                status: 'pending',
+                jobModelName: 'openai',
+                jobLastJobId: 'uuid-job-2',
+                jobMessage: null,
+                entriesTranslated: 0,
+                entriesTotal: 5,
+                createdAt: '2026-04-01T12:00:00Z',
+                updatedAt: '2026-04-01T12:00:00Z',
+            } satisfies GlossaryTranslationJob)
+        })
+
+        it('should propagate 404 when glossary not found', async () => {
+            vi.mocked(client.post).mockRejectedValue(
+                makeAxiosError(404, { detail: 'Glossary not found' })
+            )
+
+            await expect(triggerTranslation('uuid-g-999', {})).rejects.toThrow()
+        })
+    })
+
+    describe('getTranslationJobs', () => {
+        it('should call GET /glossaries/{glossaryId}/translation-jobs', async () => {
+            vi.mocked(client.get).mockResolvedValue({ data: [] })
+
+            await getTranslationJobs('uuid-g-1')
+
+            expect(client.get).toHaveBeenCalledWith('/glossaries/uuid-g-1/translation-jobs')
+        })
+
+        it('should map array of jobs from snake_case to camelCase', async () => {
+            vi.mocked(client.get).mockResolvedValue({
+                data: [
+                    {
+                        job_id: 'uuid-job-10',
+                        glossary_id: 'uuid-g-1',
+                        status: 'done',
+                        job_model_name: null,
+                        job_last_job_id: null,
+                        job_message: null,
+                        entries_translated: 10,
+                        entries_total: 10,
+                        created_at: '2026-04-01T10:00:00Z',
+                        updated_at: '2026-04-01T11:00:00Z',
+                    },
+                    {
+                        job_id: 'uuid-job-11',
+                        glossary_id: 'uuid-g-1',
+                        status: 'failed',
+                        job_model_name: 'openai',
+                        job_last_job_id: 'uuid-job-11',
+                        job_message: 'Translation failed: timeout',
+                        entries_translated: 3,
+                        entries_total: 10,
+                        created_at: '2026-04-02T10:00:00Z',
+                        updated_at: '2026-04-02T10:05:00Z',
+                    },
+                ]
+            })
+
+            const result = await getTranslationJobs('uuid-g-1')
+
+            expectTypeOf(result).toEqualTypeOf<GlossaryTranslationJob[]>()
+            expect(result).toEqual([
+                {
+                    jobId: 'uuid-job-10',
+                    glossaryId: 'uuid-g-1',
+                    status: 'done',
+                    jobModelName: null,
+                    jobLastJobId: null,
+                    jobMessage: null,
+                    entriesTranslated: 10,
+                    entriesTotal: 10,
+                    createdAt: '2026-04-01T10:00:00Z',
+                    updatedAt: '2026-04-01T11:00:00Z',
+                },
+                {
+                    jobId: 'uuid-job-11',
+                    glossaryId: 'uuid-g-1',
+                    status: 'failed',
+                    jobModelName: 'openai',
+                    jobLastJobId: 'uuid-job-11',
+                    jobMessage: 'Translation failed: timeout',
+                    entriesTranslated: 3,
+                    entriesTotal: 10,
+                    createdAt: '2026-04-02T10:00:00Z',
+                    updatedAt: '2026-04-02T10:05:00Z',
+                },
+            ] satisfies GlossaryTranslationJob[])
+        })
+
+        it('should return empty array when backend returns empty array', async () => {
+            vi.mocked(client.get).mockResolvedValue({ data: [] })
+
+            const result = await getTranslationJobs('uuid-g-1')
+
+            expect(result).toEqual([])
+        })
+
+        it('should propagate 404 when glossary not found', async () => {
+            vi.mocked(client.get).mockRejectedValue(
+                makeAxiosError(404, { detail: 'Glossary not found' })
+            )
+
+            await expect(getTranslationJobs('uuid-g-999')).rejects.toThrow()
+        })
+    })
+
+    describe('getTranslationJob', () => {
+        it('should call GET /glossaries/{glossaryId}/translation-jobs/{jobId}', async () => {
+            vi.mocked(client.get).mockResolvedValue({
+                data: {
+                    job_id: 'uuid-job-5',
+                    glossary_id: 'uuid-g-1',
+                    status: 'processing',
+                    job_model_name: null,
+                    job_last_job_id: null,
+                    job_message: null,
+                    entries_translated: 2,
+                    entries_total: 8,
+                    created_at: '2026-04-01T09:00:00Z',
+                    updated_at: '2026-04-01T09:01:00Z',
+                }
+            })
+
+            await getTranslationJob('uuid-g-1', 'uuid-job-5')
+
+            expect(client.get).toHaveBeenCalledWith('/glossaries/uuid-g-1/translation-jobs/uuid-job-5')
+        })
+
+        it('should map response from snake_case to camelCase', async () => {
+            vi.mocked(client.get).mockResolvedValue({
+                data: {
+                    job_id: 'uuid-job-6',
+                    glossary_id: 'uuid-g-2',
+                    status: 'done',
+                    job_model_name: 'openai',
+                    job_last_job_id: null,
+                    job_message: null,
+                    entries_translated: 7,
+                    entries_total: 7,
+                    created_at: '2026-04-01T08:00:00Z',
+                    updated_at: '2026-04-01T08:10:00Z',
+                }
+            })
+
+            const result = await getTranslationJob('uuid-g-2', 'uuid-job-6')
+
+            expectTypeOf(result).toEqualTypeOf<GlossaryTranslationJob>()
+            expect(result).toEqual({
+                jobId: 'uuid-job-6',
+                glossaryId: 'uuid-g-2',
+                status: 'done',
+                jobModelName: 'openai',
+                jobLastJobId: null,
+                jobMessage: null,
+                entriesTranslated: 7,
+                entriesTotal: 7,
+                createdAt: '2026-04-01T08:00:00Z',
+                updatedAt: '2026-04-01T08:10:00Z',
+            } satisfies GlossaryTranslationJob)
+        })
+
+        it('should propagate 404 when job not found', async () => {
+            vi.mocked(client.get).mockRejectedValue(
+                makeAxiosError(404, { detail: 'Translation job not found' })
+            )
+
+            await expect(getTranslationJob('uuid-g-1', 'uuid-job-999')).rejects.toThrow()
+        })
+
+        it('should propagate 404 when glossary not found', async () => {
+            vi.mocked(client.get).mockRejectedValue(
+                makeAxiosError(404, { detail: 'Glossary not found' })
+            )
+
+            await expect(getTranslationJob('uuid-g-999', 'uuid-job-1')).rejects.toThrow()
         })
     })
 })

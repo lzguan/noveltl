@@ -20,13 +20,14 @@ from ..novels.exceptions import NovelNotFoundException
 from ..novels.models import Chapter, Revision, RevisionText
 from ..novels.permissions import revision_text_mod_access_select
 from . import models, schemas
-from .constants import GlossaryRole
+from .constants import GlossaryRole, TranslationJobStatus
 from .exceptions import (
     DuplicateGlossaryContributorException,
     DuplicateGlossaryEntryException,
     GlossaryContributorNotFoundException,
     GlossaryEntryNotFoundException,
     GlossaryNotFoundException,
+    GlossaryTranslationJobNotFoundException,
     InvalidSearchModeException,
 )
 from .permissions import (
@@ -783,3 +784,116 @@ def _search_term_label_mode(
     total_count = sum(len(occ.positions) for occ in occurrences)
 
     return schemas.SearchTermResponse(occurrences=occurrences, total_count=total_count)
+
+
+# --- Translation Jobs ---
+
+
+def create_translation_job(
+    db: Session,
+    glossary_id: uuid.UUID,
+    request: schemas.CreateTranslationJob,
+    current_user: User,
+) -> models.GlossaryTranslationJob:
+    """
+    Create a new translation job for a glossary. Requires editor or owner access.
+    Sets entries_total from the count of glossary entries.
+
+    Raises:
+        GlossaryNotFoundException: Glossary not found or insufficient permissions (must be editor/owner).
+        UnknownError: Unexpected error.
+    """
+    # Verify editor/owner access to the glossary
+    q_access = select(models.Glossary.glossary_id).where(models.Glossary.glossary_id == glossary_id)
+    q_access = glossary_mod_access_select(q_access, current_user, only_editors=True)
+    try:
+        db.execute(q_access).scalar_one()
+    except NoResultFound as e:
+        raise GlossaryNotFoundException from e
+
+    # Count entries for this glossary
+    count_result = db.execute(
+        select(func.count()).select_from(models.GlossaryEntry).where(models.GlossaryEntry.glossary_id == glossary_id)
+    )
+    entries_total: int = count_result.scalar_one()
+
+    stmt = (
+        insert(models.GlossaryTranslationJob)
+        .values(
+            glossary_id=glossary_id,
+            status=TranslationJobStatus.PENDING,
+            job_model_name=request.model_name,
+            entries_total=entries_total,
+            entries_translated=0,
+        )
+        .returning(models.GlossaryTranslationJob)
+    )
+    try:
+        result = db.execute(stmt)
+        job = result.scalar_one()
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise UnknownError from e
+    return job
+
+
+def query_translation_jobs(
+    db: Session,
+    glossary_id: uuid.UUID,
+    current_user: User,
+) -> Sequence[models.GlossaryTranslationJob]:
+    """
+    List all translation jobs for a glossary. Requires at least contributor access.
+
+    Raises:
+        GlossaryNotFoundException: Glossary not found or insufficient permissions.
+    """
+    # Verify read access to the glossary
+    q_access = select(models.Glossary.glossary_id).where(models.Glossary.glossary_id == glossary_id)
+    q_access = glossary_mod_access_select(q_access, current_user)
+    try:
+        db.execute(q_access).scalar_one()
+    except NoResultFound as e:
+        raise GlossaryNotFoundException from e
+
+    q = (
+        select(models.GlossaryTranslationJob)
+        .where(models.GlossaryTranslationJob.glossary_id == glossary_id)
+        .order_by(models.GlossaryTranslationJob.created_at.desc())
+    )
+    result = db.execute(q)
+    return result.scalars().all()
+
+
+def query_translation_job(
+    db: Session,
+    glossary_id: uuid.UUID,
+    job_id: uuid.UUID,
+    current_user: User,
+) -> models.GlossaryTranslationJob:
+    """
+    Get a single translation job by id.
+
+    Raises:
+        GlossaryNotFoundException: Glossary not found or insufficient permissions.
+        GlossaryTranslationJobNotFoundException: Job not found or does not belong to glossary.
+    """
+    # Verify read access to the glossary
+    q_access = select(models.Glossary.glossary_id).where(models.Glossary.glossary_id == glossary_id)
+    q_access = glossary_mod_access_select(q_access, current_user)
+    try:
+        db.execute(q_access).scalar_one()
+    except NoResultFound as e:
+        raise GlossaryNotFoundException from e
+
+    q = (
+        select(models.GlossaryTranslationJob)
+        .where(models.GlossaryTranslationJob.job_id == job_id)
+        .where(models.GlossaryTranslationJob.glossary_id == glossary_id)
+    )
+    try:
+        result = db.execute(q)
+        return result.scalar_one()
+    except NoResultFound as e:
+        raise GlossaryTranslationJobNotFoundException from e

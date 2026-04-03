@@ -109,3 +109,31 @@ export interface ImportResult {
     entriesUpdated : number
     entriesSkipped : number
 }
+
+// --- Translation Job ---
+
+export const TranslationJobStatus = {
+    pending: 'pending',
+    processing: 'processing',
+    done: 'done',
+    failed: 'failed',
+} as const
+
+export type TranslationJobStatus = (typeof TranslationJobStatus)[keyof typeof TranslationJobStatus]
+
+export interface GlossaryTranslationJob {
+    jobId : string
+    glossaryId : string
+    status : TranslationJobStatus
+    jobModelName : string | null
+    jobLastJobId : string | null
+    jobMessage : string | null
+    entriesTranslated : number
+    entriesTotal : number
+    createdAt : string
+    updatedAt : string
+}
+
+export interface CreateTranslationJob {
+    modelName? : string | null
+}

@@ -400,9 +400,7 @@ class TestGlossaryCRUD:
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_update_glossary_outsider_cannot_update(
-        self, client: TestClient, g_glossary: Glossary, g_outsider: User
-    ):
+    def test_update_glossary_outsider_cannot_update(self, client: TestClient, g_glossary: Glossary, g_outsider: User):
         headers = get_auth_header(client, "g_outsider")
         response = client.patch(
             f"/glossaries/{g_glossary.glossary_id}",
@@ -411,14 +409,14 @@ class TestGlossaryCRUD:
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_delete_glossary(self, client: TestClient, g_glossary: Glossary, g_owner: User, g_admin: User, test_db: Session):
+    def test_delete_glossary(
+        self, client: TestClient, g_glossary: Glossary, g_owner: User, g_admin: User, test_db: Session
+    ):
         # NOTE: The remove_glossary service uses a raw SQL DELETE statement which does not
         # trigger ORM cascades. The FK constraint (NO ACTION) prevents deleting a glossary
         # that still has contributor rows. To test deletion, we use an admin user and remove
         # contributors via the DB first.
-        test_db.query(GlossaryContributor).filter(
-            GlossaryContributor.glossary_id == g_glossary.glossary_id
-        ).delete()
+        test_db.query(GlossaryContributor).filter(GlossaryContributor.glossary_id == g_glossary.glossary_id).delete()
         test_db.commit()
 
         headers = get_auth_header(client, "g_admin")
@@ -509,9 +507,7 @@ class TestGlossaryEntryCRUD:
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_create_entry_outsider_cannot_create(
-        self, client: TestClient, g_glossary: Glossary, g_outsider: User
-    ):
+    def test_create_entry_outsider_cannot_create(self, client: TestClient, g_glossary: Glossary, g_outsider: User):
         headers = get_auth_header(client, "g_outsider")
         response = client.post(
             "/glossary-entries",
@@ -615,9 +611,7 @@ class TestGlossaryContributors:
         assert data[0]["user_id"] == str(g_owner.user_id)
         assert data[0]["glossary_contributor_role"] == GlossaryRole.OWNER
 
-    def test_add_contributor(
-        self, client: TestClient, g_glossary: Glossary, g_owner: User, g_editor: User
-    ):
+    def test_add_contributor(self, client: TestClient, g_glossary: Glossary, g_owner: User, g_editor: User):
         headers = get_auth_header(client, "g_owner")
         response = client.post(
             f"/glossaries/{g_glossary.glossary_id}/contributors",
@@ -632,9 +626,7 @@ class TestGlossaryContributors:
         assert data["user_id"] == str(g_editor.user_id)
         assert data["glossary_contributor_role"] == GlossaryRole.EDITOR
 
-    def test_add_duplicate_contributor_raises_409(
-        self, client: TestClient, g_glossary: Glossary, g_owner: User
-    ):
+    def test_add_duplicate_contributor_raises_409(self, client: TestClient, g_glossary: Glossary, g_owner: User):
         headers = get_auth_header(client, "g_owner")
         # owner already exists as contributor
         response = client.post(
@@ -704,9 +696,7 @@ class TestGlossaryContributors:
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_list_contributors_outsider_forbidden(
-        self, client: TestClient, g_glossary: Glossary, g_outsider: User
-    ):
+    def test_list_contributors_outsider_forbidden(self, client: TestClient, g_glossary: Glossary, g_outsider: User):
         headers = get_auth_header(client, "g_outsider")
         response = client.get(f"/glossaries/{g_glossary.glossary_id}/contributors", headers=headers)
         assert response.status_code == status.HTTP_200_OK
@@ -822,9 +812,7 @@ class TestImportFromLabels:
         data = response.json()
         assert data["entries_updated"] == 2
 
-    def test_import_label_group_not_found(
-        self, client: TestClient, g_glossary: Glossary, g_owner: User
-    ):
+    def test_import_label_group_not_found(self, client: TestClient, g_glossary: Glossary, g_owner: User):
         import uuid
 
         headers = get_auth_header(client, "g_owner")
@@ -838,9 +826,7 @@ class TestImportFromLabels:
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_import_glossary_not_found(
-        self, client: TestClient, g_label_group: LabelGroup, g_owner: User
-    ):
+    def test_import_glossary_not_found(self, client: TestClient, g_label_group: LabelGroup, g_owner: User):
         import uuid
 
         headers = get_auth_header(client, "g_owner")
@@ -895,16 +881,12 @@ class TestImportFromLabels:
 
 
 class TestAdminAccess:
-    def test_admin_can_read_any_glossary(
-        self, client: TestClient, g_glossary: Glossary, g_admin: User
-    ):
+    def test_admin_can_read_any_glossary(self, client: TestClient, g_glossary: Glossary, g_admin: User):
         headers = get_auth_header(client, "g_admin")
         response = client.get(f"/glossaries/{g_glossary.glossary_id}", headers=headers)
         assert response.status_code == status.HTTP_200_OK
 
-    def test_admin_can_update_any_glossary(
-        self, client: TestClient, g_glossary: Glossary, g_admin: User
-    ):
+    def test_admin_can_update_any_glossary(self, client: TestClient, g_glossary: Glossary, g_admin: User):
         headers = get_auth_header(client, "g_admin")
         response = client.patch(
             f"/glossaries/{g_glossary.glossary_id}",
@@ -917,9 +899,7 @@ class TestAdminAccess:
         self, client: TestClient, g_glossary: Glossary, g_admin: User, test_db: Session
     ):
         # Remove contributors first to satisfy FK constraint before deleting.
-        test_db.query(GlossaryContributor).filter(
-            GlossaryContributor.glossary_id == g_glossary.glossary_id
-        ).delete()
+        test_db.query(GlossaryContributor).filter(GlossaryContributor.glossary_id == g_glossary.glossary_id).delete()
         test_db.commit()
 
         headers = get_auth_header(client, "g_admin")

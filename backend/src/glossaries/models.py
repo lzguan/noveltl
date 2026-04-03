@@ -5,7 +5,7 @@ Database models for glossaries.
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Enum, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import Enum, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,9 +13,11 @@ from ..models import Base
 from .constants import (
     MAX_ENTITY_TYPE_LEN,
     MAX_GLOSSARY_NAME_LEN,
+    MAX_MODEL_NAME_LEN,
     MAX_SOURCE_TERM_LEN,
     MAX_TRANSLATED_TERM_LEN,
     GlossaryRole,
+    TranslationJobStatus,
 )
 
 if TYPE_CHECKING:
@@ -63,6 +65,9 @@ class Glossary(Base):
     )
     contributors_with_glossary: Mapped[list["GlossaryContributor"]] = relationship(
         back_populates="glossary_of_contributor", cascade="all, delete-orphan"
+    )
+    translation_jobs_with_glossary: Mapped[list["GlossaryTranslationJob"]] = relationship(
+        back_populates="glossary_of_translation_job", cascade="all, delete-orphan"
     )
 
 
@@ -118,7 +123,9 @@ class GlossaryContributor(Base):
     )  # type: ignore
 
     glossary_id = mapped_column(
-        ForeignKey("glossaries.glossary_id", name="fk_glossary_contributors_glossary_id_glossaries", ondelete="CASCADE"),
+        ForeignKey(
+            "glossaries.glossary_id", name="fk_glossary_contributors_glossary_id_glossaries", ondelete="CASCADE"
+        ),
         primary_key=True,
     )
     glossary_of_contributor: Mapped["Glossary"] = relationship(back_populates="contributors_with_glossary")
@@ -127,3 +134,48 @@ class GlossaryContributor(Base):
         ForeignKey("users.user_id", name="fk_glossary_contributors_user_id_users"), primary_key=True
     )
     user_of_contributor: Mapped["User"] = relationship(back_populates="glossary_contributors_with_user")
+
+
+class GlossaryTranslationJob(Base):
+    """
+    Database model for a glossary translation job.
+
+    Attributes:
+        job_id: UUID primary key.
+        glossary_id: Foreign key to the glossary being translated.
+        status: Current job status (pending, processing, done, failed).
+        job_model_name: Name of the LLM model used for translation. Optional.
+        job_last_job_id: UUID of the last job for optimistic locking. Optional.
+        job_message: Error message on failure. Optional.
+        entries_translated: Number of entries translated so far.
+        entries_total: Total number of entries to translate.
+    """
+
+    __tablename__ = "glossary_translation_jobs"
+
+    job_id: Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
+    status: Mapped[TranslationJobStatus] = mapped_column(
+        Enum(
+            TranslationJobStatus,
+            native_enum=False,
+            length=10,
+            values_callable=lambda x: [str(e.value) for e in x],
+        ),
+        nullable=False,
+        default=TranslationJobStatus.PENDING,
+    )  # type: ignore
+    job_model_name: Mapped[str | None] = mapped_column(String(MAX_MODEL_NAME_LEN), nullable=True)
+    job_last_job_id: Mapped[uuid.UUID | None] = mapped_column(postgresql.UUID, nullable=True)
+    job_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    entries_translated: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    entries_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    glossary_id = mapped_column(
+        ForeignKey(
+            "glossaries.glossary_id",
+            name="fk_glossary_translation_jobs_glossary_id_glossaries",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+    glossary_of_translation_job: Mapped["Glossary"] = relationship(back_populates="translation_jobs_with_glossary")

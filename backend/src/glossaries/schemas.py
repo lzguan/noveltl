@@ -10,9 +10,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from .constants import (
     MAX_ENTITY_TYPE_LEN,
     MAX_GLOSSARY_NAME_LEN,
+    MAX_MODEL_NAME_LEN,
     MAX_SOURCE_TERM_LEN,
     MAX_TRANSLATED_TERM_LEN,
     GlossaryRole,
+    TranslationJobStatus,
 )
 
 
@@ -192,3 +194,28 @@ class SearchTermResponse(BaseModel):
 
     occurrences: list[TermOccurrence]
     total_count: int
+
+
+class GlossaryTranslationJob(BaseModel):
+    """
+    Pydantic schema for a glossary translation job.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    job_id: uuid.UUID
+    glossary_id: uuid.UUID
+    status: TranslationJobStatus
+    job_model_name: str | None = Field(default=None, max_length=MAX_MODEL_NAME_LEN)
+    job_last_job_id: uuid.UUID | None = None
+    job_message: str | None = None
+    entries_translated: int
+    entries_total: int
+
+
+class CreateTranslationJob(BaseModel):
+    """
+    Pydantic schema for requesting a glossary translation job.
+    """
+
+    model_name: str | None = Field(default=None, max_length=MAX_MODEL_NAME_LEN)

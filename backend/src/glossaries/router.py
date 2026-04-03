@@ -10,15 +10,20 @@ from ..database import get_db
 from ..exceptions import DataTooLongException, NotFoundException, UnknownError
 from ..novels.exceptions import NovelNotFoundException
 from . import schemas
+from .dependencies import get_translation_dispatcher
 from .exceptions import (
     DuplicateGlossaryContributorException,
     DuplicateGlossaryEntryException,
+    EnqueueFailedException,
     GlossaryContributorNotFoundException,
     GlossaryEntryNotFoundException,
     GlossaryNotFoundException,
+    GlossaryTranslationJobNotFoundException,
     InvalidSearchModeException,
+    QueueFullException,
 )
 from .service import (
+    create_translation_job,
     import_from_labels,
     insert_glossary,
     insert_glossary_contributor,
@@ -31,11 +36,14 @@ from .service import (
     query_glossary_contributors,
     query_glossary_entries,
     query_glossary_entry,
+    query_translation_job,
+    query_translation_jobs,
     remove_glossary,
     remove_glossary_contributor,
     remove_glossary_entry,
     search_term_occurrences,
 )
+from .utils import TranslationDispatcher
 
 router = APIRouter()
 
@@ -443,4 +451,112 @@ def read_term_occurrences(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e) or "Label group not found.",
+        ) from e
+
+
+# --- Translation Jobs ---
+
+
+@router.post(
+    "/glossaries/{glossary_id}/translate",
+    response_model=schemas.GlossaryTranslationJob,
+    status_code=status.HTTP_201_CREATED,
+)
+async def action_translate_glossary(
+    glossary_id: uuid.UUID,
+    request: schemas.CreateTranslationJob,
+    db: Annotated[Session, Depends(get_db)],
+    dispatcher: Annotated[TranslationDispatcher, Depends(get_translation_dispatcher)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """
+    Create a translation job for a glossary and enqueue it for processing.
+    Requires editor or owner access to the glossary.
+
+    Raises:
+        404: Glossary not found or insufficient permissions.
+        503: Queue is full.
+        500: Enqueue failed or unexpected error.
+    """
+    try:
+        job = create_translation_job(db, glossary_id, request, current_user)
+    except GlossaryNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Glossary with id {glossary_id} not found.",
+        ) from e
+    except UnknownError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred.",
+        ) from e
+
+    job_id_str = str(job.job_id)
+    try:
+        await dispatcher.enqueue(job_id_str, job.job_id, request.model_name)
+    except QueueFullException as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Translation queue is full. Please try again later.",
+        ) from e
+    except EnqueueFailedException as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to enqueue translation job: {str(e)}",
+        ) from e
+
+    return job
+
+
+@router.get(
+    "/glossaries/{glossary_id}/translation-jobs",
+    response_model=list[schemas.GlossaryTranslationJob],
+)
+def read_translation_jobs(
+    glossary_id: uuid.UUID,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """
+    List all translation jobs for a glossary.
+
+    Raises:
+        404: Glossary not found or insufficient permissions.
+    """
+    try:
+        return query_translation_jobs(db, glossary_id, current_user)
+    except GlossaryNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Glossary with id {glossary_id} not found.",
+        ) from e
+
+
+@router.get(
+    "/glossaries/{glossary_id}/translation-jobs/{job_id}",
+    response_model=schemas.GlossaryTranslationJob,
+)
+def read_translation_job(
+    glossary_id: uuid.UUID,
+    job_id: uuid.UUID,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """
+    Get a single translation job by id.
+
+    Raises:
+        404: Glossary or translation job not found.
+    """
+    try:
+        return query_translation_job(db, glossary_id, job_id, current_user)
+    except GlossaryNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Glossary with id {glossary_id} not found.",
+        ) from e
+    except GlossaryTranslationJobNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Translation job with id {job_id} not found.",
         ) from e

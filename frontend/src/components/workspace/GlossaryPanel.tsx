@@ -12,9 +12,13 @@ import {
     deleteGlossaryEntry,
     importGlossaryFromLabels,
     searchTermOccurrences,
+    triggerTranslation,
+    getTranslationJob,
+    getTranslationJobs,
 } from "../../api/glossaries";
 import { getLabelGroupsByNovel } from "../../api/labels";
 import type * as GlossaryType from "../../types/glossary";
+import { TranslationJobStatus } from "../../types/glossary";
 import type { LabelGroup } from "../../types/label";
 
 // ---- Create Glossary Form ----
@@ -456,6 +460,14 @@ const GlossaryDetail = ({ glossaryId, novelId, onBack, onNavigateToOccurrence }:
     const findButtonRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
     const findAnchorRef = useRef<HTMLElement | null>(null);
 
+    // Auto-translate state
+    const [activeJob, setActiveJob] = useState<GlossaryType.GlossaryTranslationJob | null>(null);
+    const [translationError, setTranslationError] = useState<string | null>(null);
+    const [translationSuccess, setTranslationSuccess] = useState(false);
+    const [pastJobs, setPastJobs] = useState<GlossaryType.GlossaryTranslationJob[]>([]);
+    const [pastJobsOpen, setPastJobsOpen] = useState(false);
+    const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
     const loadEntries = useCallback(async () => {
         try {
             const data = await getGlossaryEntriesByGlossary(glossaryId);
@@ -479,6 +491,80 @@ const GlossaryDetail = ({ glossaryId, novelId, onBack, onNavigateToOccurrence }:
             setError("Failed to load glossary.");
         }).finally(() => setLoading(false));
     }, [glossaryId]);
+
+    // Stop polling on unmount
+    useEffect(() => {
+        return () => {
+            if (pollIntervalRef.current !== null) {
+                clearInterval(pollIntervalRef.current);
+            }
+        };
+    }, []);
+
+    const stopPolling = useCallback(() => {
+        if (pollIntervalRef.current !== null) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+        }
+    }, []);
+
+    const startPolling = useCallback((jobId: string) => {
+        stopPolling();
+        pollIntervalRef.current = setInterval(() => {
+            getTranslationJob(glossaryId, jobId)
+                .then((job) => {
+                    setActiveJob(job);
+                    if (job.status === TranslationJobStatus.done) {
+                        stopPolling();
+                        setTranslationSuccess(true);
+                        void loadEntries();
+                    } else if (job.status === TranslationJobStatus.failed) {
+                        stopPolling();
+                        setTranslationError(job.jobMessage ?? "Translation failed.");
+                    }
+                })
+                .catch((err) => {
+                    console.error(err);
+                    stopPolling();
+                    setTranslationError("Failed to poll translation status.");
+                });
+        }, 4000);
+    }, [glossaryId, loadEntries, stopPolling]);
+
+    const handleAutoTranslate = async () => {
+        setTranslationError(null);
+        setTranslationSuccess(false);
+        try {
+            const job = await triggerTranslation(glossaryId, { modelName: null });
+            setActiveJob(job);
+            if (job.status === TranslationJobStatus.done) {
+                setTranslationSuccess(true);
+                void loadEntries();
+            } else if (job.status === TranslationJobStatus.failed) {
+                setTranslationError(job.jobMessage ?? "Translation failed.");
+            } else {
+                startPolling(job.jobId);
+            }
+        } catch (err) {
+            console.error(err);
+            setTranslationError("Failed to start translation.");
+        }
+    };
+
+    const handleLoadPastJobs = async () => {
+        try {
+            const jobs = await getTranslationJobs(glossaryId);
+            setPastJobs(jobs);
+            setPastJobsOpen(true);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const isTranslating =
+        activeJob !== null &&
+        (activeJob.status === TranslationJobStatus.pending ||
+            activeJob.status === TranslationJobStatus.processing);
 
     const handleDeleteEntry = async (entryId: string) => {
         if (!confirm("Delete this entry?")) return;
@@ -553,6 +639,67 @@ const GlossaryDetail = ({ glossaryId, novelId, onBack, onNavigateToOccurrence }:
                     <button onClick={() => setImportResult(null)} style={{ marginLeft: "8px", background: "none", border: "none", cursor: "pointer", color: "#666", fontSize: "0.8rem" }}>x</button>
                 </div>
             )}
+
+            {/* Auto-translate section */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <button
+                        onClick={() => void handleAutoTranslate()}
+                        disabled={isTranslating}
+                        style={{ padding: "4px 10px", borderRadius: "4px", border: "none", cursor: isTranslating ? "default" : "pointer", background: isTranslating ? "#aaa" : "#7c4dff", color: "#fff", fontWeight: 500, fontSize: "0.78rem", opacity: isTranslating ? 0.7 : 1 }}
+                    >
+                        Auto-translate
+                    </button>
+                    <button
+                        onClick={() => void handleLoadPastJobs()}
+                        style={{ padding: "4px 8px", borderRadius: "4px", border: "1px solid #ccc", cursor: "pointer", background: "#fff", fontSize: "0.75rem", color: "#555" }}
+                    >
+                        History
+                    </button>
+                </div>
+
+                {isTranslating && activeJob && (
+                    <div style={{ fontSize: "0.8rem", color: "#555", padding: "6px 8px", background: "#f5f0ff", borderRadius: "4px" }}>
+                        Translating... {activeJob.entriesTranslated}/{activeJob.entriesTotal} entries
+                    </div>
+                )}
+
+                {translationSuccess && (
+                    <div style={{ fontSize: "0.8rem", color: "#2e7d32", padding: "6px 8px", background: "#e8f5e9", borderRadius: "4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span>Translation complete</span>
+                        <button onClick={() => { setTranslationSuccess(false); setActiveJob(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#666", fontSize: "0.8rem" }}>x</button>
+                    </div>
+                )}
+
+                {translationError && (
+                    <div style={{ fontSize: "0.8rem", color: "#c00", padding: "6px 8px", background: "#fff0f0", borderRadius: "4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span>Translation failed: {translationError}</span>
+                        <button onClick={() => { setTranslationError(null); setActiveJob(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#666", fontSize: "0.8rem" }}>x</button>
+                    </div>
+                )}
+
+                {pastJobsOpen && (
+                    <div style={{ border: "1px solid #e0e0e0", borderRadius: "4px", padding: "8px", background: "#fafafa" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                            <span style={{ fontWeight: 600, fontSize: "0.8rem" }}>Translation Jobs</span>
+                            <button onClick={() => setPastJobsOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#888", fontSize: "0.8rem" }}>x</button>
+                        </div>
+                        {pastJobs.length === 0 ? (
+                            <div style={{ fontSize: "0.78rem", color: "#888" }}>No jobs yet.</div>
+                        ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px", maxHeight: "120px", overflowY: "auto" }}>
+                                {pastJobs.map((job) => (
+                                    <div key={job.jobId} style={{ fontSize: "0.78rem", padding: "4px 6px", border: "1px solid #eee", borderRadius: "3px", background: "#fff" }}>
+                                        <span style={{ fontWeight: 500, color: job.status === "done" ? "#2e7d32" : job.status === "failed" ? "#c00" : "#555" }}>{job.status}</span>
+                                        <span style={{ color: "#888", marginLeft: "8px" }}>{job.entriesTranslated}/{job.entriesTotal} entries</span>
+                                        {job.jobMessage && <span style={{ color: "#c00", marginLeft: "6px" }}>{job.jobMessage}</span>}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
 
             {entries.length === 0 ? (
                 <div style={{ color: "#888", fontSize: "0.85rem" }}>No entries yet.</div>

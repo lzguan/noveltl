@@ -52,6 +52,19 @@ const mapSearchTermResponse = (data: any): GlossaryType.SearchTermResponse => ({
     totalCount: data.total_count,
 })
 
+const mapTranslationJob = (data: any): GlossaryType.GlossaryTranslationJob => ({
+    jobId: data.job_id,
+    glossaryId: data.glossary_id,
+    status: data.status,
+    jobModelName: data.job_model_name,
+    jobLastJobId: data.job_last_job_id,
+    jobMessage: data.job_message,
+    entriesTranslated: data.entries_translated,
+    entriesTotal: data.entries_total,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+})
+
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 // --- Request mappers (frontend camelCase → API snake_case) ---
@@ -208,4 +221,31 @@ export const importGlossaryFromLabels = async (
 ): Promise<GlossaryType.ImportResult> => {
     const result = await client.post(`/glossaries/${glossaryId}/import-from-labels`, mapImportFromLabelsRequest(request))
     return mapImportResult(result.data)
+}
+
+// Translation Jobs
+
+export const triggerTranslation = async (
+    glossaryId: string,
+    request: GlossaryType.CreateTranslationJob,
+): Promise<GlossaryType.GlossaryTranslationJob> => {
+    const response = await client.post(`/glossaries/${glossaryId}/translate`, {
+        model_name: request.modelName ?? null,
+    })
+    return mapTranslationJob(response.data)
+}
+
+export const getTranslationJobs = async (
+    glossaryId: string,
+): Promise<GlossaryType.GlossaryTranslationJob[]> => {
+    const response = await client.get(`/glossaries/${glossaryId}/translation-jobs`)
+    return response.data.map(mapTranslationJob)
+}
+
+export const getTranslationJob = async (
+    glossaryId: string,
+    jobId: string,
+): Promise<GlossaryType.GlossaryTranslationJob> => {
+    const response = await client.get(`/glossaries/${glossaryId}/translation-jobs/${jobId}`)
+    return mapTranslationJob(response.data)
 }

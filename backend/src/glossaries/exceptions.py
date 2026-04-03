@@ -27,3 +27,23 @@ class DuplicateGlossaryContributorException(DuplicateException):
 
 class InvalidSearchModeException(Exception):
     pass
+
+
+class GlossaryTranslationJobNotFoundException(NotFoundException):
+    pass
+
+
+class EnqueueFailedException(Exception):
+    """
+    Exception raised when enqueuing a translation job fails.
+    """
+
+    pass
+
+
+class QueueFullException(EnqueueFailedException):
+    """
+    Raised when enqueue failed due to queue overflow.
+    """
+
+    pass

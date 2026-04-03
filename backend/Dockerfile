@@ -14,4 +14,4 @@ CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0"]
 FROM base AS worker
 RUN uv sync --frozen --group worker
 COPY . .
-CMD ["arq", "src.autolabels.worker.worker.WorkerSettings"]
+CMD ["arq", "src.worker.WorkerSettings"]

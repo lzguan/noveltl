@@ -162,18 +162,14 @@ def refresh_job(test_db: Session, job_id: uuid.UUID) -> GlossaryTranslationJob:
     """Re-fetch the job from the DB to get the latest state committed by the worker."""
     # Expire all cached objects so the next query hits the DB
     test_db.expire_all()
-    result = test_db.execute(
-        select(GlossaryTranslationJob).where(GlossaryTranslationJob.job_id == job_id)
-    )
+    result = test_db.execute(select(GlossaryTranslationJob).where(GlossaryTranslationJob.job_id == job_id))
     return result.scalar_one()
 
 
 def refresh_entry(test_db: Session, entry_id: uuid.UUID) -> GlossaryEntry:
     """Re-fetch the entry from the DB to get the latest state committed by the worker."""
     test_db.expire_all()
-    result = test_db.execute(
-        select(GlossaryEntry).where(GlossaryEntry.glossary_entry_id == entry_id)
-    )
+    result = test_db.execute(select(GlossaryEntry).where(GlossaryEntry.glossary_entry_id == entry_id))
     return result.scalar_one()
 
 

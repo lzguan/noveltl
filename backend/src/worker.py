@@ -15,6 +15,9 @@ from .autolabels.worker.tasks import autolabel_infer
 from .autolabels.worker.tasks import model_cache as ner_model_cache
 from .glossaries.worker.inference import OpenAITranslationModel
 from .glossaries.worker.tasks import glossary_translate, translation_model_cache
+from .translations.worker.inference import OpenAIChapterTranslationModel
+from .translations.worker.tasks import translate_novel
+from .translations.worker.tasks import translation_model_cache as novel_translation_model_cache
 
 
 async def startup(ctx: Any) -> None:
@@ -24,9 +27,12 @@ async def startup(ctx: Any) -> None:
     # Initialize translation models for glossaries
     translation_model_cache["openai"] = OpenAITranslationModel()
 
+    # Initialize translation models for novel translation
+    novel_translation_model_cache["openai"] = OpenAIChapterTranslationModel()
+
 
 class WorkerSettings:
-    functions = [autolabel_infer, glossary_translate]
+    functions = [autolabel_infer, glossary_translate, translate_novel]
     redis_settings = RedisSettings(host=REDIS_HOST, port=REDIS_PORT)
 
     on_startup = startup

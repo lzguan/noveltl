@@ -23,7 +23,6 @@ from src.auth.models import User
 from src.glossaries.constants import GlossaryRole, TranslationJobStatus
 from src.glossaries.dependencies import get_translation_dispatcher
 from src.glossaries.models import Glossary, GlossaryContributor, GlossaryEntry, GlossaryTranslationJob
-from src.glossaries.utils import TranslationDispatcher
 from src.languages.models import Language
 from src.main import app
 from src.novels.constants import NovelType, Role, Visibility
@@ -407,9 +406,7 @@ class TestGetTranslationJob:
         tj_glossary: Glossary,
         tj_existing_job: GlossaryTranslationJob,
     ):
-        response = client.get(
-            f"/glossaries/{tj_glossary.glossary_id}/translation-jobs/{tj_existing_job.job_id}"
-        )
+        response = client.get(f"/glossaries/{tj_glossary.glossary_id}/translation-jobs/{tj_existing_job.job_id}")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_get_translation_job_outsider_gets_404(

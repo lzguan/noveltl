@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from src.auth.models import User
     from src.languages.models import Language
     from src.novels.models import Novel
+    from src.translations.models import NovelTranslationJob
 
 
 class Glossary(Base):
@@ -68,6 +69,9 @@ class Glossary(Base):
     )
     translation_jobs_with_glossary: Mapped[list["GlossaryTranslationJob"]] = relationship(
         back_populates="glossary_of_translation_job", cascade="all, delete-orphan"
+    )
+    novel_translation_jobs_with_glossary: Mapped[list["NovelTranslationJob"]] = relationship(
+        back_populates="glossary_of_job",
     )
 
 

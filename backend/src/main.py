@@ -15,6 +15,7 @@ from .labels.router import router as label_router
 from .languages.router import router as language_router
 from .novels.router import router as novel_router
 from .redis import set_redis
+from .translations.router import router as translations_router
 
 
 @asynccontextmanager
@@ -35,3 +36,4 @@ app.include_router(autolabel_router)
 app.include_router(language_router)
 app.include_router(filters_router)
 app.include_router(glossary_router)
+app.include_router(translations_router)

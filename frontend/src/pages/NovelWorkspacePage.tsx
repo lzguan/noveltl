@@ -24,6 +24,9 @@ import { NerPanel } from "../components/workspace/NerPanel";
 import { LabelGroupSelector } from "../components/workspace/LabelGroupSelector";
 import { InlineTextEditor } from "../components/workspace/InlineTextEditor";
 import { GlossaryPanel } from "../components/workspace/GlossaryPanel";
+import { TranslationPanel } from "../components/workspace/TranslationPanel";
+import { getGlossariesByNovel } from "../api/glossaries";
+import type * as GlossaryType from "../types/glossary";
 
 type ActivePopover =
     | { type: "edit"; label: Label; rect: DOMRect }
@@ -34,7 +37,7 @@ type WorkspaceMode = "edit" | "label";
 
 const TOP_TABS = [{ key: "novel", label: "Novel" }];
 const EDIT_TABS = [{ key: "editor", label: "Editor" }, { key: "editLabels", label: "Labels" }];
-const LABEL_TABS = [{ key: "labels", label: "Labels" }, { key: "ner", label: "NER" }, { key: "filters", label: "Filters" }, { key: "glossary", label: "Glossary" }];
+const LABEL_TABS = [{ key: "labels", label: "Labels" }, { key: "ner", label: "NER" }, { key: "filters", label: "Filters" }, { key: "glossary", label: "Glossary" }, { key: "translation", label: "Translation" }];
 
 export const NovelWorkspacePage = () => {
     const { novel_id } = useParams<{ novel_id: string }>();
@@ -104,6 +107,9 @@ export const NovelWorkspacePage = () => {
     const [newChapterNum, setNewChapterNum] = useState("");
     const [newRevisionTitle, setNewRevisionTitle] = useState("");
     // newRevisionText removed — text editing happens inline once edit mode is toggled
+
+    // Glossaries for the current novel (used by TranslationPanel)
+    const [novelGlossaries, setNovelGlossaries] = useState<GlossaryType.Glossary[]>([]);
 
     // Loading/error
     const [loading, setLoading] = useState(true);
@@ -196,11 +202,13 @@ export const NovelWorkspacePage = () => {
             getNovelById(novel_id),
             getChaptersByNovel(novel_id),
             getLabelGroupsByNovel(novel_id),
+            getGlossariesByNovel(novel_id),
         ])
-            .then(([fetchedNovel, fetchedChapters, fetchedGroups]) => {
+            .then(([fetchedNovel, fetchedChapters, fetchedGroups, fetchedGlossaries]) => {
                 setNovel(fetchedNovel);
                 setChapters(fetchedChapters);
                 setLabelGroups(fetchedGroups);
+                setNovelGlossaries(fetchedGlossaries);
                 populateNovelForm(fetchedNovel);
                 initFromParams();
             })
@@ -947,6 +955,12 @@ export const NovelWorkspacePage = () => {
                                 onNavigateToOccurrence={(chapterId) => {
                                     handleChapterChange(chapterId);
                                 }}
+                            />
+                        )}
+                        {activeRightPanel === "translation" && (
+                            <TranslationPanel
+                                novelId={novel.novelId}
+                                glossaries={novelGlossaries}
                             />
                         )}
                     </RightPanel>

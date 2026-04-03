@@ -60,9 +60,8 @@ async def glossary_translate(
         raise
 
     # Claim the job: PENDING -> PROCESSING (optimistic lock)
-    claim_stmt = (
-        base_update.where(GlossaryTranslationJob.status == TranslationJobStatus.PENDING)
-        .values(status=TranslationJobStatus.PROCESSING)
+    claim_stmt = base_update.where(GlossaryTranslationJob.status == TranslationJobStatus.PENDING).values(
+        status=TranslationJobStatus.PROCESSING
     )
     with SessionLocal() as db:
         try:

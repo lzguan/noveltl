@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from src.glossaries.models import Glossary
     from src.labels.models import LabelData, LabelGroup
     from src.languages.models import Language
+    from src.translations.models import ChapterTranslationMapping, NovelTranslationJob
 
 
 class EnumAsInteger(TypeDecorator):  # type: ignore
@@ -120,6 +121,16 @@ class Novel(Base):
     target_associations_with_novel: Mapped[list["NovelAssociation"]] = relationship(
         back_populates="target_novel_of_association",
         foreign_keys="NovelAssociation.target_novel_id",
+        cascade="all, delete-orphan",
+    )
+    source_translation_jobs_with_novel: Mapped[list["NovelTranslationJob"]] = relationship(
+        back_populates="source_novel_of_job",
+        foreign_keys="NovelTranslationJob.source_novel_id",
+        cascade="all, delete-orphan",
+    )
+    target_translation_jobs_with_novel: Mapped[list["NovelTranslationJob"]] = relationship(
+        back_populates="target_novel_of_job",
+        foreign_keys="NovelTranslationJob.target_novel_id",
         cascade="all, delete-orphan",
     )
 
@@ -216,6 +227,14 @@ class Chapter(Base):
     novel_of_chapter: Mapped[Novel] = relationship(back_populates="chapters_with_novel")
 
     revisions_with_chapter: Mapped[list["Revision"]] = relationship(back_populates="chapter_of_revision")
+    source_mappings_with_chapter: Mapped[list["ChapterTranslationMapping"]] = relationship(
+        back_populates="source_chapter_of_mapping",
+        foreign_keys="ChapterTranslationMapping.source_chapter_id",
+    )
+    target_mappings_with_chapter: Mapped[list["ChapterTranslationMapping"]] = relationship(
+        back_populates="target_chapter_of_mapping",
+        foreign_keys="ChapterTranslationMapping.target_chapter_id",
+    )
 
     __table_args__ = (UniqueConstraint("chapter_num", "novel_id", name="chapter_per_novel"),)
 

@@ -29,3 +29,4 @@ from .glossaries.models import *  # noqa: E402, F403
 from .labels.models import *  # noqa: E402, F403
 from .languages.models import *  # noqa: E402, F403
 from .novels.models import *  # noqa: E402, F403
+from .translations.models import *  # noqa: E402, F403

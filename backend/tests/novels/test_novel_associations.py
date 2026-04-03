@@ -23,9 +23,9 @@ from sqlalchemy.orm import Session
 
 from src.auth.constants import UserType
 from src.auth.models import User
+from src.languages.models import Language
 from src.novels.constants import AssociationType, NovelType, Role, Visibility
 from src.novels.models import Contributor, Novel, NovelAssociation
-from src.languages.models import Language
 
 
 class Hash(Protocol):
@@ -96,9 +96,7 @@ def na_source_novel(test_db: Session, na_language: Language, na_owner: User) -> 
 
 @pytest.fixture
 def na_source_novel_with_editor(test_db: Session, na_source_novel: Novel, na_editor: User) -> Novel:
-    test_db.add(
-        Contributor(novel_id=na_source_novel.novel_id, user_id=na_editor.user_id, contributor_role=Role.EDITOR)
-    )
+    test_db.add(Contributor(novel_id=na_source_novel.novel_id, user_id=na_editor.user_id, contributor_role=Role.EDITOR))
     test_db.commit()
     return na_source_novel
 

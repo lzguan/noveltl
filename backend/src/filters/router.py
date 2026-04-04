@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from ..auth.dependencies import get_current_user
 from ..auth.models import User
 from ..database import get_db
-from ..novels.exceptions import RevisionTextOutdatedException
+from ..novels.exceptions import ChapterContentOutdatedException
 from . import service
 from .exceptions import (
     FilterNotFoundException,
@@ -106,7 +106,7 @@ def read_decisions(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except InstanceContextValidationException as e:
         raise HTTPException(status_code=400, detail=f"Instance/context validation error: {e}") from e
-    except RevisionTextOutdatedException as e:
+    except ChapterContentOutdatedException as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
 
 @router.post('/filters/{filter_name}/apply', status_code=204)
@@ -135,5 +135,5 @@ def apply_filter(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except InstanceValidationException as e:
         raise HTTPException(status_code=400, detail=f"Instance validation error: {e}") from e
-    except RevisionTextOutdatedException as e:
+    except ChapterContentOutdatedException as e:
         raise HTTPException(status_code=409, detail=str(e)) from e

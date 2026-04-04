@@ -8,7 +8,7 @@ from ..auth.dependencies import get_current_user
 from ..auth.models import User
 from ..database import get_db
 from ..exceptions import DataTooLongException, NotFoundException
-from ..novels.exceptions import NovelNotFoundException, RevisionTextNotFoundException
+from ..novels.exceptions import ChapterContentNotFoundException, NovelNotFoundException
 from . import schemas
 from .exceptions import (
     LabelDataNotFoundException,
@@ -219,7 +219,7 @@ def update_label_data_stream(
     """
     try:
         modify_label_data_by_stream(db, current_user, label_data_id, request)
-    except (LabelDataNotFoundException, RevisionTextNotFoundException) as e:
+    except (LabelDataNotFoundException, ChapterContentNotFoundException) as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Label data {label_data_id} or its underlying revision text not found."

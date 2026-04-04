@@ -15,7 +15,7 @@ from .constants import MAX_LABEL_ENTITY_GROUP_NAME_LEN, MAX_LABEL_GROUP_NAME_LEN
 
 if TYPE_CHECKING:
     from src.auth.models import User
-    from src.novels.models import Novel, RevisionText
+    from src.novels.models import ChapterContent, Novel
 
 class LabelGroup(Base):
     """
@@ -62,7 +62,7 @@ class LabelData(Base):
     Attributes:
         label_data_id: Integer identifier.
         label_group_id: Label group that label_data belongs to.
-        revision_text_id: UUID of chapter revision text this label data corresponds to.
+        chapter_content_id: UUID of chapter content this label data corresponds to.
 
     Note:
         Each label group can only have 1 label data corresponding to a given chapter.
@@ -75,13 +75,13 @@ class LabelData(Base):
     label_group_id = mapped_column(ForeignKey('label_groups.label_group_id', name='fk_label_datas_label_group_id_label_groups'), nullable=False)
     label_group_of_label_data : Mapped[LabelGroup] = relationship(back_populates='label_datas_with_label_group')
 
-    revision_text_id = mapped_column(ForeignKey('revision_texts.revision_text_id', name='fk_label_datas_revision_text_id_revision_texts'), nullable=False)
-    revision_text_of_label_data : Mapped["RevisionText"] = relationship(back_populates='label_datas_with_revision_text')
+    chapter_content_id = mapped_column(ForeignKey('chapter_contents.chapter_content_id', name='fk_label_datas_chapter_content_id_chapter_contents'), nullable=False)
+    chapter_content_of_label_data : Mapped["ChapterContent"] = relationship(back_populates='label_datas_with_chapter_content')
 
     labels_with_label_data : Mapped[list["Label"]] = relationship(back_populates='label_data_of_label', cascade='all, delete-orphan')
 
     __table_args__ = (
-        UniqueConstraint('label_group_id', 'revision_text_id', name='one_label_group_per_chapter'),
+        UniqueConstraint('label_group_id', 'chapter_content_id', name='one_label_group_per_chapter'),
     )
 
 class Label(Base):

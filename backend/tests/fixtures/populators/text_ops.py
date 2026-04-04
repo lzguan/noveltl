@@ -1,7 +1,7 @@
 """
-Fixtures for testing modify_revision_text and text operations.
+Fixtures for testing modify_chapter_content and text operations.
 
-Sets up a novel with one chapter, one revision, one revision text,
+Sets up a novel with one chapter, one chapter content,
 and two label groups each with their own labels. This allows testing
 that label porting works across multiple label groups.
 
@@ -21,7 +21,7 @@ from src.labels.constants import LabelRole
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.languages.models import Language
 from src.novels.constants import NovelType, Role, Visibility
-from src.novels.models import Chapter, Contributor, Novel, Revision, RevisionText
+from src.novels.models import Chapter, ChapterContent, Novel, NovelContributor, SourceWork
 
 
 class Hash(Protocol):
@@ -64,51 +64,47 @@ def to_admin(test_db: Session, no_hash: Hash) -> User:
 
 
 @pytest.fixture
-def to_novel(test_db: Session, to_language: Language, to_user: User) -> Novel:
+def to_source_work(test_db: Session) -> SourceWork:
+    sw = SourceWork(source_work_title="TextOps Source Work")
+    test_db.add(sw)
+    test_db.commit()
+    return sw
+
+
+@pytest.fixture
+def to_novel(test_db: Session, to_language: Language, to_user: User, to_source_work: SourceWork) -> Novel:
     novel = Novel(
         novel_title="TextOps Test Novel",
         language_code=to_language.language_code,
         novel_type=NovelType.ORIGINAL,
         novel_visibility=Visibility.PUBLIC,
+        source_work_id=to_source_work.source_work_id,
     )
     test_db.add(novel)
     test_db.commit()
-    test_db.add(Contributor(novel_id=novel.novel_id, user_id=to_user.user_id, contributor_role=Role.OWNER))
+    test_db.add(NovelContributor(novel_id=novel.novel_id, user_id=to_user.user_id, contributor_role=Role.OWNER))
     test_db.commit()
     return novel
 
 
 @pytest.fixture
 def to_chapter(test_db: Session, to_novel: Novel) -> Chapter:
-    chapter = Chapter(novel_id=to_novel.novel_id, chapter_num=1)
+    chapter = Chapter(novel_id=to_novel.novel_id, chapter_num=1, chapter_title="Test Chapter", chapter_is_public=True)
     test_db.add(chapter)
     test_db.commit()
     return chapter
 
 
 @pytest.fixture
-def to_revision(test_db: Session, to_chapter: Chapter) -> Revision:
-    revision = Revision(
+def to_chapter_content(test_db: Session, to_chapter: Chapter) -> ChapterContent:
+    cc = ChapterContent(
         chapter_id=to_chapter.chapter_id,
-        revision_title="Test Chapter",
-        revision_is_public=True,
-        revision_is_primary=True,
+        chapter_content_text=TEXT_CONTENT,
+        chapter_content_version=1,
     )
-    test_db.add(revision)
+    test_db.add(cc)
     test_db.commit()
-    return revision
-
-
-@pytest.fixture
-def to_revision_text(test_db: Session, to_revision: Revision) -> RevisionText:
-    rt = RevisionText(
-        revision_id=to_revision.revision_id,
-        revision_text_content=TEXT_CONTENT,
-        revision_text_version=1,
-    )
-    test_db.add(rt)
-    test_db.commit()
-    return rt
+    return cc
 
 
 # --- Label group 1: three labels ---
@@ -128,8 +124,8 @@ def to_label_group_1(test_db: Session, to_novel: Novel, to_user: User) -> LabelG
 
 
 @pytest.fixture
-def to_label_data_1(test_db: Session, to_label_group_1: LabelGroup, to_revision_text: RevisionText) -> LabelData:
-    ld = LabelData(label_group_id=to_label_group_1.label_group_id, revision_text_id=to_revision_text.revision_text_id)
+def to_label_data_1(test_db: Session, to_label_group_1: LabelGroup, to_chapter_content: ChapterContent) -> LabelData:
+    ld = LabelData(label_group_id=to_label_group_1.label_group_id, chapter_content_id=to_chapter_content.chapter_content_id)
     test_db.add(ld)
     test_db.commit()
     return ld
@@ -188,8 +184,8 @@ def to_label_group_2(test_db: Session, to_novel: Novel, to_user: User) -> LabelG
 
 
 @pytest.fixture
-def to_label_data_2(test_db: Session, to_label_group_2: LabelGroup, to_revision_text: RevisionText) -> LabelData:
-    ld = LabelData(label_group_id=to_label_group_2.label_group_id, revision_text_id=to_revision_text.revision_text_id)
+def to_label_data_2(test_db: Session, to_label_group_2: LabelGroup, to_chapter_content: ChapterContent) -> LabelData:
+    ld = LabelData(label_group_id=to_label_group_2.label_group_id, chapter_content_id=to_chapter_content.chapter_content_id)
     test_db.add(ld)
     test_db.commit()
     return ld

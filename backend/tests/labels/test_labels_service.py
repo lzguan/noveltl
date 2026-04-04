@@ -19,12 +19,12 @@ logger = logging.getLogger(__name__)
 def test_label_insert_label_data_by_autolabels_basic(
     chinese_xianxia_small_test_autolabels_cluener : list[autolabel_models.AutoLabel],
     chinese_xianxia_small_test_label_group : label_models.LabelGroup,
-    chinese_xianxia_small_test_chapters : list[tuple[novel_models.Chapter, novel_models.Revision, novel_models.RevisionText]],
+    chinese_xianxia_small_test_chapters : list[tuple[novel_models.Chapter, novel_models.ChapterContent]],
     chinese_xianxia_small_test_novel : novel_models.Novel,
     chinese_xianxia_small_test_default_params_cluener : dict[str, Any],
     chinese_xianxia_small_test_user : auth_models.User,
     chinese_xianxia_small_test_label_contributor : label_models.LabelContributor,
-    chinese_xianxia_small_test_contributor : novel_models.Contributor,
+    chinese_xianxia_small_test_contributor : novel_models.NovelContributor,
     test_db : Session
 ):
     # this test is AI generated.
@@ -36,7 +36,7 @@ def test_label_insert_label_data_by_autolabels_basic(
     logger.info(f"Expecting {expected_count} succeses, have {len(res.success)} succeses + {len(res.errors)} failures")
     assert len(res.success) == expected_count
 
-    source_revision_ids = {al.revision_text_id for al in chinese_xianxia_small_test_autolabels_cluener}
+    source_revision_ids = {al.chapter_content_id for al in chinese_xianxia_small_test_autolabels_cluener}
     assert set(res.success) == source_revision_ids
 
     label_datas_in_db = test_db.execute(
@@ -47,13 +47,13 @@ def test_label_insert_label_data_by_autolabels_basic(
     assert len(label_datas_in_db) == expected_count
 
     source_data_map = {
-        al.revision_text_id: al.auto_label_data
+        al.chapter_content_id: al.auto_label_data
         for al in chinese_xianxia_small_test_autolabels_cluener
     }
 
     for label_data in label_datas_in_db:
-        assert label_data.revision_text_id in source_data_map
-        source_labels = source_data_map[label_data.revision_text_id]
+        assert label_data.chapter_content_id in source_data_map
+        source_labels = source_data_map[label_data.chapter_content_id]
 
         db_labels = test_db.execute(
             select(label_models.Label)

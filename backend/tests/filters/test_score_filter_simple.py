@@ -26,7 +26,7 @@ from src.filters.score_filter import (
     ScoreGetContextOptions,
 )
 from src.labels.models import Label, LabelData, LabelGroup
-from src.novels.models import Revision, RevisionText
+from src.novels.models import ChapterContent
 
 # --- Tests for flag_instances ---
 
@@ -97,7 +97,7 @@ class TestGetContexts:
         sf_user: User,
         sf_label_group: LabelGroup,
         sf_labels: list[Label],
-        sf_revision: tuple[Revision, RevisionText],
+        sf_chapter_content: ChapterContent,
         score_filter: ScoreFilter,
     ):
         options = ScoreFlagInstancesOptions(
@@ -136,7 +136,7 @@ class TestGetContexts:
                 label_dirty=False,
                 label_data_id=uuid.uuid4()
             ),
-            revision_text_id=uuid.uuid4()
+            chapter_content_id=uuid.uuid4()
         )
 
         context_options = ScoreGetContextOptions()

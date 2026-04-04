@@ -1,5 +1,5 @@
 """
-Data-driven integration tests for modify_revision_text.
+Data-driven integration tests for modify_chapter_content.
 
 Uses the chinese_xianxia_small_test populator to load real chapter text and
 autolabel data, then compares in-memory apply_text_ops results against the
@@ -17,9 +17,9 @@ from src.labels.constants import LabelRole
 from src.labels.models import Label as LabelModel
 from src.labels.models import LabelContributor, LabelData, LabelGroup
 from src.labels.schemas import Label as LabelSchema
-from src.novels.models import Chapter, Contributor, Novel, Revision, RevisionText
+from src.novels.models import Chapter, ChapterContent, Novel, NovelContributor
 from src.novels.schemas import TextOp
-from src.novels.service import modify_revision_text
+from src.novels.service import modify_chapter_content
 from src.novels.utils import apply_text_ops
 from tests.conftest import DataLoader
 
@@ -49,16 +49,16 @@ def dd_label_group(
 @pytest.fixture
 def dd_chapter_0_labels(
     test_db: Session,
-    chinese_xianxia_small_test_chapters: list[tuple[Chapter, Revision, RevisionText]],
-    chinese_xianxia_small_test_contributor: Contributor,
+    chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],
+    chinese_xianxia_small_test_contributor: NovelContributor,
     dd_label_group: LabelGroup,
     autolabel_loader: DataLoader,
-) -> tuple[RevisionText, list[LabelModel]]:
+) -> tuple[ChapterContent, list[LabelModel]]:
     """
     Load autolabel data for chapter 0 and insert as real Labels in the DB.
-    Returns the RevisionText and the created labels.
+    Returns the ChapterContent and the created labels.
     """
-    _, _, rt = chinese_xianxia_small_test_chapters[0]
+    _, cc = chinese_xianxia_small_test_chapters[0]
 
     # Load autolabel JSON for chapter 0
     autolabel_json = json.loads(next(autolabel_loader("chinese/chinese_xianxia/small_test/cluener")))
@@ -67,7 +67,7 @@ def dd_chapter_0_labels(
     # Create LabelData
     ld = LabelData(
         label_group_id=dd_label_group.label_group_id,
-        revision_text_id=rt.revision_text_id,
+        chapter_content_id=cc.chapter_content_id,
     )
     test_db.add(ld)
     test_db.commit()
@@ -88,27 +88,27 @@ def dd_chapter_0_labels(
     test_db.add_all(labels)
     test_db.commit()
 
-    return rt, labels
+    return cc, labels
 
 
-class TestDataDrivenModifyRevisionText:
+class TestDataDrivenModifyChapterContent:
 
     def test_delete_substring_matches_in_memory(
         self,
         test_db: Session,
         chinese_xianxia_small_test_user: User,
-        chinese_xianxia_small_test_chapters: list[tuple[Chapter, Revision, RevisionText]],
-        dd_chapter_0_labels: tuple[RevisionText, list[LabelModel]],
+        chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],
+        dd_chapter_0_labels: tuple[ChapterContent, list[LabelModel]],
     ):
         """
         Delete the first line of chapter 0 and verify that the service function
         produces the same text and label positions as apply_text_ops in memory.
         """
-        _, revision, rt = chinese_xianxia_small_test_chapters[0]
+        chapter, cc = chinese_xianxia_small_test_chapters[0]
         _, db_labels = dd_chapter_0_labels
 
-        original_text = rt.revision_text_content
-        # Delete the first line "提笔有感\n"
+        original_text = cc.chapter_content_text
+        # Delete the first line
         first_line = original_text.split("\n")[0] + "\n"
         ops = [TextOp(op="delete", start=0, text=first_line)]
 
@@ -119,24 +119,24 @@ class TestDataDrivenModifyRevisionText:
         expected_text, expected_labels = apply_text_ops(original_text, ops, in_memory_labels)
 
         # Service function
-        modify_revision_text(
+        modify_chapter_content(
             test_db, chinese_xianxia_small_test_user,
-            revision.revision_id, rt.revision_text_id, ops,
+            chapter.chapter_id, cc.chapter_content_id, ops,
         )
 
         # Read back from DB
-        new_rt = test_db.execute(
-            select(RevisionText).where(
-                RevisionText.revision_id == revision.revision_id,
-                RevisionText.revision_text_version == 2,
+        new_cc = test_db.execute(
+            select(ChapterContent).where(
+                ChapterContent.chapter_id == chapter.chapter_id,
+                ChapterContent.chapter_content_version == 2,
             )
         ).scalar_one()
 
-        assert new_rt.revision_text_content == expected_text
+        assert new_cc.chapter_content_text == expected_text
 
         # Compare label positions
         new_lds = test_db.execute(
-            select(LabelData).where(LabelData.revision_text_id == new_rt.revision_text_id)
+            select(LabelData).where(LabelData.chapter_content_id == new_cc.chapter_content_id)
         ).scalars().all()
         new_db_labels : list[LabelModel] = []
         for ld in new_lds:
@@ -162,17 +162,17 @@ class TestDataDrivenModifyRevisionText:
         self,
         test_db: Session,
         chinese_xianxia_small_test_user: User,
-        chinese_xianxia_small_test_chapters: list[tuple[Chapter, Revision, RevisionText]],
-        dd_chapter_0_labels: tuple[RevisionText, list[LabelModel]],
+        chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],
+        dd_chapter_0_labels: tuple[ChapterContent, list[LabelModel]],
     ):
         """
         Insert text at the beginning of chapter 0 and verify service matches in-memory.
         """
-        _, revision, rt = chinese_xianxia_small_test_chapters[0]
+        chapter, cc = chinese_xianxia_small_test_chapters[0]
         _, db_labels = dd_chapter_0_labels
 
-        original_text = rt.revision_text_content
-        insert_text = "【编者注】"
+        original_text = cc.chapter_content_text
+        insert_text = "\u3010\u7f16\u8005\u6ce8\u3011"
         ops = [TextOp(op="insert", start=0, text=insert_text)]
 
         # In-memory
@@ -180,23 +180,23 @@ class TestDataDrivenModifyRevisionText:
         expected_text, expected_labels = apply_text_ops(original_text, ops, in_memory_labels)
 
         # Service
-        modify_revision_text(
+        modify_chapter_content(
             test_db, chinese_xianxia_small_test_user,
-            revision.revision_id, rt.revision_text_id, ops,
+            chapter.chapter_id, cc.chapter_content_id, ops,
         )
 
-        new_rt = test_db.execute(
-            select(RevisionText).where(
-                RevisionText.revision_id == revision.revision_id,
-                RevisionText.revision_text_version == 2,
+        new_cc = test_db.execute(
+            select(ChapterContent).where(
+                ChapterContent.chapter_id == chapter.chapter_id,
+                ChapterContent.chapter_content_version == 2,
             )
         ).scalar_one()
 
-        assert new_rt.revision_text_content == expected_text
-        assert new_rt.revision_text_content.startswith(insert_text)
+        assert new_cc.chapter_content_text == expected_text
+        assert new_cc.chapter_content_text.startswith(insert_text)
 
         new_lds = test_db.execute(
-            select(LabelData).where(LabelData.revision_text_id == new_rt.revision_text_id)
+            select(LabelData).where(LabelData.chapter_content_id == new_cc.chapter_content_id)
         ).scalars().all()
         new_db_labels : list[LabelModel] = []
         for ld in new_lds:
@@ -221,20 +221,20 @@ class TestDataDrivenModifyRevisionText:
         self,
         test_db: Session,
         chinese_xianxia_small_test_user: User,
-        chinese_xianxia_small_test_chapters: list[tuple[Chapter, Revision, RevisionText]],
-        dd_chapter_0_labels: tuple[RevisionText, list[LabelModel]],
+        chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],
+        dd_chapter_0_labels: tuple[ChapterContent, list[LabelModel]],
     ):
         """
         Apply multiple operations (delete first line, insert prefix) and verify match.
         """
-        _, revision, rt = chinese_xianxia_small_test_chapters[0]
+        chapter, cc = chinese_xianxia_small_test_chapters[0]
         _, db_labels = dd_chapter_0_labels
 
-        original_text = rt.revision_text_content
+        original_text = cc.chapter_content_text
         first_line = original_text.split("\n")[0] + "\n"
         ops = [
             TextOp(op="delete", start=0, text=first_line),
-            TextOp(op="insert", start=0, text="新标题\n"),
+            TextOp(op="insert", start=0, text="\u65b0\u6807\u9898\n"),
         ]
 
         # In-memory
@@ -242,22 +242,22 @@ class TestDataDrivenModifyRevisionText:
         expected_text, expected_labels = apply_text_ops(original_text, ops, in_memory_labels)
 
         # Service
-        modify_revision_text(
+        modify_chapter_content(
             test_db, chinese_xianxia_small_test_user,
-            revision.revision_id, rt.revision_text_id, ops,
+            chapter.chapter_id, cc.chapter_content_id, ops,
         )
 
-        new_rt = test_db.execute(
-            select(RevisionText).where(
-                RevisionText.revision_id == revision.revision_id,
-                RevisionText.revision_text_version == 2,
+        new_cc = test_db.execute(
+            select(ChapterContent).where(
+                ChapterContent.chapter_id == chapter.chapter_id,
+                ChapterContent.chapter_content_version == 2,
             )
         ).scalar_one()
 
-        assert new_rt.revision_text_content == expected_text
+        assert new_cc.chapter_content_text == expected_text
 
         new_lds = test_db.execute(
-            select(LabelData).where(LabelData.revision_text_id == new_rt.revision_text_id)
+            select(LabelData).where(LabelData.chapter_content_id == new_cc.chapter_content_id)
         ).scalars().all()
         new_db_labels : list[LabelModel] = []
         for ld in new_lds:

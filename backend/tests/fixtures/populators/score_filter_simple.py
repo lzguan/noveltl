@@ -14,7 +14,7 @@ from src.labels.constants import LabelRole
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.languages.models import Language
 from src.novels.constants import NovelType, Role, Visibility
-from src.novels.models import Chapter, Contributor, Novel, Revision, RevisionText
+from src.novels.models import Chapter, ChapterContent, Novel, NovelContributor, SourceWork
 
 
 class Hash(Protocol):
@@ -40,46 +40,47 @@ def sf_user(test_db: Session, no_hash : Hash) -> User:
 
 
 @pytest.fixture
-def sf_novel(test_db: Session, sf_language: Language, sf_user: User) -> Novel:
+def sf_source_work(test_db: Session) -> SourceWork:
+    sw = SourceWork(source_work_title="SF Source Work")
+    test_db.add(sw)
+    test_db.commit()
+    return sw
+
+
+@pytest.fixture
+def sf_novel(test_db: Session, sf_language: Language, sf_user: User, sf_source_work: SourceWork) -> Novel:
     novel = Novel(
         novel_title="SF Test Novel",
         language_code=sf_language.language_code,
         novel_type=NovelType.ORIGINAL,
-        novel_visibility=Visibility.PUBLIC
+        novel_visibility=Visibility.PUBLIC,
+        source_work_id=sf_source_work.source_work_id
     )
     test_db.add(novel)
     test_db.commit()
-    test_db.add(Contributor(novel_id=novel.novel_id, user_id=sf_user.user_id, contributor_role=Role.OWNER))
+    test_db.add(NovelContributor(novel_id=novel.novel_id, user_id=sf_user.user_id, contributor_role=Role.OWNER))
     test_db.commit()
     return novel
 
 
 @pytest.fixture
 def sf_chapter(test_db: Session, sf_novel: Novel) -> Chapter:
-    chapter = Chapter(novel_id=sf_novel.novel_id, chapter_num=1)
+    chapter = Chapter(novel_id=sf_novel.novel_id, chapter_num=1, chapter_title="Test Chapter", chapter_is_public=True)
     test_db.add(chapter)
     test_db.commit()
     return chapter
 
 
 @pytest.fixture
-def sf_revision(test_db: Session, sf_chapter: Chapter) -> tuple[Revision, RevisionText]:
-    revision = Revision(
+def sf_chapter_content(test_db: Session, sf_chapter: Chapter) -> ChapterContent:
+    cc = ChapterContent(
         chapter_id=sf_chapter.chapter_id,
-        revision_title="Test Chapter",
-        revision_is_public=True,
-        revision_is_primary=True,
+        chapter_content_text="Hello world. This is a test sentence. Another sentence here.",
+        chapter_content_version=1
     )
-    test_db.add(revision)
+    test_db.add(cc)
     test_db.commit()
-    rt = RevisionText(
-        revision_id=revision.revision_id,
-        revision_text_content="Hello world. This is a test sentence. Another sentence here.",
-        revision_text_version=1
-    )
-    test_db.add(rt)
-    test_db.commit()
-    return revision, rt
+    return cc
 
 
 @pytest.fixture
@@ -100,11 +101,10 @@ def sf_label_group(test_db: Session, sf_novel: Novel, sf_user: User) -> LabelGro
 
 
 @pytest.fixture
-def sf_label_data(test_db: Session, sf_label_group: LabelGroup, sf_revision: tuple[Revision, RevisionText]) -> LabelData:
-    _, rt = sf_revision
+def sf_label_data(test_db: Session, sf_label_group: LabelGroup, sf_chapter_content: ChapterContent) -> LabelData:
     label_data = LabelData(
         label_group_id=sf_label_group.label_group_id,
-        revision_text_id=rt.revision_text_id
+        chapter_content_id=sf_chapter_content.chapter_content_id
     )
     test_db.add(label_data)
     test_db.commit()

@@ -170,6 +170,7 @@ Two tests use `pytest-dependency` and `pytest-order`: `test_labels_service.py` d
 
 ## See Also
 
+- [testing-architecture.md](testing-architecture.md) — Test layer structure, dependency gates, fixture bundles
 - [concepts/monkeypatching.md](concepts/monkeypatching.md) — Worker testing deep dive
 - [background-jobs.md](background-jobs.md) — AutoLabel worker system
 - [conventions.md](conventions.md) — Code conventions

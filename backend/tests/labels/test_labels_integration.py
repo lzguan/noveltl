@@ -44,7 +44,7 @@ class TestInsertLabelDatasByAutolabels:
 
         assert len(res.errors) == 0, f"Expected 0 errors, got: {res.errors}"
         expected_count = len(chinese_xianxia_small_test_autolabels_cluener)
-        logger.info(f"Expecting {expected_count} succeses, have {len(res.success)} succeses + {len(res.errors)} failures")
+        logger.info(f"Expecting {expected_count} successes, have {len(res.success)} successes + {len(res.errors)} failures")
         assert len(res.success) == expected_count
 
         source_revision_ids = {al.chapter_content_id for al in chinese_xianxia_small_test_autolabels_cluener}

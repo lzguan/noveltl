@@ -122,18 +122,18 @@ Dependencies:
 The following graph was derived from actual import analysis of the backend source (April 2026). Edges represent real cross-module dependencies, not assumptions.
 
 **Key findings from import analysis:**
-- `novels/utils.py` imports `labels.schemas.Label` (Pydantic type for `apply_text_ops`) — pure function but depends on label schema
-- `labels/utils.py` is NOT pure — imports models, permissions, uses Session. Belongs in service layer testing.
-- `filters/utils.py` is NOT pure — imports auth.models, uses Session. Belongs in service layer testing.
-- `autolabels/worker/utils.py` IS pure — only internal imports, no Session
-- `novels/service.py` imports `labels.models` and `labels.schemas` — specifically in `modify_chapter_content` (integration-level function living in novels service)
-- `labels/service.py` imports `autolabels.models` and `autolabels.constants` — for `insert_label_datas_by_autolabels`
+- `backend/src/novels/utils.py` imports `labels.schemas.Label` (Pydantic type for `apply_text_ops`) — pure function but depends on label schema
+- `backend/src/labels/utils.py` is NOT pure — imports models, permissions, uses Session. Belongs in service layer testing.
+- `backend/src/filters/utils.py` is NOT pure — imports auth.models, uses Session. Belongs in service layer testing.
+- `backend/src/autolabels/worker/utils.py` IS pure — only internal imports, no Session
+- `backend/src/novels/service.py` imports `labels.models` and `labels.schemas` — specifically in `modify_chapter_content` (integration-level function living in novels service)
+- `backend/src/labels/service.py` imports `autolabels.models` and `autolabels.constants` — for `insert_label_datas_by_autolabels`
 
 ```mermaid
 graph TD
     %% Layer 0a: Pure utils (no Session parameter)
-    L0a_novels["novels/utils<br/>(apply_text_ops)"]
-    L0a_autolabels["autolabels/worker/utils<br/>(chunking, tokenization)"]
+    L0a_novels["backend/src/novels/utils<br/>(apply_text_ops)"]
+    L0a_autolabels["backend/src/autolabels/worker/utils<br/>(chunking, tokenization)"]
 
     %% Layer 0b: Fixture validation
     L0b["fixture validation"]

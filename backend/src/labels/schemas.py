@@ -240,8 +240,8 @@ class CreateLabelDataByAutoLabelStatus(BaseModel):
     Return message for CreateLabelDataByAutoLabel.
 
     Attributes:
-        success: List of UUIDs of Chapters for successful inserts.
-        errors: List of tuples of (Chapter UUID for failed inserts, error message).
+        success: List of tuples of (chapter_id, chapter_content_id) for successful inserts.
+        errors: List of tuples of (chapter_id, chapter_content_id, error message) for failed inserts.
     """
-    success : list[uuid.UUID]
-    errors: list[tuple[uuid.UUID, str]]
+    success : list[tuple[uuid.UUID, uuid.UUID]]
+    errors: list[tuple[uuid.UUID, uuid.UUID, str]]

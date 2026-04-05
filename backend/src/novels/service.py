@@ -25,30 +25,182 @@ from ..schemas import OperationStatus
 from . import models, schemas
 from .constants import Role, Visibility
 from .exceptions import (
+    ChapterContentNotFoundException,
+    ChapterContentOutdatedException,
+    ChapterDeleteFailedException,
     ChapterNotFoundException,
     ChapterNumDuplicateException,
-    DeleteRevisionFailedException,
     NovelNotFoundException,
-    RevisionMakePrimaryFailedException,
-    RevisionNotFoundException,
-    RevisionNotPublicException,
-    RevisionTextNotFoundException,
-    RevisionTextOutdatedException,
+    SourceWorkNotFoundException,
 )
 from .permissions import (
+    chapter_content_mod_access_insert,
+    chapter_content_mod_access_select,
+    chapter_mod_access_delete,
     chapter_mod_access_insert,
     chapter_mod_access_select,
+    chapter_mod_access_update,
     novel_mod_access_select,
     novel_mod_access_update,
-    revision_mod_access_delete,
-    revision_mod_access_insert,
-    revision_mod_access_select,
-    revision_mod_access_update,
-    revision_text_mod_access_insert,
-    revision_text_mod_access_select,
+    source_work_mod_access_select,
+    source_work_mod_access_update,
 )
 from .utils import apply_text_ops
 
+
+def query_source_works_by_title(
+        db : Session,
+        current_user : User | None,
+        source_work_title : str | None
+) -> Sequence[models.SourceWork]:
+    """
+    Queries source works with source_work_title as substring.
+
+    Args:
+        db: Database from which we are querying.
+        current_user: User that is querying. Can be None for guest access.
+        source_work_title: Substring we wish to search for in source work titles.
+    """
+    if source_work_title is None:
+        search_term = "%"
+    else:
+        search_term = f"%{source_work_title}%"
+    q = select(models.SourceWork).where(models.SourceWork.source_work_title.ilike(search_term))
+    q = source_work_mod_access_select(q, current_user)
+    result = db.execute(q)
+    result_scalars = result.scalars().all()
+
+    return result_scalars
+
+def query_source_work_by_id(
+        db : Session,
+        current_user : User | None,
+        source_work_id : uuid.UUID
+) -> models.SourceWork:
+    """
+    Queries a source work by id.
+
+    Args:
+        db: Database from which we are querying.
+        current_user: User that is querying. Can be None for guest access.
+        source_work_id: id of source work in database.
+
+    Raises:
+        SourceWorkNotFoundException: Source work not found in database.
+    """
+    q = select(models.SourceWork).where(models.SourceWork.source_work_id == source_work_id)
+    q = source_work_mod_access_select(q, current_user)
+    result = db.execute(q)
+    try:
+        result_scalar = result.scalar_one()
+    except NoResultFound as e:
+        raise SourceWorkNotFoundException from e
+    return result_scalar
+
+def query_novels_by_source_work(
+        db : Session,
+        current_user : User | None,
+        source_work_id : uuid.UUID
+) -> Sequence[models.Novel]:
+    """
+    Queries novels with a specific source work.
+
+    Args:
+        db: Database from which we are querying.
+        current_user: User that is querying. Can be None for guest access.
+        source_work_id: id of source work of novels we are querying.
+
+    Raises:
+        SourceWorkNotFoundException: Source work not found in database (or insufficient permissions to view it).
+    """
+    q = select(models.Novel).where(models.Novel.source_work_id == source_work_id)
+    q = novel_mod_access_select(q, current_user)
+    result = db.execute(q)
+    result_scalars = result.scalars().all()
+    if len(result_scalars) == 0:
+        query_source_work_by_id(db, current_user, source_work_id)
+    return result_scalars
+
+def insert_source_work(
+        db : Session,
+        current_user : User,
+        request : schemas.CreateSourceWork
+) -> models.SourceWork:
+    """
+    Insert a new source work into the database.
+
+    Args:
+        db: Database which we are inserting into.
+        current_user: User performing the insert. Any authenticated user can create a source work.
+        request: Metadata of source work.
+
+    Raises:
+        DataTooLongException: String is too long in some field of data we are inserting.
+        UnknownError: Some other error occured.
+    """
+    source_work = models.SourceWork(**request.model_dump())
+    try:
+        db.add(source_work)
+        db.commit()
+    except DataError as e:
+        db.rollback()
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                raise DataTooLongException from e
+        raise UnknownError from e
+    except Exception as e:
+        db.rollback()
+        raise UnknownError from e
+    return source_work
+
+def modify_source_work(
+        db : Session,
+        current_user : User,
+        source_work_id : uuid.UUID,
+        request : schemas.UpdateSourceWork
+) -> models.SourceWork:
+    """
+    Modify a source work's metadata.
+
+    Args:
+        db: Database containing the source work to modify.
+        current_user: User performing the modify. Must be admin or owner of a child novel.
+        source_work_id: id of source work to modify.
+        request: Proposed updated metadata.
+
+    Raises:
+        SourceWorkNotFoundException: Source work not found in database (or insufficient permissions).
+        InsufficientPermissionsException: User does not have permission to modify this source work.
+        DataTooLongException: Data we are updating to is too long for some string field.
+        UnknownError: Some other error occured.
+    """
+    stmt = update(
+        models.SourceWork
+    ).where(
+        models.SourceWork.source_work_id == source_work_id
+    ).values(request.model_dump(exclude_unset=True))
+    stmt = source_work_mod_access_update(stmt, current_user)
+    stmt = stmt.returning(models.SourceWork)
+    try:
+        result = db.execute(stmt)
+        result_row = result.scalar_one()
+        db.commit()
+    except DataError as e:
+        db.rollback()
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                raise DataTooLongException from e
+        raise UnknownError from e
+    except NoResultFound as e:
+        db.rollback()
+        query_source_work_by_id(db, current_user, source_work_id)
+        raise InsufficientPermissionsException from e
+    except Exception as e:
+        db.rollback()
+        raise UnknownError from e
+    return result_row
 
 def query_novels_by_title(
         db : Session,
@@ -87,12 +239,12 @@ def query_novels_by_current_user(
         current_user: User that is querying.
         editable: If True, only select novels that the user can edit. Otherwise select all such novels.
     """
-    subq = select(models.Contributor).where(and_(
-        models.Contributor.novel_id == models.Novel.novel_id,
-        models.Contributor.user_id == current_user.user_id
+    subq = select(models.NovelContributor).where(and_(
+        models.NovelContributor.novel_id == models.Novel.novel_id,
+        models.NovelContributor.user_id == current_user.user_id
     ))
     if editable:
-        subq = subq.where(models.Contributor.contributor_role.in_([Role.EDITOR, Role.OWNER]))
+        subq = subq.where(models.NovelContributor.contributor_role.in_([Role.EDITOR, Role.OWNER]))
     q = select(
         models.Novel
     ).where(exists(subq))
@@ -203,265 +355,126 @@ def query_chapter_by_id(
         raise ChapterNotFoundException from e
     return result_scalar
 
-def query_revision_by_id(
+def query_chapter_content_by_most_recent(
         db : Session,
         current_user : User | None,
-        revision_id : uuid.UUID
-    ) -> models.Revision:
+        chapter_id : uuid.UUID
+    ) -> models.ChapterContent:
     """
-    Query a chapter revision by id.
+    Query the most recent version of text of a specific chapter.
 
     Args:
         db: Database from which we are querying.
         current_user: User that is querying.
-        revision_id: id of chapter revision we are querying.
-
-    Raises:
-        RevisionNotFoundException: Chapter revision not found in database (or insufficient permissions to view it).
-    """
-    q = select(
-        models.Revision
-    ).where(
-        models.Revision.revision_id == revision_id
-    ).join(
-        models.Chapter,
-        models.Chapter.chapter_id == models.Revision.chapter_id
-    ).join(
-        models.Novel,
-        models.Novel.novel_id == models.Chapter.novel_id
-    )
-    q = revision_mod_access_select(q, current_user)
-    result = db.execute(q)
-    try:
-        result_scalar = result.scalar_one()
-    except NoResultFound as e:
-        raise RevisionNotFoundException from e
-    return result_scalar
-
-def query_revisions_by_chapter(
-        db : Session,
-        current_user : User | None,
-        chapter_id : uuid.UUID,
-        is_public : bool | None,
-        is_primary : bool | None
-    ) -> list[models.Revision]:
-    """
-    Query all chapter revisions from a chapter_id satisfying certain requirements.
-
-    Args:
-        db: Database from which we are querying.
-        current_user: User performing the query.
-        chapter_id: id of chapter we are querying from.
-        is_public: If not None, only select public chapters.
-        is_primary: If not None, only select primary chapters.
-
-    Raises:
-        ChapterNotFoundException: Chapter with corresponding chapter_id is not in database (or no permissions to view it).
-    Notes:
-        The caller should be responsible for converting to the best pydantic model for the use case.
-    """
-    q = select(
-        models.Revision
-    ).where(
-        models.Revision.chapter_id == chapter_id
-    ).join(
-        models.Chapter,
-        models.Chapter.chapter_id == models.Revision.chapter_id
-    ).join(
-        models.Novel,
-        models.Novel.novel_id == models.Chapter.novel_id
-    ).order_by(
-        models.Revision.revision_is_primary.desc(),
-        models.Revision.revision_is_public.desc(),
-        models.Revision.updated_at.desc()
-    )
-    if is_public is not None:
-        q = q.where(models.Revision.revision_is_public == is_public)
-    if is_primary is not None:
-        q = q.where(models.Revision.revision_is_primary == is_primary)
-    q = revision_mod_access_select(q, current_user)
-    result = db.execute(q)
-    result_rows = result.scalars().all()
-    if len(result_rows) == 0:
-        query_chapter_by_id(db, current_user, chapter_id)
-    return list(result_rows)
-
-
-
-def query_revisions_by_novel(
-        db : Session,
-        current_user : User | None,
-        novel_id : uuid.UUID,
-        start : int | None,
-        end : int | None,
-        is_public : bool | None,
-        is_primary : bool | None,
-    ) -> list[models.Revision]:
-    """
-    Query all chapter revisions from novel novel_id satisfying certain restrictions. Returns a dictionary in the format
-        `chapter_num : List[RevisionMeta]`
-
-    Args:
-        db: Database from which we are querying from.
-        current_user: User that is querying.
-        novel_id: id of novel we are querying chapter revisions from.
-        start: If not None, then only query chapter revisions that have chapter_num >= start.
-        end: If not None, then only query chapter revisions that have chapter_num < end.
-        is_public: If not None, then filter novels by public status.
-        is_primary: If not None, then filter novels by primary status.
-
-    Raises:
-        NovelNotFoundException: novel with corresponding novel_id is not in database (or insufficient permissions to view it).
-    """
-    q = select(models.Revision).join(
-        models.Chapter, models.Chapter.chapter_id == models.Revision.chapter_id
-    ).join(
-        models.Novel,
-        models.Novel.novel_id == models.Chapter.novel_id
-    ).where(
-        models.Novel.novel_id == novel_id
-    ).order_by(
-        models.Chapter.chapter_num.asc(),
-        models.Revision.revision_is_primary.desc(),
-        models.Revision.revision_is_public.desc(),
-        models.Revision.updated_at.desc()
-    )
-    if start is not None:
-        q = q.where(models.Chapter.chapter_num >= start)
-    if end is not None:
-        q = q.where(models.Chapter.chapter_num < end)
-    if is_public is not None:
-        q = q.where(models.Revision.revision_is_public == is_public)
-    if is_primary is not None:
-        q = q.where(models.Revision.revision_is_primary == is_primary)
-    q = revision_mod_access_select(q, current_user)
-    result = db.execute(q)
-    result_rows  = result.scalars().all()
-    if len(result_rows) == 0:
-        query_novel_by_id(db, current_user, novel_id)
-    return list(result_rows)
-
-def query_revision_text_by_most_recent(
-        db : Session,
-        current_user : User | None,
-        revision_id : uuid.UUID
-    ) -> models.RevisionText:
-    """
-    Query the most recent version of text of a specific revision.
-
-    Args:
-        db: Database from which we are querying.
-        current_user: User that is querying.
-        revision_id: ID of the revision whose text we want to retrieve.
+        chapter_id: ID of the chapter whose text we want to retrieve.
 
     Returns:
-        The text of the specified revision.
+        The text of the specified chapter.
 
     Raises:
-        RevisionNotFoundException: Revision with corresponding ID is not in database (or insufficient permissions to view it).
-        RevisionTextNotFoundException: Text for the specified revision is not found.
+        ChapterContentNotFoundException: Content for the specified chapter is not found.
     """
-    rt = aliased(models.RevisionText)
-    q = select(models.RevisionText).where(
-        models.RevisionText.revision_id == revision_id
+    cc = aliased(models.ChapterContent)
+    q = select(models.ChapterContent).where(
+        models.ChapterContent.chapter_id == chapter_id
     ).where(
-        models.RevisionText.revision_text_version == select(rt.revision_text_version).where(rt.revision_id == revision_id).order_by(rt.revision_text_version.desc()).limit(1).scalar_subquery()
+        models.ChapterContent.chapter_content_version == select(cc.chapter_content_version).where(cc.chapter_id == chapter_id).order_by(cc.chapter_content_version.desc()).limit(1).scalar_subquery()
     )
     try:
-        q = revision_text_mod_access_select(q, current_user)
+        q = chapter_content_mod_access_select(q, current_user)
         result = db.execute(q)
         result_row = result.scalar_one()
     except NoResultFound as e:
-        query_revision_by_id(db, current_user, revision_id)
-        raise RevisionTextNotFoundException from e
+        query_chapter_by_id(db, current_user, chapter_id)
+        raise ChapterContentNotFoundException from e
     return result_row
 
-def query_revision_text_by_id(
+def query_chapter_content_by_id(
     db : Session,
     current_user : User | None,
-    revision_text_id : uuid.UUID
-) -> models.RevisionText:
+    chapter_content_id : uuid.UUID
+) -> models.ChapterContent:
     """
-    Query a specific version of text of a specific revision by the text's id.
+    Query a specific version of text of a specific chapter by the text's id.
 
     Args:
         db: Database from which we are querying.
         current_user: User that is querying.
-        revision_text_id: ID of the text we want to retrieve.
+        chapter_content_id: ID of the text we want to retrieve.
 
     Raises:
-        RevisionTextNotFoundException: Text with corresponding ID is not found in database (or insufficient permissions to view it).
+        ChapterContentNotFoundException: Text with corresponding ID is not found in database (or insufficient permissions to view it).
     """
-    q = select(models.RevisionText).where(
-        models.RevisionText.revision_text_id == revision_text_id
+    q = select(models.ChapterContent).where(
+        models.ChapterContent.chapter_content_id == chapter_content_id
     )
-    q = revision_text_mod_access_select(q, current_user)
+    q = chapter_content_mod_access_select(q, current_user)
     try:
         result = db.execute(q)
         result_row = result.scalar_one()
     except NoResultFound as e:
-        raise RevisionTextNotFoundException from e
+        raise ChapterContentNotFoundException from e
     return result_row
 
-def query_revision_text_status(
+def query_chapter_content_status(
     db : Session,
     current_user : User | None,
-    revision_id : uuid.UUID,
-    revision_text_id : uuid.UUID,
+    chapter_id : uuid.UUID,
+    chapter_content_id : uuid.UUID,
 ) -> OperationStatus:
     """
-    Check whether a revision_text_id is the latest version for its revision.
-    Queries the most recent revision text version with read permissions applied,
-    then compares against the provided revision_text_id.
+    Check whether a chapter_content_id is the latest version for its chapter.
+    Queries the most recent chapter content version with read permissions applied,
+    then compares against the provided chapter_content_id.
 
     Args:
         db: Database from which we are querying.
         current_user: User performing the check.
-        revision_id: ID of the revision to check.
-        revision_text_id: ID of the revision text to validate as current.
+        chapter_id: ID of the chapter to check.
+        chapter_content_id: ID of the chapter content to validate as current.
 
     Raises:
-        RevisionTextNotFoundException: No revision text found for revision_id (or insufficient read permissions).
-        RevisionTextOutdatedException: Revision text exists but revision_text_id is not the latest version.
+        ChapterContentNotFoundException: No chapter content found for chapter_content_id (or insufficient read permissions).
+        ChapterContentOutdatedException: Chapter content exists but chapter_content_id is not the latest version.
     """
-    q = select(models.RevisionText.revision_text_id).where(
-        models.RevisionText.revision_id == revision_id
+    q = select(models.ChapterContent.chapter_content_id).where(
+        models.ChapterContent.chapter_id == chapter_id
     ).where(
-        models.RevisionText.revision_text_version == select(func.max(
-            models.RevisionText.revision_text_version
+        models.ChapterContent.chapter_content_version == select(func.max(
+            models.ChapterContent.chapter_content_version
         )).where(
-            models.RevisionText.revision_id == revision_id
+            models.ChapterContent.chapter_id == chapter_id
         ).scalar_subquery()
     )
-    q = revision_text_mod_access_select(q, current_user)
+    q = chapter_content_mod_access_select(q, current_user)
     try:
         latest_id = db.execute(q).scalar_one()
     except NoResultFound as e:
-        raise RevisionTextNotFoundException from e
-    if latest_id != revision_text_id:
-        raise RevisionTextOutdatedException("Revision text is outdated. Please refresh and try again.")
-    return OperationStatus(status="success", detail="Revision text is current.")
+        raise ChapterContentNotFoundException from e
+    if latest_id != chapter_content_id:
+        raise ChapterContentOutdatedException("Chapter content is outdated. Please refresh and try again.")
+    return OperationStatus(status="success", detail="Chapter content is current.")
 
-def query_revision_text_ids_by_revision_id(
+def query_chapter_content_ids_by_chapter_id(
     db : Session,
     current_user : User,
-    revision_id : uuid.UUID
-) -> list[schemas.RevisionTextMeta]:
+    chapter_id : uuid.UUID
+) -> list[schemas.ChapterContentMeta]:
     """
-    Query all text ids of a specific revision.
+    Query all text ids of a specific chapter.
 
     Args:
         db: Database from which we are querying.
         current_user: User that is querying.
-        revision_id: ID of the revision whose text ids we want to retrieve.
+        chapter_id: ID of the chapter whose text ids we want to retrieve.
     """
-    q = select(models.RevisionText).options(defer(models.RevisionText.revision_text_content)).where(
-        models.RevisionText.revision_id == revision_id
+    q = select(models.ChapterContent).options(defer(models.ChapterContent.chapter_content_text)).where(
+        models.ChapterContent.chapter_id == chapter_id
     )
-    q = revision_text_mod_access_select(q, current_user)
+    q = chapter_content_mod_access_select(q, current_user)
     result = db.execute(q)
     result_rows = result.scalars().all()
-    return [schemas.RevisionTextMeta.model_validate(row) for row in result_rows]
+    return [schemas.ChapterContentMeta.model_validate(row) for row in result_rows]
 
 def insert_novel(
         db : Session,
@@ -469,7 +482,8 @@ def insert_novel(
         request : schemas.CreateNovel
     ) -> models.Novel:
     """
-    Insert a novel into the database.
+    Insert a novel into the database. If source_work_id is None, a new SourceWork
+    is auto-created using the novel's title.
 
     Args:
         db: Database which we are inserting into.
@@ -477,15 +491,25 @@ def insert_novel(
         request: Metadata of novel.
 
     Raises:
-        LanguageNotFoundException: Language id in request does not exist.
+        SourceWorkNotFoundException: Provided source_work_id does not exist.
+        LanguageNotFoundException: Language code in request does not exist.
         DataTooLongException: String is too long in some field of data we are inserting.
         UnknownError: Some other error occured.
     """
-    novel = models.Novel(**request.model_dump())
     try:
+        if request.source_work_id is None:
+            source_work = models.SourceWork(source_work_title=request.novel_title)
+            db.add(source_work)
+            db.flush()
+            source_work_id = source_work.source_work_id
+        else:
+            source_work_id = request.source_work_id
+
+        novel_data = request.model_dump(exclude={'source_work_id'})
+        novel = models.Novel(**novel_data, source_work_id=source_work_id)
         db.add(novel)
         db.flush()
-        contributor = models.Contributor(contributor_role=Role.OWNER, novel_id=novel.novel_id, user_id=current_user.user_id)
+        contributor = models.NovelContributor(contributor_role=Role.OWNER, novel_id=novel.novel_id, user_id=current_user.user_id)
         db.add(contributor)
         db.commit()
     except IntegrityError as e:
@@ -493,6 +517,9 @@ def insert_novel(
         if isinstance(e.orig, PgError):
             pgcode = e.orig.pgcode
             if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
+                constraint = getattr(e.orig.diag, 'constraint_name', '') or ''
+                if 'source_work' in constraint:
+                    raise SourceWorkNotFoundException from e
                 raise LanguageNotFoundException from e
         raise UnknownError from e
     except DataError as e:
@@ -560,15 +587,18 @@ def insert_chapter(
         current_user : User,
         novel_id : uuid.UUID,
         request : schemas.CreateChapter
-    ) -> models.Chapter:
+    ) -> tuple[models.Chapter, models.ChapterContent]:
     """
-    Insert a chapter into a database.
+    Insert a chapter into a database with an initial empty ChapterContent (version 1).
 
     Args:
         db: Database into which we are inserting the chapter.
         current_user: User performing the insert.
         novel_id: id of novel the chapter belongs to
         request: Data to insert.
+
+    Returns:
+        Tuple of the new Chapter and its initial ChapterContent.
 
     Raises:
         NovelNotFoundException: Novel with novel_id does not exist in database (or insufficient permissions to view it).
@@ -588,7 +618,16 @@ def insert_chapter(
 
     try:
         result = db.execute(stmt)
-        result_row = result.scalar_one()
+        chapter = result.scalar_one()
+        cc_vals = select(
+            literal(chapter.chapter_id),
+            literal(""),
+            literal(1)
+        )
+        cc_vals = chapter_content_mod_access_insert(cc_vals, current_user, chapter.chapter_id)
+        cc_cols = ['chapter_id', 'chapter_content_text', 'chapter_content_version']
+        cc_stmt = insert(models.ChapterContent).from_select(cc_cols, cc_vals).returning(models.ChapterContent)
+        chapter_content = db.execute(cc_stmt).scalar_one()
         db.commit()
     except IntegrityError as e:
         db.rollback()
@@ -603,298 +642,177 @@ def insert_chapter(
         db.rollback()
         query_novel_by_id(db, current_user, novel_id)
         raise InsufficientPermissionsException from e
-    except Exception as e:
-        db.rollback()
-        raise UnknownError from e
-    return result_row
-
-def insert_revision(
-        db : Session,
-        current_user : User,
-        chapter_id : uuid.UUID,
-        request : schemas.CreateRevision
-    ) -> tuple[models.Revision, models.RevisionText]:
-    """
-    Insert a chapter revision into the database.
-
-    Args:
-        db: Database into which we are adding the revision.
-        current_user: User performing insert.
-        chapter_id: id of chapter this revision belongs to.
-        request: Data to insert.
-
-    Raises:
-        ChapterNotFoundException: Chapter with chapter_id does not exist in database (or insufficient permissions to view it).
-        InsufficientPermissionsException: User does not have permission to insert a revision for this chapter.
-        DataTooLongException: String field we are trying to insert too long.
-        UnknownError: Some other error occured.
-    """
-    data = list(request.model_dump().items())
-    data.extend([('chapter_id', chapter_id), ('revision_is_primary', False), ('revision_is_public', False)])
-    cols = [k for k, _ in data]
-
-    vals = select(
-        *[literal(v) for _, v in data]
-    )
-    vals = revision_mod_access_insert(vals, current_user, chapter_id)
-
-    stmt = insert(models.Revision).from_select(cols, vals).returning(models.Revision)
-    try:
-        result = db.execute(stmt)
-        new_revision = result.scalar_one()
-        vals = select(
-            literal(new_revision.revision_id),
-            literal(""),
-            literal(1)
-        )
-        vals = revision_text_mod_access_insert(vals, current_user, new_revision.revision_id)
-        cols = ['revision_id', 'revision_text_content', 'revision_text_version']
-        stmt = insert(models.RevisionText).from_select(cols, vals).returning(models.RevisionText)
-        new_revision_text = db.execute(stmt).scalar_one()
-        db.commit()
-    except IntegrityError as e:
+    except DataError as e:
         db.rollback()
         if isinstance(e.orig, PgError):
             pgcode = e.orig.pgcode
-            if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
-                raise ChapterNotFoundException from e
+            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                raise DataTooLongException from e
+        raise UnknownError from e
+    except Exception as e:
+        db.rollback()
+        raise UnknownError from e
+    return chapter, chapter_content
+
+def modify_chapter(
+        db : Session,
+        current_user : User,
+        chapter_id : uuid.UUID,
+        request : schemas.UpdateChapter,
+    ) -> models.Chapter:
+    """
+    Modifies data of chapter with chapter_id.
+
+    Args:
+        db: Database that contains the chapter to modify.
+        current_user: User performing the update.
+        chapter_id: id of chapter we are modifying.
+
+    Raises:
+        ChapterNotFoundException: chapter_id does not correspond to a chapter in db (or insufficient permissions to view it).
+        InsufficientPermissionsException: User does not have permission to modify this chapter.
+        DataTooLongException: String we are trying to modify is too long.
+        UnknownError: Some other error occured.
+    """
+    stmt = update(
+        models.Chapter
+    ).where(
+        models.Chapter.chapter_id == chapter_id
+    ).values(
+        request.model_dump(exclude_unset=True)
+    )
+    stmt = chapter_mod_access_update(stmt, current_user)
+    stmt = stmt.returning(models.Chapter)
+    try:
+        result = db.execute(stmt)
+        chapter = result.scalar_one()
+        db.commit()
+    except DataError as e:
+        db.rollback()
+        if isinstance(e.orig, PgError):
+            pgcode = e.orig.pgcode
+            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
+                raise DataTooLongException from e
         raise UnknownError from e
     except NoResultFound as e:
         db.rollback()
         query_chapter_by_id(db, current_user, chapter_id)
         raise InsufficientPermissionsException from e
-    except DataError as e:
-        db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
-        raise UnknownError from e
     except Exception as e:
         db.rollback()
         raise UnknownError from e
-    return new_revision, new_revision_text
+    return chapter
 
-def modify_revision(
+def make_public_chapter(
         db : Session,
         current_user : User,
-        revision_id : uuid.UUID,
-        request : schemas.UpdateRevision,
-    ) -> models.Revision:
+        chapter_id : uuid.UUID
+) -> models.Chapter:
     """
-    Modifies data of revision with revision_id. Cannot modify public revisions.
-
-    Args:
-        db: Database that contains the revision to modify.
-        current_user: User performing the update.
-        revision_id: id of revision we are modifying.
-
-    Raises:
-        RevisionNotFoundException: revision_id does not correspond to a revision in db (or insufficient permissions to view it).
-        InsufficientPermissionsException: User does not have permission to modify this revision.
-        DataTooLongException: String we are trying to modify is too long.
-        UnknownError: Some other error occured.
-    """
-    stmt = update(
-        models.Revision
-    ).where(
-        models.Revision.revision_id == revision_id
-    ).values(
-        request.model_dump(exclude_unset=True)
-    )
-    stmt = revision_mod_access_update(stmt, current_user)
-    stmt = stmt.returning(models.Revision)
-    try:
-        result = db.execute(stmt)
-        revision = result.scalar_one()
-        db.commit()
-    except DataError as e:
-        db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
-        raise UnknownError from e
-    except NoResultFound as e:
-        db.rollback()
-        query_revision_by_id(db, current_user, revision_id)
-        raise InsufficientPermissionsException from e
-    except Exception as e:
-        db.rollback()
-        raise UnknownError from e
-    return revision
-
-def make_public_revision(
-        db : Session,
-        current_user : User,
-        revision_id : uuid.UUID
-) -> models.Revision:
-    """
-    Make a revision public.
+    Make a chapter public.
 
     Args:
         db: Database in which the data resides.
-        current_user: User publishing the revision.
-        revision_id: id of the revision we are publishing.
+        current_user: User publishing the chapter.
+        chapter_id: id of the chapter we are publishing.
 
     Raises:
-        RevisionNotFoundException: Revision with revision_id not found (or insufficient permissions to view it).
+        ChapterNotFoundException: Chapter with chapter_id not found (or insufficient permissions to view it).
         InsufficientPermissionsException: Current user does not have permissions to perform this action.
         UnknownError: Some other error occured.
     """
     stmt = update(
-        models.Revision
+        models.Chapter
     ).where(
-        models.Revision.revision_id == revision_id
+        models.Chapter.chapter_id == chapter_id
     ).values(
-        revision_is_public = True
+        chapter_is_public = True
     )
-    stmt = revision_mod_access_update(stmt, current_user)
-    stmt = stmt.returning(models.Revision)
+    stmt = chapter_mod_access_update(stmt, current_user)
+    stmt = stmt.returning(models.Chapter)
     try:
         result = db.execute(stmt)
-        revision = result.scalar_one()
+        chapter = result.scalar_one()
         db.commit()
     except NoResultFound as e:
         db.rollback()
-        query_revision_by_id(db, current_user, revision_id)
+        query_chapter_by_id(db, current_user, chapter_id)
         raise InsufficientPermissionsException from e
     except Exception as e:
         db.rollback()
         raise UnknownError from e
-    return revision
+    return chapter
 
-def make_primary_revision(db : Session, current_user : User, revision_id : uuid.UUID) -> models.Revision:
-    """
-    Mark a revision as primary. Returns the revision marked as primary.
-
-    Args:
-        db: Database in which the data resides.
-        current_user: User publishing the revision.
-        revision_id: id of the revision we are publishing.
-
-    Raises:
-        RevisionNotFoundException: Revision with revision_id not found (or insufficient permissions to view it).
-        RevisionMakePrimaryFailedException: Failed during the db commit.
-        RevisionNotPublicException: Trying to make a non-public revision primary.
-        InsufficientPermissionsException: Current user does not have permissions to perform this action.
-        UnknownError: Some other error occured.
-    """
-    stmt = update(
-        models.Revision
-    ).where(
-        models.Revision.revision_id != revision_id
-    ).where(
-        models.Revision.revision_is_primary.is_(True)
-    ).where(
-        models.Revision.chapter_id == select(
-            models.Revision.chapter_id
-        ).where(
-            models.Revision.revision_id == revision_id
-        ).scalar_subquery()
-    ).values(revision_is_primary=False)
-    stmt = revision_mod_access_update(stmt, current_user)
-
-    stmt2 = update(
-        models.Revision
-    ).where(
-        models.Revision.revision_id == revision_id
-    ).values(
-        revision_is_primary = True
-    )
-    stmt2 = revision_mod_access_update(stmt2, current_user)
-    stmt2 = stmt2.returning(models.Revision)
-    try:
-        db.execute(stmt)
-        result = db.execute(stmt2)
-        revision = result.scalar_one()
-        db.commit()
-    except NoResultFound as e:
-        db.rollback()
-        query_revision_by_id(db, current_user, revision_id)
-        raise InsufficientPermissionsException from e
-    except IntegrityError as e:
-        if isinstance(e.orig, PgError):
-            if e.orig.pgcode == errorcodes.UNIQUE_VIOLATION:
-                raise RevisionMakePrimaryFailedException("Only one primary revision allowed per chapter.") from e
-            if e.orig.pgcode == errorcodes.CHECK_VIOLATION: # extra check
-                raise RevisionNotPublicException from e
-        raise UnknownError from e
-    except Exception as e:
-        db.rollback()
-        raise UnknownError from e
-    return revision
-
-def modify_revision_text(
+def modify_chapter_content(
         db : Session,
         current_user : User,
-        revision_id : uuid.UUID,
-        revision_text_id : uuid.UUID,
+        chapter_id : uuid.UUID,
+        chapter_content_id : uuid.UUID,
         ops : list[schemas.TextOp],
 ) -> OperationStatus:
     """
-    Modify the text of a revision and port all label datas over, including those the current user does not have access to.
+    Modify the text of a chapter and port all label datas over, including those the current user does not have access to.
 
     Args:
         db: Database in which the data resides.
         current_user: User performing the update.
-        revision_id: id of the revision we are modifying.
-        revision_text_id: id of the text we are modifying.
+        chapter_id: id of the chapter we are modifying.
+        chapter_content_id: id of the content we are modifying.
         ops: List of text operations to apply.
 
     Raises:
-        RevisionTextNotFoundException: Revision text with revision_text_id not found (or insufficient permissions to view it).
-        RevisionTextOutdatedException: Revision text is outdated.
+        ChapterContentNotFoundException: Chapter content with chapter_content_id not found (or insufficient permissions to view it).
+        ChapterContentOutdatedException: Chapter content is outdated.
         UnknownError: Some other error occured.
     """
-    q = select(models.RevisionText).where(
-        models.RevisionText.revision_id == revision_id
+    q = select(models.ChapterContent).where(
+        models.ChapterContent.chapter_id == chapter_id
     ).where(
-        models.RevisionText.revision_text_version == select(func.max(
-            models.RevisionText.revision_text_version
+        models.ChapterContent.chapter_content_version == select(func.max(
+            models.ChapterContent.chapter_content_version
         )).where(
-            models.RevisionText.revision_id == revision_id
+            models.ChapterContent.chapter_id == chapter_id
         ).scalar_subquery()
     )
-    q = revision_text_mod_access_select(q, current_user)
+    q = chapter_content_mod_access_select(q, current_user)
     try:
         result = db.execute(q)
-        revision_text = result.scalar_one()
+        chapter_content = result.scalar_one()
     except NoResultFound as e:
-        raise RevisionTextNotFoundException from e
-    if revision_text.revision_text_id != revision_text_id:
-        raise RevisionTextOutdatedException("Revision text is outdated. Please refresh and try again.")
+        raise ChapterContentNotFoundException from e
+    if chapter_content.chapter_content_id != chapter_content_id:
+        raise ChapterContentOutdatedException("Chapter content is outdated. Please refresh and try again.")
 
-    content = revision_text.revision_text_content
+    text = chapter_content.chapter_content_text
 
     q = select(label_models.Label).join(
         label_models.LabelData,
         label_models.Label.label_data_id == label_models.LabelData.label_data_id
-    ).where(label_models.LabelData.revision_text_id == revision_text.revision_text_id)
+    ).where(label_models.LabelData.chapter_content_id == chapter_content.chapter_content_id)
     label_result = db.execute(q).scalars().all()
 
     labels = [label_schemas.Label.model_validate(label) for label in label_result]
 
-    new_content, new_labels = apply_text_ops(content, ops, labels)
+    new_content, new_labels = apply_text_ops(text, ops, labels)
 
     vals = select(
-        literal(revision_text.revision_id),
+        literal(chapter_content.chapter_id),
         literal(new_content),
-        literal(revision_text.revision_text_version + 1)
+        literal(chapter_content.chapter_content_version + 1)
     )
-    cols = ['revision_id', 'revision_text_content', 'revision_text_version']
-    vals = revision_text_mod_access_insert(vals, current_user, revision_id)
-    stmt = insert(models.RevisionText).from_select(cols, vals).returning(models.RevisionText.revision_text_id)
+    cols = ['chapter_id', 'chapter_content_text', 'chapter_content_version']
+    vals = chapter_content_mod_access_insert(vals, current_user, chapter_content.chapter_id)
+    stmt = insert(models.ChapterContent).from_select(cols, vals).returning(models.ChapterContent.chapter_content_id)
 
     try:
         result = db.execute(stmt)
-        new_revision_text_id = result.scalar_one()
+        new_chapter_content_id = result.scalar_one()
         db.commit()
     except NoResultFound as e:
         db.rollback()
         # Distinguish between outdated text and insufficient write permissions.
-        # query_revision_text_status raises the appropriate exception.
-        query_revision_text_status(db, current_user, revision_id, revision_text_id)
+        # query_chapter_content_status raises the appropriate exception.
+        query_chapter_content_status(db, current_user, chapter_id, chapter_content_id)
         # If status check passes (shouldn't happen), raise generic error.
         raise InsufficientPermissionsException from e
     except Exception as e:
@@ -910,7 +828,7 @@ def modify_revision_text(
     for label_data_id, labels in label_data_map.items():
         label_data_q = select(label_models.LabelData.label_group_id).where(label_models.LabelData.label_data_id == label_data_id)
         label_group_id = db.execute(label_data_q).scalar_one()
-        stmt = insert(label_models.LabelData).values(label_group_id=label_group_id, revision_text_id=new_revision_text_id).returning(label_models.LabelData)
+        stmt = insert(label_models.LabelData).values(label_group_id=label_group_id, chapter_content_id=new_chapter_content_id).returning(label_models.LabelData)
         label_data = db.execute(stmt).scalar_one()
         label_vals = [label.model_dump() for label in labels]
         for label in label_vals:
@@ -919,46 +837,46 @@ def modify_revision_text(
         db.execute(stmt)
     db.commit()
 
-    return OperationStatus(status="success", detail="Revision text modified successfully.")
+    return OperationStatus(status="success", detail="Chapter content modified successfully.")
 
 
-def remove_revision(
+def remove_chapter(
         db : Session,
         current_user : User,
-        revision_id : uuid.UUID
+        chapter_id : uuid.UUID
     ) -> OperationStatus:
     """
-    Remove a revision from the database.
+    Remove a chapter from the database.
 
     Args:
         db: Database to remove from.
         current_user: User removing the chapter.
-        revision_id: id of revision to remove.
+        chapter_id: id of chapter to remove.
 
     Raises:
-        RevisionNotFoundException: Revision with revision_id not found (or insufficient permissions to view it).
+        ChapterNotFoundException: Chapter with chapter_id not found (or insufficient permissions to view it).
         InsufficientPermissionsException: Current user has insufficient permissions to delete this chapter.
-        DeleteRevisionFailedException: Delete failed for other reasons.
+        ChapterDeleteFailedException: Delete failed for other reasons.
     """
     stmt = delete(
-        models.Revision
+        models.Chapter
     ).where(
-        models.Revision.revision_id == revision_id
+        models.Chapter.chapter_id == chapter_id
     )
-    stmt = revision_mod_access_delete(stmt, current_user)
+    stmt = chapter_mod_access_delete(stmt, current_user)
     try:
         result = db.execute(stmt)
         cursor_res = cast(CursorResult[Any], result)
         if cursor_res.rowcount == 0:
             db.rollback()
-            query_revision_by_id(db, current_user, revision_id)
+            query_chapter_by_id(db, current_user, chapter_id)
             raise InsufficientPermissionsException
         db.commit()
     except InsufficientPermissionsException as e:
         raise e
-    except RevisionNotFoundException as e:
+    except ChapterNotFoundException as e:
         raise e
     except Exception as e:
         db.rollback()
-        raise DeleteRevisionFailedException from e
+        raise ChapterDeleteFailedException from e
     return OperationStatus(status="success", detail="Delete succeeded.")

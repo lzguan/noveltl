@@ -367,5 +367,6 @@ These flows have unique patterns documented in their respective docs:
 - [database-schema.md](database-schema.md) - Detailed database models and relationships
 - [api-design.md](api-design.md) - REST API patterns and conventions
 - [permissions.md](permissions.md) - Access control and visibility system
+- [sourcework-model.md](sourcework-model.md) - Planned SourceWork grouping model and permission boundaries
 - [background-jobs.md](background-jobs.md) - AutoLabel worker implementation
 - [filter-system.md](filter-system.md) - Filter abstraction and pipeline

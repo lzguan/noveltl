@@ -20,7 +20,7 @@ from src.labels.constants import LabelRole
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.languages.models import Language
 from src.novels.constants import NovelType, Role, Visibility
-from src.novels.models import Chapter, Contributor, Novel, Revision, RevisionText
+from src.novels.models import Chapter, ChapterContent, Novel, NovelContributor, SourceWork
 
 
 class Hash(Protocol):
@@ -71,74 +71,69 @@ def lp_admin(test_db: Session, no_hash: Hash) -> User:
     return user
 
 
+# --- Source Work ---
+@pytest.fixture
+def lp_source_work(test_db: Session) -> SourceWork:
+    sw = SourceWork(source_work_title="LP Source Work")
+    test_db.add(sw)
+    test_db.commit()
+    return sw
+
+
 # --- Novels ---
 @pytest.fixture
-def lp_novel_public(test_db: Session, lp_language: Language, lp_user_1: User) -> Novel:
+def lp_novel_public(test_db: Session, lp_language: Language, lp_user_1: User, lp_source_work: SourceWork) -> Novel:
     novel = Novel(
         novel_title="LP Public Novel",
         language_code=lp_language.language_code,
         novel_type=NovelType.ORIGINAL,
-        novel_visibility=Visibility.PUBLIC
+        novel_visibility=Visibility.PUBLIC,
+        source_work_id=lp_source_work.source_work_id
     )
     test_db.add(novel)
     test_db.commit()
-    test_db.add(Contributor(novel_id=novel.novel_id, user_id=lp_user_1.user_id, contributor_role=Role.OWNER))
+    test_db.add(NovelContributor(novel_id=novel.novel_id, user_id=lp_user_1.user_id, contributor_role=Role.OWNER))
     test_db.commit()
     return novel
 
 
 @pytest.fixture
-def lp_novel_private(test_db: Session, lp_language: Language, lp_user_1: User) -> Novel:
+def lp_novel_private(test_db: Session, lp_language: Language, lp_user_1: User, lp_source_work: SourceWork) -> Novel:
     novel = Novel(
         novel_title="LP Private Novel",
         language_code=lp_language.language_code,
         novel_type=NovelType.ORIGINAL,
-        novel_visibility=Visibility.PRIVATE
+        novel_visibility=Visibility.PRIVATE,
+        source_work_id=lp_source_work.source_work_id
     )
     test_db.add(novel)
     test_db.commit()
-    test_db.add(Contributor(novel_id=novel.novel_id, user_id=lp_user_1.user_id, contributor_role=Role.OWNER))
+    test_db.add(NovelContributor(novel_id=novel.novel_id, user_id=lp_user_1.user_id, contributor_role=Role.OWNER))
     test_db.commit()
     return novel
 
 
-# --- Chapters/Revisions ---
+# --- Chapters/Chapter Contents ---
 @pytest.fixture
-def lp_chapter_public(test_db: Session, lp_novel_public: Novel) -> tuple[Chapter, Revision, RevisionText]:
-    chapter = Chapter(chapter_num=1, novel_id=lp_novel_public.novel_id)
+def lp_chapter_public(test_db: Session, lp_novel_public: Novel) -> tuple[Chapter, ChapterContent]:
+    chapter = Chapter(chapter_num=1, chapter_title="Chapter 1", chapter_is_public=True, novel_id=lp_novel_public.novel_id)
     test_db.add(chapter)
     test_db.commit()
-    revision = Revision(
-        revision_title="Chapter 1",
-        revision_is_primary=True,
-        revision_is_public=True,
-        chapter_id=chapter.chapter_id
-    )
-    test_db.add(revision)
+    cc = ChapterContent(chapter_id=chapter.chapter_id, chapter_content_text="This is test content for the public novel chapter.", chapter_content_version=1)
+    test_db.add(cc)
     test_db.commit()
-    rt = RevisionText(revision_id=revision.revision_id, revision_text_content="This is test content for the public novel chapter.", revision_text_version=1)
-    test_db.add(rt)
-    test_db.commit()
-    return chapter, revision, rt
+    return chapter, cc
 
 
 @pytest.fixture
-def lp_chapter_private(test_db: Session, lp_novel_private: Novel) -> tuple[Chapter, Revision, RevisionText]:
-    chapter = Chapter(chapter_num=1, novel_id=lp_novel_private.novel_id)
+def lp_chapter_private(test_db: Session, lp_novel_private: Novel) -> tuple[Chapter, ChapterContent]:
+    chapter = Chapter(chapter_num=1, chapter_title="Chapter 1", chapter_is_public=False, novel_id=lp_novel_private.novel_id)
     test_db.add(chapter)
     test_db.commit()
-    revision = Revision(
-        revision_title="Chapter 1",
-        revision_is_primary=False,
-        revision_is_public=False,
-        chapter_id=chapter.chapter_id
-    )
-    test_db.add(revision)
+    cc = ChapterContent(chapter_id=chapter.chapter_id, chapter_content_text="This is test content for the private novel chapter.", chapter_content_version=1)
+    test_db.add(cc)
     test_db.commit()
-    rt = RevisionText(revision_id=revision.revision_id, revision_text_content="This is test content for the private novel chapter.", revision_text_version=1)
-    test_db.add(rt)
-    test_db.commit()
-    return chapter, revision, rt
+    return chapter, cc
 
 
 # --- Label Groups ---
@@ -217,12 +212,12 @@ def lp_label_group_private_novel(test_db: Session, lp_novel_private: Novel, lp_u
 def lp_label_data_owner_only(
     test_db: Session,
     lp_label_group_owner_only: LabelGroup,
-    lp_chapter_public: tuple[Chapter, Revision, RevisionText]
+    lp_chapter_public: tuple[Chapter, ChapterContent]
 ) -> LabelData:
-    _, _, rt = lp_chapter_public
+    _, cc = lp_chapter_public
     ld = LabelData(
         label_group_id=lp_label_group_owner_only.label_group_id,
-        revision_text_id=rt.revision_text_id
+        chapter_content_id=cc.chapter_content_id
     )
     test_db.add(ld)
     test_db.commit()
@@ -233,12 +228,12 @@ def lp_label_data_owner_only(
 def lp_label_data_with_editor(
     test_db: Session,
     lp_label_group_with_editor: LabelGroup,
-    lp_chapter_public: tuple[Chapter, Revision, RevisionText]
+    lp_chapter_public: tuple[Chapter, ChapterContent]
 ) -> LabelData:
-    _, _, rt = lp_chapter_public
+    _, cc = lp_chapter_public
     ld = LabelData(
         label_group_id=lp_label_group_with_editor.label_group_id,
-        revision_text_id=rt.revision_text_id
+        chapter_content_id=cc.chapter_content_id
     )
     test_db.add(ld)
     test_db.commit()
@@ -249,12 +244,12 @@ def lp_label_data_with_editor(
 def lp_label_data_with_viewer(
     test_db: Session,
     lp_label_group_with_viewer: LabelGroup,
-    lp_chapter_public: tuple[Chapter, Revision, RevisionText]
+    lp_chapter_public: tuple[Chapter, ChapterContent]
 ) -> LabelData:
-    _, _, rt = lp_chapter_public
+    _, cc = lp_chapter_public
     ld = LabelData(
         label_group_id=lp_label_group_with_viewer.label_group_id,
-        revision_text_id=rt.revision_text_id
+        chapter_content_id=cc.chapter_content_id
     )
     test_db.add(ld)
     test_db.commit()
@@ -265,12 +260,12 @@ def lp_label_data_with_viewer(
 def lp_label_data_private_novel(
     test_db: Session,
     lp_label_group_private_novel: LabelGroup,
-    lp_chapter_private: tuple[Chapter, Revision, RevisionText]
+    lp_chapter_private: tuple[Chapter, ChapterContent]
 ) -> LabelData:
-    _, _, rt = lp_chapter_private
+    _, cc = lp_chapter_private
     ld = LabelData(
         label_group_id=lp_label_group_private_novel.label_group_id,
-        revision_text_id=rt.revision_text_id
+        chapter_content_id=cc.chapter_content_id
     )
     test_db.add(ld)
     test_db.commit()

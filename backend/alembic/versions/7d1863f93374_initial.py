@@ -1,19 +1,18 @@
 """initial
 
-Revision ID: 60f4c7ce17aa
+Revision ID: 7d1863f93374
 Revises:
-Create Date: 2026-04-03 05:54:56.606408+00:00
+Create Date: 2026-04-04 01:06:37.107075+00:00
 
 """
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 from alembic import op
-
 from src.novels.models import EnumAsInteger, Visibility
 
 # revision identifiers, used by Alembic.
-revision = '60f4c7ce17aa'
+revision = '7d1863f93374'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -30,6 +29,14 @@ def upgrade():
     sa.CheckConstraint('char_length(language_code) = 2', name='chk_language_code_length'),
     sa.PrimaryKeyConstraint('language_code'),
     sa.UniqueConstraint('language_name', name='language_name_unique')
+    )
+    op.create_table('source_works',
+    sa.Column('source_work_id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
+    sa.Column('source_work_title', sa.String(length=255), nullable=False),
+    sa.Column('source_work_description', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.PrimaryKeyConstraint('source_work_id')
     )
     op.create_table('users',
     sa.Column('user_id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
@@ -48,15 +55,19 @@ def upgrade():
     sa.Column('novel_author', sa.String(length=31), nullable=True),
     sa.Column('novel_visibility', EnumAsInteger(Visibility), nullable=False), # type: ignore
     sa.Column('novel_type', sa.Enum('original', 'translation', 'other', name='noveltype', native_enum=False, length=16), nullable=False),
+    sa.Column('source_work_id', sa.UUID(), nullable=False),
     sa.Column('language_code', sa.String(length=2), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['language_code'], ['languages.language_code'], name='fk_novels_language_code_languages'),
+    sa.ForeignKeyConstraint(['source_work_id'], ['source_works.source_work_id'], ),
     sa.PrimaryKeyConstraint('novel_id')
     )
     op.create_table('chapters',
     sa.Column('chapter_id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
     sa.Column('chapter_num', sa.Integer(), nullable=False),
+    sa.Column('chapter_title', sa.String(length=255), nullable=True),
+    sa.Column('chapter_is_public', sa.Boolean(), nullable=False),
     sa.Column('novel_id', sa.UUID(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
@@ -83,6 +94,17 @@ def upgrade():
     sa.ForeignKeyConstraint(['user_id'], ['users.user_id'], ),
     sa.PrimaryKeyConstraint('novel_id', 'user_id')
     )
+    op.create_table('chapter_contents',
+    sa.Column('chapter_content_id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
+    sa.Column('chapter_content_text', sa.Text(), nullable=False),
+    sa.Column('chapter_content_version', sa.Integer(), nullable=False),
+    sa.Column('chapter_id', sa.UUID(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['chapter_id'], ['chapters.chapter_id'], name='fk_chapter_contents_chapter_id_chapters', ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('chapter_content_id'),
+    sa.UniqueConstraint('chapter_id', 'chapter_content_version', name='uq_chapter_content_version_per_chapter')
+    )
     op.create_table('label_group_contributors',
     sa.Column('label_contributor_role', sa.Enum('owner', 'viewer', 'editor', name='labelrole', native_enum=False, length=10), nullable=False),
     sa.Column('label_group_id', sa.UUID(), nullable=False),
@@ -93,30 +115,6 @@ def upgrade():
     sa.ForeignKeyConstraint(['user_id'], ['users.user_id'], ),
     sa.PrimaryKeyConstraint('label_group_id', 'user_id')
     )
-    op.create_table('revisions',
-    sa.Column('revision_id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
-    sa.Column('revision_title', sa.String(length=255), nullable=False),
-    sa.Column('revision_is_primary', sa.Boolean(), nullable=False),
-    sa.Column('revision_is_public', sa.Boolean(), nullable=False),
-    sa.Column('chapter_id', sa.UUID(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.CheckConstraint('revision_is_public OR NOT revision_is_primary', name='primary_must_be_public_check'),
-    sa.ForeignKeyConstraint(['chapter_id'], ['chapters.chapter_id'], name='fk_revisions_chapter_id_chapters'),
-    sa.PrimaryKeyConstraint('revision_id')
-    )
-    op.create_index('ix_one_primary_revision_per_chapter', 'revisions', ['chapter_id'], unique=True, postgresql_where=sa.text('revision_is_primary IS true'))
-    op.create_table('revision_texts',
-    sa.Column('revision_text_id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
-    sa.Column('revision_text_content', sa.Text(), nullable=False),
-    sa.Column('revision_text_version', sa.Integer(), nullable=False),
-    sa.Column('revision_id', sa.UUID(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['revision_id'], ['revisions.revision_id'], name='fk_revision_texts_revision_id_revisions', ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('revision_text_id'),
-    sa.UniqueConstraint('revision_id', 'revision_text_version', name='uq_revision_text_version_per_revision')
-    )
     op.create_table('auto_labels',
     sa.Column('auto_label_id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
     sa.Column('auto_label_data', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
@@ -125,23 +123,23 @@ def upgrade():
     sa.Column('auto_label_status', sa.Enum('failed', 'pending', 'processing', 'done', name='autolabelprogress', native_enum=False), nullable=False),
     sa.Column('auto_label_last_job_id', sa.String(length=36), nullable=True),
     sa.Column('auto_label_message', sa.Text(), nullable=True),
-    sa.Column('revision_text_id', sa.UUID(), nullable=False),
+    sa.Column('chapter_content_id', sa.UUID(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['revision_text_id'], ['revision_texts.revision_text_id'], name='fk_auto_labels_revision_text_id_revision_texts'),
+    sa.ForeignKeyConstraint(['chapter_content_id'], ['chapter_contents.chapter_content_id'], name='fk_auto_labels_chapter_content_id_chapter_contents'),
     sa.PrimaryKeyConstraint('auto_label_id'),
-    sa.UniqueConstraint('revision_text_id', 'auto_label_model_name', 'auto_label_model_params', name='uq_model_name_params')
+    sa.UniqueConstraint('chapter_content_id', 'auto_label_model_name', 'auto_label_model_params', name='uq_model_name_params')
     )
     op.create_table('label_datas',
     sa.Column('label_data_id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
     sa.Column('label_group_id', sa.UUID(), nullable=False),
-    sa.Column('revision_text_id', sa.UUID(), nullable=False),
+    sa.Column('chapter_content_id', sa.UUID(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['chapter_content_id'], ['chapter_contents.chapter_content_id'], name='fk_label_datas_chapter_content_id_chapter_contents'),
     sa.ForeignKeyConstraint(['label_group_id'], ['label_groups.label_group_id'], name='fk_label_datas_label_group_id_label_groups'),
-    sa.ForeignKeyConstraint(['revision_text_id'], ['revision_texts.revision_text_id'], name='fk_label_datas_revision_text_id_revision_texts'),
     sa.PrimaryKeyConstraint('label_data_id'),
-    sa.UniqueConstraint('label_group_id', 'revision_text_id', name='one_label_group_per_chapter')
+    sa.UniqueConstraint('label_group_id', 'chapter_content_id', name='one_label_group_per_chapter')
     )
     op.create_table('labels',
     sa.Column('label_id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
@@ -168,14 +166,13 @@ def downgrade():
     op.drop_table('labels')
     op.drop_table('label_datas')
     op.drop_table('auto_labels')
-    op.drop_table('revision_texts')
-    op.drop_index('ix_one_primary_revision_per_chapter', table_name='revisions', postgresql_where=sa.text('revision_is_primary IS true'))
-    op.drop_table('revisions')
     op.drop_table('label_group_contributors')
+    op.drop_table('chapter_contents')
     op.drop_table('novel_contributors')
     op.drop_table('label_groups')
     op.drop_table('chapters')
     op.drop_table('novels')
     op.drop_table('users')
+    op.drop_table('source_works')
     op.drop_table('languages')
     # ### end Alembic commands ###

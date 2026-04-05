@@ -7,18 +7,14 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     Boolean,
-    CheckConstraint,
     Dialect,
     Enum,
     ForeignKey,
-    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
     func,
-    not_,
-    or_,
 )
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -58,6 +54,17 @@ class EnumAsInteger(TypeDecorator): # type: ignore
     def copy(self, **kwargs): # type: ignore
         return EnumAsInteger(self.enum_type) # type: ignore
 
+class SourceWork(Base):
+    """
+    Database model to track the source work for a novel, for example if the novel is a translation of another novel.
+    """
+    __tablename__ = 'source_works'
+
+    source_work_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
+    source_work_title : Mapped[str] = mapped_column(String(MAX_NOVEL_TITLE_LEN), nullable=False)
+    source_work_description : Mapped[str] = mapped_column(Text, nullable=True)
+
+    novels_with_source_work : Mapped[list["Novel"]] = relationship(back_populates='source_work_of_novel')
 
 class Novel(Base):
     """
@@ -72,6 +79,7 @@ class Novel(Base):
         novel_type: Type of novel. Encoded as a NovelType enum.
         novel_parent_id: Integer foreign key identifier to parent novel, for example if this novel is a translation of another novel.
         language_code: String foreign key for the language the novel is written in.
+        source_work_id: Integer foreign key identifier to the source work for this novel.
 
     Note:
         novel_title is non-nullable.
@@ -86,14 +94,17 @@ class Novel(Base):
     novel_visibility : Mapped[Visibility] = mapped_column(EnumAsInteger(Visibility), nullable=False)
     novel_type : Mapped[NovelType] = mapped_column(Enum(NovelType, native_enum=False, length=16, values_callable=lambda x : [str(e.value) for e in x]), nullable=False) # type: ignore
 
+    source_work_id : Mapped[uuid.UUID] = mapped_column(ForeignKey("source_works.source_work_id"), nullable=False)
+    source_work_of_novel : Mapped["SourceWork"] = relationship(back_populates="novels_with_source_work")
+
     language_code : Mapped[str] = mapped_column(ForeignKey("languages.language_code", name='fk_novels_language_code_languages'), nullable=False)
     language_of_novel : Mapped["Language"] = relationship(back_populates="novels_with_language")
 
     chapters_with_novel : Mapped[list["Chapter"]] = relationship(back_populates='novel_of_chapter')
     label_groups_with_novel : Mapped[list["LabelGroup"]] = relationship(back_populates='novel_of_label_group')
-    contributors_with_novel : Mapped[list["Contributor"]] = relationship(back_populates='novel_of_contributor')
+    novel_contributors_with_novel : Mapped[list["NovelContributor"]] = relationship(back_populates='novel_of_contributor')
 
-class Contributor(Base):
+class NovelContributor(Base):
     """
     Database model for a contributor to a novel. Effectively an associative array for a many-many relationship between users and novels.
 
@@ -108,10 +119,10 @@ class Contributor(Base):
     contributor_role : Mapped[Role] = mapped_column(Enum(Role, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False) # type: ignore
 
     novel_id = mapped_column(ForeignKey('novels.novel_id'), primary_key=True)
-    novel_of_contributor : Mapped["Novel"] = relationship(back_populates='contributors_with_novel')
+    novel_of_contributor : Mapped["Novel"] = relationship(back_populates='novel_contributors_with_novel')
 
     user_id = mapped_column(ForeignKey('users.user_id'), primary_key=True)
-    user_of_contributor : Mapped["User"] = relationship(back_populates='contributors_with_user')
+    user_of_novel_contributor : Mapped["User"] = relationship(back_populates='novel_contributors_with_user')
 
 
 class Chapter(Base):
@@ -121,6 +132,8 @@ class Chapter(Base):
     Attributes:
         chapter_id: Integer primary key identifier.
         chapter_num: Integer chapter numbering. For example, a value of 5 would correspond to chapter 5.
+        chapter_title: String chapter title.
+        chapter_is_public: Boolean flag indicating if the chapter is public.
         novel_id: Integer foreign key identifier to the novel this chapter belongs to.
 
     Note:
@@ -131,75 +144,42 @@ class Chapter(Base):
 
     chapter_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
     chapter_num : Mapped[int] = mapped_column(Integer, nullable=False)
+    chapter_title : Mapped[str] = mapped_column(String(MAX_CHAPTER_TITLE_LEN), nullable=False)
+    chapter_is_public : Mapped[bool] = mapped_column(Boolean, nullable=False)
 
     novel_id = mapped_column(ForeignKey('novels.novel_id', name='fk_chapters_novel_id_novels'), nullable=False)
     novel_of_chapter : Mapped[Novel] = relationship(back_populates='chapters_with_novel')
 
-    revisions_with_chapter : Mapped[list["Revision"]] = relationship(back_populates='chapter_of_revision')
+    chapter_contents_with_chapter : Mapped[list["ChapterContent"]] = relationship(back_populates='chapter_of_chapter_content', cascade='all, delete-orphan')
 
     __table_args__ = (
         UniqueConstraint('chapter_num', 'novel_id', name="chapter_per_novel"),
     )
 
-class Revision(Base):
+class ChapterContent(Base):
     """
-    Database model for a revision of a chapter of a novel. Each revision corresponds to a Chapter and contains the text of that chapter for a specific revision. Once a revision is flagged as public, the revision should no longer be able to be made private or modified.
+    Database model for the text of a specific chapter. ChapterTextVersions are versioned separately from the metadata of a chapter (for example, whether it is public or primary) since we want to be able to update the metadata of a chapter without modifying the text, and we want to be able to store the text in a separate table for organizational purposes.
 
     Attributes:
-        revision_id: Integer primary key identifier.
-        revision_title: Chapter title. Different revisions of the same chapter can have different titles.
-        revision_is_primary: Boolean mark for whether a revision is the primary chapter (the 'finalized' chapter)
-        revision_is_public: Boolean mark for whether a revision is marked as public.
-        chapter_id: Id of chapter this revision belongs to.
+        chapter_content_id: UUID primary key for the chapter content, used for uniquely identifying a specific chapter content across different versions.
+        chapter_content_text: Text content of the chapter.
+        chapter_content_version: Integer version number for the chapter text. For each chapter_id, the pair (chapter_id, chapter_text_version) should be unique.
 
-    Note:
-        revision_title must have length at most MAX_CHAPTER_TITLE_LEN.
-        Both public and primary flags are non-nullable.
-        chapter_id is non-nullable.
-        For each chapter_id, only one Revision can be marked as primary.
-        If a Revision is marked as primary, it must be marked as public.
+        chapter_id: UUID foreign key identifier to the chapter this text corresponds to.
     """
-    __tablename__ = 'revisions'
+    __tablename__ = 'chapter_contents'
 
-    revision_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
-    revision_title : Mapped[str] = mapped_column(String(MAX_CHAPTER_TITLE_LEN))
-    revision_is_primary : Mapped[bool] = mapped_column(Boolean, nullable=False)
-    revision_is_public : Mapped[bool] = mapped_column(Boolean, nullable=False)
+    chapter_content_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
+    chapter_content_text : Mapped[str] = mapped_column(Text, nullable=False)
+    chapter_content_version : Mapped[int] = mapped_column(Integer, nullable=False)
 
-    chapter_of_revision : Mapped["Chapter"] = relationship(back_populates="revisions_with_chapter")
-    chapter_id = mapped_column(ForeignKey('chapters.chapter_id', name='fk_revisions_chapter_id_chapters'), nullable=False)
+    chapter_of_chapter_content : Mapped["Chapter"] = relationship(back_populates="chapter_contents_with_chapter")
+    chapter_id = mapped_column(ForeignKey('chapters.chapter_id', name='fk_chapter_contents_chapter_id_chapters', ondelete='CASCADE'), nullable=False)
 
-    revision_texts_with_revision : Mapped[list["RevisionText"]] = relationship(back_populates='revision_of_revision_text', cascade='all, delete-orphan')
+    label_datas_with_chapter_content : Mapped[list["LabelData"]] = relationship(back_populates='chapter_content_of_label_data')
+
+    auto_labels_with_chapter_content : Mapped[list["AutoLabel"]] = relationship(back_populates='chapter_content_of_auto_label', cascade='all, delete-orphan')
 
     __table_args__ = (
-        Index('ix_one_primary_revision_per_chapter', 'chapter_id', unique=True, postgresql_where=revision_is_primary.is_(True)),
-        CheckConstraint(or_(revision_is_public, not_(revision_is_primary)), name="primary_must_be_public_check")
-    )
-
-class RevisionText(Base):
-    """
-    Database model for the text of a specific revision. RevisionText are versioned separately from the metadata of a revision (for example, whether it is public or primary) since we want to be able to update the metadata of a revision without modifying the text, and we want to be able to store the text in a separate table for organizational purposes.
-
-    Attributes:
-        revision_text_id: UUID primary key for the revision text, used for uniquely identifying a specific revision text across different versions.
-        revision_text_content: Text content of the revision.
-        revision_text_version: Integer version number for the revision text. For each revision_id, the pair (revision_id, revision_text_version) should be unique.
-
-        revision_id: UUID foreign key identifier to the revision this text corresponds to.
-    """
-    __tablename__ = 'revision_texts'
-
-    revision_text_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
-    revision_text_content : Mapped[str] = mapped_column(Text, nullable=False)
-    revision_text_version : Mapped[int] = mapped_column(Integer, nullable=False)
-
-    revision_of_revision_text : Mapped["Revision"] = relationship(back_populates="revision_texts_with_revision")
-    revision_id = mapped_column(ForeignKey('revisions.revision_id', name='fk_revision_texts_revision_id_revisions', ondelete='CASCADE'), nullable=False)
-
-    label_datas_with_revision_text : Mapped[list["LabelData"]] = relationship(back_populates='revision_text_of_label_data')
-
-    auto_labels_with_revision_text : Mapped[list["AutoLabel"]] = relationship(back_populates='revision_text_of_auto_label', cascade='all, delete-orphan')
-
-    __table_args__ = (
-        UniqueConstraint('revision_id', 'revision_text_version', name="uq_revision_text_version_per_revision"),
+        UniqueConstraint('chapter_id', 'chapter_content_version', name="uq_chapter_content_version_per_chapter"),
     )

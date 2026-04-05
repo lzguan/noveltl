@@ -11,26 +11,20 @@ class NovelNotFoundException(NotFoundException):
 class ChapterNotFoundException(NotFoundException):
     pass
 
-class RevisionNotFoundException(NotFoundException):
+class ChapterContentNotFoundException(NotFoundException):
     pass
 
 class NovelTooManyFoundException(TooManyFoundException):
     pass
 
+class ChapterDeleteFailedException(DeleteFailedException):
+    pass
+
 class ChapterNumDuplicateException(FieldInvalidException):
     pass
 
-class RevisionMakePrimaryFailedException(Exception):
+class ChapterContentOutdatedException(Exception):
     pass
 
-class RevisionNotPublicException(Exception):
-    pass
-
-class DeleteRevisionFailedException(DeleteFailedException):
-    pass
-
-class RevisionTextNotFoundException(NotFoundException):
-    pass
-
-class RevisionTextOutdatedException(Exception):
+class SourceWorkNotFoundException(NotFoundException):
     pass

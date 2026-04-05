@@ -11,8 +11,8 @@ from ..labels import models as label_models
 from ..labels import schemas as label_schemas
 from ..labels.permissions import label_data_mod_access_select, label_mod_access_delete
 from ..novels import models as novel_models
-from ..novels.exceptions import RevisionTextOutdatedException
-from ..novels.permissions import revision_text_mod_access_select
+from ..novels.exceptions import ChapterContentOutdatedException
+from ..novels.permissions import chapter_content_mod_access_select
 from .filter_base import (
     ApplyFilterOptionsBase,
     DecideInstancesOptionsBase,
@@ -91,29 +91,26 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
 
     def flag_instances(self, db : Session, current_user : User, options : ScoreFlagInstancesOptions) -> list[SingleLabel]:
         q = select(
-            label_models.Label, novel_models.RevisionText.revision_text_id
+            label_models.Label, novel_models.ChapterContent.chapter_content_id
         ).where(
             label_models.Label.label_score < options.min_score
         ).join(
             label_models.LabelData,
             label_models.Label.label_data_id == label_models.LabelData.label_data_id
         ).join(
-            novel_models.RevisionText,
-            label_models.LabelData.revision_text_id == novel_models.RevisionText.revision_text_id
-        ).join(
-            novel_models.Revision,
-            novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
+            novel_models.ChapterContent,
+            label_models.LabelData.chapter_content_id == novel_models.ChapterContent.chapter_content_id
         ).join(
             novel_models.Chapter,
-            novel_models.Revision.chapter_id == novel_models.Chapter.chapter_id
+            novel_models.ChapterContent.chapter_id == novel_models.Chapter.chapter_id
         ).where(
             label_models.LabelData.label_group_id == options.label_group_id
         ).where(
-            novel_models.RevisionText.revision_text_version == select(
-                func.max(novel_models.RevisionText.revision_text_version)
+            novel_models.ChapterContent.chapter_content_version == select(
+                func.max(novel_models.ChapterContent.chapter_content_version)
             ).where(
-                novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
-            ).correlate(novel_models.Revision).scalar_subquery()
+                novel_models.ChapterContent.chapter_id == novel_models.Chapter.chapter_id
+            ).correlate(novel_models.Chapter).scalar_subquery()
         )
         if not options.flag_dirty:
             q = q.where(label_models.Label.label_dirty.is_(False))
@@ -126,37 +123,37 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
         result = db.execute(q)
         result_rows = result.all()
 
-        return [SingleLabel(label=label_schemas.Label.model_validate(label), revision_text_id=id) for label, id in result_rows]
+        return [SingleLabel(label=label_schemas.Label.model_validate(label), chapter_content_id=id) for label, id in result_rows]
 
     def get_contexts(self, db : Session, current_user : User, instances : list[SingleLabel], options : ScoreGetContextOptions) -> list[SentenceContext | None]:
-        revision_text_ids = list({instance.revision_text_id for instance in instances})
+        chapter_content_ids = list({instance.chapter_content_id for instance in instances})
         q = select(
-            novel_models.RevisionText
+            novel_models.ChapterContent
         ).where(
-            novel_models.RevisionText.revision_text_id.in_(revision_text_ids)
+            novel_models.ChapterContent.chapter_content_id.in_(chapter_content_ids)
         ).join(
-            novel_models.Revision,
-            novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
+            novel_models.Chapter,
+            novel_models.ChapterContent.chapter_id == novel_models.Chapter.chapter_id
         ).where(
-            novel_models.RevisionText.revision_text_version == select(
-                func.max(novel_models.RevisionText.revision_text_version)
+            novel_models.ChapterContent.chapter_content_version == select(
+                func.max(novel_models.ChapterContent.chapter_content_version)
             ).where(
-                novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
-            ).correlate(novel_models.Revision).scalar_subquery()
+                novel_models.ChapterContent.chapter_id == novel_models.Chapter.chapter_id
+            ).correlate(novel_models.Chapter).scalar_subquery()
         )
-        q = revision_text_mod_access_select(q, current_user)
+        q = chapter_content_mod_access_select(q, current_user)
         result = db.execute(q)
         result_rows = result.scalars().all()
-        revision_map = {rev_text.revision_text_id: rev_text for rev_text in result_rows}
+        chapter_content_map = {chapter_content.chapter_content_id: chapter_content for chapter_content in result_rows}
 
         output : list[SentenceContext | None] = []
         for instance in instances:
-            if instance.revision_text_id not in revision_map:
+            if instance.chapter_content_id not in chapter_content_map:
                 output.append(None)
                 continue
-            revision_text = revision_map[instance.revision_text_id]
+            chapter_content = chapter_content_map[instance.chapter_content_id]
             sentence, label_start_rel, label_end_rel = find_sentence_around(
-                revision_text.revision_text_content,
+                chapter_content.chapter_content_text,
                 instance.label.label_start,
                 instance.label.label_end,
                 options.delimiters
@@ -165,35 +162,35 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
                 text=sentence,
                 label_start_rel=label_start_rel,
                 label_end_rel=label_end_rel,
-                revision_text_id=instance.revision_text_id
+                chapter_content_id=instance.chapter_content_id,
             ))
         return output
 
 
-    def _check_instances_not_stale(self, db : Session, current_user : User, revision_text_ids : set[uuid.UUID]) -> None:
-        """Check that all revision_text_ids are still the latest version. Raises RevisionTextOutdatedException if any are stale."""
-        if not revision_text_ids:
+    def _check_instances_not_stale(self, db : Session, current_user : User, chapter_content_ids : set[uuid.UUID]) -> None:
+        """Check that all chapter_content_ids are still the latest version. Raises ChapterContentOutdatedException if any are stale."""
+        if not chapter_content_ids:
             return
         q = select(
-            novel_models.RevisionText.revision_text_id
+            novel_models.ChapterContent.chapter_content_id
         ).join(
-            novel_models.Revision,
-            novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
+            novel_models.Chapter,
+            novel_models.ChapterContent.chapter_id == novel_models.Chapter.chapter_id
         ).where(
-            novel_models.RevisionText.revision_text_id.in_(revision_text_ids)
+            novel_models.ChapterContent.chapter_content_id.in_(chapter_content_ids)
         ).where(
-            novel_models.RevisionText.revision_text_version == select(
-                func.max(novel_models.RevisionText.revision_text_version)
+            novel_models.ChapterContent.chapter_content_version == select(
+                func.max(novel_models.ChapterContent.chapter_content_version)
             ).where(
-                novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
-            ).correlate(novel_models.Revision).scalar_subquery()
+                novel_models.ChapterContent.chapter_id == novel_models.Chapter.chapter_id
+            ).correlate(novel_models.Chapter).scalar_subquery()
         )
-        q = revision_text_mod_access_select(q, current_user)
+        q = chapter_content_mod_access_select(q, current_user)
         current_ids = set(db.execute(q).scalars().all())
-        stale_ids = revision_text_ids - current_ids
+        stale_ids = chapter_content_ids - current_ids
         if stale_ids:
-            raise RevisionTextOutdatedException(
-                f"Instances reference stale revision text version(s): {stale_ids}. Please refresh and try again."
+            raise ChapterContentOutdatedException(
+                f"Instances reference stale chapter content version(s): {stale_ids}. Please refresh and try again."
             )
 
     def decide_instances(self, db : Session, current_user : User, instance_contexts : list[tuple[SingleLabel, SentenceContext | None]], options : ScoreDecideInstancesOptions) -> list[bool]:
@@ -202,9 +199,9 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
 
         Raises:
             DecideLengthError: If in manual mode and the length of options.decisions does not match the length of instance_contexts.
-            RevisionTextOutdatedException: If any instances reference a stale revision text version.
+            ChapterContentOutdatedException: If any instances reference a stale chapter content version.
         """
-        self._check_instances_not_stale(db, current_user, {inst.revision_text_id for inst, _ in instance_contexts})
+        self._check_instances_not_stale(db, current_user, {inst.chapter_content_id for inst, _ in instance_contexts})
         if options.mode == "auto":
             decisions : list[bool] = []
             for instance, _ in instance_contexts:
@@ -226,7 +223,7 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
 
         instance_tuples = [
             (
-                instance.revision_text_id,
+                instance.chapter_content_id,
                 instance.label.label_start,
                 instance.label.label_end,
                 instance.label.label_word,
@@ -245,7 +242,7 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
             )
         ).where(
             tuple_(
-                select(sub_q.c.revision_text_id).where(
+                select(sub_q.c.chapter_content_id).where(
                     sub_q.c.label_data_id == label_models.Label.label_data_id
                 ).correlate(label_models.Label).scalar_subquery(),
                 label_models.Label.label_start,
@@ -255,10 +252,10 @@ class ScoreFilter(Filter[ScoreFlagInstancesOptions, ScoreGetContextOptions, Scor
         )
         stmt = label_mod_access_delete(stmt, current_user)
         try:
-            self._check_instances_not_stale(db, current_user, {inst.revision_text_id for inst in instances})
+            self._check_instances_not_stale(db, current_user, {inst.chapter_content_id for inst in instances})
             db.execute(stmt)
             db.commit()
-        except RevisionTextOutdatedException:
+        except ChapterContentOutdatedException:
             db.rollback()
             raise
         except Exception as e:

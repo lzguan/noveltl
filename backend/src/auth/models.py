@@ -13,7 +13,7 @@ from .constants import MAX_USER_NAME_LEN, UserType
 
 if TYPE_CHECKING:
     from src.labels.models import LabelContributor
-    from src.novels.models import Contributor
+    from src.novels.models import NovelContributor
 
 class User(Base):
     """
@@ -41,7 +41,7 @@ class User(Base):
         nullable=False
     )
 
-    contributors_with_user : Mapped[list["Contributor"]] = relationship(back_populates='user_of_contributor')
+    novel_contributors_with_user : Mapped[list["NovelContributor"]] = relationship(back_populates='user_of_novel_contributor')
     label_contributors_with_user : Mapped[list["LabelContributor"]] = relationship(back_populates='user_of_label_contributor')
 
     __table_args__ = (

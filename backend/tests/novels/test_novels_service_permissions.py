@@ -14,18 +14,15 @@ from src.novels.constants import NovelType, Visibility
 from src.novels.exceptions import (
     ChapterNotFoundException,
     NovelNotFoundException,
-    RevisionNotFoundException,
 )
-from src.novels.models import Novel, Revision
+from src.novels.models import ChapterContent, Novel
 from src.novels.service import (
     insert_chapter,
-    insert_revision,
     query_chapter_by_id,
+    query_chapter_content_by_most_recent,
     query_chapters_by_novel,
     query_novel_by_id,
     query_novels_by_title,
-    query_revision_by_id,
-    query_revisions_by_novel,
 )
 
 
@@ -107,22 +104,11 @@ def test_chapters_query_permissions(
     p1_admin: User,
 ):
     rt = query_novel_by_id(test_db, p1_user_1, p1_novels["rt"].novel_id)
-    rt_chapters = [
+    rt_chapters_and_contents = [
         insert_chapter(
             test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=i)
         )
         for i in range(3)
-    ]
-    rt_revisions = [
-        insert_revision(
-            test_db,
-            p1_user_1,
-            chapter.chapter_id,
-            schemas.CreateRevision(
-                    revision_title=f"Title {chapter.chapter_num}",
-            ),
-        )
-        for chapter in rt_chapters
     ]
 
     with pytest.raises(NovelNotFoundException):
@@ -139,217 +125,100 @@ def test_chapters_query_permissions(
     assert len(rt_chapters_u_1) == 3
 
     with pytest.raises(ChapterNotFoundException):
-        query_chapter_by_id(test_db, p1_user_2, rt_chapters[0].chapter_id)
-    rt_revisions_u_admin = query_revisions_by_novel(
-        test_db,
-        p1_admin,
-        rt.novel_id,
-        is_public=None,
-        is_primary=None,
-        start=None,
-        end=None,
-    )
-    assert len(rt_revisions_u_admin) == 3
-    rt_revisions_u_1 = query_revisions_by_novel(
-        test_db,
-        p1_user_1,
-        rt.novel_id,
-        is_public=None,
-        is_primary=None,
-        start=None,
-        end=None,
-    )
-    assert len(rt_revisions_u_1) == 3
+        query_chapter_by_id(test_db, p1_user_2, rt_chapters_and_contents[0][0].chapter_id)
 
-    for revision, _ in rt_revisions:
-        with pytest.raises(RevisionNotFoundException):
-            query_revision_by_id(
-                test_db, p1_user_2, revision.revision_id
+    for chapter, chapter_content in rt_chapters_and_contents:
+        with pytest.raises(ChapterNotFoundException):
+            query_chapter_content_by_most_recent(
+                test_db, p1_user_2, chapter.chapter_id
             )
-        rev_u_admin = query_revision_by_id(
-            test_db, p1_admin, revision.revision_id
+        cc_u_admin = query_chapter_content_by_most_recent(
+            test_db, p1_admin, chapter.chapter_id
         )
-        assert rev_u_admin.revision_id == revision.revision_id
-        rev_u_1 = query_revision_by_id(
-            test_db, p1_user_1, revision.revision_id
+        assert cc_u_admin.chapter_content_id == chapter_content.chapter_content_id
+        cc_u_1 = query_chapter_content_by_most_recent(
+            test_db, p1_user_1, chapter.chapter_id
         )
-        assert rev_u_1.revision_id == revision.revision_id
+        assert cc_u_1.chapter_content_id == chapter_content.chapter_content_id
 
     oe = p1_novels["oe"]
-    oe_chapter_1 = insert_chapter(
+    oe_chapter_1, _ = insert_chapter(
         test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1)
     )
-    oe_revision_1 = insert_revision(
-        test_db,
-        p1_user_1,
-        oe_chapter_1.chapter_id,
-        schemas.CreateRevision(
-            revision_title="Owner Editor Title",
-        ),
-    )
 
-    assert len(test_db.execute(select(Revision)).scalars().all()) == 4
+    assert len(test_db.execute(select(ChapterContent)).scalars().all()) == 4
 
     query_chapter_by_id(test_db, p1_user_1, oe_chapter_1.chapter_id)
-    query_revision_by_id(
-        test_db, p1_user_1, oe_revision_1[0].revision_id
-    )
-    assert (
-        len(
-            query_revisions_by_novel(
-                test_db,
-                p1_user_1,
-                oe.novel_id,
-                is_public=None,
-                is_primary=None,
-                        start=None,
-                end=None,
-            )
-        )
-        == 1
+    query_chapter_content_by_most_recent(
+        test_db, p1_user_1, oe_chapter_1.chapter_id
     )
 
     query_chapter_by_id(test_db, p1_user_2, oe_chapter_1.chapter_id)
-    query_revision_by_id(
-        test_db, p1_user_2, oe_revision_1[0].revision_id
-    )
-    assert (
-        len(
-            query_revisions_by_novel(
-                test_db,
-                p1_user_2,
-                oe.novel_id,
-                is_public=None,
-                is_primary=None,
-                        start=None,
-                end=None,
-            )
-        )
-        == 1
+    query_chapter_content_by_most_recent(
+        test_db, p1_user_2, oe_chapter_1.chapter_id
     )
 
-    oe_chapter_2 = insert_chapter(
+    oe_chapter_2, _ = insert_chapter(
         test_db, p1_user_2, oe.novel_id, schemas.CreateChapter(chapter_num=2)
     )
-    oe_revision_2 = insert_revision(
-        test_db,
-        p1_user_2,
-        oe_chapter_2.chapter_id,
-        schemas.CreateRevision(
-            revision_title="Shared Editor Title",
-        ),
-    )
 
-    assert len(test_db.execute(select(Revision)).scalars().all()) == 5
+    assert len(test_db.execute(select(ChapterContent)).scalars().all()) == 5
     query_chapter_by_id(test_db, p1_user_1, oe_chapter_2.chapter_id)
-    query_revision_by_id(
-        test_db, p1_user_1, oe_revision_2[0].revision_id
-    )
-    assert (
-        len(
-            query_revisions_by_novel(
-                test_db,
-                p1_user_1,
-                oe.novel_id,
-                is_public=None,
-                is_primary=None,
-                        start=None,
-                end=None,
-            )
-        )
-        == 2
+    query_chapter_content_by_most_recent(
+        test_db, p1_user_1, oe_chapter_2.chapter_id
     )
 
     query_chapter_by_id(test_db, p1_user_2, oe_chapter_2.chapter_id)
-    query_revision_by_id(
-        test_db, p1_user_2, oe_revision_2[0].revision_id
-    )
-    assert (
-        len(
-            query_revisions_by_novel(
-                test_db,
-                p1_user_2,
-                oe.novel_id,
-                is_public=None,
-                is_primary=None,
-                        start=None,
-                end=None,
-            )
-        )
-        == 2
+    query_chapter_content_by_most_recent(
+        test_db, p1_user_2, oe_chapter_2.chapter_id
     )
 
     with pytest.raises(NovelNotFoundException):
         query_chapters_by_novel(test_db, None, oe.novel_id, start=None, end=None)
     with pytest.raises(ChapterNotFoundException):
         query_chapter_by_id(test_db, None, oe_chapter_1.chapter_id)
-    with pytest.raises(RevisionNotFoundException):
-        query_revision_by_id(
-            test_db, None, oe_revision_1[0].revision_id
+    with pytest.raises(ChapterNotFoundException):
+        query_chapter_content_by_most_recent(
+            test_db, None, oe_chapter_1.chapter_id
         )
 
     # assert admin can access
     query_chapters_by_novel(test_db, p1_admin, oe.novel_id, start=None, end=None)
     query_chapter_by_id(test_db, p1_admin, oe_chapter_1.chapter_id)
-    query_revision_by_id(
-        test_db, p1_admin, oe_revision_1[0].revision_id
+    query_chapter_content_by_most_recent(
+        test_db, p1_admin, oe_chapter_1.chapter_id
     )
 
     ov = p1_novels["ov"]
-    ov_chapter_1 = insert_chapter(
+    ov_chapter_1, _ = insert_chapter(
         test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1)
-    )
-    ov_revision_1 = insert_revision(
-        test_db,
-        p1_user_1,
-        ov_chapter_1.chapter_id,
-        schemas.CreateRevision(
-            revision_title="Owner Viewer Title",
-        ),
     )
     query_chapters_by_novel(test_db, p1_user_2, ov.novel_id, start=None, end=None)
     query_chapter_by_id(test_db, p1_user_2, ov_chapter_1.chapter_id)
-    query_revision_by_id(
-        test_db, p1_user_2, ov_revision_1[0].revision_id
+    query_chapter_content_by_most_recent(
+        test_db, p1_user_2, ov_chapter_1.chapter_id
     )
     with pytest.raises(NovelNotFoundException):
         query_chapters_by_novel(test_db, None, ov.novel_id, start=None, end=None)
     with pytest.raises(ChapterNotFoundException):
         query_chapter_by_id(test_db, None, ov_chapter_1.chapter_id)
-    with pytest.raises(RevisionNotFoundException):
-        query_revision_by_id(
-            test_db, None, ov_revision_1[0].revision_id
+    with pytest.raises(ChapterNotFoundException):
+        query_chapter_content_by_most_recent(
+            test_db, None, ov_chapter_1.chapter_id
         )
 
-    # assert p1_user_2 cannot create chapters or revisions
+    # assert p1_user_2 cannot create chapters (viewer role)
     with pytest.raises(InsufficientPermissionsException):
         insert_chapter(
             test_db, p1_user_2, ov.novel_id, schemas.CreateChapter(chapter_num=2)
         )
-    with pytest.raises(InsufficientPermissionsException):
-        insert_revision(
-            test_db,
-            p1_user_2,
-            ov_chapter_1.chapter_id,
-            schemas.CreateRevision(
-                revision_title="Should not work",
-            ),
-        )
 
-    # assert admin can create chapters and revisions
-    ov_chapter_2 = insert_chapter(
+    # assert admin can create chapters
+    ov_chapter_2, ov_content_2 = insert_chapter(
         test_db, p1_admin, ov.novel_id, schemas.CreateChapter(chapter_num=2)
     )
-    ov_revision_2 = insert_revision(
-        test_db,
-        p1_admin,
-        ov_chapter_2.chapter_id,
-        schemas.CreateRevision(
-            revision_title="Admin Title",
-        ),
-    )
     assert ov_chapter_2.chapter_id is not None
-    assert ov_revision_2[0].revision_id is not None
+    assert ov_content_2.chapter_content_id is not None
 
-    # check overall number of revisions
-    assert len(test_db.execute(select(Revision)).scalars().all()) == 7
+    # check overall number of chapter contents
+    assert len(test_db.execute(select(ChapterContent)).scalars().all()) == 7

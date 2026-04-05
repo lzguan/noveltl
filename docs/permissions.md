@@ -577,3 +577,4 @@ if current_user.user_type == UserType.ADMIN:
 - [database-schema.md](database-schema.md) — Contributor table schemas
 - [api-design.md](api-design.md) — How permissions affect API responses
 - [conventions.md](conventions.md) — Naming conventions for permission functions
+- [sourcework-model.md](sourcework-model.md) — SourceWork visibility and ownership boundary design

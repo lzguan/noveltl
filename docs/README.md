@@ -1,6 +1,6 @@
 # NovelTL Documentation
 
-**Last Updated**: March 7, 2026  
+**Last Updated**: April 03, 2026  
 **Status**: Complete
 
 This directory contains technical documentation for the NovelTL project - a collaborative platform for novel translation using Named Entity Recognition (NER) and LLM-assisted workflows.
@@ -29,6 +29,7 @@ This directory contains technical documentation for the NovelTL project - a coll
 - **[background-jobs.md](background-jobs.md)** - AutoLabel worker system, Redis queues, state machines
 - **[editable-with-labels.md](editable-with-labels.md)** - Removing `is_final` flag, label offset adjustment, concurrency control
 - **[filter-system.md](filter-system.md)** - Filter abstraction, 4-phase pipeline, implementations
+- **[sourcework-model.md](sourcework-model.md)** - SourceWork grouping model, discovery semantics, permission boundaries
 - **[ui-requirements.md](ui-requirements.md)** - Frontend component specs, UX workflows
 - **[workspace-implementation.md](workspace-implementation.md)** - Workspace component architecture, React patterns, data flow
 

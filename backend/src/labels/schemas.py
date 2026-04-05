@@ -54,13 +54,13 @@ class LabelData(BaseModel):
     Attributes:
         label_data_id: UUID identifier for this LabelData.
         label_group_id: UUID of label group this LabelData belongs to.
-        revision_text_id: UUID of revision text this LabelData is labelling.
+        chapter_content_id: UUID of chapter content this LabelData is labelling.
     """
     model_config = ConfigDict(from_attributes=True)
     label_data_id : uuid.UUID
 
     label_group_id : uuid.UUID
-    revision_text_id : uuid.UUID
+    chapter_content_id : uuid.UUID
 
 class LabelBase(BaseModel):
     """
@@ -114,9 +114,9 @@ class CreateLabelData(BaseModel):
     Pydantic schema for validating create requests for label data.
 
     Attributes:
-        revision_text_id: UUID of revision text being labelled.
+        chapter_content_id: UUID of chapter content being labelled.
     """
-    revision_text_id : uuid.UUID
+    chapter_content_id : uuid.UUID
 
 class LabelOpBase(BaseModel):
     """
@@ -217,16 +217,6 @@ class UpdateLabelDataStream(BaseModel):
     """
     ops : list[Annotated[AddLabelOp | DeleteLabelOp | UpdateLabelOp, Field(discriminator='op')]]
 
-class UpdateLabelDataStreamResponse(BaseModel):
-    """
-    Response to an UpdateLabelDataStream.
-
-    Attributes:
-        status: One of 'success', 'fail'.
-        detail: Optional details.
-    """
-    status : Literal["success", "fail"]
-    detail : str | None = None
 
 class CreateLabelDataByAutoLabel(BaseModel):
     """
@@ -236,14 +226,12 @@ class CreateLabelDataByAutoLabel(BaseModel):
         model_name: Name of NER model that performed the autolabeling.
         model_params: Parameters of model used.
         chapter_ids: Optional filter on what chapters to include.
-        revision_ids: Optional filter on what revisions to include.
         start: Optional filter on the least chapter number to include.
         end: Optional filter on the greatest chapter number to include.
     """
     model_name : str
     model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
     chapter_ids : list[uuid.UUID] | None = None
-    revision_ids : list[uuid.UUID] | None = None
     start : int | None = None
     end : int | None = None
 
@@ -252,8 +240,8 @@ class CreateLabelDataByAutoLabelStatus(BaseModel):
     Return message for CreateLabelDataByAutoLabel.
 
     Attributes:
-        success: List of UUIDs of Revisions for successful inserts.
-        errors: List of tuples of (Revision UUID for failed inserts, error message).
+        success: List of tuples of (chapter_id, chapter_content_id) for successful inserts.
+        errors: List of tuples of (chapter_id, chapter_content_id, error message) for failed inserts.
     """
-    success : list[uuid.UUID]
-    errors: list[tuple[uuid.UUID, str]]
+    success : list[tuple[uuid.UUID, uuid.UUID]]
+    errors: list[tuple[uuid.UUID, uuid.UUID, str]]

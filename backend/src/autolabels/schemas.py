@@ -69,7 +69,7 @@ class AutoLabel(BaseModel):
         auto_label_model_params: Parameters used for the model to generate the auto labels.
         auto_label_status: Labeling progress for this autolabel.
         auto_label_message: Details on status.
-        revision_text_id: UUID of revision text this AutoLabel is associated with.
+        chapter_content_id: UUID of chapter content this AutoLabel is associated with.
         auto_label_last_job_id: Job id of last job that was run on this AutoLabel.
     """
     model_config = ConfigDict(from_attributes=True)
@@ -79,7 +79,7 @@ class AutoLabel(BaseModel):
     auto_label_model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
     auto_label_status : AutoLabelProgress
     auto_label_message : str | None = None
-    revision_text_id : uuid.UUID
+    chapter_content_id : uuid.UUID
     auto_label_last_job_id : str
 
 class AutoLabelMeta(BaseModel):
@@ -92,7 +92,7 @@ class AutoLabelMeta(BaseModel):
         auto_label_model_params: Parameters used for the model to generate the auto labels.
         auto_label_status: Labeling progress for this autolabel.
         auto_label_message: Details on status.
-        revision_text_id: UUID of revision text this AutoLabel is associated with.
+        chapter_content_id: UUID of chapter content this AutoLabel is associated with.
         auto_label_last_job_id: Job id of last job that was run on this AutoLabel.
     """
     model_config = ConfigDict(from_attributes=True)
@@ -102,7 +102,7 @@ class AutoLabelMeta(BaseModel):
     auto_label_model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
     auto_label_status : AutoLabelProgress
     auto_label_message : str | None = None
-    revision_text_id : uuid.UUID
+    chapter_content_id : uuid.UUID
     auto_label_last_job_id : str
 
 class CreateAutoLabels(BaseModel):
@@ -114,10 +114,8 @@ class CreateAutoLabels(BaseModel):
         auto_label_model_name: Name of the model used to generate the auto labels.
         auto_label_model_params: Parameters used for the model to generate the auto labels.
         chapter_ids: Optional parameter. Restrict to revisions with specific chapter UUIDs.
-        revision_ids: Optional parameter. Restrict to revisions with specific revision UUIDs.
         start: Optional parameter. Restrict to revisions with chapter num >= start.
         end: Optional parameter. Restrict to revisions with chapter num < end.
-        is_primary: Optional parameter. Restrict to revisions with this specific primary flag.
         is_public: Optional parameter. Restrict to revisions with this specific public flag.
 
     """
@@ -125,10 +123,8 @@ class CreateAutoLabels(BaseModel):
     auto_label_model_name : str
     auto_label_model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
     chapter_ids : list[uuid.UUID] | None = None
-    revision_ids : list[uuid.UUID] | None = None
     start : int | None = None
     end : int | None = None
-    is_primary : bool | None = None
     is_public : bool | None = None
 
     @model_validator(mode='after')

@@ -47,12 +47,11 @@ async def read_autolabels(
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)],
         chapter_ids : Annotated[list[uuid.UUID] | None, Query(alias="chapter-ids")] = None,
-        revision_ids : Annotated[list[uuid.UUID] | None, Query(alias="revision-ids")] = None,
         start : int | None = None,
         end : int | None = None,
         model_names : Annotated[list[str] | None, Query(alias="model-names")] = None,
     ):
-    auto_labels = query_auto_labels(db, current_user, novel_id, chapter_ids, revision_ids, start, end, model_names)
+    auto_labels = query_auto_labels(db, current_user, novel_id, chapter_ids, start, end, model_names)
     return auto_labels
 
 @router.post(

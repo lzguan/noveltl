@@ -10,7 +10,7 @@ from ..models import Base
 from .constants import MAX_MODEL_NAME_LEN, AutoLabelProgress
 
 if TYPE_CHECKING:
-    from src.novels.models import RevisionText
+    from src.novels.models import ChapterContent
 
 class AutoLabel(Base):
     """
@@ -24,10 +24,10 @@ class AutoLabel(Base):
         auto_label_status: Status of labeling task for this autolabel
         auto_label_last_job_id: Job id of last request to autogenerate this autolabel. Optional parameter.
         auto_label_message: Message about the status of this auto label (e.g. auto label failure reason). Optional parameter.
-        revision_text_id: UUID of chapter revision text this AutoLabel is associated with.
+        chapter_content_id: UUID of chapter content this AutoLabel is associated with.
 
     Notes:
-        Each revision can only have one autolabel with a given model and parameters.
+        Each chapter content can only have one autolabel with a given model and parameters.
     """
     __tablename__ = 'auto_labels'
 
@@ -39,10 +39,10 @@ class AutoLabel(Base):
     auto_label_last_job_id : Mapped[str] = mapped_column(String(36), nullable=True)
     auto_label_message : Mapped[str] = mapped_column(Text, nullable=True)
 
-    revision_text_id = mapped_column(ForeignKey('revision_texts.revision_text_id', name='fk_auto_labels_revision_text_id_revision_texts'), nullable=False)
-    revision_text_of_auto_label : Mapped["RevisionText"] = relationship(back_populates='auto_labels_with_revision_text')
+    chapter_content_id = mapped_column(ForeignKey('chapter_contents.chapter_content_id', name='fk_auto_labels_chapter_content_id_chapter_contents'), nullable=False)
+    chapter_content_of_auto_label : Mapped["ChapterContent"] = relationship(back_populates='auto_labels_with_chapter_content')
 
     __table_args__ = (
-        UniqueConstraint(revision_text_id, auto_label_model_name, auto_label_model_params, name="uq_model_name_params"),
+        UniqueConstraint(chapter_content_id, auto_label_model_name, auto_label_model_params, name="uq_model_name_params"),
 
     )

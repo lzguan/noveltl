@@ -9,7 +9,7 @@ from src.labels.constants import LabelRole
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.languages.models import Language
 from src.novels.constants import NovelType, Role, Visibility
-from src.novels.models import Chapter, Contributor, Novel, Revision, RevisionText
+from src.novels.models import Chapter, ChapterContent, Novel, NovelContributor, SourceWork
 
 
 class Hash(Protocol):
@@ -43,12 +43,19 @@ def sample_users(test_db : Session, recommended_hash : Hash) -> list[User]:
     return [test_admin, test_user]
 
 @pytest.fixture
-def sample_novels(sample_languages : dict[str, Language], test_db : Session) -> list[Novel]:
+def sample_source_work(test_db: Session) -> SourceWork:
+    sw = SourceWork(source_work_title="Sample Source Work")
+    test_db.add(sw)
+    test_db.commit()
+    return sw
+
+@pytest.fixture
+def sample_novels(sample_languages : dict[str, Language], test_db : Session, sample_source_work: SourceWork) -> list[Novel]:
     # Create some sample novels
-    novel0 = Novel(novel_title="Sample Novel 1", language_code=sample_languages['en'].language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
-    novel1 = Novel(novel_title="Sample Novel 2", language_code=sample_languages['zh'].language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
-    novel2 = Novel(novel_title="Sample Novel 3", language_code=sample_languages['kr'].language_code, novel_description="A description.", novel_author="An Author", novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
-    novel3 = Novel(novel_title="Smample Novel 4", language_code=sample_languages['zh'].language_code, novel_description="Another description.", novel_author="Another Author", novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC)
+    novel0 = Novel(novel_title="Sample Novel 1", language_code=sample_languages['en'].language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC, source_work_id=sample_source_work.source_work_id)
+    novel1 = Novel(novel_title="Sample Novel 2", language_code=sample_languages['zh'].language_code, novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC, source_work_id=sample_source_work.source_work_id)
+    novel2 = Novel(novel_title="Sample Novel 3", language_code=sample_languages['kr'].language_code, novel_description="A description.", novel_author="An Author", novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC, source_work_id=sample_source_work.source_work_id)
+    novel3 = Novel(novel_title="Smample Novel 4", language_code=sample_languages['zh'].language_code, novel_description="Another description.", novel_author="Another Author", novel_type=NovelType.ORIGINAL, novel_visibility=Visibility.PUBLIC, source_work_id=sample_source_work.source_work_id)
     test_db.add_all([novel0, novel1, novel2, novel3])
     test_db.commit()
     test_db.refresh(novel0)
@@ -59,10 +66,10 @@ def sample_novels(sample_languages : dict[str, Language], test_db : Session) -> 
     return [novel0, novel1, novel2, novel3]
 
 @pytest.fixture
-def sample_contributors(test_db: Session, sample_novels: list[Novel], sample_users: list[User]) -> list[Contributor]:
+def sample_contributors(test_db: Session, sample_novels: list[Novel], sample_users: list[User]) -> list[NovelContributor]:
     # Assign the regular user as the OWNER of Novel 1 and EDITOR of Novel 2
-    c1 = Contributor(novel_id=sample_novels[1].novel_id, user_id=sample_users[1].user_id, contributor_role=Role.OWNER)
-    c2 = Contributor(novel_id=sample_novels[2].novel_id, user_id=sample_users[1].user_id, contributor_role=Role.EDITOR)
+    c1 = NovelContributor(novel_id=sample_novels[1].novel_id, user_id=sample_users[1].user_id, contributor_role=Role.OWNER)
+    c2 = NovelContributor(novel_id=sample_novels[2].novel_id, user_id=sample_users[1].user_id, contributor_role=Role.EDITOR)
 
     test_db.add_all([c1, c2])
     test_db.commit()
@@ -71,8 +78,8 @@ def sample_contributors(test_db: Session, sample_novels: list[Novel], sample_use
 @pytest.fixture
 def sample_chapters(test_db: Session, sample_novels: list[Novel]) -> list[Chapter]:
     # Add chapters to Novel 1
-    ch1 = Chapter(novel_id=sample_novels[0].novel_id, chapter_num=1)
-    ch2 = Chapter(novel_id=sample_novels[0].novel_id, chapter_num=2)
+    ch1 = Chapter(novel_id=sample_novels[0].novel_id, chapter_num=1, chapter_title="Chapter 1: The Beginning", chapter_is_public=True)
+    ch2 = Chapter(novel_id=sample_novels[0].novel_id, chapter_num=2, chapter_title="Chapter 2", chapter_is_public=True)
 
     test_db.add_all([ch1, ch2])
     test_db.commit()
@@ -81,32 +88,25 @@ def sample_chapters(test_db: Session, sample_novels: list[Novel]) -> list[Chapte
     return [ch1, ch2]
 
 @pytest.fixture
-def sample_revisions(test_db: Session, sample_chapters: list[Chapter]) -> list[tuple[Revision, RevisionText]]:
-    # Create revisions for Chapter 1
+def sample_chapter_contents(test_db: Session, sample_chapters: list[Chapter]) -> list[ChapterContent]:
+    # Create chapter contents for Chapter 1
     # We use specific text here so we can create a valid Label for it later.
-    rev1 = Revision(
+    cc1 = ChapterContent(
         chapter_id=sample_chapters[0].chapter_id,
-        revision_title="Chapter 1: The Beginning",
-        revision_is_primary=True,
-        revision_is_public=True,
+        chapter_content_text="Alice went to the market.",
+        chapter_content_version=1,
     )
-    # Create a non-primary, non-public draft
-    rev2 = Revision(
+    # Create a second version (draft)
+    cc2 = ChapterContent(
         chapter_id=sample_chapters[0].chapter_id,
-        revision_title="Chapter 1: Draft",
-        revision_is_primary=False,
-        revision_is_public=False,
+        chapter_content_text="This is a draft text.",
+        chapter_content_version=2,
     )
 
-    test_db.add_all([rev1, rev2])
+    test_db.add_all([cc1, cc2])
     test_db.commit()
 
-    rt1 = RevisionText(revision_id=rev1.revision_id, revision_text_content="Alice went to the market.", revision_text_version=1)
-    rt2 = RevisionText(revision_id=rev2.revision_id, revision_text_content="This is a draft text.", revision_text_version=1)
-    test_db.add_all([rt1, rt2])
-    test_db.commit()
-
-    return [(rev1, rt1), (rev2, rt2)]
+    return [cc1, cc2]
 
 @pytest.fixture
 def sample_label_groups(test_db: Session, sample_novels: list[Novel], sample_users: list[User]) -> list[LabelGroup]:
@@ -133,12 +133,12 @@ def sample_label_contributors(test_db: Session, sample_label_groups: list[LabelG
     return [lc1]
 
 @pytest.fixture
-def sample_label_datas(test_db: Session, sample_label_groups: list[LabelGroup], sample_revisions: list[tuple[Revision, RevisionText]]) -> list[LabelData]:
-    # Link the Label Data to the Primary Revision of Chapter 1
-    _, rt1 = sample_revisions[0]
+def sample_label_datas(test_db: Session, sample_label_groups: list[LabelGroup], sample_chapter_contents: list[ChapterContent]) -> list[LabelData]:
+    # Link the Label Data to the first ChapterContent of Chapter 1
+    cc1 = sample_chapter_contents[0]
     ld1 = LabelData(
         label_group_id=sample_label_groups[0].label_group_id,
-        revision_text_id=rt1.revision_text_id
+        chapter_content_id=cc1.chapter_content_id
     )
     test_db.add(ld1)
     test_db.commit()

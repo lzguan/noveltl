@@ -55,20 +55,18 @@ def query_auto_labels(
         current_user : User,
         novel_id : uuid.UUID,
         chapter_ids : list[uuid.UUID] | None,
-        revision_ids : list[uuid.UUID] | None,
         start : int | None,
         end : int | None,
         model_names : list[str] | None,
     ) -> list[schemas.AutoLabelMeta]:
     """
-    Query auto-labels with filtering and return lightweight metadata. Return format is a dictionary of the form `revision_id : AutoLabelMeta`.
+    Query auto-labels with filtering and return lightweight metadata.
 
     Args:
         db: Database session.
-        current_user: The user requesting the data. Non-admins only see public revisions.
+        current_user: The user requesting the data. Non-admins only see public chapters.
         novel_id: ID of the novel to filter by.
         chapter_ids: Optional list of chapter IDs to filter.
-        revision_ids: Optional list of revision IDs to filter.
         start: Optional start chapter number (inclusive).
         end: Optional end chapter number (exclusive).
         model_names: Optional names of the auto-label model to filter by.
@@ -78,22 +76,17 @@ def query_auto_labels(
     ).options(
         defer(models.AutoLabel.auto_label_data)
     ).join(
-        novel_models.RevisionText,
-        novel_models.RevisionText.revision_text_id == models.AutoLabel.revision_text_id
-    ).join(
-        novel_models.Revision,
-        novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
+        novel_models.ChapterContent,
+        novel_models.ChapterContent.chapter_content_id == models.AutoLabel.chapter_content_id
     ).join(
         novel_models.Chapter,
-        novel_models.Chapter.chapter_id == novel_models.Revision.chapter_id
+        novel_models.Chapter.chapter_id == novel_models.ChapterContent.chapter_id
     ).join(
         novel_models.Novel,
         novel_models.Novel.novel_id == novel_models.Chapter.novel_id
     ).where(novel_models.Novel.novel_id == novel_id)
     if chapter_ids is not None and len(chapter_ids) > 0:
         q = q.where(novel_models.Chapter.chapter_id.in_(chapter_ids))
-    if revision_ids is not None and len(revision_ids) > 0:
-        q = q.where(novel_models.Revision.revision_id.in_(revision_ids))
     if start is not None:
         q = q.where(novel_models.Chapter.chapter_num >= start)
     if end is not None:
@@ -118,54 +111,47 @@ async def insert_auto_labels(db : Session, current_user : User, dispatcher : Aut
         AutoLabelDuplicateException: If insertion violates a unique constraint. Will most likely occur when there is a race condition.
 
     Notes:
-        This function ignores all revision text IDs that do not exist and revisions that the user has insufficient permissions for.
+        This function ignores all chapter content IDs that do not exist and chapters that the user has insufficient permissions for.
     """
     columns : list[Any] = [
         models.AutoLabel.auto_label_model_name,
         models.AutoLabel.auto_label_model_params,
         models.AutoLabel.auto_label_status,
         models.AutoLabel.auto_label_message,
-        models.AutoLabel.revision_text_id
+        models.AutoLabel.chapter_content_id
     ]
     q = select(
         literal(request.auto_label_model_name),
         literal(request.auto_label_model_params, type_=JSONB),
         literal(AutoLabelProgress.PENDING),
         literal("Waiting to be queued."),
-        novel_models.RevisionText.revision_text_id
+        novel_models.ChapterContent.chapter_content_id
     ).select_from(
-        novel_models.RevisionText
-    ).join(
-        novel_models.Revision,
-        novel_models.Revision.revision_id == novel_models.RevisionText.revision_id
+        novel_models.ChapterContent
     ).join(
         novel_models.Chapter,
-        novel_models.Chapter.chapter_id == novel_models.Revision.chapter_id
+        novel_models.Chapter.chapter_id == novel_models.ChapterContent.chapter_id
     ).join(
         novel_models.Novel,
         novel_models.Novel.novel_id == novel_models.Chapter.novel_id
     ).where(
-        novel_models.RevisionText.revision_text_version == select(
-            func.max(novel_models.RevisionText.revision_text_version)
+        novel_models.ChapterContent.chapter_content_version == select(
+            func.max(novel_models.ChapterContent.chapter_content_version)
         ).where(
-            novel_models.RevisionText.revision_id == novel_models.Revision.revision_id
-        ).correlate(novel_models.Revision).scalar_subquery()
+            novel_models.ChapterContent.chapter_id == novel_models.Chapter.chapter_id
+        ).correlate(novel_models.Chapter).scalar_subquery()
     )
     if request.chapter_ids:
         q = q.where(novel_models.Chapter.chapter_id.in_(request.chapter_ids))
-    if request.revision_ids:
-        q = q.where(novel_models.Revision.revision_id.in_(request.revision_ids))
     if request.start is not None:
         q = q.where(novel_models.Chapter.chapter_num >= request.start)
     if request.end is not None:
         q = q.where(novel_models.Chapter.chapter_num < request.end)
-    if request.is_primary is not None:
-        q = q.where(novel_models.Revision.revision_is_primary == request.is_primary)
     if request.is_public is not None:
-        q = q.where(novel_models.Revision.revision_is_public == request.is_public)
+        q = q.where(novel_models.Chapter.chapter_is_public == request.is_public)
     q = auto_label_mod_access_insert(q, current_user)
     q = q.where(not_(exists(select(models.AutoLabel).where(and_(
-        models.AutoLabel.revision_text_id == novel_models.RevisionText.revision_text_id,
+        models.AutoLabel.chapter_content_id == novel_models.ChapterContent.chapter_content_id,
         models.AutoLabel.auto_label_model_name == request.auto_label_model_name,
         models.AutoLabel.auto_label_model_params == request.auto_label_model_params
     )))))

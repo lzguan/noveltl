@@ -61,8 +61,16 @@ Before finishing any doc write or update, verify all of the following:
 
 8. **No stale names**: after model/table/function renames, grep the doc for old names before finishing. Common past renames:
    - `RawChapter` → `Chapter`
-   - `RawChapterRevision` → `Revision`
-   - `raw_chapter_*` → `chapter_*` / `revision_*`
+   - `RawChapterRevision` → `Revision` → removed (collapsed into `Chapter`)
+   - `raw_chapter_*` → `chapter_*`
+   - `Revision` → removed (metadata merged into `Chapter`)
+   - `RevisionText` → `ChapterContent`
+   - `revision_id` → `chapter_id` (where it referred to revision metadata)
+   - `revision_text_id` → `chapter_content_id`
+   - `revision_text_content` → `chapter_content_text`
+   - `revision_text_version` → `chapter_content_version`
+   - `Contributor` → `NovelContributor`
+   - `revision_is_primary` / `revision_is_public` → removed (replaced by `chapter_is_public` on `Chapter`)
 
 ## Code Examples
 

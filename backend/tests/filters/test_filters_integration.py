@@ -306,7 +306,7 @@ class TestApplyFilter:
         apply_options = ScoreApplyFilterOptions(create_copy=False, label_group_id=label_bundle.label_group.label_group_id)
         score_filter.apply_filter(test_db, label_bundle.novel.user, instances, apply_options)
 
-        # Verify "Hello" is deleted
+        # Verify only the flagged labels are deleted and "Hello" remains
         remaining = test_db.execute(
             select(Label).where(Label.label_data_id == label_bundle.label_data.label_data_id)
         ).scalars().all()

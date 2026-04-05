@@ -8,3 +8,5 @@ pytest.log
 .coverage
 settings.local.json
 database/db_backups/backup_*.sql
+.claude/settings.json
+handoff.md

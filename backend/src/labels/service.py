@@ -355,7 +355,7 @@ def insert_label_datas_by_autolabels(
         request : schemas.CreateLabelDataByAutoLabel
     ) -> schemas.CreateLabelDataByAutoLabelStatus:
     """
-    Move autolabels from the autolabels table over to label_datas/labels. Will try to insert each new label_data and all labels associated with it. Best effort function - try to insert as many new label_datas as possible, and log the errors in the return value. Successful inserts are logged as chapter_content_id, and errors are logged as pairs of (chapter_content_id, message).
+    Move autolabels from the autolabels table over to label_datas/labels. Will try to insert each new label_data and all labels associated with it. Best effort function - try to insert as many new label_datas as possible, and log the errors in the return value. Successful inserts are logged as (chapter_id, chapter_content_id), and errors are logged as (chapter_id, chapter_content_id, message).
 
     Args:
         db: Database being used.
@@ -408,8 +408,8 @@ def insert_label_datas_by_autolabels(
         q = q.where(novel_models.Chapter.chapter_num < request.end)
     result = db.execute(q)
 
-    success : list[uuid.UUID] = []
-    errors : list[tuple[uuid.UUID, str]] = []
+    success : list[tuple[uuid.UUID, uuid.UUID]] = []
+    errors : list[tuple[uuid.UUID, uuid.UUID, str]] = []
 
     for a, r in result:
         autolabel : autolabel_models.AutoLabel = a
@@ -437,22 +437,22 @@ def insert_label_datas_by_autolabels(
                 if autolabel.auto_label_data:
                     stmt = insert(models.Label).values([{**label, 'label_data_id' : label_data_id} for label in autolabel.auto_label_data])
                     db.execute(stmt)
-                success.append(autolabel.chapter_content_id)
+                success.append((chapter_content.chapter_id, autolabel.chapter_content_id))
         except IntegrityError as e:
             if isinstance(e.orig, PgError):
                 pgcode = e.orig.pgcode
                 if pgcode == errorcodes.UNIQUE_VIOLATION:
-                    errors.append((autolabel.chapter_content_id, f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to label data for label group already existing."))
+                    errors.append((chapter_content.chapter_id, autolabel.chapter_content_id, f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to label data for label group already existing."))
                 elif pgcode == errorcodes.EXCLUSION_VIOLATION:
-                    errors.append((autolabel.chapter_content_id, f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to labels in autolabel data overlapping."))
+                    errors.append((chapter_content.chapter_id, autolabel.chapter_content_id, f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to labels in autolabel data overlapping."))
                 else:
-                    errors.append((autolabel.chapter_content_id, f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e.orig)}"))
+                    errors.append((chapter_content.chapter_id, autolabel.chapter_content_id, f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e.orig)}"))
             else:
-                errors.append((autolabel.chapter_content_id, f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}"))
+                errors.append((chapter_content.chapter_id, autolabel.chapter_content_id, f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}"))
         except NoResultFound as e:
-            errors.append((autolabel.chapter_content_id, f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to insufficient permissions: {str(e)}"))
+            errors.append((chapter_content.chapter_id, autolabel.chapter_content_id, f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to insufficient permissions: {str(e)}"))
         except Exception as e:
-            errors.append((autolabel.chapter_content_id, f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}"))
+            errors.append((chapter_content.chapter_id, autolabel.chapter_content_id, f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}"))
     try:
         db.commit()
     except Exception as e:

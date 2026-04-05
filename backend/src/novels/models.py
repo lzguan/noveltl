@@ -144,7 +144,7 @@ class Chapter(Base):
 
     chapter_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
     chapter_num : Mapped[int] = mapped_column(Integer, nullable=False)
-    chapter_title : Mapped[str] = mapped_column(String(MAX_CHAPTER_TITLE_LEN), nullable=True)
+    chapter_title : Mapped[str] = mapped_column(String(MAX_CHAPTER_TITLE_LEN), nullable=False)
     chapter_is_public : Mapped[bool] = mapped_column(Boolean, nullable=False)
 
     novel_id = mapped_column(ForeignKey('novels.novel_id', name='fk_chapters_novel_id_novels'), nullable=False)

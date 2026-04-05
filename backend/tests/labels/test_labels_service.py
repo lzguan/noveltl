@@ -37,7 +37,7 @@ def test_label_insert_label_data_by_autolabels_basic(
     assert len(res.success) == expected_count
 
     source_revision_ids = {al.chapter_content_id for al in chinese_xianxia_small_test_autolabels_cluener}
-    assert set(res.success) == source_revision_ids
+    assert set(s[1] for s in res.success) == source_revision_ids
 
     label_datas_in_db = test_db.execute(
         select(label_models.LabelData).where(

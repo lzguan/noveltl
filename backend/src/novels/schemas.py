@@ -141,7 +141,7 @@ class ChapterContent(BaseModel):
     Pydantic schema for the text content of a chapter.
 
     Attributes:
-        chapter_content_content: The full text content of the chapter.
+        chapter_content_text: The full text content of the chapter.
         chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.
         chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.
     """

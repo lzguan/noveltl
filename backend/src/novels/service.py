@@ -373,7 +373,6 @@ def query_chapter_content_by_most_recent(
 
     Raises:
         ChapterContentNotFoundException: Content for the specified chapter is not found.
-        ChapterContentOutdatedException: Content exists but is not the latest version.
     """
     cc = aliased(models.ChapterContent)
     q = select(models.ChapterContent).where(

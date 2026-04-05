@@ -20,9 +20,15 @@ from src.novels.models import Chapter, ChapterContent
 from src.novels.schemas import TextOp
 from src.novels.service import modify_chapter_content
 
+pytestmark = pytest.mark.dependency(
+    depends=["gate::novels::service", "gate::novels::utils"],
+    scope="session",
+)
+
 
 class TestBasicTextModification:
 
+    @pytest.mark.dependency(name="novels::integration::delete_shifts_labels_and_creates_new_version", scope="session")
     def test_delete_shifts_labels_and_creates_new_version(
         self,
         test_db: Session,
@@ -96,6 +102,7 @@ class TestBasicTextModification:
         assert new_labels_2[0].label_start == 21  # was 27, shifted left by 6
         assert new_labels_2[0].label_end == 29
 
+    @pytest.mark.dependency(name="novels::integration::insert_shifts_labels", scope="session")
     def test_insert_shifts_labels(
         self,
         test_db: Session,
@@ -131,6 +138,7 @@ class TestBasicTextModification:
         assert hello.label_start == 5
         assert hello.label_end == 10
 
+    @pytest.mark.dependency(name="novels::integration::multiple_ops_applied_sequentially", scope="session")
     def test_multiple_ops_applied_sequentially(
         self,
         test_db: Session,
@@ -157,9 +165,22 @@ class TestBasicTextModification:
         ).scalar_one()
         assert new_cc.chapter_content_text == "Greetings world. This is a test sentence."
 
+    @pytest.mark.dependency(
+        name="gate::novels::integration::basic_text_modification",
+        depends=[
+            "novels::integration::delete_shifts_labels_and_creates_new_version",
+            "novels::integration::insert_shifts_labels",
+            "novels::integration::multiple_ops_applied_sequentially",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 class TestEdgeCases:
 
+    @pytest.mark.dependency(name="novels::integration::empty_ops_creates_new_version_with_same_content", scope="session")
     def test_empty_ops_creates_new_version_with_same_content(
         self,
         test_db: Session,
@@ -190,6 +211,7 @@ class TestEdgeCases:
         ).scalars().all()
         assert len(new_labels) == 3
 
+    @pytest.mark.dependency(name="novels::integration::no_labels_on_chapter_content", scope="session")
     def test_no_labels_on_chapter_content(
         self,
         test_db: Session,
@@ -220,9 +242,21 @@ class TestEdgeCases:
         ).scalars().all()
         assert len(new_lds) == 0
 
+    @pytest.mark.dependency(
+        name="gate::novels::integration::edge_cases",
+        depends=[
+            "novels::integration::empty_ops_creates_new_version_with_same_content",
+            "novels::integration::no_labels_on_chapter_content",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 class TestStalenessChecks:
 
+    @pytest.mark.dependency(name="novels::integration::stale_chapter_content_id_raises", scope="session")
     def test_stale_chapter_content_id_raises(
         self,
         test_db: Session,
@@ -246,6 +280,7 @@ class TestStalenessChecks:
                 [TextOp(op="insert", start=0, text="B")],
             )
 
+    @pytest.mark.dependency(name="novels::integration::successive_modifications_work", scope="session")
     def test_successive_modifications_work(
         self,
         test_db: Session,
@@ -285,9 +320,21 @@ class TestStalenessChecks:
         ).scalar_one()
         assert cc_v3.chapter_content_text.startswith("BA")
 
+    @pytest.mark.dependency(
+        name="gate::novels::integration::staleness_checks",
+        depends=[
+            "novels::integration::stale_chapter_content_id_raises",
+            "novels::integration::successive_modifications_work",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 class TestPermissions:
 
+    @pytest.mark.dependency(name="novels::integration::non_contributor_cannot_modify", scope="session")
     def test_non_contributor_cannot_modify(
         self,
         test_db: Session,
@@ -320,6 +367,7 @@ class TestPermissions:
         ).scalars().first()
         assert v2 is None
 
+    @pytest.mark.dependency(name="novels::integration::admin_can_modify", scope="session")
     def test_admin_can_modify(
         self,
         test_db: Session,
@@ -333,3 +381,30 @@ class TestPermissions:
             [TextOp(op="insert", start=0, text="Admin ")],
         )
         assert result.status == "success"
+
+    @pytest.mark.dependency(
+        name="gate::novels::integration::permissions",
+        depends=[
+            "novels::integration::non_contributor_cannot_modify",
+            "novels::integration::admin_can_modify",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
+
+@pytest.mark.order("last")
+@pytest.mark.dependency(
+    name="gate::novels::integration",
+    depends=[
+        "gate::novels::integration::basic_text_modification",
+        "gate::novels::integration::edge_cases",
+        "gate::novels::integration::staleness_checks",
+        "gate::novels::integration::permissions",
+    ],
+    scope="session",
+)
+def test_gate():
+    """All novels integration tests must pass before downstream layers run."""
+    pass

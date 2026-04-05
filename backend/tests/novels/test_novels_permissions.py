@@ -5,8 +5,14 @@ Tests the permission helpers directly by applying them to raw SQLAlchemy
 statements and verifying which rows are returned/affected for each user role.
 """
 
+import pytest
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
+
+pytestmark = pytest.mark.dependency(
+    depends=["gate::fixture_validation"],
+    scope="session",
+)
 
 from src.auth.models import User
 from src.novels.models import Chapter, ChapterContent, Novel
@@ -26,6 +32,7 @@ from src.novels.permissions import (
 
 class TestNovelModAccessSelect:
 
+    @pytest.mark.dependency(name="novels::permissions::guest_sees_public_and_unlisted", scope="session")
     def test_guest_sees_public_and_unlisted(
         self, test_db: Session,
         p1_novel_public_tyrone: Novel,
@@ -42,6 +49,7 @@ class TestNovelModAccessSelect:
         assert p1_novel_restricted_tyrone.novel_id not in ids
         assert p1_novel_private_tyrone.novel_id not in ids
 
+    @pytest.mark.dependency(name="novels::permissions::non_contributor_sees_public_and_unlisted", scope="session")
     def test_non_contributor_sees_public_and_unlisted(
         self, test_db: Session,
         p1_user_2: User,
@@ -61,6 +69,7 @@ class TestNovelModAccessSelect:
         assert p1_novel_restricted_tyrone.novel_id not in ids
         assert p1_novel_private_tyrone.novel_id not in ids
 
+    @pytest.mark.dependency(name="novels::permissions::contributor_sees_own_restricted", scope="session")
     def test_contributor_sees_own_restricted(
         self, test_db: Session,
         p1_user_1: User,
@@ -71,6 +80,7 @@ class TestNovelModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::contributor_sees_own_private", scope="session")
     def test_contributor_sees_own_private(
         self, test_db: Session,
         p1_user_1: User,
@@ -81,6 +91,7 @@ class TestNovelModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::admin_sees_everything", scope="session")
     def test_admin_sees_everything(
         self, test_db: Session,
         p1_admin: User,
@@ -95,6 +106,7 @@ class TestNovelModAccessSelect:
         results = test_db.execute(q).scalars().all()
         assert len(results) == 2
 
+    @pytest.mark.dependency(name="novels::permissions::editor_sees_private_novel", scope="session")
     def test_editor_sees_private_novel(
         self, test_db: Session,
         p1_user_2: User,
@@ -105,6 +117,7 @@ class TestNovelModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::viewer_sees_private_novel", scope="session")
     def test_viewer_sees_private_novel(
         self, test_db: Session,
         p1_user_2: User,
@@ -115,6 +128,22 @@ class TestNovelModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(
+        name="gate::novels::permissions::novel_mod_access_select",
+        depends=[
+            "novels::permissions::guest_sees_public_and_unlisted",
+            "novels::permissions::non_contributor_sees_public_and_unlisted",
+            "novels::permissions::contributor_sees_own_restricted",
+            "novels::permissions::contributor_sees_own_private",
+            "novels::permissions::admin_sees_everything",
+            "novels::permissions::editor_sees_private_novel",
+            "novels::permissions::viewer_sees_private_novel",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 # ============================================================
 # novel_mod_access_update
@@ -122,6 +151,7 @@ class TestNovelModAccessSelect:
 
 class TestNovelModAccessUpdate:
 
+    @pytest.mark.dependency(name="novels::permissions::owner_can_update", scope="session")
     def test_owner_can_update(
         self, test_db: Session,
         p1_user_1: User,
@@ -134,6 +164,7 @@ class TestNovelModAccessUpdate:
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::editor_can_update", scope="session")
     def test_editor_can_update(
         self, test_db: Session,
         p1_user_2: User,
@@ -146,6 +177,7 @@ class TestNovelModAccessUpdate:
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::viewer_cannot_update", scope="session")
     def test_viewer_cannot_update(
         self, test_db: Session,
         p1_user_2: User,
@@ -158,6 +190,7 @@ class TestNovelModAccessUpdate:
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="novels::permissions::non_contributor_cannot_update", scope="session")
     def test_non_contributor_cannot_update(
         self, test_db: Session,
         p1_user_2: User,
@@ -170,6 +203,7 @@ class TestNovelModAccessUpdate:
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="novels::permissions::admin_can_update_any", scope="session")
     def test_admin_can_update_any(
         self, test_db: Session,
         p1_admin: User,
@@ -182,6 +216,20 @@ class TestNovelModAccessUpdate:
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(
+        name="gate::novels::permissions::novel_mod_access_update",
+        depends=[
+            "novels::permissions::owner_can_update",
+            "novels::permissions::editor_can_update",
+            "novels::permissions::viewer_cannot_update",
+            "novels::permissions::non_contributor_cannot_update",
+            "novels::permissions::admin_can_update_any",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 # ============================================================
 # chapter_mod_access_select
@@ -189,6 +237,7 @@ class TestNovelModAccessUpdate:
 
 class TestChapterModAccessSelect:
 
+    @pytest.mark.dependency(name="novels::permissions::guest_sees_chapter_on_public_novel", scope="session")
     def test_guest_sees_chapter_on_public_novel(
         self, test_db: Session,
         p1_chapter_public: Chapter,
@@ -198,6 +247,7 @@ class TestChapterModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::guest_cannot_see_chapter_on_restricted_novel", scope="session")
     def test_guest_cannot_see_chapter_on_restricted_novel(
         self, test_db: Session,
         p1_chapter_restricted: Chapter,
@@ -207,6 +257,7 @@ class TestChapterModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="novels::permissions::guest_cannot_see_chapter_on_private_novel", scope="session")
     def test_guest_cannot_see_chapter_on_private_novel(
         self, test_db: Session,
         p1_chapter_private: Chapter,
@@ -216,6 +267,7 @@ class TestChapterModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="novels::permissions::contributor_sees_chapter_on_restricted_novel", scope="session")
     def test_contributor_sees_chapter_on_restricted_novel(
         self, test_db: Session,
         p1_user_1: User,
@@ -226,6 +278,7 @@ class TestChapterModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::non_contributor_cannot_see_chapter_on_private_novel", scope="session")
     def test_non_contributor_cannot_see_chapter_on_private_novel(
         self, test_db: Session,
         p1_user_2: User,
@@ -236,6 +289,7 @@ class TestChapterModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="novels::permissions::admin_sees_chapter_on_private_novel", scope="session")
     def test_admin_sees_chapter_on_private_novel(
         self, test_db: Session,
         p1_admin: User,
@@ -246,6 +300,21 @@ class TestChapterModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(
+        name="gate::novels::permissions::chapter_mod_access_select",
+        depends=[
+            "novels::permissions::guest_sees_chapter_on_public_novel",
+            "novels::permissions::guest_cannot_see_chapter_on_restricted_novel",
+            "novels::permissions::guest_cannot_see_chapter_on_private_novel",
+            "novels::permissions::contributor_sees_chapter_on_restricted_novel",
+            "novels::permissions::non_contributor_cannot_see_chapter_on_private_novel",
+            "novels::permissions::admin_sees_chapter_on_private_novel",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 # ============================================================
 # chapter_mod_access_insert
@@ -253,6 +322,7 @@ class TestChapterModAccessSelect:
 
 class TestChapterModAccessInsert:
 
+    @pytest.mark.dependency(name="novels::permissions::owner_can_insert_chapter", scope="session")
     def test_owner_can_insert(
         self, test_db: Session,
         p1_user_1: User,
@@ -263,6 +333,7 @@ class TestChapterModAccessInsert:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::editor_can_insert_chapter", scope="session")
     def test_editor_can_insert(
         self, test_db: Session,
         p1_user_2: User,
@@ -273,6 +344,7 @@ class TestChapterModAccessInsert:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::viewer_cannot_insert_chapter", scope="session")
     def test_viewer_cannot_insert(
         self, test_db: Session,
         p1_user_2: User,
@@ -283,6 +355,7 @@ class TestChapterModAccessInsert:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="novels::permissions::non_contributor_cannot_insert_chapter", scope="session")
     def test_non_contributor_cannot_insert(
         self, test_db: Session,
         p1_user_2: User,
@@ -293,6 +366,7 @@ class TestChapterModAccessInsert:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="novels::permissions::admin_can_insert_chapter", scope="session")
     def test_admin_can_insert(
         self, test_db: Session,
         p1_admin: User,
@@ -303,6 +377,20 @@ class TestChapterModAccessInsert:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(
+        name="gate::novels::permissions::chapter_mod_access_insert",
+        depends=[
+            "novels::permissions::owner_can_insert_chapter",
+            "novels::permissions::editor_can_insert_chapter",
+            "novels::permissions::viewer_cannot_insert_chapter",
+            "novels::permissions::non_contributor_cannot_insert_chapter",
+            "novels::permissions::admin_can_insert_chapter",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 # ============================================================
 # chapter_mod_access_update
@@ -310,6 +398,7 @@ class TestChapterModAccessInsert:
 
 class TestChapterModAccessUpdate:
 
+    @pytest.mark.dependency(name="novels::permissions::owner_can_update_chapter", scope="session")
     def test_owner_can_update(
         self, test_db: Session,
         p1_user_1: User,
@@ -322,6 +411,7 @@ class TestChapterModAccessUpdate:
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::editor_can_update_chapter", scope="session")
     def test_editor_can_update(
         self, test_db: Session,
         p1_user_2: User,
@@ -334,6 +424,7 @@ class TestChapterModAccessUpdate:
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::viewer_cannot_update_chapter", scope="session")
     def test_viewer_cannot_update(
         self, test_db: Session,
         p1_user_2: User,
@@ -346,6 +437,7 @@ class TestChapterModAccessUpdate:
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="novels::permissions::non_contributor_cannot_update_chapter", scope="session")
     def test_non_contributor_cannot_update(
         self, test_db: Session,
         p1_user_2: User,
@@ -358,6 +450,7 @@ class TestChapterModAccessUpdate:
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="novels::permissions::admin_can_update_any_chapter", scope="session")
     def test_admin_can_update_any(
         self, test_db: Session,
         p1_admin: User,
@@ -370,6 +463,20 @@ class TestChapterModAccessUpdate:
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(
+        name="gate::novels::permissions::chapter_mod_access_update",
+        depends=[
+            "novels::permissions::owner_can_update_chapter",
+            "novels::permissions::editor_can_update_chapter",
+            "novels::permissions::viewer_cannot_update_chapter",
+            "novels::permissions::non_contributor_cannot_update_chapter",
+            "novels::permissions::admin_can_update_any_chapter",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 # ============================================================
 # chapter_content_mod_access_select
@@ -377,6 +484,7 @@ class TestChapterModAccessUpdate:
 
 class TestChapterContentModAccessSelect:
 
+    @pytest.mark.dependency(name="novels::permissions::guest_sees_content_on_public_novel", scope="session")
     def test_guest_sees_content_on_public_novel(
         self, test_db: Session,
         p1_chapter_content_public: ChapterContent,
@@ -386,6 +494,7 @@ class TestChapterContentModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::guest_cannot_see_content_on_restricted_novel", scope="session")
     def test_guest_cannot_see_content_on_restricted_novel(
         self, test_db: Session,
         p1_chapter_content_restricted: ChapterContent,
@@ -395,6 +504,7 @@ class TestChapterContentModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="novels::permissions::guest_cannot_see_content_on_private_novel", scope="session")
     def test_guest_cannot_see_content_on_private_novel(
         self, test_db: Session,
         p1_chapter_content_private: ChapterContent,
@@ -404,6 +514,7 @@ class TestChapterContentModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="novels::permissions::contributor_sees_content_on_restricted_novel", scope="session")
     def test_contributor_sees_content_on_restricted_novel(
         self, test_db: Session,
         p1_user_1: User,
@@ -414,6 +525,7 @@ class TestChapterContentModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::contributor_sees_content_on_private_novel", scope="session")
     def test_contributor_sees_content_on_private_novel(
         self, test_db: Session,
         p1_user_1: User,
@@ -424,6 +536,7 @@ class TestChapterContentModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::non_contributor_cannot_see_content_on_private_novel", scope="session")
     def test_non_contributor_cannot_see_content_on_private_novel(
         self, test_db: Session,
         p1_user_2: User,
@@ -434,6 +547,7 @@ class TestChapterContentModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="novels::permissions::admin_sees_all_content", scope="session")
     def test_admin_sees_everything(
         self, test_db: Session,
         p1_admin: User,
@@ -448,6 +562,7 @@ class TestChapterContentModAccessSelect:
         results = test_db.execute(q).scalars().all()
         assert len(results) == 2
 
+    @pytest.mark.dependency(name="novels::permissions::editor_sees_content_on_shared_novel", scope="session")
     def test_editor_sees_content_on_shared_novel(
         self, test_db: Session,
         p1_user_2: User,
@@ -458,6 +573,7 @@ class TestChapterContentModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::viewer_sees_content_on_shared_novel", scope="session")
     def test_viewer_sees_content_on_shared_novel(
         self, test_db: Session,
         p1_user_2: User,
@@ -469,6 +585,24 @@ class TestChapterContentModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(
+        name="gate::novels::permissions::chapter_content_mod_access_select",
+        depends=[
+            "novels::permissions::guest_sees_content_on_public_novel",
+            "novels::permissions::guest_cannot_see_content_on_restricted_novel",
+            "novels::permissions::guest_cannot_see_content_on_private_novel",
+            "novels::permissions::contributor_sees_content_on_restricted_novel",
+            "novels::permissions::contributor_sees_content_on_private_novel",
+            "novels::permissions::non_contributor_cannot_see_content_on_private_novel",
+            "novels::permissions::admin_sees_all_content",
+            "novels::permissions::editor_sees_content_on_shared_novel",
+            "novels::permissions::viewer_sees_content_on_shared_novel",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 # ============================================================
 # chapter_content_mod_access_insert
@@ -476,6 +610,7 @@ class TestChapterContentModAccessSelect:
 
 class TestChapterContentModAccessInsert:
 
+    @pytest.mark.dependency(name="novels::permissions::owner_can_insert_content", scope="session")
     def test_owner_can_insert(
         self, test_db: Session,
         p1_user_1: User,
@@ -486,6 +621,7 @@ class TestChapterContentModAccessInsert:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::editor_can_insert_content", scope="session")
     def test_editor_can_insert(
         self, test_db: Session,
         p1_user_2: User,
@@ -496,6 +632,7 @@ class TestChapterContentModAccessInsert:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::viewer_cannot_insert_content", scope="session")
     def test_viewer_cannot_insert(
         self, test_db: Session,
         p1_user_2: User,
@@ -506,6 +643,7 @@ class TestChapterContentModAccessInsert:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="novels::permissions::non_contributor_cannot_insert_content", scope="session")
     def test_non_contributor_cannot_insert(
         self, test_db: Session,
         p1_user_2: User,
@@ -516,6 +654,7 @@ class TestChapterContentModAccessInsert:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="novels::permissions::admin_can_insert_content", scope="session")
     def test_admin_can_insert(
         self, test_db: Session,
         p1_admin: User,
@@ -525,3 +664,36 @@ class TestChapterContentModAccessInsert:
         q = chapter_content_mod_access_insert(q, p1_admin, p1_chapter_private.chapter_id)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
+
+    @pytest.mark.dependency(
+        name="gate::novels::permissions::chapter_content_mod_access_insert",
+        depends=[
+            "novels::permissions::owner_can_insert_content",
+            "novels::permissions::editor_can_insert_content",
+            "novels::permissions::viewer_cannot_insert_content",
+            "novels::permissions::non_contributor_cannot_insert_content",
+            "novels::permissions::admin_can_insert_content",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
+
+@pytest.mark.order("last")
+@pytest.mark.dependency(
+    name="gate::novels::permissions",
+    depends=[
+        "gate::novels::permissions::novel_mod_access_select",
+        "gate::novels::permissions::novel_mod_access_update",
+        "gate::novels::permissions::chapter_mod_access_select",
+        "gate::novels::permissions::chapter_mod_access_insert",
+        "gate::novels::permissions::chapter_mod_access_update",
+        "gate::novels::permissions::chapter_content_mod_access_select",
+        "gate::novels::permissions::chapter_content_mod_access_insert",
+    ],
+    scope="session",
+)
+def test_gate():
+    """All novels permissions tests must pass before downstream layers run."""
+    pass

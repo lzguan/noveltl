@@ -1,6 +1,6 @@
 # Testing Architecture
 
-**Last Updated**: April 04, 2026    
+**Last Updated**: April 05, 2026    
 **Status**: Draft
 
 This document defines the test layer structure, dependency graph, fixture bundling approach, and naming conventions for the backend test suite. It replaces the ad-hoc test organization with a structured system where test layers form a partial order (poset) enforced by `pytest-dependency` gates.
@@ -208,46 +208,71 @@ Arrows point from dependency → dependent. Only router and worker nodes have no
 
 ## Gate Pattern
 
-Gates are lightweight test functions that serve as synchronization points between layers. A gate test is the **last test in its file** (enforced by `pytest-order`) and depends on all other tests in the same file via `pytest-dependency`.
+Gates are lightweight test functions that serve as synchronization points between layers. Gates use a **two-tier** structure: each test class has a **class gate** that aggregates its tests, and each file has a **file gate** that aggregates its class gates. This keeps maintenance local — adding a test means updating only its class gate, adding a class means updating only the file gate.
 
 ### How it works
 
-Every test file that needs to act as a dependency for downstream tests includes a gate at the end:
+Every test class ends with a `test_class_gate` that depends on all tests in the class. The file ends with a `test_gate` that depends on all class gates:
 
 ```python
 # test_novels_permissions.py
 
 import pytest
 
-# --- All actual test classes above ---
+pytestmark = pytest.mark.dependency(
+    depends=["gate::fixture_validation"],
+    scope="session",
+)
 
 class TestNovelModAccessSelect:
-    @pytest.mark.dependency(name="novels::permissions::novel_select", scope="session")
+    @pytest.mark.dependency(name="novels::permissions::guest_sees_public", scope="session")
     def test_guest_sees_public_and_unlisted(self, ...): ...
 
-    @pytest.mark.dependency(name="novels::permissions::novel_select_2", scope="session")
+    @pytest.mark.dependency(name="novels::permissions::contributor_sees_restricted", scope="session")
     def test_contributor_sees_own_restricted(self, ...): ...
 
-# ... more test classes ...
+    # Class gate — aggregates all tests in this class
+    @pytest.mark.dependency(
+        name="gate::novels::permissions::novel_mod_access_select",
+        depends=[
+            "novels::permissions::guest_sees_public",
+            "novels::permissions::contributor_sees_restricted",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
 
 
-# --- Gate: must be last ---
+class TestNovelModAccessUpdate:
+    @pytest.mark.dependency(name="novels::permissions::owner_can_update", scope="session")
+    def test_owner_can_update(self, ...): ...
+
+    @pytest.mark.dependency(
+        name="gate::novels::permissions::novel_mod_access_update",
+        depends=["novels::permissions::owner_can_update"],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
+
+# --- File gate: depends only on class gates ---
 @pytest.mark.order("last")
 @pytest.mark.dependency(
     name="gate::novels::permissions",
     depends=[
-        "novels::permissions::novel_select",
-        "novels::permissions::novel_select_2",
-        # ... all test names in this file
+        "gate::novels::permissions::novel_mod_access_select",
+        "gate::novels::permissions::novel_mod_access_update",
     ],
     scope="session",
 )
 def test_gate():
-    """Gate for novels permissions layer. All tests above must pass."""
+    """All novels permissions tests must pass before downstream layers run."""
     pass
 ```
 
-Downstream tests depend on the gate:
+Downstream tests depend on the file gate:
 
 ```python
 # test_novels_service.py
@@ -268,13 +293,19 @@ class TestInsertChapter:
 
 1. **Scope is always `session`**. Both producer (`name=`) and consumer (`depends=`) must use the same scope. Since gates are cross-file, everything uses `scope="session"`.
 
-2. **Gate names follow `gate::{module}::{layer}`** format (e.g., `gate::novels::permissions`, `gate::labels::service`).
+2. **File gate names follow `gate::{module}::{layer}`** format (e.g., `gate::novels::permissions`, `gate::labels::service`).
 
-3. **Test names follow `{module}::{layer}::{description}`** format (e.g., `novels::permissions::guest_select`, `labels::service::insert_label_data`).
+3. **Class gate names follow `gate::{module}::{layer}::{class_description}`** format (e.g., `gate::novels::permissions::novel_mod_access_select`). The class description is lowercase snake_case derived from the class name.
 
-4. **Gates depend on closing gates only**. A downstream file depends on one or more upstream gates. There are no "opening gates" — the `depends=` on `pytestmark` or individual tests handles the "all of these must pass" semantics.
+4. **Test names follow `{module}::{layer}::{description}`** format (e.g., `novels::permissions::guest_select`, `labels::service::insert_label_data`).
 
-5. **Multi-gate dependencies are allowed**. A test can depend on gates from multiple modules:
+5. **Only file gates get `@pytest.mark.order("last")`**. Class gates don't need ordering — they naturally run after the tests they depend on.
+
+6. **Class gates take only `self`** — no fixtures, body is just `pass`.
+
+7. **File gates depend on class gates only**. Never list individual test names in the file gate.
+
+8. **Multi-gate dependencies are allowed**. A test can depend on gates from multiple modules:
    ```python
    pytestmark = pytest.mark.dependency(
        depends=["gate::novels::permissions", "gate::labels::permissions"],
@@ -285,7 +316,7 @@ class TestInsertChapter:
 ### Tradeoffs
 
 - **Skip cascades**: If a low-level gate fails, many downstream tests skip. This is intentional — it surfaces the root cause clearly ("1 failed, 80 skipped") but hides which downstream tests would have independently failed. Use `--ignore-unknown-dependency` to run everything regardless (see [Running Tests](#running-tests)).
-- **Gate maintenance**: Each gate must list all test names in its file. Forgetting to add a new test to the gate's `depends=` means the gate could pass even if that test fails. Consider a conftest hook or naming convention to mitigate this.
+- **Gate maintenance**: Adding a new test requires updating its class gate. Adding a new class requires updating the file gate. Forgetting either means the gate could pass even if that test fails.
 - **Cross-module coupling**: `labels/service` depending on `gate::novels::permissions` means you can't run label tests in isolation without also running novel tests. The `--ignore-unknown-dependency` flag addresses this for local development.
 
 ## Naming Conventions
@@ -432,8 +463,8 @@ For these cases, use individual fixtures or purpose-built populators.
 
 Each test file contains:
 1. Imports and `pytestmark` (layer dependencies)
-2. Test classes grouped by function-under-test
-3. Gate test at the bottom
+2. Test classes grouped by function-under-test, each ending with a `test_class_gate`
+3. File-level gate at the bottom depending on class gates
 
 ```python
 """
@@ -472,6 +503,17 @@ class TestInsertChapter:
                 schemas.CreateChapter(chapter_num=1)
             )
 
+    @pytest.mark.dependency(
+        name="gate::novels::service::insert_chapter",
+        depends=[
+            "novels::service::insert_chapter_basic",
+            "novels::service::insert_chapter_denied",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 class TestQueryChapterById:
     """Tests for service.query_chapter_by_id."""
@@ -482,16 +524,25 @@ class TestQueryChapterById:
     @pytest.mark.dependency(name="novels::service::query_chapter_not_found", scope="session")
     def test_not_found(self, ...): ...
 
+    @pytest.mark.dependency(
+        name="gate::novels::service::query_chapter_by_id",
+        depends=[
+            "novels::service::query_chapter_found",
+            "novels::service::query_chapter_not_found",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
 
-# --- Gate ---
+
+# --- File gate: depends on class gates only ---
 @pytest.mark.order("last")
 @pytest.mark.dependency(
     name="gate::novels::service",
     depends=[
-        "novels::service::insert_chapter_basic",
-        "novels::service::insert_chapter_denied",
-        "novels::service::query_chapter_found",
-        "novels::service::query_chapter_not_found",
+        "gate::novels::service::insert_chapter",
+        "gate::novels::service::query_chapter_by_id",
     ],
     scope="session",
 )

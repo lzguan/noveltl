@@ -23,6 +23,11 @@ from src.novels.service import modify_chapter_content
 from src.novels.utils import apply_text_ops
 from tests.conftest import DataLoader
 
+pytestmark = pytest.mark.dependency(
+    depends=["gate::novels::service", "gate::novels::utils"],
+    scope="session",
+)
+
 
 @pytest.fixture
 def dd_label_group(
@@ -93,6 +98,7 @@ def dd_chapter_0_labels(
 
 class TestDataDrivenModifyChapterContent:
 
+    @pytest.mark.dependency(name="novels::integration_data::delete_substring_matches_in_memory", scope="session")
     def test_delete_substring_matches_in_memory(
         self,
         test_db: Session,
@@ -158,6 +164,7 @@ class TestDataDrivenModifyChapterContent:
             assert db_label.label_end == mem_label.label_end
             assert db_label.label_entity_group == mem_label.label_entity_group
 
+    @pytest.mark.dependency(name="novels::integration_data::insert_text_matches_in_memory", scope="session")
     def test_insert_text_matches_in_memory(
         self,
         test_db: Session,
@@ -217,6 +224,7 @@ class TestDataDrivenModifyChapterContent:
             assert db_l.label_start == mem_l.label_start
             assert db_l.label_end == mem_l.label_end
 
+    @pytest.mark.dependency(name="novels::integration_data::multiple_ops_match_in_memory", scope="session")
     def test_multiple_ops_match_in_memory(
         self,
         test_db: Session,
@@ -277,3 +285,28 @@ class TestDataDrivenModifyChapterContent:
             assert db_l.label_word == mem_l.label_word
             assert db_l.label_start == mem_l.label_start
             assert db_l.label_end == mem_l.label_end
+
+    @pytest.mark.dependency(
+        name="gate::novels::integration_data::data_driven_modify_chapter_content",
+        depends=[
+            "novels::integration_data::delete_substring_matches_in_memory",
+            "novels::integration_data::insert_text_matches_in_memory",
+            "novels::integration_data::multiple_ops_match_in_memory",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
+
+@pytest.mark.order("last")
+@pytest.mark.dependency(
+    name="gate::novels::integration_data",
+    depends=[
+        "gate::novels::integration_data::data_driven_modify_chapter_content",
+    ],
+    scope="session",
+)
+def test_gate():
+    """All novels integration_data tests must pass before downstream layers run."""
+    pass

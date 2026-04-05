@@ -39,7 +39,7 @@ class AutoLabel(Base):
     auto_label_last_job_id : Mapped[str] = mapped_column(String(36), nullable=True)
     auto_label_message : Mapped[str] = mapped_column(Text, nullable=True)
 
-    chapter_content_id = mapped_column(ForeignKey('chapter_contents.chapter_content_id', name='fk_auto_labels_chapter_content_id_chapter_contents'), nullable=False)
+    chapter_content_id : Mapped[uuid.UUID] = mapped_column(ForeignKey('chapter_contents.chapter_content_id', name='fk_auto_labels_chapter_content_id_chapter_contents'), nullable=False)
     chapter_content_of_auto_label : Mapped["ChapterContent"] = relationship(back_populates='auto_labels_with_chapter_content')
 
     __table_args__ = (

@@ -32,7 +32,12 @@ from src.labels.service import insert_label_datas_by_autolabels
 from src.novels.models import Chapter, ChapterContent, NovelContributor
 
 pytestmark = pytest.mark.dependency(
-    depends=["insert_label_datas_by_autolabels"],
+    depends=[
+        "insert_label_datas_by_autolabels",
+        "gate::filters::service",
+        "gate::novels::permissions",
+        "gate::labels::permissions",
+    ],
     scope="session",
 )
 
@@ -68,6 +73,7 @@ def cxst_labels_populated(
 class TestFlagInstancesCompleteness:
     """Tests that flag_instances returns ALL labels meeting the criteria."""
 
+    @pytest.mark.dependency(name="filters::integration_data::all_above_threshold_returned", scope="session")
     def test_all_labels_above_threshold_are_returned(
         self,
         test_db: Session,
@@ -103,6 +109,7 @@ class TestFlagInstancesCompleteness:
             f"but flag_instances returned {len(results)}"
         )
 
+    @pytest.mark.dependency(name="filters::integration_data::all_returned_at_zero_threshold", scope="session")
     def test_all_labels_returned_at_zero_threshold(
         self,
         test_db: Session,
@@ -133,10 +140,22 @@ class TestFlagInstancesCompleteness:
             f"but got {len(results)}"
         )
 
+    @pytest.mark.dependency(
+        name="gate::filters::integration_data::flag_instances_completeness",
+        depends=[
+            "filters::integration_data::all_above_threshold_returned",
+            "filters::integration_data::all_returned_at_zero_threshold",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 class TestFlagInstancesCorrectness:
     """Tests that flag_instances does NOT return labels below threshold."""
 
+    @pytest.mark.dependency(name="filters::integration_data::no_below_threshold_returned", scope="session")
     def test_no_labels_below_threshold_are_returned(
         self,
         test_db: Session,
@@ -161,6 +180,7 @@ class TestFlagInstancesCorrectness:
                 f"which is below threshold {min_score}"
             )
 
+    @pytest.mark.dependency(name="filters::integration_data::empty_when_threshold_exceeds", scope="session")
     def test_returns_empty_when_threshold_exceeds_all_scores(
         self,
         test_db: Session,
@@ -179,10 +199,22 @@ class TestFlagInstancesCorrectness:
 
         assert len(results) == 0
 
+    @pytest.mark.dependency(
+        name="gate::filters::integration_data::flag_instances_correctness",
+        depends=[
+            "filters::integration_data::no_below_threshold_returned",
+            "filters::integration_data::empty_when_threshold_exceeds",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 class TestFlagInstancesScorePartition:
     """Tests that labels are correctly partitioned by score threshold."""
 
+    @pytest.mark.dependency(name="filters::integration_data::flagged_plus_unflagged_equals_total", scope="session")
     def test_flagged_plus_unflagged_equals_total(
         self,
         test_db: Session,
@@ -229,10 +261,21 @@ class TestFlagInstancesScorePartition:
             f"{below_threshold_count} unflagged != {total_count} total"
         )
 
+    @pytest.mark.dependency(
+        name="gate::filters::integration_data::flag_instances_score_partition",
+        depends=[
+            "filters::integration_data::flagged_plus_unflagged_equals_total",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 class TestApplyFilterPreservation:
     """Tests that apply_filter with copy preserves original data."""
 
+    @pytest.mark.dependency(name="filters::integration_data::copy_preserves_all_original", scope="session")
     def test_copy_preserves_all_original_labels(
         self,
         test_db: Session,
@@ -282,10 +325,21 @@ class TestApplyFilterPreservation:
             f"Original group was modified: had {original_count} labels, now has {final_count}"
         )
 
+    @pytest.mark.dependency(
+        name="gate::filters::integration_data::apply_filter_preservation",
+        depends=[
+            "filters::integration_data::copy_preserves_all_original",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 class TestApplyFilterDeletion:
     """Tests that apply_filter correctly deletes specified labels."""
 
+    @pytest.mark.dependency(name="filters::integration_data::deletes_exactly_flagged", scope="session")
     def test_deletes_exactly_flagged_labels(
         self,
         test_db: Session,
@@ -340,6 +394,7 @@ class TestApplyFilterDeletion:
             f"but found {final_total}"
         )
 
+    @pytest.mark.dependency(name="filters::integration_data::remaining_below_threshold", scope="session")
     def test_remaining_labels_are_below_threshold(
         self,
         test_db: Session,
@@ -382,10 +437,22 @@ class TestApplyFilterDeletion:
             f"Found {remaining_above} labels with score < {min_score} after deletion"
         )
 
+    @pytest.mark.dependency(
+        name="gate::filters::integration_data::apply_filter_deletion",
+        depends=[
+            "filters::integration_data::deletes_exactly_flagged",
+            "filters::integration_data::remaining_below_threshold",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
 
 class TestGetContextsRealData:
     """Tests get_contexts with real Chinese text."""
 
+    @pytest.mark.dependency(name="filters::integration_data::contexts_contain_label_word", scope="session")
     def test_contexts_contain_label_word(
         self,
         test_db: Session,
@@ -413,3 +480,31 @@ class TestGetContextsRealData:
                     f"Context extraction mismatch: expected '{instance.label.label_word}' "
                     f"but got '{extracted_word}'"
                 )
+
+    @pytest.mark.dependency(
+        name="gate::filters::integration_data::get_contexts_real_data",
+        depends=[
+            "filters::integration_data::contexts_contain_label_word",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
+
+@pytest.mark.order("last")
+@pytest.mark.dependency(
+    name="gate::filters::integration_data",
+    depends=[
+        "gate::filters::integration_data::flag_instances_completeness",
+        "gate::filters::integration_data::flag_instances_correctness",
+        "gate::filters::integration_data::flag_instances_score_partition",
+        "gate::filters::integration_data::apply_filter_preservation",
+        "gate::filters::integration_data::apply_filter_deletion",
+        "gate::filters::integration_data::get_contexts_real_data",
+    ],
+    scope="session",
+)
+def test_gate():
+    """All filters integration_data tests must pass before downstream layers run."""
+    pass

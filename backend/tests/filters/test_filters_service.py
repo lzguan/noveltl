@@ -13,10 +13,16 @@ from src.labels import models as label_models
 from src.labels.constants import LabelRole
 from src.labels.exceptions import LabelGroupNotFoundException
 
+pytestmark = pytest.mark.dependency(
+    depends=["gate::labels::permissions"],
+    scope="session",
+)
+
 
 class TestCopyLabelGroup:
     """Tests for the copy_label_group function."""
 
+    @pytest.mark.dependency(name="filters::service::owner_can_copy", scope="session")
     def test_owner_can_copy_label_group(
         self,
         test_db: Session,
@@ -36,6 +42,7 @@ class TestCopyLabelGroup:
         assert new_group.novel_id == lp_label_group_owner_only.novel_id
         assert new_group.label_group_id != lp_label_group_owner_only.label_group_id
 
+    @pytest.mark.dependency(name="filters::service::editor_can_copy", scope="session")
     def test_editor_can_copy_label_group(
         self,
         test_db: Session,
@@ -53,6 +60,7 @@ class TestCopyLabelGroup:
         assert new_group is not None
         assert new_group.label_group_name == "Editor Copy"
 
+    @pytest.mark.dependency(name="filters::service::viewer_cannot_copy", scope="session")
     def test_viewer_cannot_copy_label_group(
         self,
         test_db: Session,
@@ -68,6 +76,7 @@ class TestCopyLabelGroup:
                 "Should Fail"
             )
 
+    @pytest.mark.dependency(name="filters::service::non_contributor_cannot_copy", scope="session")
     def test_non_contributor_cannot_copy(
         self,
         test_db: Session,
@@ -82,6 +91,7 @@ class TestCopyLabelGroup:
                 "Should Fail"
             )
 
+    @pytest.mark.dependency(name="filters::service::copy_preserves_contributors", scope="session")
     def test_copy_preserves_contributors(
         self,
         test_db: Session,
@@ -109,6 +119,7 @@ class TestCopyLabelGroup:
         assert lp_user_1.user_id in user_ids
         assert lp_user_2.user_id in user_ids
 
+    @pytest.mark.dependency(name="filters::service::copy_without_contributors_sets_owner", scope="session")
     def test_copy_without_contributors_sets_current_user_as_owner(
         self,
         test_db: Session,
@@ -135,6 +146,7 @@ class TestCopyLabelGroup:
         assert contributors[0].user_id == lp_user_1.user_id
         assert contributors[0].label_contributor_role == LabelRole.OWNER
 
+    @pytest.mark.dependency(name="filters::service::copy_includes_label_data", scope="session")
     def test_copy_includes_label_data(
         self,
         test_db: Session,
@@ -159,6 +171,7 @@ class TestCopyLabelGroup:
         assert len(label_datas) == 1
         assert label_datas[0].chapter_content_id == lp_label_data_owner_only.chapter_content_id
 
+    @pytest.mark.dependency(name="filters::service::copy_includes_labels", scope="session")
     def test_copy_includes_labels(
         self,
         test_db: Session,
@@ -193,6 +206,7 @@ class TestCopyLabelGroup:
             assert new_label.label_end == orig_label.label_end
             assert new_label.label_entity_group == orig_label.label_entity_group
 
+    @pytest.mark.dependency(name="filters::service::copy_does_not_affect_original", scope="session")
     def test_copy_does_not_affect_original(
         self,
         test_db: Session,
@@ -218,3 +232,34 @@ class TestCopyLabelGroup:
         ).scalars().all()
 
         assert len(original_labels) == original_label_count
+
+    @pytest.mark.dependency(
+        name="gate::filters::service::copy_label_group",
+        depends=[
+            "filters::service::owner_can_copy",
+            "filters::service::editor_can_copy",
+            "filters::service::viewer_cannot_copy",
+            "filters::service::non_contributor_cannot_copy",
+            "filters::service::copy_preserves_contributors",
+            "filters::service::copy_without_contributors_sets_owner",
+            "filters::service::copy_includes_label_data",
+            "filters::service::copy_includes_labels",
+            "filters::service::copy_does_not_affect_original",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
+
+@pytest.mark.order("last")
+@pytest.mark.dependency(
+    name="gate::filters::service",
+    depends=[
+        "gate::filters::service::copy_label_group",
+    ],
+    scope="session",
+)
+def test_gate():
+    """All filters service tests must pass before downstream layers run."""
+    pass

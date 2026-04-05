@@ -560,7 +560,7 @@ This is a phased migration from the current test structure. Each phase can be me
 - `backend/tests/fixtures/filters.py` — Filter object fixtures
 - `backend/pyproject.toml` — Pytest configuration
 - `backend/src/novels/utils.py` — Pure utils (apply_text_ops)
-- `backend/src/autolabels/utils.py` — Autolabel utils
+- `backend/src/autolabels/utils.py` — AutoLabel utils
 - `backend/src/labels/utils.py` — Label utils
 - `backend/src/filters/utils.py` — Filter utils (find_sentence_around, copy_label_group)
 - `backend/src/auth/utils.py` — Auth utils

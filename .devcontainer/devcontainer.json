@@ -39,7 +39,7 @@
 	"postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.claude /home/vscode/.codex && curl -fsSL https://claude.ai/install.sh | bash && npm install -g @openai/codex && sudo apt-get update && sudo apt-get install -y tmux",
 
 	// Configure tool-specific properties.
-	 "customizations": {
+	"customizations": {
 		"vscode": {
 			"extensions": [
 				"ms-python.debugpy",
@@ -58,7 +58,7 @@
 				"python.analysis.extraPaths": ["backend/src"]
 			}
 		}
-	 }
+	}
 
 	// Uncomment to connect as an existing user other than the container default. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "devcontainer"

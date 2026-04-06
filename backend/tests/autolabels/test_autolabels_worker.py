@@ -1,6 +1,4 @@
 import logging
-from collections.abc import Generator
-from typing import Protocol
 
 import pytest
 from arq import ArqRedis
@@ -8,13 +6,13 @@ from arq.worker import Worker
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.auth.models import User
 from src.autolabels.constants import AutoLabelProgress, SepPriority
 from src.autolabels.models import AutoLabel
 from src.autolabels.schemas import CreateAutoLabels
 from src.autolabels.service import insert_auto_labels
 from src.autolabels.utils import ArqDispatcher
-from src.novels.models import Chapter, ChapterContent, Novel
+from tests.fixtures.bundles import ScenarioBundle
+from tests.gate_logging import log_gate
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +20,6 @@ pytestmark = pytest.mark.dependency(
     depends=["gate::autolabels::utils"],
     scope="session",
 )
-
-
-class Loader(Protocol):
-    def __call__(self, pathname : str, recursive : bool = False) -> Generator[str, None, None]:
-        ...
-
 
 class TestInsertAutoLabels:
     """Tests for insert_auto_labels service function (worker integration)."""
@@ -37,26 +29,25 @@ class TestInsertAutoLabels:
     @pytest.mark.dependency(name="autolabels::worker::basic", scope="session")
     async def test_basic(
         self,
-        chinese_xianxia_small_test_novel: Novel,
-        chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],
+        chinese_xianxia_small_test_scenario: ScenarioBundle,
         redis: ArqRedis,
         test_db: Session,
-        chinese_xianxia_small_test_user: User,
         worker_mock: Worker,
     ):
+        novel_bundle = chinese_xianxia_small_test_scenario.novels[0]
         ret = await insert_auto_labels(
             test_db,
-            chinese_xianxia_small_test_user,
+            novel_bundle.user,
             ArqDispatcher(redis),
             CreateAutoLabels(
-                chapter_ids=[chapter.chapter_id for chapter, _ in chinese_xianxia_small_test_chapters],
+                chapter_ids=[chapter_bundle.chapter.chapter_id for chapter_bundle in novel_bundle.chapters],
                 auto_label_model_name='cluener',
                 auto_label_model_params={},
-                novel_id=chinese_xianxia_small_test_novel.novel_id
+                novel_id=novel_bundle.novel.novel_id
             )
         )
-        assert len(chinese_xianxia_small_test_chapters) > 0  # move this to fixture test sometime in the future
-        assert len(ret) == len(chinese_xianxia_small_test_chapters)
+        assert len(novel_bundle.chapters) > 0
+        assert len(ret) == len(novel_bundle.chapters)
         logger.info("ret.inserts: %s", ret)
         assert all(a.auto_label_status == AutoLabelProgress.PENDING for a in ret)
 
@@ -70,65 +61,64 @@ class TestInsertAutoLabels:
     @pytest.mark.dependency(name="autolabels::worker::set_params", scope="session")
     async def test_set_params(
         self,
-        chinese_xianxia_small_test_novel: Novel,
-        chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],
+        chinese_xianxia_small_test_scenario: ScenarioBundle,
         redis: ArqRedis,
         test_db: Session,
-        chinese_xianxia_small_test_user: User,
     ):
+        novel_bundle = chinese_xianxia_small_test_scenario.novels[0]
         await insert_auto_labels(
             test_db,
-            chinese_xianxia_small_test_user,
+            novel_bundle.user,
             ArqDispatcher(redis),
             CreateAutoLabels(
-                chapter_ids=[chapter.chapter_id for chapter, _ in chinese_xianxia_small_test_chapters],
+                chapter_ids=[chapter_bundle.chapter.chapter_id for chapter_bundle in novel_bundle.chapters],
                 auto_label_model_name='cluener',
                 auto_label_model_params={"separators": {"\n": SepPriority.HIGH}},
-                novel_id=chinese_xianxia_small_test_novel.novel_id
+                novel_id=novel_bundle.novel.novel_id
             )
         )
 
     @pytest.mark.dependency(name="autolabels::worker::insert_twice_is_idempotent", scope="session")
     async def test_insert_twice_is_idempotent(
         self,
-        chinese_xianxia_small_test_novel: Novel,
-        chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],
+        chinese_xianxia_small_test_scenario: ScenarioBundle,
         redis: ArqRedis,
         test_db: Session,
-        chinese_xianxia_small_test_user: User,
     ):
+        novel_bundle = chinese_xianxia_small_test_scenario.novels[0]
         ret = await insert_auto_labels(
             test_db,
-            chinese_xianxia_small_test_user,
+            novel_bundle.user,
             ArqDispatcher(redis),
             CreateAutoLabels(
-                chapter_ids=[chapter.chapter_id for chapter, _ in chinese_xianxia_small_test_chapters],
+                chapter_ids=[chapter_bundle.chapter.chapter_id for chapter_bundle in novel_bundle.chapters],
                 auto_label_model_name='cluener',
                 auto_label_model_params={"separators": {"\n": SepPriority.HIGH}},
-                novel_id=chinese_xianxia_small_test_novel.novel_id
+                novel_id=novel_bundle.novel.novel_id
             )
         )
         q = select(AutoLabel)
         result_rows = test_db.execute(q).scalars().all()
-        assert len(result_rows) == len(chinese_xianxia_small_test_chapters)
+        assert len(result_rows) == len(novel_bundle.chapters)
         assert all(row.auto_label_status == AutoLabelProgress.PENDING for row in result_rows)
-        assert len(ret) == len(chinese_xianxia_small_test_chapters)
+        assert len(ret) == len(novel_bundle.chapters)
         ret = await insert_auto_labels(
             test_db,
-            chinese_xianxia_small_test_user,
+            novel_bundle.user,
             ArqDispatcher(redis),
             CreateAutoLabels(
-                chapter_ids=[chapter.chapter_id for chapter, _ in chinese_xianxia_small_test_chapters],
+                chapter_ids=[chapter_bundle.chapter.chapter_id for chapter_bundle in novel_bundle.chapters],
                 auto_label_model_name='cluener',
                 auto_label_model_params={"separators": {"\n": SepPriority.HIGH}},
-                novel_id=chinese_xianxia_small_test_novel.novel_id
+                novel_id=novel_bundle.novel.novel_id
             )
         )
         assert len(ret) == 0
         result_rows = test_db.execute(q).scalars().all()
-        assert len(result_rows) == len(chinese_xianxia_small_test_chapters)
+        assert len(result_rows) == len(novel_bundle.chapters)
 
 
+    @pytest.mark.slow
     @pytest.mark.dependency(
         name="gate::autolabels::worker::insert_auto_labels",
         depends=[
@@ -142,6 +132,7 @@ class TestInsertAutoLabels:
         pass
 
 
+@pytest.mark.slow
 @pytest.mark.order("last")
 @pytest.mark.dependency(
     name="gate::autolabels::worker",
@@ -152,4 +143,4 @@ class TestInsertAutoLabels:
 )
 def test_gate():
     """All autolabels worker tests must pass before downstream layers run."""
-    pass
+    log_gate("gate::autolabels::worker")

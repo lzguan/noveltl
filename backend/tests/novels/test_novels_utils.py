@@ -11,6 +11,7 @@ import pytest
 from src.labels.schemas import Label
 from src.novels.schemas import TextOp
 from src.novels.utils import apply_text_op, apply_text_ops
+from tests.gate_logging import log_gate
 
 
 def _label(word: str, start: int, end: int, score: float = 1.0) -> Label:
@@ -428,4 +429,4 @@ class TestApplyTextOps:
 )
 def test_gate():
     """All novels utils tests must pass before downstream layers run."""
-    pass
+    log_gate("gate::novels::utils")

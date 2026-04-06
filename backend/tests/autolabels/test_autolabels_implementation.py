@@ -6,6 +6,7 @@ import pytest
 
 from src.autolabels.schemas import CluenerModelParams
 from src.autolabels.worker.interfaces import NERModel
+from tests.gate_logging import log_gate
 
 pytestmark = [
     pytest.mark.implementation,
@@ -59,6 +60,7 @@ class TestCluenerPredict:
                 logger.info("Word %s does not match %s (normalized value %s)", label['word'], chapter[label['start']:label['end']], cluener.model.normalize(chapter[label['start']:label['end']]))
 
 
+    @pytest.mark.slow
     @pytest.mark.dependency(
         name="gate::autolabels::implementation::cluener_predict",
         depends=[
@@ -71,6 +73,7 @@ class TestCluenerPredict:
         pass
 
 
+@pytest.mark.slow
 @pytest.mark.order("last")
 @pytest.mark.dependency(
     name="gate::autolabels::implementation",
@@ -81,4 +84,4 @@ class TestCluenerPredict:
 )
 def test_gate():
     """All autolabels implementation tests must pass before downstream layers run."""
-    pass
+    log_gate("gate::autolabels::implementation")

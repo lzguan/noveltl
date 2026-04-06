@@ -28,6 +28,7 @@ from src.labels.models import Label, LabelGroup
 from src.novels.exceptions import ChapterContentOutdatedException
 from src.novels.models import Chapter, ChapterContent
 from tests.fixtures.bundles import LabelFixtureBundle
+from tests.gate_logging import log_gate
 
 pytestmark = pytest.mark.dependency(
     depends=["gate::novels::permissions", "gate::labels::permissions", "gate::filters::service"],
@@ -564,4 +565,4 @@ class TestApplyFilterStaleness:
 )
 def test_gate():
     """All filters integration tests must pass before downstream layers run."""
-    pass
+    log_gate("gate::filters::integration")

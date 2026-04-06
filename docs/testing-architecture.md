@@ -53,7 +53,7 @@ These tests have no fixtures beyond basic Python objects. They run first and ind
 
 ### Layer 0b: Fixture Validation
 
-Asserts that fixture bundles actually create data. Each populator's nontriviality check lives here — for example, verifying that `chapter_loader` returns non-empty results, or that a fixture bundle successfully creates all its DB objects.
+Asserts that shared fixtures produce non-empty, internally consistent, and nontrivial data. This includes loaders returning real fixture files, and bundle/scenario fixtures creating linked DB rows rather than placeholder shells.
 
 Runs in parallel with Layer 0a (no dependency between them).
 
@@ -381,83 +381,69 @@ Examples:
 
 ## Fixture Bundles
 
-Individual fixtures remain available for tests that need unusual setups. Bundles are a **convenience layer on top** — not a replacement.
+Bundles should model real database structure closely enough to act as drag-and-drop database replacements in tests.
+
+The key distinction is:
+- Bundles represent persisted structure and relationships
+- Fixture builders vary scenario shape and role assignments
 
 ### Bundle design
 
-A bundle is a dataclass that aggregates the fixtures needed for a common test scenario:
+The canonical fixture should be a universal scenario bundle containing a coherent DB snapshot:
+- users and admins
+- source works
+- novels
+- novel contributors
+- chapters
+- chapter contents / versions
+- label groups
+- label contributors
+- label datas
+- labels
 
-```python
-from dataclasses import dataclass
-from src.auth.models import User
-from src.novels.models import Chapter, ChapterContent, Novel, NovelContributor, SourceWork
+This top-level bundle should preserve one-to-many relationships instead of collapsing them into a single happy-path row per table.
 
+### Universal plus granular bundles
 
-@dataclass
-class NovelFixtureBundle:
-    """Everything needed to test novel-level operations."""
-    user: User
-    source_work: SourceWork
-    novel: Novel
-    contributor: NovelContributor
-    chapter: Chapter
-    chapter_content: ChapterContent
-```
+Use one canonical universal bundle as the source of truth, then provide smaller projections for tests that want less surface area.
 
-A single fixture returns the bundle:
+For example:
+- `scenario_bundle` — full DB snapshot
+- `novel_bundle` — one novel plus contributors, chapters, and related labeling state
+- `chapter_bundle` — one chapter plus all content versions and attached label groups
+- `label_group_bundle` — one label group plus contributors and label data versions
 
-```python
-@pytest.fixture
-def novel_bundle(test_db: Session, no_hash: Hash) -> NovelFixtureBundle:
-    user = User(user_name="test_user", user_hashed_password=no_hash.hash("pass"), user_type=UserType.USER)
-    test_db.add(user)
-    test_db.commit()
-    # ... create all objects ...
-    return NovelFixtureBundle(
-        user=user,
-        source_work=sw,
-        novel=novel,
-        contributor=contributor,
-        chapter=chapter,
-        chapter_content=cc,
-    )
-```
+Granular bundles should be views into the same graph shape where possible, not independent ad hoc fixture families.
+
+### Access model is part of the bundle
+
+For this codebase, a useful DB replacement must include both resource rows and permission rows. A bundle is incomplete if it contains a novel but not the users and contributor rows needed to explain who can see or modify it.
+
+That means bundles should expose:
+- users by role or name
+- contributor rows grouped by novel / label group
+- convenience lookups for common actors such as owners, editors, viewers, and admins
 
 ### Usage in tests
 
-```python
-class TestInsertChapter:
-    def test_basic(self, test_db: Session, novel_bundle: NovelFixtureBundle):
-        chapter, cc = insert_chapter(
-            test_db, novel_bundle.user, novel_bundle.novel.novel_id,
-            CreateChapter(chapter_num=2)
-        )
-        assert chapter.chapter_num == 2
-```
-
-### Bundle hierarchy
-
-Bundles can compose:
+Tests should be able to navigate the bundle the same way the schema is navigated conceptually, for example:
 
 ```python
-@dataclass
-class LabelFixtureBundle:
-    """Everything needed to test label operations."""
-    novel: NovelFixtureBundle
-    label_group: LabelGroup
-    label_contributor: LabelContributor
-    label_data: LabelData
-    labels: list[Label]
+actor = scenario_bundle.users.by_name["alice"]
+novel = scenario_bundle.novels[0]
+chapter = novel.chapters[0]
+latest_content = chapter.contents[-1]
+label_group = chapter.label_groups[0]
 ```
 
-### When NOT to use bundles
+### When to use individual fixtures
 
-- Tests that need specific visibility levels (private, restricted, unlisted)
-- Tests that need multiple users with different roles
-- Tests that deliberately create invalid/partial state
-- Permission tests that test different user perspectives on the same data
+Use focused fixtures or scenario builders when a test needs:
+- deliberately invalid or partial state
+- a very specific edge case that would make the shared bundle noisy
+- a tiny unit-level setup where the universal graph would add more ceremony than value
 
-For these cases, use individual fixtures or purpose-built populators.
+The default should still be to prefer schema-aligned bundles for integration-style tests.
 
 ## Test Class Structure
 
@@ -585,11 +571,12 @@ This is a phased migration from the current test structure. Each phase can be me
 - Split giant test functions into classes grouped by function-under-test
 - No behavioral changes — just restructuring
 
-### Phase 2: Fixture bundles
+### Phase 2: Schema-aligned scenario bundles
 
-- Define bundle dataclasses in `backend/tests/fixtures/bundles.py`
-- Create bundle fixtures in populators
-- Migrate tests to use bundles where appropriate (keep individual fixtures available)
+- Redesign bundle dataclasses around real DB structure and access relationships
+- Introduce one universal scenario bundle as the canonical shared fixture
+- Add granular bundle projections for novels, chapters, label groups, and label data
+- Keep specialized fixtures for intentionally narrow or invalid setups
 
 ### Phase 3: Gate infrastructure
 
@@ -600,8 +587,9 @@ This is a phased migration from the current test structure. Each phase can be me
 
 ### Phase 4: Fixture validation layer
 
-- Add nontriviality assertions to all data-loading fixtures
-- Create explicit fixture validation tests if needed
+- Keep explicit fixture validation tests for shared bundles and loaders
+- Expand nontriviality assertions beyond non-empty data to cover relationship integrity and useful scenario shape
+- Ensure universal bundles validate both resource rows and access-control rows
 
 ## Relevant Files
 

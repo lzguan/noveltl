@@ -5,6 +5,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 
 from src.auth.models import User
+from tests.gate_logging import log_gate
 
 
 class TestTokenEndpoint:
@@ -95,4 +96,4 @@ class TestRegisterEndpoint:
 )
 def test_gate():
     """All auth router tests must pass before downstream layers run."""
-    pass
+    log_gate("gate::auth::router")

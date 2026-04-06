@@ -12,16 +12,17 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.auth.models import User
 from src.labels.constants import LabelRole
 from src.labels.models import Label as LabelModel
 from src.labels.models import LabelContributor, LabelData, LabelGroup
 from src.labels.schemas import Label as LabelSchema
-from src.novels.models import Chapter, ChapterContent, Novel, NovelContributor
+from src.novels.models import ChapterContent
 from src.novels.schemas import TextOp
 from src.novels.service import modify_chapter_content
 from src.novels.utils import apply_text_ops
 from tests.conftest import DataLoader
+from tests.fixtures.bundles import ScenarioBundle
+from tests.gate_logging import log_gate
 
 pytestmark = pytest.mark.dependency(
     depends=["gate::novels::service", "gate::novels::utils"],
@@ -32,19 +33,19 @@ pytestmark = pytest.mark.dependency(
 @pytest.fixture
 def dd_label_group(
     test_db: Session,
-    chinese_xianxia_small_test_novel: Novel,
-    chinese_xianxia_small_test_user: User,
+    chinese_xianxia_small_test_scenario: ScenarioBundle,
 ) -> LabelGroup:
     """Create a label group for the test novel."""
+    novel_bundle = chinese_xianxia_small_test_scenario.novels[0]
     group = LabelGroup(
         label_group_name="Data Driven Test Group",
-        novel_id=chinese_xianxia_small_test_novel.novel_id,
+        novel_id=novel_bundle.novel.novel_id,
     )
     test_db.add(group)
     test_db.commit()
     test_db.add(LabelContributor(
         label_group_id=group.label_group_id,
-        user_id=chinese_xianxia_small_test_user.user_id,
+        user_id=novel_bundle.user.user_id,
         label_contributor_role=LabelRole.OWNER,
     ))
     test_db.commit()
@@ -54,8 +55,7 @@ def dd_label_group(
 @pytest.fixture
 def dd_chapter_0_labels(
     test_db: Session,
-    chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],
-    chinese_xianxia_small_test_contributor: NovelContributor,
+    chinese_xianxia_small_test_scenario: ScenarioBundle,
     dd_label_group: LabelGroup,
     autolabel_loader: DataLoader,
 ) -> tuple[ChapterContent, list[LabelModel]]:
@@ -63,7 +63,7 @@ def dd_chapter_0_labels(
     Load autolabel data for chapter 0 and insert as real Labels in the DB.
     Returns the ChapterContent and the created labels.
     """
-    _, cc = chinese_xianxia_small_test_chapters[0]
+    cc = chinese_xianxia_small_test_scenario.novels[0].chapters[0].latest_content
 
     # Load autolabel JSON for chapter 0
     autolabel_json = json.loads(next(autolabel_loader("chinese/chinese_xianxia/small_test/cluener")))
@@ -102,15 +102,15 @@ class TestDataDrivenModifyChapterContent:
     def test_delete_substring_matches_in_memory(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_user: User,
-        chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],
+        chinese_xianxia_small_test_scenario: ScenarioBundle,
         dd_chapter_0_labels: tuple[ChapterContent, list[LabelModel]],
     ):
         """
         Delete the first line of chapter 0 and verify that the service function
         produces the same text and label positions as apply_text_ops in memory.
         """
-        chapter, cc = chinese_xianxia_small_test_chapters[0]
+        chapter_bundle = chinese_xianxia_small_test_scenario.novels[0].chapters[0]
+        chapter, cc = chapter_bundle.chapter, chapter_bundle.latest_content
         _, db_labels = dd_chapter_0_labels
 
         original_text = cc.chapter_content_text
@@ -126,7 +126,7 @@ class TestDataDrivenModifyChapterContent:
 
         # Service function
         modify_chapter_content(
-            test_db, chinese_xianxia_small_test_user,
+            test_db, chinese_xianxia_small_test_scenario.novels[0].user,
             chapter.chapter_id, cc.chapter_content_id, ops,
         )
 
@@ -168,14 +168,14 @@ class TestDataDrivenModifyChapterContent:
     def test_insert_text_matches_in_memory(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_user: User,
-        chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],
+        chinese_xianxia_small_test_scenario: ScenarioBundle,
         dd_chapter_0_labels: tuple[ChapterContent, list[LabelModel]],
     ):
         """
         Insert text at the beginning of chapter 0 and verify service matches in-memory.
         """
-        chapter, cc = chinese_xianxia_small_test_chapters[0]
+        chapter_bundle = chinese_xianxia_small_test_scenario.novels[0].chapters[0]
+        chapter, cc = chapter_bundle.chapter, chapter_bundle.latest_content
         _, db_labels = dd_chapter_0_labels
 
         original_text = cc.chapter_content_text
@@ -188,7 +188,7 @@ class TestDataDrivenModifyChapterContent:
 
         # Service
         modify_chapter_content(
-            test_db, chinese_xianxia_small_test_user,
+            test_db, chinese_xianxia_small_test_scenario.novels[0].user,
             chapter.chapter_id, cc.chapter_content_id, ops,
         )
 
@@ -228,14 +228,14 @@ class TestDataDrivenModifyChapterContent:
     def test_multiple_ops_match_in_memory(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_user: User,
-        chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],
+        chinese_xianxia_small_test_scenario: ScenarioBundle,
         dd_chapter_0_labels: tuple[ChapterContent, list[LabelModel]],
     ):
         """
         Apply multiple operations (delete first line, insert prefix) and verify match.
         """
-        chapter, cc = chinese_xianxia_small_test_chapters[0]
+        chapter_bundle = chinese_xianxia_small_test_scenario.novels[0].chapters[0]
+        chapter, cc = chapter_bundle.chapter, chapter_bundle.latest_content
         _, db_labels = dd_chapter_0_labels
 
         original_text = cc.chapter_content_text
@@ -251,7 +251,7 @@ class TestDataDrivenModifyChapterContent:
 
         # Service
         modify_chapter_content(
-            test_db, chinese_xianxia_small_test_user,
+            test_db, chinese_xianxia_small_test_scenario.novels[0].user,
             chapter.chapter_id, cc.chapter_content_id, ops,
         )
 
@@ -309,4 +309,4 @@ class TestDataDrivenModifyChapterContent:
 )
 def test_gate():
     """All novels integration_data tests must pass before downstream layers run."""
-    pass
+    log_gate("gate::novels::integration_data")

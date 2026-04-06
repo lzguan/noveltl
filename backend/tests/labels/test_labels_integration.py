@@ -1,16 +1,14 @@
 import logging
-from typing import Any
 
-import pytest  # type: ignore
+import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.auth import models as auth_models
-from src.autolabels import models as autolabel_models
 from src.labels import models as label_models
 from src.labels.schemas import CreateLabelDataByAutoLabel
 from src.labels.service import insert_label_datas_by_autolabels
-from src.novels import models as novel_models
+from tests.fixtures.bundles import ScenarioBundle
+from tests.gate_logging import log_gate
 
 logger = logging.getLogger(__name__)
 
@@ -24,42 +22,46 @@ class TestInsertLabelDatasByAutolabels:
     """Tests for insert_label_datas_by_autolabels cross-module operation."""
 
     @pytest.mark.order(1)
-    @pytest.mark.dependency(name="insert_label_datas_by_autolabels", scope="session")
     @pytest.mark.dependency(name="labels::integration::insert_label_datas_by_autolabels", scope="session")
     def test_basic(
         self,
-        chinese_xianxia_small_test_autolabels_cluener: list[autolabel_models.AutoLabel],
-        chinese_xianxia_small_test_label_group: label_models.LabelGroup,
-        chinese_xianxia_small_test_chapters: list[tuple[novel_models.Chapter, novel_models.ChapterContent]],
-        chinese_xianxia_small_test_novel: novel_models.Novel,
-        chinese_xianxia_small_test_default_params_cluener: dict[str, Any],
-        chinese_xianxia_small_test_user: auth_models.User,
-        chinese_xianxia_small_test_label_contributor: label_models.LabelContributor,
-        chinese_xianxia_small_test_contributor: novel_models.NovelContributor,
+        chinese_xianxia_small_test_autolabels_scenario: ScenarioBundle,
         test_db: Session,
     ):
-        # this test is AI generated.
-        request = CreateLabelDataByAutoLabel(model_name='cluener', model_params=chinese_xianxia_small_test_default_params_cluener)
-        res = insert_label_datas_by_autolabels(test_db, chinese_xianxia_small_test_user, chinese_xianxia_small_test_label_group.label_group_id, request)
+        novel_bundle = chinese_xianxia_small_test_autolabels_scenario.novels[0]
+        label_bundle = chinese_xianxia_small_test_autolabels_scenario.label_groups[0]
+        request = CreateLabelDataByAutoLabel(
+            model_name='cluener',
+            model_params=novel_bundle.model_params_by_name["cluener"],
+        )
+        res = insert_label_datas_by_autolabels(
+            test_db,
+            novel_bundle.user,
+            label_bundle.label_group.label_group_id,
+            request,
+        )
 
         assert len(res.errors) == 0, f"Expected 0 errors, got: {res.errors}"
-        expected_count = len(chinese_xianxia_small_test_autolabels_cluener)
+        expected_count = len(novel_bundle.autolabels_by_name["cluener"])
         logger.info(f"Expecting {expected_count} successes, have {len(res.success)} successes + {len(res.errors)} failures")
         assert len(res.success) == expected_count
 
-        source_revision_ids = {al.chapter_content_id for al in chinese_xianxia_small_test_autolabels_cluener}
+        source_revision_ids = {
+            autolabel.chapter_content_id
+            for autolabel in novel_bundle.autolabels_by_name["cluener"]
+        }
         assert {s[1] for s in res.success} == source_revision_ids
 
         label_datas_in_db = test_db.execute(
             select(label_models.LabelData).where(
-                label_models.LabelData.label_group_id == chinese_xianxia_small_test_label_group.label_group_id
+                label_models.LabelData.label_group_id == label_bundle.label_group.label_group_id
             )
         ).scalars().all()
         assert len(label_datas_in_db) == expected_count
 
         source_data_map = {
             al.chapter_content_id: al.auto_label_data
-            for al in chinese_xianxia_small_test_autolabels_cluener
+            for al in novel_bundle.autolabels_by_name["cluener"]
         }
 
         for label_data in label_datas_in_db:
@@ -88,7 +90,6 @@ class TestInsertLabelDatasByAutolabels:
     @pytest.mark.dependency(
         name="gate::labels::integration::insert_label_datas_by_autolabels",
         depends=[
-            "insert_label_datas_by_autolabels",
             "labels::integration::insert_label_datas_by_autolabels",
         ],
         scope="session",
@@ -107,4 +108,4 @@ class TestInsertLabelDatasByAutolabels:
 )
 def test_gate():
     """All labels integration tests must pass before downstream layers run."""
-    pass
+    log_gate("gate::labels::integration")

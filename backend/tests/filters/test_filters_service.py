@@ -7,16 +7,25 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.auth.models import User
 from src.filters.utils import copy_label_group
 from src.labels import models as label_models
 from src.labels.constants import LabelRole
 from src.labels.exceptions import LabelGroupNotFoundException
+from tests.fixtures.bundles import LabelFixtureBundle, ScenarioBundle
+from tests.gate_logging import log_gate
 
 pytestmark = pytest.mark.dependency(
     depends=["gate::labels::permissions"],
     scope="session",
 )
+
+
+def _label_access_user(bundle: ScenarioBundle, user_name: str):
+    return bundle.users.by_name[user_name]
+
+
+def _label_access_group(bundle: ScenarioBundle, group_name: str) -> LabelFixtureBundle:
+    return bundle.label_groups_by_name[group_name]
 
 
 class TestCopyLabelGroup:
@@ -26,35 +35,33 @@ class TestCopyLabelGroup:
     def test_owner_can_copy_label_group(
         self,
         test_db: Session,
-        lp_user_1: User,
-        lp_label_group_owner_only: label_models.LabelGroup,
-        lp_label_data_owner_only: label_models.LabelData,
-        lp_labels_owner_only: list[label_models.Label],
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_alice")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         new_group = copy_label_group(
             test_db,
-            lp_user_1,
-            lp_label_group_owner_only.label_group_id,
+            actor,
+            label_group.label_group.label_group_id,
             "Copied Group"
         )
 
         assert new_group.label_group_name == "Copied Group"
-        assert new_group.novel_id == lp_label_group_owner_only.novel_id
-        assert new_group.label_group_id != lp_label_group_owner_only.label_group_id
+        assert new_group.novel_id == label_group.label_group.novel_id
+        assert new_group.label_group_id != label_group.label_group.label_group_id
 
     @pytest.mark.dependency(name="filters::service::editor_can_copy", scope="session")
     def test_editor_can_copy_label_group(
         self,
         test_db: Session,
-        lp_user_2: User,
-        lp_label_group_with_editor: label_models.LabelGroup,
-        lp_label_data_with_editor: label_models.LabelData,
-        lp_labels_with_editor: list[label_models.Label],
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "With Editor Group")
         new_group = copy_label_group(
             test_db,
-            lp_user_2,
-            lp_label_group_with_editor.label_group_id,
+            actor,
+            label_group.label_group.label_group_id,
             "Editor Copy"
         )
         assert new_group is not None
@@ -64,15 +71,15 @@ class TestCopyLabelGroup:
     def test_viewer_cannot_copy_label_group(
         self,
         test_db: Session,
-        lp_user_2: User,
-        lp_label_group_with_viewer: label_models.LabelGroup,
-        lp_label_data_with_viewer: label_models.LabelData,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "With Viewer Group")
         with pytest.raises(LabelGroupNotFoundException):
             copy_label_group(
                 test_db,
-                lp_user_2,
-                lp_label_group_with_viewer.label_group_id,
+                actor,
+                label_group.label_group.label_group_id,
                 "Should Fail"
             )
 
@@ -80,14 +87,15 @@ class TestCopyLabelGroup:
     def test_non_contributor_cannot_copy(
         self,
         test_db: Session,
-        lp_user_3: User,
-        lp_label_group_owner_only: label_models.LabelGroup,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_charlie")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         with pytest.raises(LabelGroupNotFoundException):
             copy_label_group(
                 test_db,
-                lp_user_3,
-                lp_label_group_owner_only.label_group_id,
+                actor,
+                label_group.label_group.label_group_id,
                 "Should Fail"
             )
 
@@ -95,15 +103,15 @@ class TestCopyLabelGroup:
     def test_copy_preserves_contributors(
         self,
         test_db: Session,
-        lp_user_1: User,
-        lp_user_2: User,
-        lp_label_group_with_editor: label_models.LabelGroup,
-        lp_label_data_with_editor: label_models.LabelData,
+        label_access_scenario: ScenarioBundle,
     ):
+        owner = _label_access_user(label_access_scenario, "lp_alice")
+        editor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "With Editor Group")
         new_group = copy_label_group(
             test_db,
-            lp_user_1,
-            lp_label_group_with_editor.label_group_id,
+            owner,
+            label_group.label_group.label_group_id,
             "With Contributors",
             keep_contributors=True
         )
@@ -116,22 +124,21 @@ class TestCopyLabelGroup:
 
         assert len(contributors) == 2
         user_ids = {c.user_id for c in contributors}
-        assert lp_user_1.user_id in user_ids
-        assert lp_user_2.user_id in user_ids
+        assert owner.user_id in user_ids
+        assert editor.user_id in user_ids
 
     @pytest.mark.dependency(name="filters::service::copy_without_contributors_sets_owner", scope="session")
     def test_copy_without_contributors_sets_current_user_as_owner(
         self,
         test_db: Session,
-        lp_user_1: User,
-        lp_user_2: User,
-        lp_label_group_with_editor: label_models.LabelGroup,
-        lp_label_data_with_editor: label_models.LabelData,
+        label_access_scenario: ScenarioBundle,
     ):
+        owner = _label_access_user(label_access_scenario, "lp_alice")
+        label_group = _label_access_group(label_access_scenario, "With Editor Group")
         new_group = copy_label_group(
             test_db,
-            lp_user_1,
-            lp_label_group_with_editor.label_group_id,
+            owner,
+            label_group.label_group.label_group_id,
             "New Owner Only",
             keep_contributors=False
         )
@@ -143,22 +150,21 @@ class TestCopyLabelGroup:
         ).scalars().all()
 
         assert len(contributors) == 1
-        assert contributors[0].user_id == lp_user_1.user_id
+        assert contributors[0].user_id == owner.user_id
         assert contributors[0].label_contributor_role == LabelRole.OWNER
 
     @pytest.mark.dependency(name="filters::service::copy_includes_label_data", scope="session")
     def test_copy_includes_label_data(
         self,
         test_db: Session,
-        lp_user_1: User,
-        lp_label_group_owner_only: label_models.LabelGroup,
-        lp_label_data_owner_only: label_models.LabelData,
-        lp_labels_owner_only: list[label_models.Label],
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_alice")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         new_group = copy_label_group(
             test_db,
-            lp_user_1,
-            lp_label_group_owner_only.label_group_id,
+            actor,
+            label_group.label_group.label_group_id,
             "With Data"
         )
 
@@ -169,21 +175,20 @@ class TestCopyLabelGroup:
         ).scalars().all()
 
         assert len(label_datas) == 1
-        assert label_datas[0].chapter_content_id == lp_label_data_owner_only.chapter_content_id
+        assert label_datas[0].chapter_content_id == label_group.label_data.chapter_content_id
 
     @pytest.mark.dependency(name="filters::service::copy_includes_labels", scope="session")
     def test_copy_includes_labels(
         self,
         test_db: Session,
-        lp_user_1: User,
-        lp_label_group_owner_only: label_models.LabelGroup,
-        lp_label_data_owner_only: label_models.LabelData,
-        lp_labels_owner_only: list[label_models.Label],
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_alice")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         new_group = copy_label_group(
             test_db,
-            lp_user_1,
-            lp_label_group_owner_only.label_group_id,
+            actor,
+            label_group.label_group.label_group_id,
             "With Labels"
         )
 
@@ -199,8 +204,12 @@ class TestCopyLabelGroup:
             ).order_by(label_models.Label.label_start)
         ).scalars().all()
 
-        assert len(new_labels) == len(lp_labels_owner_only)
-        for new_label, orig_label in zip(new_labels, sorted(lp_labels_owner_only, key=lambda x: x.label_start), strict=False):
+        assert len(new_labels) == len(label_group.labels)
+        for new_label, orig_label in zip(
+            new_labels,
+            sorted(label_group.labels, key=lambda label: label.label_start),
+            strict=False,
+        ):
             assert new_label.label_word == orig_label.label_word
             assert new_label.label_start == orig_label.label_start
             assert new_label.label_end == orig_label.label_end
@@ -210,24 +219,23 @@ class TestCopyLabelGroup:
     def test_copy_does_not_affect_original(
         self,
         test_db: Session,
-        lp_user_1: User,
-        lp_label_group_owner_only: label_models.LabelGroup,
-        lp_label_data_owner_only: label_models.LabelData,
-        lp_labels_owner_only: list[label_models.Label],
+        label_access_scenario: ScenarioBundle,
     ):
-        original_label_count = len(lp_labels_owner_only)
+        actor = _label_access_user(label_access_scenario, "lp_alice")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
+        original_label_count = len(label_group.labels)
 
         copy_label_group(
             test_db,
-            lp_user_1,
-            lp_label_group_owner_only.label_group_id,
+            actor,
+            label_group.label_group.label_group_id,
             "Copy"
         )
 
         # Verify original still intact
         original_labels = test_db.execute(
             select(label_models.Label).where(
-                label_models.Label.label_data_id == lp_label_data_owner_only.label_data_id
+                label_models.Label.label_data_id == label_group.label_data.label_data_id
             )
         ).scalars().all()
 
@@ -262,4 +270,4 @@ class TestCopyLabelGroup:
 )
 def test_gate():
     """All filters service tests must pass before downstream layers run."""
-    pass
+    log_gate("gate::filters::service")

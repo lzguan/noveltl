@@ -17,7 +17,7 @@ from src.models import Base
 from src.redis import get_redis_for_app
 
 
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     """Drop all tables in test_db before test session begins."""
     url = os.getenv("TEST_URL")
     if url is None:

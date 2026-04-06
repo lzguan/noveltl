@@ -7,11 +7,6 @@ import pytest
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
-pytestmark = pytest.mark.dependency(
-    depends=["gate::fixture_validation", "gate::novels::permissions"],
-    scope="session",
-)
-
 from src.auth.models import User
 from src.labels import models as label_models
 from src.labels.permissions import (
@@ -20,6 +15,21 @@ from src.labels.permissions import (
     label_group_mod_access_update,
     label_mod_access_delete,
 )
+from tests.fixtures.bundles import LabelFixtureBundle, ScenarioBundle
+from tests.gate_logging import log_gate
+
+pytestmark = pytest.mark.dependency(
+    depends=["gate::fixture_validation", "gate::novels::permissions"],
+    scope="session",
+)
+
+
+def _label_access_user(bundle: ScenarioBundle, user_name: str) -> User:
+    return bundle.users.by_name[user_name]
+
+
+def _label_access_group(bundle: ScenarioBundle, group_name: str) -> LabelFixtureBundle:
+    return bundle.label_groups_by_name[group_name]
 
 
 class TestLabelGroupSelect:
@@ -29,28 +39,30 @@ class TestLabelGroupSelect:
     def test_owner_can_select_own_group(
         self,
         test_db: Session,
-        lp_user_1: User,
-        lp_label_group_owner_only: label_models.LabelGroup,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_alice")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         q = select(label_models.LabelGroup).where(
-            label_models.LabelGroup.label_group_id == lp_label_group_owner_only.label_group_id
+            label_models.LabelGroup.label_group_id == label_group.label_group.label_group_id
         )
-        q = label_group_mod_access_select(q, lp_user_1)
+        q = label_group_mod_access_select(q, actor)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
-        assert result.label_group_id == lp_label_group_owner_only.label_group_id
+        assert result.label_group_id == label_group.label_group.label_group_id
 
     @pytest.mark.dependency(name="labels::permissions::editor_can_select_group", scope="session")
     def test_editor_can_select_group(
         self,
         test_db: Session,
-        lp_user_2: User,
-        lp_label_group_with_editor: label_models.LabelGroup,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "With Editor Group")
         q = select(label_models.LabelGroup).where(
-            label_models.LabelGroup.label_group_id == lp_label_group_with_editor.label_group_id
+            label_models.LabelGroup.label_group_id == label_group.label_group.label_group_id
         )
-        q = label_group_mod_access_select(q, lp_user_2)
+        q = label_group_mod_access_select(q, actor)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
@@ -58,13 +70,14 @@ class TestLabelGroupSelect:
     def test_viewer_can_select_group(
         self,
         test_db: Session,
-        lp_user_2: User,
-        lp_label_group_with_viewer: label_models.LabelGroup,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "With Viewer Group")
         q = select(label_models.LabelGroup).where(
-            label_models.LabelGroup.label_group_id == lp_label_group_with_viewer.label_group_id
+            label_models.LabelGroup.label_group_id == label_group.label_group.label_group_id
         )
-        q = label_group_mod_access_select(q, lp_user_2)
+        q = label_group_mod_access_select(q, actor)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
@@ -72,14 +85,15 @@ class TestLabelGroupSelect:
     def test_viewer_cannot_select_with_only_editors(
         self,
         test_db: Session,
-        lp_user_2: User,
-        lp_label_group_with_viewer: label_models.LabelGroup,
+        label_access_scenario: ScenarioBundle,
     ):
         """Viewer should not be able to select when only_editors=True."""
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "With Viewer Group")
         q = select(label_models.LabelGroup).where(
-            label_models.LabelGroup.label_group_id == lp_label_group_with_viewer.label_group_id
+            label_models.LabelGroup.label_group_id == label_group.label_group.label_group_id
         )
-        q = label_group_mod_access_select(q, lp_user_2, only_editors=True)
+        q = label_group_mod_access_select(q, actor, only_editors=True)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
@@ -87,13 +101,14 @@ class TestLabelGroupSelect:
     def test_editor_can_select_with_only_editors(
         self,
         test_db: Session,
-        lp_user_2: User,
-        lp_label_group_with_editor: label_models.LabelGroup,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "With Editor Group")
         q = select(label_models.LabelGroup).where(
-            label_models.LabelGroup.label_group_id == lp_label_group_with_editor.label_group_id
+            label_models.LabelGroup.label_group_id == label_group.label_group.label_group_id
         )
-        q = label_group_mod_access_select(q, lp_user_2, only_editors=True)
+        q = label_group_mod_access_select(q, actor, only_editors=True)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
@@ -101,13 +116,14 @@ class TestLabelGroupSelect:
     def test_non_contributor_cannot_select_group(
         self,
         test_db: Session,
-        lp_user_3: User,
-        lp_label_group_owner_only: label_models.LabelGroup,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_charlie")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         q = select(label_models.LabelGroup).where(
-            label_models.LabelGroup.label_group_id == lp_label_group_owner_only.label_group_id
+            label_models.LabelGroup.label_group_id == label_group.label_group.label_group_id
         )
-        q = label_group_mod_access_select(q, lp_user_3)
+        q = label_group_mod_access_select(q, actor)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
@@ -115,13 +131,14 @@ class TestLabelGroupSelect:
     def test_admin_can_select_any_group(
         self,
         test_db: Session,
-        lp_admin: User,
-        lp_label_group_owner_only: label_models.LabelGroup,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_admin")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         q = select(label_models.LabelGroup).where(
-            label_models.LabelGroup.label_group_id == lp_label_group_owner_only.label_group_id
+            label_models.LabelGroup.label_group_id == label_group.label_group.label_group_id
         )
-        q = label_group_mod_access_select(q, lp_admin)
+        q = label_group_mod_access_select(q, actor)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
@@ -129,14 +146,15 @@ class TestLabelGroupSelect:
     def test_cannot_select_group_on_private_novel_without_access(
         self,
         test_db: Session,
-        lp_user_2: User,
-        lp_label_group_private_novel: label_models.LabelGroup,
+        label_access_scenario: ScenarioBundle,
     ):
         """user_2 has no access to the private novel, so cannot see label group."""
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "Private Novel Group")
         q = select(label_models.LabelGroup).where(
-            label_models.LabelGroup.label_group_id == lp_label_group_private_novel.label_group_id
+            label_models.LabelGroup.label_group_id == label_group.label_group.label_group_id
         )
-        q = label_group_mod_access_select(q, lp_user_2)
+        q = label_group_mod_access_select(q, actor)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
@@ -165,16 +183,17 @@ class TestLabelGroupUpdate:
     def test_owner_can_update(
         self,
         test_db: Session,
-        lp_user_1: User,
-        lp_label_group_owner_only: label_models.LabelGroup,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_alice")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         stmt = (
             update(label_models.LabelGroup)
-            .where(label_models.LabelGroup.label_group_id == lp_label_group_owner_only.label_group_id)
+            .where(label_models.LabelGroup.label_group_id == label_group.label_group.label_group_id)
             .values(label_group_name="Updated Name")
             .returning(label_models.LabelGroup)
         )
-        stmt = label_group_mod_access_update(stmt, lp_user_1)
+        stmt = label_group_mod_access_update(stmt, actor)
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is not None
         assert result.label_group_name == "Updated Name"
@@ -183,16 +202,17 @@ class TestLabelGroupUpdate:
     def test_editor_can_update(
         self,
         test_db: Session,
-        lp_user_2: User,
-        lp_label_group_with_editor: label_models.LabelGroup,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "With Editor Group")
         stmt = (
             update(label_models.LabelGroup)
-            .where(label_models.LabelGroup.label_group_id == lp_label_group_with_editor.label_group_id)
+            .where(label_models.LabelGroup.label_group_id == label_group.label_group.label_group_id)
             .values(label_group_name="Editor Updated")
             .returning(label_models.LabelGroup)
         )
-        stmt = label_group_mod_access_update(stmt, lp_user_2)
+        stmt = label_group_mod_access_update(stmt, actor)
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is not None
 
@@ -200,37 +220,39 @@ class TestLabelGroupUpdate:
     def test_viewer_cannot_update(
         self,
         test_db: Session,
-        lp_user_2: User,
-        lp_label_group_with_viewer: label_models.LabelGroup,
+        label_access_scenario: ScenarioBundle,
     ):
-        original_name = lp_label_group_with_viewer.label_group_name
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "With Viewer Group")
+        original_name = label_group.label_group.label_group_name
         stmt = (
             update(label_models.LabelGroup)
-            .where(label_models.LabelGroup.label_group_id == lp_label_group_with_viewer.label_group_id)
+            .where(label_models.LabelGroup.label_group_id == label_group.label_group.label_group_id)
             .values(label_group_name="Should Not Update")
             .returning(label_models.LabelGroup)
         )
-        stmt = label_group_mod_access_update(stmt, lp_user_2)
+        stmt = label_group_mod_access_update(stmt, actor)
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is None
         # Verify it wasn't updated
-        test_db.refresh(lp_label_group_with_viewer)
-        assert lp_label_group_with_viewer.label_group_name == original_name
+        test_db.refresh(label_group.label_group)
+        assert label_group.label_group.label_group_name == original_name
 
     @pytest.mark.dependency(name="labels::permissions::non_contributor_cannot_update", scope="session")
     def test_non_contributor_cannot_update(
         self,
         test_db: Session,
-        lp_user_3: User,
-        lp_label_group_owner_only: label_models.LabelGroup,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_charlie")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         stmt = (
             update(label_models.LabelGroup)
-            .where(label_models.LabelGroup.label_group_id == lp_label_group_owner_only.label_group_id)
+            .where(label_models.LabelGroup.label_group_id == label_group.label_group.label_group_id)
             .values(label_group_name="Hacked")
             .returning(label_models.LabelGroup)
         )
-        stmt = label_group_mod_access_update(stmt, lp_user_3)
+        stmt = label_group_mod_access_update(stmt, actor)
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is None
 
@@ -255,13 +277,14 @@ class TestLabelDataSelect:
     def test_owner_can_select_label_data(
         self,
         test_db: Session,
-        lp_user_1: User,
-        lp_label_data_owner_only: label_models.LabelData,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_alice")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         q = select(label_models.LabelData).where(
-            label_models.LabelData.label_data_id == lp_label_data_owner_only.label_data_id
+            label_models.LabelData.label_data_id == label_group.label_data.label_data_id
         )
-        q = label_data_mod_access_select(q, lp_user_1)
+        q = label_data_mod_access_select(q, actor)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
@@ -269,13 +292,14 @@ class TestLabelDataSelect:
     def test_editor_can_select_label_data(
         self,
         test_db: Session,
-        lp_user_2: User,
-        lp_label_data_with_editor: label_models.LabelData,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "With Editor Group")
         q = select(label_models.LabelData).where(
-            label_models.LabelData.label_data_id == lp_label_data_with_editor.label_data_id
+            label_models.LabelData.label_data_id == label_group.label_data.label_data_id
         )
-        q = label_data_mod_access_select(q, lp_user_2)
+        q = label_data_mod_access_select(q, actor)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
@@ -283,13 +307,14 @@ class TestLabelDataSelect:
     def test_viewer_can_select_label_data(
         self,
         test_db: Session,
-        lp_user_2: User,
-        lp_label_data_with_viewer: label_models.LabelData,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "With Viewer Group")
         q = select(label_models.LabelData).where(
-            label_models.LabelData.label_data_id == lp_label_data_with_viewer.label_data_id
+            label_models.LabelData.label_data_id == label_group.label_data.label_data_id
         )
-        q = label_data_mod_access_select(q, lp_user_2)
+        q = label_data_mod_access_select(q, actor)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
@@ -297,13 +322,14 @@ class TestLabelDataSelect:
     def test_non_contributor_cannot_select_label_data(
         self,
         test_db: Session,
-        lp_user_3: User,
-        lp_label_data_owner_only: label_models.LabelData,
+        label_access_scenario: ScenarioBundle,
     ):
+        actor = _label_access_user(label_access_scenario, "lp_charlie")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         q = select(label_models.LabelData).where(
-            label_models.LabelData.label_data_id == lp_label_data_owner_only.label_data_id
+            label_models.LabelData.label_data_id == label_group.label_data.label_data_id
         )
-        q = label_data_mod_access_select(q, lp_user_3)
+        q = label_data_mod_access_select(q, actor)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
@@ -311,14 +337,15 @@ class TestLabelDataSelect:
     def test_cannot_select_label_data_on_private_novel(
         self,
         test_db: Session,
-        lp_user_2: User,
-        lp_label_data_private_novel: label_models.LabelData,
+        label_access_scenario: ScenarioBundle,
     ):
         """user_2 cannot see label data on private novel they have no access to."""
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "Private Novel Group")
         q = select(label_models.LabelData).where(
-            label_models.LabelData.label_data_id == lp_label_data_private_novel.label_data_id
+            label_models.LabelData.label_data_id == label_group.label_data.label_data_id
         )
-        q = label_data_mod_access_select(q, lp_user_2)
+        q = label_data_mod_access_select(q, actor)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
@@ -344,15 +371,15 @@ class TestLabelDelete:
     def test_owner_can_delete_labels(
         self,
         test_db: Session,
-        lp_user_1: User,
-        lp_labels_owner_only: list[label_models.Label],
-        lp_label_data_owner_only: label_models.LabelData,
+        label_access_scenario: ScenarioBundle,
     ):
-        label_ids = [lab.label_id for lab in lp_labels_owner_only]
+        actor = _label_access_user(label_access_scenario, "lp_alice")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
+        label_ids = [label.label_id for label in label_group.labels]
         stmt = delete(label_models.Label).where(
             label_models.Label.label_id.in_(label_ids)
         )
-        stmt = label_mod_access_delete(stmt, lp_user_1)
+        stmt = label_mod_access_delete(stmt, actor)
         test_db.execute(stmt)
         test_db.commit()
 
@@ -366,14 +393,15 @@ class TestLabelDelete:
     def test_editor_can_delete_labels(
         self,
         test_db: Session,
-        lp_user_2: User,
-        lp_labels_with_editor: list[label_models.Label],
+        label_access_scenario: ScenarioBundle,
     ):
-        label_ids = [lab.label_id for lab in lp_labels_with_editor]
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "With Editor Group")
+        label_ids = [label.label_id for label in label_group.labels]
         stmt = delete(label_models.Label).where(
             label_models.Label.label_id.in_(label_ids)
         )
-        stmt = label_mod_access_delete(stmt, lp_user_2)
+        stmt = label_mod_access_delete(stmt, actor)
         test_db.execute(stmt)
         test_db.commit()
 
@@ -386,14 +414,15 @@ class TestLabelDelete:
     def test_viewer_cannot_delete_labels(
         self,
         test_db: Session,
-        lp_user_2: User,
-        lp_labels_with_viewer: list[label_models.Label],
+        label_access_scenario: ScenarioBundle,
     ):
-        label_ids = [lab.label_id for lab in lp_labels_with_viewer]
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "With Viewer Group")
+        label_ids = [label.label_id for label in label_group.labels]
         stmt = delete(label_models.Label).where(
             label_models.Label.label_id.in_(label_ids)
         )
-        stmt = label_mod_access_delete(stmt, lp_user_2)
+        stmt = label_mod_access_delete(stmt, actor)
         test_db.execute(stmt)
         test_db.commit()
 
@@ -401,20 +430,21 @@ class TestLabelDelete:
         remaining = test_db.execute(
             select(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
         ).scalars().all()
-        assert len(remaining) == len(lp_labels_with_viewer)
+        assert len(remaining) == len(label_group.labels)
 
     @pytest.mark.dependency(name="labels::permissions::non_contributor_cannot_delete_labels", scope="session")
     def test_non_contributor_cannot_delete_labels(
         self,
         test_db: Session,
-        lp_user_3: User,
-        lp_labels_owner_only: list[label_models.Label],
+        label_access_scenario: ScenarioBundle,
     ):
-        label_ids = [lab.label_id for lab in lp_labels_owner_only]
+        actor = _label_access_user(label_access_scenario, "lp_charlie")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
+        label_ids = [label.label_id for label in label_group.labels]
         stmt = delete(label_models.Label).where(
             label_models.Label.label_id.in_(label_ids)
         )
-        stmt = label_mod_access_delete(stmt, lp_user_3)
+        stmt = label_mod_access_delete(stmt, actor)
         test_db.execute(stmt)
         test_db.commit()
 
@@ -422,20 +452,21 @@ class TestLabelDelete:
         remaining = test_db.execute(
             select(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
         ).scalars().all()
-        assert len(remaining) == len(lp_labels_owner_only)
+        assert len(remaining) == len(label_group.labels)
 
     @pytest.mark.dependency(name="labels::permissions::admin_can_delete_any_labels", scope="session")
     def test_admin_can_delete_any_labels(
         self,
         test_db: Session,
-        lp_admin: User,
-        lp_labels_owner_only: list[label_models.Label],
+        label_access_scenario: ScenarioBundle,
     ):
-        label_ids = [lab.label_id for lab in lp_labels_owner_only]
+        actor = _label_access_user(label_access_scenario, "lp_admin")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
+        label_ids = [label.label_id for label in label_group.labels]
         stmt = delete(label_models.Label).where(
             label_models.Label.label_id.in_(label_ids)
         )
-        stmt = label_mod_access_delete(stmt, lp_admin)
+        stmt = label_mod_access_delete(stmt, actor)
         test_db.execute(stmt)
         test_db.commit()
 
@@ -472,4 +503,4 @@ class TestLabelDelete:
 )
 def test_gate():
     """All labels permissions tests must pass before downstream layers run."""
-    pass
+    log_gate("gate::labels::permissions")

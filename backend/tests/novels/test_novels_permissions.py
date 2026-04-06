@@ -9,11 +9,6 @@ import pytest
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-pytestmark = pytest.mark.dependency(
-    depends=["gate::fixture_validation"],
-    scope="session",
-)
-
 from src.auth.models import User
 from src.novels.models import Chapter, ChapterContent, Novel
 from src.novels.permissions import (
@@ -25,6 +20,14 @@ from src.novels.permissions import (
     novel_mod_access_select,
     novel_mod_access_update,
 )
+from tests.gate_logging import log_gate
+
+pytestmark = pytest.mark.dependency(
+    depends=["gate::fixture_validation"],
+    scope="session",
+)
+
+
 
 # ============================================================
 # novel_mod_access_select
@@ -696,4 +699,4 @@ class TestChapterContentModAccessInsert:
 )
 def test_gate():
     """All novels permissions tests must pass before downstream layers run."""
-    pass
+    log_gate("gate::novels::permissions")

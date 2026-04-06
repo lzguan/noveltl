@@ -9,6 +9,7 @@ from src.autolabels.constants import SepPriority
 from src.autolabels.exceptions import ChunkTooLargeException, TokenDoesNotExistException
 from src.autolabels.worker.interfaces import Tokenizer
 from src.autolabels.worker.utils import _chunk_blocks, _chunk_paragraph, chunk_text  # type: ignore
+from tests.gate_logging import log_gate
 
 
 class TokenizerTestWords(Tokenizer):
@@ -362,4 +363,4 @@ class TestChunkText:
 )
 def test_gate():
     """All autolabels utils tests must pass before downstream layers run."""
-    pass
+    log_gate("gate::autolabels::utils")

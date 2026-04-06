@@ -27,6 +27,7 @@ from src.novels.service import (
     query_novel_by_id,
     query_novels_by_title,
 )
+from tests.gate_logging import log_gate
 
 pytestmark = pytest.mark.dependency(
     depends=["gate::novels::permissions", "gate::novels::utils"],
@@ -685,4 +686,4 @@ class TestInsertChapterPermissions:
 )
 def test_gate():
     """All novels service tests must pass before downstream layers run."""
-    pass
+    log_gate("gate::novels::service")

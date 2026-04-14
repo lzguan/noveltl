@@ -46,7 +46,7 @@ pytest backend/tests/auth/test_auth.py::test_fn                 # Single test
 pytest backend/ -m "slow or not slow"                           # Include slow tests
 ruff format .                                                   # Format
 ruff check --fix .                                              # Lint + auto-fix
-pyrefly check                                                   # Type check (strict mode)
+cd backend && pyrefly check                                     # Type check (strict mode)
 ```
 
 ### Database (run from `backend/`)

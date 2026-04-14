@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/python:3.12-trixie
+FROM mcr.microsoft.com/devcontainers/base:trixie
 WORKDIR /project
 COPY --from=ghcr.io/astral-sh/uv:0.10.9 /uv /uvx /bin/
 ENV UV_PROJECT_ENVIRONMENT="/.venv"

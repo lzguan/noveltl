@@ -24,10 +24,10 @@ from ..models import Base
 from .constants import MAX_AUTHOR_LENGTH, MAX_CHAPTER_TITLE_LEN, MAX_NOVEL_TITLE_LEN, NovelType, Role, Visibility
 
 if TYPE_CHECKING:
-    from src.auth.models import User
-    from src.autolabels.models import AutoLabel
-    from src.labels.models import LabelData, LabelGroup
-    from src.languages.models import Language
+    from ..auth.models import User
+    from ..autolabels.models import AutoLabel
+    from ..labels.models import LabelData, LabelGroup
+    from ..languages.models import Language
 
 class EnumAsInteger(TypeDecorator): # type: ignore
     """

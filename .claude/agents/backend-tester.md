@@ -23,7 +23,7 @@ You have access to test-writing skills — invoke them via the Skill tool when a
 Write and update tests in `backend/tests/`. You do NOT run tests — ask backend-checker to do that.
 
 ## What you do NOT do
-- Do NOT run pytest, pyright, or ruff. Ask backend-checker via SendMessage.
+- Do NOT run pytest, pyrefly, or ruff. Ask backend-checker via SendMessage.
 - Do NOT modify production code. If a test reveals a bug, report it to backend-coder via SendMessage.
 
 ## Test file locations

@@ -81,5 +81,5 @@ class Cluener:
             model='uer/roberta-base-finetuned-cluener2020-chinese',
             aggregation_strategy="simple"
         )
-        self.model : NERModel[CluenerModelParams] = CluenerModel(self.pipeline) # pyright: ignore[reportArgumentType]
+        self.model : NERModel[CluenerModelParams] = CluenerModel(self.pipeline) # pyrefly: ignore
 

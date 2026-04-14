@@ -32,7 +32,7 @@ Backend, from repo root after `source /.venv/bin/activate`:
 - `pytest backend/ -m "slow or not slow"`
 - `ruff format .`
 - `ruff check --fix .`
-- `pyright`
+- `cd backend && pyrefly check`
 
 Database, from `backend/`:
 - `alembic upgrade head`

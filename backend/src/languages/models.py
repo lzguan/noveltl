@@ -11,7 +11,7 @@ from ..models import Base
 from .constants import MAX_LANGUAGE_CODE_LENGTH, MAX_LANGUAGE_NAME_LENGTH
 
 if TYPE_CHECKING:
-    from src.novels.models import Novel
+    from ..novels.models import Novel
 
 
 class Language(Base):

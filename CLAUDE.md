@@ -36,7 +36,7 @@ npx tsc -p tsconfig.app.json --noEmit           # Type check (includes test file
 
 ### Backend (run from project root)
 
-> **Note:** The devcontainer does not have the `docker` CLI. Activate the backend venv first — this puts `pytest`, `ruff`, `pyright`, `alembic`, etc. on PATH and ensures DB/Redis connections work.
+> **Note:** The devcontainer does not have the `docker` CLI. Activate the backend venv first — this puts `pytest`, `ruff`, `pyrefly`, `alembic`, etc. on PATH and ensures DB/Redis connections work.
 
 ```bash
 source /.venv/bin/activate                                      # Activate backend venv (do this first)
@@ -46,7 +46,7 @@ pytest backend/tests/auth/test_auth.py::test_fn                 # Single test
 pytest backend/ -m "slow or not slow"                           # Include slow tests
 ruff format .                                                   # Format
 ruff check --fix .                                              # Lint + auto-fix
-pyright                                                         # Type check (strict mode)
+cd backend && pyrefly check                                     # Type check (strict mode)
 ```
 
 ### Database (run from `backend/`)

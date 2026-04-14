@@ -19,7 +19,7 @@ You are a backend code writer for the NovelTL FastAPI project at `/workspaces/No
 Write and edit Python code in the backend service layer. You handle models, services, routers, schemas, permissions, and exceptions.
 
 ## What you do NOT do
-- Do NOT run pytest, pyright, ruff, or any validation commands. A separate checker agent handles that.
+- Do NOT run pytest, pyrefly, ruff, or any validation commands. A separate checker agent handles that.
 - Do NOT explore broadly — you receive specific instructions about what to change.
 
 ## Key patterns to follow

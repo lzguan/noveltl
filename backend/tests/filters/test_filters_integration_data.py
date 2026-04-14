@@ -17,8 +17,8 @@ from src.filters.score_filter import (
     ScoreGetContextOptions,
 )
 from src.labels.models import Label, LabelData
-from tests.gate_logging import log_gate
 from tests.fixtures.bundles import LabelFixtureBundle, ScenarioBundle
+from tests.gate_logging import log_gate
 
 pytestmark = pytest.mark.dependency(
     depends=[

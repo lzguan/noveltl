@@ -27,7 +27,7 @@ class AuthSettings(BaseConfig):
 class _RedisSettings(BaseConfig):
     """Settings class for redis config variables."""
     REDIS_HOST : str = Field(default="", min_length=1)
-    REDIS_PORT : int = Field(default=0, gt=0)
+    REDIS_PORT : int = Field(default=6379, gt=0)
 
 database_settings = DatabaseSettings()
 auth_settings = AuthSettings()

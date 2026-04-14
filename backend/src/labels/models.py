@@ -14,8 +14,8 @@ from ..models import Base
 from .constants import MAX_LABEL_ENTITY_GROUP_NAME_LEN, MAX_LABEL_GROUP_NAME_LEN, MAX_LABEL_WORD_LEN, LabelRole
 
 if TYPE_CHECKING:
-    from src.auth.models import User
-    from src.novels.models import ChapterContent, Novel
+    from ..auth.models import User
+    from ..novels.models import ChapterContent, Novel
 
 class LabelGroup(Base):
     """

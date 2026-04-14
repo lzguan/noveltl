@@ -10,7 +10,7 @@ from ..models import Base
 from .constants import MAX_MODEL_NAME_LEN, AutoLabelProgress
 
 if TYPE_CHECKING:
-    from src.novels.models import ChapterContent
+    from ..novels.models import ChapterContent
 
 class AutoLabel(Base):
     """

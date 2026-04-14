@@ -12,8 +12,8 @@ from ..models import Base
 from .constants import MAX_USER_NAME_LEN, UserType
 
 if TYPE_CHECKING:
-    from src.labels.models import LabelContributor
-    from src.novels.models import NovelContributor
+    from ..labels.models import LabelContributor
+    from ..novels.models import NovelContributor
 
 class User(Base):
     """

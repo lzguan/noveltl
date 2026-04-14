@@ -80,34 +80,32 @@ ruff check --fix .
 
 See `[tool.ruff]` in `backend/pyproject.toml` for full configuration.
 
-### Pyright (Type Checker)
+### Pyrefly (Type Checker)
 
-**Pyright** enforces strict static type checking to catch type-related bugs before runtime.
+**Pyrefly** enforces strict static type checking to catch type-related bugs before runtime.
 
-**Running Pyright:**
+**Running Pyrefly:**
 ```bash
 # Type check all files
-pyright
+pyrefly check
 
 # Type check specific file
-pyright src/novels/service.py
+pyrefly check src/novels/service.py
 ```
 
 **Current configuration:**
 - **Mode**: Strict type checking enabled
 - **Includes**: `src/` directory
-- **Excludes**: `src/lib/` (external libraries)
-- **Reports enabled**:
-  - Unused imports
-  - Unused variables
-- **Environment**: Configured for dev container (venv at `/app`)
+- **Import root**: project root (`backend/`) via `search-path = ["."]`
+- **Excludes**: `node_modules`, `__pycache__`, and dot-directories
+- **Transition behavior**: Existing `# pyright: ignore[...]` comments are still respected during migration
 
 **Type hints are required in strict mode:**
 - All function parameters must have type hints (except `self` and `cls`)
 - All return types must be specified
 - Use `typing` module for complex types (e.g., `list[str]`, `dict[str, Any]`, `Optional[int]`)
 
-See `[tool.pyright]` in `backend/pyproject.toml` for full configuration.
+See `[tool.pyrefly]` in `backend/pyproject.toml` for full configuration.
 
 ### Running Code Quality Checks
 
@@ -120,7 +118,7 @@ ruff format .
 ruff check --fix .
 
 # 3. Type check
-pyright
+pyrefly check
 
 # 4. Run tests
 pytest
@@ -133,9 +131,8 @@ pytest -m "slow or not slow"
 
 The dev container includes these extensions pre-configured:
 - **Ruff** (`charliermarsh.ruff`) - Auto-format on save, inline linting
-- **Pylance** (`ms-python.vscode-pylance`) - Pyright integration, shows type errors inline
 
-Ruff will auto-format on save, and Pylance will show type errors as you code.
+Pyrefly is the CLI type checker. Editor/LSP integration may vary depending on your local setup.
 
 ## Database Models
 - Names of columns should be `snake_case`.
@@ -430,4 +427,4 @@ export function ChapterViewer({ revisionId, labels, editable, onLabelClick }: Ch
 - [api-design.md](api-design.md) - Backend API contracts
 - [architecture.md](architecture.md) - System architecture overview
 - [backend-testing.md](backend-testing.md) - Backend testing
-- [frontend-backend-testing.md](frontend-backend-testing.md) - Frontend testing
+- [frontend-testing.md](frontend-testing.md) - Frontend testing

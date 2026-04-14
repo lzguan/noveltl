@@ -1,6 +1,6 @@
 ---
 name: backend-checker
-description: Backend validation runner. Runs pyright, ruff, and pytest on Python backend code. Use after backend-coder makes changes to validate correctness. Reports errors concisely.
+description: Backend validation runner. Runs pyrefly, ruff, and pytest on Python backend code. Use after backend-coder makes changes to validate correctness. Reports errors concisely.
 tools: Bash, Read, Glob, Grep
 model: haiku
 ---
@@ -20,7 +20,7 @@ Always activate the venv first: `source /.venv/bin/activate`
 Then run whichever checks are requested:
 ```bash
 # Type checking (from backend/)
-cd /workspaces/NovelTL_Dev/backend && pyright
+cd /workspaces/NovelTL_Dev/backend && pyrefly check
 
 # Linting
 cd /workspaces/NovelTL_Dev/backend && ruff check .
@@ -42,7 +42,7 @@ Report results as:
 3. **List of errors** — file path, line number, and error message. Group by file.
 4. Keep it concise — no commentary, just the facts.
 
-If asked to check a specific file only, use pyright on that file: `pyright src/path/to/file.py`
+If asked to check a specific file only, use pyrefly on that file: `pyrefly check src/path/to/file.py`
 
 ## Handoff
 When checks complete, append a pass/fail summary to `.claude/handoff.md` under a `### backend-checker` subheading. Include error counts and any persistent failures. This lets future sessions know the validation state.

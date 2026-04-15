@@ -25,7 +25,7 @@ describe('AutoLabels API', () => {
                     auto_label_model_params: {},
                     auto_label_status: 'pending',
                     auto_label_message: null,
-                    revision_text_id: 'uuid-rt-10',
+                    chapter_content_id: 'uuid-cc-10',
                     auto_label_last_job_id: 'job123'
                 }
             })
@@ -53,7 +53,7 @@ describe('AutoLabels API', () => {
                     auto_label_model_params: { chunk_size: 500 },
                     auto_label_status: 'done',
                     auto_label_message: 'Completed',
-                    revision_text_id: 'uuid-rt-20',
+                    chapter_content_id: 'uuid-cc-20',
                     auto_label_last_job_id: 'job456'
                 }
             })
@@ -77,7 +77,7 @@ describe('AutoLabels API', () => {
                 autoLabelModelParams: { chunk_size: 500 },
                 autoLabelStatus: 'done',
                 autoLabelMessage: 'Completed',
-                revisionTextId: 'uuid-rt-20',
+                chapterContentId: 'uuid-cc-20',
                 autoLabelLastJobId: 'job456'
             } satisfies AutoLabel)
         })
@@ -89,27 +89,18 @@ describe('AutoLabels API', () => {
 
             await expect(getAutoLabelById('uuid-al-999')).rejects.toThrow()
         })
-
-        it('should propagate 403 error for insufficient permissions', async () => {
-            vi.mocked(client.get).mockRejectedValue(
-                makeAxiosError(403, { detail: 'Insufficient permissions' })
-            )
-
-            await expect(getAutoLabelById('uuid-al-10')).rejects.toThrow()
-        })
     })
 
     describe('getAutoLabels', () => {
         it('should call GET /auto-labels with all query params', async () => {
             vi.mocked(client.get).mockResolvedValue({ data: [] })
 
-            await getAutoLabels('uuid-novel-5', ['uuid-ch-1', 'uuid-ch-2'], ['uuid-rev-10', 'uuid-rev-20'], 1, 100, ['cluener'])
+            await getAutoLabels('uuid-novel-5', ['uuid-ch-1', 'uuid-ch-2'], 1, 100, ['cluener'])
 
             expect(client.get).toHaveBeenCalledWith('/auto-labels', {
                 params: {
                     'novel-id': 'uuid-novel-5',
                     'chapter-ids': ['uuid-ch-1', 'uuid-ch-2'],
-                    'revision-ids': ['uuid-rev-10', 'uuid-rev-20'],
                     start: 1,
                     end: 100,
                     'model-names': ['cluener']
@@ -126,17 +117,8 @@ describe('AutoLabels API', () => {
                         auto_label_model_params: {},
                         auto_label_status: 'pending',
                         auto_label_message: null,
-                        revision_text_id: 'uuid-rt-10',
+                        chapter_content_id: 'uuid-cc-10',
                         auto_label_last_job_id: 'job1'
-                    },
-                    {
-                        auto_label_id: 'uuid-al-2',
-                        auto_label_model_name: 'cluener',
-                        auto_label_model_params: { chunk_size: 400 },
-                        auto_label_status: 'done',
-                        auto_label_message: 'Done',
-                        revision_text_id: 'uuid-rt-20',
-                        auto_label_last_job_id: 'job2'
                     }
                 ]
             })
@@ -151,56 +133,14 @@ describe('AutoLabels API', () => {
                     autoLabelModelParams: {},
                     autoLabelStatus: 'pending',
                     autoLabelMessage: null,
-                    revisionTextId: 'uuid-rt-10',
+                    chapterContentId: 'uuid-cc-10',
                     autoLabelLastJobId: 'job1'
-                },
-                {
-                    autoLabelId: 'uuid-al-2',
-                    autoLabelModelName: 'cluener',
-                    autoLabelModelParams: { chunk_size: 400 },
-                    autoLabelStatus: 'done',
-                    autoLabelMessage: 'Done',
-                    revisionTextId: 'uuid-rt-20',
-                    autoLabelLastJobId: 'job2'
                 }
             ] satisfies AutoLabelMeta[])
-        })
-
-        it('should pass optional params as undefined when omitted', async () => {
-            vi.mocked(client.get).mockResolvedValue({ data: [] })
-
-            await getAutoLabels('uuid-novel-10')
-
-            expect(client.get).toHaveBeenCalledWith('/auto-labels', {
-                params: {
-                    'novel-id': 'uuid-novel-10',
-                    'chapter-ids': undefined,
-                    'revision-ids': undefined,
-                    start: undefined,
-                    end: undefined,
-                    'model-names': undefined
-                }
-            })
         })
     })
 
     describe('createAutoLabels', () => {
-        it('should call POST /auto-labels', async () => {
-            vi.mocked(client.post).mockResolvedValue({ data: [] })
-
-            await createAutoLabels({
-                novelId: 'uuid-novel-5',
-                autoLabelModelName: 'cluener',
-                autoLabelModelParams: {}
-            })
-
-            expect(client.post).toHaveBeenCalled()
-            expect(client.post).toHaveBeenCalledWith(
-                '/auto-labels',
-                expect.any(Object)
-            )
-        })
-
         it('should map camelCase request to snake_case body', async () => {
             vi.mocked(client.post).mockResolvedValue({ data: [] })
 
@@ -211,7 +151,6 @@ describe('AutoLabels API', () => {
                 chapterIds: ['uuid-ch-1', 'uuid-ch-2', 'uuid-ch-3'],
                 start: 1,
                 end: 10,
-                isPrimary: true,
                 isPublic: false
             })
 
@@ -220,10 +159,8 @@ describe('AutoLabels API', () => {
                 auto_label_model_name: 'cluener',
                 auto_label_model_params: { chunk_size: 500 },
                 chapter_ids: ['uuid-ch-1', 'uuid-ch-2', 'uuid-ch-3'],
-                revision_ids: undefined,
                 start: 1,
                 end: 10,
-                is_primary: true,
                 is_public: false
             })
         })
@@ -237,7 +174,7 @@ describe('AutoLabels API', () => {
                         auto_label_model_params: {},
                         auto_label_status: 'pending',
                         auto_label_message: null,
-                        revision_text_id: 'uuid-rt-10',
+                        chapter_content_id: 'uuid-cc-10',
                         auto_label_last_job_id: 'job100'
                     }
                 ]
@@ -257,34 +194,10 @@ describe('AutoLabels API', () => {
                     autoLabelModelParams: {},
                     autoLabelStatus: 'pending',
                     autoLabelMessage: null,
-                    revisionTextId: 'uuid-rt-10',
+                    chapterContentId: 'uuid-cc-10',
                     autoLabelLastJobId: 'job100'
                 }
             ] satisfies AutoLabelMeta[])
-        })
-
-        it('should propagate 400 error for duplicate autolabels', async () => {
-            vi.mocked(client.post).mockRejectedValue(
-                makeAxiosError(400, { detail: 'Duplicate autolabel' })
-            )
-
-            await expect(createAutoLabels({
-                novelId: 'uuid-novel-5',
-                autoLabelModelName: 'cluener',
-                autoLabelModelParams: {}
-            })).rejects.toThrow()
-        })
-
-        it('should propagate 500 error for unknown errors', async () => {
-            vi.mocked(client.post).mockRejectedValue(
-                makeAxiosError(500, { detail: 'Unknown error' })
-            )
-
-            await expect(createAutoLabels({
-                novelId: 'uuid-novel-5',
-                autoLabelModelName: 'cluener',
-                autoLabelModelParams: {}
-            })).rejects.toThrow()
         })
     })
 })

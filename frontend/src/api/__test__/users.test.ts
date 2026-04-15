@@ -21,7 +21,7 @@ describe('Users API', () => {
     describe('register', () => {
         it('should call POST /register with snake_case request body', async () => {
             vi.mocked(client.post).mockResolvedValue({
-                data: { user_id: 1, user_name: 'newuser', user_type: 'user' }
+                data: { user_id: 'uuid-user-1', user_name: 'newuser', user_type: 'user' }
             })
 
             await register({ userName: 'newuser', userPassword: 'pass123', userType: 'user' })
@@ -35,7 +35,7 @@ describe('Users API', () => {
 
         it('should map request from camelCase to snake_case', async () => {
             vi.mocked(client.post).mockResolvedValue({
-                data: { user_id: 2, user_name: 'admin', user_type: 'admin' }
+                data: { user_id: 'uuid-user-2', user_name: 'admin', user_type: 'admin' }
             })
 
             await register({ userName: 'admin', userPassword: 'adminpass', userType: 'admin' })
@@ -49,7 +49,7 @@ describe('Users API', () => {
 
         it('should map response from snake_case to camelCase', async () => {
             vi.mocked(client.post).mockResolvedValue({
-                data: { user_id: 10, user_name: 'testuser', user_type: 'user' }
+                data: { user_id: 'uuid-user-10', user_name: 'testuser', user_type: 'user' }
             })
 
             const result = await register({
@@ -60,7 +60,7 @@ describe('Users API', () => {
 
             expectTypeOf(result).toEqualTypeOf<User>()
             expect(result).toEqual({
-                userId: 10,
+                userId: 'uuid-user-10',
                 userName: 'testuser',
                 userType: 'user'
             } satisfies User)
@@ -94,7 +94,7 @@ describe('Users API', () => {
     describe('createUser', () => {
         it('should call POST /users with snake_case request body', async () => {
             vi.mocked(client.post).mockResolvedValue({
-                data: { user_id: 1, user_name: 'newuser', user_type: 'user' }
+                data: { user_id: 'uuid-user-1', user_name: 'newuser', user_type: 'user' }
             })
 
             await createUser({ userName: 'newuser', userPassword: 'pass123', userType: 'user' })
@@ -108,7 +108,7 @@ describe('Users API', () => {
 
         it('should map request from camelCase to snake_case', async () => {
             vi.mocked(client.post).mockResolvedValue({
-                data: { user_id: 5, user_name: 'editor', user_type: 'user' }
+                data: { user_id: 'uuid-user-5', user_name: 'editor', user_type: 'user' }
             })
 
             await createUser({ userName: 'editor', userPassword: 'editorpass', userType: 'user' })
@@ -122,7 +122,7 @@ describe('Users API', () => {
 
         it('should map response from snake_case to camelCase', async () => {
             vi.mocked(client.post).mockResolvedValue({
-                data: { user_id: 20, user_name: 'created', user_type: 'admin' }
+                data: { user_id: 'uuid-user-20', user_name: 'created', user_type: 'admin' }
             })
 
             const result = await createUser({
@@ -133,7 +133,7 @@ describe('Users API', () => {
 
             expectTypeOf(result).toEqualTypeOf<User>()
             expect(result).toEqual({
-                userId: 20,
+                userId: 'uuid-user-20',
                 userName: 'created',
                 userType: 'admin'
             } satisfies User)
@@ -167,7 +167,7 @@ describe('Users API', () => {
     describe('getCurrentUser', () => {
         it('should call GET /users/me', async () => {
             vi.mocked(client.get).mockResolvedValue({
-                data: { user_id: 1, user_name: 'currentuser', user_type: 'user' }
+                data: { user_id: 'uuid-user-1', user_name: 'currentuser', user_type: 'user' }
             })
 
             await getCurrentUser()
@@ -177,14 +177,14 @@ describe('Users API', () => {
 
         it('should map response from snake_case to camelCase', async () => {
             vi.mocked(client.get).mockResolvedValue({
-                data: { user_id: 100, user_name: 'me', user_type: 'admin' }
+                data: { user_id: 'uuid-user-100', user_name: 'me', user_type: 'admin' }
             })
 
             const result = await getCurrentUser()
 
             expectTypeOf(result).toEqualTypeOf<User>()
             expect(result).toEqual({
-                userId: 100,
+                userId: 'uuid-user-100',
                 userName: 'me',
                 userType: 'admin'
             } satisfies User)
@@ -202,7 +202,7 @@ describe('Users API', () => {
     describe('getUserByName', () => {
         it('should call GET /users/{userName}', async () => {
             vi.mocked(client.get).mockResolvedValue({
-                data: { user_id: 5, user_name: 'john', user_type: 'user' }
+                data: { user_id: 'uuid-user-5', user_name: 'john', user_type: 'user' }
             })
 
             await getUserByName('john')
@@ -212,14 +212,14 @@ describe('Users API', () => {
 
         it('should map response from snake_case to camelCase', async () => {
             vi.mocked(client.get).mockResolvedValue({
-                data: { user_id: 50, user_name: 'alice', user_type: 'admin' }
+                data: { user_id: 'uuid-user-50', user_name: 'alice', user_type: 'admin' }
             })
 
             const result = await getUserByName('alice')
 
             expectTypeOf(result).toEqualTypeOf<User>()
             expect(result).toEqual({
-                userId: 50,
+                userId: 'uuid-user-50',
                 userName: 'alice',
                 userType: 'admin'
             } satisfies User)
@@ -274,9 +274,9 @@ describe('Users API', () => {
                 data: { status: 'success', detail: null }
             })
 
-            await deleteUser(10)
+            await deleteUser('uuid-user-10')
 
-            expect(client.delete).toHaveBeenCalledWith('/users/10')
+            expect(client.delete).toHaveBeenCalledWith('/users/uuid-user-10')
         })
 
         it('should map response status correctly', async () => {
@@ -284,7 +284,7 @@ describe('Users API', () => {
                 data: { status: 'verify', detail: 'Please verify deletion' }
             })
 
-            const result = await deleteUser(20)
+            const result = await deleteUser('uuid-user-20')
 
             expectTypeOf(result).toEqualTypeOf<DeleteUserStatus>()
             expect(result).toEqual({
@@ -298,7 +298,7 @@ describe('Users API', () => {
                 makeAxiosError(404, { detail: 'User not found' })
             )
 
-            await expect(deleteUser(999)).rejects.toThrow()
+            await expect(deleteUser('uuid-user-999')).rejects.toThrow()
         })
 
         it('should propagate 401 error for insufficient permissions', async () => {
@@ -306,7 +306,7 @@ describe('Users API', () => {
                 makeAxiosError(401, { detail: 'Insufficient permissions' })
             )
 
-            await expect(deleteUser(5)).rejects.toThrow()
+            await expect(deleteUser('uuid-user-5')).rejects.toThrow()
         })
     })
 })

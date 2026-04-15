@@ -1,4 +1,4 @@
-import client from "./client";
+import client from './client'
 import {
     type LabelGroup,
     type CreateLabelGroup,
@@ -10,9 +10,7 @@ import {
     type UpdateLabelDataStream,
     type CreateLabelDataByAutoLabel,
     type CreateLabelDataByAutoLabelStatus
-} from "../types/label";
-
-// --- Response mappers (API snake_case → frontend camelCase) ---
+} from '../types/label'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -25,7 +23,7 @@ const mapLabelGroup = (data: any): LabelGroup => ({
 const mapLabelData = (data: any): LabelData => ({
     labelDataId: data.label_data_id,
     labelGroupId: data.label_group_id,
-    revisionTextId: data.revision_text_id,
+    chapterContentId: data.chapter_content_id,
 })
 
 const mapLabel = (data: any): Label => ({
@@ -45,8 +43,6 @@ const mapCreateLabelDataByAutoLabelStatus = (data: any): CreateLabelDataByAutoLa
 
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-// --- Request mappers (frontend camelCase → API snake_case) ---
-
 const mapCreateLabelGroupRequest = (data: CreateLabelGroup) => ({
     label_group_name: data.labelGroupName,
     novel_id: data.novelId,
@@ -57,7 +53,7 @@ const mapUpdateLabelGroupRequest = (data: UpdateLabelGroup) => ({
 })
 
 const mapCreateLabelDataRequest = (data: CreateLabelData) => ({
-    revision_text_id: data.revisionTextId,
+    chapter_content_id: data.chapterContentId,
 })
 
 const mapLabelOp = (op: LabelOp) => {
@@ -75,7 +71,9 @@ const mapLabelOp = (op: LabelOp) => {
             entity_group: op.entityGroup,
             score: op.score,
         }
-    } else if (op.op === 'update') {
+    }
+
+    if (op.op === 'update') {
         return {
             ...base,
             new_start_pos: op.newStartPos,
@@ -98,17 +96,14 @@ const mapCreateLabelDataByAutoLabelRequest = (data: CreateLabelDataByAutoLabel) 
     model_name: data.modelName,
     model_params: data.modelParams,
     chapter_ids: data.chapterIds,
-    revision_ids: data.revisionIds,
     start: data.start,
     end: data.end,
 })
 
-// --- API functions ---
-
 export const getLabelGroupsByNovel = async (novelId : string) : Promise<LabelGroup[]> => {
-    const result = await client.get(`/label-groups`, {
+    const result = await client.get('/label-groups', {
         params: {
-            "novel-id": novelId
+            'novel-id': novelId
         }
     })
     return result.data.map(mapLabelGroup)

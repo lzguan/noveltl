@@ -1,7 +1,7 @@
 export type UserType = 'admin' | 'user'
 
 export interface User {
-    userId : number
+    userId : string
     userName : string
     userType : UserType
 }

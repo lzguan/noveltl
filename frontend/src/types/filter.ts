@@ -19,7 +19,7 @@ export interface SentenceContext extends ContextBase {
     labelStartRel : number
     labelEndRel : number
     label? : Label | null
-    revisionTextId : string
+    chapterContentId : string
 }
 
 export interface ParagraphContext extends ContextBase {
@@ -28,7 +28,7 @@ export interface ParagraphContext extends ContextBase {
     labelStartRel : number
     labelEndRel : number
     label? : Label | null
-    revisionTextId : string
+    chapterContentId : string
 }
 
 // --- Concrete instance types ---
@@ -36,7 +36,7 @@ export interface ParagraphContext extends ContextBase {
 export interface SingleLabel extends InstanceBase {
     type : 'single_label'
     label : Label
-    revisionTextId : string
+    chapterContentId : string
 }
 
 // --- Request/Response types ---

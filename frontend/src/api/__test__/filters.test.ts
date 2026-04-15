@@ -64,8 +64,8 @@ describe('Filters API', () => {
         it('should return array of flagged instances', async () => {
             vi.mocked(client.post).mockResolvedValue({
                 data: [
-                    { type: 'single_label', label: {}, revisionTextId: 'uuid-rt-1' },
-                    { type: 'single_label', label: {}, revisionTextId: 'uuid-rt-2' }
+                    { type: 'single_label', label: {}, chapterContentId: 'uuid-cc-1' },
+                    { type: 'single_label', label: {}, chapterContentId: 'uuid-cc-2' }
                 ]
             })
 
@@ -97,7 +97,7 @@ describe('Filters API', () => {
         it('should call POST /filters/{filterName}/get-contexts with instances and options', async () => {
             vi.mocked(client.post).mockResolvedValue({ data: [] })
 
-            const instances = [{ type: 'single_label', label: {}, revisionTextId: 'uuid-rt-1' }]
+            const instances = [{ type: 'single_label', label: {}, chapterContentId: 'uuid-cc-1' }]
             await getContexts('score_filter', instances, { option: 'value' })
 
             expect(client.post).toHaveBeenCalledWith(
@@ -117,7 +117,7 @@ describe('Filters API', () => {
                         text: 'This is a sentence.',
                         labelStartRel: 0,
                         labelEndRel: 4,
-                        revisionTextId: 'uuid-rt-1'
+                        chapterContentId: 'uuid-cc-1'
                     }
                 ]
             })

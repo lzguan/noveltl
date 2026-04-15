@@ -11,6 +11,22 @@ export type Role = 'owner' | 'viewer' | 'editor'
 
 export type NovelType = 'original' | 'translation' | 'other'
 
+export interface SourceWork {
+    sourceWorkId : string
+    sourceWorkTitle : string
+    sourceWorkDescription : string | null
+}
+
+export interface CreateSourceWork {
+    sourceWorkTitle : string
+    sourceWorkDescription? : string
+}
+
+export interface UpdateSourceWork {
+    sourceWorkTitle? : string
+    sourceWorkDescription? : string
+}
+
 export interface Novel {
     novelId : string
     novelTitle : string
@@ -18,7 +34,6 @@ export interface Novel {
     novelAuthor : string | null
     novelVisibility : Visibility
     novelType : NovelType
-    novelParentId : string | null
     languageCode : string
 }
 
@@ -29,6 +44,7 @@ export interface CreateNovel {
     novelVisibility : Visibility
     novelType : NovelType
     languageCode : string
+    sourceWorkId? : string | null
 }
 
 export interface UpdateNovel {
@@ -37,51 +53,40 @@ export interface UpdateNovel {
     novelAuthor? : string
     novelVisibility? : Visibility
     novelType? : NovelType
-    novelParentId? : string
 }
 
 export interface Chapter {
     chapterId : string
     chapterNum : number
+    chapterTitle : string
+    chapterIsPublic : boolean
     novelId : string
 }
 
 export interface CreateChapter {
     chapterNum : number
+    chapterTitle? : string
+    chapterIsPublic? : boolean
 }
 
-export interface Revision {
-    revisionId : string
-    revisionTitle : string
-    revisionIsPrimary : boolean
-    revisionIsPublic : boolean
-    chapterId : string
+export interface UpdateChapter {
+    chapterTitle : string
 }
 
-export type RevisionMeta = Revision
-
-export interface RevisionText {
-    revisionTextId : string
-    revisionTextContent : string
-    revisionTextVersion : number
+export interface ChapterContent {
+    chapterContentText : string
+    chapterContentVersion : number
+    chapterContentId : string
 }
 
-export interface RevisionTextMeta {
-    revisionTextId : string
-    revisionTextVersion : number
+export interface ChapterContentMeta {
+    chapterContentVersion : number
+    chapterContentId : string
 }
 
-export interface RevisionData {
-    metadata : Revision
-    content : RevisionText
-}
-
-export interface CreateRevision {
-    revisionTitle : string
-}
-
-export interface UpdateRevision {
-    revisionTitle? : string
+export interface ChapterData {
+    metadata : Chapter
+    content : ChapterContent
 }
 
 export interface TextOp {
@@ -90,9 +95,9 @@ export interface TextOp {
     text : string
 }
 
-export interface UpdateRevisionText {
+export interface UpdateChapterContent {
     textOps : TextOp[]
-    revisionTextId : string
+    chapterContentId : string
 }
 
 export interface OperationStatus {

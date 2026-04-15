@@ -1,9 +1,13 @@
 import client from './client'
 import * as NovelType from '../types/novel'
 
-// --- Response mappers (API snake_case → frontend camelCase) ---
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+const mapSourceWork = (data: any): NovelType.SourceWork => ({
+    sourceWorkId: data.source_work_id,
+    sourceWorkTitle: data.source_work_title,
+    sourceWorkDescription: data.source_work_description,
+})
 
 const mapNovel = (data: any): NovelType.Novel => ({
     novelId: data.novel_id,
@@ -12,38 +16,31 @@ const mapNovel = (data: any): NovelType.Novel => ({
     novelAuthor: data.novel_author,
     novelVisibility: data.novel_visibility,
     novelType: data.novel_type,
-    novelParentId: data.novel_parent_id,
     languageCode: data.language_code,
 })
 
 const mapChapter = (data: any): NovelType.Chapter => ({
     chapterId: data.chapter_id,
     chapterNum: data.chapter_num,
+    chapterTitle: data.chapter_title,
+    chapterIsPublic: data.chapter_is_public,
     novelId: data.novel_id,
 })
 
-const mapRevision = (data: any): NovelType.Revision => ({
-    revisionId: data.revision_id,
-    revisionTitle: data.revision_title,
-    revisionIsPrimary: data.revision_is_primary,
-    revisionIsPublic: data.revision_is_public,
-    chapterId: data.chapter_id,
+const mapChapterContent = (data: any): NovelType.ChapterContent => ({
+    chapterContentText: data.chapter_content_text,
+    chapterContentVersion: data.chapter_content_version,
+    chapterContentId: data.chapter_content_id,
 })
 
-const mapRevisionText = (data: any): NovelType.RevisionText => ({
-    revisionTextId: data.revision_text_id,
-    revisionTextContent: data.revision_text_content,
-    revisionTextVersion: data.revision_text_version,
+const mapChapterContentMeta = (data: any): NovelType.ChapterContentMeta => ({
+    chapterContentVersion: data.chapter_content_version,
+    chapterContentId: data.chapter_content_id,
 })
 
-const mapRevisionTextMeta = (data: any): NovelType.RevisionTextMeta => ({
-    revisionTextId: data.revision_text_id,
-    revisionTextVersion: data.revision_text_version,
-})
-
-const mapRevisionData = (data: any): NovelType.RevisionData => ({
-    metadata: mapRevision(data.metadata),
-    content: mapRevisionText(data.content),
+const mapChapterData = (data: any): NovelType.ChapterData => ({
+    metadata: mapChapter(data.metadata),
+    content: mapChapterContent(data.content),
 })
 
 const mapOperationStatus = (data: any): NovelType.OperationStatus => ({
@@ -51,7 +48,15 @@ const mapOperationStatus = (data: any): NovelType.OperationStatus => ({
     detail: data.detail,
 })
 
-// --- Request mappers (frontend camelCase → API snake_case) ---
+const mapCreateSourceWorkRequest = (data: NovelType.CreateSourceWork) => ({
+    source_work_title: data.sourceWorkTitle,
+    source_work_description: data.sourceWorkDescription,
+})
+
+const mapUpdateSourceWorkRequest = (data: NovelType.UpdateSourceWork) => ({
+    source_work_title: data.sourceWorkTitle,
+    source_work_description: data.sourceWorkDescription,
+})
 
 const mapCreateNovelRequest = (data: NovelType.CreateNovel) => ({
     novel_title: data.novelTitle,
@@ -60,14 +65,7 @@ const mapCreateNovelRequest = (data: NovelType.CreateNovel) => ({
     novel_visibility: data.novelVisibility,
     novel_type: data.novelType,
     language_code: data.languageCode,
-})
-
-const mapCreateChapterRequest = (data: NovelType.CreateChapter) => ({
-    chapter_num: data.chapterNum,
-})
-
-const mapCreateRevisionRequest = (data: NovelType.CreateRevision) => ({
-    revision_title: data.revisionTitle,
+    source_work_id: data.sourceWorkId,
 })
 
 const mapUpdateNovelRequest = (data: NovelType.UpdateNovel) => ({
@@ -76,30 +74,65 @@ const mapUpdateNovelRequest = (data: NovelType.UpdateNovel) => ({
     novel_author: data.novelAuthor,
     novel_visibility: data.novelVisibility,
     novel_type: data.novelType,
-    novel_parent_id: data.novelParentId,
 })
 
-const mapUpdateRevisionRequest = (data: NovelType.UpdateRevision) => ({
-    revision_title: data.revisionTitle,
+const mapCreateChapterRequest = (data: NovelType.CreateChapter) => ({
+    chapter_num: data.chapterNum,
+    chapter_title: data.chapterTitle,
+    chapter_is_public: data.chapterIsPublic,
 })
 
-const mapUpdateRevisionTextRequest = (data: NovelType.UpdateRevisionText) => ({
+const mapUpdateChapterRequest = (data: NovelType.UpdateChapter) => ({
+    chapter_title: data.chapterTitle,
+})
+
+const mapUpdateChapterContentRequest = (data: NovelType.UpdateChapterContent) => ({
     text_ops: data.textOps.map(op => ({
         op: op.op,
         start: op.start,
         text: op.text,
     })),
-    revision_text_id: data.revisionTextId,
+    chapter_content_id: data.chapterContentId,
 })
 
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-// --- API functions ---
+export const getSourceWorks = async (titleContains? : string) : Promise<NovelType.SourceWork[]> => {
+    const result = await client.get('/source-works', {
+        params: {
+            'title-contains': titleContains
+        }
+    })
+    return result.data.map(mapSourceWork)
+}
+
+export const getSourceWorkById = async (sourceWorkId : string) : Promise<NovelType.SourceWork> => {
+    const result = await client.get(`/source-works/${sourceWorkId}`)
+    return mapSourceWork(result.data)
+}
+
+export const getNovelsBySourceWork = async (sourceWorkId : string) : Promise<NovelType.Novel[]> => {
+    const result = await client.get(`/source-works/${sourceWorkId}/novels`)
+    return result.data.map(mapNovel)
+}
+
+export const createSourceWork = async (request : NovelType.CreateSourceWork) : Promise<NovelType.SourceWork> => {
+    const result = await client.post('/source-works', mapCreateSourceWorkRequest(request))
+    return mapSourceWork(result.data)
+}
+
+export const updateSourceWork = async (
+    sourceWorkId : string,
+    request : NovelType.UpdateSourceWork
+) : Promise<NovelType.SourceWork> => {
+    const result = await client.patch(`/source-works/${sourceWorkId}`, mapUpdateSourceWorkRequest(request))
+    return mapSourceWork(result.data)
+}
 
 export const getNovels = async (titleContains? : string) : Promise<NovelType.Novel[]> => {
     const result = await client.get('/novels', {
-        params : {
-            "title-contains": titleContains
+        params: {
+            'title-contains': titleContains
         }
     })
     return result.data.map(mapNovel)
@@ -107,9 +140,9 @@ export const getNovels = async (titleContains? : string) : Promise<NovelType.Nov
 
 export const getNovelsMine = async (editable : boolean, titleContains? : string) : Promise<NovelType.Novel[]> => {
     const result = await client.get('/novels/mine', {
-        params : {
+        params: {
             editable,
-            "title-contains": titleContains
+            'title-contains': titleContains
         }
     })
     return result.data.map(mapNovel)
@@ -120,10 +153,20 @@ export const getNovelById = async (novelId : string) : Promise<NovelType.Novel> 
     return mapNovel(result.data)
 }
 
+export const createNovel = async (request : NovelType.CreateNovel) : Promise<NovelType.Novel> => {
+    const result = await client.post('/novels', mapCreateNovelRequest(request))
+    return mapNovel(result.data)
+}
+
+export const updateNovel = async (novelId : string, request : NovelType.UpdateNovel) : Promise<NovelType.Novel> => {
+    const result = await client.patch(`/novels/${novelId}`, mapUpdateNovelRequest(request))
+    return mapNovel(result.data)
+}
+
 export const getChaptersByNovel = async (novelId : string, start? : number, end? : number) : Promise<NovelType.Chapter[]> => {
-    const result = await client.get(`/chapters`, {
-        params : {
-            "novel-id": novelId,
+    const result = await client.get('/chapters', {
+        params: {
+            'novel-id': novelId,
             start,
             end
         }
@@ -136,101 +179,53 @@ export const getChapterById = async (chapterId : string) : Promise<NovelType.Cha
     return mapChapter(result.data)
 }
 
-export const getChapterRevisionById = async (revisionId : string) : Promise<NovelType.Revision> => {
-    const result = await client.get(`/revisions/${revisionId}`)
-    return mapRevision(result.data)
-}
-
-export const getChapterRevisionsByNovel = async (
-    novelId : string,
-    start? : number,
-    end? : number,
-    isPublic? : boolean,
-    isPrimary? : boolean
-) : Promise<NovelType.RevisionMeta[]> => {
-    const result = await client.get(`/novels/${novelId}/revisions`, {
-        params : {
-            start,
-            end,
-            "is-public": isPublic,
-            "is-primary": isPrimary
-        }
-    })
-    return result.data.map(mapRevision)
-}
-
-export const getChapterRevisionsByChapter = async (
-    chapterId : string,
-    isPublic? : boolean,
-    isPrimary? : boolean
-) : Promise<NovelType.RevisionMeta[]> => {
-    const result = await client.get(`/chapters/${chapterId}/revisions`, {
-        params : {
-            "is-public": isPublic,
-            "is-primary": isPrimary
-        }
-    })
-    return result.data.map(mapRevision)
-}
-
-export const createNovel = async (request : NovelType.CreateNovel) : Promise<NovelType.Novel> => {
-    const result = await client.post(`/novels`, mapCreateNovelRequest(request))
-    return mapNovel(result.data)
-}
-
-export const createChapterForNovel = async (novelId : string, request : NovelType.CreateChapter) : Promise<NovelType.Chapter> => {
+export const createChapterForNovel = async (novelId : string, request : NovelType.CreateChapter) : Promise<NovelType.ChapterData> => {
     const result = await client.post(`/novels/${novelId}/chapters`, mapCreateChapterRequest(request))
+    return mapChapterData(result.data)
+}
+
+export const updateChapter = async (chapterId : string, request : NovelType.UpdateChapter) : Promise<NovelType.Chapter> => {
+    const result = await client.patch(`/chapters/${chapterId}`, mapUpdateChapterRequest(request))
     return mapChapter(result.data)
 }
 
-export const createRevisionForChapter = async (chapterId : string, request : NovelType.CreateRevision) : Promise<NovelType.RevisionData> => {
-    const result = await client.post(`/chapters/${chapterId}/revisions`, mapCreateRevisionRequest(request))
-    return mapRevisionData(result.data)
-}
-
-export const updateNovel = async (novelId : string, request : NovelType.UpdateNovel) : Promise<NovelType.Novel> => {
-    const result = await client.patch(`/novels/${novelId}`, mapUpdateNovelRequest(request))
-    return mapNovel(result.data)
-}
-
-export const updateRevision = async (revisionId : string, request : NovelType.UpdateRevision) : Promise<NovelType.Revision> => {
-    const result = await client.patch(`/revisions/${revisionId}`, mapUpdateRevisionRequest(request))
-    return mapRevision(result.data)
-}
-
-export const publishRevision = async (revisionId : string) : Promise<NovelType.Revision> => {
-    const result = await client.post(`/revisions/${revisionId}/publish`)
-    return mapRevision(result.data)
-}
-
-export const makeRevisionPrimary = async (revisionId : string) : Promise<NovelType.Revision> => {
-    const result = await client.post(`/revisions/${revisionId}/make-primary`)
-    return mapRevision(result.data)
-}
-
-export const deleteRevision = async (revisionId : string) : Promise<NovelType.OperationStatus> => {
-    const result = await client.delete(`/revisions/${revisionId}`)
+export const deleteChapter = async (chapterId : string) : Promise<NovelType.OperationStatus> => {
+    const result = await client.delete(`/chapters/${chapterId}`)
     return mapOperationStatus(result.data)
 }
 
-// --- Revision Text endpoints ---
-
-export const getRevisionText = async (revisionId : string) : Promise<NovelType.RevisionText> => {
-    const result = await client.get(`/revisions/${revisionId}/text`)
-    return mapRevisionText(result.data)
+export const publishChapter = async (chapterId : string) : Promise<NovelType.Chapter> => {
+    const result = await client.post(`/chapters/${chapterId}/publish`)
+    return mapChapter(result.data)
 }
 
-export const getRevisionTextById = async (revisionTextId : string) : Promise<NovelType.RevisionText> => {
-    const result = await client.get(`/revision-texts/${revisionTextId}`)
-    return mapRevisionText(result.data)
+export const getChapterContent = async (chapterId : string) : Promise<NovelType.ChapterContent> => {
+    const result = await client.get(`/chapters/${chapterId}/content`)
+    return mapChapterContent(result.data)
 }
 
-export const getRevisionTextVersions = async (revisionId : string) : Promise<NovelType.RevisionTextMeta[]> => {
-    const result = await client.get(`/revisions/${revisionId}/text-versions`)
-    return result.data.map(mapRevisionTextMeta)
+export const getChapterContentById = async (chapterContentId : string) : Promise<NovelType.ChapterContent> => {
+    const result = await client.get(`/chapter-contents/${chapterContentId}`)
+    return mapChapterContent(result.data)
 }
 
-export const updateRevisionText = async (revisionId : string, request : NovelType.UpdateRevisionText) : Promise<NovelType.OperationStatus> => {
-    const result = await client.patch(`/revisions/${revisionId}/text`, mapUpdateRevisionTextRequest(request))
+export const getChapterContentVersions = async (chapterId : string) : Promise<NovelType.ChapterContentMeta[]> => {
+    const result = await client.get(`/chapters/${chapterId}/content-versions`)
+    return result.data.map(mapChapterContentMeta)
+}
+
+export const getChapterContentStatus = async (
+    chapterId : string,
+    chapterContentId : string
+) : Promise<NovelType.OperationStatus> => {
+    const result = await client.get(`/chapters/${chapterId}/content-status/${chapterContentId}`)
+    return mapOperationStatus(result.data)
+}
+
+export const updateChapterContent = async (
+    chapterId : string,
+    request : NovelType.UpdateChapterContent
+) : Promise<NovelType.OperationStatus> => {
+    const result = await client.patch(`/chapters/${chapterId}/content`, mapUpdateChapterContentRequest(request))
     return mapOperationStatus(result.data)
 }

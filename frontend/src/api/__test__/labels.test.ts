@@ -5,9 +5,11 @@ import {
     getLabelGroupsByNovel,
     createLabelGroup,
     getLabelGroupById,
+    getLabelDatas,
+    createLabelDataForGroup,
     createLabelDataByAutoLabel
 } from '../labels'
-import { type LabelGroup, type CreateLabelDataByAutoLabelStatus } from '../../types/label'
+import { type LabelGroup, type LabelData, type CreateLabelDataByAutoLabelStatus } from '../../types/label'
 
 vi.mock('../client')
 
@@ -193,7 +195,6 @@ describe('Labels API', () => {
                     model_name: 'cluener',
                     model_params: { chunk_size: 500 },
                     chapter_ids: ['uuid-ch-1', 'uuid-ch-2'],
-                    revision_ids: undefined,
                     start: 1,
                     end: 10
                 }
@@ -203,8 +204,8 @@ describe('Labels API', () => {
         it('should map response from snake_case to camelCase', async () => {
             vi.mocked(client.post).mockResolvedValue({
                 data: {
-                    success: ['uuid-rev-1', 'uuid-rev-2'],
-                    errors: [['uuid-rev-3', 'Failed to process']]
+                    success: [['uuid-ch-1', 'uuid-cc-1'], ['uuid-ch-2', 'uuid-cc-2']],
+                    errors: [['uuid-ch-3', 'uuid-cc-3', 'Failed to process']]
                 }
             })
 
@@ -215,9 +216,52 @@ describe('Labels API', () => {
 
             expectTypeOf(result).toEqualTypeOf<CreateLabelDataByAutoLabelStatus>()
             expect(result).toEqual({
-                success: ['uuid-rev-1', 'uuid-rev-2'],
-                errors: [['uuid-rev-3', 'Failed to process']]
+                success: [['uuid-ch-1', 'uuid-cc-1'], ['uuid-ch-2', 'uuid-cc-2']],
+                errors: [['uuid-ch-3', 'uuid-cc-3', 'Failed to process']]
             } satisfies CreateLabelDataByAutoLabelStatus)
+        })
+    })
+
+    describe('label data', () => {
+        it('should map label datas with chapterContentId', async () => {
+            vi.mocked(client.get).mockResolvedValue({
+                data: [
+                    {
+                        label_data_id: 'uuid-ld-1',
+                        label_group_id: 'uuid-lg-1',
+                        chapter_content_id: 'uuid-cc-1'
+                    }
+                ]
+            })
+
+            const result = await getLabelDatas('uuid-lg-1')
+
+            expectTypeOf(result).toEqualTypeOf<LabelData[]>()
+            expect(result).toEqual([
+                {
+                    labelDataId: 'uuid-ld-1',
+                    labelGroupId: 'uuid-lg-1',
+                    chapterContentId: 'uuid-cc-1'
+                }
+            ] satisfies LabelData[])
+        })
+
+        it('should create label data with chapter_content_id', async () => {
+            vi.mocked(client.post).mockResolvedValue({
+                data: {
+                    label_data_id: 'uuid-ld-2',
+                    label_group_id: 'uuid-lg-1',
+                    chapter_content_id: 'uuid-cc-2'
+                }
+            })
+
+            await createLabelDataForGroup('uuid-lg-1', {
+                chapterContentId: 'uuid-cc-2'
+            })
+
+            expect(client.post).toHaveBeenCalledWith('/label-groups/uuid-lg-1/label-datas', {
+                chapter_content_id: 'uuid-cc-2'
+            })
         })
     })
 })

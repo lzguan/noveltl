@@ -53,7 +53,7 @@ export const deleteCurrentUser = async (): Promise<DeleteUserStatus> => {
     return mapDeleteUserStatus(result.data)
 }
 
-export const deleteUser = async (userId: number): Promise<DeleteUserStatus> => {
+export const deleteUser = async (userId: string): Promise<DeleteUserStatus> => {
     const result = await client.delete(`/users/${userId}`)
     return mapDeleteUserStatus(result.data)
 }

@@ -10,7 +10,6 @@ export const AppRoutes = {
         NOVELS: '/edit/novels',
         NOVEL: '/edit/novels/:novel_id',
     },
-    WORKSPACE: '/workspace/:novel_id',
 } as const;
 
 export const routeTo = {
@@ -31,16 +30,15 @@ export const routeTo = {
     },
     edit: {
         novels: () => '/edit/novels',
-        novel: (id: string) => `/workspace/${id}`,
-    },
-    workspace: (novelId: string, params?: { chapter?: string; revision?: string; labelsGroup?: string; nerGroup?: string }) => {
-        const base = `/workspace/${novelId}`;
-        const qs = new URLSearchParams();
-        if (params?.chapter) qs.set('chapter', params.chapter);
-        if (params?.revision) qs.set('revision', params.revision);
-        if (params?.labelsGroup) qs.set('labelsGroup', params.labelsGroup);
-        if (params?.nerGroup) qs.set('nerGroup', params.nerGroup);
-        const query = qs.toString();
-        return query ? `${base}?${query}` : base;
-    },
+        novel: (novelId: string, params?: { chapter?: string; revision?: string; labelsGroup?: string; nerGroup?: string }) => {
+            const base = `/edit/novels/${novelId}`;
+            const qs = new URLSearchParams();
+            if (params?.chapter) qs.set('chapter', params.chapter);
+            if (params?.revision) qs.set('revision', params.revision);
+            if (params?.labelsGroup) qs.set('labelsGroup', params.labelsGroup);
+            if (params?.nerGroup) qs.set('nerGroup', params.nerGroup);
+            const query = qs.toString();
+            return query ? `${base}?${query}` : base;
+        },
+    }
 };

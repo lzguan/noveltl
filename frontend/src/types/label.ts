@@ -32,11 +32,11 @@ export interface Label {
 export interface LabelData {
     labelDataId : string
     labelGroupId : string
-    revisionTextId : string
+    chapterContentId : string
 }
 
 export interface CreateLabelData {
-    revisionTextId : string
+    chapterContentId : string
 }
 
 // --- Label Operations ---
@@ -91,12 +91,11 @@ export interface CreateLabelDataByAutoLabel {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     modelParams : Record<string, any>
     chapterIds? : string[] | null
-    revisionIds? : string[] | null
     start? : number | null
     end? : number | null
 }
 
 export interface CreateLabelDataByAutoLabelStatus {
-    success : string[]
-    errors : [string, string][]
+    success : [string, string][]
+    errors : [string, string, string][]
 }

@@ -35,6 +35,7 @@ export interface Novel {
     novelVisibility : Visibility
     novelType : NovelType
     languageCode : string
+    sourceWorkId : string
 }
 
 export interface CreateNovel {
@@ -53,6 +54,11 @@ export interface UpdateNovel {
     novelAuthor? : string
     novelVisibility? : Visibility
     novelType? : NovelType
+}
+
+export interface SourceWorkData {
+    sourceWork : SourceWork
+    novels : Novel[]
 }
 
 export interface Chapter {

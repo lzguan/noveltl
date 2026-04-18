@@ -51,8 +51,9 @@ from .utils import apply_text_ops
 def query_source_works_by_title(
         db : Session,
         current_user : User | None,
-        source_work_title : str | None
-) -> Sequence[models.SourceWork]:
+        source_work_title : str | None,
+        ret_novels : bool
+) -> Sequence[tuple[models.SourceWork, list[models.Novel]]]:
     """
     Queries source works with source_work_title as substring.
 
@@ -60,6 +61,7 @@ def query_source_works_by_title(
         db: Database from which we are querying.
         current_user: User that is querying. Can be None for guest access.
         source_work_title: Substring we wish to search for in source work titles.
+        ret_novels: If True, return a list of tuples of (SourceWork, list of Novels with that SourceWork). Otherwise just return a list of SourceWorks and an empty list of Novels.
     """
     if source_work_title is None:
         search_term = "%"
@@ -69,8 +71,18 @@ def query_source_works_by_title(
     q = source_work_mod_access_select(q, current_user)
     result = db.execute(q)
     result_scalars = result.scalars().all()
+    if ret_novels:
+        source_work_ids = [sw.source_work_id for sw in result_scalars]
+        novels_q = select(models.Novel).where(models.Novel.source_work_id.in_(source_work_ids))
+        novels_q = novel_mod_access_select(novels_q, current_user)
+        novels_result = db.execute(novels_q)
+        novels_scalars = novels_result.scalars().all()
+        novels_by_source_work = defaultdict(list)
+        for novel in novels_scalars:
+            novels_by_source_work[novel.source_work_id].append(novel)
+        return [(sw, novels_by_source_work[sw.source_work_id]) for sw in result_scalars]
 
-    return result_scalars
+    return [(sw, []) for sw in result_scalars]
 
 def query_source_work_by_id(
         db : Session,

@@ -21,7 +21,10 @@
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	 "features": {
 		"ghcr.io/devcontainers/features/git:1": {},
-		"ghcr.io/devcontainers/features/github-cli:1": {}
+		"ghcr.io/devcontainers/features/github-cli:1": {},
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "lts"
+		}
 	 },
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
@@ -33,7 +36,7 @@
 	// Uncomment the next line if you want to keep your containers running after VS Code shuts down.
 	// "shutdownAction": "none",
 
-	"postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.claude /home/vscode/.codex && pnpm add -g @openai/codex",
+	"postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.claude /home/vscode/.codex && pnpm add -g @openai/codex && rm  -rf /workspaces/NovelTL_Dev/frontend/node_modules/.vite-temp",
 
 	// Configure tool-specific properties.
 	"customizations": {

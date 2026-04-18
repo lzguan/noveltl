@@ -56,18 +56,19 @@ router = APIRouter()
 
 @router.get(
     '/source-works',
-    response_model=list[schemas.SourceWork]
+    response_model=list[schemas.SourceWorkData]
 )
 async def read_source_works(
     db : Annotated[Session, Depends(get_db)],
     current_user : Annotated[User | None, Depends(get_optional_user)],
-    title_contains : str | None = Query(default=None, alias="title-contains")
+    title_contains : str | None = Query(default=None, alias="title-contains"),
+    ret_novels : bool = Query(default=False, alias="ret-novels")
 ):
     """
     Endpoint for retrieving source works in bulk, optionally filtered by title substring.
     """
-    source_works = query_source_works_by_title(db, current_user, title_contains)
-    return source_works
+    source_works = query_source_works_by_title(db, current_user, title_contains, ret_novels)
+    return [schemas.SourceWorkData(source_work=sw, novels=novels) for sw, novels in source_works]
 
 @router.get(
     '/source-works/{source_work_id}',

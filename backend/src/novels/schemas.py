@@ -58,6 +58,7 @@ class Novel(BaseModel):
         novel_visibility: Visibility enum of novel.
         novel_type: NovelType enum of novel.
         language_code: String code key to language of the novel.
+        source_work_id: UUID foreign key to source work of the novel.
     """
     novel_id : uuid.UUID
     novel_title : str
@@ -67,6 +68,7 @@ class Novel(BaseModel):
     novel_type : NovelType
 
     language_code : str
+    source_work_id : uuid.UUID
 
 class CreateNovel(BaseModel):
     """
@@ -106,6 +108,17 @@ class UpdateNovel(BaseModel):
     novel_author : str | None = None
     novel_visibility : Visibility | None = None
     novel_type : NovelType | None = None
+
+class SourceWorkData(BaseModel):
+    """
+    Pydantic schema to represent a source work and all its associated novels.
+
+    Attributes:
+        source_work: The source work metadata.
+        novels: A list of novels associated with this source work.
+    """
+    source_work : SourceWork
+    novels : list[Novel]
 
 class Chapter(BaseModel):
     """

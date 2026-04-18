@@ -34,14 +34,57 @@ describe('Novels API', () => {
     })
 
     describe('source works', () => {
-        it('should call GET /source-works with title-contains', async () => {
+        it('should call GET /source-works with title-contains and ret-novels', async () => {
             vi.mocked(client.get).mockResolvedValue({ data: [] })
 
-            await getSourceWorks('xianxia')
+            await getSourceWorks('xianxia', true)
 
             expect(client.get).toHaveBeenCalledWith('/source-works', {
-                params: { 'title-contains': 'xianxia' }
+                params: { 'title-contains': 'xianxia', 'ret-novels': true }
             })
+        })
+
+        it('should map SourceWorkData responses', async () => {
+            vi.mocked(client.get).mockResolvedValue({
+                data: [{
+                    source_work: {
+                        source_work_id: 'uuid-sw-1',
+                        source_work_title: 'Source Work',
+                        source_work_description: 'desc'
+                    },
+                    novels: [{
+                        novel_id: 'uuid-novel-1',
+                        novel_title: 'Nested Novel',
+                        novel_description: null,
+                        novel_author: 'Jane Doe',
+                        novel_visibility: 3,
+                        novel_type: 'original',
+                        language_code: 'zh',
+                        source_work_id: 'uuid-sw-1'
+                    }]
+                }]
+            })
+
+            const result = await getSourceWorks('xianxia', true)
+
+            expectTypeOf(result).toEqualTypeOf<NovelType.SourceWorkData[]>()
+            expect(result).toEqual([{
+                sourceWork: {
+                    sourceWorkId: 'uuid-sw-1',
+                    sourceWorkTitle: 'Source Work',
+                    sourceWorkDescription: 'desc'
+                },
+                novels: [{
+                    novelId: 'uuid-novel-1',
+                    novelTitle: 'Nested Novel',
+                    novelDescription: null,
+                    novelAuthor: 'Jane Doe',
+                    novelVisibility: 3,
+                    novelType: 'original',
+                    languageCode: 'zh',
+                    sourceWorkId: 'uuid-sw-1'
+                }]
+            }] satisfies NovelType.SourceWorkData[])
         })
 
         it('should map SourceWork responses', async () => {
@@ -101,7 +144,8 @@ describe('Novels API', () => {
                     novel_author: null,
                     novel_visibility: 3,
                     novel_type: 'original',
-                    language_code: 'zh'
+                    language_code: 'zh',
+                    source_work_id: 'uuid-sw-1'
                 }]
             })
 
@@ -109,6 +153,7 @@ describe('Novels API', () => {
 
             expect(client.get).toHaveBeenCalledWith('/source-works/uuid-sw-1/novels')
             expect(result[0]?.novelId).toBe('uuid-novel-1')
+            expect(result[0]?.sourceWorkId).toBe('uuid-sw-1')
         })
     })
 
@@ -122,7 +167,8 @@ describe('Novels API', () => {
                     novel_author: 'John Doe',
                     novel_visibility: 3,
                     novel_type: 'other',
-                    language_code: 'jp'
+                    language_code: 'jp',
+                    source_work_id: 'uuid-sw-10'
                 }
             })
 
@@ -136,7 +182,8 @@ describe('Novels API', () => {
                 novelAuthor: 'John Doe',
                 novelVisibility: 3,
                 novelType: 'other',
-                languageCode: 'jp'
+                languageCode: 'jp',
+                sourceWorkId: 'uuid-sw-10'
             } satisfies NovelType.Novel)
         })
 

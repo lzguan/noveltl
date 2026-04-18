@@ -17,6 +17,12 @@ const mapNovel = (data: any): NovelType.Novel => ({
     novelVisibility: data.novel_visibility,
     novelType: data.novel_type,
     languageCode: data.language_code,
+    sourceWorkId: data.source_work_id,
+})
+
+const mapSourceWorkData = (data: any): NovelType.SourceWorkData => ({
+    sourceWork: mapSourceWork(data.source_work),
+    novels: data.novels.map(mapNovel),
 })
 
 const mapChapter = (data: any): NovelType.Chapter => ({
@@ -97,13 +103,14 @@ const mapUpdateChapterContentRequest = (data: NovelType.UpdateChapterContent) =>
 
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-export const getSourceWorks = async (titleContains? : string) : Promise<NovelType.SourceWork[]> => {
+export const getSourceWorks = async (titleContains? : string, retNovels? : boolean) : Promise<NovelType.SourceWorkData[]> => {
     const result = await client.get('/source-works', {
         params: {
-            'title-contains': titleContains
+            'title-contains': titleContains,
+            'ret-novels': retNovels
         }
     })
-    return result.data.map(mapSourceWork)
+    return result.data.map(mapSourceWorkData)
 }
 
 export const getSourceWorkById = async (sourceWorkId : string) : Promise<NovelType.SourceWork> => {

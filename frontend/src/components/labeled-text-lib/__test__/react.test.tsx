@@ -19,7 +19,7 @@ type TestLabel = Label<TestStyle>;
 
 function makeLabel(start: number, end: number, name: string): TestLabel {
     return {
-        range: { start, end },
+        interval: { start, end },
         style: { name },
     };
 }

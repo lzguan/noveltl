@@ -1,12 +1,10 @@
 import { rgb } from "./components/labeled-text-lib/builtin/colors";
 import { type BoldStyle, type ColorStyle, type ProductStyle, type UnderlineStyle } from "./components/labeled-text-lib/builtin/reducers";
-import { makeBasicSegmenter } from "./components/labeled-text-lib/core/segmenters";
 import { type Label } from "./components/labeled-text-lib/core/types";
-import { StaticLabeledText } from "./components/labeled-text-lib/react/StaticLabeledText";
 import { type SegmentManager } from "./components/labeled-text-lib/core/segmentManager";
-import { ManagedLabeledText, type ManagedLabel } from "./components/labeled-text-lib/react/ManagedLabeledText";
+import { type ManagedLabel } from "./components/labeled-text-lib/react/ManagedLabeledText";
 import { DynamicLabeledText, type EditorOverlayRenderContext } from "./components/labeled-text-lib/react/DynamicLabeledText";
-import { makePlainBoxRenderer, makePlainTextRenderer } from "./components/labeled-text-lib/react/Renderer";
+import { makePlainBoxRenderer } from "./components/labeled-text-lib/react/Renderer";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type DemoStyle = ProductStyle<[ColorStyle, UnderlineStyle, BoldStyle]>;
@@ -16,6 +14,7 @@ function toHexColor(color: number): string {
     return `#${color.toString(16).padStart(6, "0")}`;
 }
 
+/*
 const demoText = "Alice met Bob in Wonderland. The Queen of Hearts watched from afar.";
 
 const demoLabels: DemoLabel[] = [
@@ -136,15 +135,6 @@ const plainSegmenter = makeBasicSegmenter<DemoStyle, DemoLabel>();
 const plainTextRenderer = {
     renderText: makePlainTextRenderer<DemoStyle, DemoLabel>(),
 };
-const measuredBoxLayering = {
-    containerStyle: {
-        isolation: "isolate" as const,
-    },
-    overlayStyle: {
-        zIndex: -1,
-    },
-};
-
 const measuredBoxRenderer = makePlainBoxRenderer<DemoStyle, DemoLabel>(([colorStyle, underlineStyle, boldStyle]) => ({
         backgroundColor: `${toHexColor(colorStyle.color)}2f`,
         border: `1px solid ${toHexColor(colorStyle.color)}7a`,
@@ -399,8 +389,20 @@ function buildChineseChapterDemo(paragraphCount: number): {
 }
 
 const chineseChapterDemo = buildChineseChapterDemo(14);
+*/
 
-type ManagedDemoLabel = ManagedLabel<DemoStyle, DemoLabel>;
+const measuredBoxRenderer = makePlainBoxRenderer<DemoStyle, DemoLabel>(([colorStyle, underlineStyle, boldStyle]) => ({
+    backgroundColor: `${toHexColor(colorStyle.color)}2f`,
+    border: `1px solid ${toHexColor(colorStyle.color)}7a`,
+    borderRadius: "0.8rem",
+    boxShadow: boldStyle.bold
+        ? `0 0.35rem 1.35rem ${toHexColor(colorStyle.color)}2e, inset 0 0 0 1px ${toHexColor(colorStyle.color)}1f`
+        : `0 0.2rem 0.8rem ${toHexColor(colorStyle.color)}1f, inset 0 0 0 1px ${toHexColor(colorStyle.color)}16`,
+    backdropFilter: "blur(8px)",
+    outline: underlineStyle.underline ? `2px solid ${toHexColor(colorStyle.color)}28` : undefined,
+    outlineOffset: underlineStyle.underline ? "-3px" : undefined,
+}));
+
 type EditorMode = "editing" | "labeling";
 type DemoLabelData = {
     id: string;
@@ -437,7 +439,7 @@ type LabelMutationOp = {
 type FlushRecord = {
     id: string;
     mode: EditorMode;
-    reason: "inactive" | "mode-switch";
+    reason: "inactive" | "mode-switch" | "manual";
     summary: string[];
 };
 
@@ -634,8 +636,8 @@ function BasicWorkflowManagerDemo() {
                     id: label.id,
                     labelDataId: label.labelDataId,
                     range: {
-                        start: segment.start + label.range.start,
-                        end: segment.start + label.range.end,
+                        start: segment.start + label.interval.start,
+                        end: segment.start + label.interval.end,
                     },
                 })),
             )
@@ -668,7 +670,7 @@ function BasicWorkflowManagerDemo() {
         labelsRef.current = labels;
     }, [labels]);
 
-    const flushQueue = useCallback((targetMode: EditorMode, reason: "inactive" | "mode-switch") => {
+    const flushQueue = useCallback((targetMode: EditorMode, reason: "inactive" | "mode-switch" | "manual") => {
         if (targetMode === "editing") {
             if (editingOps.length === 0) {
                 return;
@@ -699,6 +701,11 @@ function BasicWorkflowManagerDemo() {
         ]);
         setLabelingOps([]);
     }, [editingOps, labelingOps]);
+
+    const flushAllQueues = useCallback((reason: "manual" | "mode-switch") => {
+        flushQueue("editing", reason);
+        flushQueue("labeling", reason);
+    }, [flushQueue]);
 
     useEffect(() => {
         if (editingOps.length === 0) {
@@ -765,18 +772,18 @@ function BasicWorkflowManagerDemo() {
         }
 
         const newLabel: DemoRenderLabel = {
-            id: `wl-${labelIdCounterRef.current++}`,
+            id: `wl-${labelIdCounterRef.current + 1}`,
             labelDataId: labelData.id,
             labelName: labelData.name,
             groupName: labelData.groupName,
-            range: {
+            interval: {
                 start: insertPopup.start,
                 end: insertPopup.end,
             },
             style: labelData.style,
         };
 
-        manager.addLabel(newLabel);
+        manager.addLabel(`wl-${labelIdCounterRef.current++}`, newLabel);
         syncFromManager(manager);
         setLabelingOps((prev) => [...prev, {
             id: `label-op-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -849,6 +856,20 @@ function BasicWorkflowManagerDemo() {
                 <button type="button" onClick={() => switchMode("labeling")} disabled={mode === "labeling"}>
                     Labeling Mode
                 </button>
+                <button
+                    type="button"
+                    onClick={() => flushQueue(mode, "manual")}
+                    disabled={mode === "editing" ? editingOps.length === 0 : labelingOps.length === 0}
+                >
+                    Flush Current Queue
+                </button>
+                <button
+                    type="button"
+                    onClick={() => flushAllQueues("manual")}
+                    disabled={editingOps.length === 0 && labelingOps.length === 0}
+                >
+                    Flush All Queues
+                </button>
                 <div style={{ paddingTop: "0.4rem", color: "#52606d" }}>
                     Pending ops: editing <code>{editingOps.length}</code>, labeling <code>{labelingOps.length}</code>
                 </div>
@@ -909,8 +930,8 @@ function BasicWorkflowManagerDemo() {
                                         id: label.id,
                                         labelDataId: label.labelDataId,
                                         range: {
-                                            start: segment.start + label.range.start,
-                                            end: segment.start + label.range.end,
+                                            start: segment.start + label.interval.start,
+                                            end: segment.start + label.interval.end,
                                         },
                                     })),
                                 )
@@ -1141,6 +1162,7 @@ function BasicWorkflowManagerDemo() {
     );
 }
 
+/*
 const managedDemoText = "Alice met Bob in Wonderland.";
 const managedDemoLabels: ManagedDemoLabel[] = [
     {
@@ -1233,249 +1255,25 @@ function ManagedLabeledTextDemo() {
         </div>
     );
 }
+*/
 
 function Test() {
     return (
         <main
             style={{
                 padding: "2.5rem 2rem 4rem",
-                maxWidth: "52rem",
+                maxWidth: "58rem",
                 margin: "0 auto",
                 color: "#1f2937",
             }}
         >
-            <h1>Labeled Text Library Demo</h1>
+            <h1>Labeled Text Dynamic Demo</h1>
             <p>
-                Temporary labeled-text renderer demos using a product style of color
-                with independent underline and bold flags.
+                This page is now focused on the dynamic editor prototype: one labeled
+                surface, editing and labeling modes, local op queues, and label-aware
+                interactions.
             </p>
-            <div
-                style={{
-                    border: "1px solid #d4d4d8",
-                    borderRadius: "0.75rem",
-                    padding: "1rem",
-                    lineHeight: 1.8,
-                    backgroundColor: "#fffdf7",
-                }}
-            >
-                <StaticLabeledText
-                    text={demoText}
-                    labels={demoLabels}
-                    segment={plainSegmenter}
-                    render={plainTextRenderer}
-                />
-            </div>
-            <h2 style={{ marginTop: "2rem" }}>Plain Box Renderer</h2>
-            <p>
-                Same text, but rendered through the current plain boxed renderer API.
-            </p>
-            <div
-                style={{
-                    border: "1px solid #d4d4d8",
-                    borderRadius: "0.75rem",
-                    padding: "1rem",
-                    lineHeight: 1.8,
-                    background: "linear-gradient(180deg, #fbfbff 0%, #f4f5ff 100%)",
-                }}
-            >
-                <StaticLabeledText
-                    text={demoText}
-                    labels={demoLabels}
-                    segment={measuredBoxSegmenter}
-                    render={measuredBoxRenderer}
-                    containerStyle={measuredBoxLayering.containerStyle}
-                    overlayStyle={measuredBoxLayering.overlayStyle}
-                />
-            </div>
-            <h2 style={{ marginTop: "2rem" }}>Managed Labeled Text Prototype</h2>
-            <p>
-                Minimal non-static demo backed by the new segment manager. The buttons
-                below call <code>insertTextAt</code> and <code>deleteTextAt</code> on
-                the live manager instance.
-            </p>
-            <ManagedLabeledTextDemo />
             <BasicWorkflowManagerDemo />
-            <h2 style={{ marginTop: "2rem" }}>Measured Box Renderer Prototype</h2>
-            <p>
-                Same general idea, but this one uses the DOM range API to place
-                translucent boxes over the label spans inside each basic segment.
-            </p>
-            <div
-                style={{
-                    border: "1px solid #d7e4ea",
-                    borderRadius: "1.25rem",
-                    background:
-                        "linear-gradient(180deg, rgba(248,252,252,0.98) 0%, rgba(238,247,247,0.98) 100%)",
-                    padding: "1.25rem",
-                    boxShadow: "0 1.25rem 3rem rgba(15, 23, 42, 0.08)",
-                }}
-            >
-                <p
-                    style={{
-                        marginTop: 0,
-                        marginBottom: "1rem",
-                        color: "#52606d",
-                        fontSize: "0.96rem",
-                    }}
-                >
-                    Drag the lower-right corner of the box below to stress wrapping.
-                </p>
-                <div
-                    style={{
-                        resize: "horizontal",
-                        overflow: "auto",
-                        minWidth: "16rem",
-                        width: "32rem",
-                        maxWidth: "100%",
-                        border: "1px solid rgba(148, 163, 184, 0.28)",
-                        borderRadius: "1rem",
-                        padding: "1.15rem 1.2rem 1.25rem",
-                        background:
-                            "linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(246,250,252,0.92) 100%)",
-                        boxShadow:
-                            "inset 0 1px 0 rgba(255,255,255,0.85), 0 0.65rem 1.8rem rgba(15, 23, 42, 0.06)",
-                    }}
-                >
-                    <StaticLabeledText
-                        text={measuredBoxText}
-                        labels={measuredBoxLabels}
-                        segment={measuredBoxSegmenter}
-                        render={measuredBoxRenderer}
-                        containerStyle={measuredBoxLayering.containerStyle}
-                        overlayStyle={measuredBoxLayering.overlayStyle}
-                    />
-                </div>
-            </div>
-            <h2 style={{ marginTop: "2rem" }}>Measured Box Stress Demo</h2>
-            <p>
-                Larger synthetic passage for rough performance checks. This one uses{" "}
-                <code>{stressDemo.text.length}</code> characters and{" "}
-                <code>{stressDemo.labels.length}</code> labels.
-            </p>
-            <div
-                style={{
-                    border: "1px solid #d7e4ea",
-                    borderRadius: "1.25rem",
-                    background:
-                        "linear-gradient(180deg, rgba(248,252,252,0.98) 0%, rgba(238,247,247,0.98) 100%)",
-                    padding: "1.25rem",
-                    boxShadow: "0 1.25rem 3rem rgba(15, 23, 42, 0.08)",
-                }}
-            >
-                <div
-                    style={{
-                        resize: "horizontal",
-                        maxHeight: "26rem",
-                        overflow: "auto",
-                        minWidth: "18rem",
-                        width: "40rem",
-                        maxWidth: "100%",
-                        border: "1px solid rgba(148, 163, 184, 0.28)",
-                        borderRadius: "1rem",
-                        padding: "1.15rem 1.2rem 1.25rem",
-                        background:
-                            "linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(246,250,252,0.92) 100%)",
-                        boxShadow:
-                            "inset 0 1px 0 rgba(255,255,255,0.85), 0 0.65rem 1.8rem rgba(15, 23, 42, 0.06)",
-                    }}
-                >
-                    <StaticLabeledText
-                        text={stressDemo.text}
-                        labels={stressDemo.labels}
-                        segment={measuredBoxSegmenter}
-                        render={measuredBoxRenderer}
-                        containerStyle={measuredBoxLayering.containerStyle}
-                        overlayStyle={measuredBoxLayering.overlayStyle}
-                    />
-                </div>
-            </div>
-            <h2 style={{ marginTop: "2rem" }}>Sparse Label Stress Demo</h2>
-            <p>
-                Longer text with fewer labels to compare against the dense stress case.
-                This one uses <code>{sparseStressDemo.text.length}</code> characters and{" "}
-                <code>{sparseStressDemo.labels.length}</code> labels.
-            </p>
-            <div
-                style={{
-                    border: "1px solid #d7e4ea",
-                    borderRadius: "1.25rem",
-                    background:
-                        "linear-gradient(180deg, rgba(248,252,252,0.98) 0%, rgba(238,247,247,0.98) 100%)",
-                    padding: "1.25rem",
-                    boxShadow: "0 1.25rem 3rem rgba(15, 23, 42, 0.08)",
-                }}
-            >
-                <div
-                    style={{
-                        resize: "horizontal",
-                        maxHeight: "26rem",
-                        overflow: "auto",
-                        minWidth: "18rem",
-                        width: "40rem",
-                        maxWidth: "100%",
-                        border: "1px solid rgba(148, 163, 184, 0.28)",
-                        borderRadius: "1rem",
-                        padding: "1.15rem 1.2rem 1.25rem",
-                        background:
-                            "linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(246,250,252,0.92) 100%)",
-                        boxShadow:
-                            "inset 0 1px 0 rgba(255,255,255,0.85), 0 0.65rem 1.8rem rgba(15, 23, 42, 0.06)",
-                    }}
-                >
-                    <StaticLabeledText
-                        text={sparseStressDemo.text}
-                        labels={sparseStressDemo.labels}
-                        segment={measuredBoxSegmenter}
-                        render={measuredBoxRenderer}
-                        containerStyle={measuredBoxLayering.containerStyle}
-                        overlayStyle={measuredBoxLayering.overlayStyle}
-                    />
-                </div>
-            </div>
-            <h2 style={{ marginTop: "2rem" }}>Synthetic Chinese Chapter Demo</h2>
-            <p>
-                Synthetic xianxia-style chapter text with recurring character, sect,
-                item, and location names labeled throughout. This one uses{" "}
-                <code>{chineseChapterDemo.text.length}</code> characters and{" "}
-                <code>{chineseChapterDemo.labels.length}</code> labels.
-            </p>
-            <div
-                style={{
-                    border: "1px solid #d7e4ea",
-                    borderRadius: "1.25rem",
-                    background:
-                        "linear-gradient(180deg, rgba(248,252,252,0.98) 0%, rgba(238,247,247,0.98) 100%)",
-                    padding: "1.25rem",
-                    boxShadow: "0 1.25rem 3rem rgba(15, 23, 42, 0.08)",
-                }}
-            >
-                <div
-                    style={{
-                        resize: "horizontal",
-                        maxHeight: "26rem",
-                        overflow: "auto",
-                        minWidth: "18rem",
-                        width: "40rem",
-                        maxWidth: "100%",
-                        border: "1px solid rgba(148, 163, 184, 0.28)",
-                        borderRadius: "1rem",
-                        padding: "1.15rem 1.2rem 1.25rem",
-                        background:
-                            "linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(246,250,252,0.92) 100%)",
-                        boxShadow:
-                            "inset 0 1px 0 rgba(255,255,255,0.85), 0 0.65rem 1.8rem rgba(15, 23, 42, 0.06)",
-                    }}
-                >
-                    <StaticLabeledText
-                        text={chineseChapterDemo.text}
-                        labels={chineseChapterDemo.labels}
-                        segment={measuredBoxSegmenter}
-                        render={measuredBoxRenderer}
-                        containerStyle={measuredBoxLayering.containerStyle}
-                        overlayStyle={measuredBoxLayering.overlayStyle}
-                    />
-                </div>
-            </div>
         </main>
     );
 }

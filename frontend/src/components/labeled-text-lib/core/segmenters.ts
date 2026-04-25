@@ -13,15 +13,15 @@ export function makeBasicSegmenter<S extends Style, L extends Label<S>>(gap: num
     return (text: string, labels: L[]): Segment<S, L>[] => {
         const segments: Segment<S, L>[] = [];
         const labelsCopy = [...labels];
-        if (!isSorted(labelsCopy.map(l => l.range.start))) {
-            labelsCopy.sort((a, b) => a.range.start - b.range.start);
+        if (!isSorted(labelsCopy.map(l => l.interval.start))) {
+            labelsCopy.sort((a, b) => a.interval.start - b.interval.start);
         }
         let curSegmentStart = 0;
         let curSegmentEnd = 0;
         let curSegmentLabels: L[] = [];
         for (const label of labelsCopy) {
             // check if no overlap with the current segment
-            if (label.range.start >= curSegmentEnd + gap) {
+            if (label.interval.start >= curSegmentEnd + gap) {
                 if (curSegmentEnd > curSegmentStart) {
                     segments.push({
                         labels: curSegmentLabels,
@@ -29,21 +29,21 @@ export function makeBasicSegmenter<S extends Style, L extends Label<S>>(gap: num
                         text: text.slice(curSegmentStart, curSegmentEnd)
                     });
                 }
-                if (label.range.start > curSegmentEnd) {
+                if (label.interval.start > curSegmentEnd) {
                     // add a segment for the gap
                     segments.push({
                         labels: [],
                         start: curSegmentEnd,
-                        text: text.slice(curSegmentEnd, label.range.start)
+                        text: text.slice(curSegmentEnd, label.interval.start)
                     });
                 }
-                curSegmentStart = label.range.start;
-                curSegmentEnd = label.range.end;
-                curSegmentLabels = [{...label, range: {start: 0, end: label.range.end - label.range.start}}]; // adjust the label range to be relative to the segment start
+                curSegmentStart = label.interval.start;
+                curSegmentEnd = label.interval.end;
+                curSegmentLabels = [{...label, interval: {start: 0, end: label.interval.end - label.interval.start}}]; // adjust the label range to be relative to the segment start
             } else {
                 // merge with the current segment
-                curSegmentEnd = Math.max(curSegmentEnd, label.range.end);
-                curSegmentLabels.push({...label, range: {start: label.range.start - curSegmentStart, end: label.range.end - curSegmentStart}}); // adjust the label range to be relative to the segment start
+                curSegmentEnd = Math.max(curSegmentEnd, label.interval.end);
+                curSegmentLabels.push({...label, interval: {start: label.interval.start - curSegmentStart, end: label.interval.end - curSegmentStart}}); // adjust the label range to be relative to the segment start
             }
         }
         if (curSegmentLabels.length > 0) {
@@ -84,8 +84,8 @@ export function makeReducingSegmenter<S extends Style, L extends Label<S>>(reduc
                 continue;
             }
             for (const label of segment.labels) {
-                partition.add(label.range.start);
-                partition.add(label.range.end);
+                partition.add(label.interval.start);
+                partition.add(label.interval.end);
             }
             partition.add(segment.text.length);
             const sortedPartition = Array.from(partition).sort((a, b) => a - b);
@@ -93,9 +93,9 @@ export function makeReducingSegmenter<S extends Style, L extends Label<S>>(reduc
             for (let i = 0; i < sortedPartition.length - 1; i++) {
                 const partStart = sortedPartition[i];
                 const partEnd = sortedPartition[i + 1];
-                const partLabels = segment.labels.filter(label => { return label.range.start <= partStart && label.range.end >= partEnd; });
+                const partLabels = segment.labels.filter(label => { return label.interval.start <= partStart && label.interval.end >= partEnd; });
                 newLabels.push({
-                    range: { start: partStart, end: partEnd },
+                    interval: { start: partStart, end: partEnd },
                     style: reducer(partLabels.map(l => l.style))
                 });
             }
@@ -115,20 +115,20 @@ export function makeFullReducingSegmenter<S extends Style, L extends Label<S>>(r
         partition.add(0);
         partition.add(text.length);
         for (const label of labels) {
-            partition.add(label.range.start);
-            partition.add(label.range.end);
+            partition.add(label.interval.start);
+            partition.add(label.interval.end);
         }
         const sortedPartition = Array.from(partition).sort((a, b) => a - b);
         const segments: Segment<S, Label<S>>[] = [];
         for (let i = 0; i < sortedPartition.length - 1; i++) {
             const partStart = sortedPartition[i];
             const partEnd = sortedPartition[i + 1];
-            const partLabels = labels.filter(label => { return label.range.start <= partStart && label.range.end >= partEnd; });
+            const partLabels = labels.filter(label => { return label.interval.start <= partStart && label.interval.end >= partEnd; });
             segments.push({
                 start: partStart,
                 text: text.slice(partStart, partEnd),
                 labels: partLabels.length > 0 ? [{
-                    range: { start: 0, end: partEnd - partStart },
+                    interval: { start: 0, end: partEnd - partStart },
                     style: reducer(partLabels.map(l => l.style))
                 }] : []
             });

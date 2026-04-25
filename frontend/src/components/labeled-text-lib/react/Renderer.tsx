@@ -8,7 +8,7 @@ export type ReducedTextRenderer<S extends Style> = ({ segment } : { segment: Red
 
 export type FullReducedTextRenderer<S extends Style> = ({ segment } : { segment: FullReducedSegment<S> }) => JSX.Element;
 
-export type OverlayRenderer<S extends Style, L extends Label<S>> = ({ segment, containerRef, overlayRef } : { segment: Segment<S, L>, containerRef : React.RefObject<HTMLDivElement | null>, overlayRef: React.RefObject<HTMLDivElement | null> }) => JSX.Element;
+export type OverlayRenderer<S extends Style, L extends Label<S>> = ({ segment, containerRef, overlayRef } : { segment: Segment<S, L>, readonly containerRef : React.RefObject<HTMLDivElement | null>, overlayRef: React.RefObject<HTMLDivElement | null> }) => JSX.Element;
 
 type TextPoint = {
     node : Node | null;
@@ -71,8 +71,8 @@ export function makeBoxOverlayRenderer<S extends Style, L extends Label<S>>(toBo
                 if (!segmentElement) {
                     return;
                 }
-                const leftTextPoint = resolveTextPoint(segmentElement, segment, label.range.start);
-                const rightTextPoint = resolveTextPoint(segmentElement, segment, label.range.end);
+                const leftTextPoint = resolveTextPoint(segmentElement, segment, label.interval.start);
+                const rightTextPoint = resolveTextPoint(segmentElement, segment, label.interval.end);
                 if (!leftTextPoint?.node || !rightTextPoint?.node) {
                     return;
                 }

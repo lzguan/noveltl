@@ -14,7 +14,7 @@ type ManagedTestLabel = Label<TestStyle> & {
 function makeLabel(id: string, start: number, end: number, name: string): ManagedTestLabel {
     return {
         id,
-        range: { start, end },
+        interval: { start, end },
         style: { name },
     };
 }
@@ -33,9 +33,9 @@ function assertManagerInvariants(manager: ReturnType<typeof makeBasicSegmentMana
         expect(segment.text.length).toBeGreaterThan(0);
 
         for (const label of segment.labels) {
-            expect(label.range.start).toBeGreaterThanOrEqual(0);
-            expect(label.range.end).toBeGreaterThan(label.range.start);
-            expect(label.range.end).toBeLessThanOrEqual(segment.text.length);
+            expect(label.interval.start).toBeGreaterThanOrEqual(0);
+            expect(label.interval.end).toBeGreaterThan(label.interval.start);
+            expect(label.interval.end).toBeLessThanOrEqual(segment.text.length);
         }
 
         cursor += segment.text.length;
@@ -50,8 +50,8 @@ function getAbsoluteLabels(manager: ReturnType<typeof makeBasicSegmentManager<Te
         .flatMap((segment) =>
             segment.labels.map((label) => ({
                 id: label.id,
-                start: segment.start + label.range.start,
-                end: segment.start + label.range.end,
+                start: segment.start + label.interval.start,
+                end: segment.start + label.interval.end,
                 name: label.style.name,
             })),
         )

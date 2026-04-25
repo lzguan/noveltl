@@ -92,6 +92,10 @@ RUN --mount=type=cache,target=/home/vscode/.cache/uv,uid=1000,gid=1000 \
 
 ---
 
+## 6. Devcontainer Startup Failing on Reload Window in VSCode in Windows 11
+
+**Fix:** Restart wsl.
+
 ## Relevant Files
 - `compose.yaml` - Docker Compose service definitions
 - `.devcontainer/devcontainer.json` - Dev Container configuration

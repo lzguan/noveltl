@@ -8,7 +8,7 @@ export type Style = object
  * Half-open character range into the source text: [start, end).
  * `start` is inclusive and `end` is exclusive.
  */
-export type Range = {
+export type Interval = {
     start: number;
     end: number;
 };
@@ -20,7 +20,7 @@ export type Range = {
  * into segment-local coordinates in their output.
  */
 export type Label<S extends Style> = {
-    range : Range;
+    interval : Interval;
     style : S
 }
 
@@ -28,7 +28,7 @@ export type Label<S extends Style> = {
  * A disjoint rendered slice of text.
  *
  * Segments are ordered by `start` and are intended to partition some region of
- * the source text. For segment-local consumers, each label range in `labels` is
+ * the source text. For segment-local consumers, each label interval in `labels` is
  * relative to `segment.start`, not to the full document.
  */
 export type Segment<S extends Style, L extends Label<S>> = {

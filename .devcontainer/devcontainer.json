@@ -49,7 +49,8 @@
 				"bierner.markdown-mermaid",
 				"openai.chatgpt",
 				"meta.pyrefly",
-				"bradlc.vscode-tailwindcss"
+				"bradlc.vscode-tailwindcss",
+				"typescriptteam.native-preview"
 			],
 			"settings": {
 				"python.defaultInterpreterPath": "/.venv/bin/python",
@@ -61,7 +62,8 @@
 				"less.lint.unknownAtRules": "ignore",
 				"files.associations": {
 					"*.css": "tailwindcss"
-				}
+				},
+				"js/ts.experimental.useTsgo": true
 			}
 		}
 	}

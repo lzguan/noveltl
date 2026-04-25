@@ -2,15 +2,15 @@ export const AppRoutes = {
     LOGIN: '/login',
     DASHBOARD: '/dashboard',
     VIEW: {
-        SOURCEWORKS: '/view/sourceworks',
-        SOURCEWORK_DETAILS: '/view/sourceworks/:sourcework_id',
+        SOURCEWORKS: '/view/source-works',
+        SOURCEWORK_DETAILS: '/view/source-works/:sourceWorkId',
         NOVELS: '/view/novels',
-        NOVEL_DETAILS: '/view/novels/:novel_id',
-        CHAPTER: '/view/chapters/:chapter_id',
+        NOVEL_DETAILS: '/view/novels/:novelId',
+        CHAPTER: '/view/chapters/:chapterId',
     },
     EDIT: {
         NOVELS: '/edit/novels',
-        NOVEL: '/edit/novels/:novel_id',
+        NOVEL: '/edit/novels/:novelId',
     },
     TEST: "/test"
 } as const;
@@ -21,9 +21,9 @@ export const routeTo = {
             const params = new URLSearchParams();
             if (options?.search) params.set('search', options.search);
             const query = params.toString();
-            return query ? `/view/sourceworks?${query}` : '/view/sourceworks';
+            return query ? `/view/source-works?${query}` : '/view/source-works';
         },
-        sourcework: (id: string) => `/view/sourceworks/${id}`,
+        sourcework: (id: string) => `/view/source-works/${id}`,
 
         novels: (options?: { mine?: boolean; search?: string }) => {
             const params = new URLSearchParams();
@@ -33,20 +33,18 @@ export const routeTo = {
             return query ? `/view/novels?${query}` : '/view/novels';
         },
         novel: (id: string) => `/view/novels/${id}`,
-        chapter: (chapterId: string, options?: { revisionId?: string }) => {
+        chapter: (chapterId: string, options?: { chapterContentId?: string }) => {
             const base = `/view/chapters/${chapterId}`;
-            if (options?.revisionId) return `${base}?revision_id=${options.revisionId}`;
+            if (options?.chapterContentId) return `${base}?chapter-content-id=${options.chapterContentId}`;
             return base;
         }
     },
     edit: {
         novels: () => '/edit/novels',
-        novel: (novelId: string, params?: { chapter?: string; labelsGroup?: string; nerGroup?: string }) => {
+        novel: (novelId: string, params?: { chapterId?: string; }) => {
             const base = `/edit/novels/${novelId}`;
             const qs = new URLSearchParams();
-            if (params?.chapter) qs.set('chapter', params.chapter);
-            if (params?.labelsGroup) qs.set('labelsGroup', params.labelsGroup);
-            if (params?.nerGroup) qs.set('nerGroup', params.nerGroup);
+            if (params?.chapterId) qs.set('chapter-id', params.chapterId);
             const query = qs.toString();
             return query ? `${base}?${query}` : base;
         },
@@ -63,14 +61,12 @@ export const extractParams = {
             search: searchParams.get('search') || undefined,
         }),
         chapter: (searchParams: URLSearchParams) => ({
-            revisionId: searchParams.get('revision_id') || undefined,
+            chapterContentId: searchParams.get('chapter-content-id') || undefined,
         }),
     },
     edit: {
         novel: (searchParams: URLSearchParams) => ({
-            chapter: searchParams.get('chapter') || undefined,
-            labelsGroup: searchParams.get('labelsGroup') || undefined,
-            nerGroup: searchParams.get('nerGroup') || undefined,
+            chapterId: searchParams.get('chapter-id') || undefined,
         })
 
     }

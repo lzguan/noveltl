@@ -1,16 +1,32 @@
 import { makeBasicSegmenter } from "./segmenters";
-import type { Label, Interval, Segment, Style } from "./types";
+import type { StyledLabel, Interval, Segment, Style } from "./types";
 
 export type LabelID = string;
 type SegmentID = string;
 type Index = number;
 
-export type ManagedLabel<S extends Style, L extends Label<S>> = L & {
+export type ManagedLabel<S extends Style, L extends StyledLabel<S>> = L & {
     id: LabelID;
 }
 
-export type ManagedSegment<S extends Style, L extends Label<S>> = Segment<S, ManagedLabel<S, L>> & {
+export type ManagedSegment<S extends Style, L extends StyledLabel<S>> = Segment<S, ManagedLabel<S, L>> & {
     id: SegmentID;
+}
+
+class Lock {
+    private lock = 0;
+
+    acquire() {
+        this.lock++;
+    }
+
+    release() {
+        this.lock--;
+    }
+
+    isFree() {
+        return this.lock <= 0;
+    }
 }
 
 /**
@@ -69,7 +85,7 @@ export function getUncoveredSubintervals(
  * - Essentially, the getter interface should return data consistent with the representation that LabeledText expects.
  * - The actual label data should store start pos relative to entire text.
  */
-export type SegmentManager<S extends Style, L extends Label<S>> = {
+export type SegmentManager<S extends Style, L extends StyledLabel<S>> = {
     /**
      * Gets the current text.
      */
@@ -119,12 +135,17 @@ export type SegmentManager<S extends Style, L extends Label<S>> = {
      * @param length 
      */
     deleteTextAt(pos: number, length: number): void;
+
+    /**
+     * Perform a batch of operations. 
+     */
+    batch(operations: (() => void)): void;
 }
 
 /**
  * Nothing here should touch the labelId - label map.
  */
-type SegmentManagerInternals<S extends Style, L extends Label<S>> = {
+type SegmentManagerInternals<S extends Style, L extends StyledLabel<S>> = {
     /**
      * Validate whether a segment can be split at the given position. The position is relative to the segment. This is used to prevent splitting in the middle of a label, for example. 
      * @param segment 
@@ -168,12 +189,19 @@ type SegmentManagerInternals<S extends Style, L extends Label<S>> = {
     prependSegment(segment: Segment<S, ManagedLabel<S, L>>): SegmentID;
 
     /**
+     * Notify all subscribers of a change. This should be called whenever the segments are updated.
+     */
+    notifySubscribers(): void;
+
+    lock : Lock;
+
+    /**
      * Generate a new segment ID. This is used internally to assign IDs to new segments. It should guarantee that the generated ID is unique among all existing segments.
      */
     idGenerator: Generator<SegmentID, never, SegmentID>;
 };
 
-type SegmentManagerData<S extends Style, L extends Label<S>> = {
+type SegmentManagerData<S extends Style, L extends StyledLabel<S>> = {
     /**
      * Lookup index, not ssot
      */
@@ -185,7 +213,7 @@ type SegmentManagerData<S extends Style, L extends Label<S>> = {
     subscribers : Set<() => void>;
 }
 
-export function makeBasicSegmentManager<S extends Style, L extends Label<S>>(initialText: string, initialLabels: ManagedLabel<S, L>[], gap : number = 0): SegmentManager<S, L> {
+export function makeBasicSegmentManager<S extends Style, L extends StyledLabel<S>>(initialText: string, initialLabels: ManagedLabel<S, L>[], gap : number = 0): SegmentManager<S, L> {
     const segmenter = makeBasicSegmenter<S, ManagedLabel<S, L>>(gap);
     const segmentManager : SegmentManager<S, L> & SegmentManagerInternals<S, L> & SegmentManagerData<S, L> = {
         idGenerator: (function*() {
@@ -199,14 +227,17 @@ export function makeBasicSegmentManager<S extends Style, L extends Label<S>>(ini
         text: "",
         labelsById: new Map<LabelID, L>(),
         segmentIdsByLabelId: new Map<LabelID, SegmentID>(),
-
         subscribers: new Set<() => void>(),
+        lock : new Lock(),
+
         getText() {
             return this.text;
         },
+
         getSegmentIds() {
             return this.bounds.map(b => b.id);
         },
+
         getSegment(id: SegmentID) {
             const ret = this.segmentsById.get(id);
             if (!ret) {
@@ -214,16 +245,24 @@ export function makeBasicSegmentManager<S extends Style, L extends Label<S>>(ini
             }
             return ret;
         },
+
         getSegments() {
             return this.bounds.map(b => {
                 const seg = {id : b.id, ...this.segmentsById.get(b.id)};
                 return seg as ManagedSegment<S, L>;
             });
         },
+
         subscribe(listener : () => void) {
             this.subscribers.add(listener);
             return () => {
                 this.subscribers.delete(listener);
+            }
+        },
+
+        notifySubscribers() {
+            if (this.lock.isFree()) {
+                this.subscribers.forEach((subscriber) => subscriber());
             }
         },
 
@@ -362,7 +401,7 @@ export function makeBasicSegmentManager<S extends Style, L extends Label<S>>(ini
             this.labelsById.set(id, label);
             this.segmentIdsByLabelId.set(id, newSegmentId);
             this.segmentsById.get(newSegmentId)!.labels.push( { ...label, interval: { start: label.interval.start - this.segmentsById.get(newSegmentId)!.start, end: label.interval.end - this.segmentsById.get(newSegmentId)!.start } , id });
-            this.subscribers.forEach((subscriber) => subscriber());
+            this.notifySubscribers();
         },
 
         removeLabel(id : LabelID) {
@@ -384,7 +423,7 @@ export function makeBasicSegmentManager<S extends Style, L extends Label<S>>(ini
             // Try to split the segment
             const uncovered = getUncoveredSubintervals({ start: label.interval.start, end: label.interval.end }, newLabels.map(l => l.interval));
             if (uncovered.length === 0) {
-                this.subscribers.forEach((subscriber) => subscriber());
+                this.notifySubscribers();
                 return;
             }
             for (const range of uncovered) {
@@ -394,24 +433,28 @@ export function makeBasicSegmentManager<S extends Style, L extends Label<S>>(ini
                 const splitPos = range.start - segment.start;
                 this.splitSegment(segmentId, splitPos);
             }
-            this.subscribers.forEach((subscriber) => subscriber());
+            this.notifySubscribers();
         },
 
         updateLabel(id: LabelID, newLabel: L) {
-            this.removeLabel(id);
-            this.addLabel(id, newLabel);
-            this.subscribers.forEach((subscriber) => subscriber());
+            this.batch(() => {
+                this.removeLabel(id);
+                this.addLabel(id, newLabel);
+            });
         },
 
         insertTextAt(pos : number, text : string) {
+            if (text.length === 0) {
+                return;
+            }
             if (pos === 0) {
                 this.prependSegment({ start: 0, text, labels: [] });
-                this.subscribers.forEach((subscriber) => subscriber());
+                this.notifySubscribers();
                 return;
             }
             if (pos === this.text.length) {
                 this.postpendSegment({ start: pos, text, labels: [] });
-                this.subscribers.forEach((subscriber) => subscriber());
+                this.notifySubscribers();
                 return;
             }
             if (pos < 0 || pos > this.text.length) {
@@ -460,7 +503,7 @@ export function makeBasicSegmentManager<S extends Style, L extends Label<S>>(ini
                 this.bounds[idx + startOff].end += text.length;
                 this.bounds.slice(idx + startOff + 1).forEach(b => { b.start += text.length; b.end += text.length; this.segmentsById.get(b.id)!.start += text.length });
             }
-            this.subscribers.forEach((subscriber) => subscriber());
+            this.notifySubscribers();
         },
         
         deleteTextAt(pos: number, length: number) {
@@ -479,6 +522,7 @@ export function makeBasicSegmentManager<S extends Style, L extends Label<S>>(ini
             const affectedBounds = this.bounds.slice(startIdx, endIdx);
             if (affectedBounds.length === 0) {
                 this.text = this.text.slice(0, pos) + this.text.slice(endPos);
+                this.notifySubscribers();
                 return;
             }
 
@@ -550,8 +594,19 @@ export function makeBasicSegmentManager<S extends Style, L extends Label<S>>(ini
                 rebuiltBounds.push({ id, start: segment.start, end: segment.start + segment.text.length });
             }
             this.bounds.splice(startIdx, 0, ...rebuiltBounds);
-            this.subscribers.forEach((subscriber) => subscriber());
+            this.notifySubscribers();
         },
+
+        batch(operations: () => void) {
+            this.lock.acquire();
+            try {
+                operations();
+            }
+            finally {
+                this.lock.release();
+                this.notifySubscribers();
+            }
+        }
     }
     for (const label of initialLabels) {
         segmentManager.labelsById.set(label.id, label);

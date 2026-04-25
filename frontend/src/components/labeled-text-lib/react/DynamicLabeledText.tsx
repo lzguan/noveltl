@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import type { SegmentManager } from "../core/segmentManager";
-import type { Label, Style } from "../core/types";
+import type { StyledLabel, Style } from "../core/types";
 import type { Renderer } from "./Renderer";
 
 type Caret = {
@@ -11,17 +11,17 @@ type Caret = {
 
 type CaretRenderer = ({caret, containerRef, overlayRef} : { caret : Caret, containerRef : React.RefObject<HTMLDivElement | null>, overlayRef : React.RefObject<HTMLDivElement | null> }) => JSX.Element;
 
-type EditorRenderer<S extends Style, L extends Label<S>> = Renderer<S, L> & {
+type EditorRenderer<S extends Style, L extends StyledLabel<S>> = Renderer<S, L> & {
     renderCaret : CaretRenderer;
 }
 
-type CallbackParams<S extends Style, L extends Label<S>, E extends React.SyntheticEvent<HTMLDivElement>> = {
+type CallbackParams<S extends Style, L extends StyledLabel<S>, E extends React.SyntheticEvent<HTMLDivElement>> = {
     event : E;
     manager : SegmentManager<S, L>;
     caret : Caret;
 }
 
-type EditorCallbacks<S extends Style, L extends Label<S>> = {
+type EditorCallbacks<S extends Style, L extends StyledLabel<S>> = {
     onPointerDown? : ({event, manager, caret} : CallbackParams<S, L, React.PointerEvent<HTMLDivElement>>) => void;
     onPointerMove? : ({event, manager, caret} : CallbackParams<S, L, React.PointerEvent<HTMLDivElement>>) => void;
     onPointerUp? : ({event, manager, caret} : CallbackParams<S, L, React.PointerEvent<HTMLDivElement>>) => void;
@@ -41,7 +41,7 @@ type EditorCallbacks<S extends Style, L extends Label<S>> = {
     onBlur? : ({event, manager, caret} : CallbackParams<S, L, React.FocusEvent<HTMLDivElement>>) => void;
 }
 
-function DynamicLabeledText<S extends Style, L extends Label<S>>(
+function DynamicLabeledText<S extends Style, L extends StyledLabel<S>>(
     { caret, manager, render, containerStyle, overlayStyle, caretOverlayStyle, ...callbacks } : { caret: Caret, manager : SegmentManager<S, L>, render : EditorRenderer<S, L>, containerStyle?: React.CSSProperties, overlayStyle?: React.CSSProperties, caretOverlayStyle?: React.CSSProperties } & EditorCallbacks<S, L>
 ) {
     const containerRef = useRef<HTMLDivElement | null>(null);

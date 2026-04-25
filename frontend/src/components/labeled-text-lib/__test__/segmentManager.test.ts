@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { getUncoveredSubintervals, makeBasicSegmentManager } from "../core/segmentManager";
-import type { Label } from "../core/types";
+import type { StyledLabel } from "../core/types";
 
 type TestStyle = {
     name: string;
 };
 
-type ManagedTestLabel = Label<TestStyle> & {
+type ManagedTestLabel = StyledLabel<TestStyle> & {
     id: string;
 };
 

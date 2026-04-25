@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeBasicSegmenter } from "../core/segmenters";
-import type { Label } from "../core/types";
+import type { StyledLabel } from "../core/types";
 import { StaticLabeledText } from "../react/StaticLabeledText";
 import {
     makeBoxOverlayRenderer,
@@ -15,7 +15,7 @@ type TestStyle = {
     name: string;
 };
 
-type TestLabel = Label<TestStyle>;
+type TestLabel = StyledLabel<TestStyle>;
 
 function makeLabel(start: number, end: number, name: string): TestLabel {
     return {

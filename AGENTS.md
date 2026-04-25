@@ -5,7 +5,7 @@
 NovelTL is a collaborative novel-translation platform. It combines manual labeling workflows with NER-assisted auto-labeling to keep names and terminology consistent across long texts.
 
 Stack:
-- Frontend: React 19, TypeScript, Vite
+- Frontend: React 19, TypeScript 7, Vite, pnpm
 - Backend: FastAPI, SQLAlchemy, Alembic
 - Infra: PostgreSQL, Redis, ARQ worker
 
@@ -19,12 +19,12 @@ Stack:
 ## Commands
 
 Frontend, from `frontend/`:
-- `npm run dev`
-- `npm run build`
-- `npm run lint`
-- `npm run test`
-- `npx vitest run`
-- `npx tsc -p tsconfig.app.json --noEmit`
+- `pnpm dev`
+- `pnpm build`
+- `pnpm lint`
+- `pnpm test`
+- `pnpm exec vitest run`
+- `pnpm exec tsgo -p tsconfig.app.json --noEmit`
 
 Backend, from repo root after `source /.venv/bin/activate`:
 - `pytest backend/`
@@ -51,6 +51,7 @@ Frontend:
 - Utilities/API modules: `camelCase.ts`
 - Named exports only
 - Pages live in `frontend/src/pages/`
+- Use `pnpm` for frontend package/scripts and `tsgo` instead of `tsc` for TypeScript checks
 
 API boundary:
 - Backend uses `snake_case`

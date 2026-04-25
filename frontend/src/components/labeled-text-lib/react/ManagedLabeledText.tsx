@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
 import { makeBasicSegmentManager, type ManagedLabel, type SegmentManager } from "../core/segmentManager";
-import type { Label, Style } from "../core/types";
+import type { StyledLabel, Style } from "../core/types";
 import type { Renderer } from "./Renderer";
 
-type ManagedLabeledTextProps<S extends Style, L extends Label<S>> = {
+type ManagedLabeledTextProps<S extends Style, L extends StyledLabel<S>> = {
     initialText: string;
     initialLabels: ManagedLabel<S, L>[];
     gap?: number;
@@ -14,7 +14,7 @@ type ManagedLabeledTextProps<S extends Style, L extends Label<S>> = {
     onReady?: (manager: SegmentManager<S, L>) => void;
 };
 
-function ManagedLabeledText<S extends Style, L extends Label<S>>(
+function ManagedLabeledText<S extends Style, L extends StyledLabel<S>>(
     props: ManagedLabeledTextProps<S, L>,
 ) {
     const {

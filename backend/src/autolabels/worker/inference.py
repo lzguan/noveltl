@@ -74,12 +74,13 @@ class CluenerModel(NERModel[CluenerModelParams]):
 class Cluener:
 
     def __init__(self):
-        from transformers import pipeline  # type : ignore
+        from transformers import pipeline
 
         self.pipeline = pipeline(
             'token-classification',
             model='uer/roberta-base-finetuned-cluener2020-chinese',
             aggregation_strategy="simple"
         )
+        if self.pipeline.tokenizer is None:
+            raise ValueError("Failed to load model")
         self.model : NERModel[CluenerModelParams] = CluenerModel(self.pipeline) # pyrefly: ignore
-

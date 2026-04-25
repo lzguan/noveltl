@@ -1,4 +1,4 @@
-import { type Style, type Label, type Segmenter, type Segment, type ReducingSegmenter, type FullReducingSegmenter, asReducedSegment, asFullReducedSegment } from "./types";
+import { type Style, type StyledLabel, type Segmenter, type Segment, type ReducingSegmenter, type FullReducingSegmenter, asReducedSegment, asFullReducedSegment } from "./types";
 
 function isSorted(nums : number[]) : boolean {
     for (let i = 1; i < nums.length; i++) {
@@ -9,7 +9,7 @@ function isSorted(nums : number[]) : boolean {
     return true;
 }
 
-export function makeBasicSegmenter<S extends Style, L extends Label<S>>(gap: number = 0): Segmenter<S, L> {
+export function makeBasicSegmenter<S extends Style, L extends StyledLabel<S>>(gap: number = 0): Segmenter<S, L> {
     return (text: string, labels: L[]): Segment<S, L>[] => {
         const segments: Segment<S, L>[] = [];
         const labelsCopy = [...labels];
@@ -72,10 +72,10 @@ export function makeBasicSegmenter<S extends Style, L extends Label<S>>(gap: num
  */
 export type StyleReducer<S extends Style> = (styles : S[]) => S
 
-export function makeReducingSegmenter<S extends Style, L extends Label<S>>(reducer: StyleReducer<S>, baseSegmenter: Segmenter<S, L>): ReducingSegmenter<S, L> {
+export function makeReducingSegmenter<S extends Style, L extends StyledLabel<S>>(reducer: StyleReducer<S>, baseSegmenter: Segmenter<S, L>): ReducingSegmenter<S, L> {
     return (text: string, labels: L[]) => {
         const segments = baseSegmenter(text, labels);
-        const newSegments: Segment<S, Label<S>>[] = [];
+        const newSegments: Segment<S, StyledLabel<S>>[] = [];
         for (const segment of segments) {
             const partition = new Set<number>()
             partition.add(0);
@@ -89,7 +89,7 @@ export function makeReducingSegmenter<S extends Style, L extends Label<S>>(reduc
             }
             partition.add(segment.text.length);
             const sortedPartition = Array.from(partition).sort((a, b) => a - b);
-            const newLabels : Label<S>[] = [];
+            const newLabels : StyledLabel<S>[] = [];
             for (let i = 0; i < sortedPartition.length - 1; i++) {
                 const partStart = sortedPartition[i];
                 const partEnd = sortedPartition[i + 1];
@@ -109,7 +109,7 @@ export function makeReducingSegmenter<S extends Style, L extends Label<S>>(reduc
     }
 }
 
-export function makeFullReducingSegmenter<S extends Style, L extends Label<S>>(reducer: StyleReducer<S>): FullReducingSegmenter<S, L> {
+export function makeFullReducingSegmenter<S extends Style, L extends StyledLabel<S>>(reducer: StyleReducer<S>): FullReducingSegmenter<S, L> {
     return (text: string, labels: L[]) => {
         const partition = new Set<number>();
         partition.add(0);
@@ -119,7 +119,7 @@ export function makeFullReducingSegmenter<S extends Style, L extends Label<S>>(r
             partition.add(label.interval.end);
         }
         const sortedPartition = Array.from(partition).sort((a, b) => a - b);
-        const segments: Segment<S, Label<S>>[] = [];
+        const segments: Segment<S, StyledLabel<S>>[] = [];
         for (let i = 0; i < sortedPartition.length - 1; i++) {
             const partStart = sortedPartition[i];
             const partEnd = sortedPartition[i + 1];

@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from .auth.router import router as auth_router
 from .autolabels.router import router as autolabel_router
 from .config import uvicorn_logger
+from .editing.router import router as editing_router
 from .filters.router import router as filters_router
 from .labels.router import router as label_router
 from .languages.router import router as language_router
@@ -33,3 +34,4 @@ app.include_router(label_router)
 app.include_router(autolabel_router)
 app.include_router(language_router)
 app.include_router(filters_router)
+app.include_router(editing_router)

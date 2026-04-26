@@ -30,7 +30,7 @@ class LabelGroup(Base):
     label_group_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
     label_group_name : Mapped[str] = mapped_column(String(MAX_LABEL_GROUP_NAME_LEN))
 
-    novel_id = mapped_column(ForeignKey('novels.novel_id', name='fk_label_groups_novel_id_novels'), nullable=False)
+    novel_id : Mapped[uuid.UUID] = mapped_column(ForeignKey('novels.novel_id', name='fk_label_groups_novel_id_novels'), nullable=False)
     novel_of_label_group : Mapped["Novel"] = relationship(back_populates='label_groups_with_novel')
 
     label_datas_with_label_group : Mapped[list["LabelData"]] = relationship(back_populates='label_group_of_label_data', cascade='all, delete-orphan')
@@ -49,10 +49,10 @@ class LabelContributor(Base):
 
     label_contributor_role : Mapped[LabelRole] = mapped_column(Enum(LabelRole, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False) # type: ignore
 
-    label_group_id = mapped_column(ForeignKey('label_groups.label_group_id'), primary_key=True)
+    label_group_id : Mapped[uuid.UUID] = mapped_column(ForeignKey('label_groups.label_group_id'), primary_key=True)
     label_group_of_label_contributor : Mapped[LabelGroup] = relationship(back_populates='label_contributors_with_label_group')
 
-    user_id = mapped_column(ForeignKey('users.user_id'), primary_key=True)
+    user_id : Mapped[uuid.UUID] = mapped_column(ForeignKey('users.user_id'), primary_key=True)
     user_of_label_contributor : Mapped["User"] = relationship(back_populates='label_contributors_with_user')
 
 class LabelData(Base):
@@ -72,10 +72,10 @@ class LabelData(Base):
 
     label_data_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
 
-    label_group_id = mapped_column(ForeignKey('label_groups.label_group_id', name='fk_label_datas_label_group_id_label_groups'), nullable=False)
+    label_group_id : Mapped[uuid.UUID] = mapped_column(ForeignKey('label_groups.label_group_id', name='fk_label_datas_label_group_id_label_groups'), nullable=False)
     label_group_of_label_data : Mapped[LabelGroup] = relationship(back_populates='label_datas_with_label_group')
 
-    chapter_content_id = mapped_column(ForeignKey('chapter_contents.chapter_content_id', name='fk_label_datas_chapter_content_id_chapter_contents'), nullable=False)
+    chapter_content_id : Mapped[uuid.UUID] = mapped_column(ForeignKey('chapter_contents.chapter_content_id', name='fk_label_datas_chapter_content_id_chapter_contents'), nullable=False)
     chapter_content_of_label_data : Mapped["ChapterContent"] = relationship(back_populates='label_datas_with_chapter_content')
 
     labels_with_label_data : Mapped[list["Label"]] = relationship(back_populates='label_data_of_label', cascade='all, delete-orphan')
@@ -113,7 +113,7 @@ class Label(Base):
     label_end : Mapped[int] = mapped_column(Integer, nullable=False)
     label_dirty : Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    label_data_id = mapped_column(ForeignKey('label_datas.label_data_id', name='fk_labels_label_data_id_label_datas'), nullable=False)
+    label_data_id : Mapped[uuid.UUID] = mapped_column(ForeignKey('label_datas.label_data_id', name='fk_labels_label_data_id_label_datas'), nullable=False)
     label_data_of_label : Mapped["LabelData"] = relationship(back_populates='labels_with_label_data')
 
     __table_args__ = (

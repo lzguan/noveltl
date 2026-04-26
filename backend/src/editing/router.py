@@ -21,7 +21,7 @@ def read_edit_chapter_data(
         label_groups_num : Annotated[int, Query(alias="label-groups-num", ge=1, le=20)],
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)],
-        subject_id : Annotated[uuid.UUID, Query(alias="subject-id")] | None = None
+        subject_id : Annotated[uuid.UUID | None, Query(alias="subject-id")] = None,
     ):
     """
     Gets all data associated with a chapter required for editing.

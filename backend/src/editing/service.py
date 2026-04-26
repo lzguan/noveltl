@@ -62,7 +62,8 @@ def query_edit_chapter_data(
     except Exception:
         raise
 
-    q = select(lm.LabelGroup, lm.LabelData, lm.LabelContributor).select_from(
+    lc = aliased(lm.LabelContributor)
+    q = select(lm.LabelGroup, lm.LabelData, lc).select_from(
         lm.LabelGroup
     ).where(
         lm.LabelGroup.novel_id == novel_id
@@ -73,12 +74,12 @@ def query_edit_chapter_data(
             lm.LabelData.chapter_content_id == chapter_content.chapter_content_id
         )
     ).join(
-        lm.LabelContributor,
+        lc,
         and_(
-            lm.LabelContributor.label_group_id == lm.LabelGroup.label_group_id,
-            lm.LabelContributor.user_id == current_user.user_id
+            lc.label_group_id == lm.LabelGroup.label_group_id,
+            lc.user_id == current_user.user_id
         ),
-    ).order_by(lm.LabelData.updated_at.desc().nullslast(), lm.LabelGroup.label_group_id)
+    ).order_by(lm.LabelData.updated_at.desc().nullslast(), lm.LabelGroup.label_group_id.asc())
 
     q = label_group_mod_access_select(q, current_user)
 

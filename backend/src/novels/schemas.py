@@ -5,7 +5,7 @@ Pydantic models for novels and chapters.
 import uuid
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from .constants import NovelType, Visibility
 
@@ -129,6 +129,7 @@ class Chapter(BaseModel):
         chapter_num: The chapter number.
         novel_id: UUID foreign key to the novel this chapter belongs to.
     """
+    model_config = ConfigDict(from_attributes=True)
     chapter_id : uuid.UUID
     chapter_num : int
     chapter_title : str
@@ -158,6 +159,7 @@ class ChapterContent(BaseModel):
         chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.
         chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.
     """
+    model_config = ConfigDict(from_attributes=True)
     chapter_content_text : str
     chapter_content_version : int
     chapter_content_id : uuid.UUID

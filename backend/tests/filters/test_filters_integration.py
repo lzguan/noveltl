@@ -147,7 +147,8 @@ class TestGetContexts:
                 label_end=4,
                 label_score=1.0,
                 label_dirty=False,
-                label_data_id=uuid.uuid4()
+                label_data_id=uuid.uuid4(),
+                label_id=uuid.uuid4(),
             ),
             chapter_content_id=uuid.uuid4()
         )

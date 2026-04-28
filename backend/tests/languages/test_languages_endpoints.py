@@ -11,7 +11,7 @@ def test_languages_endpoints(client : TestClient, sample_languages : dict[str, L
     assert isinstance(languages, list)
     assert len(languages) == 4 # type: ignore
 
-    lang_codes = {lang['language_code'] for lang in languages} # type: ignore
+    lang_codes = {lang['languageCode'] for lang in languages} # type: ignore
     assert "en" in lang_codes
     assert "zh" in lang_codes
     assert "kr" in lang_codes
@@ -21,15 +21,15 @@ def test_languages_endpoints(client : TestClient, sample_languages : dict[str, L
     response = client.get("/languages/en")
     assert response.status_code == 200
     lang_en = response.json()
-    assert lang_en['language_name'] == "English"
-    assert lang_en['language_code'] == "en"
+    assert lang_en['languageName'] == "English"
+    assert lang_en['languageCode'] == "en"
 
     # Test GET /languages/{language_code} for Chinese
     response = client.get("/languages/zh")
     assert response.status_code == 200
     lang_zh = response.json()
-    assert lang_zh['language_name'] == "Chinese"
-    assert lang_zh['language_code'] == "zh"
+    assert lang_zh['languageName'] == "Chinese"
+    assert lang_zh['languageCode'] == "zh"
 
     # Test GET /languages/{language_code} for non-existent code
     response = client.get("/languages/xx")

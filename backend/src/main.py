@@ -1,6 +1,7 @@
 """
 This is the main endpoint for the application.
 """
+import logging
 
 from contextlib import asynccontextmanager
 
@@ -15,6 +16,22 @@ from .labels.router import router as label_router
 from .languages.router import router as language_router
 from .novels.router import router as novel_router
 from .redis import set_redis
+
+
+logger = logging.getLogger("src")
+logger.setLevel(logging.DEBUG)
+
+fh = logging.FileHandler("backend.log")
+fh.setLevel(logging.DEBUG)
+
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+
+logger.addHandler(fh)
+logger.addHandler(ch)
 
 
 @asynccontextmanager
@@ -35,3 +52,7 @@ app.include_router(autolabel_router)
 app.include_router(language_router)
 app.include_router(filters_router)
 app.include_router(editing_router)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

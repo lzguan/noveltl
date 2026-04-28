@@ -1,0 +1,4270 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FastAPI",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/token": {
+      "post": {
+        "summary": "Login For Access Token",
+        "description": "Verifies a client's login request and returns a token if it succeeds.\n\nArgs:\n    db: Database dependency.\n    form_data: OAuth2PasswordRequestForm dependency.",
+        "operationId": "login_for_access_token_token_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_login_for_access_token_token_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/register": {
+      "post": {
+        "summary": "Register User",
+        "description": "Endpoint for registering a new user. Client with registration request must not be logged in.\n\nArgs:\n    request: Create user request.\n    db: Database dependency.\n    current_user: Optional user dependency. Should be None for this function to succeed.",
+        "operationId": "register_user_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/users": {
+      "post": {
+        "summary": "Create User",
+        "description": "Creates a user with metadata request, provided that the current_user has sufficient permissions.\n\nArgs:\n    db: Database dependency.\n    current_user: Current user dependency. Must not be None (e.g. user must be logged in).\n    request: Metadata of user to be added.",
+        "operationId": "create_user_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/users/me": {
+      "get": {
+        "summary": "Read User Me",
+        "description": "Return the current logged in user.\n\nArgs:\n    current_user: Current user dependency.",
+        "operationId": "read_user_me_users_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Delete User Me",
+        "description": "Delete the user currently logged in.",
+        "operationId": "delete_user_me_users_me_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteUserStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/users/{userName}": {
+      "get": {
+        "summary": "Read User",
+        "description": "Get user by username.\n\nArgs:\n    user_name: Username of user.\n    db: Database dependency.",
+        "operationId": "read_user_users__userName__get",
+        "parameters": [
+          {
+            "name": "userName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Username"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{userId}": {
+      "delete": {
+        "summary": "Delete User",
+        "description": "Delete the user with user_id if the current user has sufficient permissions to perform this action. Throw an exception if the user currently logged in has insufficient permissions.",
+        "operationId": "delete_user_users__userId__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Userid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteUserStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/source-works": {
+      "get": {
+        "summary": "Read Source Works",
+        "description": "Endpoint for retrieving source works in bulk, optionally filtered by title substring.",
+        "operationId": "read_source_works_source_works_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "titleContains",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Titlecontains"
+            }
+          },
+          {
+            "name": "retNovels",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Retnovels"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SourceWorkData-Output"
+                  },
+                  "title": "Response Read Source Works Source Works Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Source Work",
+        "description": "Create a new source work.\n\nRaises:\n    400: Data in some field is too long.",
+        "operationId": "create_source_work_source_works_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSourceWork"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceWork"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/source-works/{sourceWorkId}": {
+      "get": {
+        "summary": "Read Source Work",
+        "description": "Endpoint for retrieving a source work by id.\n\nRaises:\n    404: Source work not found (or insufficient permissions).",
+        "operationId": "read_source_work_source_works__sourceWorkId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sourceWorkId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sourceworkid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceWork"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Source Work",
+        "description": "Update a source work's metadata.\n\nRaises:\n    404: Source work not found.\n    401: Insufficient permissions.\n    400: Data in some field exceeds maximum length.",
+        "operationId": "update_source_work_source_works__sourceWorkId__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sourceWorkId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sourceworkid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSourceWork"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceWork"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/source-works/{sourceWorkId}/novels": {
+      "get": {
+        "summary": "Read Novels By Source Work",
+        "description": "Endpoint for retrieving novels belonging to a source work.\n\nRaises:\n    404: Source work not found (or insufficient permissions).",
+        "operationId": "read_novels_by_source_work_source_works__sourceWorkId__novels_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sourceWorkId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sourceworkid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Novel"
+                  },
+                  "title": "Response Read Novels By Source Work Source Works  Sourceworkid  Novels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/novels": {
+      "get": {
+        "summary": "Read Novels",
+        "description": "Endpoint for retrieving novels in bulk.",
+        "operationId": "read_novels_novels_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "titleContains",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Titlecontains"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Novel"
+                  },
+                  "title": "Response Read Novels Novels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Novel",
+        "description": "Add a new novel to the database.\n\nRaises:\n    404: Language code or source work not found.\n    400: Data in some field is too long.",
+        "operationId": "create_novel_novels_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNovel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Novel"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/novels/mine": {
+      "get": {
+        "summary": "Read Novels Mine",
+        "description": "Endpoint for retrieving novels that the user has special access to.",
+        "operationId": "read_novels_mine_novels_mine_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "editable",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Editable"
+            }
+          },
+          {
+            "name": "titleContains",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Titlecontains"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Novel"
+                  },
+                  "title": "Response Read Novels Mine Novels Mine Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/novels/{novelId}": {
+      "get": {
+        "summary": "Read Novel",
+        "description": "Endpoint for retrieving a novel by id.\n\nRaises:\n    404: Novel not found (or insufficient permissions).",
+        "operationId": "read_novel_novels__novelId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Novel"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Novel",
+        "description": "Update the novel with novel_id.\n\nRaises:\n    404: Novel not found.\n    401: Insufficient permissions (user is not owner/editor).\n    400: Data in some field exceeds maximum length.",
+        "operationId": "update_novel_novels__novelId__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNovel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Novel"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chapters": {
+      "get": {
+        "summary": "Read Chapters By Novel",
+        "description": "Endpoint for retrieving chapters by novel_id.\n\nRaises:\n    404: Novel not found (or insufficient permissions).",
+        "operationId": "read_chapters_by_novel_chapters_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Chapter"
+                  },
+                  "title": "Response Read Chapters By Novel Chapters Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chapters/{chapterId}": {
+      "get": {
+        "summary": "Read Chapter By Id",
+        "description": "Endpoint for retrieving chapter by id.\n\nRaises:\n    404: Chapter not found (or insufficient permissions).",
+        "operationId": "read_chapter_by_id_chapters__chapterId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chapterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapterid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Chapter"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Chapter",
+        "description": "Update chapter metadata.\n\nRaises:\n    404: Chapter not found.\n    401: Insufficient permissions.\n    400: Field in request too long.",
+        "operationId": "update_chapter_chapters__chapterId__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chapterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapterid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateChapter"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Chapter"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Chapter",
+        "description": "Delete a chapter from the database.\n\nRaises:\n    404: Chapter not found.\n    401: Insufficient permissions.\n    500: Delete failed for other reasons.",
+        "operationId": "delete_chapter_chapters__chapterId__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chapterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapterid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/novels/{novelId}/chapters": {
+      "post": {
+        "summary": "Create Chapter",
+        "description": "Insert a new chapter into the database. Returns chapter metadata and initial empty content.\n\nRaises:\n    404: Novel not found.\n    409: Chapter with this chapter number already exists in this novel.\n    401: Insufficient permissions.",
+        "operationId": "create_chapter_novels__novelId__chapters_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateChapter"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterData"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chapters/{chapterId}/publish": {
+      "post": {
+        "summary": "Action Publish Chapter",
+        "description": "Publish a chapter (make it public).\n\nRaises:\n    404: Chapter not found.\n    401: Insufficient permissions.",
+        "operationId": "action_publish_chapter_chapters__chapterId__publish_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chapterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapterid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Chapter"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chapters/{chapterId}/content": {
+      "get": {
+        "summary": "Read Chapter Content",
+        "description": "Endpoint for retrieving the most recent content of a chapter.\n\nRaises:\n    404: Chapter not found, or chapter has no content.",
+        "operationId": "read_chapter_content_chapters__chapterId__content_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chapterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapterid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterContent"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Chapter Content",
+        "description": "Apply text operations to the most recent content of a chapter. Uses optimistic concurrency\nvia chapter_content_id -- if the content has been modified since the client last fetched it,\na 409 is returned.\n\nRaises:\n    404: Chapter content not found.\n    409: Chapter content is outdated (someone else modified it).\n    401: Insufficient permissions to modify this chapter.",
+        "operationId": "update_chapter_content_chapters__chapterId__content_patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chapterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapterid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateChapterContent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chapter-contents/{chapterContentId}": {
+      "get": {
+        "summary": "Read Chapter Content By Id",
+        "description": "Endpoint for retrieving a specific version of chapter content by its id.\n\nRaises:\n    404: Chapter content not found (or insufficient permissions).",
+        "operationId": "read_chapter_content_by_id_chapter_contents__chapterContentId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chapterContentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chaptercontentid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterContent"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chapters/{chapterId}/content-versions": {
+      "get": {
+        "summary": "Read Chapter Content Versions",
+        "description": "Endpoint for retrieving all content version metadata for a chapter.\nReturns an empty list if the chapter has no content versions or doesn't exist.",
+        "operationId": "read_chapter_content_versions_chapters__chapterId__content_versions_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chapterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapterid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChapterContentMeta"
+                  },
+                  "title": "Response Read Chapter Content Versions Chapters  Chapterid  Content Versions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chapters/{chapterId}/content-status/{chapterContentId}": {
+      "get": {
+        "summary": "Read Chapter Content Status",
+        "description": "Check whether a chapter_content_id is the latest version for a chapter.\n\nRaises:\n    404: Chapter content not found (or insufficient read permissions).\n    409: Chapter content is outdated.",
+        "operationId": "read_chapter_content_status_chapters__chapterId__content_status__chapterContentId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chapterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapterid"
+            }
+          },
+          {
+            "name": "chapterContentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chaptercontentid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/label-groups": {
+      "get": {
+        "summary": "Read Label Groups",
+        "description": "Gets all label groups of the current user for a novel.",
+        "operationId": "read_label_groups_label_groups_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LabelGroup"
+                  },
+                  "title": "Response Read Label Groups Label Groups Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Label Group",
+        "description": "Creates a new label group.\n\nRaises:\n    404: Novel not found.\n    400: Label group name is too long.",
+        "operationId": "create_label_group_label_groups_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLabelGroup"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelGroup"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/label-groups/{labelGroupId}": {
+      "get": {
+        "summary": "Read Label Group",
+        "description": "Gets a label group by id.\n\nRaises:\n    404: Label group not found (or insufficient permissions).",
+        "operationId": "read_label_group_label_groups__labelGroupId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "labelGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Labelgroupid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelGroup"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Label Group",
+        "description": "Updates a label group (e.g. rename).\n\nRaises:\n    404: Label group not found.\n    400: Label group name is too long.",
+        "operationId": "update_label_group_label_groups__labelGroupId__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "labelGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Labelgroupid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLabelGroup"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelGroup"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/label-datas": {
+      "get": {
+        "summary": "Read Label Datas By Group Chapters",
+        "description": "Gets all label datas in a label group, optionally filtered by chapter range.",
+        "operationId": "read_label_datas_by_group_chapters_label_datas_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "labelGroupId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Labelgroupid"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LabelData"
+                  },
+                  "title": "Response Read Label Datas By Group Chapters Label Datas Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/label-datas/{labelDataId}": {
+      "get": {
+        "summary": "Read Label Data",
+        "description": "Gets a label data by id.\n\nRaises:\n    404: Label data not found (or insufficient permissions).",
+        "operationId": "read_label_data_label_datas__labelDataId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "labelDataId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Labeldataid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelData"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Label Data Stream",
+        "description": "Applies a stream of edit operations to labels.\n\nRaises:\n    404: Label data or its underlying revision text not found, or target label does not exist.\n    409: Word mismatch or label overlap detected.\n    400: Operation positions out of bounds or invalid operation.",
+        "operationId": "update_label_data_stream_label_datas__labelDataId__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "labelDataId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Labeldataid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLabelDataStream"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/label-datas/{labelDataId}/labels": {
+      "get": {
+        "summary": "Read Labels By Label Data",
+        "description": "Get the specific list of labels inside a label data entry.",
+        "operationId": "read_labels_by_label_data_label_datas__labelDataId__labels_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "labelDataId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Labeldataid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Label"
+                  },
+                  "title": "Response Read Labels By Label Data Label Datas  Labeldataid  Labels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/label-groups/{labelGroupId}/label-datas": {
+      "post": {
+        "summary": "Create Label Data",
+        "description": "Creates a label data entry for a revision text in a label group.\n\nRaises:\n    404: Label group or revision text not found.\n    409: Label data for this revision text already exists in this group.",
+        "operationId": "create_label_data_label_groups__labelGroupId__label_datas_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "labelGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Labelgroupid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLabelData"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelData"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/label-groups/{labelGroupId}/label-datas/auto-labels": {
+      "post": {
+        "summary": "Create Label Datas By Auto Labels",
+        "description": "Creates label datas and populates labels from autolabel results.",
+        "operationId": "create_label_datas_by_auto_labels_label_groups__labelGroupId__label_datas_auto_labels_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "labelGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Labelgroupid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLabelDataByAutoLabel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateLabelDataByAutoLabelStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auto-labels/{autoLabelId}": {
+      "get": {
+        "summary": "Read Autolabel By Id",
+        "description": "Endpoint for retrieving autolabel from database.\n\nArgs:\n    auto_label_id: UUID for auto label.\n    db: Database dependency.\n    current_user: Current user dependency.",
+        "operationId": "read_autolabel_by_id_auto_labels__autoLabelId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "autoLabelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Autolabelid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutoLabel"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auto-labels": {
+      "get": {
+        "summary": "Read Autolabels",
+        "operationId": "read_autolabels_auto_labels_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          },
+          {
+            "name": "chapterIds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Chapterids"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "name": "modelNames",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Modelnames"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AutoLabelMeta"
+                  },
+                  "title": "Response Read Autolabels Auto Labels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Autolabels",
+        "operationId": "create_autolabels_auto_labels_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAutoLabels"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AutoLabelMeta"
+                  },
+                  "title": "Response Create Autolabels Auto Labels Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/languages/{languageCode}": {
+      "get": {
+        "summary": "Read Language By Code",
+        "description": "Retrieves a language by its code.\n\nArgs:\n    language_code: The code of the language to retrieve.\n    db: Database session.",
+        "operationId": "read_language_by_code_languages__languageCode__get",
+        "parameters": [
+          {
+            "name": "languageCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Languagecode"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Language"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/languages": {
+      "get": {
+        "summary": "Read All Languages",
+        "description": "Retrieves all languages in the database.\n\nArgs:\n    db: Database session.",
+        "operationId": "read_all_languages_languages_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Language"
+                  },
+                  "type": "array",
+                  "title": "Response Read All Languages Languages Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/filters/schemas": {
+      "get": {
+        "summary": "Read Filter Schemas",
+        "description": "Retrieves the schemas for all registered filters, including the instance, context, and options schemas for each filter.\n\nReturns:\n    A dictionary mapping filter names to their schema information.",
+        "operationId": "read_filter_schemas_filters_schemas_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/SchemaInfo"
+                  },
+                  "type": "object",
+                  "title": "Response Read Filter Schemas Filters Schemas Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/filters/{filterName}/flag-instances": {
+      "post": {
+        "summary": "Read Flagged Instances",
+        "description": "Flags instances using a specified filter and options.\n\nArgs:\n    filter_name: The name of the filter to use.\n    options: The options for flagging instances, which will be validated against the filter's schema.\n    db: Database session for any necessary database access during filtering.\n    current_user: The user making the request, which may be relevant for certain filters.",
+        "operationId": "read_flagged_instances_filters__filterName__flag_instances_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "filterName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Filtername"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Options"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {},
+                  "title": "Response Read Flagged Instances Filters  Filtername  Flag Instances Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/filters/{filterName}/get-contexts": {
+      "post": {
+        "summary": "Read Contexts",
+        "description": "Retrieves contexts for a list of instances using a specified filter and options.\n\nArgs:\n    filter_name: The name of the filter to use.\n    instances: The list of instances to retrieve contexts for. Each instance will be validated against the filter's instance schema.\n    options: The options for retrieving contexts, which will be validated against the filter's schema.\n    db: Database session for any necessary database access during context retrieval.\n    current_user: The user making the request, which may be relevant for certain filters.",
+        "operationId": "read_contexts_filters__filterName__get_contexts_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "filterName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Filtername"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstanceOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {},
+                  "title": "Response Read Contexts Filters  Filtername  Get Contexts Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/filters/{filterName}/decide-instances": {
+      "post": {
+        "summary": "Read Decisions",
+        "description": "Decides whether instances pass a filter in given contexts using specified options.\n\nArgs:\n    filter_name: The name of the filter to use.\n    body: An InstanceContextOptions object containing the list of instance-context pairs and the options for deciding instances. Each instance and context will be validated against the filter's schemas.\n    db: Database session for any necessary database access during the decision process.\n    current_user: The user making the request, which may be relevant for certain filters.",
+        "operationId": "read_decisions_filters__filterName__decide_instances_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "filterName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Filtername"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstanceContextOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Read Decisions Filters  Filtername  Decide Instances Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/filters/{filterName}/apply": {
+      "post": {
+        "summary": "Apply Filter",
+        "description": "Applies a filter to a label group for a list of instances using specified options.\n\nArgs:\n    filter_name: The name of the filter to apply.\n    body: An InstanceOptions object containing the list of instances and the options for applying the filter. Each instance will be validated against the filter's instance schema, and the options will be validated against the filter's apply filter options schema.\n    db: Database session for any necessary database access during filter application.\n    current_user: The user making the request, which may be relevant for certain filters.",
+        "operationId": "apply_filter_filters__filterName__apply_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "filterName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Filtername"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstanceOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/edit-chapter-data/{chapterId}": {
+      "get": {
+        "summary": "Read Edit Chapter Data",
+        "description": "Gets all data associated with a chapter required for editing.\n\nArgs:\n    chapter_id: Chapter id of requested chapter\n    novel_id: Novel id of requested chapter\n\nRaises:\n    404: Chapter not found (or insufficient permissions).",
+        "operationId": "read_edit_chapter_data_edit_chapter_data__chapterId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chapterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapterid"
+            }
+          },
+          {
+            "name": "novelId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          },
+          {
+            "name": "labelGroupsNum",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Labelgroupsnum"
+            }
+          },
+          {
+            "name": "subjectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subjectid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditChapterData"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddLabelOp": {
+        "properties": {
+          "startPos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Startpos"
+          },
+          "endPos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Endpos"
+          },
+          "word": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Word"
+          },
+          "op": {
+            "type": "string",
+            "const": "add",
+            "title": "Op"
+          },
+          "dirty": {
+            "type": "boolean",
+            "title": "Dirty",
+            "default": true
+          },
+          "entityGroup": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entitygroup"
+          },
+          "score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "default": 1.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "startPos",
+          "endPos",
+          "word",
+          "op"
+        ],
+        "title": "AddLabelOp",
+        "description": "Pydantic schema for a label add operation. Inherits all attributes from LabelOpBase.\n\nAttributes:\n    op: The string literal 'add'.\n    dirty: Boolean whether to mark the label as dirty.\n    entity_group: String representing what entity group this label belongs to. If none, then set a default value.\n    score: Float score between 0.0 and 1.0 representing how likely this label is to be an entity."
+      },
+      "AutoLabel": {
+        "properties": {
+          "autoLabelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Autolabelid"
+          },
+          "autoLabelData": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LabelBase"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Autolabeldata"
+          },
+          "autoLabelModelName": {
+            "type": "string",
+            "title": "Autolabelmodelname"
+          },
+          "autoLabelModelParams": {
+            "additionalProperties": true,
+            "type": "object",
+            "maxProperties": 50,
+            "title": "Autolabelmodelparams"
+          },
+          "autoLabelStatus": {
+            "$ref": "#/components/schemas/AutoLabelProgress"
+          },
+          "autoLabelMessage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Autolabelmessage"
+          },
+          "chapterContentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chaptercontentid"
+          },
+          "autoLabelLastJobId": {
+            "type": "string",
+            "title": "Autolabellastjobid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "autoLabelId",
+          "autoLabelData",
+          "autoLabelModelName",
+          "autoLabelModelParams",
+          "autoLabelStatus",
+          "chapterContentId",
+          "autoLabelLastJobId"
+        ],
+        "title": "AutoLabel",
+        "description": "Pydantic schema for an auto-labeled data entry.\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_data: Dictionary containing the auto-labeled data.\n    auto_label_model_name: Name of the model used to generate the auto labels.\n    auto_label_model_params: Parameters used for the model to generate the auto labels.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    chapter_content_id: UUID of chapter content this AutoLabel is associated with.\n    auto_label_last_job_id: Job id of last job that was run on this AutoLabel."
+      },
+      "AutoLabelMeta": {
+        "properties": {
+          "autoLabelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Autolabelid"
+          },
+          "autoLabelModelName": {
+            "type": "string",
+            "title": "Autolabelmodelname"
+          },
+          "autoLabelModelParams": {
+            "additionalProperties": true,
+            "type": "object",
+            "maxProperties": 50,
+            "title": "Autolabelmodelparams"
+          },
+          "autoLabelStatus": {
+            "$ref": "#/components/schemas/AutoLabelProgress"
+          },
+          "autoLabelMessage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Autolabelmessage"
+          },
+          "chapterContentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chaptercontentid"
+          },
+          "autoLabelLastJobId": {
+            "type": "string",
+            "title": "Autolabellastjobid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "autoLabelId",
+          "autoLabelModelName",
+          "autoLabelModelParams",
+          "autoLabelStatus",
+          "chapterContentId",
+          "autoLabelLastJobId"
+        ],
+        "title": "AutoLabelMeta",
+        "description": "Pydantic schema for auto-label metadata.\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_model_name: Name of the model used to generate the auto labels.\n    auto_label_model_params: Parameters used for the model to generate the auto labels.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    chapter_content_id: UUID of chapter content this AutoLabel is associated with.\n    auto_label_last_job_id: Job id of last job that was run on this AutoLabel."
+      },
+      "AutoLabelProgress": {
+        "type": "string",
+        "enum": [
+          "failed",
+          "pending",
+          "processing",
+          "done"
+        ],
+        "title": "AutoLabelProgress",
+        "description": "Status for an autolabel in database. One of 'failed', 'pending', 'processing', 'done'"
+      },
+      "Body_login_for_access_token_token_post": {
+        "properties": {
+          "grant_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^password$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant Type"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "title": "Password"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "default": ""
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "format": "password",
+            "title": "Client Secret"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "Body_login_for_access_token_token_post"
+      },
+      "Chapter": {
+        "properties": {
+          "chapterId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chapterid"
+          },
+          "chapterNum": {
+            "type": "integer",
+            "title": "Chapternum"
+          },
+          "chapterTitle": {
+            "type": "string",
+            "title": "Chaptertitle"
+          },
+          "chapterIsPublic": {
+            "type": "boolean",
+            "title": "Chapterispublic"
+          },
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterId",
+          "chapterNum",
+          "chapterTitle",
+          "chapterIsPublic",
+          "novelId"
+        ],
+        "title": "Chapter",
+        "description": "Pydantic schema for chapter metadata. Represents a single \"chapter\" entry, which groups all its revisions.\n\nAttributes:\n    chapter_id: UUID primary key identifier.\n    chapter_num: The chapter number.\n    novel_id: UUID foreign key to the novel this chapter belongs to."
+      },
+      "ChapterContent": {
+        "properties": {
+          "chapterContentText": {
+            "type": "string",
+            "title": "Chaptercontenttext"
+          },
+          "chapterContentVersion": {
+            "type": "integer",
+            "title": "Chaptercontentversion"
+          },
+          "chapterContentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chaptercontentid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterContentText",
+          "chapterContentVersion",
+          "chapterContentId"
+        ],
+        "title": "ChapterContent",
+        "description": "Pydantic schema for the text content of a chapter.\n\nAttributes:\n    chapter_content_text: The full text content of the chapter.\n    chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text."
+      },
+      "ChapterContentMeta": {
+        "properties": {
+          "chapterContentVersion": {
+            "type": "integer",
+            "title": "Chaptercontentversion"
+          },
+          "chapterContentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chaptercontentid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterContentVersion",
+          "chapterContentId"
+        ],
+        "title": "ChapterContentMeta",
+        "description": "Metadata for a ChapterContent.\n\nAttributes:\n    chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text."
+      },
+      "ChapterData": {
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/Chapter"
+          },
+          "content": {
+            "$ref": "#/components/schemas/ChapterContent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metadata",
+          "content"
+        ],
+        "title": "ChapterData",
+        "description": "Pydantic schema for aggregating a ChapterContent and a Chapter together.\n\nAttributes:\n    metadata: The metadata of the chapter, such as title and whether it's primary.\n    content: The text content of the chapter."
+      },
+      "CreateAutoLabels": {
+        "properties": {
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "autoLabelModelName": {
+            "type": "string",
+            "title": "Autolabelmodelname"
+          },
+          "autoLabelModelParams": {
+            "additionalProperties": true,
+            "type": "object",
+            "maxProperties": 50,
+            "title": "Autolabelmodelparams"
+          },
+          "chapterIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapterids"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "isPublic": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ispublic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "novelId",
+          "autoLabelModelName",
+          "autoLabelModelParams"
+        ],
+        "title": "CreateAutoLabels",
+        "description": "Pydantic schema for creating an auto-labeled data entry.\n\nAttributes:\n    novel_id: UUID of novel to create auto labels for.\n    auto_label_model_name: Name of the model used to generate the auto labels.\n    auto_label_model_params: Parameters used for the model to generate the auto labels.\n    chapter_ids: Optional parameter. Restrict to revisions with specific chapter UUIDs.\n    start: Optional parameter. Restrict to revisions with chapter num >= start.\n    end: Optional parameter. Restrict to revisions with chapter num < end.\n    is_public: Optional parameter. Restrict to revisions with this specific public flag."
+      },
+      "CreateChapter": {
+        "properties": {
+          "chapterNum": {
+            "type": "integer",
+            "title": "Chapternum"
+          },
+          "chapterTitle": {
+            "type": "string",
+            "title": "Chaptertitle",
+            "default": ""
+          },
+          "chapterIsPublic": {
+            "type": "boolean",
+            "title": "Chapterispublic",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterNum"
+        ],
+        "title": "CreateChapter",
+        "description": "Pydantic schema to validate data for creating a new chapter. The novel_id is expected to be passed via the URL path.\n\nAttributes:\n    chapter_num: The chapter number to create.\n    chapter_title: Title of the chapter. Defaults to empty string.\n    chapter_is_public: Whether the chapter is publicly visible. Defaults to False."
+      },
+      "CreateLabelData": {
+        "properties": {
+          "chapterContentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chaptercontentid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterContentId"
+        ],
+        "title": "CreateLabelData",
+        "description": "Pydantic schema for validating create requests for label data.\n\nAttributes:\n    chapter_content_id: UUID of chapter content being labelled."
+      },
+      "CreateLabelDataByAutoLabel": {
+        "properties": {
+          "modelName": {
+            "type": "string",
+            "title": "Modelname"
+          },
+          "modelParams": {
+            "additionalProperties": true,
+            "type": "object",
+            "maxProperties": 50,
+            "title": "Modelparams"
+          },
+          "chapterIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapterids"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          }
+        },
+        "type": "object",
+        "required": [
+          "modelName",
+          "modelParams"
+        ],
+        "title": "CreateLabelDataByAutoLabel",
+        "description": "Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.\n\nAttributes:\n    model_name: Name of NER model that performed the autolabeling.\n    model_params: Parameters of model used.\n    chapter_ids: Optional filter on what chapters to include.\n    start: Optional filter on the least chapter number to include.\n    end: Optional filter on the greatest chapter number to include."
+      },
+      "CreateLabelDataByAutoLabelStatus": {
+        "properties": {
+          "success": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Success"
+          },
+          "errors": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "type": "array",
+              "maxItems": 3,
+              "minItems": 3
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "errors"
+        ],
+        "title": "CreateLabelDataByAutoLabelStatus",
+        "description": "Return message for CreateLabelDataByAutoLabel.\n\nAttributes:\n    success: List of tuples of (chapter_id, chapter_content_id) for successful inserts.\n    errors: List of tuples of (chapter_id, chapter_content_id, error message) for failed inserts."
+      },
+      "CreateLabelGroup": {
+        "properties": {
+          "labelGroupName": {
+            "type": "string",
+            "maxLength": 31,
+            "title": "Labelgroupname"
+          },
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "labelGroupName",
+          "novelId"
+        ],
+        "title": "CreateLabelGroup",
+        "description": "Pydantic schema for validating forms for creating a label group.\n\nAttributes:\n    label_group_name: Name of label group to create.\n    novel_id: UUID of novel this label group belongs to."
+      },
+      "CreateNovel": {
+        "properties": {
+          "novelTitle": {
+            "type": "string",
+            "title": "Noveltitle"
+          },
+          "novelDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Noveldescription"
+          },
+          "novelAuthor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Novelauthor"
+          },
+          "novelVisibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "novelType": {
+            "$ref": "#/components/schemas/NovelType"
+          },
+          "languageCode": {
+            "type": "string",
+            "title": "Languagecode"
+          },
+          "sourceWorkId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceworkid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "novelTitle",
+          "novelVisibility",
+          "novelType",
+          "languageCode"
+        ],
+        "title": "CreateNovel",
+        "description": "Pydantic schema to validate forms for creating a novel.\n\nAttributes:\n    novel_title: Novel title to create.\n    novel_description: Description of novel we are creating.\n    novel_author: Author of novel we are creating.\n    novel_visibility: Visibility level of novel we are creating.\n    novel_type: Type of novel we are creating.\n    language_code: String code key to language of novel we are creating.\n    source_work_id: Optional source work to attach to. If None, a new source work is auto-created."
+      },
+      "CreateSourceWork": {
+        "properties": {
+          "sourceWorkTitle": {
+            "type": "string",
+            "title": "Sourceworktitle"
+          },
+          "sourceWorkDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceworkdescription"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sourceWorkTitle"
+        ],
+        "title": "CreateSourceWork",
+        "description": "Pydantic schema to validate forms for creating a source work.\n\nAttributes:\n    source_work_title: Title of the source work to create.\n    source_work_description: Optional description."
+      },
+      "CreateUser": {
+        "properties": {
+          "userName": {
+            "type": "string",
+            "title": "Username"
+          },
+          "userPassword": {
+            "type": "string",
+            "title": "Userpassword"
+          },
+          "userType": {
+            "$ref": "#/components/schemas/UserType"
+          }
+        },
+        "type": "object",
+        "required": [
+          "userName",
+          "userPassword",
+          "userType"
+        ],
+        "title": "CreateUser",
+        "description": "Pydantic schema to validate data required to create a user.\n\nAttributes:\n    user_name: Username of user being created.\n    user_password: Unhashed password of user being create.\n    user_type: UserType type of user to be created.\nNotes:"
+      },
+      "DeleteLabelOp": {
+        "properties": {
+          "startPos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Startpos"
+          },
+          "endPos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Endpos"
+          },
+          "word": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Word"
+          },
+          "op": {
+            "type": "string",
+            "const": "delete",
+            "title": "Op"
+          }
+        },
+        "type": "object",
+        "required": [
+          "startPos",
+          "endPos",
+          "word",
+          "op"
+        ],
+        "title": "DeleteLabelOp",
+        "description": "Pydantic schema for a label delete operation. Inherits all attributes from LabelOpBase.\n\nAttributes:\n    op: The string literal 'delete'."
+      },
+      "DeleteUserStatus": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "fail",
+              "verify"
+            ],
+            "title": "Status"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "DeleteUserStatus",
+        "description": "Pydantic schema to return status after deleting a user\n\nAttributes:\n    status: One of 'success', 'fail', 'verify'.\n    detail: String denoting details of operation."
+      },
+      "EditChapterData": {
+        "properties": {
+          "chapter": {
+            "$ref": "#/components/schemas/Chapter"
+          },
+          "chapterContent": {
+            "$ref": "#/components/schemas/ChapterContent"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "labelGroupList": {
+            "items": {
+              "$ref": "#/components/schemas/LabelGroupListEntry"
+            },
+            "type": "array",
+            "title": "Labelgrouplist"
+          },
+          "labelDataList": {
+            "items": {
+              "$ref": "#/components/schemas/LabelDataEntry"
+            },
+            "type": "array",
+            "title": "Labeldatalist"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapter",
+          "chapterContent",
+          "role",
+          "labelGroupList",
+          "labelDataList"
+        ],
+        "title": "EditChapterData",
+        "description": "Pydantic schema for the data needed to edit a chapter.\n\nAttributes:\n    chapter: Chapter being edited.\n    chapter_content: ChapterContent being edited.\n    label_groups: List of LabelGroups in this novel.\n    labels: List of Labels in this chapter content."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InstanceContextOptions": {
+        "properties": {
+          "instanceContexts": {
+            "items": {
+              "prefixItems": [
+                {},
+                {}
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Instancecontexts"
+          },
+          "options": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instanceContexts",
+          "options"
+        ],
+        "title": "InstanceContextOptions"
+      },
+      "InstanceOptions": {
+        "properties": {
+          "instances": {
+            "items": {},
+            "type": "array",
+            "title": "Instances"
+          },
+          "options": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instances",
+          "options"
+        ],
+        "title": "InstanceOptions"
+      },
+      "Label": {
+        "properties": {
+          "labelEntityGroup": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labelentitygroup"
+          },
+          "labelScore": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Labelscore"
+          },
+          "labelWord": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Labelword"
+          },
+          "labelStart": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Labelstart"
+          },
+          "labelEnd": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Labelend"
+          },
+          "labelDirty": {
+            "type": "boolean",
+            "title": "Labeldirty"
+          },
+          "labelDataId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Labeldataid"
+          },
+          "labelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Labelid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "labelEntityGroup",
+          "labelScore",
+          "labelWord",
+          "labelStart",
+          "labelEnd",
+          "labelDirty",
+          "labelDataId",
+          "labelId"
+        ],
+        "title": "Label",
+        "description": "Pydantic schema for a label that belongs to a LabelData.\nExtends LabelBase with a label_data_id foreign key and label_id pkey."
+      },
+      "LabelBase": {
+        "properties": {
+          "labelEntityGroup": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labelentitygroup"
+          },
+          "labelScore": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Labelscore"
+          },
+          "labelWord": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Labelword"
+          },
+          "labelStart": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Labelstart"
+          },
+          "labelEnd": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Labelend"
+          },
+          "labelDirty": {
+            "type": "boolean",
+            "title": "Labeldirty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "labelEntityGroup",
+          "labelScore",
+          "labelWord",
+          "labelStart",
+          "labelEnd",
+          "labelDirty"
+        ],
+        "title": "LabelBase",
+        "description": "Pydantic schema for a single label without a parent LabelData reference.\nUsed by autolabels and other contexts where labels exist independently of a LabelData.\n\nAttributes:\n    label_entity_group: Some arbitrary string denoting the entity group this label belongs to (e.g. PERSON, LOCATION, etc.).\n    label_score: Some float corresponding to how likely a label is to be correct. Used by label autogeneration modules (TBD).\n    label_word: Word that this label is labeling.\n    label_start: Start position of this label in text.\n    label_end: End position of this label in text.\n    label_dirty: Use TBD, most likely will be for score calculations in LabelData aggregate operations.\n\nNote:\n    label_start must be strictly less than label_end. Otherwise a ValueError will occur.\n    label_word must have length label_end - label_start. Otherwise a ValueError will occur."
+      },
+      "LabelData": {
+        "properties": {
+          "labelDataId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Labeldataid"
+          },
+          "labelGroupId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Labelgroupid"
+          },
+          "chapterContentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chaptercontentid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "labelDataId",
+          "labelGroupId",
+          "chapterContentId"
+        ],
+        "title": "LabelData",
+        "description": "Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling."
+      },
+      "LabelDataEntry": {
+        "properties": {
+          "labelDataId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Labeldataid"
+          },
+          "labels": {
+            "items": {
+              "$ref": "#/components/schemas/Label"
+            },
+            "type": "array",
+            "title": "Labels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "labelDataId",
+          "labels"
+        ],
+        "title": "LabelDataEntry"
+      },
+      "LabelGroup": {
+        "properties": {
+          "labelGroupId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Labelgroupid"
+          },
+          "labelGroupName": {
+            "type": "string",
+            "maxLength": 31,
+            "title": "Labelgroupname"
+          },
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "labelGroupId",
+          "labelGroupName",
+          "novelId"
+        ],
+        "title": "LabelGroup",
+        "description": "Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to."
+      },
+      "LabelGroupListEntry": {
+        "properties": {
+          "labelGroup": {
+            "$ref": "#/components/schemas/LabelGroup"
+          },
+          "labelData": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LabelData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/LabelRole"
+          }
+        },
+        "type": "object",
+        "required": [
+          "labelGroup",
+          "labelData",
+          "role"
+        ],
+        "title": "LabelGroupListEntry"
+      },
+      "LabelRole": {
+        "type": "string",
+        "enum": [
+          "owner",
+          "viewer",
+          "editor"
+        ],
+        "title": "LabelRole"
+      },
+      "Language": {
+        "properties": {
+          "languageCode": {
+            "type": "string",
+            "title": "Languagecode"
+          },
+          "languageName": {
+            "type": "string",
+            "title": "Languagename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "languageCode",
+          "languageName"
+        ],
+        "title": "Language",
+        "description": "Pydantic schema for language.\n\nAttributes:\n    language_code: String code key to language.\n    language_name: String name of language."
+      },
+      "Novel": {
+        "properties": {
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "novelTitle": {
+            "type": "string",
+            "title": "Noveltitle"
+          },
+          "novelDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Noveldescription"
+          },
+          "novelAuthor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Novelauthor"
+          },
+          "novelVisibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "novelType": {
+            "$ref": "#/components/schemas/NovelType"
+          },
+          "languageCode": {
+            "type": "string",
+            "title": "Languagecode"
+          },
+          "sourceWorkId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sourceworkid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "novelId",
+          "novelTitle",
+          "novelVisibility",
+          "novelType",
+          "languageCode",
+          "sourceWorkId"
+        ],
+        "title": "Novel",
+        "description": "Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel."
+      },
+      "NovelType": {
+        "type": "string",
+        "enum": [
+          "original",
+          "translation",
+          "other"
+        ],
+        "title": "NovelType"
+      },
+      "OperationStatus": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "fail"
+            ],
+            "title": "Status"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "OperationStatus",
+        "description": "Pydantic model to signal return status of operation.\n\nAttributes:\n    status: One of \"success\", \"fail\".\n    detail: Details on operation.\n\nNotes:\n    Unless under exceptional circumstances, should not return fail and just raise an exception."
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "owner",
+          "viewer",
+          "editor"
+        ],
+        "title": "Role"
+      },
+      "SchemaInfo": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "supports_decide": {
+            "type": "boolean",
+            "title": "Supports Decide"
+          },
+          "supports_apply": {
+            "type": "boolean",
+            "title": "Supports Apply"
+          },
+          "instance_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Instance Schema"
+          },
+          "context_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Context Schema"
+          },
+          "flag_instances_options_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Flag Instances Options Schema"
+          },
+          "get_contexts_options_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Get Contexts Options Schema"
+          },
+          "decide_instances_options_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Decide Instances Options Schema"
+          },
+          "apply_filter_options_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Apply Filter Options Schema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "description",
+          "supports_decide",
+          "supports_apply",
+          "instance_schema",
+          "context_schema",
+          "flag_instances_options_schema",
+          "get_contexts_options_schema",
+          "decide_instances_options_schema",
+          "apply_filter_options_schema"
+        ],
+        "title": "SchemaInfo"
+      },
+      "SourceWork": {
+        "properties": {
+          "sourceWorkId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sourceworkid"
+          },
+          "sourceWorkTitle": {
+            "type": "string",
+            "title": "Sourceworktitle"
+          },
+          "sourceWorkDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceworkdescription"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sourceWorkId",
+          "sourceWorkTitle"
+        ],
+        "title": "SourceWork",
+        "description": "Pydantic schema for a source work.\n\nAttributes:\n    source_work_id: UUID id of source work in db.\n    source_work_title: Title of the source work.\n    source_work_description: Optional description of the source work."
+      },
+      "SourceWorkData-Input": {
+        "properties": {
+          "sourceWork": {
+            "$ref": "#/components/schemas/SourceWork"
+          },
+          "novels": {
+            "items": {
+              "$ref": "#/components/schemas/Novel"
+            },
+            "type": "array",
+            "title": "Novels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sourceWork",
+          "novels"
+        ],
+        "title": "SourceWorkData",
+        "description": "Pydantic schema to represent a source work and all its associated novels.\n\nAttributes:\n    source_work: The source work metadata.\n    novels: A list of novels associated with this source work."
+      },
+      "SourceWorkData-Output": {
+        "properties": {
+          "sourceWork": {
+            "$ref": "#/components/schemas/SourceWork"
+          },
+          "novels": {
+            "items": {
+              "$ref": "#/components/schemas/Novel"
+            },
+            "type": "array",
+            "title": "Novels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sourceWork",
+          "novels"
+        ],
+        "title": "SourceWorkData",
+        "description": "Pydantic schema to represent a source work and all its associated novels.\n\nAttributes:\n    source_work: The source work metadata.\n    novels: A list of novels associated with this source work."
+      },
+      "TextOp": {
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "insert",
+              "delete"
+            ],
+            "title": "Op"
+          },
+          "start": {
+            "type": "integer",
+            "title": "Start"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "op",
+          "start",
+          "text"
+        ],
+        "title": "TextOp",
+        "description": "Pydantic schema to update text content of a chapter.\n\nAttributes:\n    op: The text operation, either \"insert\" or \"delete\".\n    start: The starting index in the text content where the operation should be applied.\n    text: The text to insert (for insert operations) or the text to delete (for delete operations)."
+      },
+      "Token": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "token_type"
+        ],
+        "title": "Token",
+        "description": "Pydantic schema for a JWT\n\nAttributes:\n    access_token: Payload.\n    token_type: Type of token."
+      },
+      "UpdateChapter": {
+        "properties": {
+          "chapterTitle": {
+            "type": "string",
+            "title": "Chaptertitle"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterTitle"
+        ],
+        "title": "UpdateChapter",
+        "description": "Pydantic schema to validate data for updating chapter metadata.\n\nAttributes:\n    chapter_title: The new title for the chapter."
+      },
+      "UpdateChapterContent": {
+        "properties": {
+          "textOps": {
+            "items": {
+              "$ref": "#/components/schemas/TextOp"
+            },
+            "type": "array",
+            "title": "Textops"
+          },
+          "chapterContentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chaptercontentid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "textOps",
+          "chapterContentId"
+        ],
+        "title": "UpdateChapterContent",
+        "description": "Pydantic schema to validate data for updating the text content of a chapter. The chapter_id is expected to be passed via the URL path.\n\nAttributes:\n    text_ops: A list of text operations (insertions or deletions) to apply to the existing text content.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text."
+      },
+      "UpdateLabelDataStream": {
+        "properties": {
+          "ops": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/AddLabelOp"
+                },
+                {
+                  "$ref": "#/components/schemas/DeleteLabelOp"
+                },
+                {
+                  "$ref": "#/components/schemas/UpdateLabelOp"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "op",
+                "mapping": {
+                  "add": "#/components/schemas/AddLabelOp",
+                  "delete": "#/components/schemas/DeleteLabelOp",
+                  "update": "#/components/schemas/UpdateLabelOp"
+                }
+              }
+            },
+            "type": "array",
+            "title": "Ops"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ops"
+        ],
+        "title": "UpdateLabelDataStream",
+        "description": "Pydantic schema for a buffered stream of label operations.\n\nAttributes:\n    ops: A list of label operations."
+      },
+      "UpdateLabelGroup": {
+        "properties": {
+          "labelGroupName": {
+            "type": "string",
+            "maxLength": 31,
+            "title": "Labelgroupname"
+          }
+        },
+        "type": "object",
+        "required": [
+          "labelGroupName"
+        ],
+        "title": "UpdateLabelGroup",
+        "description": "Pydantic schema for validating forms for updating a label group.\n\nAttributes:\n    label_group_name: New name of label group."
+      },
+      "UpdateLabelOp": {
+        "properties": {
+          "startPos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Startpos"
+          },
+          "endPos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Endpos"
+          },
+          "word": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Word"
+          },
+          "op": {
+            "type": "string",
+            "const": "update",
+            "title": "Op"
+          },
+          "newStartPos": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newstartpos"
+          },
+          "newEndPos": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newendpos"
+          },
+          "newWord": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newword"
+          },
+          "dirty": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dirty"
+          },
+          "entityGroup": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entitygroup"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "startPos",
+          "endPos",
+          "word",
+          "op"
+        ],
+        "title": "UpdateLabelOp",
+        "description": "Pydantic schema for a label update operation. Inherits all attributes from LabelOpBase.\n\nAttributes:\n    op: The string literal 'update'.\n    new_start_pos: Optional parameter. The new start position of the label.\n    new_end_pos: Optional parameter. The new end position of the label.\n    new_word: Optional parameter. The new word the label is labelling. Must satisfy `new_word == chapter_text[new_start_pos : new_end_pos]`.\n    dirty: Optional parameter. Value to change the current label's dirty value to.\n    entity_group: Optional parameter. New entity group for this label.\n    score: Optional parameter. New score for the entity."
+      },
+      "UpdateNovel": {
+        "properties": {
+          "novelTitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Noveltitle"
+          },
+          "novelDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Noveldescription"
+          },
+          "novelAuthor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Novelauthor"
+          },
+          "novelVisibility": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Visibility"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "novelType": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NovelType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "UpdateNovel",
+        "description": "Pydantic schema to validate forms for updating a novel. The novel id will be passed into the router endpoint.\n\nAttributes:\n    novel_title: Updated title to novel we are updating. If None, then do not update.\n    novel_description: Updated description of novel we are updating. If None, then do not update.\n    novel_author: Author of novel we are creating. If None, then do not update.\n    novel_visibility: Updated visibility level of novel we are updating. If None, then do not update.\n    novel_type: Updated novel type. If None, then do not update."
+      },
+      "UpdateSourceWork": {
+        "properties": {
+          "sourceWorkTitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceworktitle"
+          },
+          "sourceWorkDescription": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceworkdescription"
+          }
+        },
+        "type": "object",
+        "title": "UpdateSourceWork",
+        "description": "Pydantic schema to validate forms for updating a source work.\n\nAttributes:\n    source_work_title: Updated title. If None, do not update.\n    source_work_description: Updated description. If None, do not update."
+      },
+      "User": {
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Userid"
+          },
+          "userName": {
+            "type": "string",
+            "title": "Username"
+          },
+          "userType": {
+            "$ref": "#/components/schemas/UserType"
+          }
+        },
+        "type": "object",
+        "required": [
+          "userId",
+          "userName",
+          "userType"
+        ],
+        "title": "User",
+        "description": "Pydantic model for user information.\n\nAttributes:\n    user_id: id of this user.\n    user_name: Username for this user.\n    user_type: A value in UserType (e.g. 'admin', or 'user')"
+      },
+      "UserType": {
+        "type": "string",
+        "enum": [
+          "user",
+          "admin"
+        ],
+        "title": "UserType",
+        "description": "Enum of possible user types."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "Visibility": {
+        "type": "integer",
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "title": "Visibility"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "token"
+          }
+        }
+      }
+    }
+  }
+}

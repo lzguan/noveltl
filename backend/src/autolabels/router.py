@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.orm import Session
 
 from ..auth.dependencies import get_current_user
@@ -16,11 +16,11 @@ from .utils import AutoLabelDispatcher
 router = APIRouter()
 
 @router.get(
-    '/auto-labels/{auto_label_id}',
+    '/auto-labels/{autoLabelId}',
     response_model=schemas.AutoLabel
 )
 async def read_autolabel_by_id(
-        auto_label_id : uuid.UUID,
+        auto_label_id : Annotated[uuid.UUID, Path(alias="autoLabelId")],
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
@@ -43,13 +43,13 @@ async def read_autolabel_by_id(
 
 @router.get('/auto-labels', response_model=list[schemas.AutoLabelMeta])
 async def read_autolabels(
-        novel_id : Annotated[uuid.UUID, Query(alias="novel-id")],
+        novel_id : Annotated[uuid.UUID, Query(alias="novelId")],
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)],
-        chapter_ids : Annotated[list[uuid.UUID] | None, Query(alias="chapter-ids")] = None,
+        chapter_ids : Annotated[list[uuid.UUID] | None, Query(alias="chapterIds")] = None,
         start : int | None = None,
         end : int | None = None,
-        model_names : Annotated[list[str] | None, Query(alias="model-names")] = None,
+        model_names : Annotated[list[str] | None, Query(alias="modelNames")] = None,
     ):
     auto_labels = query_auto_labels(db, current_user, novel_id, chapter_ids, start, end, model_names)
     return auto_labels

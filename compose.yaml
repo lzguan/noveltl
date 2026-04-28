@@ -86,6 +86,7 @@ services:
       - ./backend:/project
     ports:
       - "${BACKEND_PORT}:8000"
+    command: uv run python -m src.main --no-sync
 
   frontend:
     build:

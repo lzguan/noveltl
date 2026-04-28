@@ -1,338 +1,344 @@
-# Labeled Text Library
+# Labeled Text Library Implementation
 
-**Last Updated**: March 29, 2026    
+**Last Updated**: April 26, 2026  
 **Status**: Draft
 
-Design doc for a standalone labeled text rendering library. The library provides a general-purpose component for displaying text with overlapping annotations from multiple sources, where the visual appearance of overlapping regions is controlled by a user-defined algebraic structure over styles.
-
-This doc is aimed at anyone working on the workspace frontend or considering extracting this as a standalone package.
+This document describes the current implementation of the frontend labeled text library in `frontend/src/components/labeled-text-lib/`. It explains the actual data model, segmentation rules, mutation model, and React adapters that exist today. Read this before changing `EditNovelPage` or drafting higher-level editor architecture.
 
 ---
 
 ## Table of Contents
 
-1. [Motivation](#motivation)
-2. [Core Abstraction: Style Monoid](#core-abstraction-style-monoid)
-3. [Pipeline](#pipeline)
-4. [Type Definitions](#type-definitions)
-5. [Segmentation Algorithm](#segmentation-algorithm)
-6. [Rendering](#rendering)
-7. [Examples](#examples)
-8. [Integration with NovelTL](#integration-with-noveltl)
-9. [Editing Integration](#editing-integration)
-10. [Future: Style Transform Step](#future-style-transform-step)
-11. [Package Structure](#package-structure)
-12. [Relevant Files](#relevant-files)
-13. [See Also](#see-also)
+1. [Overview](#overview)
+2. [Scope](#scope)
+3. [Core Data Model](#core-data-model)
+4. [Segmentation](#segmentation)
+5. [Segment Manager](#segment-manager)
+6. [React Adapters](#react-adapters)
+7. [Rendering Helpers](#rendering-helpers)
+8. [What The Library Does Not Own](#what-the-library-does-not-own)
+9. [How NovelTL Should Use It](#how-noveltl-should-use-it)
+10. [Known Limitations](#known-limitations)
+11. [Relevant Files](#relevant-files)
+12. [See Also](#see-also)
 
 ---
 
-## Motivation
+## Overview
 
-NovelTL's workspace displays chapter text annotated with labels from multiple sources: user-created label groups, NER model predictions, and filtered results. The current implementation (`labelOps.ts` + `AnnotatedText.tsx`) handles this but has hardcoded style logic — colors are derived from entity groups, priority determines highlight vs underline, and the rendering strategy is baked into the component.
+The labeled text library is a small frontend subsystem for rendering text with interval annotations and, in the dynamic case, mutating the text/annotation model while preserving rendering invariants.
 
-Problems with the current approach:
+Today it has three layers:
 
-1. **Inflexible overlap handling** — when labels from different sources overlap, the highest-priority source always gets the background highlight and lower-priority sources become underlines. There's no way to blend, average, or apply a custom strategy.
-2. **Tightly coupled to NovelTL types** — `LabelSourceConfig` references entity groups, NER-specific colors, and "bright"/"dim" style literals.
-3. **Hard to prototype new UIs** — changing how labels render (e.g., emphasize the active tab's labels, dim everything else) requires modifying `resolveSegmentStyle` directly.
+1. Core types in `core/types.ts`
+2. Segmentation and mutable document logic in `core/segmenters.ts` and `core/segmentManager.ts`
+3. React adapters and renderer helpers in `react/`
 
-The goal is a library where the user defines *what style data looks like* and *how overlapping styles combine*, and the library handles segmentation and rendering.
+The important point is that this library is not a full editor architecture. It knows how to:
 
----
+- represent labels as intervals over text
+- partition text into renderable segments
+- maintain those segments while text/label mutations occur
+- render the segments statically or from an externally owned manager
 
-## Core Abstraction: Style Monoid
+It does not know anything about chapters, label groups, backend flushing, edit modes, or queueing.
 
-A **monoid** is a type `S` equipped with:
+## Scope
 
-- A binary operation `combine: (a: S, b: S) => S` that is associative: `combine(a, combine(b, c)) === combine(combine(a, b), c)`
-- An identity element `empty: S` such that `combine(empty, x) === combine(x, empty) === x`
+The current implementation supports two main use cases:
 
-The library requires the user to provide a `StyleConfig<S>`:
+1. Static rendering of a text plus labels
+2. Dynamic rendering driven by an externally owned `SegmentManager`
 
-```typescript
-type StyleConfig<S> = {
-  combine: (a: S, b: S) => S;
-  empty: S;
-};
-```
+The design is generic over:
 
-The `empty` value is the style for text segments where no labels overlap (plain text). The `combine` operation defines what happens when two or more labels cover the same character range — their styles are folded together.
+- style type `S`
+- label type `L extends StyledLabel<S>`
 
-### Why a monoid and not a product of independent properties?
+This means the library is intentionally not coupled to NovelTL label schemas. NovelTL-specific concerns should stay outside the library and be adapted into its generic types.
 
-Consider a style with `color`, `opacity`, and `priority`. You might think: define a monoid for color (blend), a monoid for opacity (average), a monoid for priority (max), and take their product. This works when the dimensions are independent.
+## Core Data Model
 
-But priority breaks independence — a high-priority label might want to *override* a low-priority label's color entirely, not blend with it. The priority dimension influences how color and opacity combine. This means the combine operation needs access to the full style value, not just individual fields.
+The core types live in [frontend/src/components/labeled-text-lib/core/types.ts](/workspaces/NovelTL_Dev/frontend/src/components/labeled-text-lib/core/types.ts:1).
 
-A single `combine` function over the full style type handles this naturally.
+Important concepts:
 
----
+- `StyledLabel<S>`
+  - A label with an absolute half-open interval `[start, end)` into the source text
+  - Also carries a style payload `S`
 
-## Pipeline
+- `Segment<S, L>`
+  - A contiguous slice of text with `start`, `text`, and `labels`
+  - Inside a segment, label intervals are relative to `segment.start`
 
-```
-Labels + Styles           User provides (Label, Style) pairs
-       │
-       ▼
-   Segmentation           Split text at label boundaries into maximal
-       │                  contiguous ranges with constant label coverage
-       ▼
-  Style Folding           For each segment, combine all active styles
-       │                  using the monoid operation
-       ▼
-    Rendering             Render each segment via an injectable render
-                          function: (text, combinedStyle) → JSX
-```
+- `ManagedLabel`
+  - Extends a label with a stable `id`
+  - Required by the mutable manager
 
----
+- `ManagedSegment`
+  - A segment with a stable segment `id`
 
-## Type Definitions
+The absolute-vs-relative distinction is the main thing to remember:
 
-```typescript
-// --- Core library types ---
+- external labels are stored in absolute text coordinates
+- labels inside rendered segments are projected into segment-local coordinates
 
-// A label is anything with a start and end position
-type LabelSpan = {
-  start: number;
-  end: number;
-};
+## Segmentation
 
-// A label paired with its style
-type StyledLabel<S, L extends LabelSpan = LabelSpan> = {
-  label: L;
-  style: S;
-};
+Segmentation logic lives in [core/segmenters.ts](/workspaces/NovelTL_Dev/frontend/src/components/labeled-text-lib/core/segmenters.ts:1).
 
-// The monoid definition
-type StyleConfig<S> = {
-  combine: (a: S, b: S) => S;
-  empty: S;
-};
+### `makeBasicSegmenter`
 
-// Output of the segmentation step
-type StyledSegment<S, L extends LabelSpan = LabelSpan> = {
-  text: string;
-  start: number;
-  end: number;
-  style: S;
-  labels: L[];  // all labels covering this segment (for click handlers, tooltips, etc.)
-};
+`makeBasicSegmenter(gap)` partitions a text into ordered segments.
 
-// The render function signature
-type SegmentRenderer<S, L extends LabelSpan = LabelSpan> = React.FC<{
-  text: string;
-  style: S;
-  labels: L[];
-  charStart: number;
-  charEnd: number;
-}>;
-```
+Behavior:
 
----
+- unlabeled regions become unlabeled segments
+- overlapping labels are merged into one labeled segment
+- labels inside a segment are rewritten to segment-local coordinates
+- the optional `gap` parameter controls whether nearby/touching labels should be merged into the same segment
 
-## Segmentation Algorithm
-
-The segmentation algorithm splits text into maximal contiguous ranges where the set of overlapping labels is constant. This is the same boundary-based approach used in the current `buildMultiSourceSegments`.
+Practical `gap` meaning:
 
-```
-Input text:  "Alice went to Wonderland"
-Label A:     [0, 5)   "Alice"   style: { color: blue }
-Label B:     [3, 14)  "ce went to" style: { color: red }
-
-Boundaries:  0, 3, 5, 14, 24
-
-Segments:
-  [0, 3)   "Ali"              → labels: [A],    style: A.style
-  [3, 5)   "ce"               → labels: [A, B], style: combine(A.style, B.style)
-  [5, 14)  " went to "        → labels: [B],    style: B.style
-  [14, 24) "Wonderland"       → labels: [],     style: empty
-```
-
-Algorithm:
-
-1. Collect all label `start` and `end` positions, plus `0` and `text.length`, into a set of boundary points.
-2. Sort the boundary points.
-3. For each pair of consecutive boundaries `[start, end)`:
-   - Find all labels where `label.start <= start && label.end >= end`.
-   - Fold their styles: `labels.reduce((acc, l) => combine(acc, l.style), empty)`.
-   - Emit a `StyledSegment`.
-
-This runs in `O(B * L)` where `B` is the number of boundary points and `L` is the number of labels. For typical chapter sizes (a few hundred labels), this is fast. We can optimize this by using a segment tree.
-
----
-
-## Rendering
-
-The top-level React component:
-
-```typescript
-type LabeledTextProps<S, L extends LabelSpan = LabelSpan> = {
-  text: string;
-  styledLabels: StyledLabel<S, L>[];
-  styleConfig: StyleConfig<S>;
-  renderSegment?: SegmentRenderer<S, L>;
-  onTextSelect?: (selection: TextSelection) => void;
-  onLabelClick?: (label: L, rect: DOMRect) => void;
-};
-```
+- `gap = 0`
+  - touching labels may remain separate
+- `gap > 0`
+  - close labels can be merged into one larger segment
 
-The `renderSegment` prop is optional. The library provides a default renderer that maps style fields to CSS properties (background color, underline, opacity, etc.). Users can override it for custom rendering strategies like gradients, animations, or entirely different visual approaches.
+This matters because the manager later relies on these segmentation boundaries when inserting/deleting text around labels.
 
-The component handles:
+### Reducing Segmenters
 
-- Running the segmentation algorithm
-- Rendering each segment via `renderSegment`
-- Text selection tracking (mapping DOM selections back to character positions via `data-char-start` attributes)
-- Label click detection (delegated to `onLabelClick`)
+The same file also defines:
 
----
+- `makeReducingSegmenter`
+- `makeFullReducingSegmenter`
 
-## Examples
+These are style-reduction helpers, not mutable editor primitives.
 
-### Simple: single color per label
+They:
 
-```typescript
-type SimpleStyle = { color: string; opacity: number };
+- partition labeled coverage more finely
+- reduce multiple overlapping styles into one style per rendered subrange
 
-const simpleConfig: StyleConfig<SimpleStyle> = {
-  empty: { color: "transparent", opacity: 1 },
-  combine: (a, b) => ({
-    color: a.color === "transparent" ? b.color : a.color,
-    opacity: Math.min(a.opacity, b.opacity),
-  }),
-};
-```
+Use them when you want a visual reduction of overlap, not when you need to preserve individual labels as editable objects.
 
-### Priority-aware: higher priority overrides color
+## Segment Manager
 
-```typescript
-type PriorityStyle = { color: string; opacity: number; priority: number };
+The mutable manager lives in [core/segmentManager.ts](/workspaces/NovelTL_Dev/frontend/src/components/labeled-text-lib/core/segmentManager.ts:88).
 
-const priorityConfig: StyleConfig<PriorityStyle> = {
-  empty: { color: "transparent", opacity: 1, priority: Infinity },
-  combine: (a, b) => {
-    const winner = a.priority <= b.priority ? a : b;
-    const loser = a.priority <= b.priority ? b : a;
-    return {
-      color: winner.color,
-      opacity: (winner.opacity + loser.opacity) / 2,
-      priority: winner.priority,
-    };
-  },
-};
-```
+### Purpose
 
-### NovelTL-specific: active tab emphasized
+`SegmentManager` is a mutable document model that keeps:
 
-```typescript
-type NovelTLStyle = {
-  color: string;
-  emphasis: "bright" | "dim";
-  priority: number;
-  interactive: boolean;
-};
+- the current text
+- the current segments
+- label identities
+- subscriber notifications
 
-const novelTLConfig: StyleConfig<NovelTLStyle> = {
-  empty: { color: "transparent", emphasis: "dim", priority: Infinity, interactive: false },
-  combine: (a, b) => {
-    const primary = a.priority <= b.priority ? a : b;
-    return {
-      color: primary.color,
-      emphasis: primary.emphasis,
-      priority: primary.priority,
-      interactive: primary.interactive || (a.priority <= b.priority ? b : a).interactive,
-    };
-  },
-};
+It is the library's stateful core for dynamic editing.
 
-// Usage: the active tab's label group gets priority 0, emphasis "bright"
-// All other groups get priority 1, emphasis "dim"
-```
+### Public API
 
----
+The main public methods are:
 
-## Integration with NovelTL
+- `getText()`
+- `getSegmentIds()`
+- `getSegment(id)`
+- `getSegments()`
+- `subscribe(callback)`
+- `addLabel(id, label)`
+- `updateLabel(id, label)`
+- `removeLabel(id)`
+- `insertTextAt(pos, text)`
+- `deleteTextAt(pos, length)`
+- `batch(fn)`
 
-The current code maps to the library as follows:
+### Invariants
 
-| Current code | Library equivalent |
-|---|---|
-| `LabelSourceConfig` | `StyledLabel<S>` — labels paired with styles |
-| `buildMultiSourceSegments` | `buildStyledSegments` — the segmentation algorithm |
-| `resolveSegmentStyle` | `StyleConfig.combine` — the monoid operation |
-| `AnnotatedText` | `LabeledText` — the top-level component |
-| `ActiveSource.priority` | A field inside the user-defined `S` type |
+The manager is designed to maintain these invariants:
 
-Migration path: replace `labelOps.ts` internals with the library, define a `NovelTLStyle` type and its `StyleConfig`, and pass them to `LabeledText`. The workspace page (`NovelWorkspacePage.tsx`) constructs `StyledLabel[]` from its label groups and NER results, choosing emphasis/priority based on the active tab.
+- segments cover the full text with no gaps or overlaps
+- every segment has positive length
+- every label has positive length
+- every label is fully contained within exactly one segment
+- labels returned from segments use coordinates relative to that segment
 
----
+This invariant set is the main reason the manager exists. Callers mutate the document through manager operations and the manager repairs segment structure as needed.
 
-## Editing Integration
+### Internal Representation
 
-Text editing and label display are separate concerns. The library handles display; editing is handled by a sibling component (currently `InlineTextEditor`). They share the same text data but never render simultaneously — when the user is editing, the textarea is shown; when viewing labels, `LabeledText` is shown.
+The current implementation maintains:
 
-The library does not need to know about editing, revision text IDs, or concurrency control. It takes a `text` string and `StyledLabel[]` and renders them.
+- `text`
+- `bounds`
+  - ordered segment ranges
+- `segmentsById`
+- `labelsById`
+- `segmentIdsByLabelId`
+- `subscribers`
 
----
+This is enough to answer segment queries, map labels back to segments, and rebuild local regions after edits.
 
-## Future: Style Transform Step
+### Mutation Semantics
 
-An optional preprocessing step that enriches styles with context-dependent data before segmentation. The pipeline becomes:
+#### Label mutations
 
-```
-PureStyle (stored)  →  transform(text, labels)  →  Style (enriched)  →  segment + combine  →  render
-```
+- `addLabel`
+  - merges affected segments if needed
+  - inserts the label into the resulting segment
 
-This would add a second type parameter:
+- `removeLabel`
+  - removes the label
+  - may split the segment again if uncovered space is large enough relative to `gap`
 
-```typescript
-type LabeledTextProps<P, S = P, L extends LabelSpan = LabelSpan> = {
-  text: string;
-  styledLabels: StyledLabel<P, L>[];
-  styleConfig: StyleConfig<S>;
-  transform?: (text: string, labels: StyledLabel<P, L>[]) => StyledLabel<S, L>[];
-  renderSegment?: SegmentRenderer<S, L>;
-  // ...
-};
-```
+- `updateLabel`
+  - implemented as batched remove + add
 
-When `transform` is not provided (default), `P === S` and the labels pass through unchanged. TypeScript default type parameters (`S = P`) mean simple usage doesn't pay for this complexity.
+#### Text insertion
 
-Use cases: gradient blending between adjacent labels, context-dependent emphasis (e.g., labels near the cursor get brighter). This is not planned for the initial implementation.
+`insertTextAt` handles several cases:
 
----
+- prepend at position `0`
+- append at `text.length`
+- insertion into unlabeled segments
+- insertion near labels within an allowed gap
+- insertion that invalidates overlapping labels
 
-## Package Structure
+Notably, insertion through the middle of existing labels is destructive to those labels in the current implementation: overlapping labels are removed before the text is inserted. This is an important behavior for higher-level editor logic to understand.
 
-The library can be published as a standalone package with no NovelTL dependencies:
+#### Text deletion
 
-```
-labeled-text/
-  src/
-    core.ts              # StyleConfig, StyledLabel, StyledSegment types
-    segment.ts           # buildStyledSegments (pure function, no React)
-    react/
-      LabeledText.tsx    # Top-level component
-      defaultRenderer.tsx  # Default SegmentRenderer
-      selection.ts       # Text selection → character position mapping
-  package.json
-```
+`deleteTextAt`:
 
-The `core.ts` and `segment.ts` modules have zero dependencies. The `react/` directory depends only on React. NovelTL imports the library and provides its own `StyleConfig` and optionally its own `SegmentRenderer`.
+- removes intersecting labels
+- shifts labels that occur after the deleted range
+- removes affected segments
+- rebuilds the local affected region using the base segmenter
 
----
+This local rebuild is the main repair mechanism after destructive text edits.
+
+### Batching
+
+`batch(fn)` suppresses intermediate subscriber notifications while a group of operations runs. After the batch completes, one final notification is emitted.
+
+Use this when a higher-level action is conceptually one change but implemented as several manager operations.
+
+## React Adapters
+
+### `StaticLabeledText`
+
+[react/StaticLabeledText.tsx](../frontend/src/components/labeled-text-lib/react/StaticLabeledText.tsx) is the simple rendering path.
+
+It:
+
+- receives raw `text`
+- receives raw `labels`
+- receives a segmenter
+- computes segments on render
+- renders them with a supplied `Renderer`
+
+Use it for read-only rendering when you do not need a persistent mutable manager.
+
+### `DynamicLabeledText`
+
+[react/DynamicLabeledText.tsx](../frontend/src/components/labeled-text-lib/react/DynamicLabeledText.tsx) is the dynamic adapter.
+
+It:
+
+- receives an already-created `SegmentManager`
+- subscribes to manager changes
+- mirrors `manager.getSegments()` into React state
+- renders those segments
+- exposes a hidden `contentEditable` for keyboard/composition/input events
+- forwards pointer, keyboard, clipboard, composition, focus, and input callbacks with access to both `manager` and `caret`
+
+This is the right adapter for NovelTL's editor work because the page can own:
+
+- the manager lifecycle
+- caret state
+- mode state
+- backend synchronization state
+
+The adapter only handles rendering and event forwarding.
+
+## Rendering Helpers
+
+[react/Renderer.tsx](/workspaces/NovelTL_Dev/frontend/src/components/labeled-text-lib/react/Renderer.tsx:1) provides:
+
+- `Renderer`
+- plain text rendering helpers
+- overlay box rendering helpers
+- DOM range measurement utilities
+
+The important split is:
+
+- `renderText`
+  - renders the visible text for a segment
+- `renderOverlay`
+  - optionally renders measured overlay boxes on top of the text
+
+`makePlainBoxRenderer` is the convenience helper currently used in the editor experiments. It renders plain text plus overlay boxes whose CSS comes from a style-to-box-style function.
+
+The built-in reducers and color helpers under `builtin/` are convenience utilities, not core architecture.
+
+## What The Library Does Not Own
+
+This is the most important boundary for the editor architecture.
+
+The library does not own:
+
+- chapter selection
+- active label group / active tab / active index
+- editor mode such as `"edit"` vs `"label"`
+- session buffering
+- backend flush queues
+- optimistic synchronization state
+- NovelTL permission rules
+- chapter content version / `chapterContentId` reconciliation
+
+`SegmentManager` is a document mutation primitive, not the whole page state machine.
+
+## How NovelTL Should Use It
+
+For the current editing direction, the intended shape is:
+
+1. Convert backend label data into manager labels
+2. Own the manager in page-level React state or memoized lifecycle logic
+3. Use `DynamicLabeledText` for rendering and event capture
+4. Keep higher-level editor state outside the library
+
+The higher-level editor should likely maintain:
+
+- backend snapshot
+- optimistic local text/label snapshot
+- session buffers
+- flush queue
+- mode / active entry / visibility
+
+The manager should track only the live mutable text+label surface for the currently active editing context.
+
+## Known Limitations
+
+- There is no built-in concept of backend synchronization.
+- Text edits that overlap labels are destructive to those labels in the current manager implementation.
+- The manager is mutable and imperative, so higher-level code must be disciplined about lifecycle and ownership.
+- `DynamicLabeledText` depends on external caret state; caret movement logic is not provided by the library.
+- The library does not currently document a stable package-style public API boundary; it is still an internal subsystem.
 
 ## Relevant Files
 
-- `frontend/src/components/workspace/labelOps.ts` — Current label segmentation and style resolution (to be replaced)
-- `frontend/src/components/workspace/AnnotatedText.tsx` — Current annotated text display component (to be replaced)
-- `frontend/src/types/label.ts` — Label type definitions (library will use a generic `LabelSpan` instead)
-- `frontend/src/components/workspace/InlineTextEditor.tsx` — Text editing component (stays separate)
-- `frontend/src/pages/NovelWorkspacePage.tsx` — Consumer that constructs label sources and styles
+- `frontend/src/components/labeled-text-lib/core/types.ts` - Core interval, segment, and style types
+- `frontend/src/components/labeled-text-lib/core/segmenters.ts` - Basic and reducing segmentation logic
+- `frontend/src/components/labeled-text-lib/core/segmentManager.ts` - Mutable segmented document model
+- `frontend/src/components/labeled-text-lib/react/StaticLabeledText.tsx` - Read-only rendering adapter
+- `frontend/src/components/labeled-text-lib/react/DynamicLabeledText.tsx` - Externally managed dynamic rendering adapter
+- `frontend/src/components/labeled-text-lib/react/Renderer.tsx` - Renderer and overlay helpers
+- `frontend/src/components/labeled-text-lib/builtin/` - Convenience style reducers and color helpers
+- `frontend/src/components/labeled-text-lib/__test__/` - Behavior tests for segmentation, manager, and React rendering
 
 ## See Also
 
-- [workspace-implementation.md](workspace-implementation.md) — How the current workspace is built, including label rendering pipeline
-- [ui-requirements.md](ui-requirements.md) — Frontend component specs and UX workflows
-- [editable-with-labels.md](editable-with-labels.md) — Label offset adjustment when text is edited
+- [labeled-text-library.md](labeled-text-library.md) - Original design/motivation doc, now deprecated
+- [workspace-implementation.md](workspace-implementation.md) - Existing workspace architecture doc
+- [editable-with-labels.md](editable-with-labels.md) - Broader editor/backend concurrency notes

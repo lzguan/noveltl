@@ -842,7 +842,7 @@ def modify_chapter_content(
         label_group_id = db.execute(label_data_q).scalar_one()
         stmt = insert(label_models.LabelData).values(label_group_id=label_group_id, chapter_content_id=new_chapter_content_id).returning(label_models.LabelData)
         label_data = db.execute(stmt).scalar_one()
-        label_vals = [label.model_dump() for label in labels]
+        label_vals = [label.model_dump(exclude={"label_id"}) for label in labels]
         for label in label_vals:
             label['label_data_id'] = label_data.label_data_id
         stmt = insert(label_models.Label).values(label_vals)

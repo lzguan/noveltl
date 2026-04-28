@@ -225,14 +225,14 @@ Follow RESTful API naming conventions.
 
 ## URL Conventions
 - Use `kebab-case` for multi-word URL path segments (e.g. `/label-groups`, `/auto-labels`, `/flag-instances`).
-- Path parameters use `snake_case` (e.g. `{novel_id}`, `{label_group_id}`) since they map to Python variables.
-- Query parameters use `kebab-case`. In FastAPI, this requires an explicit alias:
+- Path parameters use `camelCase` aliases (e.g. `{novelId}`, `{labelGroupId}`), while the Python variable names remain `snake_case`.
+- Query parameters use `camelCase`. In FastAPI, this requires an explicit alias:
     ```python
     def read_novels(
-        title_contains: str | None = Query(default=None, alias="title-contains"),
+        title_contains: str | None = Query(default=None, alias="titleContains"),
     ): ...
     ```
-- JSON request/response body keys use `snake_case`.
+- JSON request/response body keys use `camelCase`.
 
 ## CRUD Patterns
 
@@ -246,8 +246,8 @@ Follow RESTful API naming conventions.
 | Delete | DELETE | `/objects/{object_id}` | `DELETE /revisions/{revision_id}` |
 
 ## Filtering and Collection Queries
-- Bulk querying with filters uses `GET /objects` with query parameters (e.g. `GET /novels?title-contains=alice`).
-- When querying child resources, prefer query parameters on the child collection (e.g. `GET /chapters?novel-id=1`).
+- Bulk querying with filters uses `GET /objects` with query parameters (e.g. `GET /novels?titleContains=alice`).
+- When querying child resources, prefer query parameters on the child collection (e.g. `GET /chapters?novelId=1`).
 - Nested URL reads (e.g. `GET /novels/{novel_id}/revisions`) are acceptable when the parent-child relationship is naturally navigated.
 
 ## Actions on Resources

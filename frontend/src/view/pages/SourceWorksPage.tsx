@@ -1,24 +1,29 @@
 import { useSearchParams } from "react-router-dom";
 import { extractParams } from "@/routes";
-import { getSourceWorks } from "@/api/novels";
 import { useState, useEffect } from "react";
-import { type SourceWorkData } from "@/types/novel";
 import { SourceWorkList } from "../components/SourceWorkList";
 import { LoadingList } from "../components/LoadingList";
 import { StaticRouteInput } from "@/view/components/StaticRouteInput";
 import { routeTo } from "@/routes";
+import { readSourceWorksSourceWorksGet, type SourceWorkDataOutput } from "@/client";
 
 function SourceWorksPage() {
     const [searchParams] = useSearchParams();
     const [loading, setLoading] = useState(false);
     const { search } = extractParams.view.sourceworks(searchParams)
-    const [sourceWorkData, setSourceWorkData] = useState<SourceWorkData[]>([]);
+    const [sourceWorkData, setSourceWorkData] = useState<SourceWorkDataOutput[]>([]);
+    const [, setError] = useState<unknown>(null);
 
     useEffect(() => {
         async function loadSourceWorks() {
             setLoading(true);
-            const data = await getSourceWorks(search, true);
-            setSourceWorkData(data);
+            const data = await readSourceWorksSourceWorksGet({ query: { "title-contains" : search } });
+            if (data.data) {
+                setSourceWorkData(data.data);
+            } else {
+                setError(data.error);
+                setSourceWorkData([]);
+            }
             setLoading(false);
         }
 

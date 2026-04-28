@@ -51,16 +51,16 @@ async def create_novel(
 
 ## Naming Conventions
 
-URLs use `kebab-case` (web standard), JSON bodies and Python code use `snake_case`. This keeps URLs readable while maintaining consistency between payload fields and backend code. See [conventions.md](conventions.md) for the full naming rules.
+URLs use `kebab-case` for resource segments, API parameters and JSON bodies use `camelCase`, and backend Python code stays `snake_case`. This keeps URLs readable while making the generated frontend client idiomatic without a translation layer. See [conventions.md](conventions.md) for the full naming rules.
 
 | Context | Casing | Examples |
 |---------|--------|----------|
-| URL paths | `kebab-case` | `/auto-labels/{id}`, `/label-groups/{id}` |
-| JSON fields | `snake_case` | `novel_title`, `label_group_name` |
-| Query params | `kebab-case` aliases | `?title-contains=example`, `?is-public=true` |
-| Path params | `snake_case` | `{novel_id}`, `{chapter_id}` |
+| URL paths | `kebab-case` segments | `/auto-labels/{id}`, `/label-groups/{id}` |
+| JSON fields | `camelCase` | `novelTitle`, `labelGroupName` |
+| Query params | `camelCase` aliases | `?titleContains=example`, `?isPublic=true` |
+| Path params | `camelCase` aliases | `{novelId}`, `{chapterId}` |
 
-Multi-word query params use FastAPI's `Query(alias="kebab-name")`. Single-word params like `start`, `end`, `editable` need no alias.
+Multi-word request parameters use FastAPI aliases, e.g. `Query(alias="titleContains")` and `Path(alias="chapterContentId")`. Single-word params like `start`, `end`, `editable` need no alias.
 
 ## Resource Hierarchy
 

@@ -1,6 +1,6 @@
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
 
 from ..auth.dependencies import get_current_user
@@ -29,9 +29,9 @@ def read_filter_schemas():
     """
     return service.query_schemas()
 
-@router.post('/filters/{filter_name}/flag-instances', response_model=list[Any])
+@router.post('/filters/{filterName}/flag-instances', response_model=list[Any])
 def read_flagged_instances(
-        filter_name : str,
+        filter_name : Annotated[str, Path(alias="filterName")],
         options : dict[Any, Any],
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
@@ -52,9 +52,9 @@ def read_flagged_instances(
     except OptionsValidationException as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-@router.post('/filters/{filter_name}/get-contexts', response_model=list[Any])
+@router.post('/filters/{filterName}/get-contexts', response_model=list[Any])
 def read_contexts(
-        filter_name : str,
+        filter_name : Annotated[str, Path(alias="filterName")],
         body : InstanceOptions,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
@@ -80,9 +80,9 @@ def read_contexts(
     except InstanceValidationException as e:
         raise HTTPException(status_code=400, detail=f"Instance validation error: {e}") from e
 
-@router.post('/filters/{filter_name}/decide-instances', response_model=list[bool])
+@router.post('/filters/{filterName}/decide-instances', response_model=list[bool])
 def read_decisions(
-        filter_name : str,
+        filter_name : Annotated[str, Path(alias="filterName")],
         body : InstanceContextOptions,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
@@ -109,9 +109,9 @@ def read_decisions(
     except ChapterContentOutdatedException as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
 
-@router.post('/filters/{filter_name}/apply', status_code=204)
+@router.post('/filters/{filterName}/apply', status_code=204)
 def apply_filter(
-        filter_name : str,
+        filter_name : Annotated[str, Path(alias="filterName")],
         body : InstanceOptions,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]

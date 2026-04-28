@@ -89,7 +89,7 @@ sequenceDiagram
     end
 
     note over DB,C: Poll for status
-    C->>B: GET /auto-labels?novel-id=…<br/>[Bearer token]
+    C->>B: GET /auto-labels?novelId=…<br/>[Bearer token]
     B->>DB: SELECT AutoLabels<br/>+ revision_mod_access_select
     B-->>C: 200 {revision_id: AutoLabelMeta}
 
@@ -623,7 +623,7 @@ Response: 200 OK
 ### Query AutoLabels for Novel
 
 ```http
-GET /auto-labels?novel-id=1&model-names=cluener
+GET /auto-labels?novelId=1&modelNames=cluener
 Authorization: Bearer <token>
 
 Response: 200 OK
@@ -641,12 +641,12 @@ Response: 200 OK
 ```
 
 **Query Parameters:**
-- `novel-id` (required) - Novel to query autolabels for
-- `chapter-ids` (optional) - Filter by chapter IDs
+- `novelId` (required) - Novel to query autolabels for
+- `chapterIds` (optional) - Filter by chapter IDs
 - `revision-ids` (optional) - Filter by revision IDs
 - `start` (optional) - Start chapter number
 - `end` (optional) - End chapter number  
-- `model-names` (optional) - Filter by model names
+- `modelNames` (optional) - Filter by model names
 
 **Note:** Returns lightweight metadata without `auto_label_data` for performance.
 

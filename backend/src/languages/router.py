@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -10,9 +10,9 @@ from .service import query_all_languages, query_language_by_code
 
 router = APIRouter()
 
-@router.get('/languages/{language_code}', response_model=schemas.Language)
+@router.get('/languages/{languageCode}', response_model=schemas.Language)
 def read_language_by_code(
-        language_code : str,
+        language_code : Annotated[str, Path(alias="languageCode")],
         db : Annotated[Session, Depends(get_db)]
     ):
     """

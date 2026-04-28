@@ -41,7 +41,7 @@ dev = [
 ]
 
 [tool.uv]
-package = false
+package = true
 default-groups = [
     "backend",
     "worker",

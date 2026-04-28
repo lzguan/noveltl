@@ -1,6 +1,6 @@
 # Removing `is_final` flag
 
-**Last Updated**: March 21, 2026
+**Last Updated**: April 26, 2026
 **Status**: Draft
 
 ---
@@ -404,6 +404,8 @@ There are several other things we need to consider, outlined below.
 #### Security
 
 We should only allow the client to fetch `RevisionText` by uuid, not by pkey. This is to ensure that a client cannot guess the id of a new `RevisionText` with `LabelData` currently in the process of being populated and perform some malicious actions. If the client manages to guess it, then hats off to them I guess.
+
+> **Note — about PKEYs** At the time this doc was drafted, pkeys were still INTEGER types. They have since been migrated to UUIDs, so this concern has been fixed in a slightly different than stated. 
 
 #### Autolabels
 

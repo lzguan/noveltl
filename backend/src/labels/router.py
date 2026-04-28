@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.orm import Session
 
 from ..auth.dependencies import get_current_user
@@ -37,7 +37,7 @@ router = APIRouter()
 
 @router.get('/label-groups', response_model=list[schemas.LabelGroup])
 def read_label_groups(
-        novel_id : Annotated[uuid.UUID, Query(alias="novel-id")],
+        novel_id : Annotated[uuid.UUID, Query(alias="novelId")],
         db: Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
@@ -46,9 +46,9 @@ def read_label_groups(
     """
     return query_label_groups(db, current_user, novel_id)
 
-@router.get('/label-groups/{label_group_id}', response_model=schemas.LabelGroup)
+@router.get('/label-groups/{labelGroupId}', response_model=schemas.LabelGroup)
 def read_label_group(
-        label_group_id : uuid.UUID,
+        label_group_id : Annotated[uuid.UUID, Path(alias="labelGroupId")],
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
@@ -69,7 +69,7 @@ def read_label_group(
 
 @router.get('/label-datas', response_model=list[schemas.LabelData])
 def read_label_datas_by_group_chapters(
-        label_group_id : Annotated[uuid.UUID, Query(alias="label-group-id")],
+        label_group_id : Annotated[uuid.UUID, Query(alias="labelGroupId")],
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)],
         start : int | None = None,
@@ -81,9 +81,9 @@ def read_label_datas_by_group_chapters(
     label_datas = query_label_datas(db, current_user, label_group_id, start, end)
     return label_datas
 
-@router.get('/label-datas/{label_data_id}', response_model=schemas.LabelData)
+@router.get('/label-datas/{labelDataId}', response_model=schemas.LabelData)
 def read_label_data(
-        label_data_id : uuid.UUID,
+        label_data_id : Annotated[uuid.UUID, Path(alias="labelDataId")],
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
@@ -102,9 +102,9 @@ def read_label_data(
         ) from e
     return label_data
 
-@router.get('/label-datas/{label_data_id}/labels', response_model=list[schemas.Label])
+@router.get('/label-datas/{labelDataId}/labels', response_model=list[schemas.Label])
 def read_labels_by_label_data(
-        label_data_id : uuid.UUID,
+        label_data_id : Annotated[uuid.UUID, Path(alias="labelDataId")],
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]
     ):
@@ -141,9 +141,9 @@ def create_label_group(
         ) from e
     return label_group
 
-@router.patch('/label-groups/{label_group_id}', response_model=schemas.LabelGroup)
+@router.patch('/label-groups/{labelGroupId}', response_model=schemas.LabelGroup)
 def update_label_group(
-        label_group_id: uuid.UUID,
+        label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
         request: schemas.UpdateLabelGroup,
         db: Annotated[Session, Depends(get_db)],
         current_user: Annotated[User, Depends(get_current_user)]
@@ -169,9 +169,9 @@ def update_label_group(
         ) from e
     return label_group
 
-@router.post('/label-groups/{label_group_id}/label-datas', response_model=schemas.LabelData)
+@router.post('/label-groups/{labelGroupId}/label-datas', response_model=schemas.LabelData)
 def create_label_data(
-        label_group_id: uuid.UUID,
+        label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
         request: schemas.CreateLabelData,
         db: Annotated[Session, Depends(get_db)],
         current_user: Annotated[User, Depends(get_current_user)]
@@ -202,9 +202,9 @@ def create_label_data(
         ) from e
     return label_data
 
-@router.patch('/label-datas/{label_data_id}', status_code=status.HTTP_204_NO_CONTENT)
+@router.patch('/label-datas/{labelDataId}', status_code=status.HTTP_204_NO_CONTENT)
 def update_label_data_stream(
-        label_data_id: uuid.UUID,
+        label_data_id: Annotated[uuid.UUID, Path(alias="labelDataId")],
         request: schemas.UpdateLabelDataStream,
         db: Annotated[Session, Depends(get_db)],
         current_user: Annotated[User, Depends(get_current_user)]
@@ -252,11 +252,11 @@ def update_label_data_stream(
     return
 
 @router.post(
-    '/label-groups/{label_group_id}/label-datas/auto-labels',
+    '/label-groups/{labelGroupId}/label-datas/auto-labels',
     response_model=schemas.CreateLabelDataByAutoLabelStatus
 )
 def create_label_datas_by_auto_labels(
-        label_group_id : uuid.UUID,
+        label_group_id : Annotated[uuid.UUID, Path(alias="labelGroupId")],
         request : schemas.CreateLabelDataByAutoLabel,
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)]

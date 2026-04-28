@@ -5,30 +5,31 @@ Common schemas for filters, including context and instance schemas. These are us
 import uuid
 from typing import Any, Literal, Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
 
 from ..labels import schemas as label_schemas
+from ..schemas import Model
 
 
 # -----------------------------------------
 # --- Abstract base schemas for filters ---
 # -----------------------------------------
-class InstanceBase(BaseModel):
+class InstanceBase(Model):
     pass
 
-class ContextBase(BaseModel):
+class ContextBase(Model):
     pass
 
-class FlagInstancesOptionsBase(BaseModel):
+class FlagInstancesOptionsBase(Model):
     pass
 
-class GetContextsOptionsBase(BaseModel):
+class GetContextsOptionsBase(Model):
     pass
 
-class DecideInstancesOptionsBase(BaseModel):
+class DecideInstancesOptionsBase(Model):
     pass
 
-class ApplyFilterOptionsBase(BaseModel):
+class ApplyFilterOptionsBase(Model):
     create_copy : bool = Field(
         default=False,
         description="Whether to copy the labels that pass the filter instead of moving them. If set to True, new labels will be created with the same label word and entity group as the original label. If set to False, apply_filter will update the original labels that pass the filter. This option is only applicable to filters that support applying, and will be ignored for filters that don't support applying. Read specific implementations of apply_filter for details on how this option affects the behavior of the filter when applying."
@@ -75,10 +76,10 @@ class SingleLabel(InstanceBase):
 # ------ Router schemas and types ------
 # --------------------------------------
 
-class InstanceOptions(BaseModel):
+class InstanceOptions(Model):
     instances: list[Any]
     options : dict[Any, Any]
 
-class InstanceContextOptions(BaseModel):
+class InstanceContextOptions(Model):
     instance_contexts: list[tuple[Any, Any]]
     options : dict[Any, Any]

@@ -23,6 +23,7 @@ def _label(word: str, start: int, end: int, score: float = 1.0) -> Label:
         label_end=end,
         label_dirty=False,
         label_data_id=uuid.uuid4(),
+        label_id=uuid.uuid4(),
     )
 
 

@@ -1,23 +1,22 @@
 import uuid
 
-from pydantic import BaseModel
-
 from ..labels.constants import LabelRole
 from ..labels.schemas import Label, LabelData, LabelGroup
 from ..novels.constants import Role
 from ..novels.schemas import Chapter, ChapterContent
+from ..schemas import Model
 
 
-class LabelGroupListEntry(BaseModel):
+class LabelGroupListEntry(Model):
     label_group : LabelGroup
     label_data : LabelData | None
     role : LabelRole
 
-class LabelDataEntry(BaseModel):
+class LabelDataEntry(Model):
     label_data_id : uuid.UUID
     labels : list[Label]
 
-class EditChapterData(BaseModel):
+class EditChapterData(Model):
     """
     Pydantic schema for the data needed to edit a chapter.
 

@@ -1,7 +1,7 @@
-from pydantic import BaseModel
+from ..schemas import Model
 
 
-class Language(BaseModel):
+class Language(Model):
     """
     Pydantic schema for language.
 

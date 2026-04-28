@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -14,14 +14,14 @@ from .service import query_edit_chapter_data
 
 router = APIRouter()
 
-@router.get('/edit-chapter-data/{chapter_id}', response_model=EditChapterData)
+@router.get('/edit-chapter-data/{chapterId}', response_model=EditChapterData)
 def read_edit_chapter_data(
-        chapter_id : uuid.UUID,
-        novel_id : Annotated[uuid.UUID, Query(alias="novel-id")],
-        label_groups_num : Annotated[int, Query(alias="label-groups-num", ge=1, le=20)],
+        chapter_id : Annotated[uuid.UUID, Path(alias="chapterId")],
+        novel_id : Annotated[uuid.UUID, Query(alias="novelId")],
+        label_groups_num : Annotated[int, Query(alias="labelGroupsNum", ge=1, le=20)],
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[User, Depends(get_current_user)],
-        subject_id : Annotated[uuid.UUID | None, Query(alias="subject-id")] = None,
+        subject_id : Annotated[uuid.UUID | None, Query(alias="subjectId")] = None,
     ):
     """
     Gets all data associated with a chapter required for editing.

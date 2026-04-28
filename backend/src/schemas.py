@@ -1,9 +1,19 @@
+"""
+Top level schemas for the codebase. These are used across multiple modules, and should not import from any module other than standard library and pydantic to avoid circular imports.
+"""
 from typing import Any, Literal
 
-from pydantic import BaseModel, ValidationInfo, model_validator
+from pydantic import BaseModel, ConfigDict, ValidationInfo, model_validator
+from pydantic.alias_generators import to_camel
 
 
-class SkipDefaultModel(BaseModel):
+class Model(BaseModel):
+    """
+    Base Pydantic model for all models in this codebase to inherit from.
+    """
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+class SkipDefaultModel(Model):
 
     @model_validator(mode='before')
     @classmethod
@@ -19,7 +29,7 @@ class SkipDefaultModel(BaseModel):
 
         return data # pyright: ignore[reportUnknownVariableType]
 
-class OperationStatus(BaseModel):
+class OperationStatus(Model):
     """
     Pydantic model to signal return status of operation.
 

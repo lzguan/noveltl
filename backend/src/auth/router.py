@@ -8,7 +8,7 @@ import uuid
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -152,11 +152,11 @@ async def read_user_me(
     return current_user
 
 @router.get(
-    "/users/{user_name}",
+    "/users/{userName}",
     response_model=schemas.User
 )
 async def read_user(
-        user_name : str,
+        user_name : Annotated[str, Path(alias="userName")],
         db : Annotated[Session, Depends(get_db)]
     ):
     """
@@ -199,11 +199,11 @@ async def delete_user_me(
     return stat
 
 @router.delete(
-    '/users/{user_id}',
+    '/users/{userId}',
     response_model=schemas.DeleteUserStatus
 )
 async def delete_user(
-        user_id : uuid.UUID,
+        user_id : Annotated[uuid.UUID, Path(alias="userId")],
         db : Annotated[Session, Depends(get_db)],
         current_user : Annotated[schemas.User, Depends(get_current_user)]
     ):

@@ -7,10 +7,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
+from ..schemas import Model
 from .constants import UserType
 
 
-class User(BaseModel):
+class User(Model):
     """
     Pydantic model for user information.
 
@@ -25,7 +26,7 @@ class User(BaseModel):
     user_name : str
     user_type : UserType
 
-class CreateUser(BaseModel):
+class CreateUser(Model):
     """
     Pydantic schema to validate data required to create a user.
 
@@ -49,7 +50,7 @@ class CreateUser(BaseModel):
             raise ValueError("Username must be at least 3 characters long.")
         return v
 
-class DeleteUserStatus(BaseModel):
+class DeleteUserStatus(Model):
     """
     Pydantic schema to return status after deleting a user
 

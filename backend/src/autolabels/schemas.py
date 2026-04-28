@@ -4,10 +4,10 @@ Pydantic schemas for autolabels.
 import uuid
 from typing import Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from ..labels.schemas import LabelBase
-from ..schemas import SkipDefaultModel
+from ..schemas import Model, SkipDefaultModel
 from .constants import MAX_PARAMS_FIELDS, AutoLabelProgress, SepPriority
 from .validators import SmallDict
 
@@ -58,7 +58,7 @@ class CluenerModelParams(NERModelParamsBase):
         return self
 
 
-class AutoLabel(BaseModel):
+class AutoLabel(Model):
     """
     Pydantic schema for an auto-labeled data entry.
 
@@ -82,7 +82,7 @@ class AutoLabel(BaseModel):
     chapter_content_id : uuid.UUID
     auto_label_last_job_id : str
 
-class AutoLabelMeta(BaseModel):
+class AutoLabelMeta(Model):
     """
     Pydantic schema for auto-label metadata.
 
@@ -105,7 +105,7 @@ class AutoLabelMeta(BaseModel):
     chapter_content_id : uuid.UUID
     auto_label_last_job_id : str
 
-class CreateAutoLabels(BaseModel):
+class CreateAutoLabels(Model):
     """
     Pydantic schema for creating an auto-labeled data entry.
 

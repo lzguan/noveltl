@@ -5,14 +5,15 @@ Pydantic schemas for labels.
 import uuid
 from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from ..autolabels.constants import MAX_PARAMS_FIELDS
 from ..autolabels.validators import SmallDict
+from ..schemas import Model
 from .constants import MAX_LABEL_ENTITY_GROUP_NAME_LEN, MAX_LABEL_GROUP_NAME_LEN, MAX_LABEL_WORD_LEN
 
 
-class LabelGroup(BaseModel):
+class LabelGroup(Model):
     """
     Pydantic schema for a label group.
 
@@ -27,7 +28,7 @@ class LabelGroup(BaseModel):
     label_group_name : str = Field(max_length=MAX_LABEL_GROUP_NAME_LEN)
     novel_id : uuid.UUID
 
-class CreateLabelGroup(BaseModel):
+class CreateLabelGroup(Model):
     """
     Pydantic schema for validating forms for creating a label group.
 
@@ -38,7 +39,7 @@ class CreateLabelGroup(BaseModel):
     label_group_name : str = Field(max_length=MAX_LABEL_GROUP_NAME_LEN)
     novel_id : uuid.UUID
 
-class UpdateLabelGroup(BaseModel):
+class UpdateLabelGroup(Model):
     """
     Pydantic schema for validating forms for updating a label group.
 
@@ -47,7 +48,7 @@ class UpdateLabelGroup(BaseModel):
     """
     label_group_name : str = Field(max_length=MAX_LABEL_GROUP_NAME_LEN)
 
-class LabelData(BaseModel):
+class LabelData(Model):
     """
     Pydantic schema for a list of labels in some text.
 
@@ -62,7 +63,7 @@ class LabelData(BaseModel):
     label_group_id : uuid.UUID
     chapter_content_id : uuid.UUID
 
-class LabelBase(BaseModel):
+class LabelBase(Model):
     """
     Pydantic schema for a single label without a parent LabelData reference.
     Used by autolabels and other contexts where labels exist independently of a LabelData.
@@ -105,11 +106,12 @@ class LabelBase(BaseModel):
 class Label(LabelBase):
     """
     Pydantic schema for a label that belongs to a LabelData.
-    Extends LabelBase with a label_data_id foreign key.
+    Extends LabelBase with a label_data_id foreign key and label_id pkey.
     """
     label_data_id : uuid.UUID
+    label_id : uuid.UUID
 
-class CreateLabelData(BaseModel):
+class CreateLabelData(Model):
     """
     Pydantic schema for validating create requests for label data.
 
@@ -118,7 +120,7 @@ class CreateLabelData(BaseModel):
     """
     chapter_content_id : uuid.UUID
 
-class LabelOpBase(BaseModel):
+class LabelOpBase(Model):
     """
     Base class for a label operation. Any label operation must include these parameters to validate the request.
 
@@ -208,7 +210,7 @@ class UpdateLabelOp(LabelOpBase):
             raise ValueError("Length of new word does not match label bounds")
         return self
 
-class UpdateLabelDataStream(BaseModel):
+class UpdateLabelDataStream(Model):
     """
     Pydantic schema for a buffered stream of label operations.
 
@@ -218,7 +220,7 @@ class UpdateLabelDataStream(BaseModel):
     ops : list[Annotated[AddLabelOp | DeleteLabelOp | UpdateLabelOp, Field(discriminator='op')]]
 
 
-class CreateLabelDataByAutoLabel(BaseModel):
+class CreateLabelDataByAutoLabel(Model):
     """
     Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.
 
@@ -235,7 +237,7 @@ class CreateLabelDataByAutoLabel(BaseModel):
     start : int | None = None
     end : int | None = None
 
-class CreateLabelDataByAutoLabelStatus(BaseModel):
+class CreateLabelDataByAutoLabelStatus(Model):
     """
     Return message for CreateLabelDataByAutoLabel.
 

@@ -5,12 +5,13 @@ Pydantic models for novels and chapters.
 import uuid
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict
 
+from ..schemas import Model
 from .constants import NovelType, Visibility
 
 
-class SourceWork(BaseModel):
+class SourceWork(Model):
     """
     Pydantic schema for a source work.
 
@@ -19,11 +20,12 @@ class SourceWork(BaseModel):
         source_work_title: Title of the source work.
         source_work_description: Optional description of the source work.
     """
+    model_config = ConfigDict(from_attributes=True)
     source_work_id : uuid.UUID
     source_work_title : str
     source_work_description : str | None = None
 
-class CreateSourceWork(BaseModel):
+class CreateSourceWork(Model):
     """
     Pydantic schema to validate forms for creating a source work.
 
@@ -34,7 +36,7 @@ class CreateSourceWork(BaseModel):
     source_work_title : str
     source_work_description : str | None = None
 
-class UpdateSourceWork(BaseModel):
+class UpdateSourceWork(Model):
     """
     Pydantic schema to validate forms for updating a source work.
 
@@ -46,7 +48,7 @@ class UpdateSourceWork(BaseModel):
     source_work_description : str | None = None
 
 
-class Novel(BaseModel):
+class Novel(Model):
     """
     Pydantic schema for novel.
 
@@ -60,6 +62,7 @@ class Novel(BaseModel):
         language_code: String code key to language of the novel.
         source_work_id: UUID foreign key to source work of the novel.
     """
+    model_config = ConfigDict(from_attributes=True)
     novel_id : uuid.UUID
     novel_title : str
     novel_description : str | None = None
@@ -70,7 +73,7 @@ class Novel(BaseModel):
     language_code : str
     source_work_id : uuid.UUID
 
-class CreateNovel(BaseModel):
+class CreateNovel(Model):
     """
     Pydantic schema to validate forms for creating a novel.
 
@@ -92,7 +95,7 @@ class CreateNovel(BaseModel):
     language_code : str
     source_work_id : uuid.UUID | None = None
 
-class UpdateNovel(BaseModel):
+class UpdateNovel(Model):
     """
     Pydantic schema to validate forms for updating a novel. The novel id will be passed into the router endpoint.
 
@@ -109,7 +112,7 @@ class UpdateNovel(BaseModel):
     novel_visibility : Visibility | None = None
     novel_type : NovelType | None = None
 
-class SourceWorkData(BaseModel):
+class SourceWorkData(Model):
     """
     Pydantic schema to represent a source work and all its associated novels.
 
@@ -120,7 +123,7 @@ class SourceWorkData(BaseModel):
     source_work : SourceWork
     novels : list[Novel]
 
-class Chapter(BaseModel):
+class Chapter(Model):
     """
     Pydantic schema for chapter metadata. Represents a single "chapter" entry, which groups all its revisions.
 
@@ -137,7 +140,7 @@ class Chapter(BaseModel):
 
     novel_id : uuid.UUID
 
-class CreateChapter(BaseModel):
+class CreateChapter(Model):
     """
     Pydantic schema to validate data for creating a new chapter. The novel_id is expected to be passed via the URL path.
 
@@ -150,7 +153,7 @@ class CreateChapter(BaseModel):
     chapter_title : str = ""
     chapter_is_public : bool = False
 
-class ChapterContent(BaseModel):
+class ChapterContent(Model):
     """
     Pydantic schema for the text content of a chapter.
 
@@ -164,7 +167,7 @@ class ChapterContent(BaseModel):
     chapter_content_version : int
     chapter_content_id : uuid.UUID
 
-class ChapterContentMeta(BaseModel):
+class ChapterContentMeta(Model):
     """
     Metadata for a ChapterContent.
 
@@ -172,10 +175,11 @@ class ChapterContentMeta(BaseModel):
         chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.
         chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.
     """
+    model_config = ConfigDict(from_attributes=True)
     chapter_content_version : int
     chapter_content_id : uuid.UUID
 
-class ChapterData(BaseModel):
+class ChapterData(Model):
     """
     Pydantic schema for aggregating a ChapterContent and a Chapter together.
 
@@ -186,7 +190,7 @@ class ChapterData(BaseModel):
     metadata: Chapter
     content: ChapterContent
 
-class UpdateChapter(BaseModel):
+class UpdateChapter(Model):
     """
     Pydantic schema to validate data for updating chapter metadata.
 
@@ -195,7 +199,7 @@ class UpdateChapter(BaseModel):
     """
     chapter_title : str
 
-class TextOp(BaseModel):
+class TextOp(Model):
     """
     Pydantic schema to update text content of a chapter.
 
@@ -208,7 +212,7 @@ class TextOp(BaseModel):
     start : int
     text : str
 
-class UpdateChapterContent(BaseModel):
+class UpdateChapterContent(Model):
     """
     Pydantic schema to validate data for updating the text content of a chapter. The chapter_id is expected to be passed via the URL path.
 

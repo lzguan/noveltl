@@ -37,24 +37,24 @@ def _versioned_user(bundle: ScenarioBundle, user_name: str) -> User:
 
 def _normalize_payload(payload: dict[str, object]) -> dict[str, object]:
     normalized = dict(payload)
-    label_group_list = cast(list[dict[str, Any]], normalized["label_group_list"])
-    label_data_list = cast(list[dict[str, Any]], normalized["label_data_list"])
-    normalized["label_group_list"] = sorted(
+    label_group_list = cast(list[dict[str, Any]], normalized["labelGroupList"])
+    label_data_list = cast(list[dict[str, Any]], normalized["labelDataList"])
+    normalized["labelGroupList"] = sorted(
         label_group_list,
-        key=lambda entry: entry["label_group"]["label_group_name"],
+        key=lambda entry: entry["labelGroup"]["labelGroupName"],
     )
-    normalized["label_data_list"] = sorted(
+    normalized["labelDataList"] = sorted(
         [
             {
                 **entry,
                 "labels": sorted(
                     entry["labels"],
-                    key=lambda label: (label["label_start"], label["label_end"], label["label_word"]),
+                    key=lambda label: (label["labelStart"], label["labelEnd"], label["labelWord"]),
                 ),
             }
             for entry in label_data_list
         ],
-        key=lambda entry: entry["label_data_id"],
+        key=lambda entry: entry["labelDataId"],
     )
     return normalized
 
@@ -73,8 +73,8 @@ class TestReadEditChapterData:
         response = client.get(
             _editing_url(chapter_bundle.chapter.chapter_id),
             params={
-                "novel-id": str(novel_bundle.novel.novel_id),
-                "label-groups-num": 2,
+                "novelId": str(novel_bundle.novel.novel_id),
+                "labelGroupsNum": 2,
             },
             headers=_auth_headers(actor),
         )
@@ -82,20 +82,20 @@ class TestReadEditChapterData:
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
 
-        assert payload["chapter"]["chapter_id"] == str(chapter_bundle.chapter.chapter_id)
-        assert payload["chapter"]["novel_id"] == str(novel_bundle.novel.novel_id)
-        assert payload["chapter_content"]["chapter_content_id"] == str(chapter_bundle.latest_content.chapter_content_id)
+        assert payload["chapter"]["chapterId"] == str(chapter_bundle.chapter.chapter_id)
+        assert payload["chapter"]["novelId"] == str(novel_bundle.novel.novel_id)
+        assert payload["chapterContent"]["chapterContentId"] == str(chapter_bundle.latest_content.chapter_content_id)
         assert payload["role"] == "owner"
 
-        assert {entry["label_group"]["label_group_name"] for entry in payload["label_group_list"]} == {"Group 1", "Group 2"}
+        assert {entry["labelGroup"]["labelGroupName"] for entry in payload["labelGroupList"]} == {"Group 1", "Group 2"}
 
         label_data_ids_from_groups = {
-            entry["label_data"]["label_data_id"]
-            for entry in payload["label_group_list"]
-            if entry["label_data"] is not None
+            entry["labelData"]["labelDataId"]
+            for entry in payload["labelGroupList"]
+            if entry["labelData"] is not None
         }
-        assert len(payload["label_data_list"]) == 2
-        assert {entry["label_data_id"] for entry in payload["label_data_list"]} == label_data_ids_from_groups
+        assert len(payload["labelDataList"]) == 2
+        assert {entry["labelDataId"] for entry in payload["labelDataList"]} == label_data_ids_from_groups
 
     @pytest.mark.dependency(name="editing::router::admin_subject_override", scope="session")
     def test_admin_subject_override(
@@ -111,17 +111,17 @@ class TestReadEditChapterData:
         owner_response = client.get(
             _editing_url(chapter_bundle.chapter.chapter_id),
             params={
-                "novel-id": str(novel_bundle.novel.novel_id),
-                "label-groups-num": 2,
+                "novelId": str(novel_bundle.novel.novel_id),
+                "labelGroupsNum": 2,
             },
             headers=_auth_headers(owner),
         )
         admin_response = client.get(
             _editing_url(chapter_bundle.chapter.chapter_id),
             params={
-                "novel-id": str(novel_bundle.novel.novel_id),
-                "label-groups-num": 2,
-                "subject-id": str(owner.user_id),
+                "novelId": str(novel_bundle.novel.novel_id),
+                "labelGroupsNum": 2,
+                "subjectId": str(owner.user_id),
             },
             headers=_auth_headers(admin),
         )
@@ -144,9 +144,9 @@ class TestReadEditChapterData:
         response = client.get(
             _editing_url(chapter_bundle.chapter.chapter_id),
             params={
-                "novel-id": str(novel_bundle.novel.novel_id),
-                "label-groups-num": 2,
-                "subject-id": str(owner.user_id),
+                "novelId": str(novel_bundle.novel.novel_id),
+                "labelGroupsNum": 2,
+                "subjectId": str(owner.user_id),
             },
             headers=_auth_headers(other_user),
         )
@@ -166,9 +166,9 @@ class TestReadEditChapterData:
         response = client.get(
             _editing_url(chapter_bundle.chapter.chapter_id),
             params={
-                "novel-id": str(novel_bundle.novel.novel_id),
-                "label-groups-num": 2,
-                "subject-id": str(uuid.uuid4()),
+                "novelId": str(novel_bundle.novel.novel_id),
+                "labelGroupsNum": 2,
+                "subjectId": str(uuid.uuid4()),
             },
             headers=_auth_headers(admin),
         )
@@ -241,8 +241,8 @@ class TestReadEditChapterData:
         response = client.get(
             _editing_url(chapter_bundle.chapter.chapter_id),
             params={
-                "novel-id": str(novel_bundle.novel.novel_id),
-                "label-groups-num": 2,
+                "novelId": str(novel_bundle.novel.novel_id),
+                "labelGroupsNum": 2,
             },
             headers=_auth_headers(actor),
         )
@@ -250,7 +250,7 @@ class TestReadEditChapterData:
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
 
-        assert {entry["label_group"]["label_group_name"] for entry in payload["label_group_list"]} == {
+        assert {entry["labelGroup"]["labelGroupName"] for entry in payload["labelGroupList"]} == {
             "Group 1",
             "Group 2",
             "Group 3",
@@ -258,12 +258,12 @@ class TestReadEditChapterData:
         }
 
         group_entries_by_name = {
-            entry["label_group"]["label_group_name"]: entry
-            for entry in payload["label_group_list"]
+            entry["labelGroup"]["labelGroupName"]: entry
+            for entry in payload["labelGroupList"]
         }
-        assert group_entries_by_name["Group 4"]["label_data"] is None
+        assert group_entries_by_name["Group 4"]["labelData"] is None
 
-        returned_label_data_ids = {entry["label_data_id"] for entry in payload["label_data_list"]}
+        returned_label_data_ids = {entry["labelDataId"] for entry in payload["labelDataList"]}
         expected_label_data_ids = {
             str(extra_label_data.label_data_id),
             str(existing_label_data_1.label_data_id),

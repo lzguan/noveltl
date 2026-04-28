@@ -1,4 +1,5 @@
 from typing import Annotated, Any
+import logging
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -14,6 +15,8 @@ from .service import query_user_by_user_name
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
+
+logger = logging.getLogger(__name__)
 
 async def get_optional_user(
         db : Annotated[Session, Depends(get_db)],
@@ -32,12 +35,14 @@ async def get_optional_user(
         payload : dict[str, Any] = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM]) # type: ignore
         username = payload.get("sub")
         if username is None:
+            logger.debug(f"Token payload does not contain 'sub' field. Payload: {payload}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",
                 headers={"WWW-Authenticate": "Bearer"},
             )
     except InvalidTokenError as e:
+        logger.debug(f"Invalid token: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",

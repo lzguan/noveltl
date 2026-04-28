@@ -48,27 +48,27 @@ class TestRegisterEndpoint:
     @pytest.mark.dependency(name="auth::router::register_success", scope="session")
     def test_success(self, client: TestClient, sample_users: list[User]):
         response = client.post('/register', json={
-            "user_name": "user2",
-            "user_password": "abc",
-            "user_type": "user"
+            "userName": "user2",
+            "userPassword": "abc",
+            "userType": "user"
         })
         assert response.status_code == status.HTTP_200_OK
 
     @pytest.mark.dependency(name="auth::router::register_duplicate", scope="session")
     def test_duplicate_user(self, client: TestClient, sample_users: list[User]):
         response = client.post('/register', json={
-            "user_name": "user",
-            "user_password": "pwd",
-            "user_type": "user"
+            "userName": "user",
+            "userPassword": "pwd",
+            "userType": "user"
         })
         assert response.status_code == status.HTTP_409_CONFLICT
 
     @pytest.mark.dependency(name="auth::router::register_admin_rejected", scope="session")
     def test_register_admin_rejected(self, client: TestClient, sample_users: list[User]):
         response = client.post('/register', json={
-            "user_name": "admin2",
-            "user_password": "pwd",
-            "user_type": "admin"
+            "userName": "admin2",
+            "userPassword": "pwd",
+            "userType": "admin"
         })
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 

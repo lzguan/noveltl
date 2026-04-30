@@ -75,7 +75,7 @@ def test_db(test_engine : Engine, testing_session_local : sessionmaker[Session])
 
 @pytest.fixture
 async def redis():
-    pool = await create_pool(RedisSettings(host='redis', port=6379, database=1))
+    pool = await create_pool(RedisSettings(host='test_redis', port=6379, database=0))
     yield pool
     await pool.aclose()
 

@@ -54,6 +54,8 @@ services:
       - test
   redis:
     image: redis
+  test_redis:
+    image: redis
 
   worker:
     build: 

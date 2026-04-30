@@ -3,8 +3,8 @@
 import logging
 
 from arq.connections import RedisSettings
-from pydantic import Field  # type: ignore
-from pydantic_settings import BaseSettings, SettingsConfigDict  # type: ignore
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 uvicorn_logger = logging.getLogger("uvicorn.info")
 

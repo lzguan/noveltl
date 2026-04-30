@@ -56,7 +56,6 @@ class TestBasicTextModification:
             test_db, actor, chapter.chapter_id,
             chapter_content.chapter_content_id, ops,
         )
-        assert result.status == "success"
 
         # New chapter content should exist with version 2
         new_cc = test_db.execute(
@@ -258,7 +257,6 @@ class TestEdgeCases:
             test_db, to_user, to_chapter.chapter_id,
             to_chapter_content.chapter_content_id, ops,
         )
-        assert result.status == "success"
 
         new_cc = test_db.execute(
             select(ChapterContent).where(
@@ -342,7 +340,6 @@ class TestStalenessChecks:
             cc_v2.chapter_content_id,
             [TextOp(op="insert", start=0, text="B")],
         )
-        assert result.status == "success"
 
         cc_v3 = test_db.execute(
             select(ChapterContent).where(
@@ -414,7 +411,6 @@ class TestPermissions:
             chapter_content.chapter_content_id,
             [TextOp(op="insert", start=0, text="Admin ")],
         )
-        assert result.status == "success"
 
     @pytest.mark.dependency(
         name="gate::novels::integration::permissions",

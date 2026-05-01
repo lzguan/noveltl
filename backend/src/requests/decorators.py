@@ -29,7 +29,7 @@ def ttl_cache[**P, R : BaseModel](cache: TTLCache, ttl: int, success_code : int 
             if (request_key is None):
                 return func(*args, **kwargs)
             if not cache.insert(request_key, {"status": "pending", "status_code": None, "response": None, "error": None}, expire=ttl):
-                raise HTTPException(status_code=409, detail="Request with same request_key already in progress.")
+                raise HTTPException(status_code=409, detail="Request with same request_key already exists.", headers={"X-Cache-Conflict": "true"})
             try:
                 result = func(*args, **kwargs)
                 cache.set(request_key, {"status": "success", "status_code": success_code, "response": serialize_ret(result) if serialize_ret else None, "error": None}, expire=ttl)
@@ -63,7 +63,7 @@ def attl_cache[**P, R : BaseModel](cache: TTLCache, ttl: int, success_code : int
             if (request_key is None):
                 return await func(*args, **kwargs)
             if not await cache.ainsert(request_key, {"status": "pending", "status_code": None, "response": None, "error": None}, expire=ttl):
-                raise HTTPException(status_code=409, detail="Request with same request_key already exists.")
+                raise HTTPException(status_code=409, detail="Request with same request_key already exists.", headers={"X-Cache-Conflict": "true"})
             try:
                 result = await func(*args, **kwargs)
                 await cache.aset(request_key, {"status": "success", "status_code": success_code, "response": serialize_ret(result) if serialize_ret else None, "error": None}, expire=ttl)

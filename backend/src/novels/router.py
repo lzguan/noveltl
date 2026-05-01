@@ -15,7 +15,7 @@ from ..exceptions import DataTooLongException, InsufficientPermissionsException
 from ..languages.exceptions import LanguageNotFoundException
 from ..requests.cache import redis_cache
 from ..requests.decorators import attl_cache, svp
-from ..schemas import OperationStatus
+from ..schemas import ErrorResponse, OperationStatus
 from . import schemas
 from .exceptions import (
     ChapterContentNotFoundException,
@@ -615,7 +615,21 @@ async def read_chapter_content_status(
 
 @router.patch(
     '/chapters/{chapterId}/content',
-    response_model=schemas.ModifyChapterContentResponse
+    response_model=schemas.ModifyChapterContentResponse,
+    responses={
+        401: {"model": ErrorResponse, "description": "Insufficient permissions to modify this chapter."},
+        404: {"model": ErrorResponse, "description": "Chapter content not found."},
+        409: {
+            "model": ErrorResponse,
+            "description": "Chapter content is outdated, or the request key already exists.",
+            "headers": {
+                "X-Cache-Conflict": {
+                    "description": "Present when this 409 was caused by a cached request-key conflict.",
+                    "schema": {"type": "string", "enum": ["true"]},
+                }
+            },
+        },
+    },
 )
 @attl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=svp(schemas.ModifyChapterContentResponse))
 async def update_chapter_content(

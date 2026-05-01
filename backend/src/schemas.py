@@ -42,3 +42,14 @@ class OperationStatus(Model):
     """
     status : Literal["success", "fail"]
     detail : str | None = None
+
+
+class ErrorResponse(Model):
+    """
+    Standard error payload for HTTPException-based API errors.
+
+    Attributes:
+        detail: Human-readable description of the error.
+    """
+
+    detail: str

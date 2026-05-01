@@ -25,7 +25,10 @@ router = APIRouter()
 
 @router.post(
     "/token",
-    response_model=schemas.Token
+    response_model=schemas.Token,
+    responses={
+        401: { "description": "Password does not match.", "headers": {"WWW-Authenticate": "Bearer"} },
+    }
 )
 async def login_for_access_token(
         form_data : Annotated[OAuth2PasswordRequestForm, Depends()],

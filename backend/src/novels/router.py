@@ -15,7 +15,7 @@ from ..exceptions import DataTooLongException, InsufficientPermissionsException
 from ..languages.exceptions import LanguageNotFoundException
 from ..requests.cache import redis_cache
 from ..requests.decorators import attl_cache, svp
-from ..schemas import ErrorResponse, OperationStatus
+from ..schemas import DetailHTTPErrorResponse, OperationStatus, RequestConflictErrorResponse
 from . import schemas
 from .exceptions import (
     ChapterContentNotFoundException,
@@ -617,17 +617,11 @@ async def read_chapter_content_status(
     '/chapters/{chapterId}/content',
     response_model=schemas.ModifyChapterContentResponse,
     responses={
-        401: {"model": ErrorResponse, "description": "Insufficient permissions to modify this chapter."},
-        404: {"model": ErrorResponse, "description": "Chapter content not found."},
+        401: {"model": DetailHTTPErrorResponse, "description": "Insufficient permissions to modify this chapter."},
+        404: {"model": DetailHTTPErrorResponse, "description": "Chapter content not found."},
         409: {
-            "model": ErrorResponse,
-            "description": "Chapter content is outdated, or the request key already exists.",
-            "headers": {
-                "X-Cache-Conflict": {
-                    "description": "Present when this 409 was caused by a cached request-key conflict.",
-                    "schema": {"type": "string", "enum": ["true"]},
-                }
-            },
+            "model": RequestConflictErrorResponse,
+            "description": "Chapter content is outdated, or the request key already exists."
         },
     },
 )

@@ -10,11 +10,15 @@ from ..redis_conn import get_redis_for_ttl_cache_async, get_redis_for_ttl_cache_
 
 RequestStatus = Literal["pending", "success", "failure"]
 
+class CacheError(TypedDict):
+    detail: str
+    cacheConflict: bool
+
 class CacheEntry(TypedDict):
     status : RequestStatus
     status_code : int | None
     response : dict | None
-    error : str | None
+    error : CacheError | None
 
 class TTLCache(Protocol):
     def get(self, key: uuid.UUID) -> CacheEntry | None: ...

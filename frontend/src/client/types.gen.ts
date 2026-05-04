@@ -177,6 +177,41 @@ export type BodyLoginForAccessTokenTokenPost = {
 };
 
 /**
+ * CacheEntry
+ */
+export type CacheEntry = {
+    /**
+     * Status
+     */
+    status: 'pending' | 'success' | 'failure';
+    /**
+     * Status Code
+     */
+    status_code: number | null;
+    /**
+     * Response
+     */
+    response: {
+        [key: string]: unknown;
+    } | null;
+    error: CacheError | null;
+};
+
+/**
+ * CacheError
+ */
+export type CacheError = {
+    /**
+     * Detail
+     */
+    detail: string;
+    /**
+     * Cacheconflict
+     */
+    cacheConflict: boolean;
+};
+
+/**
  * Chapter
  *
  * Pydantic schema for chapter metadata. Represents a single "chapter" entry, which groups all its revisions.
@@ -569,6 +604,21 @@ export type DeleteUserStatus = {
 };
 
 /**
+ * DetailHTTPErrorResponse
+ *
+ * Generic error payload for HTTPException responses that only return a detail string.
+ *
+ * Attributes:
+ * detail: Human-readable description of the error.
+ */
+export type DetailHttpErrorResponse = {
+    /**
+     * Detail
+     */
+    detail: string;
+};
+
+/**
  * EditChapterData
  *
  * Pydantic schema for the data needed to edit a chapter.
@@ -919,6 +969,38 @@ export type OperationStatus = {
      * Detail
      */
     detail?: string | null;
+};
+
+/**
+ * RequestConflictDetail
+ *
+ * Structured detail payload used by request-key wrapped 409 responses.
+ *
+ * Attributes:
+ * detail: Human-readable description of the error.
+ * cache_conflict: Whether the failure was caused by a request-key cache conflict.
+ */
+export type RequestConflictDetail = {
+    /**
+     * Detail
+     */
+    detail: string;
+    /**
+     * Cacheconflict
+     */
+    cacheConflict: boolean;
+};
+
+/**
+ * RequestConflictErrorResponse
+ *
+ * HTTPException response body for request-key wrapped 409 responses.
+ *
+ * Attributes:
+ * detail: Structured conflict detail.
+ */
+export type RequestConflictErrorResponse = {
+    detail: RequestConflictDetail;
 };
 
 /**
@@ -1321,6 +1403,10 @@ export type LoginForAccessTokenTokenPostData = {
 };
 
 export type LoginForAccessTokenTokenPostErrors = {
+    /**
+     * Password does not match.
+     */
+    401: unknown;
     /**
      * Validation Error
      */
@@ -2014,11 +2100,28 @@ export type UpdateChapterContentChaptersChapterIdContentPatchData = {
          */
         chapterId: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * Requestkey
+         */
+        requestKey?: string | null;
+    };
     url: '/chapters/{chapterId}/content';
 };
 
 export type UpdateChapterContentChaptersChapterIdContentPatchErrors = {
+    /**
+     * Insufficient permissions to modify this chapter.
+     */
+    401: DetailHttpErrorResponse;
+    /**
+     * Chapter content not found.
+     */
+    404: DetailHttpErrorResponse;
+    /**
+     * Chapter content is outdated, or the request key already exists.
+     */
+    409: RequestConflictErrorResponse;
     /**
      * Validation Error
      */
@@ -2167,11 +2270,28 @@ export type ReadLabelGroupsLabelGroupsGetResponse = ReadLabelGroupsLabelGroupsGe
 export type CreateLabelGroupLabelGroupsPostData = {
     body: CreateLabelGroup;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Requestkey
+         */
+        requestKey?: string | null;
+    };
     url: '/label-groups';
 };
 
 export type CreateLabelGroupLabelGroupsPostErrors = {
+    /**
+     * Label group name is too long.
+     */
+    400: DetailHttpErrorResponse;
+    /**
+     * Novel associated with this label group not found.
+     */
+    404: DetailHttpErrorResponse;
+    /**
+     * Request key conflict.
+     */
+    409: RequestConflictErrorResponse;
     /**
      * Validation Error
      */
@@ -2327,11 +2447,28 @@ export type UpdateLabelDataStreamLabelDatasLabelDataIdPatchData = {
          */
         labelDataId: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * Requestkey
+         */
+        requestKey?: string | null;
+    };
     url: '/label-datas/{labelDataId}';
 };
 
 export type UpdateLabelDataStreamLabelDatasLabelDataIdPatchErrors = {
+    /**
+     * Operation positions are out of bounds or the operation is otherwise invalid.
+     */
+    400: DetailHttpErrorResponse;
+    /**
+     * Label data, chapter content, or target label not found.
+     */
+    404: DetailHttpErrorResponse;
+    /**
+     * Label stream conflict, such as word mismatch, overlap violation, or request-key conflict.
+     */
+    409: RequestConflictErrorResponse;
     /**
      * Validation Error
      */
@@ -2389,11 +2526,24 @@ export type CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostData = {
          */
         labelGroupId: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * Requestkey
+         */
+        requestKey?: string | null;
+    };
     url: '/label-groups/{labelGroupId}/label-datas';
 };
 
 export type CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostErrors = {
+    /**
+     * Label group or chapter content not found.
+     */
+    404: DetailHttpErrorResponse;
+    /**
+     * Label data already exists for this chapter content in the label group, or the request key already exists.
+     */
+    409: RequestConflictErrorResponse;
     /**
      * Validation Error
      */
@@ -2787,3 +2937,37 @@ export type ReadEditChapterDataEditChapterDataChapterIdGetResponses = {
 };
 
 export type ReadEditChapterDataEditChapterDataChapterIdGetResponse = ReadEditChapterDataEditChapterDataChapterIdGetResponses[keyof ReadEditChapterDataEditChapterDataChapterIdGetResponses];
+
+export type GetCachedResultCachedCachedIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Cachedid
+         */
+        cachedId: string;
+    };
+    query?: never;
+    url: '/cached/{cachedId}';
+};
+
+export type GetCachedResultCachedCachedIdGetErrors = {
+    /**
+     * Cached result not found.
+     */
+    404: DetailHttpErrorResponse;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetCachedResultCachedCachedIdGetError = GetCachedResultCachedCachedIdGetErrors[keyof GetCachedResultCachedCachedIdGetErrors];
+
+export type GetCachedResultCachedCachedIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: CacheEntry;
+};
+
+export type GetCachedResultCachedCachedIdGetResponse = GetCachedResultCachedCachedIdGetResponses[keyof GetCachedResultCachedCachedIdGetResponses];

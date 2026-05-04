@@ -123,6 +123,11 @@ export type SegmentManager<S extends Style, L extends StyledLabel<S>> = {
      * @param id 
      */
     removeLabel(id: LabelID): void;
+
+    /**
+     * Gets a label by its ID. Throw an error if the label id does not exist.
+     */
+    getLabel(id: LabelID): L;
     /**
      * Insert text at a given position. This may cause segments to split or merge depending on the implementation. The position is relative to the full text, not segment-local. If the position is out of bounds, throw an error.
      * @param pos 
@@ -251,6 +256,14 @@ export function makeBasicSegmentManager<S extends Style, L extends StyledLabel<S
                 const seg = {id : b.id, ...this.segmentsById.get(b.id)};
                 return seg as ManagedSegment<S, L>;
             });
+        },
+
+        getLabel(id: LabelID) {
+            const label = this.labelsById.get(id);
+            if (!label) {
+                throw new Error(`Label with ID ${id} not found`);
+            }
+            return label;
         },
 
         subscribe(listener : () => void) {

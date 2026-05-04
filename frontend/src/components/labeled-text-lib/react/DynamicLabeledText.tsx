@@ -3,7 +3,7 @@ import type { SegmentManager } from "../core/segmentManager";
 import type { StyledLabel, Style } from "../core/types";
 import type { Renderer } from "./Renderer";
 
-type Caret = {
+export type Caret = {
     anchor : number;
     focus : number;
     visible : boolean;

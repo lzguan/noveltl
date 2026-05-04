@@ -8,9 +8,9 @@ from pydantic import BaseModel
 
 from src.auth.models import User
 from src.auth.utils import create_access_token
+from src.novels.models import Novel
 from src.requests.cache import CacheEntry, redis_cache
 from src.requests.decorators import attl_cache, ttl_cache
-from src.novels.models import Novel
 
 
 def _auth_headers(user: User) -> dict[str, str]:
@@ -123,7 +123,10 @@ class TestRequestsRouter:
         assert cached_response.json()["status"] == "failure"
         assert cached_response.json()["status_code"] == status.HTTP_404_NOT_FOUND
         assert cached_response.json()["response"] is None
-        assert cached_response.json()["error"] == "Novel associated with this label group not found."
+        assert cached_response.json()["error"] == {
+            "detail": "Novel associated with this label group not found.",
+            "cacheConflict": False,
+        }
 
 
 class TestRequestDecorators:
@@ -151,7 +154,10 @@ class TestRequestDecorators:
 
         @ttl_cache(cache=cache, ttl=60, success_code=200, serialize_ret=lambda result: result.model_dump())
         def fail(request_key: uuid.UUID | None = None) -> SampleResponse:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="boom")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="boom",
+            )
 
         with pytest.raises(HTTPException):
             fail(request_key=request_key)
@@ -160,7 +166,7 @@ class TestRequestDecorators:
             "status": "failure",
             "status_code": status.HTTP_409_CONFLICT,
             "response": None,
-            "error": "boom",
+            "error": {"detail": "boom", "cacheConflict": False},
         }
 
     @pytest.mark.asyncio

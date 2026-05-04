@@ -29,16 +29,24 @@ def ttl_cache[**P, R : BaseModel](cache: TTLCache, ttl: int, success_code : int 
             if (request_key is None):
                 return func(*args, **kwargs)
             if not cache.insert(request_key, {"status": "pending", "status_code": None, "response": None, "error": None}, expire=ttl):
-                raise HTTPException(status_code=409, detail="Request with same request_key already exists.", headers={"X-Cache-Conflict": "true"})
+                raise HTTPException(
+                    status_code=409,
+                    detail={"detail": "Request with same request_key already exists.", "cacheConflict": True},
+                )
             try:
                 result = func(*args, **kwargs)
                 cache.set(request_key, {"status": "success", "status_code": success_code, "response": serialize_ret(result) if serialize_ret else None, "error": None}, expire=ttl)
                 return result
             except HTTPException as e:
-                cache.set(request_key, {"status": "failure", "status_code": e.status_code, "response": None, "error": e.detail}, expire=ttl)
+                cache.set(request_key, {"status": "failure", "status_code": e.status_code, "response": None, "error": {"detail": e.detail, "cacheConflict": False}}, expire=ttl)
+                if e.status_code == 409:
+                    raise HTTPException(
+                        status_code=409,
+                        detail={"detail": e.detail, "cacheConflict": False},
+                    ) from e
                 raise
             except Exception as e:
-                cache.set(request_key, {"status": "failure", "status_code": 500, "response": None, "error": str(e)}, expire=ttl)
+                cache.set(request_key, {"status": "failure", "status_code": 500, "response": None, "error": { "detail": str(e), "cacheConflict": False }}, expire=ttl)
                 raise
         return wrapper
     return inner_decorator
@@ -63,16 +71,24 @@ def attl_cache[**P, R : BaseModel](cache: TTLCache, ttl: int, success_code : int
             if (request_key is None):
                 return await func(*args, **kwargs)
             if not await cache.ainsert(request_key, {"status": "pending", "status_code": None, "response": None, "error": None}, expire=ttl):
-                raise HTTPException(status_code=409, detail="Request with same request_key already exists.", headers={"X-Cache-Conflict": "true"})
+                raise HTTPException(
+                    status_code=409,
+                    detail={"detail": "Request with same request_key already exists.", "cacheConflict": True},
+                )
             try:
                 result = await func(*args, **kwargs)
                 await cache.aset(request_key, {"status": "success", "status_code": success_code, "response": serialize_ret(result) if serialize_ret else None, "error": None}, expire=ttl)
                 return result
             except HTTPException as e:
-                await cache.aset(request_key, {"status": "failure", "status_code": e.status_code, "response": None, "error": e.detail}, expire=ttl)
+                await cache.aset(request_key, {"status": "failure", "status_code": e.status_code, "response": None, "error": { "detail": e.detail, "cacheConflict": False }}, expire=ttl)
+                if e.status_code == 409:
+                    raise HTTPException(
+                        status_code=409,
+                        detail={"detail": e.detail, "cacheConflict": False},
+                    ) from e
                 raise
             except Exception as e:
-                await cache.aset(request_key, {"status": "failure", "status_code": 500, "response": None, "error": str(e)}, expire=ttl)
+                await cache.aset(request_key, {"status": "failure", "status_code": 500, "response": None, "error": { "detail": str(e), "cacheConflict": False }}, expire=ttl)
                 raise
         return wrapper
     return inner_decorator

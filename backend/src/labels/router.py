@@ -11,7 +11,7 @@ from ..exceptions import DataTooLongException, NotFoundException
 from ..novels.exceptions import ChapterContentNotFoundException, NovelNotFoundException
 from ..requests.cache import redis_cache
 from ..requests.decorators import svp, ttl_cache
-from ..schemas import ErrorResponse
+from ..schemas import DetailHTTPErrorResponse, RequestConflictErrorResponse
 from . import schemas
 from .exceptions import (
     LabelDataNotFoundException,
@@ -121,17 +121,11 @@ def read_labels_by_label_data(
     '/label-groups',
     response_model=schemas.LabelGroup,
     responses={
-        400: {"model": ErrorResponse, "description": "Label group name is too long."},
-        404: {"model": ErrorResponse, "description": "Novel associated with this label group not found."},
+        400: {"model": DetailHTTPErrorResponse, "description": "Label group name is too long."},
+        404: {"model": DetailHTTPErrorResponse, "description": "Novel associated with this label group not found."},
         409: {
-            "model": ErrorResponse,
+            "model": RequestConflictErrorResponse,
             "description": "Request key conflict.",
-            "headers": {
-                "X-Cache-Conflict": {
-                    "description": "Present when this 409 was caused by a cached request-key conflict.",
-                    "schema": {"type": "string", "enum": ["true"]},
-                }
-            },
         },
     },
 )
@@ -195,16 +189,10 @@ def update_label_group(
     '/label-groups/{labelGroupId}/label-datas',
     response_model=schemas.LabelData,
     responses={
-        404: {"model": ErrorResponse, "description": "Label group or chapter content not found."},
+        404: {"model": DetailHTTPErrorResponse, "description": "Label group or chapter content not found."},
         409: {
-            "model": ErrorResponse,
+            "model": RequestConflictErrorResponse,
             "description": "Label data already exists for this chapter content in the label group, or the request key already exists.",
-            "headers": {
-                "X-Cache-Conflict": {
-                    "description": "Present when this 409 was caused by a cached request-key conflict.",
-                    "schema": {"type": "string", "enum": ["true"]},
-                }
-            },
         },
     },
 )
@@ -246,21 +234,15 @@ def create_label_data(
     '/label-datas/{labelDataId}',
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
-        400: {"model": ErrorResponse, "description": "Operation positions are out of bounds or the operation is otherwise invalid."},
-        404: {"model": ErrorResponse, "description": "Label data, chapter content, or target label not found."},
+        400: {"model": DetailHTTPErrorResponse, "description": "Operation positions are out of bounds or the operation is otherwise invalid."},
+        404: {"model": DetailHTTPErrorResponse, "description": "Label data, chapter content, or target label not found."},
         409: {
-            "model": ErrorResponse,
+            "model": RequestConflictErrorResponse,
             "description": "Label stream conflict, such as word mismatch, overlap violation, or request-key conflict.",
-            "headers": {
-                "X-Cache-Conflict": {
-                    "description": "Present when this 409 was caused by a cached request-key conflict.",
-                    "schema": {"type": "string", "enum": ["true"]},
-                }
-            },
         },
     },
 )
-@ttl_cache(ttl=60, cache=redis_cache, success_code=204, serialize_ret=svp(schemas.LabelData))
+@ttl_cache(ttl=60, cache=redis_cache, success_code=204)
 def update_label_data_stream(
         label_data_id: Annotated[uuid.UUID, Path(alias="labelDataId")],
         request: schemas.UpdateLabelDataStream,

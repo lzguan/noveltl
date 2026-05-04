@@ -44,12 +44,36 @@ class OperationStatus(Model):
     detail : str | None = None
 
 
-class ErrorResponse(Model):
+class DetailHTTPErrorResponse(Model):
     """
-    Standard error payload for HTTPException-based API errors.
+    Generic error payload for HTTPException responses that only return a detail string.
 
     Attributes:
         detail: Human-readable description of the error.
     """
 
     detail: str
+
+
+class RequestConflictDetail(Model):
+    """
+    Structured detail payload used by request-key wrapped 409 responses.
+
+    Attributes:
+        detail: Human-readable description of the error.
+        cache_conflict: Whether the failure was caused by a request-key cache conflict.
+    """
+
+    detail: str
+    cache_conflict: bool
+
+
+class RequestConflictErrorResponse(Model):
+    """
+    HTTPException response body for request-key wrapped 409 responses.
+
+    Attributes:
+        detail: Structured conflict detail.
+    """
+
+    detail: RequestConflictDetail

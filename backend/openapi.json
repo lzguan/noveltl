@@ -31,6 +31,12 @@
               }
             }
           },
+          "401": {
+            "description": "Password does not match.",
+            "headers": {
+              "WWW-Authenticate": "Bearer"
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1218,6 +1224,36 @@
               }
             }
           },
+          "401": {
+            "description": "Insufficient permissions to modify this chapter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Chapter content not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Chapter content is outdated, or the request key already exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestConflictErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1477,6 +1513,36 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LabelGroup"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Label group name is too long.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Novel associated with this label group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request key conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestConflictErrorResponse"
                 }
               }
             }
@@ -1773,6 +1839,36 @@
           "204": {
             "description": "Successful Response"
           },
+          "400": {
+            "description": "Operation positions are out of bounds or the operation is otherwise invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Label data, chapter content, or target label not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Label stream conflict, such as word mismatch, overlap violation, or request-key conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestConflictErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1892,6 +1988,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LabelData"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Label group or chapter content not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Label data already exists for this chapter content in the label group, or the request key already exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestConflictErrorResponse"
                 }
               }
             }
@@ -2596,6 +2712,16 @@
               }
             }
           },
+          "404": {
+            "description": "Cached result not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -2897,13 +3023,12 @@
           "error": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/CacheError"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Error"
+            ]
           }
         },
         "type": "object",
@@ -2914,6 +3039,24 @@
           "error"
         ],
         "title": "CacheEntry"
+      },
+      "CacheError": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "cacheConflict": {
+            "type": "boolean",
+            "title": "Cacheconflict"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail",
+          "cacheConflict"
+        ],
+        "title": "CacheError"
       },
       "Chapter": {
         "properties": {
@@ -3430,6 +3573,20 @@
         "title": "DeleteUserStatus",
         "description": "Pydantic schema to return status after deleting a user\n\nAttributes:\n    status: One of 'success', 'fail', 'verify'.\n    detail: String denoting details of operation."
       },
+      "DetailHTTPErrorResponse": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "DetailHTTPErrorResponse",
+        "description": "Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error."
+      },
       "EditChapterData": {
         "properties": {
           "chapter": {
@@ -3905,6 +4062,38 @@
         ],
         "title": "OperationStatus",
         "description": "Pydantic model to signal return status of operation.\n\nAttributes:\n    status: One of \"success\", \"fail\".\n    detail: Details on operation.\n\nNotes:\n    Unless under exceptional circumstances, should not return fail and just raise an exception."
+      },
+      "RequestConflictDetail": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "cacheConflict": {
+            "type": "boolean",
+            "title": "Cacheconflict"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail",
+          "cacheConflict"
+        ],
+        "title": "RequestConflictDetail",
+        "description": "Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict."
+      },
+      "RequestConflictErrorResponse": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/RequestConflictDetail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "RequestConflictErrorResponse",
+        "description": "HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail."
       },
       "Role": {
         "type": "string",

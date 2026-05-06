@@ -1,18 +1,17 @@
-import { createLabelDataLabelGroupsLabelGroupIdLabelDatasPost, type EditChapterData } from "@/client";
-import { CacheConflictError, ConnectionError, FatalError, isLabelData, isRequestConflictErrorResponse, validateData, type DataEntry, type IDRepository, type MyStyle, type ProvisionalId, type RequestManager } from "./types";
+import { createLabelDataLabelGroupsLabelGroupIdLabelDatasPost, type Chapter, type EditChapterData, type Novel } from "@/client";
+import { CacheConflictError, ConnectionError, FatalError, isLabelData, isRequestConflictErrorResponse, validateData, type DataEntry, type IDRepository, type ProvisionalId, type RequestManager, type Runtime } from "./types";
 import { buildIdRepository } from "./idRepository";
 import { buildRequestManager } from "./requestmanager";
 import { buildDataManager } from "./dataManager";
 import type { Color } from "@/components/labeled-text-lib/builtin/colors";
-import { makeBasicSegmentManager } from "@/components/labeled-text-lib/core/segmentManager";
-import type { StyledLabel } from "@/components/labeled-text-lib/core/types";
+import { buildUIManager } from "./uiManager";
 
 export function buildProvisionalChapterContentId(editChapterData: EditChapterData, idRepo : IDRepository) : ProvisionalId {
     return idRepo.newIdAndBindId("chapterContent", editChapterData.chapterContent.chapterContentId)
 }
 
 export function buildDataEntries(editChapterData : EditChapterData, idRepo : IDRepository, requestManager : RequestManager, provisionalChapterContentId : ProvisionalId) : DataEntry[] {
-    return editChapterData.labelGroupList.map((labelGroupEntry) => { 
+    return editChapterData.labelGroupList.map((labelGroupEntry) : DataEntry => { 
         const labelGroupProvisionalId = idRepo.newIdAndBindId("labelGroup", labelGroupEntry.labelGroup.labelGroupId)
         return ({
             labelGroup: { ...labelGroupEntry.labelGroup, labelGroupId: labelGroupProvisionalId, provisional: true },
@@ -20,6 +19,7 @@ export function buildDataEntries(editChapterData : EditChapterData, idRepo : IDR
             labelData: labelGroupEntry.labelData ? { ...labelGroupEntry.labelData, labelDataId: idRepo.newIdAndBindId("labelData", labelGroupEntry.labelData.labelDataId), provisional: true } : (()  => {
                 const provisionalId = idRepo.newId("labelData")
                 requestManager.enqueueRequest({
+                    retries: 3,
                     reserveList: [
                         { kind: "labelGroup", id: labelGroupProvisionalId, desiredState: "locked"},
                         { kind: "labelData", id: provisionalId, desiredState: "creating"},
@@ -79,21 +79,20 @@ export function buildDataEntries(editChapterData : EditChapterData, idRepo : IDR
 
             labels: labelGroupEntry.labelData ? editChapterData.labelDataList.find((labelData) => labelData.labelDataId === labelGroupEntry.labelData!.labelDataId)?.labels.map((label) => ({ ...label, labelId: idRepo.newIdAndBindExists("label"), provisional: true })) || [] : [],
 
-            visible: editChapterData.labelDataList.some((labelData) => labelData.labelDataId === labelGroupEntry.labelData?.labelDataId),
-
-            role: labelGroupEntry.role
+            role: labelGroupEntry.role,
+            loadingStatus: editChapterData.labelDataList.some((val) => val.labelDataId === labelGroupEntry.labelData?.labelDataId) ? "loaded" : "notLoaded"
         })
     })
 }
 
-export function buildRuntime(setErrors : (errors: Error[] | null) => void, novel : { novelId : string }, chapter : { chapterId : string }, editChapterData : EditChapterData) {
+export function buildRuntime(setErrors : (errors: Error[] | null) => void, novel : Novel, chapter : Chapter, editChapterData : EditChapterData, userId : string) : Runtime {
         const idRepo = buildIdRepository()
         const requestManager = buildRequestManager(idRepo, setErrors)
         const provisionalChapterContentId = buildProvisionalChapterContentId(editChapterData, idRepo)
         const entries = buildDataEntries(editChapterData, idRepo, requestManager, provisionalChapterContentId)
-        const dataManager = buildDataManager(entries, idRepo, novel.novelId, chapter.chapterId, provisionalChapterContentId, editChapterData.chapterContent.chapterContentText)
+        const dataManager = buildDataManager(entries, idRepo, novel, chapter, userId, provisionalChapterContentId, editChapterData.chapterContent.chapterContentText)
         const colourMapping = new Map<ProvisionalId, Color>(entries.map((entry) => [entry.labelGroup.labelGroupId, Math.floor(Math.random() * 16777215)] as [ProvisionalId, Color]))
-        const uiManager = makeBasicSegmentManager<MyStyle, StyledLabel<MyStyle>>(
+        const uiManager = buildUIManager(
             editChapterData.chapterContent.chapterContentText, 
             entries.flatMap((entry) => entry.labels.map((label) => ({
                 id: label.labelId, 

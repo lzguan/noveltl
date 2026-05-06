@@ -1,12 +1,10 @@
 import { useRef, useState } from "react";
-import { type Controller, type DataManager, type MyStyle, type ProvisionalId, type RequestManager, type Signal, type UserEvent } from "./types";
+import { type Controller, type DataManager, type ProvisionalId, type RequestManager, type Signal, type UIManager, type UserEvent } from "./types";
 import { type EditChapterData } from "@/client";
-import { type SegmentManager } from "@/components/labeled-text-lib/core/segmentManager";
-import type { StyledLabel } from "@/components/labeled-text-lib/core/types";
 import type { Color } from "@/components/labeled-text-lib/builtin/colors";
 
 
-export function useController( editChapterData : EditChapterData, getMode: () => "edit" | "label" | "view", setMode: (mode: "edit" | "label" | "view") => void, { requestManager, dataManager, colourMapping, uiManager} : { requestManager: RequestManager; dataManager: DataManager; colourMapping: Map<ProvisionalId, Color>; uiManager: SegmentManager<MyStyle, StyledLabel<MyStyle>> }, setErrors : (e : Error[] | null) => void): Controller {
+export function useController( editChapterData : EditChapterData, getMode: () => "edit" | "label" | "view", setMode: (mode: "edit" | "label" | "view") => void, { requestManager, dataManager, colourMapping, uiManager} : { requestManager: RequestManager; dataManager: DataManager; colourMapping: Map<ProvisionalId, Color>; uiManager: UIManager }, setErrors : (e : Error[] | null) => void): Controller {
     
     const [activeLabelGroupId, setActiveLabelGroupId] = useState<ProvisionalId | null>(null)
 

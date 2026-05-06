@@ -775,6 +775,28 @@ export type LabelBase = {
 };
 
 /**
+ * LabelContributor
+ *
+ * Pydantic schema for a label contributor, which can be either a user or an autolabel model.
+ *
+ * Attributes:
+ * label_contributor_role: Role of the contributor, either a user or an autolabel model.
+ * label_group_id: UUID of label group this contributor belongs to.
+ * user_id: UUID of user
+ */
+export type LabelContributor = {
+    labelContributorRole: LabelRole;
+    /**
+     * Labelgroupid
+     */
+    labelGroupId: string;
+    /**
+     * Userid
+     */
+    userId: string;
+};
+
+/**
  * LabelData
  *
  * Pydantic schema for a list of labels in some text.
@@ -2517,6 +2539,38 @@ export type ReadLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponses = {
 };
 
 export type ReadLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponse = ReadLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponses[keyof ReadLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponses];
+
+export type ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetData = {
+    body?: never;
+    path: {
+        /**
+         * Labelgroupid
+         */
+        labelGroupId: string;
+    };
+    query?: never;
+    url: '/label-groups/{labelGroupId}/contributors';
+};
+
+export type ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetError = ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetErrors[keyof ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetErrors];
+
+export type ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponses = {
+    /**
+     * Response Read Label Contributors Label Groups  Labelgroupid  Contributors Get
+     *
+     * Successful Response
+     */
+    200: Array<LabelContributor>;
+};
+
+export type ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse = ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponses[keyof ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponses];
 
 export type CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostData = {
     body: CreateLabelData;

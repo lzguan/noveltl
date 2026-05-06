@@ -7,6 +7,7 @@ import uuid
 from typing import Any
 
 from sqlalchemy import Delete, Select, Update, and_, exists, literal, or_, select
+from sqlalchemy.orm import aliased
 
 from ..auth.constants import UserType
 from ..auth.models import User
@@ -292,6 +293,30 @@ def label_mod_access_delete[T : Delete](q : T, current_user : User) -> T:
                     and_(
                         LabelContributor.user_id == current_user.user_id,
                         LabelContributor.label_contributor_role.in_([LabelRole.EDITOR, LabelRole.OWNER])
+                    )
+                )
+            )
+        )
+    return q
+
+
+def label_contributors_mod_access_select[T : Select[tuple[Any, ...]]](q : T, current_user : User, aliased_type : type[LabelContributor] = LabelContributor) -> T:
+    """
+    Takes a select statement for label contributors and returns a select statement that restricts permissions on q.
+    """
+    # as long as the user has view access to the label group, they can see the contributors, so we check permissions based on the label group
+    if current_user.user_type != UserType.ADMIN:
+        temp_t = aliased(LabelContributor)
+        return q.where(
+            exists(
+                select(
+                    1
+                ).select_from(
+                    temp_t
+                ).where(
+                    and_(
+                        temp_t.label_group_id == aliased_type.label_group_id,
+                        temp_t.user_id == current_user.user_id,
                     )
                 )
             )

@@ -17,7 +17,7 @@ function SourceWorksPage() {
     useEffect(() => {
         async function loadSourceWorks() {
             setLoading(true);
-            const data = await readSourceWorksSourceWorksGet({ query: { "title-contains" : search } });
+            const data = await readSourceWorksSourceWorksGet({ query: { titleContains : search } });
             if (data.data) {
                 setSourceWorkData(data.data);
             } else {

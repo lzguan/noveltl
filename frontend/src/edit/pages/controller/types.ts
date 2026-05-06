@@ -1,4 +1,5 @@
 import type { AddLabelOp, CacheEntry, DeleteLabelOp, DetailHttpErrorResponse, Label, LabelData, LabelGroup, ModifyChapterContentResponse, Role, TextOp, UpdateLabelOp } from "@/client";
+import type { Color } from "@/components/labeled-text-lib/builtin/colors";
 import type { ColorStyle, ProductStyle } from "@/components/labeled-text-lib/builtin/reducers";
 import type { SegmentManager } from "@/components/labeled-text-lib/core/segmentManager";
 import type { StyledLabel } from "@/components/labeled-text-lib/core/types";
@@ -26,18 +27,36 @@ export type UserEvent = { eventType : "textOp", op : TextOp } // text op
 | { eventType : "switchLabelGroup", labelGroupId : string | null } // place focus on a specific label group
 | { eventType : "hoverPos", pos : number | null } // hover on a specific position in text, or null to clear hover (only for ui purposes, does not affect the actual labels meaningfully)
 | { eventType : "clickPos", pos : number | null } // click on a specific position in text, or null to clear click (only for ui purposes, does not affect the actual labels meaningfully)
+| { eventType : "loadGroup", labelGroupId : string } // load a specific label group
+| { eventType: "toggleVisibility", labelGroupId: string, visible: boolean } // toggle visibility of a specific label group
 
-export type Signal = null | { signalType : "changeLabelGroupId", oldId : string, newId : string }
+export type Signal = null | { type: "groupLoaded", labelGroupId : string, getLabels : () => ProvisionalLabel[], mutable : boolean } | { type : "detachedIds", detachedIds : { id: ProvisionalId, kind: Kind }[] }
 
-export type RequestVariant = "addLabelGroup" | "textOp" | "labelOp" | "addLabelData"
-export type RequestEvent = {
+type CachedResultOutput = { signal : Signal, status : "success", error : null } | { signal : null, status : "pending", error : null } | { signal : null, status : "failure", error : Error }
+
+export type RequestVariant = "addLabelGroup" | "textOp" | "labelOp" | "addLabelData" | "reloadGroup"
+
+export type BaseRequestEvent = {
     callback : (requestKey : string) => Promise<Signal>
-    handleCachedResult : (cachedResult : CacheEntry, requestKey : string) => { signal : Signal, status : "success", error : null } | { signal : null, status : "pending", error : null } | { signal : null, status : "failure", error : Error }
-    reserveList : { id : ProvisionalId, kind : Kind, desiredState : IdStatus }[]
-    variant : RequestVariant
+    reserveList : { id : ProvisionalId, kind : Kind, desiredState : InFlightIdStatus }[]
+    variant: RequestVariant,
+    onFailure?: () => void, // optional handler that will be called if the request fails after all retries, with the error that caused the failure
+    onFatalError?: (err : Error) => void, // optional handler that will be called if the request encounters a fatal error
+    retries: number,
+    skip? : () => boolean // if returns true, this request will be skipped
+}
+export type NoCachedRequestEvent = BaseRequestEvent & { handleCachedResult?: never }
+
+export type CachedRequestEvent = BaseRequestEvent & { 
+    handleCachedResult : (cachedResult : CacheEntry, requestKey : string) => CachedResultOutput // if not provided, the callback should never throw a CacheConflictError, and the request manager will not attempt to handle cache results for this request
 }
 
-export type KeyedRequestEvent = RequestEvent & { requestKey : string, retries: number }
+export type RequestEvent = CachedRequestEvent | NoCachedRequestEvent
+
+export type NoCachedKeyedRequestEvent = NoCachedRequestEvent & { requestKey : string }
+export type CachedKeyedRequestEvent = CachedRequestEvent & { requestKey : string }
+
+export type KeyedRequestEvent = NoCachedKeyedRequestEvent | CachedKeyedRequestEvent
 
 export type ProvisionalLabelGroup = LabelGroup & { provisional: true }
 export type ProvisionalLabelData = LabelData & { provisional: true }
@@ -49,7 +68,8 @@ export type DataEntry = {
     labelData : ProvisionalLabelData
     labels : ProvisionalLabel[] // sorted by start position
     role : Role
-    visible : boolean
+
+    loadingStatus : "notLoaded" | "loading" | "loaded" | "loadError"
 }
 
 /**
@@ -68,29 +88,37 @@ export type DataEntry = {
  * 
  * creating, updating, idUpdating, deleting states effectively lock this resource
  * locked state effectively makes this resource read-only, but can be reserved multiple times until all locks are released (do not use this state for writes)
+ * 
+ * slightly outdated
  */
 
-export type InFlightIdStatus = "creating" | "updating" | "idUpdating" | "deleting" | "locked"
-export type GroundIdStatus = "pending" | "clean" | "deleted"
+export type InFlightIdStatus = "creating" | "updating" | "idUpdating" | "deleting" | "locked" | "detaching" | "loading" | "killing"
+export type GroundIdStatus = "pending" | "clean" | "deleted" | "detached" | "killed"
 
 export type IdStatus = InFlightIdStatus | GroundIdStatus
 
 export function entryStatus(status : InFlightIdStatus): GroundIdStatus {
-    if (status === "creating") {
+    if (status === "creating" || status === "loading" || status === "killing") {
         return "pending"
     }
     return "clean"
 }
 
 export function exitStatus(status : InFlightIdStatus) : GroundIdStatus {
-    if (status === "creating" || status === "updating" || status === "idUpdating" || status === "locked") {
+    if (status === "creating" || status === "updating" || status === "idUpdating" || status === "locked" || status === "loading") {
         return "clean"
+    }
+    else if (status === "detaching") {
+        return "detached"
+    }
+    else if (status === "killing") {
+        return "killed"
     }
     return "deleted"
 }
 
 export function isInFlight(status : IdStatus) : status is InFlightIdStatus {
-    return status === "creating" || status === "updating" || status === "idUpdating" || status === "deleting" || status === "locked"
+    return status === "creating" || status === "updating" || status === "idUpdating" || status === "deleting" || status === "locked" || status === "detaching" || status === "loading" || status === "killing"
 }
 
 export type IdentifiableKind = "labelGroup" | "labelData" | "chapterContent"
@@ -138,13 +166,15 @@ export interface IDRepository {
 
     idObjState(kind : Kind, id : ProvisionalId) : IdStatus
 
-    isReserveable(kind : Kind, id : ProvisionalId, desiredState : IdStatus) : boolean
+    isReserveable(kind : Kind, id : ProvisionalId, desiredState : InFlightIdStatus) : boolean
 
-    reserveIdObjState(kind : Kind, id : ProvisionalId, desiredState : IdStatus) : boolean
+    reserveIdObjState(kind : Kind, id : ProvisionalId, desiredState : InFlightIdStatus) : boolean
 
     releaseIdObjStateOnSuccess(kind : Kind, id : ProvisionalId) : void
 
     releaseIdObjStateOnFailure(kind : Kind, id : ProvisionalId) : void
+
+    gc(): void
 }
 
 export type DataManager = {
@@ -158,9 +188,28 @@ export type DataManager = {
     deleteTextAt : (startPos : number, endPos : number) => void
     flushTextOps : () => RequestEvent[]
 
+
     handleSignal : (signal : Signal) => void
 
-    getEntries : () => readonly DataEntry[]
+    reloadGroup(labelGroupId : string) : RequestEvent[]
+
+    getForGroup: {
+        labelDataId: (labelGroupId : string) => string
+        role: (labelGroupId : string) => Role
+        labels: (labelGroupId : string) => readonly Label[]
+        isLoaded: (labelGroupId : string) => boolean
+    }
+    getGroups : () => readonly LabelGroup[]
+
+}
+
+export type UIManager = {
+    segmentManager : SegmentManager<MyStyle, StyledLabel<MyStyle>>
+    handleSignal : (signal : Signal) => void
+    toggleVisibility : (labelIds: ProvisionalId[], visible: boolean) => void
+    toggleClickStatus : (labelIds: ProvisionalId[], clickStatus: "clicked" | "none") => void
+    toggleHoverStatus : (labelIds: ProvisionalId[], hoverStatus: "hovered" | "none") => void
+    toggleActiveStatus : (labelIds: ProvisionalId[], activeStatus: boolean) => void
 }
 
 
@@ -229,6 +278,16 @@ export interface Controller {
     handleSignal : (signal : Signal) => void
 }
 
+export type Runtime = {
+    idRepo : IDRepository
+    requestManager : RequestManager
+    provisionalChapterContentId : string
+    entries : DataEntry[]
+    dataManager : DataManager
+    colourMapping : Map<ProvisionalId, Color>
+    uiManager : UIManager
+}
+
 
 export type Validator<T> = (value: unknown) => value is T
 
@@ -269,6 +328,21 @@ export const isLabelData = hasShape({
     labelGroupId: isString,
     chapterContentId: isString,
 }) as Validator<LabelData>
+
+export const isLabel = hasShape({
+    labelId: isString,
+    labelDataId: isString,
+    labelStart : isNumber,
+    labelEnd : isNumber,
+    labelWord : isString,
+    labelEntityGroup: isString,
+    labelScore: isNumber,
+    labelDirty: isBoolean,
+}) as Validator<Label>
+
+export const isArrayOf = <T>(itemValidator: Validator<T>): Validator<T[]> =>
+    (value): value is T[] =>
+        Array.isArray(value) && value.every(itemValidator)
 
 export const isModifyChapterContentResponse = hasShape({
     chapterContentVersion: isNumber,

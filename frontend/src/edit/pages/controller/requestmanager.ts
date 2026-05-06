@@ -1,4 +1,4 @@
-import type { IDRepository, KeyedRequestEvent, RequestEvent, RequestManager, Signal, UserEvent } from "./types"
+import type { CachedKeyedRequestEvent, IDRepository, KeyedRequestEvent, RequestEvent, RequestManager, Signal, UserEvent } from "./types"
 import { FatalError, TimeoutError, ConnectionError, CacheConflictError, isDetailHttpErrorResponse, NoCacheEntryError } from "./types"
 import { getCachedResultCachedCachedIdGet, type CacheEntry } from "@/client";
 
@@ -73,7 +73,7 @@ function withTimeout<T>(promise : Promise<T>, timeoutMs : number) : Promise<T> {
 
 export function buildRequestManager(idRepo : IDRepository, setErrors : (errors : Error[] | null) => void) : RequestManager {
     const requestQueue : KeyedRequestEvent[] = []
-    let statusQueries : KeyedRequestEvent[] = [] // requests for which we have sent the main request and are now polling for their status
+    let statusQueries : CachedKeyedRequestEvent[] = [] // requests for which we have sent the main request and are now polling for their status
     let retryRequests : KeyedRequestEvent[] = [] // requests that have failed due to cache conflicts/known recoverable errors and should be retried
     let userEventTimeout : ReturnType<typeof setTimeout> | null = null
     let debounceLock : boolean = false // if true do not send any requests to server
@@ -131,10 +131,19 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
     const send = async () => {
         const fromQueueRequests = []
         if (statusQueries.some((request) => request.retries < 0) || retryRequests.some((request) => request.retries < 0)) {
+            ((statusQueries as KeyedRequestEvent[]).concat(retryRequests)).filter((request) => request.retries < 0).forEach((request) => { 
+                request.reserveList.forEach((reservation) => {
+                    idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id)
+                })
+                request.onFailure?.()
+            })
             throw new FatalError("A request has exceeded the maximum number of retries")
         }
-        while (requestQueue.length > 0 && requestQueue[0].reserveList.every((reservation) => idRepo.isReserveable(reservation.kind, reservation.id, reservation.desiredState))) {
+        while (requestQueue.length > 0 && (requestQueue[0].skip?.() || requestQueue[0].reserveList.every((reservation) => idRepo.isReserveable(reservation.kind, reservation.id, reservation.desiredState)))) {
             const request = requestQueue.shift()!
+            if (request.skip?.()) {
+                continue
+            }
             request.reserveList.forEach((reservation) => {
                 idRepo.reserveIdObjState(reservation.kind, reservation.id, reservation.desiredState)
             })
@@ -143,7 +152,7 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
         
         const statusQueryPromises = requestStatusQueries()
 
-        const newStatusQueries : KeyedRequestEvent[] = []
+        const newStatusQueries : CachedKeyedRequestEvent[] = []
         const newRetryRequests : KeyedRequestEvent[] = []
         const [fromQueueResult, statusQueryResult, retryResult] = await Promise.allSettled([
             Promise.allSettled(fromQueueRequests.map((request) => withTimeout(request.callback(request.requestKey), 10000))),
@@ -166,7 +175,12 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
             const request = fromQueueRequests[i]
             if (result.status === "rejected") {
                 if (result.reason instanceof TimeoutError || result.reason instanceof ConnectionError) {
-                    newStatusQueries.push({ ...request, retries: request.retries - 1})
+                    if (request.handleCachedResult) {
+                        newStatusQueries.push({ ...request, retries: request.retries - 1})
+                    }
+                    else {
+                        newRetryRequests.push({ ...request, retries: request.retries - 1, requestKey: crypto.randomUUID()})
+                    }
                 }
                 else if (result.reason instanceof CacheConflictError) {
                     newRetryRequests.push({ ...request, retries: request.retries - 1, requestKey: crypto.randomUUID()})
@@ -174,6 +188,7 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
                 else {
                     errorsList.push({request: request, reason: result.reason})
                     request.reserveList.forEach((reservation) => idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id))
+                    request.onFatalError?.(result.reason)
                 }
             }
             else {
@@ -194,6 +209,7 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
                 else {
                     errorsList.push({request: request, reason: result.reason})
                     request.reserveList.forEach((reservation) => idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id))
+                    request.onFatalError?.(result.reason)
                 }
             }
             else {
@@ -226,7 +242,12 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
             const request = retryRequests[i]
             if (result.status === "rejected") {
                 if (result.reason instanceof TimeoutError || result.reason instanceof ConnectionError) {
-                    newStatusQueries.push({ ...request, retries: request.retries - 1})
+                    if (request.handleCachedResult) {
+                        newStatusQueries.push({ ...request, retries: request.retries - 1})
+                    }
+                    else {
+                        newRetryRequests.push({ ...request, retries: request.retries - 1, requestKey: crypto.randomUUID()})
+                    }
                 }
                 else if (result.reason instanceof CacheConflictError) {
                     newRetryRequests.push({ ...request, retries: request.retries - 1, requestKey: crypto.randomUUID()})
@@ -234,6 +255,7 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
                 else {
                     errorsList.push({request: request, reason: result.reason})
                     request.reserveList.forEach((reservation) => idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id))
+                    request.onFatalError?.(result.reason)
                 }
             }
             else {

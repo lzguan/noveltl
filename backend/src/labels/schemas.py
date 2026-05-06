@@ -7,6 +7,8 @@ from typing import Annotated, Literal, Self
 
 from pydantic import ConfigDict, Field, model_validator
 
+from src.labels.constants import LabelRole
+
 from ..autolabels.constants import MAX_PARAMS_FIELDS
 from ..autolabels.validators import SmallDict
 from ..schemas import Model
@@ -247,3 +249,17 @@ class CreateLabelDataByAutoLabelStatus(Model):
     """
     success : list[tuple[uuid.UUID, uuid.UUID]]
     errors: list[tuple[uuid.UUID, uuid.UUID, str]]
+
+class LabelContributor(Model):
+    """
+    Pydantic schema for a label contributor, which can be either a user or an autolabel model.
+
+    Attributes:
+        label_contributor_role: Role of the contributor, either a user or an autolabel model.
+        label_group_id: UUID of label group this contributor belongs to.
+        user_id: UUID of user
+    """
+    model_config = ConfigDict(from_attributes=True)
+    label_contributor_role : LabelRole
+    label_group_id : uuid.UUID
+    user_id : uuid.UUID

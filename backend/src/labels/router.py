@@ -29,6 +29,7 @@ from .service import (
     insert_label_group,
     modify_label_data_by_stream,
     modify_label_group,
+    query_label_contributors_of_label_group,
     query_label_data_by_id,
     query_label_datas,
     query_label_group_by_id,
@@ -116,6 +117,24 @@ def read_labels_by_label_data(
     """
     labels = query_labels_by_label_data_id(db, current_user, label_data_id)
     return labels
+
+@router.get('/label-groups/{labelGroupId}/contributors', response_model=list[schemas.LabelContributor])
+def read_label_contributors(
+        label_group_id : Annotated[uuid.UUID, Path(alias="labelGroupId")],
+        db : Annotated[Session, Depends(get_db)],
+        current_user : Annotated[User, Depends(get_current_user)]
+    ):
+    """
+    Get the list of contributors for a label group.
+    """
+    try:
+        contributors = query_label_contributors_of_label_group(db, current_user, label_group_id)
+    except LabelGroupNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Label group with id {label_group_id} not found."
+        ) from e
+    return contributors
 
 @router.post(
     '/label-groups',

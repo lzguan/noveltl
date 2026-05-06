@@ -1932,6 +1932,56 @@
         }
       }
     },
+    "/label-groups/{labelGroupId}/contributors": {
+      "get": {
+        "summary": "Read Label Contributors",
+        "description": "Get the list of contributors for a label group.",
+        "operationId": "read_label_contributors_label_groups__labelGroupId__contributors_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "labelGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Labelgroupid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LabelContributor"
+                  },
+                  "title": "Response Read Label Contributors Label Groups  Labelgroupid  Contributors Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/label-groups/{labelGroupId}/label-datas": {
       "post": {
         "summary": "Create Label Data",
@@ -3800,6 +3850,31 @@
         ],
         "title": "LabelBase",
         "description": "Pydantic schema for a single label without a parent LabelData reference.\nUsed by autolabels and other contexts where labels exist independently of a LabelData.\n\nAttributes:\n    label_entity_group: Some arbitrary string denoting the entity group this label belongs to (e.g. PERSON, LOCATION, etc.).\n    label_score: Some float corresponding to how likely a label is to be correct. Used by label autogeneration modules (TBD).\n    label_word: Word that this label is labeling.\n    label_start: Start position of this label in text.\n    label_end: End position of this label in text.\n    label_dirty: Use TBD, most likely will be for score calculations in LabelData aggregate operations.\n\nNote:\n    label_start must be strictly less than label_end. Otherwise a ValueError will occur.\n    label_word must have length label_end - label_start. Otherwise a ValueError will occur."
+      },
+      "LabelContributor": {
+        "properties": {
+          "labelContributorRole": {
+            "$ref": "#/components/schemas/LabelRole"
+          },
+          "labelGroupId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Labelgroupid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Userid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "labelContributorRole",
+          "labelGroupId",
+          "userId"
+        ],
+        "title": "LabelContributor",
+        "description": "Pydantic schema for a label contributor, which can be either a user or an autolabel model.\n\nAttributes:\n    label_contributor_role: Role of the contributor, either a user or an autolabel model.\n    label_group_id: UUID of label group this contributor belongs to.\n    user_id: UUID of user"
       },
       "LabelData": {
         "properties": {

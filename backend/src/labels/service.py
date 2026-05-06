@@ -26,6 +26,7 @@ from .exceptions import (
     LabelWordMismatchInvalidOperationException,
 )
 from .permissions import (
+    label_contributors_mod_access_select,
     label_data_mod_access_insert,
     label_data_mod_access_select,
     label_group_mod_access_insert,
@@ -155,6 +156,27 @@ def query_labels_by_label_data_id(db : Session, current_user : User, label_data_
     q = label_data_mod_access_select(q, current_user)
     result = db.execute(q)
     result_rows = result.scalars().all()
+    return result_rows
+
+def query_label_contributors_of_label_group(db : Session, current_user : User, label_group_id : uuid.UUID) -> Sequence[models.LabelContributor]:
+    """
+    Returns a list of all label contributors corresponding to a label group.
+
+    Args:
+        db: Database to query from.
+        current_user: Current user.
+        label_group_id: id of label group.
+    """
+    q = select(
+        models.LabelContributor
+    ).where(
+        models.LabelContributor.label_group_id == label_group_id
+    )
+    q = label_contributors_mod_access_select(q, current_user)
+    result = db.execute(q)
+    result_rows = result.scalars().all()
+    if len(result_rows) == 0:
+        raise LabelGroupNotFoundException
     return result_rows
 
 def insert_label_group(db : Session, current_user : User, request : schemas.CreateLabelGroup) -> models.LabelGroup:

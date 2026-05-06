@@ -1,4 +1,4 @@
-import type { IDRepository, IdentifiableKindMap, ExistableKindMap, IdStatus, ServerExists, ServerId, ProvisionalId, Kind, IdentifiableKind, ExistableKind } from "./types";
+import type { IDRepository, IdentifiableKindMap, ExistableKindMap, IdStatus, InFlightIdStatus, ServerExists, ServerId, ProvisionalId, Kind, IdentifiableKind, ExistableKind } from "./types";
 import { isIdentifiableKind, isInFlight, entryStatus, exitStatus } from "./types";
 
 /**
@@ -95,7 +95,7 @@ export function buildIdRepository() : IDRepository {
             }
         },
 
-        isReserveable(kind : Kind, id : ProvisionalId, desiredState : IdStatus) : boolean {
+        isReserveable(kind : Kind, id : ProvisionalId, desiredState : InFlightIdStatus) : boolean {
             const currentState = this.idObjState(kind, id)
             const serverState = isIdentifiableKind(kind) ? identifiableKindMap[kind].get(id)?.serverId : existableKindMap[kind].get(id)?.serverExists
             if (desiredState === "creating") {
@@ -110,12 +110,21 @@ export function buildIdRepository() : IDRepository {
             else if (desiredState === "deleting") {
                 return currentState === "clean" && serverState !== null
             }
+            else if (desiredState === "detaching") {
+                return currentState === "clean" && serverState !== null
+            }
+            else if (desiredState === "loading") {
+                return currentState === "pending"
+            }
+            else if (desiredState === "killing") {
+                return currentState === "pending"
+            }
             else {
                 return false
             }
         },
 
-        reserveIdObjState(kind : Kind, id : ProvisionalId, desiredState : IdStatus) : boolean {
+        reserveIdObjState(kind : Kind, id : ProvisionalId, desiredState : InFlightIdStatus) : boolean {
             if (!this.isReserveable(kind, id, desiredState)) {
                 return false
             }
@@ -153,6 +162,29 @@ export function buildIdRepository() : IDRepository {
                 }
             }
             entry.status = entryStatus(entry.status)
+        },
+
+        gc() : void {
+            identifiableKindMap.labelGroup.forEach((value, key) => {
+                if (value.status === "deleted" || value.status === "killed" || value.status === "detached") {
+                    identifiableKindMap.labelGroup.delete(key)
+                }
+            })
+            identifiableKindMap.labelData.forEach((value, key) => {
+                if (value.status === "deleted" || value.status === "killed" || value.status === "detached") {
+                    identifiableKindMap.labelData.delete(key)
+                }
+            })
+            identifiableKindMap.chapterContent.forEach((value, key) => {
+                if (value.status === "deleted" || value.status === "killed" || value.status === "detached") {
+                    identifiableKindMap.chapterContent.delete(key)
+                }
+            })
+            existableKindMap.label.forEach((value, key) => {
+                if (value.status === "deleted" || value.status === "killed" || value.status === "detached") {
+                    existableKindMap.label.delete(key)
+                }
+            })
         }
     }
 }

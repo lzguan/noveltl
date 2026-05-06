@@ -1,6 +1,6 @@
-import type { TextOp } from "@/client"
-import { type DataEntry, type LabelOp, type DataManager, type IDRepository, type ProvisionalId, type RequestEvent, type ProvisionalLabelGroup, type Kind, type IdStatus, type Signal, ConnectionError, CacheConflictError, FatalError } from "./types"
-import { createLabelDataLabelGroupsLabelGroupIdLabelDatasPost, createLabelGroupLabelGroupsPost, updateChapterContentChaptersChapterIdContentPatch, updateLabelDataStreamLabelDatasLabelDataIdPatch } from "@/client"
+import type { Chapter, Novel, TextOp } from "@/client"
+import { type DataEntry, type LabelOp, type DataManager, type IDRepository, type ProvisionalId, type RequestEvent, type ProvisionalLabelGroup, type Kind, type Signal, ConnectionError, CacheConflictError, FatalError, type InFlightIdStatus, type ProvisionalLabel } from "./types"
+import { createLabelDataLabelGroupsLabelGroupIdLabelDatasPost, createLabelGroupLabelGroupsPost, readLabelContributorsLabelGroupsLabelGroupIdContributorsGet, readLabelDatasByGroupChaptersLabelDatasGet, readLabelGroupLabelGroupsLabelGroupIdGet, readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet, updateChapterContentChaptersChapterIdContentPatch, updateLabelDataStreamLabelDatasLabelDataIdPatch } from "@/client"
 import { isDetailHttpErrorResponse, isLabelData, isLabelGroup, isRequestConflictErrorResponse, validateData, isModifyChapterContentResponse } from "./types"
 
 /**
@@ -43,7 +43,7 @@ import { isDetailHttpErrorResponse, isLabelData, isLabelGroup, isRequestConflict
  * 
  * The handleCachedResult function in any request event should bind the correct server ids to the provisional ids in the ID repository. The request manager is responsible for passing the server response cached result to the handleCachedResult function.
  */
-export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, novelId : string, chapterId : string, initialChapterContentId : ProvisionalId, initialText : string) : DataManager {
+export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, novel : Novel, chapter : Chapter, userId : string, initialChapterContentId : ProvisionalId, initialText : string) : DataManager {
     let entries : DataEntry[] = ents
     let text : string = initialText
     const chapterContentId : ProvisionalId = initialChapterContentId
@@ -80,7 +80,7 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
         const newLabelGroup : ProvisionalLabelGroup = {
             labelGroupId: provisionalGroupId,
             labelGroupName: labelGroupName,
-            novelId: novelId,
+            novelId: novel.novelId,
             provisional: true
         }
         const newEntries = [...entries]
@@ -90,19 +90,21 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
             labelData: { labelDataId: provisionalDataId, labelGroupId: provisionalGroupId, chapterContentId: contentIdSnapshot, provisional: true },
             labels: [],
             role: "owner",
-            visible: true,
+            loadingStatus: "notLoaded"
         })
         entries = newEntries
 
         return [provisionalGroupId, [
             {
                 variant: "addLabelGroup",
+                retries: 3,
                 callback: async (requestKey) => {
+                    entries.find((entry) => entry.labelGroup.labelGroupId === provisionalGroupId)!.loadingStatus = "loading"
                     let resp
                     try {
                         resp = await createLabelGroupLabelGroupsPost({ 
                             body: {
-                                novelId: novelId,
+                                novelId: novel.novelId,
                                 labelGroupName: labelGroupName,
                             },
                             query: {
@@ -144,6 +146,7 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
             },
             {
                 variant: "addLabelGroup",
+                retries: 3,
                 callback: async (requestKey) => {
                     let resp
                     try {
@@ -170,6 +173,7 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
                         throw new FatalError("Failed to create label data", resp.error)
                     }
                     idRepo.bindServerId("labelData", provisionalDataId, resp.data.labelDataId)
+                    entries.find((entry) => entry.labelGroup.labelGroupId === provisionalGroupId)!.loadingStatus = "loaded"
                     return null
                 },
                 handleCachedResult: (cachedResult, requestKey) => {
@@ -372,7 +376,7 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
                 throw new Error(`Label group with id ${labelGroupId} not found while flushing label ops`)
             }
             const currentLabelIds = new Set(entry.labels.map((label) => label.labelId))
-            const reserveList : { id : ProvisionalId, kind : Kind, desiredState : IdStatus }[] = [
+            const reserveList : { id : ProvisionalId, kind : Kind, desiredState : InFlightIdStatus }[] = [
                 { id: entry.labelData.labelDataId, kind: "labelData", desiredState: "updating" },
                 { id: chapterContentId, kind: "chapterContent", desiredState: "locked" },
             ]
@@ -399,6 +403,7 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
             }
             return {
                 variant: "labelOp",
+                retries: 3,
                 reserveList,
                 callback: async (requestKey) => {
                     let resp
@@ -559,6 +564,7 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
         return [
             {
                 variant: "textOp",
+                retries: 3,
                 reserveList: [
                     { id: currentChapterContentId, kind: "chapterContent", desiredState: "updating" },
                     ...reserveLabelDataIds.map((labelDataId) => ({ id: labelDataId, kind: "labelData" as const, desiredState: "idUpdating" as const })),
@@ -569,7 +575,7 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
                     try {
                         resp = await updateChapterContentChaptersChapterIdContentPatch({
                             path: {
-                                chapterId,
+                                chapterId: chapter.chapterId,
                             },
                             body: {
                                 chapterContentId: idRepo.getServerId("chapterContent", currentChapterContentId)!,
@@ -640,7 +646,225 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
         return
     }
 
-    
+    const getGroups = () => entries.map((entry) => entry.labelGroup)
+
+    const reloadGroup = (labelGroupId : string) : RequestEvent[] => {
+        const entry = entries.find((e) => e.labelGroup.labelGroupId === labelGroupId)
+        if (!entry) {
+            throw new Error(`Label group with id ${labelGroupId} not found`)
+        }
+        const contentIdSnapshot = entry.labelData.chapterContentId
+        if (entry.loadingStatus === "loading") {
+            return []
+        }
+        entry.loadingStatus = "loading"
+        const toDetach : { id: ProvisionalId, kind: Kind }[] = [...entry.labels.map((label) => {
+            return { id: label.labelId, kind: "label" as const }
+        }), { id: entry.labelData.labelDataId, kind: "labelData" }]
+        const newLabelDataId = idRepo.newId("labelData")
+        let skipMe = false
+
+        const cleanupOnErr = () => {
+            entry.loadingStatus = "loadError"
+            skipMe = true
+            if (idRepo.isReserveable("labelData", newLabelDataId, "killing")) {
+                idRepo.reserveIdObjState("labelData", newLabelDataId, "killing")
+                idRepo.releaseIdObjStateOnSuccess("labelData", newLabelDataId)
+            }
+            else if (idRepo.isReserveable("labelData", newLabelDataId, "detaching")) {
+                idRepo.reserveIdObjState("labelData", newLabelDataId, "detaching")
+                idRepo.releaseIdObjStateOnSuccess("labelData", newLabelDataId)
+            }
+        }
+        return [
+            {
+                variant: "reloadGroup",
+                retries: 3,
+                reserveList: [
+                    {
+                        id: contentIdSnapshot,
+                        kind: "chapterContent",
+                        desiredState: "locked",
+                    },
+                     {
+                        id: entry.labelGroup.labelGroupId,
+                        kind: "labelGroup",
+                        desiredState: "updating",
+                    },
+                    {
+                        id: entry.labelData.labelDataId,
+                        kind: "labelData",
+                        desiredState: "detaching",
+                    },
+                    ...entry.labels.map((label) : { id: string, kind: Kind, desiredState: InFlightIdStatus } => ({
+                        id: label.labelId,
+                        kind: "label",
+                        desiredState: "detaching"
+                    }))
+                ],
+                skip: () => skipMe,
+                callback: async () => {
+                    let resp
+                    try {
+                        resp = await Promise.all([
+                            readLabelGroupLabelGroupsLabelGroupIdGet({
+                                path: {
+                                    labelGroupId: idRepo.getServerId("labelGroup", entry.labelGroup.labelGroupId)!,
+                                }
+                            }),
+                            readLabelContributorsLabelGroupsLabelGroupIdContributorsGet({
+                                path: {
+                                    labelGroupId: idRepo.getServerId("labelGroup", entry.labelGroup.labelGroupId)!,
+                                }
+                            })
+                        ])
+                    } catch (err) {
+                        throw new ConnectionError("Failed to read label group", err)
+                    }
+                    if (resp[0].error || resp[1].error) {
+                        throw new FatalError("Failed to read label group", resp[0].error)
+                    }
+                    entry.labelGroup = {
+                        ...entry.labelGroup,
+                        labelGroupName: resp[0].data.labelGroupName,
+                    }
+                    const contributorMe = resp[1].data.find((contributor) => contributor.userId === userId)
+                    if (!contributorMe) {
+                        throw new FatalError("Current user is not a contributor to the label group")
+                    }
+                    entry.role = contributorMe.labelContributorRole
+                    entry.labelData = {
+                        ...entry.labelData,
+                        labelDataId: newLabelDataId
+                    }
+                    entry.labels = []
+                    return { type: "detachedIds", detachedIds: toDetach }
+                },
+                onFailure: cleanupOnErr,
+                onFatalError: cleanupOnErr
+            },
+            {
+                variant: "reloadGroup",
+                retries: 3,
+                reserveList: [
+                    {
+                        id: entry.labelGroup.labelGroupId,
+                        kind: "labelGroup",
+                        desiredState: "locked",
+                    },
+                    {
+                        id: newLabelDataId,
+                        kind: "labelData",
+                        desiredState: "loading",
+                    },
+                ],
+                skip: () => skipMe,
+                callback: async () => {
+                    let resp
+                    try {
+                        resp = await readLabelDatasByGroupChaptersLabelDatasGet({
+                            query: {
+                                labelGroupId: idRepo.getServerId("labelGroup", entry.labelGroup.labelGroupId)!,
+                                start: chapter.chapterNum,
+                                end: chapter.chapterNum + 1,
+                            }
+                        })
+                    } catch (err) {
+                        throw new ConnectionError("Failed to read label data", err)
+                    }
+                    if (resp.error) {
+                        throw new FatalError("Failed to read label data", resp.error)
+                    }
+                    if (resp.data.length === 0) {
+                        throw new FatalError("No label data found for label group and chapter")
+                    }
+                    idRepo.bindServerId("labelData", entry.labelData.labelDataId, resp.data[0].labelDataId)
+                    return null
+                },
+                onFailure: cleanupOnErr,
+                onFatalError: cleanupOnErr
+            },
+            {
+                variant: "reloadGroup",
+                reserveList: [
+                    {
+                        id: contentIdSnapshot,
+                        kind: "chapterContent",
+                        desiredState: "locked",
+                    },
+                    {
+                        id: entry.labelGroup.labelGroupId,
+                        kind: "labelGroup",
+                        desiredState: "locked",
+                    },
+                    {
+                        id: newLabelDataId,
+                        kind: "labelData",
+                        desiredState: "locked",
+                    }
+                ],
+                retries: 3,
+                skip: () => skipMe,
+                callback: async () => {
+                    if (entry.loadingStatus === "loadError") {
+                        throw new FatalError("Label group is in load error state")
+                    }
+                    let resp
+                    try {
+                        resp = await readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet({
+                            path: {
+                                labelDataId: idRepo.getServerId("labelData", entry.labelData.labelDataId)!,
+                            }
+                        })
+                    } catch (err) {
+                        throw new ConnectionError("Failed to read labels for label data", err)
+                    }
+                    if (resp.error) {
+                        entry.loadingStatus = "loadError"
+                        throw new FatalError("Failed to read labels for label data", resp.error)
+                    }
+                    const newLabels = resp.data.map((label) : ProvisionalLabel => ({ ...label, provisional: true, labelId: idRepo.newIdAndBindExists("label") })) // possible leak here if timeout but it doesn't really matter
+                    entry.labels = newLabels
+                    entry.loadingStatus = "loaded"
+                    return { type: "groupLoaded", labelGroupId: entry.labelGroup.labelGroupId, getLabels: () => newLabels, mutable: entry.role === "editor" || entry.role === "owner"}
+                },
+                onFailure: cleanupOnErr,
+                onFatalError: cleanupOnErr
+            },
+        ]
+    }
+
+    const getLabelDataId = (labelGroupId : string) => {
+        const entry = entries.find((e) => e.labelGroup.labelGroupId === labelGroupId)
+        if (!entry) {
+            throw new Error(`Label group with id ${labelGroupId} not found`)
+        }
+        return entry.labelData.labelDataId
+    }
+
+    const getRole = (labelGroupId : string) => {
+        const entry = entries.find((e) => e.labelGroup.labelGroupId === labelGroupId)
+        if (!entry) {
+            throw new Error(`Label group with id ${labelGroupId} not found`)
+        }
+        return entry.role
+    }
+
+    const getLabels = (labelGroupId : string) => {
+        const entry = entries.find((e) => e.labelGroup.labelGroupId === labelGroupId)
+        if (!entry) {
+            throw new Error(`Label group with id ${labelGroupId} not found`)
+        }
+        return entry.labels
+    }
+
+    const getIsLoaded = (labelGroupId : string) => {
+        const entry = entries.find((e) => e.labelGroup.labelGroupId === labelGroupId)
+        if (!entry) {
+            throw new Error(`Label group with id ${labelGroupId} not found`)
+        }
+        return entry.loadingStatus === "loaded"
+    }
 
     return {
         addLabel: addLabel,
@@ -652,6 +876,15 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
         deleteTextAt,
         flushTextOps,
         handleSignal,
-        getEntries: () => entries,
+        reloadGroup,
+
+        getForGroup: {
+            labelDataId: getLabelDataId,
+            role: getRole,
+            labels: getLabels,
+            isLoaded: getIsLoaded,
+        },
+
+        getGroups
     }
 }

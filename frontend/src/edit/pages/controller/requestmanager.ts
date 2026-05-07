@@ -1,4 +1,4 @@
-import type { CachedKeyedRequestEvent, IDRepository, KeyedRequestEvent, RequestEvent, RequestManager, Signal, UserEvent } from "./types"
+import type { CachedKeyedRequestEvent, IDRepository, KeyedRequestEvent, RequestEvent, RequestManager, Reservation, Signal, UserEvent } from "./types"
 import { FatalError, TimeoutError, ConnectionError, CacheConflictError, isDetailHttpErrorResponse, NoCacheEntryError } from "./types"
 import { getCachedResultCachedCachedIdGet, type CacheEntry } from "@/client";
 
@@ -17,6 +17,16 @@ function withTimeout<T>(promise : Promise<T>, timeoutMs : number) : Promise<T> {
         })
     })
 }
+
+function getReservationList(request : KeyedRequestEvent) : Reservation[] {
+    if (request.reservationRequest.wait) {
+        return request.reservationRequest.reserveList.call()
+    }
+    else {
+        return request.reservationRequest.reserveList
+    }
+}
+
 /**
  * Below is a brief outline of the behaviour of the request manager.
  * 
@@ -130,23 +140,35 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
 
     const send = async () => {
         const fromQueueRequests = []
+
+        let delay : number | null = 1000 // todo: implement exponential backoff for retries instead of fixed delay
         if (statusQueries.some((request) => request.retries < 0) || retryRequests.some((request) => request.retries < 0)) {
             ((statusQueries as KeyedRequestEvent[]).concat(retryRequests)).filter((request) => request.retries < 0).forEach((request) => { 
-                request.reserveList.forEach((reservation) => {
-                    idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id)
-                })
+                getReservationList(request).forEach((reservation) => idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id))
                 request.onFailure?.()
             })
             throw new FatalError("A request has exceeded the maximum number of retries")
         }
-        while (requestQueue.length > 0 && (requestQueue[0].skip?.() || requestQueue[0].reserveList.every((reservation) => idRepo.isReserveable(reservation.kind, reservation.id, reservation.desiredState)))) {
+        while (
+            requestQueue.length > 0 
+            && !requestQueue[0].reservationRequest.wait?.()
+            && (
+                requestQueue[0].reservationRequest.skip?.() 
+                || getReservationList(requestQueue[0]).every((reservation) => idRepo.isReserveable(reservation.kind, reservation.id, reservation.desiredState))
+            )
+        )
+        {
             const request = requestQueue.shift()!
-            if (request.skip?.()) {
+            if (request.reservationRequest.skip?.()) {
                 continue
             }
-            request.reserveList.forEach((reservation) => {
-                idRepo.reserveIdObjState(reservation.kind, reservation.id, reservation.desiredState)
-            })
+            const reservationRequest = request.reservationRequest
+            if (reservationRequest.wait) {
+                reservationRequest.reserveList.call().forEach((reservation) => idRepo.reserveIdObjState(reservation.kind, reservation.id, reservation.desiredState))
+            }
+            else {
+                reservationRequest.reserveList.forEach((reservation) => idRepo.reserveIdObjState(reservation.kind, reservation.id, reservation.desiredState))
+            }
             fromQueueRequests.push(request)
         }
         
@@ -187,13 +209,14 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
                 }
                 else {
                     errorsList.push({request: request, reason: result.reason})
-                    request.reserveList.forEach((reservation) => idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id))
+                    getReservationList(request).forEach((reservation) => idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id))
                     request.onFatalError?.(result.reason)
                 }
             }
             else {
-                request.reserveList.forEach((reservation) => idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id))
+                getReservationList(request).forEach((reservation) => idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id))
                 passSignal(result.value)
+                delay = null
             }
         }
         for (let i = 0; i < statusQueryResult.value.length; i++) {
@@ -208,7 +231,7 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
                 }
                 else {
                     errorsList.push({request: request, reason: result.reason})
-                    request.reserveList.forEach((reservation) => idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id))
+                    getReservationList(request).forEach((reservation) => idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id))
                     request.onFatalError?.(result.reason)
                 }
             }
@@ -216,8 +239,9 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
                 try {
                     const { signal, status, error } = request.handleCachedResult(result.value, request.requestKey)
                     if (status === "success") {
-                        request.reserveList.forEach((reservation) => idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id))
+                        getReservationList(request).forEach((reservation) => idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id))
                         passSignal(signal)
+                        delay = null
                     }
                     else if (status === "pending") {
                         newStatusQueries.push({ ...request, retries: request.retries - 1})
@@ -228,12 +252,14 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
                         }
                         else {
                             errorsList.push({request: request, reason: error})
-                            request.reserveList.forEach((reservation) => idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id))
+                            getReservationList(request).forEach((reservation) => idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id))
+                            request.onFatalError?.(error)
                         }
                     }
                 } catch (err) {
                     errorsList.push({request: request, reason: err instanceof Error ? err : new Error(String(err))})
-                    request.reserveList.forEach((reservation) => idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id))
+                    getReservationList(request).forEach((reservation) => idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id))
+                    request.onFatalError?.(err instanceof Error ? err : new Error(String(err)))
                 }
             }
         }
@@ -254,13 +280,14 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
                 }
                 else {
                     errorsList.push({request: request, reason: result.reason})
-                    request.reserveList.forEach((reservation) => idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id))
+                    getReservationList(request).forEach((reservation) => idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id))
                     request.onFatalError?.(result.reason)
                 }
             }
             else {
-                request.reserveList.forEach((reservation) => idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id))
+                getReservationList(request).forEach((reservation) => idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id))
                 passSignal(result.value)
+                delay = null
             }
         }
         if (errorsList.length > 0) {
@@ -272,7 +299,7 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
         statusQueries = newStatusQueries
         retryRequests = newRetryRequests
         
-
+        return delay
     }
 
     const start = async () => {
@@ -289,7 +316,12 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
                     })
                 }
                 else {
-                    await send()
+                    const delay = await send()
+                    if (delay) {
+                        await new Promise((resolve) => {
+                            setTimeout(resolve, delay)
+                        })
+                    }
                 }
             }
         } catch (err) {
@@ -310,16 +342,18 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
 
     const onUserEvent = (event : UserEvent) => {
         console.log("User event:", event)
-        debounceLock = true
-        if (userEventTimeout) {
-            clearTimeout(userEventTimeout)
-        }
-        userEventTimeout = setTimeout(() => {
-            userEventTimeout = null
-            debounceLock = false
-        }, 1000)
-        if (!requestLoopRunning) {
-            start()
+        if (["textOp", "labelOp", "addLabelGroup", "loadGroup", "switchMode"].includes(event.eventType)) {
+            debounceLock = true
+            if (userEventTimeout) {
+                clearTimeout(userEventTimeout)
+            }
+            userEventTimeout = setTimeout(() => {
+                userEventTimeout = null
+                debounceLock = false
+            }, 1000)
+            if (!requestLoopRunning) {
+                start()
+            }
         }
     }
 

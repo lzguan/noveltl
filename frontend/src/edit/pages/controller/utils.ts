@@ -3,7 +3,7 @@ import { CacheConflictError, ConnectionError, FatalError, isLabelData, isRequest
 import { buildIdRepository } from "./idRepository";
 import { buildRequestManager } from "./requestmanager";
 import { buildDataManager } from "./dataManager";
-import type { Color } from "@/components/labeled-text-lib/builtin/colors";
+import { generateRandomColor, type Color } from "@/components/labeled-text-lib/builtin/colors";
 import { buildUIManager } from "./uiManager";
 
 export function buildProvisionalChapterContentId(editChapterData: EditChapterData, idRepo : IDRepository) : ProvisionalId {
@@ -20,11 +20,14 @@ export function buildDataEntries(editChapterData : EditChapterData, idRepo : IDR
                 const provisionalId = idRepo.newId("labelData")
                 requestManager.enqueueRequest({
                     retries: 3,
-                    reserveList: [
-                        { kind: "labelGroup", id: labelGroupProvisionalId, desiredState: "locked"},
-                        { kind: "labelData", id: provisionalId, desiredState: "creating"},
-                        { kind: "chapterContent", id: provisionalChapterContentId, desiredState: "locked"}
-                    ],
+                    reservationRequest: {
+                        reserveList: [
+                            { kind: "labelGroup", id: labelGroupProvisionalId, desiredState: "locked"},
+                            { kind: "labelData", id: provisionalId, desiredState: "creating"},
+                            { kind: "chapterContent", id: provisionalChapterContentId, desiredState: "locked"}
+                        ],
+                    },
+                    
                     callback: async (requestKey) => {
                         let response
                         try {
@@ -91,7 +94,8 @@ export function buildRuntime(setErrors : (errors: Error[] | null) => void, novel
         const provisionalChapterContentId = buildProvisionalChapterContentId(editChapterData, idRepo)
         const entries = buildDataEntries(editChapterData, idRepo, requestManager, provisionalChapterContentId)
         const dataManager = buildDataManager(entries, idRepo, novel, chapter, userId, provisionalChapterContentId, editChapterData.chapterContent.chapterContentText)
-        const colourMapping = new Map<ProvisionalId, Color>(entries.map((entry) => [entry.labelGroup.labelGroupId, Math.floor(Math.random() * 16777215)] as [ProvisionalId, Color]))
+        const colorMapping = new Map<ProvisionalId, Color>(entries.map((entry) => [entry.labelGroup.labelGroupId, generateRandomColor()]))
+        const visibilityMapping = new Map<ProvisionalId, boolean>(entries.map((entry) => [entry.labelGroup.labelGroupId, false] as [ProvisionalId, boolean]))
         const uiManager = buildUIManager(
             editChapterData.chapterContent.chapterContentText, 
             entries.flatMap((entry) => entry.labels.map((label) => ({
@@ -99,10 +103,13 @@ export function buildRuntime(setErrors : (errors: Error[] | null) => void, novel
                 interval: { start: label.labelStart, end: label.labelEnd}, 
                 style: [ 
                     {
-                        color: colourMapping.get(entry.labelGroup.labelGroupId)!
+                        color: colorMapping.get(entry.labelGroup.labelGroupId)!
                     },  
                     { 
-                        visible: true, 
+                        visible: (() => {
+                            visibilityMapping.set(entry.labelGroup.labelGroupId, true)
+                            return visibilityMapping.get(entry.labelGroup.labelGroupId)!
+                        })(), 
                         mutable: entry.role === "editor" || entry.role === "owner", 
                         cursorStatus: "none",
                         active: false
@@ -111,14 +118,14 @@ export function buildRuntime(setErrors : (errors: Error[] | null) => void, novel
             )))
         )
 
-        requestManager.attachControllerSignalHandler(dataManager.handleSignal)
         return {
             idRepo,
             requestManager,
             provisionalChapterContentId,
             entries,
             dataManager,
-            colourMapping,
-            uiManager
+            colorMapping,
+            uiManager,
+            visibilityMapping
         }
     }

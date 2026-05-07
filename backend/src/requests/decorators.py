@@ -94,6 +94,9 @@ def attl_cache[**P, R : BaseModel](cache: TTLCache, ttl: int, success_code : int
     return inner_decorator
 
 def svp(result_t: type[BaseModel]) -> Callable[[Any], dict]:
+    """
+    I forgot what this stands for. Returns a function that takes in an instance of result_t or something that can be parsed into result_t and returns a dict that can be returned as a JSON response.
+    """
     def serializer(to_serialize : Any) -> dict:
         return result_t.model_validate(to_serialize).model_dump(mode="json")
     return serializer

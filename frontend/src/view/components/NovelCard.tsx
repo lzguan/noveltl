@@ -1,23 +1,10 @@
 import { Card, CardTitle, CardContent, CardHeader, CardDescription } from "@/components/ui/card"
 import { ExpandableText } from "@/components/text/ExpandableText"
-import { type Novel } from "@/types/novel";
 import { routeTo } from "@/routes";
+import type { Novel } from "@/client";
+import { truncateProducer } from "../utils/truncateProducer";
 
-function truncateProducer(maxLength : number) : (t : string) => {truncated : string, canTruncate : boolean} {
-    function truncateParagraph(t : string) : {truncated : string, canTruncate : boolean} {
-        const paragraphs = t.split(/\r?\n/);
-        if (paragraphs.length === 0) {
-            return { truncated: "", canTruncate: false }
-        }
-        if (paragraphs.length === 1) {
-            const truncated = paragraphs[0].length > maxLength ? paragraphs[0].slice(0, maxLength).concat("...") : paragraphs[0];
-            return { truncated, canTruncate: paragraphs[0].length > maxLength }
-        }
-        const truncated = paragraphs[0].length > maxLength ? paragraphs[0].slice(0, maxLength).concat("...") : paragraphs[0].concat("...");
-        return { truncated, canTruncate: true }
-    }
-    return truncateParagraph
-}
+
 
 const truncate = truncateProducer(1000)
 
@@ -46,6 +33,5 @@ function NovelCard({ novel, showDescription=false }: { novel: Novel, showDescrip
 }
 
 export {
-    truncateProducer,
     NovelCard
 }

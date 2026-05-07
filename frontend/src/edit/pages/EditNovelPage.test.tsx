@@ -7,6 +7,7 @@ import { EditNovelPage } from "./EditNovelPage";
 const readNovelMock = vi.fn();
 const readChaptersMock = vi.fn();
 const readEditChapterDataMock = vi.fn();
+const readUserMeMock = vi.fn();
 const createChapterMock = vi.fn();
 const useControllerMock = vi.fn();
 const buildRuntimeMock = vi.fn();
@@ -19,6 +20,7 @@ vi.mock("@/client", async () => {
         readNovelNovelsNovelIdGet: readNovelMock,
         readChaptersByNovelChaptersGet: readChaptersMock,
         readEditChapterDataEditChapterDataChapterIdGet: readEditChapterDataMock,
+        readUserMeUsersMeGet: readUserMeMock,
     };
 });
 
@@ -92,7 +94,7 @@ function makeEditChapterData(role: "owner" | "viewer" | "editor" = "owner") {
 }
 
 function makeRuntime(text: string) {
-    const uiManager = {
+    const segmentManager = {
         getText: () => text,
         subscribe: () => () => {},
         getLabel: vi.fn(),
@@ -106,13 +108,20 @@ function makeRuntime(text: string) {
         getSegmentIds: () => [],
         getSegment: vi.fn(),
     };
+    const uiManager = {
+        segmentManager,
+        handleSignal: vi.fn(),
+        toggleVisibility: vi.fn(),
+        toggleClickStatus: vi.fn(),
+        toggleHoverStatus: vi.fn(),
+        toggleActiveStatus: vi.fn(),
+    };
 
     return {
         idRepo: {
             getServerId: () => "server-id",
         },
         requestManager: {
-            attachControllerSignalHandler: vi.fn(),
             isQueueEmpty: () => true,
             start: vi.fn(async () => undefined),
             handleSignal: vi.fn(),
@@ -123,7 +132,14 @@ function makeRuntime(text: string) {
         provisionalChapterContentId: "provisional-content",
         entries: [],
         dataManager: {
-            getEntries: () => [],
+            getGroups: () => [],
+            getForGroup: {
+                role: () => "viewer",
+                labelData: () => null,
+                labelGroup: () => null,
+                labels: () => [],
+                loadingStatus: () => "unloaded",
+            },
             handleSignal: vi.fn(),
             addLabelGroup: vi.fn(),
             addLabel: vi.fn(),
@@ -134,7 +150,8 @@ function makeRuntime(text: string) {
             deleteTextAt: vi.fn(),
             flushTextOps: () => [],
         },
-        colourMapping: new Map(),
+        colorMapping: new Map(),
+        visibilityMapping: new Map(),
         uiManager,
     };
 }
@@ -154,11 +171,21 @@ describe("EditNovelPage", () => {
         readNovelMock.mockResolvedValue({ data: makeNovel(), error: undefined });
         readChaptersMock.mockResolvedValue({ data: makeChapters(), error: undefined });
         readEditChapterDataMock.mockResolvedValue({ data: makeEditChapterData(), error: undefined });
+        readUserMeMock.mockResolvedValue({
+            data: {
+                userId: "user-1",
+                userName: "alice",
+                userType: "user",
+            },
+            error: undefined,
+        });
         buildRuntimeMock.mockImplementation(() => makeRuntime("Alice met Bob."));
         useControllerMock.mockImplementation((_editChapterData, _getMode, _setMode, runtime) => ({
             handleEvent: vi.fn(),
             handleSignal: vi.fn(),
             uiManager: runtime.uiManager,
+            labelGroupViews: [],
+            activeLabelGroupId: null,
         }));
     });
 
@@ -270,7 +297,7 @@ describe("EditNovelPage", () => {
         renderEditor("/edit/novels/novel-1?chapter-id=chapter-1");
 
         expect(await screen.findByText("Glass Harbor")).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Edit Text" })).toBeDisabled();
+        expect(screen.getByRole("button", { name: "Edit" })).toBeDisabled();
         expect(screen.getByTestId("dynamic-labeled-text")).toBeInTheDocument();
     });
 });

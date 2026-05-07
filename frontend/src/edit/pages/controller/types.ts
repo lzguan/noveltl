@@ -30,20 +30,85 @@ export type UserEvent = { eventType : "textOp", op : TextOp } // text op
 | { eventType : "loadGroup", labelGroupId : string } // load a specific label group
 | { eventType: "toggleVisibility", labelGroupId: string, visible: boolean } // toggle visibility of a specific label group
 
-export type Signal = null | { type: "groupLoaded", labelGroupId : string, getLabels : () => ProvisionalLabel[], mutable : boolean } | { type : "detachedIds", detachedIds : { id: ProvisionalId, kind: Kind }[] }
+type GroupLoadedSignal = { type: "groupLoaded", labelGroupId : string, getLabels : () => ProvisionalLabel[], mutable : boolean }
+type ClearLabelsSignal = { type : "clearLabels", labelIds : ProvisionalId[] }
+type DetachedIdsSignal = { type : "detachedIds", detachedIds : { id: ProvisionalId, kind: Kind }[] }
+
+export type Signal = null
+| GroupLoadedSignal
+| ClearLabelsSignal
+| DetachedIdsSignal
+
+type DecoratedGroupLoadedSignal = GroupLoadedSignal & { visible: boolean, color: Color }
+
+declare const DecoratedSignalTag : unique symbol
+
+type _DecoratedSignal = DecoratedGroupLoadedSignal | ClearLabelsSignal | DetachedIdsSignal
+
+export type DecoratedSignal = _DecoratedSignal & { [DecoratedSignalTag] : typeof DecoratedSignalTag }
+
+export function makeDecoratedSignal(signal : _DecoratedSignal) : DecoratedSignal {
+    return signal as DecoratedSignal
+}
 
 type CachedResultOutput = { signal : Signal, status : "success", error : null } | { signal : null, status : "pending", error : null } | { signal : null, status : "failure", error : Error }
 
 export type RequestVariant = "addLabelGroup" | "textOp" | "labelOp" | "addLabelData" | "reloadGroup"
 
+export type Reservation = {
+    kind : Kind,
+    id : ProvisionalId,
+    desiredState : InFlightIdStatus
+}
+
+export type StaticReservationRequest = {
+    reserveList : Reservation[]
+    skip? : () => boolean
+    wait? : never
+}
+
+
+declare const IDCTag : unique symbol 
+
+type IdempotentCallable<T> = {
+    call : () => T
+    readonly [IDCTag] : typeof IDCTag
+}
+
+export function makeIdempotent<T>(fn : () => T) : IdempotentCallable<T> {
+    let called = false
+    let result : T
+    return {
+        call: () => {
+            if (!called) {
+                result = fn()
+                called = true
+            }
+            return result!
+        },
+    } as IdempotentCallable<T>
+}
+
+export type LazyReservationRequest = {
+    reserveList : IdempotentCallable<Reservation[]>
+    /**
+     * If provided, skip this request if this function returns true provided that wait() returns false.
+     */
+    skip? : () => boolean
+    /**
+     * Wait to send this request until this function returns false. If not provided, the request manager will not delay this request.
+     */
+    wait : () => boolean
+}
+
+
 export type BaseRequestEvent = {
     callback : (requestKey : string) => Promise<Signal>
-    reserveList : { id : ProvisionalId, kind : Kind, desiredState : InFlightIdStatus }[]
+    reservationRequest : StaticReservationRequest | LazyReservationRequest
     variant: RequestVariant,
     onFailure?: () => void, // optional handler that will be called if the request fails after all retries, with the error that caused the failure
     onFatalError?: (err : Error) => void, // optional handler that will be called if the request encounters a fatal error
     retries: number,
-    skip? : () => boolean // if returns true, this request will be skipped
 }
 export type NoCachedRequestEvent = BaseRequestEvent & { handleCachedResult?: never }
 
@@ -62,6 +127,7 @@ export type ProvisionalLabelGroup = LabelGroup & { provisional: true }
 export type ProvisionalLabelData = LabelData & { provisional: true }
 export type ProvisionalLabel = Label & { provisional: true }
 
+export type LoadingStatus = "notLoaded" | "loading" | "loaded" | "loadError"
 
 export type DataEntry = {
     labelGroup : ProvisionalLabelGroup
@@ -69,7 +135,7 @@ export type DataEntry = {
     labels : ProvisionalLabel[] // sorted by start position
     role : Role
 
-    loadingStatus : "notLoaded" | "loading" | "loaded" | "loadError"
+    loadingStatus : LoadingStatus
 }
 
 /**
@@ -189,7 +255,7 @@ export type DataManager = {
     flushTextOps : () => RequestEvent[]
 
 
-    handleSignal : (signal : Signal) => void
+    handleSignal : (signal : DecoratedSignal) => void
 
     reloadGroup(labelGroupId : string) : RequestEvent[]
 
@@ -197,15 +263,20 @@ export type DataManager = {
         labelDataId: (labelGroupId : string) => string
         role: (labelGroupId : string) => Role
         labels: (labelGroupId : string) => readonly Label[]
-        isLoaded: (labelGroupId : string) => boolean
+        loadingStatus: (labelGroupId : string) => LoadingStatus
+        name: (labelGroupId : string) => string
     }
     getGroups : () => readonly LabelGroup[]
 
+    /**
+     * Attach a label group sync handler
+     */
+    attachLabelGroupSyncHandler : (handler : () => void) => void
 }
 
 export type UIManager = {
     segmentManager : SegmentManager<MyStyle, StyledLabel<MyStyle>>
-    handleSignal : (signal : Signal) => void
+    handleSignal : (signal : DecoratedSignal) => void
     toggleVisibility : (labelIds: ProvisionalId[], visible: boolean) => void
     toggleClickStatus : (labelIds: ProvisionalId[], clickStatus: "clicked" | "none") => void
     toggleHoverStatus : (labelIds: ProvisionalId[], hoverStatus: "hovered" | "none") => void
@@ -262,20 +333,35 @@ export type RequestManager = {
     isQueueEmpty : () => boolean
     enqueueRequest : (request : RequestEvent) => void
 
-    handleSignal : (signal : Signal) => void
+    handleSignal : (signal : DecoratedSignal) => void
 
     onUserEvent : (event : UserEvent) => void
-    send : () => Promise<void>
+    send : () => Promise<null | number> // returns null if no delay is needed or the delay until the next retry if a request was sent and needs to be retried
     start : () => Promise<void>
 
+    /**
+     * Attach a handler for signals that are received by the request manager when processing request events.
+     */
     attachControllerSignalHandler : (handler : (signal : Signal) => void) => void
 }
 
 
+export type LabelGroupView = {
+    labelGroupId : ProvisionalId,
+    labelGroupName : string,
+    role : Role,
+    loadingStatus : LoadingStatus
+    visible : boolean
+    color : Color
+}
+
 export interface Controller {
     handleEvent : (event : UserEvent) => void
-    uiManager : SegmentManager<MyStyle, StyledLabel<MyStyle>>
-    handleSignal : (signal : Signal) => void
+    uiManager : UIManager
+    handleSignal : (signal : Signal) => void // not decorated
+
+    labelGroupViews : LabelGroupView[]
+    activeLabelGroupId : ProvisionalId | null
 }
 
 export type Runtime = {
@@ -284,7 +370,8 @@ export type Runtime = {
     provisionalChapterContentId : string
     entries : DataEntry[]
     dataManager : DataManager
-    colourMapping : Map<ProvisionalId, Color>
+    colorMapping : Map<ProvisionalId, Color>
+    visibilityMapping : Map<ProvisionalId, boolean>
     uiManager : UIManager
 }
 
@@ -335,7 +422,7 @@ export const isLabel = hasShape({
     labelStart : isNumber,
     labelEnd : isNumber,
     labelWord : isString,
-    labelEntityGroup: isString,
+    labelEntityGroup: (val) => isString(val) || val === null,
     labelScore: isNumber,
     labelDirty: isBoolean,
 }) as Validator<Label>

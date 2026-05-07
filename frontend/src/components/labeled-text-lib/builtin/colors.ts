@@ -100,3 +100,8 @@ export function blendColors(left: Color, right: Color, weight: number = 0.5): Co
         blue(left) * leftWeight + blue(right) * clampedWeight,
     );
 }
+
+
+export function generateRandomColor(): Color {
+    return Math.floor(Math.random() * 16777215);
+}

@@ -5,6 +5,7 @@ Todo:
     Implement user permissions.
 """
 
+import logging
 import uuid
 from collections import defaultdict
 from collections.abc import Sequence
@@ -47,6 +48,7 @@ from .permissions import (
 )
 from .utils import apply_text_ops
 
+logger = logging.getLogger(__name__)
 
 def query_source_works_by_title(
         db : Session,
@@ -853,8 +855,12 @@ def modify_chapter_content(
         label_vals = [label.model_dump(exclude={"label_id"}) for label in labels]
         for label in label_vals:
             label['label_data_id'] = label_data.label_data_id
-        stmt = insert(label_models.Label).values(label_vals)
-        db.execute(stmt)
+        if len(label_vals) > 0:
+            stmt = insert(label_models.Label).values(label_vals)
+            db.execute(stmt)
+        else:
+            logger.debug(f"No labels to port for label_data_id {label_data_id} and chapter_content_id {chapter_content.chapter_content_id}")
+
     db.commit()
 
     return schemas.ModifyChapterContentResponse(

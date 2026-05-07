@@ -4,16 +4,18 @@ import {
     useMemo,
     useRef,
     useState,
+    useSyncExternalStore,
     type JSX,
     type RefObject,
 } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import {
     createChapterNovelsNovelIdChaptersPost,
     readChaptersByNovelChaptersGet,
     readEditChapterDataEditChapterDataChapterIdGet,
     readNovelNovelsNovelIdGet,
+    readUserMeUsersMeGet,
     type Chapter,
     type DetailHttpErrorResponse,
     type EditChapterData,
@@ -21,6 +23,7 @@ import {
     type Novel,
     type RequestConflictErrorResponse,
     type Role,
+    type User,
 } from "@/client";
 import { toHex } from "@/components/labeled-text-lib/builtin/colors";
 import { DynamicLabeledText, type Caret as EditorCaret } from "@/components/labeled-text-lib/react/DynamicLabeledText";
@@ -36,8 +39,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label as FieldLabel } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLoader } from "@/lib/utils";
-import { extractParams } from "@/routes";
+import { AppRoutes, extractParams } from "@/routes";
 
 import { useController } from "./controller/controller";
 import type { MyStyle, ProvisionalId, UserEvent } from "./controller/types";
@@ -65,6 +69,7 @@ type CaretRangeDocument = Document & {
 type WorkspaceProps = {
     editChapterData: EditChapterData;
     novel: Novel;
+    currentUser: User;
     chapterList: Chapter[];
     chapterDraftNum: string;
     chapterDraftTitle: string;
@@ -77,6 +82,24 @@ type WorkspaceProps = {
     onCreateChapter: () => Promise<void>;
     onReloadChapterData: () => Promise<EditChapterData | null>;
     onSelectChapter: (chapterId: string) => void;
+};
+
+type LabelPopupRef = {
+    labelGroupId: ProvisionalId;
+    labelId: ProvisionalId;
+};
+
+type LabelPopupState =
+    | { type: "selection"; x: number; y: number }
+    | { type: "labels"; x: number; y: number; candidates: LabelPopupRef[]; selectedIndex: number }
+    | null;
+
+type ResolvedLabelRef = {
+    labelGroupId: ProvisionalId;
+    labelGroupName: string;
+    color: number;
+    role: Role;
+    label: Label;
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -388,6 +411,14 @@ async function loadEditChapterData(chapterId: string, novelId: string, labelGrou
     return response.data;
 }
 
+async function loadCurrentUser(): Promise<User> {
+    const response = await readUserMeUsersMeGet();
+    if (!response.data) {
+        throw new Error("Failed to load current user.");
+    }
+    return response.data;
+}
+
 function LabelStateBadge({ label }: { label: Label }) {
     return (
         <span className="rounded-full border border-black/10 bg-black/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-black/55">
@@ -521,6 +552,7 @@ function CreateChapterPanel({
 function EditNovelWorkspace({
     editChapterData,
     novel,
+    currentUser,
     chapterList,
     chapterDraftNum,
     chapterDraftTitle,
@@ -538,11 +570,15 @@ function EditNovelWorkspace({
     const [errors, setErrors] = useState<Error[] | null>(null);
     const [caret, setCaret] = useState<EditorCaret>({ anchor: 0, focus: 0, visible: false });
     const [editorActive, setEditorActive] = useState(false);
-    const [activeGroupId, setActiveGroupId] = useState<ProvisionalId | null>(null);
-    const [selectedLabelId, setSelectedLabelId] = useState<ProvisionalId | null>(null);
+    const [selectedLabelRef, setSelectedLabelRef] = useState<LabelPopupRef | null>(null);
     const [newGroupName, setNewGroupName] = useState("");
     const [, setSurfaceVersion] = useState(0);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [toolPanel, setToolPanel] = useState("mode");
+    const [labelPopup, setLabelPopup] = useState<LabelPopupState>(null);
+    const [labelEntityGroup, setLabelEntityGroup] = useState("");
+    const [labelScore, setLabelScore] = useState("1");
+    const [labelDirty, setLabelDirty] = useState(true);
     const dragAnchorRef = useRef<number | null>(null);
     const modeRef = useRef<WorkspaceMode>(mode);
 
@@ -555,11 +591,12 @@ function EditNovelWorkspace({
     const runtime = useMemo(
         () => buildRuntime(
             setErrors,
-            { novelId: novel.novelId },
-            { chapterId: editChapterData.chapter.chapterId },
+            novel,
+            editChapterData.chapter,
             editChapterData,
+            currentUser.userId,
         ),
-        [editChapterData, novel.novelId],
+        [currentUser.userId, editChapterData, novel],
     );
 
     const controller = useController(
@@ -570,19 +607,20 @@ function EditNovelWorkspace({
         setErrors,
     );
 
-    const [textSnapshot, setTextSnapshot] = useState(() => runtime.uiManager.getText());
-
-    useEffect(() => runtime.uiManager.subscribe(() => {
-        setTextSnapshot(runtime.uiManager.getText());
-        setSurfaceVersion((previous) => previous + 1);
-    }), [runtime]);
-
-    useEffect(() => {
-        runtime.requestManager.attachControllerSignalHandler(controller.handleSignal);
-        if (!runtime.requestManager.isQueueEmpty()) {
-            void runtime.requestManager.start();
-        }
-    }, [controller.handleSignal, runtime]);
+    const segmentManager = controller.uiManager.segmentManager;
+    const subscribeToSegmentManager = useCallback(
+        (onStoreChange: () => void) => segmentManager.subscribe(onStoreChange),
+        [segmentManager],
+    );
+    const getSegmentTextSnapshot = useCallback(
+        () => segmentManager.getText(),
+        [segmentManager],
+    );
+    const textSnapshot = useSyncExternalStore(
+        subscribeToSegmentManager,
+        getSegmentTextSnapshot,
+        getSegmentTextSnapshot,
+    );
 
     useEffect(() => {
         const syncInterval = window.setInterval(() => {
@@ -599,11 +637,80 @@ function EditNovelWorkspace({
         };
     }, [runtime]);
 
-    const entries = runtime.dataManager.getEntries();
-    const activeEntry = entries.find((entry) => entry.labelGroup.labelGroupId === activeGroupId) ?? null;
-    const selectedLabel = activeEntry?.labels.find((label) => label.labelId === selectedLabelId) ?? null;
+    useEffect(() => {
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                setLabelPopup(null);
+            }
+        };
+        const closeOnOutsidePointer = (event: PointerEvent) => {
+            const target = event.target;
+            if (target instanceof Element && target.closest("[data-label-popup]")) {
+                return;
+            }
+            setLabelPopup(null);
+        };
+        window.addEventListener("keydown", closeOnEscape);
+        window.addEventListener("pointerdown", closeOnOutsidePointer);
+        return () => {
+            window.removeEventListener("keydown", closeOnEscape);
+            window.removeEventListener("pointerdown", closeOnOutsidePointer);
+        };
+    }, []);
+
+    const labelGroupViews = controller.labelGroupViews;
+    const activeGroupId = controller.activeLabelGroupId;
+    const activeGroupView = labelGroupViews.find((group) => group.labelGroupId === activeGroupId) ?? null;
+    const activeLabels = activeGroupId ? runtime.dataManager.getForGroup.labels(activeGroupId) : [];
     const selection = normalizeSelection(caret);
     const selectedText = selectionText(textSnapshot, caret);
+
+    const resolveLabelRef = useCallback((ref: LabelPopupRef | null): ResolvedLabelRef | null => {
+        if (!ref) {
+            return null;
+        }
+        const group = labelGroupViews.find((candidate) => candidate.labelGroupId === ref.labelGroupId);
+        if (!group) {
+            return null;
+        }
+        const label = runtime.dataManager.getForGroup.labels(ref.labelGroupId).find((candidate) => candidate.labelId === ref.labelId);
+        if (!label) {
+            return null;
+        }
+        return {
+            labelGroupId: ref.labelGroupId,
+            labelGroupName: group.labelGroupName,
+            color: group.color,
+            role: group.role,
+            label,
+        };
+    }, [labelGroupViews, runtime]);
+
+    const selectedLabel = resolveLabelRef(selectedLabelRef);
+
+    const clickedPopupLabels = useMemo(() => {
+        if (labelPopup?.type !== "labels") {
+            return [];
+        }
+        return labelPopup.candidates
+            .map((candidate) => resolveLabelRef(candidate))
+            .filter((candidate): candidate is ResolvedLabelRef => candidate !== null);
+    }, [labelPopup, resolveLabelRef]);
+
+    const clickedPopupLabel = labelPopup?.type === "labels"
+        ? clickedPopupLabels[labelPopup.selectedIndex] ?? clickedPopupLabels[0] ?? null
+        : null;
+
+    const findLabelsAtPosition = useCallback((position: number): LabelPopupRef[] => (
+        labelGroupViews
+            .filter((group) => group.visible)
+            .flatMap((group) => runtime.dataManager.getForGroup.labels(group.labelGroupId)
+                .filter((label) => label.labelStart <= position && label.labelEnd > position)
+                .map((label) => ({
+                    labelGroupId: group.labelGroupId,
+                    labelId: label.labelId,
+                })))
+    ), [labelGroupViews, runtime]);
 
     const renderCaret = useCallback(
         ({
@@ -697,36 +804,39 @@ function EditNovelWorkspace({
         refreshSurface();
     }, [controller, refreshSurface]);
 
+    const switchLabelGroup = useCallback((labelGroupId: ProvisionalId | null) => {
+        setSelectedLabelRef(null);
+        emitEvent({
+            eventType: "switchLabelGroup",
+            labelGroupId,
+        });
+    }, [emitEvent]);
+
     const switchMode = useCallback((nextMode: WorkspaceMode) => {
+        setLabelPopup(null);
         emitEvent({ eventType: "switchMode", mode: nextMode });
         if (nextMode !== "label") {
             return;
         }
-        const preferredEntry = entries.find((entry) => entry.visible) ?? entries[0];
-        if (!preferredEntry) {
+        const preferredGroup = labelGroupViews.find((group) => group.visible) ?? labelGroupViews[0];
+        if (!preferredGroup) {
             return;
         }
-        if (activeGroupId === preferredEntry.labelGroup.labelGroupId) {
+        if (activeGroupId === preferredGroup.labelGroupId) {
             return;
         }
-        setActiveGroupId(preferredEntry.labelGroup.labelGroupId);
-        emitEvent({
-            eventType: "switchLabelGroup",
-            labelGroupId: preferredEntry.labelGroup.labelGroupId,
-        });
-    }, [activeGroupId, emitEvent, entries]);
+        switchLabelGroup(preferredGroup.labelGroupId);
+    }, [activeGroupId, emitEvent, labelGroupViews, switchLabelGroup]);
 
-    const activeEntryCanMutate = activeEntry
+    const activeGroupCanMutate = activeGroupView
         ? (
-            activeEntry.role === "editor"
-            || activeEntry.role === "owner"
+            activeGroupView.role === "editor"
+            || activeGroupView.role === "owner"
         )
-        && activeEntry.visible
-        && runtime.idRepo.getServerId("labelData", activeEntry.labelData.labelDataId) !== null
         : false;
 
     const canEditText = mode === "edit" && editChapterData.role !== "viewer";
-    const canOperateOnSelection = activeEntryCanMutate && mode === "label" && selection.start < selection.end;
+    const canOperateOnSelection = activeGroupCanMutate && mode === "label" && selection.start < selection.end;
 
     const handleReloadFromError = useCallback(async () => {
         try {
@@ -813,83 +923,81 @@ function EditNovelWorkspace({
         }
     }, [canEditText, caret, emitEvent, textSnapshot]);
 
-    const switchLabelGroup = useCallback((labelGroupId: ProvisionalId | null) => {
-        setActiveGroupId(labelGroupId);
-        setSelectedLabelId(null);
-        emitEvent({
-            eventType: "switchLabelGroup",
-            labelGroupId,
-        });
-    }, [emitEvent]);
-
     const selectLabelAtPosition = useCallback((position: number) => {
-        if (!activeEntry) {
-            setSelectedLabelId(null);
+        const clicked = findLabelsAtPosition(position);
+        if (clicked.length === 0) {
+            setSelectedLabelRef(null);
             return;
         }
-        const label = activeEntry.labels.find((candidate) => candidate.labelStart <= position && candidate.labelEnd > position) ?? null;
-        setSelectedLabelId(label?.labelId ?? null);
-    }, [activeEntry]);
+        setSelectedLabelRef(clicked[0]);
+    }, [findLabelsAtPosition]);
 
-    const addLabelFromSelection = useCallback(() => {
-        if (!activeEntry || !canOperateOnSelection) {
+    const addLabelFromSelection = useCallback((groupId = activeGroupId) => {
+        const group = groupId ? labelGroupViews.find((candidate) => candidate.labelGroupId === groupId) : null;
+        const canMutateGroup = group?.role === "editor" || group?.role === "owner";
+        if (!groupId || !canMutateGroup || mode !== "label" || selection.start >= selection.end) {
             return;
         }
         const { start, end } = normalizeSelection(caret);
+        const parsedScore = Number(labelScore);
         emitEvent({
             eventType: "labelOp",
-            labelGroupId: activeEntry.labelGroup.labelGroupId,
+            labelGroupId: groupId,
             op: {
                 op: "add",
                 startPos: start,
                 endPos: end,
                 word: textSnapshot.slice(start, end),
-                dirty: true,
-                entityGroup: null,
-                score: 1,
+                dirty: labelDirty,
+                entityGroup: labelEntityGroup.trim() || null,
+                score: Number.isFinite(parsedScore) ? parsedScore : 1,
             },
         });
-    }, [activeEntry, canOperateOnSelection, caret, emitEvent, textSnapshot]);
+        setLabelPopup(null);
+    }, [activeGroupId, caret, emitEvent, labelDirty, labelEntityGroup, labelGroupViews, labelScore, mode, selection.end, selection.start, textSnapshot]);
 
-    const deleteSelectedLabel = useCallback(() => {
-        if (!activeEntry || !selectedLabel || !activeEntryCanMutate) {
+    const deleteLabelRef = useCallback((target: ResolvedLabelRef | null) => {
+        if (!target || !(target.role === "editor" || target.role === "owner")) {
             return;
         }
         emitEvent({
             eventType: "labelOp",
-            labelGroupId: activeEntry.labelGroup.labelGroupId,
+            labelGroupId: target.labelGroupId,
             op: {
                 op: "delete",
-                startPos: selectedLabel.labelStart,
-                endPos: selectedLabel.labelEnd,
-                word: selectedLabel.labelWord,
+                startPos: target.label.labelStart,
+                endPos: target.label.labelEnd,
+                word: target.label.labelWord,
             },
         });
-        setSelectedLabelId(null);
-    }, [activeEntry, activeEntryCanMutate, emitEvent, selectedLabel]);
+        setSelectedLabelRef(null);
+        setLabelPopup(null);
+    }, [emitEvent]);
 
-    const updateSelectedLabelFromSelection = useCallback(() => {
-        if (!activeEntry || !selectedLabel || !canOperateOnSelection) {
+    const updateLabelFromSelection = useCallback((target: ResolvedLabelRef | null) => {
+        if (!target || !(target.role === "editor" || target.role === "owner") || mode !== "label" || selection.start >= selection.end) {
             return;
         }
         const { start, end } = normalizeSelection(caret);
+        const parsedScore = Number(labelScore);
         emitEvent({
             eventType: "labelOp",
-            labelGroupId: activeEntry.labelGroup.labelGroupId,
+            labelGroupId: target.labelGroupId,
             op: {
                 op: "update",
-                startPos: selectedLabel.labelStart,
-                endPos: selectedLabel.labelEnd,
-                word: selectedLabel.labelWord,
+                startPos: target.label.labelStart,
+                endPos: target.label.labelEnd,
+                word: target.label.labelWord,
                 newStartPos: start,
                 newEndPos: end,
                 newWord: textSnapshot.slice(start, end),
-                entityGroup: selectedLabel.labelEntityGroup,
-                score: selectedLabel.labelScore,
-                dirty: true,
+                entityGroup: labelEntityGroup.trim() || null,
+                score: Number.isFinite(parsedScore) ? parsedScore : target.label.labelScore,
+                dirty: labelDirty,
             },
         });
-    }, [activeEntry, canOperateOnSelection, caret, emitEvent, selectedLabel, textSnapshot]);
+        setLabelPopup(null);
+    }, [caret, emitEvent, labelDirty, labelEntityGroup, labelScore, mode, selection.end, selection.start, textSnapshot]);
 
     const addLabelGroup = useCallback(() => {
         const trimmed = newGroupName.trim();
@@ -903,159 +1011,97 @@ function EditNovelWorkspace({
         setNewGroupName("");
     }, [emitEvent, newGroupName]);
 
+    const toggleLabelGroupVisibility = useCallback((labelGroupId: ProvisionalId, visible: boolean) => {
+        emitEvent({ eventType: "toggleVisibility", labelGroupId, visible });
+    }, [emitEvent]);
+
+    const reloadLabelGroup = useCallback((labelGroupId: ProvisionalId) => {
+        emitEvent({ eventType: "loadGroup", labelGroupId });
+    }, [emitEvent]);
+
     const errorMessages = extractErrorMessages(errors);
     const showOutdatedReload = errors?.some(isOutdatedError) ?? false;
 
+    const popupGroupId = activeGroupId ?? labelGroupViews[0]?.labelGroupId ?? null;
+
     return (
-        <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(245,187,110,0.24),_transparent_34%),linear-gradient(180deg,_#f8f3ea_0%,_#f4efe5_32%,_#efe8dc_100%)] px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
-            <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4">
-                <Card className="overflow-visible border-0 bg-white/82 shadow-[0_20px_60px_rgba(38,29,18,0.12)] backdrop-blur">
-                    <CardHeader className="gap-4 border-b border-black/5 pb-5">
-                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                            <div className="space-y-3">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <StatusPill tone={isSyncing ? "warning" : "success"}>
-                                        {isSyncing ? "Syncing" : "In Sync"}
-                                    </StatusPill>
-                                    <RoleTone role={editChapterData.role} />
-                                    <StatusPill tone="default">
-                                        {`Chapter ${editChapterData.chapter.chapterNum}`}
-                                    </StatusPill>
-                                </div>
-                                <div className="space-y-1">
-                                    <CardTitle className="text-2xl font-semibold tracking-tight text-slate-950">
-                                        {novel.novelTitle}
-                                    </CardTitle>
-                                    <CardDescription className="text-base text-slate-600">
-                                        {editChapterData.chapter.chapterTitle || `Chapter ${editChapterData.chapter.chapterNum}`}
-                                    </CardDescription>
-                                </div>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                <Button
-                                    type="button"
-                                    variant={mode === "view" ? "default" : "secondary"}
-                                    onClick={() => switchMode("view")}
-                                >
-                                    View
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant={mode === "edit" ? "default" : "secondary"}
-                                    onClick={() => switchMode("edit")}
-                                    disabled={editChapterData.role === "viewer"}
-                                >
-                                    Edit Text
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant={mode === "label" ? "default" : "secondary"}
-                                    onClick={() => switchMode("label")}
-                                >
-                                    Label
-                                </Button>
-                                <Button type="button" variant="outline" onClick={() => void handleReloadFromError()}>
-                                    Refresh Snapshot
-                                </Button>
+        <main className="min-h-screen bg-[#f6f2ea] text-slate-900">
+            <header className="sticky top-0 z-30 border-b border-black/10 bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
+                <div className="mx-auto flex w-full max-w-[1680px] flex-wrap items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <Button type="button" variant="outline" asChild>
+                            <Link to={AppRoutes.DASHBOARD}>Home</Link>
+                        </Button>
+                        <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold text-slate-950">{novel.novelTitle}</div>
+                            <div className="truncate text-xs text-slate-500">
+                                Chapter {editChapterData.chapter.chapterNum}
+                                {editChapterData.chapter.chapterTitle ? `: ${editChapterData.chapter.chapterTitle}` : ""}
                             </div>
                         </div>
-                        {errorMessages.length > 0 ? (
-                            <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-left text-sm text-amber-950">
-                                <div className="font-semibold">Editor needs attention</div>
-                                <ul className="mt-2 space-y-1 text-amber-900">
-                                    {errorMessages.map((message, index) => (
-                                        <li key={`${message}-${index}`}>{message}</li>
-                                    ))}
-                                </ul>
-                                {showOutdatedReload ? (
-                                    <div className="mt-3">
-                                        <Button type="button" size="sm" onClick={() => void handleReloadFromError()}>
-                                            Reload Latest Chapter Content
-                                        </Button>
-                                    </div>
-                                ) : null}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <select
+                            value={editChapterData.chapter.chapterId}
+                            onChange={(event) => onSelectChapter(event.target.value)}
+                            className="h-9 rounded-md border border-black/10 bg-white px-3 text-sm outline-none"
+                        >
+                            {chapterList.map((chapter) => (
+                                <option key={chapter.chapterId} value={chapter.chapterId}>
+                                    Chapter {chapter.chapterNum}: {chapter.chapterTitle || `Chapter ${chapter.chapterNum}`}
+                                </option>
+                            ))}
+                        </select>
+                        <StatusPill tone={isSyncing ? "warning" : "success"}>{isSyncing ? "Syncing" : "In Sync"}</StatusPill>
+                        <RoleTone role={editChapterData.role} />
+                        <Button type="button" variant="outline" onClick={() => void handleReloadFromError()}>
+                            Refresh
+                        </Button>
+                    </div>
+                </div>
+                {errorMessages.length > 0 ? (
+                    <div className="mx-auto mt-3 w-full max-w-[1680px] rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                        <div className="font-semibold">Editor needs attention</div>
+                        <ul className="mt-2 space-y-1 text-amber-900">
+                            {errorMessages.map((message, index) => (
+                                <li key={`${message}-${index}`}>{message}</li>
+                            ))}
+                        </ul>
+                        {showOutdatedReload ? (
+                            <div className="mt-3">
+                                <Button type="button" size="sm" onClick={() => void handleReloadFromError()}>
+                                    Reload Latest Chapter Content
+                                </Button>
                             </div>
                         ) : null}
-                    </CardHeader>
-                </Card>
+                    </div>
+                ) : null}
+            </header>
 
-                <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)] 2xl:grid-cols-[280px_minmax(0,1.25fr)_minmax(320px,380px)]">
-                    <Card className="border-0 bg-white/78 shadow-[0_12px_40px_rgba(38,29,18,0.08)] backdrop-blur xl:self-start">
-                        <CardHeader className="border-b border-black/5 pb-4">
-                            <CardTitle>Chapters</CardTitle>
-                            <CardDescription>Switch chapters or add a new one without leaving the editor route.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="max-h-[26rem] space-y-2 overflow-auto pr-1">
-                                {chapterList.map((chapter) => {
-                                    const isCurrent = chapter.chapterId === editChapterData.chapter.chapterId;
-                                    return (
-                                        <button
-                                            key={chapter.chapterId}
-                                            type="button"
-                                            onClick={() => onSelectChapter(chapter.chapterId)}
-                                            className={`flex w-full flex-col rounded-2xl border px-4 py-3 text-left transition ${
-                                                isCurrent
-                                                    ? "border-amber-400 bg-amber-100/80 shadow-sm"
-                                                    : "border-black/5 bg-white/70 hover:border-amber-300 hover:bg-amber-50/70"
-                                            }`}
-                                        >
-                                            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-                                                Chapter {chapter.chapterNum}
-                                            </span>
-                                            <span className="mt-1 text-sm font-medium text-slate-900">
-                                                {chapter.chapterTitle || `Chapter ${chapter.chapterNum}`}
-                                            </span>
-                                        </button>
-                                    );
-                                })}
+            <div className="mx-auto grid w-full max-w-[1680px] gap-5 px-4 py-5 lg:grid-cols-[minmax(0,1fr)_380px] sm:px-6">
+                <section className="min-w-0">
+                    <div className="mx-auto min-h-[calc(100vh-7rem)] max-w-[920px] bg-white px-6 py-8 shadow-[0_18px_60px_rgba(30,24,16,0.14)] sm:px-10 lg:px-14">
+                        <div className="mb-6 flex flex-wrap items-start justify-between gap-3 border-b border-black/10 pb-4">
+                            <div>
+                                <h1 className="text-xl font-semibold text-slate-950">
+                                    {editChapterData.chapter.chapterTitle || `Chapter ${editChapterData.chapter.chapterNum}`}
+                                </h1>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    {mode === "edit" ? "Text editing" : mode === "label" ? "Labeling" : "Reading"} mode
+                                </p>
                             </div>
-                            <CreateChapterPanel
-                                chapterDraftNum={chapterDraftNum}
-                                chapterDraftTitle={chapterDraftTitle}
-                                chapterDraftIsPublic={chapterDraftIsPublic}
-                                createChapterError={createChapterError}
-                                isCreatingChapter={isCreatingChapter}
-                                disableCreation={editChapterData.role === "viewer"}
-                                onChapterDraftNumChange={onChapterDraftNumChange}
-                                onChapterDraftTitleChange={onChapterDraftTitleChange}
-                                onChapterDraftVisibilityChange={onChapterDraftVisibilityChange}
-                                onCreateChapter={onCreateChapter}
-                            />
-                        </CardContent>
-                    </Card>
+                            <div className="text-right text-xs text-slate-500">
+                                <div>{textSnapshot.length} characters</div>
+                                <div>Selection [{selection.start}, {selection.end})</div>
+                            </div>
+                        </div>
 
-                    <Card className="min-w-0 border-0 bg-white/86 shadow-[0_16px_50px_rgba(38,29,18,0.1)] backdrop-blur">
-                        <CardHeader className="border-b border-black/5 pb-4">
-                            <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
-                                <div>
-                                    <CardTitle>Chapter Surface</CardTitle>
-                                    <CardDescription>
-                                        {mode === "edit"
-                                            ? "Type directly into the dynamic editor. Text edits flush through the controller/runtime."
-                                            : mode === "label"
-                                                ? "Select text, switch groups, and create or adjust labels."
-                                                : "Review the chapter with label overlays active."}
-                                    </CardDescription>
-                                </div>
-                                <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-                                    <span>Selection [{selection.start}, {selection.end})</span>
-                                    <span>{selectedText ? JSON.stringify(selectedText) : "No selection"}</span>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="rounded-[1.6rem] border border-black/8 bg-[linear-gradient(180deg,_rgba(255,255,255,0.95),_rgba(250,246,240,0.9))] p-4 shadow-inner sm:p-5">
-                                <DynamicLabeledText
+                        <DynamicLabeledText
                                     caret={caret}
-                                    manager={controller.uiManager}
+                                    manager={segmentManager}
                                     render={renderer}
                                     containerStyle={{
-                                        minHeight: "32rem",
-                                        padding: "1rem 1.1rem",
-                                        borderRadius: "1.2rem",
-                                        border: "1px solid rgba(15, 23, 42, 0.08)",
-                                        background: "linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,244,236,0.94))",
+                                        minHeight: "calc(100vh - 16rem)",
                                         color: "#0f172a",
                                         fontFamily: "\"Iowan Old Style\", \"Palatino Linotype\", \"Book Antiqua\", serif",
                                         fontSize: "1.06rem",
@@ -1067,11 +1113,12 @@ function EditNovelWorkspace({
                                     onPointerDown={({ event }) => {
                                         event.preventDefault();
                                         setEditorActive(true);
+                                        setLabelPopup(null);
                                         const position = resolvePointerPosition(
                                             event.target,
                                             event.clientX,
                                             event.clientY,
-                                            controller.uiManager.getText().length,
+                                            segmentManager.getText().length,
                                         );
                                         dragAnchorRef.current = position;
                                         setCaret({ anchor: position, focus: position, visible: true });
@@ -1084,7 +1131,7 @@ function EditNovelWorkspace({
                                             event.target,
                                             event.clientX,
                                             event.clientY,
-                                            controller.uiManager.getText().length,
+                                            segmentManager.getText().length,
                                         );
                                         if (mode === "label") {
                                             emitEvent({ eventType: "hoverPos", pos: position });
@@ -1099,15 +1146,27 @@ function EditNovelWorkspace({
                                             event.target,
                                             event.clientX,
                                             event.clientY,
-                                            controller.uiManager.getText().length,
+                                            segmentManager.getText().length,
                                         );
-                                        if (dragAnchorRef.current !== null) {
-                                            setCaret({ anchor: dragAnchorRef.current, focus: position, visible: true });
-                                            dragAnchorRef.current = null;
-                                        }
+                                        const anchor = dragAnchorRef.current;
+                                        const nextCaret = anchor !== null
+                                            ? { anchor, focus: position, visible: true }
+                                            : { anchor: position, focus: position, visible: true };
+                                        setCaret(nextCaret);
+                                        dragAnchorRef.current = null;
                                         if (mode === "label") {
                                             emitEvent({ eventType: "clickPos", pos: position });
-                                            selectLabelAtPosition(position);
+                                            const start = Math.min(nextCaret.anchor, nextCaret.focus);
+                                            const end = Math.max(nextCaret.anchor, nextCaret.focus);
+                                            if (start < end) {
+                                                setLabelPopup({ type: "selection", x: event.clientX, y: event.clientY });
+                                            } else {
+                                                const candidates = findLabelsAtPosition(position);
+                                                selectLabelAtPosition(position);
+                                                setLabelPopup(candidates.length > 0
+                                                    ? { type: "labels", x: event.clientX, y: event.clientY, candidates, selectedIndex: 0 }
+                                                    : null);
+                                            }
                                         }
                                     }}
                                     onDoubleClick={({ event }) => {
@@ -1115,13 +1174,13 @@ function EditNovelWorkspace({
                                             event.target,
                                             event.clientX,
                                             event.clientY,
-                                            controller.uiManager.getText().length,
+                                            segmentManager.getText().length,
                                         );
-                                        const bounds = findWordBounds(controller.uiManager.getText(), position);
+                                        const bounds = findWordBounds(segmentManager.getText(), position);
                                         setCaret({ anchor: bounds.start, focus: bounds.end, visible: true });
                                         if (mode === "label") {
                                             emitEvent({ eventType: "clickPos", pos: position });
-                                            selectLabelAtPosition(position);
+                                            setLabelPopup({ type: "selection", x: event.clientX, y: event.clientY });
                                         }
                                     }}
                                     onFocus={() => {
@@ -1137,7 +1196,7 @@ function EditNovelWorkspace({
                                         }
                                     }}
                                     onKeyDown={({ event }) => {
-                                        const currentText = controller.uiManager.getText();
+                                        const currentText = segmentManager.getText();
                                         const currentCaret = caret;
                                         const textLength = currentText.length;
                                         const extend = event.shiftKey;
@@ -1226,7 +1285,7 @@ function EditNovelWorkspace({
                                         }
                                     }}
                                     onCopy={({ event }) => {
-                                        const copiedText = selectionText(controller.uiManager.getText(), caret);
+                                        const copiedText = selectionText(segmentManager.getText(), caret);
                                         if (!copiedText) {
                                             return;
                                         }
@@ -1234,7 +1293,7 @@ function EditNovelWorkspace({
                                         event.clipboardData.setData("text/plain", copiedText);
                                     }}
                                     onCut={({ event }) => {
-                                        const copiedText = selectionText(controller.uiManager.getText(), caret);
+                                        const copiedText = selectionText(segmentManager.getText(), caret);
                                         if (!copiedText || !canEditText) {
                                             return;
                                         }
@@ -1256,186 +1315,253 @@ function EditNovelWorkspace({
                                     onInput={({ event }) => {
                                         event.currentTarget.textContent = "";
                                     }}
-                                />
-                            </div>
-                            <div className="grid gap-3 lg:grid-cols-3">
-                                <div className="rounded-2xl border border-black/5 bg-slate-950/[0.03] px-4 py-3">
-                                    <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Editor state</div>
-                                    <div className="mt-2 space-y-1 text-sm text-slate-700">
-                                        <div>{editorActive ? "Focused" : "Blurred"}</div>
-                                        <div>{textSnapshot.length} characters</div>
-                                    </div>
-                                </div>
-                                <div className="rounded-2xl border border-black/5 bg-slate-950/[0.03] px-4 py-3">
-                                    <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Selection</div>
-                                    <div className="mt-2 space-y-1 text-sm text-slate-700">
-                                        <div>[{selection.start}, {selection.end})</div>
-                                        <div>{selectedText ? selectedText : "No text selected"}</div>
-                                    </div>
-                                </div>
-                                <div className="rounded-2xl border border-black/5 bg-slate-950/[0.03] px-4 py-3">
-                                    <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Sync</div>
-                                    <div className="mt-2 space-y-1 text-sm text-slate-700">
-                                        <div>{isSyncing ? "Pending requests are being flushed" : "No queued requests"}</div>
-                                        <div>{mode === "edit" ? "Text mode" : mode === "label" ? "Label mode" : "Read-only mode"}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                        />
+                    </div>
+                </section>
 
-                    <Card className="border-0 bg-white/80 shadow-[0_14px_44px_rgba(38,29,18,0.09)] backdrop-blur xl:col-span-2 2xl:col-span-1 2xl:self-start">
+                <aside className="lg:sticky lg:top-[5.25rem] lg:h-[calc(100vh-6.5rem)]">
+                    <Card className="h-full overflow-hidden border-0 bg-white shadow-[0_14px_44px_rgba(38,29,18,0.1)]">
                         <CardHeader className="border-b border-black/5 pb-4">
-                            <CardTitle>Labels</CardTitle>
-                            <CardDescription>Switch groups, stage new label groups, and adjust labels from the active selection.</CardDescription>
+                            <CardTitle>Tools</CardTitle>
+                            <CardDescription>Mode controls, labels, chapters, and future automation panels.</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-5">
-                            <div className="space-y-2">
-                                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Label groups</div>
-                                <div className="space-y-2">
-                                    {entries.map((entry) => {
-                                        const currentServerId = runtime.idRepo.getServerId("labelData", entry.labelData.labelDataId);
-                                        const isActive = entry.labelGroup.labelGroupId === activeGroupId;
-                                        const isReady = currentServerId !== null;
-                                        const canMutate = entry.visible && isReady && (entry.role === "editor" || entry.role === "owner");
-                                        const statusLabel = !entry.visible
-                                            ? "not loaded"
-                                            : !isReady
-                                                ? "preparing"
-                                                : canMutate
-                                                    ? "editable"
-                                                    : "view only";
+                        <CardContent className="h-[calc(100%-5.5rem)] overflow-auto px-4 py-4">
+                            <Tabs value={toolPanel} onValueChange={setToolPanel} className="h-full">
+                                <TabsList className="grid grid-cols-4">
+                                    <TabsTrigger value="mode">Mode</TabsTrigger>
+                                    <TabsTrigger value="labels">Labels</TabsTrigger>
+                                    <TabsTrigger value="chapters">Chapters</TabsTrigger>
+                                    <TabsTrigger value="future">More</TabsTrigger>
+                                </TabsList>
 
-                                        return (
-                                            <button
-                                                key={entry.labelGroup.labelGroupId}
-                                                type="button"
-                                                onClick={() => switchLabelGroup(entry.labelGroup.labelGroupId)}
-                                                className={`flex w-full items-start justify-between rounded-2xl border px-4 py-3 text-left transition ${
-                                                    isActive
-                                                        ? "border-amber-400 bg-amber-100/80"
-                                                        : "border-black/5 bg-white/70 hover:border-amber-300 hover:bg-amber-50/70"
-                                                }`}
-                                            >
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span
-                                                            className="h-3 w-3 rounded-full border border-black/10"
-                                                            style={{ backgroundColor: toHex(runtime.colourMapping.get(entry.labelGroup.labelGroupId) ?? 0) }}
-                                                        />
-                                                        <span className="text-sm font-medium text-slate-900">
-                                                            {entry.labelGroup.labelGroupName}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-xs text-slate-500">
-                                                        {entry.labels.length} labels
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-col items-end gap-2">
-                                                    <RoleTone role={entry.role} />
-                                                    <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                                        {statusLabel}
-                                                    </span>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            <div className="space-y-3 rounded-2xl border border-black/5 bg-slate-950/[0.03] p-4">
-                                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">New label group</div>
-                                <input
-                                    value={newGroupName}
-                                    onChange={(event) => setNewGroupName(event.target.value)}
-                                    placeholder="Character glossary"
-                                    className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-400"
-                                />
-                                <Button type="button" className="w-full" onClick={addLabelGroup} disabled={newGroupName.trim().length === 0}>
-                                    Add Label Group
-                                </Button>
-                            </div>
-
-                            <div className="space-y-3 rounded-2xl border border-black/5 bg-slate-950/[0.03] p-4">
-                                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Active group controls</div>
-                                {activeEntry ? (
-                                    <div className="space-y-3">
-                                        <div className="rounded-xl border border-black/5 bg-white/80 px-3 py-2 text-sm text-slate-700">
-                                            {activeEntry.labelGroup.labelGroupName}
-                                        </div>
-                                        <div className="grid gap-2 sm:grid-cols-2">
-                                            <Button type="button" variant="secondary" onClick={addLabelFromSelection} disabled={!canOperateOnSelection}>
-                                                Add From Selection
-                                            </Button>
-                                            <Button type="button" variant="secondary" onClick={updateSelectedLabelFromSelection} disabled={!selectedLabel || !canOperateOnSelection}>
-                                                Use Selection For Label
-                                            </Button>
-                                            <Button type="button" variant="outline" onClick={deleteSelectedLabel} disabled={!selectedLabel || !activeEntryCanMutate}>
-                                                Remove Selected Label
-                                            </Button>
-                                            <Button type="button" variant="outline" onClick={() => setSelectedLabelId(null)} disabled={!selectedLabel}>
-                                                Clear Label Selection
-                                            </Button>
-                                        </div>
-                                        {!activeEntry.visible ? (
-                                            <p className="text-xs text-slate-500">
-                                                This group exists, but its labels were not included in the current editor snapshot.
-                                            </p>
-                                        ) : null}
-                                        {activeEntry.visible && !activeEntryCanMutate ? (
-                                            <p className="text-xs text-slate-500">
-                                                This group is visible, but it is not ready for writes yet or your role is read-only.
-                                            </p>
-                                        ) : null}
+                                <TabsContent value="mode" className="space-y-4 pt-3">
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <Button type="button" variant={mode === "view" ? "default" : "secondary"} onClick={() => switchMode("view")}>View</Button>
+                                        <Button type="button" variant={mode === "edit" ? "default" : "secondary"} onClick={() => switchMode("edit")} disabled={editChapterData.role === "viewer"}>Edit</Button>
+                                        <Button type="button" variant={mode === "label" ? "default" : "secondary"} onClick={() => switchMode("label")}>Label</Button>
                                     </div>
-                                ) : (
-                                    <p className="text-sm text-slate-500">Choose a label group to start labeling.</p>
-                                )}
-                            </div>
+                                    <div className="rounded-lg border border-black/10 bg-slate-50 p-3 text-sm text-slate-700">
+                                        <div>{editorActive ? "Editor focused" : "Editor blurred"}</div>
+                                        <div>{textSnapshot.length} characters</div>
+                                        <div>Selection [{selection.start}, {selection.end})</div>
+                                        <div className="truncate">{selectedText || "No selected text"}</div>
+                                    </div>
+                                </TabsContent>
 
-                            <div className="space-y-2">
-                                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Labels in active group</div>
-                                <div className="max-h-[28rem] space-y-2 overflow-auto pr-1">
-                                    {activeEntry?.labels.length ? activeEntry.labels.map((label) => {
-                                        const isSelected = label.labelId === selectedLabelId;
-                                        return (
-                                            <button
-                                                key={label.labelId}
-                                                type="button"
-                                                onClick={() => setSelectedLabelId(label.labelId)}
-                                                className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
-                                                    isSelected
-                                                        ? "border-amber-400 bg-amber-100/80"
-                                                        : "border-black/5 bg-white/75 hover:border-amber-300 hover:bg-amber-50/70"
-                                                }`}
-                                            >
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div>
-                                                        <div className="text-sm font-medium text-slate-900">{label.labelWord}</div>
-                                                        <div className="mt-1 text-xs text-slate-500">
-                                                            [{label.labelStart}, {label.labelEnd}) {label.labelEntityGroup ? `• ${label.labelEntityGroup}` : ""}
-                                                        </div>
+                                <TabsContent value="labels" className="space-y-4 pt-3">
+                                    <div className="space-y-2">
+                                        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Label groups</div>
+                                        {labelGroupViews.map((group) => {
+                                            const labels = runtime.dataManager.getForGroup.labels(group.labelGroupId);
+                                            const isActive = group.labelGroupId === activeGroupId;
+                                            return (
+                                                <div key={group.labelGroupId} className={`rounded-lg border p-3 ${isActive ? "border-amber-400 bg-amber-50" : "border-black/10 bg-white"}`}>
+                                                    <button type="button" className="flex w-full items-start justify-between gap-3 text-left" onClick={() => switchLabelGroup(group.labelGroupId)}>
+                                                        <span className="min-w-0">
+                                                            <span className="flex items-center gap-2">
+                                                                <span className="h-3 w-3 rounded-full border border-black/10" style={{ backgroundColor: toHex(group.color) }} />
+                                                                <span className="truncate text-sm font-medium text-slate-900">{group.labelGroupName}</span>
+                                                            </span>
+                                                            <span className="mt-1 block text-xs text-slate-500">{labels.length} labels, {group.loadingStatus}</span>
+                                                        </span>
+                                                        <RoleTone role={group.role} />
+                                                    </button>
+                                                    <div className="mt-3 grid grid-cols-2 gap-2">
+                                                        <Button type="button" size="sm" variant="outline" onClick={() => toggleLabelGroupVisibility(group.labelGroupId, !group.visible)}>
+                                                            {group.visible ? "Hide" : "Show"}
+                                                        </Button>
+                                                        <Button type="button" size="sm" variant="outline" onClick={() => reloadLabelGroup(group.labelGroupId)}>
+                                                            Refresh
+                                                        </Button>
                                                     </div>
-                                                    <LabelStateBadge label={label} />
                                                 </div>
-                                                <div className="mt-2 text-xs text-slate-500">
-                                                    Score {label.labelScore.toFixed(2)}
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className="space-y-3 rounded-lg border border-black/10 bg-slate-50 p-3">
+                                        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">New label group</div>
+                                        <Input value={newGroupName} onChange={(event) => setNewGroupName(event.target.value)} placeholder="Character glossary" />
+                                        <Button type="button" className="w-full" onClick={addLabelGroup} disabled={newGroupName.trim().length === 0}>
+                                            Add Label Group
+                                        </Button>
+                                    </div>
+
+                                    <div className="space-y-3 rounded-lg border border-black/10 bg-slate-50 p-3">
+                                        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Active group</div>
+                                        {activeGroupView ? (
+                                            <>
+                                                <div className="text-sm font-medium text-slate-900">{activeGroupView.labelGroupName}</div>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <Button type="button" variant="secondary" onClick={() => addLabelFromSelection()} disabled={!canOperateOnSelection}>
+                                                        Add Selection
+                                                    </Button>
+                                                    <Button type="button" variant="secondary" onClick={() => updateLabelFromSelection(selectedLabel)} disabled={!selectedLabel || !canOperateOnSelection}>
+                                                        Update Label
+                                                    </Button>
+                                                    <Button type="button" variant="outline" onClick={() => deleteLabelRef(selectedLabel)} disabled={!selectedLabel || !(selectedLabel.role === "editor" || selectedLabel.role === "owner")}>
+                                                        Delete Label
+                                                    </Button>
+                                                    <Button type="button" variant="outline" onClick={() => setSelectedLabelRef(null)} disabled={!selectedLabel}>
+                                                        Clear
+                                                    </Button>
                                                 </div>
-                                            </button>
-                                        );
-                                    }) : (
-                                        <div className="rounded-2xl border border-dashed border-black/10 bg-white/60 px-4 py-4 text-sm text-slate-500">
-                                            {activeEntry
-                                                ? "No labels in this group yet."
-                                                : "No active label group selected."}
+                                            </>
+                                        ) : (
+                                            <p className="text-sm text-slate-500">Choose a label group to start labeling.</p>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Labels in active group</div>
+                                        <div className="max-h-72 space-y-2 overflow-auto pr-1">
+                                            {activeLabels.length > 0 ? activeLabels.map((label) => {
+                                                const isSelected = selectedLabelRef?.labelGroupId === activeGroupId && selectedLabelRef.labelId === label.labelId;
+                                                return (
+                                                    <button
+                                                        key={label.labelId}
+                                                        type="button"
+                                                        onClick={() => activeGroupId ? setSelectedLabelRef({ labelGroupId: activeGroupId, labelId: label.labelId }) : undefined}
+                                                        className={`w-full rounded-lg border px-3 py-3 text-left transition ${isSelected ? "border-amber-400 bg-amber-50" : "border-black/10 bg-white hover:border-amber-300"}`}
+                                                    >
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div>
+                                                                <div className="text-sm font-medium text-slate-900">{label.labelWord}</div>
+                                                                <div className="mt-1 text-xs text-slate-500">
+                                                                    [{label.labelStart}, {label.labelEnd}) {label.labelEntityGroup ? `- ${label.labelEntityGroup}` : ""}
+                                                                </div>
+                                                            </div>
+                                                            <LabelStateBadge label={label} />
+                                                        </div>
+                                                    </button>
+                                                );
+                                            }) : (
+                                                <div className="rounded-lg border border-dashed border-black/10 bg-white px-4 py-4 text-sm text-slate-500">
+                                                    {activeGroupView ? "No labels in this group yet." : "No active label group selected."}
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                            </div>
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="chapters" className="space-y-4 pt-3">
+                                    <div className="max-h-72 space-y-2 overflow-auto pr-1">
+                                        {chapterList.map((chapter) => (
+                                            <button
+                                                key={chapter.chapterId}
+                                                type="button"
+                                                onClick={() => onSelectChapter(chapter.chapterId)}
+                                                className={`flex w-full flex-col rounded-lg border px-3 py-3 text-left ${chapter.chapterId === editChapterData.chapter.chapterId ? "border-amber-400 bg-amber-50" : "border-black/10 bg-white"}`}
+                                            >
+                                                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Chapter {chapter.chapterNum}</span>
+                                                <span className="mt-1 text-sm font-medium text-slate-900">{chapter.chapterTitle || `Chapter ${chapter.chapterNum}`}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <CreateChapterPanel
+                                        chapterDraftNum={chapterDraftNum}
+                                        chapterDraftTitle={chapterDraftTitle}
+                                        chapterDraftIsPublic={chapterDraftIsPublic}
+                                        createChapterError={createChapterError}
+                                        isCreatingChapter={isCreatingChapter}
+                                        disableCreation={editChapterData.role === "viewer"}
+                                        onChapterDraftNumChange={onChapterDraftNumChange}
+                                        onChapterDraftTitleChange={onChapterDraftTitleChange}
+                                        onChapterDraftVisibilityChange={onChapterDraftVisibilityChange}
+                                        onCreateChapter={onCreateChapter}
+                                    />
+                                </TabsContent>
+
+                                <TabsContent value="future" className="space-y-3 pt-3">
+                                    <div className="rounded-lg border border-dashed border-black/10 bg-slate-50 p-4 text-sm text-slate-500">Auto-labels panel placeholder.</div>
+                                    <div className="rounded-lg border border-dashed border-black/10 bg-slate-50 p-4 text-sm text-slate-500">Filters panel placeholder.</div>
+                                </TabsContent>
+                            </Tabs>
                         </CardContent>
                     </Card>
-                </div>
+                </aside>
             </div>
+
+            {labelPopup ? (
+                <div
+                    data-label-popup
+                    className="fixed z-50 w-80 rounded-lg border border-black/10 bg-white p-3 text-sm shadow-[0_18px_50px_rgba(15,23,42,0.22)]"
+                    style={{ left: clamp(labelPopup.x + 12, 12, window.innerWidth - 340), top: clamp(labelPopup.y + 12, 12, window.innerHeight - 360) }}
+                >
+                    {labelPopup.type === "selection" ? (
+                        <div className="space-y-3">
+                            <div className="font-semibold text-slate-950">Add label</div>
+                            <select
+                                value={popupGroupId ?? ""}
+                                onChange={(event) => switchLabelGroup(event.target.value || null)}
+                                className="w-full rounded-md border border-black/10 bg-white px-3 py-2"
+                            >
+                                {labelGroupViews.map((group) => (
+                                    <option key={group.labelGroupId} value={group.labelGroupId}>{group.labelGroupName}</option>
+                                ))}
+                            </select>
+                            <Input value={labelEntityGroup} onChange={(event) => setLabelEntityGroup(event.target.value)} placeholder="Entity group" />
+                            <Input value={labelScore} onChange={(event) => setLabelScore(event.target.value)} placeholder="Score" />
+                            <label className="flex items-center gap-2 text-sm text-slate-700">
+                                <input type="checkbox" checked={labelDirty} onChange={(event) => setLabelDirty(event.target.checked)} />
+                                Mark dirty
+                            </label>
+                            <div className="flex gap-2">
+                                <Button type="button" className="flex-1" onClick={() => addLabelFromSelection(popupGroupId ?? undefined)} disabled={!popupGroupId}>
+                                    Add
+                                </Button>
+                                <Button type="button" variant="outline" onClick={() => setLabelPopup(null)}>Cancel</Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="font-semibold text-slate-950">Labels at cursor</div>
+                            <select
+                                value={labelPopup.selectedIndex}
+                                onChange={(event) => {
+                                    const selectedIndex = Number(event.target.value);
+                                    setLabelPopup({ ...labelPopup, selectedIndex });
+                                    const selected = labelPopup.candidates[selectedIndex];
+                                    if (selected) {
+                                        setSelectedLabelRef(selected);
+                                        switchLabelGroup(selected.labelGroupId);
+                                    }
+                                }}
+                                className="w-full rounded-md border border-black/10 bg-white px-3 py-2"
+                            >
+                                {clickedPopupLabels.map((candidate, index) => (
+                                    <option key={`${candidate.labelGroupId}:${candidate.label.labelId}`} value={index}>
+                                        {candidate.labelGroupName}: {candidate.label.labelWord}
+                                    </option>
+                                ))}
+                            </select>
+                            {clickedPopupLabel ? (
+                                <>
+                                    <div className="rounded-md border border-black/10 bg-slate-50 p-3">
+                                        <div className="font-medium text-slate-900">{clickedPopupLabel.label.labelWord}</div>
+                                        <div className="mt-1 text-xs text-slate-500">[{clickedPopupLabel.label.labelStart}, {clickedPopupLabel.label.labelEnd})</div>
+                                        <div className="mt-1 text-xs text-slate-500">{clickedPopupLabel.label.labelEntityGroup || "No entity group"}</div>
+                                    </div>
+                                    <Input value={labelEntityGroup} onChange={(event) => setLabelEntityGroup(event.target.value)} placeholder="Entity group" />
+                                    <Input value={labelScore} onChange={(event) => setLabelScore(event.target.value)} placeholder="Score" />
+                                    <label className="flex items-center gap-2 text-sm text-slate-700">
+                                        <input type="checkbox" checked={labelDirty} onChange={(event) => setLabelDirty(event.target.checked)} />
+                                        Mark dirty
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button type="button" variant="secondary" onClick={() => updateLabelFromSelection(clickedPopupLabel)} disabled={selection.start >= selection.end}>
+                                            Use Selection
+                                        </Button>
+                                        <Button type="button" variant="outline" onClick={() => deleteLabelRef(clickedPopupLabel)}>
+                                            Delete
+                                        </Button>
+                                    </div>
+                                </>
+                            ) : null}
+                        </div>
+                    )}
+                </div>
+            ) : null}
         </main>
     );
 }
@@ -1488,6 +1614,12 @@ export function EditNovelPage({ loadLabelsNum = 3 }: { loadLabelsNum: number }) 
         [chapterId, loadLabelsNum, novelId],
     );
 
+    const [currentUser, currentUserLoading, currentUserError, reloadCurrentUser] = useLoader<User | null>(
+        null,
+        loadCurrentUser,
+        [],
+    );
+
     const setChapterSearchParam = useCallback((nextChapterId: string) => {
         const nextParams = new URLSearchParams(searchParams);
         nextParams.set("chapter-id", nextChapterId);
@@ -1516,8 +1648,9 @@ export function EditNovelPage({ loadLabelsNum = 3 }: { loadLabelsNum: number }) 
             reloadNovel(),
             reloadChapterList(),
             reloadEditChapterData(),
+            reloadCurrentUser(),
         ]);
-    }, [reloadChapterList, reloadEditChapterData, reloadNovel]);
+    }, [reloadChapterList, reloadCurrentUser, reloadEditChapterData, reloadNovel]);
 
     const createChapter = useCallback(async () => {
         if (!novelId) {
@@ -1579,8 +1712,11 @@ export function EditNovelPage({ loadLabelsNum = 3 }: { loadLabelsNum: number }) 
         );
     }
 
-    const loadingBaseState = novelLoading || chapterListLoading || (Boolean(chapterId) && !editChapterData && editChapterDataLoading);
-    const topLevelError = novelError ?? chapterListError;
+    const loadingBaseState = novelLoading
+        || chapterListLoading
+        || currentUserLoading
+        || (Boolean(chapterId) && !editChapterData && editChapterDataLoading);
+    const topLevelError = novelError ?? chapterListError ?? currentUserError;
 
     if (loadingBaseState && !novel && chapterList.length === 0) {
         return (
@@ -1688,7 +1824,7 @@ export function EditNovelPage({ loadLabelsNum = 3 }: { loadLabelsNum: number }) 
         );
     }
 
-    if (!novel || !editChapterData) {
+    if (!novel || !editChapterData || !currentUser) {
         return (
             <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(245,187,110,0.24),_transparent_34%),linear-gradient(180deg,_#f8f3ea_0%,_#f4efe5_32%,_#efe8dc_100%)] px-4 py-10">
                 <Card className="max-w-xl border-0 bg-white/85 text-left shadow-[0_18px_50px_rgba(38,29,18,0.12)] backdrop-blur">
@@ -1706,6 +1842,7 @@ export function EditNovelPage({ loadLabelsNum = 3 }: { loadLabelsNum: number }) 
             key={`${editChapterData.chapter.chapterId}:${editChapterData.chapterContent.chapterContentId}`}
             editChapterData={editChapterData}
             novel={novel}
+            currentUser={currentUser}
             chapterList={chapterList}
             chapterDraftNum={chapterDraftNum}
             chapterDraftTitle={chapterDraftTitle}

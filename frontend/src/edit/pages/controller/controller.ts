@@ -1,13 +1,36 @@
-import { useRef, useState } from "react";
-import { type Controller, type DataManager, type ProvisionalId, type RequestManager, type Signal, type UIManager, type UserEvent } from "./types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { makeDecoratedSignal, type Controller, type DecoratedSignal, type LabelGroupView, type ProvisionalId, type Runtime, type Signal, type UserEvent } from "./types";
 import { type EditChapterData } from "@/client";
-import type { Color } from "@/components/labeled-text-lib/builtin/colors";
+import { generateRandomColor } from "@/components/labeled-text-lib/builtin/colors";
 
 
-export function useController( editChapterData : EditChapterData, getMode: () => "edit" | "label" | "view", setMode: (mode: "edit" | "label" | "view") => void, { requestManager, dataManager, colourMapping, uiManager} : { requestManager: RequestManager; dataManager: DataManager; colourMapping: Map<ProvisionalId, Color>; uiManager: UIManager }, setErrors : (e : Error[] | null) => void): Controller {
-    
+function buildLabelGroupViews(
+    dataManager: Runtime["dataManager"],
+    visibilityMapping: Runtime["visibilityMapping"],
+    colorMapping: Runtime["colorMapping"]
+): LabelGroupView[] {
+    return dataManager.getGroups().map((group) : LabelGroupView => ({
+        labelGroupId: group.labelGroupId,
+        labelGroupName: dataManager.getForGroup.name(group.labelGroupId),
+        role: dataManager.getForGroup.role(group.labelGroupId),
+        loadingStatus: dataManager.getForGroup.loadingStatus(group.labelGroupId),
+        visible: visibilityMapping.get(group.labelGroupId) ?? false,
+        color: colorMapping.get(group.labelGroupId) ?? 0
+    }))
+}
+
+export function useController( editChapterData : EditChapterData, getMode: () => "edit" | "label" | "view", setMode: (mode: "edit" | "label" | "view") => void, { requestManager, dataManager, colorMapping, uiManager, visibilityMapping } : Runtime, setErrors : (e : Error[] | null) => void): Controller {
     const [activeLabelGroupId, setActiveLabelGroupId] = useState<ProvisionalId | null>(null)
+    const [labelGroupViews, setLabelGroupViews] = useState<LabelGroupView[]>(() => buildLabelGroupViews(dataManager, visibilityMapping, colorMapping))
 
+    const syncLabelGroupViews = useCallback(() => {
+        setLabelGroupViews(buildLabelGroupViews(dataManager, visibilityMapping, colorMapping))
+    }, [dataManager, visibilityMapping, colorMapping])
+    useEffect(() => {
+        dataManager.attachLabelGroupSyncHandler(syncLabelGroupViews)
+
+        return () => dataManager.attachLabelGroupSyncHandler(() => {}) // detach handler on unmount
+    }, [dataManager, syncLabelGroupViews])
     
     const clickedLabelIdsRef = useRef<ProvisionalId[]>([])
     const hoveredLabelIdsRef = useRef<ProvisionalId[]>([])
@@ -20,7 +43,11 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
         }
         if (getMode() !== "edit") {
             setErrors([new Error("Received text operation event while not in edit mode")])
-        } else {
+        } 
+        else if (editChapterData.role === "viewer") {
+            setErrors([new Error("You do not have permission to edit")])
+        }
+        else {
             if (queueStatus.current === "labelOps") {
                 const requestEvents = dataManager.flushLabelOps()
                 requestEvents.forEach((requestEvent) => requestManager.enqueueRequest(requestEvent))
@@ -29,7 +56,7 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
             if (event.op.op === "insert") {
                 try {
                     dataManager.insertTextAt(event.op.start, event.op.text)
-                    uiManager.insertTextAt(event.op.start, event.op.text)
+                    uiManager.segmentManager.insertTextAt(event.op.start, event.op.text)
                 } catch (err) {
                     setErrors([err instanceof Error ? err : new Error(String(err))])
                 }
@@ -37,7 +64,7 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
             else if (event.op.op === "delete") {
                 try {
                     dataManager.deleteTextAt(event.op.start, event.op.text.length)
-                    uiManager.deleteTextAt(event.op.start, event.op.text.length)
+                    uiManager.segmentManager.deleteTextAt(event.op.start, event.op.text.length)
                 } catch (err) {
                     setErrors([err instanceof Error ? err : new Error(String(err))])
                 }
@@ -51,7 +78,11 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
         }
         if (getMode() !== "label") {
             setErrors([new Error("Received label operation event while not in label mode")])
-        } else {
+        } 
+        else if (dataManager.getForGroup.role(event.labelGroupId) === "viewer") {
+            setErrors([new Error("You do not have permission to edit labels")])
+        }
+        else {
             if (queueStatus.current === "textOps") {
                 const requestEvents = dataManager.flushTextOps()
                 requestEvents.forEach((requestEvent) => requestManager.enqueueRequest(requestEvent))
@@ -59,7 +90,7 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
             queueStatus.current = "labelOps"
             if (event.op.op === "add") {
                 try {
-                    const labelDataId = dataManager.getEntries().find((entry) => entry.labelGroup.labelGroupId === event.labelGroupId)?.labelData.labelDataId
+                    const labelDataId = dataManager.getForGroup.labelDataId(event.labelGroupId)
                     if (!labelDataId) {
                         throw new Error(`Label data not found for label group ID ${event.labelGroupId}`)
                     }
@@ -69,16 +100,16 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
                         event.op.startPos,
                         event.op.endPos,
                         event.op.word,
-                        event.op.entityGroup || undefined,
-                        event.op.score,
-                        event.op.dirty
+                        event.op.entityGroup ?? undefined,
+                        event.op.score ?? undefined,
+                        event.op.dirty ?? undefined
                     )
-                    uiManager.addLabel(provisionalLabelId, {
+                    uiManager.segmentManager.addLabel(provisionalLabelId, {
                         style: [
-                            { color: colourMapping.get(event.labelGroupId)! }, { 
-                                visible: true, 
+                            { color: colorMapping.get(event.labelGroupId)! }, { 
+                                visible: visibilityMapping.get(event.labelGroupId)!, 
                                 mutable: (() => {
-                                    const role = dataManager.getEntries().find((entry) => entry.labelGroup.labelGroupId === event.labelGroupId)!.role
+                                    const role = dataManager.getForGroup.role(event.labelGroupId)
                                     return role === "editor" || role === "owner"
                                 })(),
                                 cursorStatus: "none",
@@ -92,7 +123,7 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
             }
             else if (event.op.op === "delete") {
                 try {
-                    const labelDataId = dataManager.getEntries().find((entry) => entry.labelGroup.labelGroupId === event.labelGroupId)?.labelData.labelDataId
+                    const labelDataId = dataManager.getForGroup.labelDataId(event.labelGroupId)
                     if (!labelDataId) {
                         throw new Error(`Label data not found for label group ID ${event.labelGroupId}`)
                     }
@@ -102,14 +133,14 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
                         event.op.startPos,
                         event.op.endPos
                     )
-                    uiManager.removeLabel(labelId)
+                    uiManager.segmentManager.removeLabel(labelId)
                 } catch (err) {
                     setErrors([err instanceof Error ? err : new Error(String(err))])
                 }
             }
             else {
                 try {
-                    const labelDataId = dataManager.getEntries().find((entry) => entry.labelGroup.labelGroupId === event.labelGroupId)?.labelData.labelDataId
+                    const labelDataId = dataManager.getForGroup.labelDataId(event.labelGroupId)
                     if (!labelDataId) {
                         throw new Error(`Label data not found for label group ID ${event.labelGroupId}`)
                     }
@@ -121,21 +152,18 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
                         event.op.newStartPos,
                         event.op.newEndPos,
                         event.op.newWord,
-                        event.op.entityGroup || undefined,
-                        event.op.score || undefined,
-                        event.op.dirty || undefined
+                        event.op.entityGroup ?? undefined,
+                        event.op.score ?? undefined,
+                        event.op.dirty ?? undefined
                     )
-                    uiManager.updateLabel(labelId, {
+                    uiManager.segmentManager.updateLabel(labelId, {
                         style: [
                             { 
-                                color: colourMapping.get(event.labelGroupId)! 
+                                color: colorMapping.get(event.labelGroupId)! 
                             }, 
                             { 
-                                visible: true, 
-                                mutable: (() => {
-                                    const role = dataManager.getEntries().find((entry) => entry.labelGroup.labelGroupId === event.labelGroupId)!.role
-                                    return role === "editor" || role === "owner"
-                                })(),
+                                visible: visibilityMapping.get(event.labelGroupId)!, 
+                                mutable: dataManager.getForGroup.role(event.labelGroupId) === "editor" || dataManager.getForGroup.role(event.labelGroupId) === "owner",
                                 cursorStatus: "none",
                                 active: event.labelGroupId === activeLabelGroupId
                             }
@@ -155,7 +183,8 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
         }
         try {
             const [provisionalLabelGroupId, requestEvents] = dataManager.addLabelGroup(event.labelGroupName)
-            colourMapping.set(provisionalLabelGroupId, Math.floor(Math.random() * 16777215))
+            colorMapping.set(provisionalLabelGroupId, generateRandomColor())
+            visibilityMapping.set(provisionalLabelGroupId, false)
             if (queueStatus.current === "textOps") {
                 const flushedRequestEvents = dataManager.flushTextOps()
                 flushedRequestEvents.forEach((requestEvent) => requestManager.enqueueRequest(requestEvent))
@@ -170,6 +199,7 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
         } catch (err) {
             setErrors([err instanceof Error ? err : new Error(String(err))])
         }
+        syncLabelGroupViews()
     }
 
     const handleSwitchLabelGroupEvent = (event : UserEvent) => {
@@ -182,38 +212,10 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
         }
         try {
             if (event.labelGroupId !== activeLabelGroupId) {
-                const curEntry = dataManager.getEntries().find((entry) => entry.labelGroup.labelGroupId === activeLabelGroupId)
-                curEntry?.labels.forEach((label) => { 
-                    const lab = uiManager.getLabel(label.labelId)
-                    uiManager.updateLabel(label.labelId, {
-                        interval: lab.interval,
-                        style: [
-                            {
-                                ...lab.style[0]
-                            },
-                            {
-                                ...lab.style[1],
-                                active: false
-                            }
-                        ]
-                    })
-                })
-                const newEntry = dataManager.getEntries().find((entry) => entry.labelGroup.labelGroupId === event.labelGroupId)
-                newEntry?.labels.forEach((label) => { 
-                    const lab = uiManager.getLabel(label.labelId)
-                    uiManager.updateLabel(label.labelId, {
-                        interval: lab.interval,
-                        style: [
-                            {
-                                ...lab.style[0]
-                            },
-                            {
-                                ...lab.style[1],
-                                active: true
-                            }
-                        ]
-                    })
-                })
+                const activeLabels = activeLabelGroupId !== null ? dataManager.getForGroup.labels(activeLabelGroupId) : []
+                uiManager.toggleActiveStatus(activeLabels.map((label) => label.labelId), false)
+                const eventLabelIds = event.labelGroupId !== null ? dataManager.getForGroup.labels(event.labelGroupId).map((label) => label.labelId) : []
+                uiManager.toggleActiveStatus(eventLabelIds, true)
                 setActiveLabelGroupId(event.labelGroupId)
             }
         } catch (err) {
@@ -233,60 +235,14 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
             const clickedLabelIds = clickedLabelIdsRef.current
             const pos = event.pos
             if (pos !== null) {
-                const newClickedLabelIds = dataManager.getEntries().flatMap((entry) => entry.labels.filter((label) => label.labelStart <= pos && label.labelEnd > pos).map((label) => label.labelId))
+                const newClickedLabelIds = dataManager.getGroups().flatMap((group) => dataManager.getForGroup.labels(group.labelGroupId).filter((label) => label.labelStart <= pos && label.labelEnd > pos).map((label) => label.labelId))
 
-                uiManager.batch(() => {
-                    clickedLabelIds.forEach((labelId) => {
-                        const lab = uiManager.getLabel(labelId)
-                        uiManager.updateLabel(labelId, {
-                            interval: lab.interval,
-                            style: [
-                                {
-                                    ...lab.style[0]
-                                },
-                                {
-                                    ...lab.style[1],
-                                    cursorStatus: "none"
-                                }
-                            ]
-                        })
-                    })
-                    newClickedLabelIds.forEach((labelId) => {
-                        const lab = uiManager.getLabel(labelId)
-                        uiManager.updateLabel(labelId, {
-                            interval: lab.interval,
-                            style: [
-                                {
-                                    ...lab.style[0]
-                                },
-                                {
-                                    ...lab.style[1],
-                                    cursorStatus: "clicked"
-                                }
-                            ]
-                        })
-                    })
-                })
+                uiManager.toggleClickStatus(clickedLabelIds, "none")
+                uiManager.toggleClickStatus(newClickedLabelIds, "clicked")
                 clickedLabelIdsRef.current = newClickedLabelIds
             }
             else {
-                uiManager.batch(() => {
-                    clickedLabelIds.forEach((labelId) => {
-                        const lab = uiManager.getLabel(labelId)
-                        uiManager.updateLabel(labelId, {
-                            interval: lab.interval,
-                            style: [
-                                {
-                                    ...lab.style[0]
-                                },
-                                {
-                                    ...lab.style[1],
-                                    cursorStatus: "none"
-                                }
-                            ]
-                        })
-                    })
-                })
+                uiManager.toggleClickStatus(clickedLabelIds, "none")
                 clickedLabelIdsRef.current = []
             }
         } catch (err) {
@@ -306,60 +262,13 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
             const hoveredLabelIds = hoveredLabelIdsRef.current
             const pos = event.pos
             if (pos !== null) {
-                const newHoveredLabelIds = dataManager.getEntries().flatMap((entry) => entry.labels.filter((label) => label.labelStart <= pos && label.labelEnd > pos).map((label) => label.labelId))
-
-                uiManager.batch(() => {
-                    hoveredLabelIds.forEach((labelId) => {
-                        const lab = uiManager.getLabel(labelId)
-                        uiManager.updateLabel(labelId, {
-                            interval: lab.interval,
-                            style: [
-                                {
-                                    ...lab.style[0]
-                                },
-                                {
-                                    ...lab.style[1],
-                                    cursorStatus: lab.style[1].cursorStatus === "clicked" ? "clicked" : "none"
-                                }
-                            ]
-                        })
-                    })
-                    newHoveredLabelIds.forEach((labelId) => {
-                        const lab = uiManager.getLabel(labelId)
-                        uiManager.updateLabel(labelId, {
-                            interval: lab.interval,
-                            style: [
-                                {
-                                    ...lab.style[0]
-                                },
-                                {
-                                    ...lab.style[1],
-                                    cursorStatus: lab.style[1].cursorStatus === "clicked" ? "clicked" : "hovered"
-                                }
-                            ]
-                        })
-                    })
-                })
+                const newHoveredLabelIds = dataManager.getGroups().flatMap((group) => dataManager.getForGroup.labels(group.labelGroupId).filter((label) => label.labelStart <= pos && label.labelEnd > pos).map((label) => label.labelId))
+                uiManager.toggleHoverStatus(hoveredLabelIds, "none")
+                uiManager.toggleHoverStatus(newHoveredLabelIds, "hovered")
                 hoveredLabelIdsRef.current = newHoveredLabelIds
             }
             else {
-                uiManager.batch(() => {
-                    hoveredLabelIds.forEach((labelId) => {
-                        const lab = uiManager.getLabel(labelId)
-                        uiManager.updateLabel(labelId, {
-                            interval: lab.interval,
-                            style: [
-                                {
-                                    ...lab.style[0]
-                                },
-                                {
-                                    ...lab.style[1],
-                                    cursorStatus: lab.style[1].cursorStatus === "clicked" ? "clicked" : "none"
-                                }
-                            ]
-                        })
-                    })
-                })
+                uiManager.toggleHoverStatus(hoveredLabelIds, "none")
                 hoveredLabelIdsRef.current = []
             }
         } catch (err) {
@@ -367,6 +276,69 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
         }
     }
 
+    const handleLoadGroupEvent = (event : UserEvent) => {
+        if (event.eventType !== "loadGroup") {
+            throw new Error("handleLoadGroupEvent called with non-loadGroup event")
+        }
+        if (getMode() !== "label") {
+            setErrors([new Error("Received load group event while not in label mode")])
+            return
+        }
+        try {
+            if (queueStatus.current === "labelOps") {
+                const requestEvents = dataManager.flushLabelOps()
+                requestEvents.forEach((requestEvent) => requestManager.enqueueRequest(requestEvent))
+                queueStatus.current = "none"
+            }
+            else if (queueStatus.current === "textOps") {
+                const requestEvents = dataManager.flushTextOps()
+                requestEvents.forEach((requestEvent) => requestManager.enqueueRequest(requestEvent))
+                queueStatus.current = "none"
+            }
+            const requestEvents = dataManager.reloadGroup(event.labelGroupId)
+            requestEvents.forEach((requestEvent) => requestManager.enqueueRequest(requestEvent))
+        } catch (err) {
+            setErrors([err instanceof Error ? err : new Error(String(err))])
+        }
+        syncLabelGroupViews()
+    }
+
+    const handleToggleVisibilityEvent = (event : UserEvent) => {
+        if (event.eventType !== "toggleVisibility") {
+            throw new Error("handleToggleVisibilityEvent called with non-toggleVisibility event")
+        }
+        try {
+            const labelIds = dataManager.getForGroup.labels(event.labelGroupId).map((label) => label.labelId)
+            uiManager.toggleVisibility(labelIds, event.visible)
+            visibilityMapping.set(event.labelGroupId, event.visible)
+        } catch (err) {
+            setErrors([err instanceof Error ? err : new Error(String(err))])
+        }
+        syncLabelGroupViews()
+    }
+
+    const handleSwitchModeEvent = (event : UserEvent) => {
+        if (event.eventType !== "switchMode") {
+            throw new Error("handleSwitchModeEvent called with non-switchMode event")
+        }
+        if (event.mode === "edit" && editChapterData.role === "viewer") {
+            setErrors([new Error("You do not have permission to switch to edit mode")])
+        }
+        else {
+            if (queueStatus.current === "textOps") {
+                const requestEvents = dataManager.flushTextOps()
+                requestEvents.forEach((requestEvent) => requestManager.enqueueRequest(requestEvent))
+                queueStatus.current = "none"
+            }
+            else if (queueStatus.current === "labelOps") {
+                const requestEvents = dataManager.flushLabelOps()
+                requestEvents.forEach((requestEvent) => requestManager.enqueueRequest(requestEvent))
+                queueStatus.current = "none"
+            }
+            setMode(event.mode)
+        }
+        syncLabelGroupViews()
+    }
 
     const handleEvent = (event : UserEvent) => {
         if (event.eventType === "textOp") {
@@ -379,22 +351,7 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
             handleAddLabelGroupEvent(event)
         }
         else if (event.eventType === "switchMode") {
-            if (event.mode === "edit" && editChapterData.role === "viewer") {
-                setErrors([new Error("You do not have permission to switch to edit mode")])
-            }
-            else {
-                if (queueStatus.current === "textOps") {
-                    const requestEvents = dataManager.flushTextOps()
-                    requestEvents.forEach((requestEvent) => requestManager.enqueueRequest(requestEvent))
-                    queueStatus.current = "none"
-                }
-                else if (queueStatus.current === "labelOps") {
-                    const requestEvents = dataManager.flushLabelOps()
-                    requestEvents.forEach((requestEvent) => requestManager.enqueueRequest(requestEvent))
-                    queueStatus.current = "none"
-                }
-                setMode(event.mode)
-            }
+            handleSwitchModeEvent(event)
         }
         else if (event.eventType === "switchLabelGroup") {
             handleSwitchLabelGroupEvent(event)
@@ -405,17 +362,68 @@ export function useController( editChapterData : EditChapterData, getMode: () =>
         else if (event.eventType === "hoverPos") {
             handleHoverPosEvent(event)
         }
+        else if (event.eventType === "loadGroup") {
+            handleLoadGroupEvent(event)
+        }
+        else if (event.eventType === "toggleVisibility") {
+            handleToggleVisibilityEvent(event)
+        }
         requestManager.onUserEvent(event)
     }
 
-    const handleSignal = (signal : Signal) => {
-        requestManager.handleSignal(signal)
-        dataManager.handleSignal(signal)
-    }
+    const handleSignal = useCallback((signal : Signal) => {
+        let decoratedSignal : DecoratedSignal
+        if (signal === null) {
+            return
+        }
+        if (signal.type === "groupLoaded") {
+            if (visibilityMapping.get(signal.labelGroupId) === undefined) {
+                visibilityMapping.set(signal.labelGroupId, true)
+            }
+            if (colorMapping.get(signal.labelGroupId) === undefined) {
+                colorMapping.set(signal.labelGroupId, generateRandomColor())
+            }
+            decoratedSignal = makeDecoratedSignal({ ...signal, visible: visibilityMapping.get(signal.labelGroupId)!, color: colorMapping.get(signal.labelGroupId)! })
+        }
+        else {
+            decoratedSignal = makeDecoratedSignal(signal)
+        }
+
+        requestManager.handleSignal(decoratedSignal)
+        dataManager.handleSignal(decoratedSignal)
+        uiManager.handleSignal(decoratedSignal)
+        syncLabelGroupViews()
+    }, [requestManager, dataManager, uiManager, visibilityMapping, colorMapping, syncLabelGroupViews])
+
+    useEffect(() => {
+        requestManager.attachControllerSignalHandler(handleSignal)
+
+        return () => requestManager.attachControllerSignalHandler(() => {}) // detach handler on unmount
+    }, [requestManager, handleSignal])
+
+    useEffect(() => {
+        const wait = setInterval(() => {
+            if (queueStatus.current === "textOps") {
+                const requestEvents = dataManager.flushTextOps()
+                requestEvents.forEach((requestEvent) => requestManager.enqueueRequest(requestEvent))
+                queueStatus.current = "none"
+            }
+            else if (queueStatus.current === "labelOps") {
+                const requestEvents = dataManager.flushLabelOps()
+                requestEvents.forEach((requestEvent) => requestManager.enqueueRequest(requestEvent))
+                queueStatus.current = "none"
+            }
+            requestManager.start()
+        }, 1500)
+        return () => clearInterval(wait)
+    }, [dataManager, requestManager, handleSignal])
 
     return {
         handleEvent,
         uiManager,
-        handleSignal
+        handleSignal,
+
+        labelGroupViews,
+        activeLabelGroupId
     }
 }

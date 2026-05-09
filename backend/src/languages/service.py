@@ -12,7 +12,7 @@ from . import models
 from .exceptions import LanguageNotFoundException
 
 
-def query_language_by_code(db : Session, language_code : str) -> models.Language:
+def query_language_by_code(db: Session, language_code: str) -> models.Language:
     """
     Finds language with corresponding language_code in database.
 
@@ -31,7 +31,8 @@ def query_language_by_code(db : Session, language_code : str) -> models.Language
         raise LanguageNotFoundException from e
     return ret
 
-def query_all_languages(db : Session) -> Sequence[models.Language]:
+
+def query_all_languages(db: Session) -> Sequence[models.Language]:
     """
     Queries all languages in the database.
 

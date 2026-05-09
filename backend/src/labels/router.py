@@ -39,23 +39,25 @@ from .service import (
 
 router = APIRouter()
 
-@router.get('/label-groups', response_model=list[schemas.LabelGroup])
+
+@router.get("/label-groups", response_model=list[schemas.LabelGroup])
 def read_label_groups(
-        novel_id : Annotated[uuid.UUID, Query(alias="novelId")],
-        db: Annotated[Session, Depends(get_db)],
-        current_user : Annotated[User, Depends(get_current_user)]
-    ):
+    novel_id: Annotated[uuid.UUID, Query(alias="novelId")],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     """
     Gets all label groups of the current user for a novel.
     """
     return query_label_groups(db, current_user, novel_id)
 
-@router.get('/label-groups/{labelGroupId}', response_model=schemas.LabelGroup)
+
+@router.get("/label-groups/{labelGroupId}", response_model=schemas.LabelGroup)
 def read_label_group(
-        label_group_id : Annotated[uuid.UUID, Path(alias="labelGroupId")],
-        db : Annotated[Session, Depends(get_db)],
-        current_user : Annotated[User, Depends(get_current_user)]
-    ):
+    label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     """
     Gets a label group by id.
 
@@ -66,31 +68,32 @@ def read_label_group(
         label_group = query_label_group_by_id(db, current_user, label_group_id)
     except LabelGroupNotFoundException as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Label group with id {label_group_id} not found."
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Label group with id {label_group_id} not found."
         ) from e
     return label_group
 
-@router.get('/label-datas', response_model=list[schemas.LabelData])
+
+@router.get("/label-datas", response_model=list[schemas.LabelData])
 def read_label_datas_by_group_chapters(
-        label_group_id : Annotated[uuid.UUID, Query(alias="labelGroupId")],
-        db : Annotated[Session, Depends(get_db)],
-        current_user : Annotated[User, Depends(get_current_user)],
-        start : int | None = None,
-        end : int | None = None
-    ):
+    label_group_id: Annotated[uuid.UUID, Query(alias="labelGroupId")],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    start: int | None = None,
+    end: int | None = None,
+):
     """
     Gets all label datas in a label group, optionally filtered by chapter range.
     """
     label_datas = query_label_datas(db, current_user, label_group_id, start, end)
     return label_datas
 
-@router.get('/label-datas/{labelDataId}', response_model=schemas.LabelData)
+
+@router.get("/label-datas/{labelDataId}", response_model=schemas.LabelData)
 def read_label_data(
-        label_data_id : Annotated[uuid.UUID, Path(alias="labelDataId")],
-        db : Annotated[Session, Depends(get_db)],
-        current_user : Annotated[User, Depends(get_current_user)]
-    ):
+    label_data_id: Annotated[uuid.UUID, Path(alias="labelDataId")],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     """
     Gets a label data by id.
 
@@ -100,30 +103,29 @@ def read_label_data(
     try:
         label_data = query_label_data_by_id(db, current_user, label_data_id)
     except LabelDataNotFoundException as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Label data not found."
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Label data not found.") from e
     return label_data
 
-@router.get('/label-datas/{labelDataId}/labels', response_model=list[schemas.Label])
+
+@router.get("/label-datas/{labelDataId}/labels", response_model=list[schemas.Label])
 def read_labels_by_label_data(
-        label_data_id : Annotated[uuid.UUID, Path(alias="labelDataId")],
-        db : Annotated[Session, Depends(get_db)],
-        current_user : Annotated[User, Depends(get_current_user)]
-    ):
+    label_data_id: Annotated[uuid.UUID, Path(alias="labelDataId")],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     """
     Get the specific list of labels inside a label data entry.
     """
     labels = query_labels_by_label_data_id(db, current_user, label_data_id)
     return labels
 
-@router.get('/label-groups/{labelGroupId}/contributors', response_model=list[schemas.LabelContributor])
+
+@router.get("/label-groups/{labelGroupId}/contributors", response_model=list[schemas.LabelContributor])
 def read_label_contributors(
-        label_group_id : Annotated[uuid.UUID, Path(alias="labelGroupId")],
-        db : Annotated[Session, Depends(get_db)],
-        current_user : Annotated[User, Depends(get_current_user)]
-    ):
+    label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     """
     Get the list of contributors for a label group.
     """
@@ -131,13 +133,13 @@ def read_label_contributors(
         contributors = query_label_contributors_of_label_group(db, current_user, label_group_id)
     except LabelGroupNotFoundException as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Label group with id {label_group_id} not found."
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Label group with id {label_group_id} not found."
         ) from e
     return contributors
 
+
 @router.post(
-    '/label-groups',
+    "/label-groups",
     response_model=schemas.LabelGroup,
     responses={
         400: {"model": DetailHTTPErrorResponse, "description": "Label group name is too long."},
@@ -150,11 +152,11 @@ def read_label_contributors(
 )
 @ttl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=svp(schemas.LabelGroup))
 def create_label_group(
-        request: schemas.CreateLabelGroup,
-        db: Annotated[Session, Depends(get_db)],
-        current_user: Annotated[User, Depends(get_current_user)],
-        request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
-    ):
+    request: schemas.CreateLabelGroup,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
+):
     """
     Creates a new label group.
 
@@ -166,23 +168,20 @@ def create_label_group(
         label_group = insert_label_group(db, current_user, request)
     except NovelNotFoundException as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Novel associated with this label group not found."
+            status_code=status.HTTP_404_NOT_FOUND, detail="Novel associated with this label group not found."
         ) from e
     except DataTooLongException as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Label group name is too long."
-        ) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Label group name is too long.") from e
     return label_group
 
-@router.patch('/label-groups/{labelGroupId}', response_model=schemas.LabelGroup)
+
+@router.patch("/label-groups/{labelGroupId}", response_model=schemas.LabelGroup)
 def update_label_group(
-        label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
-        request: schemas.UpdateLabelGroup,
-        db: Annotated[Session, Depends(get_db)],
-        current_user: Annotated[User, Depends(get_current_user)]
-    ):
+    label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
+    request: schemas.UpdateLabelGroup,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     """
     Updates a label group (e.g. rename).
 
@@ -194,18 +193,15 @@ def update_label_group(
         label_group = modify_label_group(db, current_user, label_group_id, request)
     except LabelGroupNotFoundException as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Label group with id {label_group_id} not found."
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Label group with id {label_group_id} not found."
         ) from e
     except DataTooLongException as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Label group name is too long."
-        ) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Label group name is too long.") from e
     return label_group
 
+
 @router.post(
-    '/label-groups/{labelGroupId}/label-datas',
+    "/label-groups/{labelGroupId}/label-datas",
     response_model=schemas.LabelData,
     responses={
         404: {"model": DetailHTTPErrorResponse, "description": "Label group or chapter content not found."},
@@ -217,12 +213,12 @@ def update_label_group(
 )
 @ttl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=svp(schemas.LabelData))
 def create_label_data(
-        label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
-        request: schemas.CreateLabelData,
-        db: Annotated[Session, Depends(get_db)],
-        current_user: Annotated[User, Depends(get_current_user)],
-        request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
-    ):
+    label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
+    request: schemas.CreateLabelData,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
+):
     """
     Creates a label data entry for a revision text in a label group.
 
@@ -233,28 +229,31 @@ def create_label_data(
     try:
         label_data = insert_label_data(db, current_user, label_group_id, request)
     except LabelGroupNotFoundException as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Label group not found."
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Label group not found.") from e
     except LabelDataRevisionDuplicateException as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Label data for this revision text already exists in this group."
+            detail="Label data for this revision text already exists in this group.",
         ) from e
     except NotFoundException as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Label group or revision text not found."
+            status_code=status.HTTP_404_NOT_FOUND, detail="Label group or revision text not found."
         ) from e
     return label_data
 
+
 @router.patch(
-    '/label-datas/{labelDataId}',
+    "/label-datas/{labelDataId}",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
-        400: {"model": DetailHTTPErrorResponse, "description": "Operation positions are out of bounds or the operation is otherwise invalid."},
-        404: {"model": DetailHTTPErrorResponse, "description": "Label data, chapter content, or target label not found."},
+        400: {
+            "model": DetailHTTPErrorResponse,
+            "description": "Operation positions are out of bounds or the operation is otherwise invalid.",
+        },
+        404: {
+            "model": DetailHTTPErrorResponse,
+            "description": "Label data, chapter content, or target label not found.",
+        },
         409: {
             "model": RequestConflictErrorResponse,
             "description": "Label stream conflict, such as word mismatch, overlap violation, or request-key conflict.",
@@ -263,12 +262,12 @@ def create_label_data(
 )
 @ttl_cache(ttl=60, cache=redis_cache, success_code=204)
 def update_label_data_stream(
-        label_data_id: Annotated[uuid.UUID, Path(alias="labelDataId")],
-        request: schemas.UpdateLabelDataStream,
-        db: Annotated[Session, Depends(get_db)],
-        current_user: Annotated[User, Depends(get_current_user)],
-        request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
-    ) -> None:
+    label_data_id: Annotated[uuid.UUID, Path(alias="labelDataId")],
+    request: schemas.UpdateLabelDataStream,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
+) -> None:
     """
     Applies a stream of edit operations to labels.
 
@@ -282,45 +281,40 @@ def update_label_data_stream(
     except (LabelDataNotFoundException, ChapterContentNotFoundException) as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Label data {label_data_id} or its underlying revision text not found."
+            detail=f"Label data {label_data_id} or its underlying revision text not found.",
         ) from e
     except LabelWordMismatchInvalidOperationException as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Word mismatch detected: {str(e) or 'Label word does not match text.'}"
+            detail=f"Word mismatch detected: {str(e) or 'Label word does not match text.'}",
         ) from e
     except LabelExclusionViolationInvalidOperationException as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Label overlap detected. Operations violate exclusion constraints."
+            detail="Label overlap detected. Operations violate exclusion constraints.",
         ) from e
     except LabelOutOfBoundsInvalidOperationException as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Operation positions are out of bounds of the chapter text."
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Operation positions are out of bounds of the chapter text."
         ) from e
     except LabelNotExistsInvalidOperationException as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="The label targeted for deletion does not exist."
+            status_code=status.HTTP_404_NOT_FOUND, detail="The label targeted for deletion does not exist."
         ) from e
     except LabelInvalidOperationException as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e) or "Invalid operation."
-        ) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e) or "Invalid operation.") from e
     return
 
+
 @router.post(
-    '/label-groups/{labelGroupId}/label-datas/auto-labels',
-    response_model=schemas.CreateLabelDataByAutoLabelStatus
+    "/label-groups/{labelGroupId}/label-datas/auto-labels", response_model=schemas.CreateLabelDataByAutoLabelStatus
 )
 def create_label_datas_by_auto_labels(
-        label_group_id : Annotated[uuid.UUID, Path(alias="labelGroupId")],
-        request : schemas.CreateLabelDataByAutoLabel,
-        db : Annotated[Session, Depends(get_db)],
-        current_user : Annotated[User, Depends(get_current_user)]
-    ):
+    label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
+    request: schemas.CreateLabelDataByAutoLabel,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     """
     Creates label datas and populates labels from autolabel results.
     """

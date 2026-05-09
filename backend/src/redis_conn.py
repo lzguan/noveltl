@@ -14,6 +14,7 @@ redis_for_ttl_cache_sync = redis.Redis(host=_redis_settings.REDIS_HOST, port=_re
 
 redis_for_ttl_cache_async = redis.asyncio.Redis(host=_redis_settings.REDIS_HOST, port=_redis_settings.REDIS_PORT, db=1)
 
+
 @asynccontextmanager
 async def set_redis() -> AsyncGenerator[None]:
     global redis_for_worker
@@ -31,12 +32,12 @@ def get_redis() -> ArqRedis:
 def get_redis_for_app() -> ArqRedis:
     if redis_for_worker is not None:
         return redis_for_worker
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Request queueing down."
-    )
+    raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Request queueing down.")
+
 
 def get_redis_for_ttl_cache_sync() -> redis.Redis:
     return redis_for_ttl_cache_sync
+
 
 def get_redis_for_ttl_cache_async() -> redis.asyncio.Redis:
     return redis_for_ttl_cache_async

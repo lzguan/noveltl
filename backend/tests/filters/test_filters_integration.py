@@ -9,6 +9,7 @@ Tests cover:
 
 Note: These tests are AI generated and may not cover all edge cases or be fully comprehensive. It is recommended to review and modify the tests as needed to ensure they align with the specific requirements and constraints of your application.
 """
+
 import uuid
 
 import pytest
@@ -37,8 +38,8 @@ pytestmark = pytest.mark.dependency(
 
 # --- Tests for flag_instances ---
 
-class TestFlagInstances:
 
+class TestFlagInstances:
     @pytest.mark.dependency(name="filters::integration::flag_by_min_score", scope="session")
     def test_flag_instances_filters_by_min_score(
         self,
@@ -46,10 +47,7 @@ class TestFlagInstances:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=label_bundle.label_group.label_group_id,
-            min_score=0.8
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=0.8)
         results = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
         assert len(results) == 2
@@ -63,10 +61,7 @@ class TestFlagInstances:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=label_bundle.label_group.label_group_id,
-            min_score=0.4
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=0.4)
         results = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
         assert len(results) == 1
@@ -80,10 +75,7 @@ class TestFlagInstances:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=label_bundle.label_group.label_group_id,
-            min_score=0.95
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=0.95)
         results = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
         assert len(results) == 3
@@ -105,8 +97,8 @@ class TestFlagInstances:
 
 # --- Tests for get_contexts ---
 
-class TestGetContexts:
 
+class TestGetContexts:
     @pytest.mark.dependency(name="filters::integration::get_contexts_extracts_sentence", scope="session")
     def test_get_contexts_extracts_sentence(
         self,
@@ -114,10 +106,7 @@ class TestGetContexts:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=label_bundle.label_group.label_group_id,
-            min_score=0.8
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=0.8)
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
         context_options = ScoreGetContextOptions()
@@ -126,8 +115,8 @@ class TestGetContexts:
         assert len(contexts) == 2
         assert contexts is not None
         assert all(context is not None for context in contexts)
-        assert "Hello world." in [context.text.strip() for context in contexts] # type: ignore
-        assert "This is a test sentence." in [context.text.strip() for context in contexts] # type: ignore
+        assert "Hello world." in [context.text.strip() for context in contexts]  # type: ignore
+        assert "This is a test sentence." in [context.text.strip() for context in contexts]  # type: ignore
 
     @pytest.mark.dependency(name="filters::integration::get_contexts_none_for_inaccessible", scope="session")
     def test_get_contexts_returns_none_for_inaccessible_revision(
@@ -150,7 +139,7 @@ class TestGetContexts:
                 label_data_id=uuid.uuid4(),
                 label_id=uuid.uuid4(),
             ),
-            chapter_content_id=uuid.uuid4()
+            chapter_content_id=uuid.uuid4(),
         )
 
         context_options = ScoreGetContextOptions()
@@ -173,8 +162,8 @@ class TestGetContexts:
 
 # --- Tests for decide_instances ---
 
-class TestDecideInstances:
 
+class TestDecideInstances:
     @pytest.mark.dependency(name="filters::integration::decide_auto_passes_all", scope="session")
     def test_decide_auto_mode_passes_all_without_exclude(
         self,
@@ -182,10 +171,7 @@ class TestDecideInstances:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=label_bundle.label_group.label_group_id,
-            min_score=0.0
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=0.0)
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
         context_options = ScoreGetContextOptions()
@@ -206,10 +192,7 @@ class TestDecideInstances:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=label_bundle.label_group.label_group_id,
-            min_score=1.0
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=1.0)
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
         context_options = ScoreGetContextOptions()
@@ -231,10 +214,7 @@ class TestDecideInstances:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=label_bundle.label_group.label_group_id,
-            min_score=1.0
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=1.0)
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
         context_options = ScoreGetContextOptions()
@@ -242,7 +222,7 @@ class TestDecideInstances:
 
         instance_contexts = [(i, c) for i, c in zip(instances, contexts, strict=False)]
 
-        manual_decisions = [True, False, True][:len(instance_contexts)]
+        manual_decisions = [True, False, True][: len(instance_contexts)]
         decide_options = ScoreDecideInstancesOptions(mode="manual", decisions=manual_decisions)
         decisions = score_filter.decide_instances(test_db, label_bundle.novel.user, instance_contexts, decide_options)
 
@@ -255,10 +235,7 @@ class TestDecideInstances:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
-        options = ScoreFlagInstancesOptions(
-            label_group_id=label_bundle.label_group.label_group_id,
-            min_score=1.0
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=1.0)
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
         context_options = ScoreGetContextOptions()
@@ -287,8 +264,8 @@ class TestDecideInstances:
 
 # --- Tests for apply_filter ---
 
-class TestApplyFilter:
 
+class TestApplyFilter:
     @pytest.mark.dependency(name="filters::integration::apply_deletes_labels", scope="session")
     def test_apply_filter_deletes_specified_labels(
         self,
@@ -297,21 +274,22 @@ class TestApplyFilter:
         score_filter: ScoreFilter,
     ):
         # Flag low-score labels
-        options = ScoreFlagInstancesOptions(
-            label_group_id=label_bundle.label_group.label_group_id,
-            min_score=0.8
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=0.8)
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
         assert len(instances) == 2  # Only "world" with score 0.5 and "test" with score 0.3
 
         # Apply filter (delete the flagged labels)
-        apply_options = ScoreApplyFilterOptions(create_copy=False, label_group_id=label_bundle.label_group.label_group_id)
+        apply_options = ScoreApplyFilterOptions(
+            create_copy=False, label_group_id=label_bundle.label_group.label_group_id
+        )
         score_filter.apply_filter(test_db, label_bundle.novel.user, instances, apply_options)
 
         # Verify only the flagged labels are deleted and "Hello" remains
-        remaining = test_db.execute(
-            select(Label).where(Label.label_data_id == label_bundle.label_data.label_data_id)
-        ).scalars().all()
+        remaining = (
+            test_db.execute(select(Label).where(Label.label_data_id == label_bundle.label_data.label_data_id))
+            .scalars()
+            .all()
+        )
 
         assert len(remaining) == 1
         remaining_words = {lab.label_word for lab in remaining}
@@ -327,21 +305,24 @@ class TestApplyFilter:
         score_filter: ScoreFilter,
     ):
         # Flag all labels
-        options = ScoreFlagInstancesOptions(
-            label_group_id=label_bundle.label_group.label_group_id,
-            min_score=1.0
-        )
+        options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=1.0)
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
         assert len(instances) == 3
 
         # Apply filter with copy
-        apply_options = ScoreApplyFilterOptions(create_copy=True, new_label_group_name="Filtered Copy", label_group_id=label_bundle.label_group.label_group_id)
+        apply_options = ScoreApplyFilterOptions(
+            create_copy=True,
+            new_label_group_name="Filtered Copy",
+            label_group_id=label_bundle.label_group.label_group_id,
+        )
         score_filter.apply_filter(test_db, label_bundle.novel.user, instances, apply_options)
 
         # Original group should still have all labels
-        original_labels = test_db.execute(
-            select(Label).where(Label.label_data_id == label_bundle.label_data.label_data_id)
-        ).scalars().all()
+        original_labels = (
+            test_db.execute(select(Label).where(Label.label_data_id == label_bundle.label_data.label_data_id))
+            .scalars()
+            .all()
+        )
         assert len(original_labels) == 3
 
         # New group should exist and have labels deleted from it
@@ -358,13 +339,17 @@ class TestApplyFilter:
         score_filter: ScoreFilter,
     ):
         # Apply filter with empty list
-        apply_options = ScoreApplyFilterOptions(create_copy=False, label_group_id=label_bundle.label_group.label_group_id)
+        apply_options = ScoreApplyFilterOptions(
+            create_copy=False, label_group_id=label_bundle.label_group.label_group_id
+        )
         score_filter.apply_filter(test_db, label_bundle.novel.user, [], apply_options)
 
         # All labels should remain
-        remaining = test_db.execute(
-            select(Label).where(Label.label_data_id == label_bundle.label_data.label_data_id)
-        ).scalars().all()
+        remaining = (
+            test_db.execute(select(Label).where(Label.label_data_id == label_bundle.label_data.label_data_id))
+            .scalars()
+            .all()
+        )
         assert len(remaining) == 3
 
     @pytest.mark.dependency(
@@ -401,7 +386,6 @@ def _create_v2(test_db: Session, chapter: Chapter, old_cc: ChapterContent) -> Ch
 
 
 class TestDecideInstancesStaleness:
-
     @pytest.mark.dependency(name="filters::integration::decide_stale_rejected", scope="session")
     def test_stale_instances_rejected(
         self,
@@ -469,7 +453,6 @@ class TestDecideInstancesStaleness:
 
 
 class TestApplyFilterStaleness:
-
     @pytest.mark.dependency(name="filters::integration::apply_stale_rejected", scope="session")
     def test_stale_instances_rejected(
         self,

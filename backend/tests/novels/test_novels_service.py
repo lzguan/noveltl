@@ -40,7 +40,9 @@ class TestQueryNovelsByTitle:
 
     @pytest.mark.dependency(name="novels::service::guest_sees_public_novels", scope="session")
     def test_guest_sees_public_novels(
-        self, test_db: Session, p1_novels: dict[str, Novel],
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
     ):
         results = query_novels_by_title(test_db, None, "")
         assert len(results) == 2
@@ -50,7 +52,10 @@ class TestQueryNovelsByTitle:
 
     @pytest.mark.dependency(name="novels::service::regular_user_sees_public_novels", scope="session")
     def test_regular_user_sees_public_novels(
-        self, test_db: Session, p1_novels: dict[str, Novel], p1_user_1: User,
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
+        p1_user_1: User,
     ):
         results = query_novels_by_title(test_db, p1_user_1, "")
         assert len(results) == 2
@@ -60,7 +65,10 @@ class TestQueryNovelsByTitle:
 
     @pytest.mark.dependency(name="novels::service::other_user_sees_public_novels", scope="session")
     def test_other_user_sees_public_novels(
-        self, test_db: Session, p1_novels: dict[str, Novel], p1_user_2: User,
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
+        p1_user_2: User,
     ):
         results = query_novels_by_title(test_db, p1_user_2, "")
         assert len(results) == 2
@@ -70,7 +78,10 @@ class TestQueryNovelsByTitle:
 
     @pytest.mark.dependency(name="novels::service::admin_sees_public_novels", scope="session")
     def test_admin_sees_public_novels(
-        self, test_db: Session, p1_novels: dict[str, Novel], p1_admin: User,
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
+        p1_admin: User,
     ):
         results = query_novels_by_title(test_db, p1_admin, "")
         assert len(results) == 2
@@ -80,7 +91,9 @@ class TestQueryNovelsByTitle:
 
     @pytest.mark.dependency(name="novels::service::search_filters_by_title", scope="session")
     def test_search_filters_by_title(
-        self, test_db: Session, p1_novels: dict[str, Novel],
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
     ):
         results = query_novels_by_title(test_db, None, "t")
         assert len(results) == 1
@@ -106,7 +119,10 @@ class TestQueryNovelById:
 
     @pytest.mark.dependency(name="novels::service::unlisted_novel_visible_to_contributor", scope="session")
     def test_unlisted_novel_visible_to_contributor(
-        self, test_db: Session, p1_novels: dict[str, Novel], p1_user_2: User,
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
+        p1_user_2: User,
     ):
         us = query_novel_by_id(test_db, p1_user_2, p1_novels["us"].novel_id)
         assert us.novel_title == "us"
@@ -115,26 +131,36 @@ class TestQueryNovelById:
 
     @pytest.mark.dependency(name="novels::service::unlisted_novel_visible_to_guest", scope="session")
     def test_unlisted_novel_visible_to_guest(
-        self, test_db: Session, p1_novels: dict[str, Novel],
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
     ):
         query_novel_by_id(test_db, None, p1_novels["us"].novel_id)
 
     @pytest.mark.dependency(name="novels::service::unlisted_novel_visible_to_other_user", scope="session")
     def test_unlisted_novel_visible_to_other_user(
-        self, test_db: Session, p1_novels: dict[str, Novel], p1_user_1: User,
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
+        p1_user_1: User,
     ):
         query_novel_by_id(test_db, p1_user_1, p1_novels["us"].novel_id)
 
     @pytest.mark.dependency(name="novels::service::restricted_novel_not_visible_to_guest", scope="session")
     def test_restricted_novel_not_visible_to_guest(
-        self, test_db: Session, p1_novels: dict[str, Novel],
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
     ):
         with pytest.raises(NovelNotFoundException):
             query_novel_by_id(test_db, None, p1_novels["rt"].novel_id)
 
     @pytest.mark.dependency(name="novels::service::restricted_novel_visible_to_contributor", scope="session")
     def test_restricted_novel_visible_to_contributor(
-        self, test_db: Session, p1_novels: dict[str, Novel], p1_user_1: User,
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
+        p1_user_1: User,
     ):
         rt = query_novel_by_id(test_db, p1_user_1, p1_novels["rt"].novel_id)
         assert rt.novel_title == "rt"
@@ -143,14 +169,19 @@ class TestQueryNovelById:
 
     @pytest.mark.dependency(name="novels::service::private_novel_not_visible_to_guest", scope="session")
     def test_private_novel_not_visible_to_guest(
-        self, test_db: Session, p1_novels: dict[str, Novel],
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
     ):
         with pytest.raises(NovelNotFoundException):
             query_novel_by_id(test_db, None, p1_novels["prt"].novel_id)
 
     @pytest.mark.dependency(name="novels::service::private_novel_visible_to_admin", scope="session")
     def test_private_novel_visible_to_admin(
-        self, test_db: Session, p1_novels: dict[str, Novel], p1_admin: User,
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
+        p1_admin: User,
     ):
         prt = query_novel_by_id(test_db, p1_admin, p1_novels["prt"].novel_id)
         assert prt.novel_title == "prt"
@@ -159,7 +190,10 @@ class TestQueryNovelById:
 
     @pytest.mark.dependency(name="novels::service::private_novel_visible_to_owner", scope="session")
     def test_private_novel_visible_to_owner(
-        self, test_db: Session, p1_novels: dict[str, Novel], p1_user_1: User,
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
+        p1_user_1: User,
     ):
         oe = query_novel_by_id(test_db, p1_user_1, p1_novels["oe"].novel_id)
         assert oe.novel_title == "oe"
@@ -179,7 +213,9 @@ class TestQueryNovelById:
 
     @pytest.mark.dependency(name="novels::service::private_novel_not_visible_to_non_contributor", scope="session")
     def test_private_novel_not_visible_to_non_contributor(
-        self, test_db: Session, p1_novels: dict[str, Novel],
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
     ):
         with pytest.raises(NovelNotFoundException):
             query_novel_by_id(test_db, None, p1_novels["oe"].novel_id)
@@ -217,13 +253,9 @@ class TestQueryChaptersByNovel:
     ):
         rt = p1_novels["rt"]
         for i in range(3):
-            insert_chapter(
-                test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=i)
-            )
+            insert_chapter(test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=i))
         with pytest.raises(NovelNotFoundException):
-            query_chapters_by_novel(
-                test_db, p1_user_2, rt.novel_id, start=None, end=None
-            )
+            query_chapters_by_novel(test_db, p1_user_2, rt.novel_id, start=None, end=None)
 
     @pytest.mark.dependency(name="novels::service::admin_can_query_restricted_novel", scope="session")
     def test_admin_can_query_restricted_novel(
@@ -235,12 +267,8 @@ class TestQueryChaptersByNovel:
     ):
         rt = p1_novels["rt"]
         for i in range(3):
-            insert_chapter(
-                test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=i)
-            )
-        chapters = query_chapters_by_novel(
-            test_db, p1_admin, rt.novel_id, start=None, end=None
-        )
+            insert_chapter(test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=i))
+        chapters = query_chapters_by_novel(test_db, p1_admin, rt.novel_id, start=None, end=None)
         assert len(chapters) == 3
 
     @pytest.mark.dependency(name="novels::service::contributor_can_query_restricted_novel", scope="session")
@@ -252,17 +280,15 @@ class TestQueryChaptersByNovel:
     ):
         rt = p1_novels["rt"]
         for i in range(3):
-            insert_chapter(
-                test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=i)
-            )
-        chapters = query_chapters_by_novel(
-            test_db, p1_user_1, rt.novel_id, start=None, end=None
-        )
+            insert_chapter(test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=i))
+        chapters = query_chapters_by_novel(test_db, p1_user_1, rt.novel_id, start=None, end=None)
         assert len(chapters) == 3
 
     @pytest.mark.dependency(name="novels::service::guest_cannot_query_private_novel", scope="session")
     def test_guest_cannot_query_private_novel(
-        self, test_db: Session, p1_novels: dict[str, Novel],
+        self,
+        test_db: Session,
+        p1_novels: dict[str, Novel],
     ):
         oe = p1_novels["oe"]
         with pytest.raises(NovelNotFoundException):
@@ -277,12 +303,8 @@ class TestQueryChaptersByNovel:
         p1_admin: User,
     ):
         oe = p1_novels["oe"]
-        insert_chapter(
-            test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
-        chapters = query_chapters_by_novel(
-            test_db, p1_admin, oe.novel_id, start=None, end=None
-        )
+        insert_chapter(test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1))
+        chapters = query_chapters_by_novel(test_db, p1_admin, oe.novel_id, start=None, end=None)
         assert len(chapters) == 1
 
     @pytest.mark.dependency(name="novels::service::contributor_can_query_viewer_restricted_novel", scope="session")
@@ -294,12 +316,8 @@ class TestQueryChaptersByNovel:
         p1_user_2: User,
     ):
         ov = p1_novels["ov"]
-        insert_chapter(
-            test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
-        chapters = query_chapters_by_novel(
-            test_db, p1_user_2, ov.novel_id, start=None, end=None
-        )
+        insert_chapter(test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1))
+        chapters = query_chapters_by_novel(test_db, p1_user_2, ov.novel_id, start=None, end=None)
         assert len(chapters) == 1
 
     @pytest.mark.dependency(name="novels::service::guest_cannot_query_viewer_restricted_novel", scope="session")
@@ -310,9 +328,7 @@ class TestQueryChaptersByNovel:
         p1_user_1: User,
     ):
         ov = p1_novels["ov"]
-        insert_chapter(
-            test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
+        insert_chapter(test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1))
         with pytest.raises(NovelNotFoundException):
             query_chapters_by_novel(test_db, None, ov.novel_id, start=None, end=None)
 
@@ -345,9 +361,7 @@ class TestQueryChapterById:
         p1_user_2: User,
     ):
         rt = p1_novels["rt"]
-        chapter, _ = insert_chapter(
-            test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=0)
-        )
+        chapter, _ = insert_chapter(test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=0))
         with pytest.raises(ChapterNotFoundException):
             query_chapter_by_id(test_db, p1_user_2, chapter.chapter_id)
 
@@ -359,9 +373,7 @@ class TestQueryChapterById:
         p1_user_1: User,
     ):
         oe = p1_novels["oe"]
-        chapter, _ = insert_chapter(
-            test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
+        chapter, _ = insert_chapter(test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1))
         with pytest.raises(ChapterNotFoundException):
             query_chapter_by_id(test_db, None, chapter.chapter_id)
 
@@ -374,9 +386,7 @@ class TestQueryChapterById:
         p1_user_2: User,
     ):
         oe = p1_novels["oe"]
-        chapter, _ = insert_chapter(
-            test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
+        chapter, _ = insert_chapter(test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1))
         query_chapter_by_id(test_db, p1_user_1, chapter.chapter_id)
         query_chapter_by_id(test_db, p1_user_2, chapter.chapter_id)
 
@@ -389,9 +399,7 @@ class TestQueryChapterById:
         p1_admin: User,
     ):
         oe = p1_novels["oe"]
-        chapter, _ = insert_chapter(
-            test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
+        chapter, _ = insert_chapter(test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1))
         query_chapter_by_id(test_db, p1_admin, chapter.chapter_id)
 
     @pytest.mark.dependency(name="novels::service::viewer_can_query_chapter", scope="session")
@@ -403,9 +411,7 @@ class TestQueryChapterById:
         p1_user_2: User,
     ):
         ov = p1_novels["ov"]
-        chapter, _ = insert_chapter(
-            test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
+        chapter, _ = insert_chapter(test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1))
         query_chapter_by_id(test_db, p1_user_2, chapter.chapter_id)
 
     @pytest.mark.dependency(name="novels::service::guest_cannot_query_viewer_restricted_chapter", scope="session")
@@ -416,9 +422,7 @@ class TestQueryChapterById:
         p1_user_1: User,
     ):
         ov = p1_novels["ov"]
-        chapter, _ = insert_chapter(
-            test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
+        chapter, _ = insert_chapter(test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1))
         with pytest.raises(ChapterNotFoundException):
             query_chapter_by_id(test_db, None, chapter.chapter_id)
 
@@ -450,13 +454,9 @@ class TestQueryChapterContentByMostRecent:
         p1_user_2: User,
     ):
         rt = p1_novels["rt"]
-        chapter, _ = insert_chapter(
-            test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=0)
-        )
+        chapter, _ = insert_chapter(test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=0))
         with pytest.raises(ChapterNotFoundException):
-            query_chapter_content_by_most_recent(
-                test_db, p1_user_2, chapter.chapter_id
-            )
+            query_chapter_content_by_most_recent(test_db, p1_user_2, chapter.chapter_id)
 
     @pytest.mark.dependency(name="novels::service::admin_can_query_restricted_content", scope="session")
     def test_admin_can_query_restricted_content(
@@ -467,12 +467,8 @@ class TestQueryChapterContentByMostRecent:
         p1_admin: User,
     ):
         rt = p1_novels["rt"]
-        chapter, chapter_content = insert_chapter(
-            test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=0)
-        )
-        cc = query_chapter_content_by_most_recent(
-            test_db, p1_admin, chapter.chapter_id
-        )
+        chapter, chapter_content = insert_chapter(test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=0))
+        cc = query_chapter_content_by_most_recent(test_db, p1_admin, chapter.chapter_id)
         assert cc.chapter_content_id == chapter_content.chapter_content_id
 
     @pytest.mark.dependency(name="novels::service::contributor_can_query_restricted_content", scope="session")
@@ -483,12 +479,8 @@ class TestQueryChapterContentByMostRecent:
         p1_user_1: User,
     ):
         rt = p1_novels["rt"]
-        chapter, chapter_content = insert_chapter(
-            test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=0)
-        )
-        cc = query_chapter_content_by_most_recent(
-            test_db, p1_user_1, chapter.chapter_id
-        )
+        chapter, chapter_content = insert_chapter(test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=0))
+        cc = query_chapter_content_by_most_recent(test_db, p1_user_1, chapter.chapter_id)
         assert cc.chapter_content_id == chapter_content.chapter_content_id
 
     @pytest.mark.dependency(name="novels::service::guest_cannot_query_private_content", scope="session")
@@ -499,13 +491,9 @@ class TestQueryChapterContentByMostRecent:
         p1_user_1: User,
     ):
         oe = p1_novels["oe"]
-        chapter, _ = insert_chapter(
-            test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
+        chapter, _ = insert_chapter(test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1))
         with pytest.raises(ChapterNotFoundException):
-            query_chapter_content_by_most_recent(
-                test_db, None, chapter.chapter_id
-            )
+            query_chapter_content_by_most_recent(test_db, None, chapter.chapter_id)
 
     @pytest.mark.dependency(name="novels::service::contributor_can_query_private_content", scope="session")
     def test_contributor_can_query_private_content(
@@ -516,15 +504,9 @@ class TestQueryChapterContentByMostRecent:
         p1_user_2: User,
     ):
         oe = p1_novels["oe"]
-        chapter, _ = insert_chapter(
-            test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
-        query_chapter_content_by_most_recent(
-            test_db, p1_user_1, chapter.chapter_id
-        )
-        query_chapter_content_by_most_recent(
-            test_db, p1_user_2, chapter.chapter_id
-        )
+        chapter, _ = insert_chapter(test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1))
+        query_chapter_content_by_most_recent(test_db, p1_user_1, chapter.chapter_id)
+        query_chapter_content_by_most_recent(test_db, p1_user_2, chapter.chapter_id)
 
     @pytest.mark.dependency(name="novels::service::admin_can_query_private_content", scope="session")
     def test_admin_can_query_private_content(
@@ -535,12 +517,8 @@ class TestQueryChapterContentByMostRecent:
         p1_admin: User,
     ):
         oe = p1_novels["oe"]
-        chapter, _ = insert_chapter(
-            test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
-        query_chapter_content_by_most_recent(
-            test_db, p1_admin, chapter.chapter_id
-        )
+        chapter, _ = insert_chapter(test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1))
+        query_chapter_content_by_most_recent(test_db, p1_admin, chapter.chapter_id)
 
     @pytest.mark.dependency(name="novels::service::viewer_can_query_content", scope="session")
     def test_viewer_can_query_content(
@@ -551,12 +529,8 @@ class TestQueryChapterContentByMostRecent:
         p1_user_2: User,
     ):
         ov = p1_novels["ov"]
-        chapter, _ = insert_chapter(
-            test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
-        query_chapter_content_by_most_recent(
-            test_db, p1_user_2, chapter.chapter_id
-        )
+        chapter, _ = insert_chapter(test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1))
+        query_chapter_content_by_most_recent(test_db, p1_user_2, chapter.chapter_id)
 
     @pytest.mark.dependency(name="novels::service::guest_cannot_query_viewer_restricted_content", scope="session")
     def test_guest_cannot_query_viewer_restricted_content(
@@ -566,13 +540,9 @@ class TestQueryChapterContentByMostRecent:
         p1_user_1: User,
     ):
         ov = p1_novels["ov"]
-        chapter, _ = insert_chapter(
-            test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
+        chapter, _ = insert_chapter(test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1))
         with pytest.raises(ChapterNotFoundException):
-            query_chapter_content_by_most_recent(
-                test_db, None, chapter.chapter_id
-            )
+            query_chapter_content_by_most_recent(test_db, None, chapter.chapter_id)
 
     @pytest.mark.dependency(
         name="gate::novels::service::query_chapter_content_by_most_recent",
@@ -604,9 +574,7 @@ class TestInsertChapterPermissions:
     ):
         ov = p1_novels["ov"]
         with pytest.raises(InsufficientPermissionsException):
-            insert_chapter(
-                test_db, p1_user_2, ov.novel_id, schemas.CreateChapter(chapter_num=2)
-            )
+            insert_chapter(test_db, p1_user_2, ov.novel_id, schemas.CreateChapter(chapter_num=2))
 
     @pytest.mark.dependency(name="novels::service::admin_can_insert_chapter", scope="session")
     def test_admin_can_insert_chapter(
@@ -616,9 +584,7 @@ class TestInsertChapterPermissions:
         p1_admin: User,
     ):
         ov = p1_novels["ov"]
-        chapter, content = insert_chapter(
-            test_db, p1_admin, ov.novel_id, schemas.CreateChapter(chapter_num=2)
-        )
+        chapter, content = insert_chapter(test_db, p1_admin, ov.novel_id, schemas.CreateChapter(chapter_num=2))
         assert chapter.chapter_id is not None
         assert content.chapter_content_id is not None
 
@@ -638,23 +604,13 @@ class TestInsertChapterPermissions:
 
         # 3 chapters on rt
         for i in range(3):
-            insert_chapter(
-                test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=i)
-            )
+            insert_chapter(test_db, p1_user_1, rt.novel_id, schemas.CreateChapter(chapter_num=i))
         # 2 chapters on oe (one per user)
-        insert_chapter(
-            test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
-        insert_chapter(
-            test_db, p1_user_2, oe.novel_id, schemas.CreateChapter(chapter_num=2)
-        )
+        insert_chapter(test_db, p1_user_1, oe.novel_id, schemas.CreateChapter(chapter_num=1))
+        insert_chapter(test_db, p1_user_2, oe.novel_id, schemas.CreateChapter(chapter_num=2))
         # 2 chapters on ov (owner + admin)
-        insert_chapter(
-            test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1)
-        )
-        insert_chapter(
-            test_db, p1_admin, ov.novel_id, schemas.CreateChapter(chapter_num=2)
-        )
+        insert_chapter(test_db, p1_user_1, ov.novel_id, schemas.CreateChapter(chapter_num=1))
+        insert_chapter(test_db, p1_admin, ov.novel_id, schemas.CreateChapter(chapter_num=2))
 
         assert len(test_db.execute(select(ChapterContent)).scalars().all()) == 7
 

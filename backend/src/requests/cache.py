@@ -10,15 +10,18 @@ from ..redis_conn import get_redis_for_ttl_cache_async, get_redis_for_ttl_cache_
 
 RequestStatus = Literal["pending", "success", "failure"]
 
+
 class CacheError(TypedDict):
     detail: str
     cacheConflict: bool
 
+
 class CacheEntry(TypedDict):
-    status : RequestStatus
-    status_code : int | None
-    response : dict | None
-    error : CacheError | None
+    status: RequestStatus
+    status_code: int | None
+    response: dict | None
+    error: CacheError | None
+
 
 class TTLCache(Protocol):
     def get(self, key: uuid.UUID) -> CacheEntry | None: ...
@@ -28,6 +31,7 @@ class TTLCache(Protocol):
     async def aset(self, key: uuid.UUID, value: CacheEntry, expire: int) -> None: ...
     async def ainsert(self, key: uuid.UUID, value: CacheEntry, expire: int) -> bool: ...
 
+
 class RedisCache(TTLCache):
     def __init__(self):
         pass
@@ -35,7 +39,7 @@ class RedisCache(TTLCache):
     def get(self, key: uuid.UUID) -> CacheEntry | None:
         value = get_redis_for_ttl_cache_sync().get(str(key))
         if value is not None:
-            return json.loads(value) # type: ignore
+            return json.loads(value)  # type: ignore
         return None
 
     def set(self, key: uuid.UUID, value: CacheEntry, expire: int) -> None:
@@ -47,13 +51,18 @@ class RedisCache(TTLCache):
     async def aget(self, key: uuid.UUID) -> CacheEntry | None:
         value = await get_redis_for_ttl_cache_async().get(str(key))
         if value is not None:
-            return json.loads(value) # type: ignore
+            return json.loads(value)  # type: ignore
         return None
 
     async def aset(self, key: uuid.UUID, value: CacheEntry, expire: int) -> None:
         await get_redis_for_ttl_cache_async().set(str(key), json.dumps(value), ex=expire)
 
     async def ainsert(self, key: uuid.UUID, value: CacheEntry, expire: int) -> bool:
-        return True if await get_redis_for_ttl_cache_async().set(str(key), json.dumps(value), ex=expire, nx=True) else False
+        return (
+            True
+            if await get_redis_for_ttl_cache_async().set(str(key), json.dumps(value), ex=expire, nx=True)
+            else False
+        )
+
 
 redis_cache = RedisCache()

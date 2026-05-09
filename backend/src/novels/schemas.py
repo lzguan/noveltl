@@ -20,10 +20,12 @@ class SourceWork(Model):
         source_work_title: Title of the source work.
         source_work_description: Optional description of the source work.
     """
+
     model_config = ConfigDict(from_attributes=True)
-    source_work_id : uuid.UUID
-    source_work_title : str
-    source_work_description : str | None = None
+    source_work_id: uuid.UUID
+    source_work_title: str
+    source_work_description: str | None = None
+
 
 class CreateSourceWork(Model):
     """
@@ -33,8 +35,10 @@ class CreateSourceWork(Model):
         source_work_title: Title of the source work to create.
         source_work_description: Optional description.
     """
-    source_work_title : str
-    source_work_description : str | None = None
+
+    source_work_title: str
+    source_work_description: str | None = None
+
 
 class UpdateSourceWork(Model):
     """
@@ -44,8 +48,9 @@ class UpdateSourceWork(Model):
         source_work_title: Updated title. If None, do not update.
         source_work_description: Updated description. If None, do not update.
     """
-    source_work_title : str | None = None
-    source_work_description : str | None = None
+
+    source_work_title: str | None = None
+    source_work_description: str | None = None
 
 
 class Novel(Model):
@@ -62,16 +67,18 @@ class Novel(Model):
         language_code: String code key to language of the novel.
         source_work_id: UUID foreign key to source work of the novel.
     """
-    model_config = ConfigDict(from_attributes=True)
-    novel_id : uuid.UUID
-    novel_title : str
-    novel_description : str | None = None
-    novel_author : str | None = None
-    novel_visibility : Visibility
-    novel_type : NovelType
 
-    language_code : str
-    source_work_id : uuid.UUID
+    model_config = ConfigDict(from_attributes=True)
+    novel_id: uuid.UUID
+    novel_title: str
+    novel_description: str | None = None
+    novel_author: str | None = None
+    novel_visibility: Visibility
+    novel_type: NovelType
+
+    language_code: str
+    source_work_id: uuid.UUID
+
 
 class CreateNovel(Model):
     """
@@ -86,14 +93,16 @@ class CreateNovel(Model):
         language_code: String code key to language of novel we are creating.
         source_work_id: Optional source work to attach to. If None, a new source work is auto-created.
     """
-    novel_title : str
-    novel_description : str | None = None
-    novel_author : str | None = None
-    novel_visibility : Visibility
-    novel_type : NovelType
 
-    language_code : str
-    source_work_id : uuid.UUID | None = None
+    novel_title: str
+    novel_description: str | None = None
+    novel_author: str | None = None
+    novel_visibility: Visibility
+    novel_type: NovelType
+
+    language_code: str
+    source_work_id: uuid.UUID | None = None
+
 
 class UpdateNovel(Model):
     """
@@ -106,11 +115,13 @@ class UpdateNovel(Model):
         novel_visibility: Updated visibility level of novel we are updating. If None, then do not update.
         novel_type: Updated novel type. If None, then do not update.
     """
-    novel_title : str | None = None
-    novel_description : str | None = None
-    novel_author : str | None = None
-    novel_visibility : Visibility | None = None
-    novel_type : NovelType | None = None
+
+    novel_title: str | None = None
+    novel_description: str | None = None
+    novel_author: str | None = None
+    novel_visibility: Visibility | None = None
+    novel_type: NovelType | None = None
+
 
 class SourceWorkData(Model):
     """
@@ -120,8 +131,10 @@ class SourceWorkData(Model):
         source_work: The source work metadata.
         novels: A list of novels associated with this source work.
     """
-    source_work : SourceWork
-    novels : list[Novel]
+
+    source_work: SourceWork
+    novels: list[Novel]
+
 
 class Chapter(Model):
     """
@@ -132,13 +145,15 @@ class Chapter(Model):
         chapter_num: The chapter number.
         novel_id: UUID foreign key to the novel this chapter belongs to.
     """
-    model_config = ConfigDict(from_attributes=True)
-    chapter_id : uuid.UUID
-    chapter_num : int
-    chapter_title : str
-    chapter_is_public : bool
 
-    novel_id : uuid.UUID
+    model_config = ConfigDict(from_attributes=True)
+    chapter_id: uuid.UUID
+    chapter_num: int
+    chapter_title: str
+    chapter_is_public: bool
+
+    novel_id: uuid.UUID
+
 
 class CreateChapter(Model):
     """
@@ -149,9 +164,11 @@ class CreateChapter(Model):
         chapter_title: Title of the chapter. Defaults to empty string.
         chapter_is_public: Whether the chapter is publicly visible. Defaults to False.
     """
-    chapter_num : int
-    chapter_title : str = ""
-    chapter_is_public : bool = False
+
+    chapter_num: int
+    chapter_title: str = ""
+    chapter_is_public: bool = False
+
 
 class ChapterContent(Model):
     """
@@ -162,10 +179,12 @@ class ChapterContent(Model):
         chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.
         chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.
     """
+
     model_config = ConfigDict(from_attributes=True)
-    chapter_content_text : str
-    chapter_content_version : int
-    chapter_content_id : uuid.UUID
+    chapter_content_text: str
+    chapter_content_version: int
+    chapter_content_id: uuid.UUID
+
 
 class ChapterContentMeta(Model):
     """
@@ -175,9 +194,11 @@ class ChapterContentMeta(Model):
         chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.
         chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.
     """
+
     model_config = ConfigDict(from_attributes=True)
-    chapter_content_version : int
-    chapter_content_id : uuid.UUID
+    chapter_content_version: int
+    chapter_content_id: uuid.UUID
+
 
 class ChapterData(Model):
     """
@@ -187,8 +208,10 @@ class ChapterData(Model):
         metadata: The metadata of the chapter, such as title and whether it's primary.
         content: The text content of the chapter.
     """
+
     metadata: Chapter
     content: ChapterContent
+
 
 class UpdateChapter(Model):
     """
@@ -197,7 +220,9 @@ class UpdateChapter(Model):
     Attributes:
         chapter_title: The new title for the chapter.
     """
-    chapter_title : str
+
+    chapter_title: str
+
 
 class TextOp(Model):
     """
@@ -208,9 +233,11 @@ class TextOp(Model):
         start: The starting index in the text content where the operation should be applied.
         text: The text to insert (for insert operations) or the text to delete (for delete operations).
     """
-    op : Literal["insert", "delete"]
-    start : int
-    text : str
+
+    op: Literal["insert", "delete"]
+    start: int
+    text: str
+
 
 class UpdateChapterContent(Model):
     """
@@ -220,8 +247,10 @@ class UpdateChapterContent(Model):
         text_ops: A list of text operations (insertions or deletions) to apply to the existing text content.
         chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.
     """
-    text_ops : list[TextOp]
-    chapter_content_id : uuid.UUID
+
+    text_ops: list[TextOp]
+    chapter_content_id: uuid.UUID
+
 
 class ModifyChapterContentResponse(Model):
     """
@@ -232,7 +261,8 @@ class ModifyChapterContentResponse(Model):
         chapter_content_id: The UUID of the text content that was modified.
         label_data_id_map: A mapping from label data IDs before the text modification to label data IDs after the text modification
     """
+
     model_config = ConfigDict(from_attributes=True)
-    chapter_content_version : int
-    chapter_content_id : uuid.UUID
-    label_data_id_map : dict[uuid.UUID, uuid.UUID]
+    chapter_content_version: int
+    chapter_content_id: uuid.UUID
+    label_data_id_map: dict[uuid.UUID, uuid.UUID]

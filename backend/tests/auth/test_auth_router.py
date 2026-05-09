@@ -13,10 +13,7 @@ class TestTokenEndpoint:
 
     @pytest.mark.dependency(name="auth::router::correct_login", scope="session")
     def test_correct_login(self, client: TestClient, sample_users: list[User]):
-        response = client.post('/token', data={
-            "username": "admin",
-            "password": "123"
-        })
+        response = client.post("/token", data={"username": "admin", "password": "123"})
         assert response.status_code == status.HTTP_200_OK
         token_data = response.json()
         assert "access_token" in token_data
@@ -24,10 +21,7 @@ class TestTokenEndpoint:
 
     @pytest.mark.dependency(name="auth::router::wrong_password", scope="session")
     def test_wrong_password(self, client: TestClient, sample_users: list[User]):
-        response = client.post("/token", data={
-            "username": "user",
-            "password": "wrong_password"
-        })
+        response = client.post("/token", data={"username": "user", "password": "wrong_password"})
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     @pytest.mark.dependency(
@@ -47,29 +41,17 @@ class TestRegisterEndpoint:
 
     @pytest.mark.dependency(name="auth::router::register_success", scope="session")
     def test_success(self, client: TestClient, sample_users: list[User]):
-        response = client.post('/register', json={
-            "userName": "user2",
-            "userPassword": "abc",
-            "userType": "user"
-        })
+        response = client.post("/register", json={"userName": "user2", "userPassword": "abc", "userType": "user"})
         assert response.status_code == status.HTTP_200_OK
 
     @pytest.mark.dependency(name="auth::router::register_duplicate", scope="session")
     def test_duplicate_user(self, client: TestClient, sample_users: list[User]):
-        response = client.post('/register', json={
-            "userName": "user",
-            "userPassword": "pwd",
-            "userType": "user"
-        })
+        response = client.post("/register", json={"userName": "user", "userPassword": "pwd", "userType": "user"})
         assert response.status_code == status.HTTP_409_CONFLICT
 
     @pytest.mark.dependency(name="auth::router::register_admin_rejected", scope="session")
     def test_register_admin_rejected(self, client: TestClient, sample_users: list[User]):
-        response = client.post('/register', json={
-            "userName": "admin2",
-            "userPassword": "pwd",
-            "userType": "admin"
-        })
+        response = client.post("/register", json={"userName": "admin2", "userPassword": "pwd", "userType": "admin"})
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     @pytest.mark.dependency(

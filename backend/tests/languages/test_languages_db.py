@@ -9,7 +9,7 @@ from src.languages.models import Language
 from src.novels.models import Novel
 
 
-def test_language_creation(test_db : Session):
+def test_language_creation(test_db: Session):
     # Create a language
     lang = Language(language_name="English", language_code="en")
     test_db.add(lang)
@@ -32,7 +32,8 @@ def test_language_creation(test_db : Session):
     all_languages = test_db.execute(select(Language)).scalars().all()
     assert len(all_languages) == 2
 
-def test_language_unique_constraints(test_db : Session):
+
+def test_language_unique_constraints(test_db: Session):
     # Create a language
     lang1 = Language(language_name="English", language_code="en")
     test_db.add(lang1)
@@ -55,7 +56,8 @@ def test_language_unique_constraints(test_db : Session):
     assert e.value.orig.pgcode == errorcodes.UNIQUE_VIOLATION  # Unique violation
     test_db.rollback()
 
-def test_language_length_constraints(test_db : Session):
+
+def test_language_length_constraints(test_db: Session):
     # Language name exceeding 31 characters
     long_name = "L" * 32
     lang1 = Language(language_name=long_name, language_code="xx")
@@ -99,7 +101,8 @@ def test_language_length_constraints(test_db : Session):
     assert queried_lang4.language_name == max_name
     assert queried_lang4.language_code == max_code
 
-def test_cannot_delete_language_in_use(test_db : Session, sample_novels : list[Novel]):
+
+def test_cannot_delete_language_in_use(test_db: Session, sample_novels: list[Novel]):
     # sample_novels fixture creates novels with languages
     # Attempt to delete a language that is in use
     lang_in_use = test_db.execute(select(Language).where(Language.language_name == "English")).scalar_one()

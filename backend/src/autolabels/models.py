@@ -12,6 +12,7 @@ from .constants import MAX_MODEL_NAME_LEN, AutoLabelProgress
 if TYPE_CHECKING:
     from ..novels.models import ChapterContent
 
+
 class AutoLabel(Base):
     """
     Database model for storing automatically labeled data.
@@ -29,20 +30,33 @@ class AutoLabel(Base):
     Notes:
         Each chapter content can only have one autolabel with a given model and parameters.
     """
-    __tablename__ = 'auto_labels'
 
-    auto_label_id : Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
-    auto_label_data : Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
-    auto_label_model_name : Mapped[str] = mapped_column(String(MAX_MODEL_NAME_LEN), nullable=False)
-    auto_label_model_params : Mapped[dict[Any, Any]] = mapped_column(JSONB, nullable=False)
-    auto_label_status : Mapped[AutoLabelProgress] = mapped_column(Enum(AutoLabelProgress, native_enum=False, length=10, values_callable=lambda x : [str(e.value) for e in x]), nullable=False, default=AutoLabelProgress.PENDING) # type: ignore
-    auto_label_last_job_id : Mapped[str] = mapped_column(String(36), nullable=True)
-    auto_label_message : Mapped[str] = mapped_column(Text, nullable=True)
+    __tablename__ = "auto_labels"
 
-    chapter_content_id : Mapped[uuid.UUID] = mapped_column(ForeignKey('chapter_contents.chapter_content_id', name='fk_auto_labels_chapter_content_id_chapter_contents'), nullable=False)
-    chapter_content_of_auto_label : Mapped["ChapterContent"] = relationship(back_populates='auto_labels_with_chapter_content')
+    auto_label_id: Mapped[uuid.UUID] = mapped_column(
+        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
+    )
+    auto_label_data: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    auto_label_model_name: Mapped[str] = mapped_column(String(MAX_MODEL_NAME_LEN), nullable=False)
+    auto_label_model_params: Mapped[dict[Any, Any]] = mapped_column(JSONB, nullable=False)
+    auto_label_status: Mapped[AutoLabelProgress] = mapped_column(
+        Enum(AutoLabelProgress, native_enum=False, length=10, values_callable=lambda x: [str(e.value) for e in x]),
+        nullable=False,
+        default=AutoLabelProgress.PENDING,
+    )  # type: ignore
+    auto_label_last_job_id: Mapped[str] = mapped_column(String(36), nullable=True)
+    auto_label_message: Mapped[str] = mapped_column(Text, nullable=True)
+
+    chapter_content_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("chapter_contents.chapter_content_id", name="fk_auto_labels_chapter_content_id_chapter_contents"),
+        nullable=False,
+    )
+    chapter_content_of_auto_label: Mapped["ChapterContent"] = relationship(
+        back_populates="auto_labels_with_chapter_content"
+    )
 
     __table_args__ = (
-        UniqueConstraint(chapter_content_id, auto_label_model_name, auto_label_model_params, name="uq_model_name_params"),
-
+        UniqueConstraint(
+            chapter_content_id, auto_label_model_name, auto_label_model_params, name="uq_model_name_params"
+        ),
     )

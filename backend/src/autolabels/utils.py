@@ -11,12 +11,13 @@ class AutoLabelDispatcher(Protocol):
     """
     Abstract class for enqueuing an autolabel request to some queue.
     """
+
     async def enqueue(
         self,
-        job_id : str,
-        auto_label_id : uuid.UUID,
-        model_name : str,
-        model_params : dict[str, str | int | float | bool],
+        job_id: str,
+        auto_label_id: uuid.UUID,
+        model_name: str,
+        model_params: dict[str, str | int | float | bool],
     ) -> None:
         """
         Enqueue a request.
@@ -33,19 +34,22 @@ class AutoLabelDispatcher(Protocol):
         """
         ...
 
+
 class ArqDispatcher(AutoLabelDispatcher):
-    def __init__(self, redis_pool : ArqRedis) -> None:
+    def __init__(self, redis_pool: ArqRedis) -> None:
         self.redis = redis_pool
 
     async def enqueue(
-            self,
-            job_id : str,
-            auto_label_id: uuid.UUID,
-            model_name: str,
-            model_params: dict[str, str | int | float | bool],
-        ) -> None:
+        self,
+        job_id: str,
+        auto_label_id: uuid.UUID,
+        model_name: str,
+        model_params: dict[str, str | int | float | bool],
+    ) -> None:
         try:
-            await self.redis.enqueue_job('autolabel_infer', job_id, auto_label_id, model_name, model_params, _job_id=job_id)
+            await self.redis.enqueue_job(
+                "autolabel_infer", job_id, auto_label_id, model_name, model_params, _job_id=job_id
+            )
         except (ConnectionError, TimeoutError, OSError) as e:
             raise EnqueueFailedException(f"Redis connection failed: {str(e)}") from e
         except ResponseError as e:

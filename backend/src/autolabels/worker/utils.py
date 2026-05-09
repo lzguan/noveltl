@@ -5,7 +5,9 @@ from ..exceptions import ChunkTooLargeException, TokenDoesNotExistException
 from .interfaces import Tokenizer
 
 
-def _chunk_blocks(text : str, separators : dict[str, SepPriority]) -> Generator[tuple[str, int, SepPriority | None], None, None]:
+def _chunk_blocks(
+    text: str, separators: dict[str, SepPriority]
+) -> Generator[tuple[str, int, SepPriority | None], None, None]:
     """
     Separates text into chunks ending with an element in separators. Only supports single character separators. Return format is a generator yielding tuples of (chunk_text, chunk_start_pos, separator_priority).
 
@@ -18,13 +20,16 @@ def _chunk_blocks(text : str, separators : dict[str, SepPriority]) -> Generator[
     pos = 0
     while pos < len(text):
         if text[pos] in separators:
-            yield text[pos_last_sep:pos + 1], pos_last_sep, separators[text[pos]]
+            yield text[pos_last_sep : pos + 1], pos_last_sep, separators[text[pos]]
             pos_last_sep = pos + 1
         pos += 1
     if pos > pos_last_sep:
         yield text[pos_last_sep:pos], pos_last_sep, None
 
-def _chunk_paragraph(text : str, max_chunk_size : int, start_pos : int, words : list[tuple[str, int]]) -> Generator[tuple[str, int], None, None]:
+
+def _chunk_paragraph(
+    text: str, max_chunk_size: int, start_pos: int, words: list[tuple[str, int]]
+) -> Generator[tuple[str, int], None, None]:
     """
     Returns a generator that yields chunks of the original text, each chunk having no more than max_chunk_size tokens. Used as a helper function for chunk_text.
 
@@ -41,7 +46,7 @@ def _chunk_paragraph(text : str, max_chunk_size : int, start_pos : int, words : 
     chunk_size = 0
     for word, sz in words:
         if chunk_size + sz > max_chunk_size:
-            yield text[chunk_start_offset : chunk_cur_offset], start_pos + chunk_start_offset
+            yield text[chunk_start_offset:chunk_cur_offset], start_pos + chunk_start_offset
             chunk_start_offset = chunk_cur_offset
             chunk_size = 0
         chunk_cur_offset = text.find(word, chunk_cur_offset)
@@ -50,10 +55,12 @@ def _chunk_paragraph(text : str, max_chunk_size : int, start_pos : int, words : 
         chunk_cur_offset += len(word)
         chunk_size += sz
     if chunk_size > 0:
-        yield text[chunk_start_offset : ], start_pos + chunk_start_offset
+        yield text[chunk_start_offset:], start_pos + chunk_start_offset
 
 
-def chunk_text(text : str, separators : dict[str, SepPriority], tokenizer : Tokenizer, max_chunk_size : int, force_chunk : bool = False) -> Generator[tuple[str, int], None, None]:
+def chunk_text(
+    text: str, separators: dict[str, SepPriority], tokenizer: Tokenizer, max_chunk_size: int, force_chunk: bool = False
+) -> Generator[tuple[str, int], None, None]:
     """
     Return a generator that returns chunks of the original text along with their start positions, each chunk having no more than max_chunk_size tokens.
 
@@ -74,8 +81,10 @@ def chunk_text(text : str, separators : dict[str, SepPriority], tokenizer : Toke
             - Account for odd behavior from tokenizer (e.g. normalization changing length, etc.)
         Test extensively.
     """
-    priority_buffers : dict[SepPriority, tuple[int, int, int]] = { priority : (0, 0, 0) for priority in SepPriority} # priority : (index in all_buffer, size in tokens of buffer, end pos of buffer)
-    all_buffer : list[str] = [] # buffer of lines
+    priority_buffers: dict[SepPriority, tuple[int, int, int]] = {
+        priority: (0, 0, 0) for priority in SepPriority
+    }  # priority : (index in all_buffer, size in tokens of buffer, end pos of buffer)
+    all_buffer: list[str] = []  # buffer of lines
     all_buffer_size = 0
     all_buffer_start = 0
     all_buffer_end = 0
@@ -91,13 +100,13 @@ def chunk_text(text : str, separators : dict[str, SepPriority], tokenizer : Toke
             for prio in SepPriority:
                 idx, p_size, p_end = priority_buffers[prio]
                 if idx > 0:
-                    yield ''.join(all_buffer[:idx]), all_buffer_start
+                    yield "".join(all_buffer[:idx]), all_buffer_start
                     yielded = True
                     for prio2 in SepPriority:
                         priority_buffers[prio2] = (
                             max(priority_buffers[prio2][0] - idx, 0),
                             max(priority_buffers[prio2][1] - p_size, 0),
-                            max(priority_buffers[prio2][2], p_end)
+                            max(priority_buffers[prio2][2], p_end),
                         )
 
                     all_buffer = all_buffer[idx:]
@@ -128,4 +137,4 @@ def chunk_text(text : str, separators : dict[str, SepPriority], tokenizer : Toke
         for prio in SepPriority:
             if prio >= priority:
                 priority_buffers[prio] = (len(all_buffer), all_buffer_size, all_buffer_end)
-    yield ''.join(all_buffer), all_buffer_start
+    yield "".join(all_buffer), all_buffer_start

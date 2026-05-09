@@ -1,6 +1,7 @@
 """
 Pydantic schemas for autolabels.
 """
+
 import uuid
 from typing import Self
 
@@ -16,7 +17,9 @@ class NERModelParamsBase(SkipDefaultModel):
     """
     Pydantic schema for base NER model parameters. No attributes provided.
     """
+
     pass
+
 
 class CluenerModelParams(NERModelParamsBase):
     """
@@ -31,27 +34,27 @@ class CluenerModelParams(NERModelParamsBase):
         To validate this model without injecting default values, call `CluenerModelParams.model_validate(..., context={'skip_default_values' : True})`.
     """
 
-    chunk_size : int = Field(default=500, gt=0, le=512)
-    separators : dict[str, SepPriority] = Field(
+    chunk_size: int = Field(default=500, gt=0, le=512)
+    separators: dict[str, SepPriority] = Field(
         default={
             "\n": SepPriority.HIGH,
-
             "。": SepPriority.MED,
             "！": SepPriority.MED,
             "？": SepPriority.MED,
             ".": SepPriority.MED,
             "!": SepPriority.MED,
             "?": SepPriority.MED,
-
             "，": SepPriority.LOW,
             "；": SepPriority.LOW,
             "：": SepPriority.LOW,
             ",": SepPriority.LOW,
             ";": SepPriority.LOW,
-            ":": SepPriority.LOW
-        })
-    force_chunk : bool = False
-    @model_validator(mode='after')
+            ":": SepPriority.LOW,
+        }
+    )
+    force_chunk: bool = False
+
+    @model_validator(mode="after")
     def verify_separators(self) -> Self:
         if not all(len(key) == 1 for key in self.separators):
             raise ValueError("A separator does not have length 1")
@@ -72,15 +75,17 @@ class AutoLabel(Model):
         chapter_content_id: UUID of chapter content this AutoLabel is associated with.
         auto_label_last_job_id: Job id of last job that was run on this AutoLabel.
     """
+
     model_config = ConfigDict(from_attributes=True)
-    auto_label_id : uuid.UUID
-    auto_label_data : list[LabelBase] | None
-    auto_label_model_name : str
-    auto_label_model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
-    auto_label_status : AutoLabelProgress
-    auto_label_message : str | None = None
-    chapter_content_id : uuid.UUID
-    auto_label_last_job_id : str
+    auto_label_id: uuid.UUID
+    auto_label_data: list[LabelBase] | None
+    auto_label_model_name: str
+    auto_label_model_params: SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
+    auto_label_status: AutoLabelProgress
+    auto_label_message: str | None = None
+    chapter_content_id: uuid.UUID
+    auto_label_last_job_id: str
+
 
 class AutoLabelMeta(Model):
     """
@@ -95,15 +100,17 @@ class AutoLabelMeta(Model):
         chapter_content_id: UUID of chapter content this AutoLabel is associated with.
         auto_label_last_job_id: Job id of last job that was run on this AutoLabel.
     """
+
     model_config = ConfigDict(from_attributes=True)
 
-    auto_label_id : uuid.UUID
-    auto_label_model_name : str
-    auto_label_model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
-    auto_label_status : AutoLabelProgress
-    auto_label_message : str | None = None
-    chapter_content_id : uuid.UUID
-    auto_label_last_job_id : str
+    auto_label_id: uuid.UUID
+    auto_label_model_name: str
+    auto_label_model_params: SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
+    auto_label_status: AutoLabelProgress
+    auto_label_message: str | None = None
+    chapter_content_id: uuid.UUID
+    auto_label_last_job_id: str
+
 
 class CreateAutoLabels(Model):
     """
@@ -119,17 +126,18 @@ class CreateAutoLabels(Model):
         is_public: Optional parameter. Restrict to revisions with this specific public flag.
 
     """
-    novel_id : uuid.UUID
-    auto_label_model_name : str
-    auto_label_model_params : SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
-    chapter_ids : list[uuid.UUID] | None = None
-    start : int | None = None
-    end : int | None = None
-    is_public : bool | None = None
 
-    @model_validator(mode='after')
+    novel_id: uuid.UUID
+    auto_label_model_name: str
+    auto_label_model_params: SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
+    chapter_ids: list[uuid.UUID] | None = None
+    start: int | None = None
+    end: int | None = None
+    is_public: bool | None = None
+
+    @model_validator(mode="after")
     def validate_model_params(self) -> Self:
-        if self.auto_label_model_name == 'cluener':
+        if self.auto_label_model_name == "cluener":
             resolved_params = CluenerModelParams.model_validate(self.auto_label_model_params)
             self.auto_label_model_params = resolved_params.model_dump()
 

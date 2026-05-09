@@ -11,5 +11,6 @@ def generate_openapi_json():
     with open(Path(__file__).parent.parent / "openapi.json", "w") as f:
         json.dump(openapi_schema, f, indent=2)
 
+
 if __name__ == "__main__":
     generate_openapi_json()

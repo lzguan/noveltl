@@ -7,5 +7,5 @@ from ..redis_conn import get_redis
 from .utils import ArqDispatcher, AutoLabelDispatcher
 
 
-def get_arq_dispatcher(redis : Annotated[ArqRedis, Depends(get_redis)]) -> AutoLabelDispatcher:
+def get_arq_dispatcher(redis: Annotated[ArqRedis, Depends(get_redis)]) -> AutoLabelDispatcher:
     return ArqDispatcher(redis)

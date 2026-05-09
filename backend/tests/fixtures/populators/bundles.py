@@ -52,8 +52,7 @@ def _build_label_group_bundle(
             labels=labels_by_label_data_id.get(label_data.label_data_id, []),
         )
         for label_data in label_datas
-        if label_data.label_group_id == label_group.label_group_id
-        and label_data.chapter_content_id in content_by_id
+        if label_data.label_group_id == label_group.label_group_id and label_data.chapter_content_id in content_by_id
     ]
     owner_users, editor_users, viewer_users = group_label_users_by_role(contributors, users)
     return LabelFixtureBundle(
@@ -142,16 +141,10 @@ def _build_scenario_bundle(
     novel_bundles = [
         _build_novel_bundle(
             source_work=next(
-                source_work
-                for source_work in source_works
-                if source_work.source_work_id == novel.source_work_id
+                source_work for source_work in source_works if source_work.source_work_id == novel.source_work_id
             ),
             novel=novel,
-            contributors=[
-                contributor
-                for contributor in novel_contributors
-                if contributor.novel_id == novel.novel_id
-            ],
+            contributors=[contributor for contributor in novel_contributors if contributor.novel_id == novel.novel_id],
             chapters=chapters,
             chapter_contents=chapter_contents,
             label_groups=label_groups_by_novel_id.get(novel.novel_id, []),
@@ -238,11 +231,7 @@ def access_matrix_scenario(
         users=[p1_user_1, p1_user_2, p1_admin],
         source_works=[p1_source_work],
         novels=novels,
-        novel_contributors=[
-            contributor
-            for novel in novels
-            for contributor in novel.novel_contributors_with_novel
-        ],
+        novel_contributors=[contributor for novel in novels for contributor in novel.novel_contributors_with_novel],
         chapters=[],
         chapter_contents=[],
         label_groups=[],
@@ -293,11 +282,7 @@ def novel_resource_scenario(
         users=[p1_user_1, p1_user_2, p1_admin],
         source_works=[p1_source_work],
         novels=novels,
-        novel_contributors=[
-            contributor
-            for novel in novels
-            for contributor in novel.novel_contributors_with_novel
-        ],
+        novel_contributors=[contributor for novel in novels for contributor in novel.novel_contributors_with_novel],
         chapters=chapters,
         chapter_contents=chapter_contents,
         label_groups=[],
@@ -345,11 +330,7 @@ def label_access_scenario(
         users=[lp_user_1, lp_user_2, lp_user_3, lp_admin],
         source_works=[lp_source_work],
         novels=novels,
-        novel_contributors=[
-            contributor
-            for novel in novels
-            for contributor in novel.novel_contributors_with_novel
-        ],
+        novel_contributors=[contributor for novel in novels for contributor in novel.novel_contributors_with_novel],
         chapters=[chapter_public, chapter_private],
         chapter_contents=[chapter_content_public, chapter_content_private],
         label_groups=label_groups,
@@ -480,16 +461,20 @@ def chinese_xianxia_small_test_labels_scenario(
     )
     assert len(result.errors) == 0
 
-    label_datas = test_db.execute(
-        select(LabelData).where(
-            LabelData.label_group_id == label_bundle.label_group.label_group_id
+    label_datas = (
+        test_db.execute(select(LabelData).where(LabelData.label_group_id == label_bundle.label_group.label_group_id))
+        .scalars()
+        .all()
+    )
+    labels: Sequence[Label] = (
+        test_db.execute(
+            select(Label).where(Label.label_data_id.in_([label_data.label_data_id for label_data in label_datas]))
         )
-    ).scalars().all()
-    labels : Sequence[Label] = test_db.execute(
-        select(Label).where(
-            Label.label_data_id.in_([label_data.label_data_id for label_data in label_datas])
-        )
-    ).scalars().all() if label_datas else []
+        .scalars()
+        .all()
+        if label_datas
+        else []
+    )
 
     label_bundle.label_datas = [
         LabelDataBundle(

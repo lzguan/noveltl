@@ -7,8 +7,9 @@ from .inference import Cluener
 from .tasks import autolabel_infer, model_cache
 
 
-async def startup(ctx : Any) -> None:
-    model_cache['cluener'] = Cluener().model
+async def startup(ctx: Any) -> None:
+    model_cache["cluener"] = Cluener().model
+
 
 class WorkerSettings:
     functions = [autolabel_infer]

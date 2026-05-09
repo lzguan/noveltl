@@ -3,6 +3,7 @@ Tests for label permission functions.
 
 Note: These tests are AI generated and may not cover all edge cases or be fully comprehensive. It is recommended to review and modify the tests as needed to ensure they align with the specific requirements and constraints of your application.
 """
+
 import pytest
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
@@ -376,17 +377,17 @@ class TestLabelDelete:
         actor = _label_access_user(label_access_scenario, "lp_alice")
         label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         label_ids = [label.label_id for label in label_group.labels]
-        stmt = delete(label_models.Label).where(
-            label_models.Label.label_id.in_(label_ids)
-        )
+        stmt = delete(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
         stmt = label_mod_access_delete(stmt, actor)
         test_db.execute(stmt)
         test_db.commit()
 
         # Verify deleted
-        remaining = test_db.execute(
-            select(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
-        ).scalars().all()
+        remaining = (
+            test_db.execute(select(label_models.Label).where(label_models.Label.label_id.in_(label_ids)))
+            .scalars()
+            .all()
+        )
         assert len(remaining) == 0
 
     @pytest.mark.dependency(name="labels::permissions::editor_can_delete_labels", scope="session")
@@ -398,16 +399,16 @@ class TestLabelDelete:
         actor = _label_access_user(label_access_scenario, "lp_bob")
         label_group = _label_access_group(label_access_scenario, "With Editor Group")
         label_ids = [label.label_id for label in label_group.labels]
-        stmt = delete(label_models.Label).where(
-            label_models.Label.label_id.in_(label_ids)
-        )
+        stmt = delete(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
         stmt = label_mod_access_delete(stmt, actor)
         test_db.execute(stmt)
         test_db.commit()
 
-        remaining = test_db.execute(
-            select(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
-        ).scalars().all()
+        remaining = (
+            test_db.execute(select(label_models.Label).where(label_models.Label.label_id.in_(label_ids)))
+            .scalars()
+            .all()
+        )
         assert len(remaining) == 0
 
     @pytest.mark.dependency(name="labels::permissions::viewer_cannot_delete_labels", scope="session")
@@ -419,17 +420,17 @@ class TestLabelDelete:
         actor = _label_access_user(label_access_scenario, "lp_bob")
         label_group = _label_access_group(label_access_scenario, "With Viewer Group")
         label_ids = [label.label_id for label in label_group.labels]
-        stmt = delete(label_models.Label).where(
-            label_models.Label.label_id.in_(label_ids)
-        )
+        stmt = delete(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
         stmt = label_mod_access_delete(stmt, actor)
         test_db.execute(stmt)
         test_db.commit()
 
         # Verify NOT deleted
-        remaining = test_db.execute(
-            select(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
-        ).scalars().all()
+        remaining = (
+            test_db.execute(select(label_models.Label).where(label_models.Label.label_id.in_(label_ids)))
+            .scalars()
+            .all()
+        )
         assert len(remaining) == len(label_group.labels)
 
     @pytest.mark.dependency(name="labels::permissions::non_contributor_cannot_delete_labels", scope="session")
@@ -441,17 +442,17 @@ class TestLabelDelete:
         actor = _label_access_user(label_access_scenario, "lp_charlie")
         label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         label_ids = [label.label_id for label in label_group.labels]
-        stmt = delete(label_models.Label).where(
-            label_models.Label.label_id.in_(label_ids)
-        )
+        stmt = delete(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
         stmt = label_mod_access_delete(stmt, actor)
         test_db.execute(stmt)
         test_db.commit()
 
         # Verify NOT deleted
-        remaining = test_db.execute(
-            select(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
-        ).scalars().all()
+        remaining = (
+            test_db.execute(select(label_models.Label).where(label_models.Label.label_id.in_(label_ids)))
+            .scalars()
+            .all()
+        )
         assert len(remaining) == len(label_group.labels)
 
     @pytest.mark.dependency(name="labels::permissions::admin_can_delete_any_labels", scope="session")
@@ -463,16 +464,16 @@ class TestLabelDelete:
         actor = _label_access_user(label_access_scenario, "lp_admin")
         label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         label_ids = [label.label_id for label in label_group.labels]
-        stmt = delete(label_models.Label).where(
-            label_models.Label.label_id.in_(label_ids)
-        )
+        stmt = delete(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
         stmt = label_mod_access_delete(stmt, actor)
         test_db.execute(stmt)
         test_db.commit()
 
-        remaining = test_db.execute(
-            select(label_models.Label).where(label_models.Label.label_id.in_(label_ids))
-        ).scalars().all()
+        remaining = (
+            test_db.execute(select(label_models.Label).where(label_models.Label.label_id.in_(label_ids)))
+            .scalars()
+            .all()
+        )
         assert len(remaining) == 0
 
     @pytest.mark.dependency(

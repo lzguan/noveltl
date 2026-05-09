@@ -18,9 +18,10 @@ from .types import (
 )
 
 # use kebab-case for filter names in the registry to match URL path parameters
-FILTER_REGISTRY : dict[str, RegisteredFilter] = {
+FILTER_REGISTRY: dict[str, RegisteredFilter] = {
     "score-filter": ScoreFilter(),
 }
+
 
 def query_schemas() -> dict[str, SchemaInfo]:
     """
@@ -42,7 +43,7 @@ def query_schemas() -> dict[str, SchemaInfo]:
     }
 
 
-def flag_instances(db : Session, current_user : User, filter_name : str, options : Any) -> list[Instance]:
+def flag_instances(db: Session, current_user: User, filter_name: str, options: Any) -> list[Instance]:
     """
     Flags instances using a specified filter and options.
 
@@ -61,7 +62,10 @@ def flag_instances(db : Session, current_user : User, filter_name : str, options
         raise OptionsValidationException(f"Invalid options for filter {filter_name}: {e}") from e
     return list(filter.flag_instances(db, current_user, validated_options))
 
-def get_contexts(db : Session, current_user : User, filter_name : str, instances : list[Any], options : Any) -> list[Context | None]:
+
+def get_contexts(
+    db: Session, current_user: User, filter_name: str, instances: list[Any], options: Any
+) -> list[Context | None]:
     if filter_name not in FILTER_REGISTRY:
         raise FilterNotFoundException(f"Filter {filter_name} not found in registry")
     filter = FILTER_REGISTRY[filter_name]
@@ -75,7 +79,10 @@ def get_contexts(db : Session, current_user : User, filter_name : str, instances
         raise InstanceValidationException(f"Invalid instances for filter {filter_name}: {e}") from e
     return list(filter.get_contexts(db, current_user, validated_instances, validated_options))
 
-def decide_instances(db : Session, current_user : User, filter_name : str, instance_contexts : list[Any], options : Any) -> list[bool]:
+
+def decide_instances(
+    db: Session, current_user: User, filter_name: str, instance_contexts: list[Any], options: Any
+) -> list[bool]:
     if filter_name not in FILTER_REGISTRY:
         raise FilterNotFoundException(f"Filter {filter_name} not found in registry")
     filter = FILTER_REGISTRY[filter_name]
@@ -87,7 +94,7 @@ def decide_instances(db : Session, current_user : User, filter_name : str, insta
         validated_instance_contexts = [
             (
                 filter.instance_schema.model_validate(instance),
-                filter.context_schema.model_validate(context) if context is not None else None
+                filter.context_schema.model_validate(context) if context is not None else None,
             )
             for instance, context in instance_contexts
         ]
@@ -95,7 +102,8 @@ def decide_instances(db : Session, current_user : User, filter_name : str, insta
         raise InstanceContextValidationException(f"Invalid instances or contexts for filter {filter_name}: {e}") from e
     return list(filter.decide_instances(db, current_user, validated_instance_contexts, validated_options))
 
-def apply_filter(db : Session, current_user : User, filter_name : str, instances : list[Any], options : Any) -> None:
+
+def apply_filter(db: Session, current_user: User, filter_name: str, instances: list[Any], options: Any) -> None:
     if filter_name not in FILTER_REGISTRY:
         raise FilterNotFoundException(f"Filter {filter_name} not found in registry")
     filter = FILTER_REGISTRY[filter_name]

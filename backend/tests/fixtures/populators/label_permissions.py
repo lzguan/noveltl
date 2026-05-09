@@ -9,6 +9,7 @@ Sets up:
 
 Note: this test is AI generated.
 """
+
 from typing import Any, Protocol
 
 import pytest
@@ -88,7 +89,7 @@ def lp_novel_public(test_db: Session, lp_language: Language, lp_user_1: User, lp
         language_code=lp_language.language_code,
         novel_type=NovelType.ORIGINAL,
         novel_visibility=Visibility.PUBLIC,
-        source_work_id=lp_source_work.source_work_id
+        source_work_id=lp_source_work.source_work_id,
     )
     test_db.add(novel)
     test_db.commit()
@@ -104,7 +105,7 @@ def lp_novel_private(test_db: Session, lp_language: Language, lp_user_1: User, l
         language_code=lp_language.language_code,
         novel_type=NovelType.ORIGINAL,
         novel_visibility=Visibility.PRIVATE,
-        source_work_id=lp_source_work.source_work_id
+        source_work_id=lp_source_work.source_work_id,
     )
     test_db.add(novel)
     test_db.commit()
@@ -116,10 +117,16 @@ def lp_novel_private(test_db: Session, lp_language: Language, lp_user_1: User, l
 # --- Chapters/Chapter Contents ---
 @pytest.fixture
 def lp_chapter_public(test_db: Session, lp_novel_public: Novel) -> tuple[Chapter, ChapterContent]:
-    chapter = Chapter(chapter_num=1, chapter_title="Chapter 1", chapter_is_public=True, novel_id=lp_novel_public.novel_id)
+    chapter = Chapter(
+        chapter_num=1, chapter_title="Chapter 1", chapter_is_public=True, novel_id=lp_novel_public.novel_id
+    )
     test_db.add(chapter)
     test_db.commit()
-    cc = ChapterContent(chapter_id=chapter.chapter_id, chapter_content_text="This is test content for the public novel chapter.", chapter_content_version=1)
+    cc = ChapterContent(
+        chapter_id=chapter.chapter_id,
+        chapter_content_text="This is test content for the public novel chapter.",
+        chapter_content_version=1,
+    )
     test_db.add(cc)
     test_db.commit()
     return chapter, cc
@@ -127,10 +134,16 @@ def lp_chapter_public(test_db: Session, lp_novel_public: Novel) -> tuple[Chapter
 
 @pytest.fixture
 def lp_chapter_private(test_db: Session, lp_novel_private: Novel) -> tuple[Chapter, ChapterContent]:
-    chapter = Chapter(chapter_num=1, chapter_title="Chapter 1", chapter_is_public=False, novel_id=lp_novel_private.novel_id)
+    chapter = Chapter(
+        chapter_num=1, chapter_title="Chapter 1", chapter_is_public=False, novel_id=lp_novel_private.novel_id
+    )
     test_db.add(chapter)
     test_db.commit()
-    cc = ChapterContent(chapter_id=chapter.chapter_id, chapter_content_text="This is test content for the private novel chapter.", chapter_content_version=1)
+    cc = ChapterContent(
+        chapter_id=chapter.chapter_id,
+        chapter_content_text="This is test content for the private novel chapter.",
+        chapter_content_version=1,
+    )
     test_db.add(cc)
     test_db.commit()
     return chapter, cc
@@ -143,51 +156,55 @@ def lp_label_group_owner_only(test_db: Session, lp_novel_public: Novel, lp_user_
     lg = LabelGroup(label_group_name="Owner Only Group", novel_id=lp_novel_public.novel_id)
     test_db.add(lg)
     test_db.commit()
-    test_db.add(LabelContributor(
-        label_group_id=lg.label_group_id,
-        user_id=lp_user_1.user_id,
-        label_contributor_role=LabelRole.OWNER
-    ))
+    test_db.add(
+        LabelContributor(
+            label_group_id=lg.label_group_id, user_id=lp_user_1.user_id, label_contributor_role=LabelRole.OWNER
+        )
+    )
     test_db.commit()
     return lg
 
 
 @pytest.fixture
-def lp_label_group_with_editor(test_db: Session, lp_novel_public: Novel, lp_user_1: User, lp_user_2: User) -> LabelGroup:
+def lp_label_group_with_editor(
+    test_db: Session, lp_novel_public: Novel, lp_user_1: User, lp_user_2: User
+) -> LabelGroup:
     """Label group where user_1 is OWNER, user_2 is EDITOR."""
     lg = LabelGroup(label_group_name="With Editor Group", novel_id=lp_novel_public.novel_id)
     test_db.add(lg)
     test_db.commit()
-    test_db.add(LabelContributor(
-        label_group_id=lg.label_group_id,
-        user_id=lp_user_1.user_id,
-        label_contributor_role=LabelRole.OWNER
-    ))
-    test_db.add(LabelContributor(
-        label_group_id=lg.label_group_id,
-        user_id=lp_user_2.user_id,
-        label_contributor_role=LabelRole.EDITOR
-    ))
+    test_db.add(
+        LabelContributor(
+            label_group_id=lg.label_group_id, user_id=lp_user_1.user_id, label_contributor_role=LabelRole.OWNER
+        )
+    )
+    test_db.add(
+        LabelContributor(
+            label_group_id=lg.label_group_id, user_id=lp_user_2.user_id, label_contributor_role=LabelRole.EDITOR
+        )
+    )
     test_db.commit()
     return lg
 
 
 @pytest.fixture
-def lp_label_group_with_viewer(test_db: Session, lp_novel_public: Novel, lp_user_1: User, lp_user_2: User) -> LabelGroup:
+def lp_label_group_with_viewer(
+    test_db: Session, lp_novel_public: Novel, lp_user_1: User, lp_user_2: User
+) -> LabelGroup:
     """Label group where user_1 is OWNER, user_2 is VIEWER."""
     lg = LabelGroup(label_group_name="With Viewer Group", novel_id=lp_novel_public.novel_id)
     test_db.add(lg)
     test_db.commit()
-    test_db.add(LabelContributor(
-        label_group_id=lg.label_group_id,
-        user_id=lp_user_1.user_id,
-        label_contributor_role=LabelRole.OWNER
-    ))
-    test_db.add(LabelContributor(
-        label_group_id=lg.label_group_id,
-        user_id=lp_user_2.user_id,
-        label_contributor_role=LabelRole.VIEWER
-    ))
+    test_db.add(
+        LabelContributor(
+            label_group_id=lg.label_group_id, user_id=lp_user_1.user_id, label_contributor_role=LabelRole.OWNER
+        )
+    )
+    test_db.add(
+        LabelContributor(
+            label_group_id=lg.label_group_id, user_id=lp_user_2.user_id, label_contributor_role=LabelRole.VIEWER
+        )
+    )
     test_db.commit()
     return lg
 
@@ -198,11 +215,11 @@ def lp_label_group_private_novel(test_db: Session, lp_novel_private: Novel, lp_u
     lg = LabelGroup(label_group_name="Private Novel Group", novel_id=lp_novel_private.novel_id)
     test_db.add(lg)
     test_db.commit()
-    test_db.add(LabelContributor(
-        label_group_id=lg.label_group_id,
-        user_id=lp_user_1.user_id,
-        label_contributor_role=LabelRole.OWNER
-    ))
+    test_db.add(
+        LabelContributor(
+            label_group_id=lg.label_group_id, user_id=lp_user_1.user_id, label_contributor_role=LabelRole.OWNER
+        )
+    )
     test_db.commit()
     return lg
 
@@ -210,15 +227,10 @@ def lp_label_group_private_novel(test_db: Session, lp_novel_private: Novel, lp_u
 # --- Label Data ---
 @pytest.fixture
 def lp_label_data_owner_only(
-    test_db: Session,
-    lp_label_group_owner_only: LabelGroup,
-    lp_chapter_public: tuple[Chapter, ChapterContent]
+    test_db: Session, lp_label_group_owner_only: LabelGroup, lp_chapter_public: tuple[Chapter, ChapterContent]
 ) -> LabelData:
     _, cc = lp_chapter_public
-    ld = LabelData(
-        label_group_id=lp_label_group_owner_only.label_group_id,
-        chapter_content_id=cc.chapter_content_id
-    )
+    ld = LabelData(label_group_id=lp_label_group_owner_only.label_group_id, chapter_content_id=cc.chapter_content_id)
     test_db.add(ld)
     test_db.commit()
     return ld
@@ -226,15 +238,10 @@ def lp_label_data_owner_only(
 
 @pytest.fixture
 def lp_label_data_with_editor(
-    test_db: Session,
-    lp_label_group_with_editor: LabelGroup,
-    lp_chapter_public: tuple[Chapter, ChapterContent]
+    test_db: Session, lp_label_group_with_editor: LabelGroup, lp_chapter_public: tuple[Chapter, ChapterContent]
 ) -> LabelData:
     _, cc = lp_chapter_public
-    ld = LabelData(
-        label_group_id=lp_label_group_with_editor.label_group_id,
-        chapter_content_id=cc.chapter_content_id
-    )
+    ld = LabelData(label_group_id=lp_label_group_with_editor.label_group_id, chapter_content_id=cc.chapter_content_id)
     test_db.add(ld)
     test_db.commit()
     return ld
@@ -242,15 +249,10 @@ def lp_label_data_with_editor(
 
 @pytest.fixture
 def lp_label_data_with_viewer(
-    test_db: Session,
-    lp_label_group_with_viewer: LabelGroup,
-    lp_chapter_public: tuple[Chapter, ChapterContent]
+    test_db: Session, lp_label_group_with_viewer: LabelGroup, lp_chapter_public: tuple[Chapter, ChapterContent]
 ) -> LabelData:
     _, cc = lp_chapter_public
-    ld = LabelData(
-        label_group_id=lp_label_group_with_viewer.label_group_id,
-        chapter_content_id=cc.chapter_content_id
-    )
+    ld = LabelData(label_group_id=lp_label_group_with_viewer.label_group_id, chapter_content_id=cc.chapter_content_id)
     test_db.add(ld)
     test_db.commit()
     return ld
@@ -258,15 +260,10 @@ def lp_label_data_with_viewer(
 
 @pytest.fixture
 def lp_label_data_private_novel(
-    test_db: Session,
-    lp_label_group_private_novel: LabelGroup,
-    lp_chapter_private: tuple[Chapter, ChapterContent]
+    test_db: Session, lp_label_group_private_novel: LabelGroup, lp_chapter_private: tuple[Chapter, ChapterContent]
 ) -> LabelData:
     _, cc = lp_chapter_private
-    ld = LabelData(
-        label_group_id=lp_label_group_private_novel.label_group_id,
-        chapter_content_id=cc.chapter_content_id
-    )
+    ld = LabelData(label_group_id=lp_label_group_private_novel.label_group_id, chapter_content_id=cc.chapter_content_id)
     test_db.add(ld)
     test_db.commit()
     return ld
@@ -284,7 +281,7 @@ def lp_labels_owner_only(test_db: Session, lp_label_data_owner_only: LabelData) 
             label_end=12,
             label_entity_group="MISC",
             label_score=0.95,
-            label_dirty=False
+            label_dirty=False,
         ),
         Label(
             label_data_id=lp_label_data_owner_only.label_data_id,
@@ -293,7 +290,7 @@ def lp_labels_owner_only(test_db: Session, lp_label_data_owner_only: LabelData) 
             label_end=20,
             label_entity_group="MISC",
             label_score=0.90,
-            label_dirty=False
+            label_dirty=False,
         ),
     ]
     test_db.add_all(labels)
@@ -312,7 +309,7 @@ def lp_labels_with_editor(test_db: Session, lp_label_data_with_editor: LabelData
             label_end=12,
             label_entity_group="MISC",
             label_score=0.95,
-            label_dirty=False
+            label_dirty=False,
         ),
     ]
     test_db.add_all(labels)
@@ -331,7 +328,7 @@ def lp_labels_with_viewer(test_db: Session, lp_label_data_with_viewer: LabelData
             label_end=12,
             label_entity_group="MISC",
             label_score=0.95,
-            label_dirty=False
+            label_dirty=False,
         ),
     ]
     test_db.add_all(labels)

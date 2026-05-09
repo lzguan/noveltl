@@ -24,15 +24,21 @@ from src.novels.models import Chapter, ChapterContent, Novel, NovelContributor, 
 
 def typed_list[T](t: type[T]) -> Callable[[], list[T]]:
     """Return a typed empty-list factory for dataclass default_factory use."""
+
     def factory() -> list[T]:
         return []
+
     return factory
+
 
 def typed_dict[K, V](k: type[K], v: type[V]) -> Callable[[], dict[K, V]]:
     """Return a typed empty-dict factory for dataclass default_factory use."""
+
     def factory() -> dict[K, V]:
         return {}
+
     return factory
+
 
 @dataclass
 class UserCollection:
@@ -210,6 +216,7 @@ class ScenarioBundle:
             "label_datas": len(self.label_datas),
             "labels": len(self.labels),
         }
+
 
 def build_user_collection(users: list[User]) -> UserCollection:
     return UserCollection(

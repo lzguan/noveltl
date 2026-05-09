@@ -31,8 +31,8 @@ def _label(word: str, start: int, end: int, score: float = 1.0) -> Label:
 # apply_text_op — delete
 # -------------------------------------------------------
 
-class TestDeleteOp:
 
+class TestDeleteOp:
     @pytest.mark.dependency(name="novels::utils::delete_middle_shifts_labels", scope="session")
     def test_delete_middle_shifts_labels(self):
         # "Hello world. Test." with labels on "Hello" [0,5) and "Test" [13,17)
@@ -49,7 +49,7 @@ class TestDeleteOp:
         assert hello.label_start == 0
         assert hello.label_end == 5
         assert test.label_start == 7  # 13 - 6
-        assert test.label_end == 11   # 17 - 6
+        assert test.label_end == 11  # 17 - 6
 
     @pytest.mark.dependency(name="novels::utils::delete_at_start", scope="session")
     def test_delete_at_start(self):
@@ -192,8 +192,8 @@ class TestDeleteOp:
 # apply_text_op — insert
 # -------------------------------------------------------
 
-class TestInsertOp:
 
+class TestInsertOp:
     @pytest.mark.dependency(name="novels::utils::insert_middle_shifts_labels", scope="session")
     def test_insert_middle_shifts_labels(self):
         text = "Hello world."
@@ -209,7 +209,7 @@ class TestInsertOp:
         assert hello.label_start == 0
         assert hello.label_end == 5
         assert world.label_start == 11  # 6 + 5
-        assert world.label_end == 16   # 11 + 5
+        assert world.label_end == 16  # 11 + 5
 
     @pytest.mark.dependency(name="novels::utils::insert_at_start", scope="session")
     def test_insert_at_start(self):
@@ -326,8 +326,8 @@ class TestInsertOp:
 # apply_text_ops — sequential
 # -------------------------------------------------------
 
-class TestApplyTextOps:
 
+class TestApplyTextOps:
     @pytest.mark.dependency(name="novels::utils::sequential_delete_then_insert", scope="session")
     def test_sequential_delete_then_insert(self):
         text = "Hello world."

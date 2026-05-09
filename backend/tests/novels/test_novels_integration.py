@@ -38,7 +38,6 @@ def _text_ops_label_group(bundle: ScenarioBundle, group_name: str) -> LabelFixtu
 
 
 class TestBasicTextModification:
-
     @pytest.mark.dependency(name="novels::integration::delete_shifts_labels_and_creates_new_version", scope="session")
     def test_delete_shifts_labels_and_creates_new_version(
         self,
@@ -52,9 +51,12 @@ class TestBasicTextModification:
         label_group_2 = _text_ops_label_group(versioned_chapter_scenario, "Group 2")
         ops = [TextOp(op="delete", start=0, text="Hello ")]  # delete "Hello "
 
-        result = modify_chapter_content(
-            test_db, actor, chapter.chapter_id,
-            chapter_content.chapter_content_id, ops,
+        modify_chapter_content(
+            test_db,
+            actor,
+            chapter.chapter_id,
+            chapter_content.chapter_content_id,
+            ops,
         )
 
         # New chapter content should exist with version 2
@@ -82,9 +84,11 @@ class TestBasicTextModification:
                 LabelData.label_group_id == label_group_1.label_group.label_group_id,
             )
         ).scalar_one()
-        new_labels_1 = test_db.execute(
-            select(LabelModel).where(LabelModel.label_data_id == new_ld_1.label_data_id)
-        ).scalars().all()
+        new_labels_1 = (
+            test_db.execute(select(LabelModel).where(LabelModel.label_data_id == new_ld_1.label_data_id))
+            .scalars()
+            .all()
+        )
         words_1 = {lb.label_word for lb in new_labels_1}
         assert "Hello" not in words_1  # overlaps deletion
         assert "world" in words_1
@@ -103,9 +107,11 @@ class TestBasicTextModification:
                 LabelData.label_group_id == label_group_2.label_group.label_group_id,
             )
         ).scalar_one()
-        new_labels_2 = test_db.execute(
-            select(LabelModel).where(LabelModel.label_data_id == new_ld_2.label_data_id)
-        ).scalars().all()
+        new_labels_2 = (
+            test_db.execute(select(LabelModel).where(LabelModel.label_data_id == new_ld_2.label_data_id))
+            .scalars()
+            .all()
+        )
         assert len(new_labels_2) == 1
         assert new_labels_2[0].label_word == "sentence"
         assert new_labels_2[0].label_start == 21  # was 27, shifted left by 6
@@ -124,8 +130,11 @@ class TestBasicTextModification:
         ops = [TextOp(op="insert", start=0, text="Dear ")]
 
         modify_chapter_content(
-            test_db, actor, chapter.chapter_id,
-            chapter_content.chapter_content_id, ops,
+            test_db,
+            actor,
+            chapter.chapter_id,
+            chapter_content.chapter_content_id,
+            ops,
         )
 
         new_cc = test_db.execute(
@@ -143,9 +152,9 @@ class TestBasicTextModification:
                 LabelData.label_group_id == label_group_1.label_group.label_group_id,
             )
         ).scalar_one()
-        new_labels = test_db.execute(
-            select(LabelModel).where(LabelModel.label_data_id == new_ld.label_data_id)
-        ).scalars().all()
+        new_labels = (
+            test_db.execute(select(LabelModel).where(LabelModel.label_data_id == new_ld.label_data_id)).scalars().all()
+        )
         assert len(new_labels) == 3
         hello = next(lb for lb in new_labels if lb.label_word == "Hello")
         assert hello.label_start == 5
@@ -166,8 +175,11 @@ class TestBasicTextModification:
         ]
 
         modify_chapter_content(
-            test_db, actor, chapter.chapter_id,
-            chapter_content.chapter_content_id, ops,
+            test_db,
+            actor,
+            chapter.chapter_id,
+            chapter_content.chapter_content_id,
+            ops,
         )
 
         new_cc = test_db.execute(
@@ -192,8 +204,9 @@ class TestBasicTextModification:
 
 
 class TestEdgeCases:
-
-    @pytest.mark.dependency(name="novels::integration::empty_ops_creates_new_version_with_same_content", scope="session")
+    @pytest.mark.dependency(
+        name="novels::integration::empty_ops_creates_new_version_with_same_content", scope="session"
+    )
     def test_empty_ops_creates_new_version_with_same_content(
         self,
         test_db: Session,
@@ -205,8 +218,11 @@ class TestEdgeCases:
         label_group_1 = _text_ops_label_group(versioned_chapter_scenario, "Group 1")
         label_group_2 = _text_ops_label_group(versioned_chapter_scenario, "Group 2")
         modify_chapter_content(
-            test_db, actor, chapter.chapter_id,
-            chapter_content.chapter_content_id, [],
+            test_db,
+            actor,
+            chapter.chapter_id,
+            chapter_content.chapter_content_id,
+            [],
         )
 
         new_cc = test_db.execute(
@@ -218,9 +234,11 @@ class TestEdgeCases:
         assert new_cc.chapter_content_text == "Hello world. This is a test sentence."
 
         # Labels for both groups are still ported to the new version.
-        new_label_datas = test_db.execute(
-            select(LabelData).where(LabelData.chapter_content_id == new_cc.chapter_content_id)
-        ).scalars().all()
+        new_label_datas = (
+            test_db.execute(select(LabelData).where(LabelData.chapter_content_id == new_cc.chapter_content_id))
+            .scalars()
+            .all()
+        )
         assert len(new_label_datas) == 2
 
         group_1_label_data = next(
@@ -234,12 +252,16 @@ class TestEdgeCases:
             if label_data.label_group_id == label_group_2.label_group.label_group_id
         )
 
-        group_1_labels = test_db.execute(
-            select(LabelModel).where(LabelModel.label_data_id == group_1_label_data.label_data_id)
-        ).scalars().all()
-        group_2_labels = test_db.execute(
-            select(LabelModel).where(LabelModel.label_data_id == group_2_label_data.label_data_id)
-        ).scalars().all()
+        group_1_labels = (
+            test_db.execute(select(LabelModel).where(LabelModel.label_data_id == group_1_label_data.label_data_id))
+            .scalars()
+            .all()
+        )
+        group_2_labels = (
+            test_db.execute(select(LabelModel).where(LabelModel.label_data_id == group_2_label_data.label_data_id))
+            .scalars()
+            .all()
+        )
         assert len(group_1_labels) == 3
         assert len(group_2_labels) == 1
 
@@ -253,9 +275,12 @@ class TestEdgeCases:
     ):
         ops = [TextOp(op="insert", start=0, text="New ")]
 
-        result = modify_chapter_content(
-            test_db, to_user, to_chapter.chapter_id,
-            to_chapter_content.chapter_content_id, ops,
+        modify_chapter_content(
+            test_db,
+            to_user,
+            to_chapter.chapter_id,
+            to_chapter_content.chapter_content_id,
+            ops,
         )
 
         new_cc = test_db.execute(
@@ -267,9 +292,11 @@ class TestEdgeCases:
         assert new_cc.chapter_content_text == "New Hello world. This is a test sentence."
 
         # No label datas on new chapter content
-        new_lds = test_db.execute(
-            select(LabelData).where(LabelData.chapter_content_id == new_cc.chapter_content_id)
-        ).scalars().all()
+        new_lds = (
+            test_db.execute(select(LabelData).where(LabelData.chapter_content_id == new_cc.chapter_content_id))
+            .scalars()
+            .all()
+        )
         assert len(new_lds) == 0
 
     @pytest.mark.dependency(
@@ -285,7 +312,6 @@ class TestEdgeCases:
 
 
 class TestStalenessChecks:
-
     @pytest.mark.dependency(name="novels::integration::stale_chapter_content_id_raises", scope="session")
     def test_stale_chapter_content_id_raises(
         self,
@@ -297,7 +323,9 @@ class TestStalenessChecks:
         chapter_content = _text_ops_chapter_content(versioned_chapter_scenario)
         # First call succeeds and creates version 2
         modify_chapter_content(
-            test_db, actor, chapter.chapter_id,
+            test_db,
+            actor,
+            chapter.chapter_id,
             chapter_content.chapter_content_id,
             [TextOp(op="insert", start=0, text="A")],
         )
@@ -305,7 +333,9 @@ class TestStalenessChecks:
         # Second call with OLD chapter_content_id -> stale
         with pytest.raises(ChapterContentOutdatedException):
             modify_chapter_content(
-                test_db, actor, chapter.chapter_id,
+                test_db,
+                actor,
+                chapter.chapter_id,
                 chapter_content.chapter_content_id,  # version 1, but version 2 exists
                 [TextOp(op="insert", start=0, text="B")],
             )
@@ -321,7 +351,9 @@ class TestStalenessChecks:
         chapter_content = _text_ops_chapter_content(versioned_chapter_scenario)
         # Create version 2
         modify_chapter_content(
-            test_db, actor, chapter.chapter_id,
+            test_db,
+            actor,
+            chapter.chapter_id,
             chapter_content.chapter_content_id,
             [TextOp(op="insert", start=0, text="A")],
         )
@@ -335,8 +367,10 @@ class TestStalenessChecks:
         ).scalar_one()
 
         # Create version 3 using version 2's id
-        result = modify_chapter_content(
-            test_db, actor, chapter.chapter_id,
+        modify_chapter_content(
+            test_db,
+            actor,
+            chapter.chapter_id,
             cc_v2.chapter_content_id,
             [TextOp(op="insert", start=0, text="B")],
         )
@@ -362,7 +396,6 @@ class TestStalenessChecks:
 
 
 class TestPermissions:
-
     @pytest.mark.dependency(name="novels::integration::non_contributor_cannot_modify", scope="session")
     def test_non_contributor_cannot_modify(
         self,
@@ -377,7 +410,9 @@ class TestPermissions:
         # then falls through to InsufficientPermissionsException.
         with pytest.raises(InsufficientPermissionsException):
             modify_chapter_content(
-                test_db, actor, chapter.chapter_id,
+                test_db,
+                actor,
+                chapter.chapter_id,
                 chapter_content.chapter_content_id,
                 [TextOp(op="insert", start=0, text="X")],
             )
@@ -389,12 +424,16 @@ class TestPermissions:
         ).scalar_one()
         assert cc.chapter_content_text == "Hello world. This is a test sentence."
         # No version 2 should exist
-        v2 = test_db.execute(
-            select(ChapterContent).where(
-                ChapterContent.chapter_id == chapter.chapter_id,
-                ChapterContent.chapter_content_version == 2,
+        v2 = (
+            test_db.execute(
+                select(ChapterContent).where(
+                    ChapterContent.chapter_id == chapter.chapter_id,
+                    ChapterContent.chapter_content_version == 2,
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         assert v2 is None
 
     @pytest.mark.dependency(name="novels::integration::admin_can_modify", scope="session")
@@ -406,8 +445,10 @@ class TestPermissions:
         actor = _text_ops_user(versioned_chapter_scenario, "to_admin")
         chapter = _text_ops_chapter(versioned_chapter_scenario)
         chapter_content = _text_ops_chapter_content(versioned_chapter_scenario)
-        result = modify_chapter_content(
-            test_db, actor, chapter.chapter_id,
+        modify_chapter_content(
+            test_db,
+            actor,
+            chapter.chapter_id,
             chapter_content.chapter_content_id,
             [TextOp(op="insert", start=0, text="Admin ")],
         )

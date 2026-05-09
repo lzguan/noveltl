@@ -90,9 +90,7 @@ class TestReadEditChapterData:
         assert {entry["labelGroup"]["labelGroupName"] for entry in payload["labelGroupList"]} == {"Group 1", "Group 2"}
 
         label_data_ids_from_groups = {
-            entry["labelData"]["labelDataId"]
-            for entry in payload["labelGroupList"]
-            if entry["labelData"] is not None
+            entry["labelData"]["labelDataId"] for entry in payload["labelGroupList"] if entry["labelData"] is not None
         }
         assert len(payload["labelDataList"]) == 2
         assert {entry["labelDataId"] for entry in payload["labelDataList"]} == label_data_ids_from_groups
@@ -257,10 +255,7 @@ class TestReadEditChapterData:
             "Group 4",
         }
 
-        group_entries_by_name = {
-            entry["labelGroup"]["labelGroupName"]: entry
-            for entry in payload["labelGroupList"]
-        }
+        group_entries_by_name = {entry["labelGroup"]["labelGroupName"]: entry for entry in payload["labelGroupList"]}
         assert group_entries_by_name["Group 4"]["labelData"] is None
 
         returned_label_data_ids = {entry["labelDataId"] for entry in payload["labelDataList"]}

@@ -8,13 +8,15 @@ from ..schemas import Model
 
 
 class LabelGroupListEntry(Model):
-    label_group : LabelGroup
-    label_data : LabelData | None
-    role : LabelRole
+    label_group: LabelGroup
+    label_data: LabelData | None
+    role: LabelRole
+
 
 class LabelDataEntry(Model):
-    label_data_id : uuid.UUID
-    labels : list[Label]
+    label_data_id: uuid.UUID
+    labels: list[Label]
+
 
 class EditChapterData(Model):
     """
@@ -26,8 +28,9 @@ class EditChapterData(Model):
         label_groups: List of LabelGroups in this novel.
         labels: List of Labels in this chapter content.
     """
-    chapter : Chapter
-    chapter_content : ChapterContent
-    role : Role
-    label_group_list : list[LabelGroupListEntry]
-    label_data_list : list[LabelDataEntry]
+
+    chapter: Chapter
+    chapter_content: ChapterContent
+    role: Role
+    label_group_list: list[LabelGroupListEntry]
+    label_data_list: list[LabelDataEntry]

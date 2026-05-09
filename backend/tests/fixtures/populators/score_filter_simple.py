@@ -31,8 +31,9 @@ def sf_language(test_db: Session) -> Language:
 
 
 @pytest.fixture
-def sf_user(test_db: Session, no_hash : Hash) -> User:
+def sf_user(test_db: Session, no_hash: Hash) -> User:
     from src.auth.constants import UserType
+
     user = User(user_name="sf_user", user_hashed_password=no_hash.hash("pass"), user_type=UserType.USER)
     test_db.add(user)
     test_db.commit()
@@ -54,7 +55,7 @@ def sf_novel(test_db: Session, sf_language: Language, sf_user: User, sf_source_w
         language_code=sf_language.language_code,
         novel_type=NovelType.ORIGINAL,
         novel_visibility=Visibility.PUBLIC,
-        source_work_id=sf_source_work.source_work_id
+        source_work_id=sf_source_work.source_work_id,
     )
     test_db.add(novel)
     test_db.commit()
@@ -76,7 +77,7 @@ def sf_chapter_content(test_db: Session, sf_chapter: Chapter) -> ChapterContent:
     cc = ChapterContent(
         chapter_id=sf_chapter.chapter_id,
         chapter_content_text="Hello world. This is a test sentence. Another sentence here.",
-        chapter_content_version=1
+        chapter_content_version=1,
     )
     test_db.add(cc)
     test_db.commit()
@@ -85,17 +86,14 @@ def sf_chapter_content(test_db: Session, sf_chapter: Chapter) -> ChapterContent:
 
 @pytest.fixture
 def sf_label_group(test_db: Session, sf_novel: Novel, sf_user: User) -> LabelGroup:
-    group = LabelGroup(
-        label_group_name="SF Test Group",
-        novel_id=sf_novel.novel_id
-    )
+    group = LabelGroup(label_group_name="SF Test Group", novel_id=sf_novel.novel_id)
     test_db.add(group)
     test_db.commit()
-    test_db.add(LabelContributor(
-        label_group_id=group.label_group_id,
-        user_id=sf_user.user_id,
-        label_contributor_role=LabelRole.OWNER
-    ))
+    test_db.add(
+        LabelContributor(
+            label_group_id=group.label_group_id, user_id=sf_user.user_id, label_contributor_role=LabelRole.OWNER
+        )
+    )
     test_db.commit()
     return group
 
@@ -103,8 +101,7 @@ def sf_label_group(test_db: Session, sf_novel: Novel, sf_user: User) -> LabelGro
 @pytest.fixture
 def sf_label_data(test_db: Session, sf_label_group: LabelGroup, sf_chapter_content: ChapterContent) -> LabelData:
     label_data = LabelData(
-        label_group_id=sf_label_group.label_group_id,
-        chapter_content_id=sf_chapter_content.chapter_content_id
+        label_group_id=sf_label_group.label_group_id, chapter_content_id=sf_chapter_content.chapter_content_id
     )
     test_db.add(label_data)
     test_db.commit()
@@ -122,7 +119,7 @@ def sf_labels(test_db: Session, sf_label_data: LabelData) -> list[Label]:
             label_start=0,
             label_end=5,
             label_score=0.9,
-            label_dirty=False
+            label_dirty=False,
         ),
         Label(
             label_data_id=sf_label_data.label_data_id,
@@ -131,7 +128,7 @@ def sf_labels(test_db: Session, sf_label_data: LabelData) -> list[Label]:
             label_start=6,
             label_end=11,
             label_score=0.5,
-            label_dirty=False
+            label_dirty=False,
         ),
         Label(
             label_data_id=sf_label_data.label_data_id,
@@ -140,7 +137,7 @@ def sf_labels(test_db: Session, sf_label_data: LabelData) -> list[Label]:
             label_start=22,
             label_end=26,
             label_score=0.3,
-            label_dirty=False
+            label_dirty=False,
         ),
     ]
     test_db.add_all(labels)

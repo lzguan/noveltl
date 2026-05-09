@@ -14,15 +14,16 @@ from .service import query_edit_chapter_data
 
 router = APIRouter()
 
-@router.get('/edit-chapter-data/{chapterId}', response_model=EditChapterData)
+
+@router.get("/edit-chapter-data/{chapterId}", response_model=EditChapterData)
 def read_edit_chapter_data(
-        chapter_id : Annotated[uuid.UUID, Path(alias="chapterId")],
-        novel_id : Annotated[uuid.UUID, Query(alias="novelId")],
-        label_groups_num : Annotated[int, Query(alias="labelGroupsNum", ge=1, le=20)],
-        db : Annotated[Session, Depends(get_db)],
-        current_user : Annotated[User, Depends(get_current_user)],
-        subject_id : Annotated[uuid.UUID | None, Query(alias="subjectId")] = None,
-    ):
+    chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
+    novel_id: Annotated[uuid.UUID, Query(alias="novelId")],
+    label_groups_num: Annotated[int, Query(alias="labelGroupsNum", ge=1, le=20)],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    subject_id: Annotated[uuid.UUID | None, Query(alias="subjectId")] = None,
+):
     """
     Gets all data associated with a chapter required for editing.
 
@@ -35,7 +36,9 @@ def read_edit_chapter_data(
     """
     try:
         if subject_id is not None and subject_id != current_user.user_id and current_user.user_type != UserType.ADMIN:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions to access data for other user.")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions to access data for other user."
+            )
         elif subject_id is not None and subject_id != current_user.user_id:
             q = select(User).where(User.user_id == subject_id)
             subject_user = db.execute(q).scalar_one_or_none()
@@ -44,4 +47,6 @@ def read_edit_chapter_data(
             return query_edit_chapter_data(db, subject_user, chapter_id, novel_id, label_groups_num)
         return query_edit_chapter_data(db, current_user, chapter_id, novel_id, label_groups_num)
     except ChapterNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or insufficient permissions.") from e
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or insufficient permissions."
+        ) from e

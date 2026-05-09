@@ -1,6 +1,7 @@
 """
 This is the main endpoint for the application.
 """
+
 import logging
 from contextlib import asynccontextmanager
 
@@ -25,7 +26,7 @@ fh.setLevel(logging.DEBUG)
 
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 fh.setFormatter(formatter)
 ch.setFormatter(formatter)
 
@@ -56,4 +57,5 @@ app.include_router(requests_router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

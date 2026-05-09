@@ -3,6 +3,7 @@ Tests for copy_label_group function.
 
 Note: This test is AI generated and may not cover all edge cases or be fully comprehensive. It is recommended to review and modify the tests as needed to ensure they align with the specific requirements and constraints of your application.
 """
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -39,12 +40,7 @@ class TestCopyLabelGroup:
     ):
         actor = _label_access_user(label_access_scenario, "lp_alice")
         label_group = _label_access_group(label_access_scenario, "Owner Only Group")
-        new_group = copy_label_group(
-            test_db,
-            actor,
-            label_group.label_group.label_group_id,
-            "Copied Group"
-        )
+        new_group = copy_label_group(test_db, actor, label_group.label_group.label_group_id, "Copied Group")
 
         assert new_group.label_group_name == "Copied Group"
         assert new_group.novel_id == label_group.label_group.novel_id
@@ -58,12 +54,7 @@ class TestCopyLabelGroup:
     ):
         actor = _label_access_user(label_access_scenario, "lp_bob")
         label_group = _label_access_group(label_access_scenario, "With Editor Group")
-        new_group = copy_label_group(
-            test_db,
-            actor,
-            label_group.label_group.label_group_id,
-            "Editor Copy"
-        )
+        new_group = copy_label_group(test_db, actor, label_group.label_group.label_group_id, "Editor Copy")
         assert new_group is not None
         assert new_group.label_group_name == "Editor Copy"
 
@@ -76,12 +67,7 @@ class TestCopyLabelGroup:
         actor = _label_access_user(label_access_scenario, "lp_bob")
         label_group = _label_access_group(label_access_scenario, "With Viewer Group")
         with pytest.raises(LabelGroupNotFoundException):
-            copy_label_group(
-                test_db,
-                actor,
-                label_group.label_group.label_group_id,
-                "Should Fail"
-            )
+            copy_label_group(test_db, actor, label_group.label_group.label_group_id, "Should Fail")
 
     @pytest.mark.dependency(name="filters::service::non_contributor_cannot_copy", scope="session")
     def test_non_contributor_cannot_copy(
@@ -92,12 +78,7 @@ class TestCopyLabelGroup:
         actor = _label_access_user(label_access_scenario, "lp_charlie")
         label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         with pytest.raises(LabelGroupNotFoundException):
-            copy_label_group(
-                test_db,
-                actor,
-                label_group.label_group.label_group_id,
-                "Should Fail"
-            )
+            copy_label_group(test_db, actor, label_group.label_group.label_group_id, "Should Fail")
 
     @pytest.mark.dependency(name="filters::service::copy_preserves_contributors", scope="session")
     def test_copy_preserves_contributors(
@@ -109,18 +90,18 @@ class TestCopyLabelGroup:
         editor = _label_access_user(label_access_scenario, "lp_bob")
         label_group = _label_access_group(label_access_scenario, "With Editor Group")
         new_group = copy_label_group(
-            test_db,
-            owner,
-            label_group.label_group.label_group_id,
-            "With Contributors",
-            keep_contributors=True
+            test_db, owner, label_group.label_group.label_group_id, "With Contributors", keep_contributors=True
         )
 
-        contributors = test_db.execute(
-            select(label_models.LabelContributor).where(
-                label_models.LabelContributor.label_group_id == new_group.label_group_id
+        contributors = (
+            test_db.execute(
+                select(label_models.LabelContributor).where(
+                    label_models.LabelContributor.label_group_id == new_group.label_group_id
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         assert len(contributors) == 2
         user_ids = {c.user_id for c in contributors}
@@ -136,18 +117,18 @@ class TestCopyLabelGroup:
         owner = _label_access_user(label_access_scenario, "lp_alice")
         label_group = _label_access_group(label_access_scenario, "With Editor Group")
         new_group = copy_label_group(
-            test_db,
-            owner,
-            label_group.label_group.label_group_id,
-            "New Owner Only",
-            keep_contributors=False
+            test_db, owner, label_group.label_group.label_group_id, "New Owner Only", keep_contributors=False
         )
 
-        contributors = test_db.execute(
-            select(label_models.LabelContributor).where(
-                label_models.LabelContributor.label_group_id == new_group.label_group_id
+        contributors = (
+            test_db.execute(
+                select(label_models.LabelContributor).where(
+                    label_models.LabelContributor.label_group_id == new_group.label_group_id
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         assert len(contributors) == 1
         assert contributors[0].user_id == owner.user_id
@@ -161,18 +142,15 @@ class TestCopyLabelGroup:
     ):
         actor = _label_access_user(label_access_scenario, "lp_alice")
         label_group = _label_access_group(label_access_scenario, "Owner Only Group")
-        new_group = copy_label_group(
-            test_db,
-            actor,
-            label_group.label_group.label_group_id,
-            "With Data"
-        )
+        new_group = copy_label_group(test_db, actor, label_group.label_group.label_group_id, "With Data")
 
-        label_datas = test_db.execute(
-            select(label_models.LabelData).where(
-                label_models.LabelData.label_group_id == new_group.label_group_id
+        label_datas = (
+            test_db.execute(
+                select(label_models.LabelData).where(label_models.LabelData.label_group_id == new_group.label_group_id)
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         assert len(label_datas) == 1
         assert label_datas[0].chapter_content_id == label_group.label_data.chapter_content_id
@@ -185,24 +163,21 @@ class TestCopyLabelGroup:
     ):
         actor = _label_access_user(label_access_scenario, "lp_alice")
         label_group = _label_access_group(label_access_scenario, "Owner Only Group")
-        new_group = copy_label_group(
-            test_db,
-            actor,
-            label_group.label_group.label_group_id,
-            "With Labels"
-        )
+        new_group = copy_label_group(test_db, actor, label_group.label_group.label_group_id, "With Labels")
 
         new_label_data = test_db.execute(
-            select(label_models.LabelData).where(
-                label_models.LabelData.label_group_id == new_group.label_group_id
-            )
+            select(label_models.LabelData).where(label_models.LabelData.label_group_id == new_group.label_group_id)
         ).scalar_one()
 
-        new_labels = test_db.execute(
-            select(label_models.Label).where(
-                label_models.Label.label_data_id == new_label_data.label_data_id
-            ).order_by(label_models.Label.label_start)
-        ).scalars().all()
+        new_labels = (
+            test_db.execute(
+                select(label_models.Label)
+                .where(label_models.Label.label_data_id == new_label_data.label_data_id)
+                .order_by(label_models.Label.label_start)
+            )
+            .scalars()
+            .all()
+        )
 
         assert len(new_labels) == len(label_group.labels)
         for new_label, orig_label in zip(
@@ -225,19 +200,18 @@ class TestCopyLabelGroup:
         label_group = _label_access_group(label_access_scenario, "Owner Only Group")
         original_label_count = len(label_group.labels)
 
-        copy_label_group(
-            test_db,
-            actor,
-            label_group.label_group.label_group_id,
-            "Copy"
-        )
+        copy_label_group(test_db, actor, label_group.label_group.label_group_id, "Copy")
 
         # Verify original still intact
-        original_labels = test_db.execute(
-            select(label_models.Label).where(
-                label_models.Label.label_data_id == label_group.label_data.label_data_id
+        original_labels = (
+            test_db.execute(
+                select(label_models.Label).where(
+                    label_models.Label.label_data_id == label_group.label_data.label_data_id
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         assert len(original_labels) == original_label_count
 

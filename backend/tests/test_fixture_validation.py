@@ -119,7 +119,9 @@ class TestLabelBundleCreatesData:
         logger.info("Checking label bundle relationships for label_group_id=%s", group_id)
         assert label_bundle.label_contributor.label_group_id == group_id
         assert label_bundle.label_data.label_group_id == group_id
-        assert label_bundle.label_data.chapter_content_id == label_bundle.label_datas[0].chapter_content.chapter_content_id
+        assert (
+            label_bundle.label_data.chapter_content_id == label_bundle.label_datas[0].chapter_content.chapter_content_id
+        )
         for label in label_bundle.labels:
             assert label.label_data_id == label_bundle.label_data.label_data_id
 
@@ -220,7 +222,9 @@ class TestAdditionalScenarioBundlesCreateData:
         assert len(owner_only_group.labels) > 0
 
     @pytest.mark.dependency(name="fixture_validation::versioned_chapter_scenario", scope="session")
-    def test_versioned_chapter_scenario_has_multiple_label_groups(self, versioned_chapter_scenario: ScenarioBundle) -> None:
+    def test_versioned_chapter_scenario_has_multiple_label_groups(
+        self, versioned_chapter_scenario: ScenarioBundle
+    ) -> None:
         chapter_bundle = versioned_chapter_scenario.chapters[0]
         logger.info(
             "Versioned chapter scenario groups=%s chapter_versions=%s",
@@ -261,6 +265,7 @@ class TestAdditionalScenarioBundlesCreateData:
     )
     def test_class_gate(self):
         pass
+
 
 # ---------------------------------------------------------------------------
 # Data loaders

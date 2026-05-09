@@ -73,16 +73,9 @@ class TestReadLabelContributors:
 
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
-        assert {
-            (entry["userId"], entry["labelContributorRole"])
-            for entry in payload
-        } == {
-            (str(user.user_id), "owner")
-            for user in label_group.owner_users
-        } | {
-            (str(user.user_id), "viewer")
-            for user in label_group.viewer_users
-        }
+        assert {(entry["userId"], entry["labelContributorRole"]) for entry in payload} == {
+            (str(user.user_id), "owner") for user in label_group.owner_users
+        } | {(str(user.user_id), "viewer") for user in label_group.viewer_users}
         assert {entry["labelGroupId"] for entry in payload} == {str(label_group.label_group.label_group_id)}
 
     @pytest.mark.dependency(name="labels::router::non_contributor_gets_404", scope="session")

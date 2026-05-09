@@ -21,6 +21,7 @@ pytestmark = pytest.mark.dependency(
     scope="session",
 )
 
+
 class TestInsertAutoLabels:
     """Tests for insert_auto_labels service function (worker integration)."""
 
@@ -41,10 +42,10 @@ class TestInsertAutoLabels:
             ArqDispatcher(redis),
             CreateAutoLabels(
                 chapter_ids=[chapter_bundle.chapter.chapter_id for chapter_bundle in novel_bundle.chapters],
-                auto_label_model_name='cluener',
+                auto_label_model_name="cluener",
                 auto_label_model_params={},
-                novel_id=novel_bundle.novel.novel_id
-            )
+                novel_id=novel_bundle.novel.novel_id,
+            ),
         )
         assert len(novel_bundle.chapters) > 0
         assert len(ret) == len(novel_bundle.chapters)
@@ -72,10 +73,10 @@ class TestInsertAutoLabels:
             ArqDispatcher(redis),
             CreateAutoLabels(
                 chapter_ids=[chapter_bundle.chapter.chapter_id for chapter_bundle in novel_bundle.chapters],
-                auto_label_model_name='cluener',
+                auto_label_model_name="cluener",
                 auto_label_model_params={"separators": {"\n": SepPriority.HIGH}},
-                novel_id=novel_bundle.novel.novel_id
-            )
+                novel_id=novel_bundle.novel.novel_id,
+            ),
         )
 
     @pytest.mark.dependency(name="autolabels::worker::insert_twice_is_idempotent", scope="session")
@@ -92,10 +93,10 @@ class TestInsertAutoLabels:
             ArqDispatcher(redis),
             CreateAutoLabels(
                 chapter_ids=[chapter_bundle.chapter.chapter_id for chapter_bundle in novel_bundle.chapters],
-                auto_label_model_name='cluener',
+                auto_label_model_name="cluener",
                 auto_label_model_params={"separators": {"\n": SepPriority.HIGH}},
-                novel_id=novel_bundle.novel.novel_id
-            )
+                novel_id=novel_bundle.novel.novel_id,
+            ),
         )
         q = select(AutoLabel)
         result_rows = test_db.execute(q).scalars().all()
@@ -108,15 +109,14 @@ class TestInsertAutoLabels:
             ArqDispatcher(redis),
             CreateAutoLabels(
                 chapter_ids=[chapter_bundle.chapter.chapter_id for chapter_bundle in novel_bundle.chapters],
-                auto_label_model_name='cluener',
+                auto_label_model_name="cluener",
                 auto_label_model_params={"separators": {"\n": SepPriority.HIGH}},
-                novel_id=novel_bundle.novel.novel_id
-            )
+                novel_id=novel_bundle.novel.novel_id,
+            ),
         )
         assert len(ret) == 0
         result_rows = test_db.execute(q).scalars().all()
         assert len(result_rows) == len(novel_bundle.chapters)
-
 
     @pytest.mark.slow
     @pytest.mark.dependency(

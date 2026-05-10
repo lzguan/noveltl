@@ -1,1 +1,1 @@
-fuck you
+to satisfy uv install module

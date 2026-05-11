@@ -17,6 +17,7 @@ services:
       - claude-code-config:/home/node/.claude
       - gh-cli-config:/home/node/.config/gh
       - codex-cli-config:/home/node/.codex
+      - /workspaces/frontend/node_modules
 
 
     # Uncomment the next four lines if you will use a ptrace-based debugger like C++, Go, and Rust.

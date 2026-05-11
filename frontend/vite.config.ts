@@ -8,10 +8,12 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     watch: {
-      usePolling: true
+      ignored: ['**/.git/**', '**/node_modules/**', '**/.pnpm-store/**'],
+      usePolling: true,
     },
-    host: true,
+    host: '0.0.0.0',
     strictPort: true,
+    origin: 'http://localhost:5173',
     port: 5173,
     proxy: {
       '/api': {

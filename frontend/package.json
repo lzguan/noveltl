@@ -6,8 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsgo -b && vite build",
     "lint": "eslint .",
+    "check": "tsgo -b --noEmit",
     "preview": "vite preview",
     "test": "vitest --config vitest.config.ts",
     "openapi-ts": "openapi-ts"

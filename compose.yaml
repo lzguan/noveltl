@@ -99,6 +99,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./frontend:/project
+      - /project/node_modules
       - pnpm-store:/pnpm/store
     ports:
       - "${FRONTEND_PORT}:5173"

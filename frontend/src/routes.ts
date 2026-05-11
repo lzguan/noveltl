@@ -32,7 +32,19 @@ export const routeTo = {
             const query = params.toString();
             return query ? `/view/novels?${query}` : '/view/novels';
         },
-        novel: (id: string) => `/view/novels/${id}`,
+        novel: (id: string, start?: number, end?: number) => {
+            const base = `/view/novels/${id}`;
+            if (start !== undefined && end !== undefined) {
+                return `${base}?start=${start}&end=${end}`;
+            }
+            else if (start !== undefined) {
+                return `${base}?start=${start}`;
+            }
+            else if (end !== undefined) {
+                return `${base}?end=${end}`;
+            }
+            return base;
+        },
         chapter: (chapterId: string, options?: { chapterContentId?: string }) => {
             const base = `/view/chapters/${chapterId}`;
             if (options?.chapterContentId) return `${base}?chapter-content-id=${options.chapterContentId}`;
@@ -59,6 +71,10 @@ export const extractParams = {
         novels: (searchParams: URLSearchParams) => ({
             mine: searchParams.get('mine') === 'true',
             search: searchParams.get('search') || undefined,
+        }),
+        novel: (searchParams: URLSearchParams) => ({
+            start: searchParams.get('start') ? parseInt(searchParams.get('start')!) : undefined,
+            end: searchParams.get('end') ? parseInt(searchParams.get('end')!) : undefined,
         }),
         chapter: (searchParams: URLSearchParams) => ({
             chapterContentId: searchParams.get('chapter-content-id') || undefined,

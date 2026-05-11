@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/devcontainers/javascript-node:dev-22-trixie
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
-ENV npm_config_store_dir=/home/node/.pnpm-store
+ENV npm_config_store_dir=/pnpm/store
 
 WORKDIR /project-deps
 # uv

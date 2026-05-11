@@ -65,7 +65,8 @@
 						"source.organizeImports.ruff": "explicit",
 						"source.fixAll": "explicit"
 					}
-				}
+				},
+				"remote.autoForwardPorts": false
 			}
 		}
 	}

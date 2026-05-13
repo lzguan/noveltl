@@ -13,3 +13,4 @@ handoff.md
 .codex
 *.log
 .pnpm-store/
+.ruff_cache/

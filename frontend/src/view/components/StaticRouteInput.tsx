@@ -1,14 +1,17 @@
-import {Input} from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Button } from "../../components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 function StaticRouteInput({ toHref, defaultValue }: { toHref : (search : string) => string, defaultValue? : string }) {
     const [searchTerm, setSearchTerm] = useState<string>(defaultValue || "");
     const [isComposing, setIsComposing] = useState<boolean>(false);
+    const navigate = useNavigate();
 
     return (
-        <form className="flex gap-2" onSubmit={() => {
-            if (!isComposing) window.location.href = toHref(searchTerm)
+        <form className="flex gap-2" onSubmit={(event) => {
+            event.preventDefault();
+            if (!isComposing) navigate(toHref(searchTerm));
         }}>
             <Input
                 name="search"

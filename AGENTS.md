@@ -37,6 +37,15 @@ Skills are currently located in [.claude/skills/](.claude/skills/). Agents are c
 
 Actively suggest ways for the user to improve their workflow, such as using plan mode, subagents, or various other features that you offer if they fit the task scope.
 
+## Project scripts
+
+- Frontend: `pnpm check` (type check), `pnpm lint` (ESLint), `pnpm test` (vitest). See [`frontend/package.json`](frontend/package.json) for more details.
+- Backend: `uv run ruff check` (lint), `uv run pyrefly` (type check), `uv run pytest` (tests). See [`backend/pyproject.toml`](backend/pyproject.toml) for more details.
+
+See [scripts.md](docs/scripts.md) for more scripts.
+
+If any scripts time out, it may be due to lacking hardware. Confirm with the user before proceeding with a rerun.
+
 ## Other
 
 If an issue is caused by a typo, describe it as a typo when communicating with the user. Do not overstate the severity of minor wording or spelling mistakes.

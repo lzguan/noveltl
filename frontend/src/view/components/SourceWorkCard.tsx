@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ExpandableText } from "@/components/text/ExpandableText";
 import { truncateProducer } from "../utils/truncateProducer";
 import type { Novel, SourceWork } from "@/client";
+import { Link } from "react-router-dom";
 
 const truncate = truncateProducer(300)
 
@@ -13,9 +14,9 @@ function SourceWorkCard({ sourceWork, novels } : { sourceWork : SourceWork, nove
     return (
         <Card className="text-left">
             <CardHeader>
-                <CardTitle>{<a href={routeTo.view.sourcework(sourceWork.sourceWorkId)}>
+                <CardTitle>{<Link className="hover:underline" to={routeTo.view.sourcework(sourceWork.sourceWorkId)}>
                     {sourceWork.sourceWorkTitle}
-                </a>}</CardTitle>
+                </Link>}</CardTitle>
                 <CardDescription>
                     <div style={{ fontStyle: sourceWork.sourceWorkDescription ? "normal" : "italic" }}>
                         {sourceWork.sourceWorkDescription ? <ExpandableText text={sourceWork.sourceWorkDescription} truncate={truncate} /> : "No description available."}

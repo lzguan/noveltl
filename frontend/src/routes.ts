@@ -1,4 +1,5 @@
 export const AppRoutes = {
+    ROOT: '/',
     LOGIN: '/login',
     DASHBOARD: '/dashboard',
     VIEW: {
@@ -9,6 +10,7 @@ export const AppRoutes = {
         CHAPTER: '/view/chapters/:chapterId',
     },
     EDIT: {
+        DASHBOARD: '/edit',
         NOVELS: '/edit/novels',
         NOVEL: '/edit/novels/:novelId',
     },
@@ -52,6 +54,7 @@ export const routeTo = {
         }
     },
     edit: {
+        dashboard: () => '/edit',
         novels: () => '/edit/novels',
         novel: (novelId: string, params?: { chapterId?: string; }) => {
             const base = `/edit/novels/${novelId}`;

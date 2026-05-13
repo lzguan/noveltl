@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { loginForAccessTokenTokenPost } from "@/client";
@@ -37,14 +37,24 @@ export function LoginPage() {
     const [password, setPassword] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [checkingToken, setCheckingToken] = useState(true);
 
     const redirectTarget = useMemo(() => {
         const redirect = searchParams.get("redirect");
         if (!redirect || !redirect.startsWith("/")) {
-            return AppRoutes.TEST;
+            return AppRoutes.DASHBOARD;
         }
         return redirect;
     }, [searchParams]);
+
+    useEffect(() => {
+        const token = window.localStorage.getItem("access_token");
+        if (token) {
+            navigate(redirectTarget, { replace: true });
+            return;
+        }
+        requestAnimationFrame(() => setCheckingToken(false));
+    }, [navigate, redirectTarget]);
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -70,13 +80,17 @@ export function LoginPage() {
         navigate(redirectTarget, { replace: true });
     };
 
+    if (checkingToken) {
+        return null;
+    }
+
     return (
-        <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(245,187,110,0.24),transparent_34%),linear-gradient(180deg,#f8f3ea_0%,#f4efe5_32%,#efe8dc_100%)] px-4 py-10">
-            <Card className="w-full max-w-md border-0 bg-white/88 shadow-[0_20px_60px_rgba(38,29,18,0.12)] backdrop-blur">
-                <CardHeader className="border-b border-black/5 pb-5">
-                    <CardTitle className="text-2xl text-slate-950">Sign In</CardTitle>
+        <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+            <Card className="w-full max-w-md">
+                <CardHeader className="pb-5">
+                    <CardTitle className="text-2xl">Sign In</CardTitle>
                     <CardDescription>
-                        Minimal login flow for the prototype frontend.
+                        Enter your credentials to access the translation workspace.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
@@ -100,7 +114,7 @@ export function LoginPage() {
                                 autoComplete="current-password"
                                 value={password}
                                 onChange={(event) => setPassword(event.target.value)}
-                                placeholder="••••••••"
+                                placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;"
                                 required
                             />
                         </div>

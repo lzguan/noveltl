@@ -3,6 +3,7 @@ import { ExpandableText } from "@/components/text/ExpandableText"
 import { routeTo } from "@/routes";
 import type { Novel } from "@/client";
 import { truncateProducer } from "../utils/truncateProducer";
+import { Link } from "react-router-dom";
 
 
 
@@ -12,7 +13,7 @@ function NovelCard({ novel, showDescription=false }: { novel: Novel, showDescrip
     return <Card className="text-left">
         <>
             <CardHeader>
-                <CardTitle>{<a href={routeTo.view.novel(novel.novelId)}>{novel.novelTitle}</a>}</CardTitle>
+                <CardTitle>{<Link className="hover:underline" to={routeTo.view.novel(novel.novelId)}>{novel.novelTitle}</Link>}</CardTitle>
                 <CardDescription>
                     <div style={{ fontStyle: novel.novelAuthor ? "normal" : "italic" }}>
                         {novel.novelAuthor || "Unknown Author"}

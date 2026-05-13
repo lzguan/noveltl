@@ -27,3 +27,7 @@ Seed database with admin data:
 Seed database with language data:
 - Navigate to [`backend/`](../backend/)
 - Run `uv run --no-sync -m scripts.seed_languages`
+
+See [`frontend/package.json`](../frontend/package.json) for general frontend configurations and scripts.
+
+See [`backend/pyproject.toml`](../backend/pyproject.toml) for general backend configurations and scripts.

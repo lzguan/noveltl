@@ -11,7 +11,9 @@ function StaticRouteInput({ toHref, defaultValue }: { toHref : (search : string)
     return (
         <form className="flex gap-2" onSubmit={(event) => {
             event.preventDefault();
-            if (!isComposing) navigate(toHref(searchTerm));
+            if (!isComposing) navigate(toHref(searchTerm))?.catch((err) => {
+                console.error("Failed to navigate", err);
+            });
         }}>
             <Input
                 name="search"

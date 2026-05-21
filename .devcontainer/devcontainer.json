@@ -33,7 +33,7 @@
 	// Uncomment the next line if you want to keep your containers running after VS Code shuts down.
 	// "shutdownAction": "none",
 
-	"postCreateCommand": "mkdir -p /home/node/.claude /home/node/.codex && sudo chown -R node:node /home/node/.claude /home/node/.codex",
+	"postCreateCommand": "mkdir -p /home/node/.claude /home/node/.codex /home/node/.opencode && sudo chown -R node:node /home/node/.claude /home/node/.codex /home/node/.opencode",
 
 	// Configure tool-specific properties.
 	"customizations": {
@@ -44,10 +44,10 @@
 				"christian-kohler.npm-intellisense",
 				"charliermarsh.ruff",
 				"bierner.markdown-mermaid",
-				"openai.chatgpt",
 				"meta.pyrefly",
 				"bradlc.vscode-tailwindcss",
-				"typescriptteam.native-preview"
+				"typescriptteam.native-preview",
+				"oxc.oxc-vscode"
 			],
 			"settings": {
 				"python.defaultInterpreterPath": "/.venv/bin/python",
@@ -66,7 +66,17 @@
 						"source.fixAll": "explicit"
 					}
 				},
-				"remote.autoForwardPorts": false
+				"[typescript]": {
+					"editor.defaultFormatter": "oxc.oxc-vscode",
+					"editor.codeActionsOnSave": {
+						"source.fixAll": "always"
+					}
+				},
+				"remote.autoForwardPorts": false,
+				"oxc.typeAware": true,
+				"oxc.configPath": "frontend/.oxlintrc.json",
+				"oxc.tsConfigPath": "frontend/tsconfig.json",
+				"oxc.path.tsgolint": "frontend/node_modules/.bin/tsgolint"
 			}
 		}
 	}

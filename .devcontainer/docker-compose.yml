@@ -16,6 +16,7 @@ services:
       - ..:/workspaces:cached
       - claude-code-config:/home/node/.claude
       - gh-cli-config:/home/node/.config/gh
+      - opencode-cli-config:/home/node/.local/share/opencode
       - codex-cli-config:/home/node/.codex
       - /workspaces/frontend/node_modules
 
@@ -33,3 +34,4 @@ volumes:
   claude-code-config:
   gh-cli-config:
   codex-cli-config:
+  opencode-cli-config:

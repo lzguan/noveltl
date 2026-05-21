@@ -103,7 +103,9 @@ function SourceWorkDetailsPage() {
             setLoading(false);
         }
 
-        loadSourceWork();
+        loadSourceWork().catch((err) => {
+            setError(err);
+        });
 
         return () => {
             ignore = true;

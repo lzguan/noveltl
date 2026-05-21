@@ -1,0 +1,28 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "lsp": {
+        "pyright": { "disabled": true },
+        "typescript": { "disabled": true },
+        "pyrefly": {
+            "command": ["uv", "--directory", "backend", "run", "pyrefly", "lsp"],
+            "extensions": [".py", ".pyi"]
+        },
+        "ruff": {
+            "command": ["uv", "--directory", "backend", "run", "ruff", "server"],
+            "extensions": [".py", ".pyi"]
+        },
+        "tsgo": {
+            "command": ["pnpm", "--dir", "frontend", "exec", "tsgo", "--lsp", "--stdio"],
+            "extensions": [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]
+        },
+        "oxlint": {
+            "command": ["pnpm", "exec", "oxlint", "--lsp"],
+            "extensions": [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]
+        },
+    },
+    "permission": {
+        "bash": {
+            "*": "ask"
+        }
+    }
+}

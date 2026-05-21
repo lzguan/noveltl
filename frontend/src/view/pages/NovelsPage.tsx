@@ -64,7 +64,9 @@ function NovelsPage() {
             setLoading(false);
         }
 
-        loadNovels();
+        loadNovels().catch((err) => {
+            setError(err);
+        });
 
         return () => {
             ignore = true;

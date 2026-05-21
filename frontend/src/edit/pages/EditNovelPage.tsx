@@ -1305,7 +1305,7 @@ function EditNovelWorkspace({
     );
 }
 
-export function EditNovelPage({ loadLabelsNum = 3 }: { loadLabelsNum: number }) {
+export function EditNovelPage({ loadLabelsNum }: { loadLabelsNum: number }) {
     const params = useParams<"novelId">();
     const [searchParams, setSearchParams] = useSearchParams();
     const chapterId = useMemo(

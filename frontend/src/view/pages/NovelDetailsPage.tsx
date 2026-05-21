@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/empty";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { logger } from "@/lib/logging";
 import { routeTo, extractParams } from "@/routes";
 import { BookOpenIcon, ChevronLeftIcon, FileTextIcon, PencilIcon } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -227,7 +228,9 @@ function NovelDetailsPage() {
             setLoading(false);
         }
 
-        loadData();
+        loadData().catch((err) => {
+            logger.error("Failed to load novel details", err);
+        });
 
         return () => {
             ignore = true;

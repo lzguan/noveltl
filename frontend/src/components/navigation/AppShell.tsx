@@ -38,6 +38,9 @@ function useAuth() {
                     setUser(res.data);
                 }
             })
+            .catch((err) => {
+                console.error("Failed to fetch user data", err);
+            })
             .finally(() => {});
         return () => {
             ignore = true;
@@ -68,7 +71,9 @@ function AppShell({ title, subtitle, side, homeHref }: AppShellProps) {
 
     function handleLogout() {
         logout();
-        navigate("/login", { replace: true });
+        navigate("/login", { replace: true })?.catch((err) => {
+            console.error("Failed to navigate after logout", err);
+        });
     }
 
     return (

@@ -33,7 +33,7 @@
 	// Uncomment the next line if you want to keep your containers running after VS Code shuts down.
 	// "shutdownAction": "none",
 
-	"postCreateCommand": "mkdir -p /home/node/.claude /home/node/.codex /home/node/.opencode && sudo chown -R node:node /home/node/.claude /home/node/.codex /home/node/.opencode",
+	"postCreateCommand": "mkdir -p /home/node/.claude /home/node/.codex /home/node/.local/share/opencode && sudo chown -R node:node /home/node/.claude /home/node/.codex /home/node/.local/share/opencode",
 
 	// Configure tool-specific properties.
 	"customizations": {
@@ -50,7 +50,7 @@
 				"oxc.oxc-vscode"
 			],
 			"settings": {
-				"python.defaultInterpreterPath": "/.venv/bin/python",
+				"python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
 				"css.lint.unknownAtRules": "ignore",
 				"scss.lint.unknownAtRules": "ignore",
 				"less.lint.unknownAtRules": "ignore",

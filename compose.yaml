@@ -71,6 +71,7 @@ services:
       SECRET_KEY: ${SECRET_KEY} # purely to not crash on startup
     volumes:
       - ./backend:/project
+      - /project/.venv
     profiles:
       - manual
 
@@ -89,6 +90,7 @@ services:
       SECRET_KEY: ${SECRET_KEY}
     volumes:
       - ./backend:/project
+      - /project/.venv
     ports:
       - "${BACKEND_PORT}:8000"
     command: uv run python -m src.main --no-sync

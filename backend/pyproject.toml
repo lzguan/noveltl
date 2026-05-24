@@ -98,15 +98,6 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 
-[tool.pyright]
-include = ["src"]
-exclude = ["**/node_modules", "**/__pycache__", "**/.*"]
-venvPath = "/"
-venv = ".venv"
-typeCheckingMode = "strict"
-reportUnusedImport = true
-reportUnusedVariable = true
-
 [tool.coverage.run]
 branch = true
 source = ["src"]

@@ -33,6 +33,10 @@
             "grep *": "allow",
             "find *": "allow",
             "ps *": "allow",
+            "file *": "allow",
+            "ws *": "allow",
+            "du *": "allow",
+            "df *": "allow",
 
             "git log *": "allow",
             "git status *": "allow",

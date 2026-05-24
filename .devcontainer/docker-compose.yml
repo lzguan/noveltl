@@ -18,7 +18,8 @@ services:
       - gh-cli-config:/home/node/.config/gh
       - opencode-cli-config:/home/node/.local/share/opencode
       - codex-cli-config:/home/node/.codex
-      - /workspaces/frontend/node_modules
+      - /workspaces/NovelTL_Dev/frontend/node_modules
+      - /workspaces/NovelTL_Dev/backend/.venv
 
 
     # Uncomment the next four lines if you will use a ptrace-based debugger like C++, Go, and Rust.

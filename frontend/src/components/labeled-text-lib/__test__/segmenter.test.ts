@@ -51,7 +51,7 @@ describe("BasicSegmenter", () => {
                 text: "bc",
                 labels: [
                     {
-                        range: { start: 0, end: 2 },
+                        interval: { start: 0, end: 2 },
                         style: { name: "first" },
                     },
                 ],
@@ -66,7 +66,7 @@ describe("BasicSegmenter", () => {
                 text: "ef",
                 labels: [
                     {
-                        range: { start: 0, end: 2 },
+                        interval: { start: 0, end: 2 },
                         style: { name: "second" },
                     },
                 ],
@@ -97,11 +97,11 @@ describe("BasicSegmenter", () => {
                 text: "bcde",
                 labels: [
                     {
-                        range: { start: 0, end: 3 },
+                        interval: { start: 0, end: 3 },
                         style: { name: "outer" },
                     },
                     {
-                        range: { start: 2, end: 4 },
+                        interval: { start: 2, end: 4 },
                         style: { name: "inner" },
                     },
                 ],
@@ -127,7 +127,7 @@ describe("BasicSegmenter", () => {
                 text: "ab",
                 labels: [
                     {
-                        range: { start: 0, end: 2 },
+                        interval: { start: 0, end: 2 },
                         style: { name: "left" },
                     },
                 ],
@@ -137,7 +137,7 @@ describe("BasicSegmenter", () => {
                 text: "cd",
                 labels: [
                     {
-                        range: { start: 0, end: 2 },
+                        interval: { start: 0, end: 2 },
                         style: { name: "right" },
                     },
                 ],
@@ -158,11 +158,11 @@ describe("BasicSegmenter", () => {
                 text: "abcd",
                 labels: [
                     {
-                        range: { start: 0, end: 2 },
+                        interval: { start: 0, end: 2 },
                         style: { name: "left" },
                     },
                     {
-                        range: { start: 2, end: 4 },
+                        interval: { start: 2, end: 4 },
                         style: { name: "right" },
                     },
                 ],
@@ -188,7 +188,7 @@ describe("ReducingSegmenter", () => {
                 text: "a",
                 labels: [
                     {
-                        range: { start: 0, end: 1 },
+                        interval: { start: 0, end: 1 },
                         style: { name: "" },
                     },
                 ],
@@ -198,15 +198,15 @@ describe("ReducingSegmenter", () => {
                 text: "bcde",
                 labels: [
                     {
-                        range: { start: 0, end: 2 },
+                        interval: { start: 0, end: 2 },
                         style: { name: "outer" },
                     },
                     {
-                        range: { start: 2, end: 3 },
+                        interval: { start: 2, end: 3 },
                         style: { name: "outer+inner" },
                     },
                     {
-                        range: { start: 3, end: 4 },
+                        interval: { start: 3, end: 4 },
                         style: { name: "inner" },
                     },
                 ],
@@ -216,7 +216,7 @@ describe("ReducingSegmenter", () => {
                 text: "f",
                 labels: [
                     {
-                        range: { start: 0, end: 1 },
+                        interval: { start: 0, end: 1 },
                         style: { name: "" },
                     },
                 ],
@@ -247,7 +247,7 @@ describe("FullReducingSegmenter", () => {
                 text: "bc",
                 labels: [
                     {
-                        range: { start: 0, end: 2 },
+                        interval: { start: 0, end: 2 },
                         style: { name: "outer" },
                     },
                 ],
@@ -257,7 +257,7 @@ describe("FullReducingSegmenter", () => {
                 text: "d",
                 labels: [
                     {
-                        range: { start: 0, end: 1 },
+                        interval: { start: 0, end: 1 },
                         style: { name: "outer+inner" },
                     },
                 ],
@@ -267,7 +267,7 @@ describe("FullReducingSegmenter", () => {
                 text: "e",
                 labels: [
                     {
-                        range: { start: 0, end: 1 },
+                        interval: { start: 0, end: 1 },
                         style: { name: "inner" },
                     },
                 ],

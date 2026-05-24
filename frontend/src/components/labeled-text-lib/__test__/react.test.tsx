@@ -11,6 +11,16 @@ import {
     type Renderer,
 } from "../react/Renderer";
 
+// React 19 + jsdom: useLayoutEffect state updates don't always flush
+// synchronously, so alias it to useEffect in the test environment.
+vi.mock("react", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("react")>();
+    return {
+        ...actual,
+        useLayoutEffect: actual.useEffect,
+    };
+});
+
 type TestStyle = {
     name: string;
 };

@@ -22,7 +22,40 @@
     },
     "permission": {
         "bash": {
-            "*": "ask"
+            "*": "ask",
+            "ls *": "allow",
+            "cat *": "allow",
+            "echo *": "allow",
+            "cd *": "allow",
+            "pwd *": "allow",
+            "head *": "allow",
+            "tail *": "allow",
+            "grep *": "allow",
+            "find *": "allow",
+            "ps *": "allow",
+
+            "git log *": "allow",
+            "git status *": "allow",
+            "git diff *": "allow",
+            "git show *": "allow",
+            "git rev-parse *": "allow",
+
+            "uv pip list *": "allow",
+            "uv pip show *": "allow",
+            "uv tree *": "allow",
+            "uv help *": "allow",
+        },
+        "edit": {
+            "*": "ask",
+            "opencode.json": "deny",
+            "frontend/**": "allow",
+            "backend/**": "allow",
+            "docs/**": "allow",
+            "**/Dockerfile": "ask",
+        },
+        "read": {
+            "*": "allow",
+            ".env": "deny",
         }
     }
 }

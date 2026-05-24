@@ -1,15 +1,13 @@
-import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Chapter, EditChapterData, Label, Novel } from "@/client";
 
-import { useController } from "../controller";
-import type { ProvisionalId, RequestEvent, RequestManager, Runtime, Signal } from "../types";
+import { buildController } from "../controller";
+import type { LabelGroupView, ProvisionalId, RequestEvent, RequestManager, Runtime, Signal } from "../types";
 import { buildRuntime } from "../utils";
 
 type Harness = {
-    result: ReturnType<typeof renderHook<ReturnType<typeof useController>, never>>["result"];
-    unmount: () => void;
+    controller: ReturnType<typeof buildController>;
     runtime: Runtime;
     requestManager: RequestManager & {
         enqueuedRequests: RequestEvent[];
@@ -17,8 +15,12 @@ type Harness = {
     };
     setErrors: ReturnType<typeof vi.fn>;
     setMode: ReturnType<typeof vi.fn>;
+    setLabelGroupViews: (views: LabelGroupView[]) => void;
+    setActiveLabelGroupId: (id: ProvisionalId | null) => void;
     getMode: () => "edit" | "label" | "view";
     getGroupId: (name?: string) => ProvisionalId;
+    labelGroupViews: LabelGroupView[];
+    activeLabelGroupId: ProvisionalId | null;
 };
 
 function makeNovel(): Novel {
@@ -119,6 +121,12 @@ function makeRequestManager(): Harness["requestManager"] {
         attachControllerSignalHandler: vi.fn((handler: (signal: Signal) => void) => {
             signalHandler = handler;
         }),
+        detachControllerSignalHandler: vi.fn(() => {
+            signalHandler = () => {};
+        }),
+        waitFlush: vi.fn(async () => {
+            requestManager.enqueuedRequests.length = 0;
+        }),
         emitSignal: (signal: Signal) => {
             signalHandler(signal);
         },
@@ -140,22 +148,38 @@ function renderController(role: "owner" | "editor" | "viewer" = "owner"): Harnes
         ...runtime,
         requestManager,
     };
-    const { result, unmount } = renderHook(() => useController(
+
+    let labelGroupViews: LabelGroupView[] = [];
+    const setLabelGroupViews = (views: LabelGroupView[]) => {
+        labelGroupViews = views;
+    };
+    let activeLabelGroupId: ProvisionalId | null = null;
+    const setActiveLabelGroupId = (id: ProvisionalId | null) => {
+        activeLabelGroupId = id;
+    };
+
+    const controller = buildController(
         editChapterData,
         getMode,
         setMode,
         runtimeWithFakeRequests,
         setErrors,
-    ));
+        setLabelGroupViews,
+        setActiveLabelGroupId,
+    );
+    controller.start();
 
     return {
-        result,
-        unmount,
+        controller,
         runtime: runtimeWithFakeRequests,
         requestManager,
         setErrors,
         setMode,
+        setLabelGroupViews,
+        setActiveLabelGroupId,
         getMode,
+        get labelGroupViews() { return labelGroupViews; },
+        get activeLabelGroupId() { return activeLabelGroupId; },
         getGroupId: (name = "Characters") => {
             const group = runtimeWithFakeRequests.dataManager
                 .getGroups()
@@ -195,7 +219,7 @@ describe("edit controller", () => {
         const harness = renderController();
         const groupId = harness.getGroupId();
 
-        expect(harness.result.current.labelGroupViews).toEqual([
+        expect(harness.labelGroupViews).toEqual([
             {
                 labelGroupId: groupId,
                 labelGroupName: "Characters",
@@ -205,24 +229,18 @@ describe("edit controller", () => {
                 color: expect.any(Number),
             },
         ]);
-        expect(harness.result.current.activeLabelGroupId).toBeNull();
+        expect(harness.activeLabelGroupId).toBeNull();
         expect(harness.runtime.uiManager.segmentManager.getText()).toBe("Alice met Bob.");
-
-        harness.unmount();
     });
 
     it("keeps data manager and segment manager coherent through mixed text, label, and group events", () => {
         const harness = renderController();
         const groupId = harness.getGroupId();
 
-        act(() => {
-            harness.result.current.handleEvent({ eventType: "switchMode", mode: "edit" });
-        });
-        act(() => {
-            harness.result.current.handleEvent({
-                eventType: "textOp",
-                op: { op: "insert", start: 6, text: "brave " },
-            });
+        harness.controller.handleEvent({ eventType: "switchMode", mode: "edit" });
+        harness.controller.handleEvent({
+            eventType: "textOp",
+            op: { op: "insert", start: 6, text: "brave " },
         });
         expect(harness.runtime.uiManager.segmentManager.getText()).toBe("Alice brave met Bob.");
         expect(labelSummaries(harness.runtime, groupId)).toEqual([
@@ -230,30 +248,24 @@ describe("edit controller", () => {
             { word: "Bob", start: 16, end: 19, entityGroup: "character", dirty: false },
         ]);
 
-        act(() => {
-            harness.result.current.handleEvent({ eventType: "switchMode", mode: "label" });
-        });
+        harness.controller.handleEvent({ eventType: "switchMode", mode: "label" });
         expect(harness.requestManager.enqueuedRequests.map((request) => request.variant)).toEqual(["textOp"]);
 
-        act(() => {
-            harness.result.current.handleEvent({ eventType: "switchLabelGroup", labelGroupId: groupId });
-        });
-        expect(harness.result.current.activeLabelGroupId).toBe(groupId);
+        harness.controller.handleEvent({ eventType: "switchLabelGroup", labelGroupId: groupId });
+        expect(harness.activeLabelGroupId).toBe(groupId);
 
-        act(() => {
-            harness.result.current.handleEvent({
-                eventType: "labelOp",
-                labelGroupId: groupId,
-                op: {
-                    op: "add",
-                    startPos: 6,
-                    endPos: 11,
-                    word: "brave",
-                    entityGroup: "trait",
-                    score: 0.8,
-                    dirty: true,
-                },
-            });
+        harness.controller.handleEvent({
+            eventType: "labelOp",
+            labelGroupId: groupId,
+            op: {
+                op: "add",
+                startPos: 6,
+                endPos: 11,
+                word: "brave",
+                entityGroup: "trait",
+                score: 0.8,
+                dirty: true,
+            },
         });
         const braveLabel = labelByWord(harness.runtime, groupId, "brave");
         expect(harness.runtime.uiManager.segmentManager.getLabel(braveLabel.labelId).style[1]).toMatchObject({
@@ -262,28 +274,24 @@ describe("edit controller", () => {
             visible: true,
         });
 
-        act(() => {
-            harness.result.current.handleEvent({
-                eventType: "labelOp",
-                labelGroupId: groupId,
-                op: {
-                    op: "update",
-                    startPos: 16,
-                    endPos: 19,
-                    word: "Bob",
-                    newStartPos: 16,
-                    newEndPos: 20,
-                    newWord: "Bob.",
-                    entityGroup: "character",
-                    score: 0.95,
-                    dirty: true,
-                },
-            });
+        harness.controller.handleEvent({
+            eventType: "labelOp",
+            labelGroupId: groupId,
+            op: {
+                op: "update",
+                startPos: 16,
+                endPos: 19,
+                word: "Bob",
+                newStartPos: 16,
+                newEndPos: 20,
+                newWord: "Bob.",
+                entityGroup: "character",
+                score: 0.95,
+                dirty: true,
+            },
         });
 
-        act(() => {
-            harness.result.current.handleEvent({ eventType: "addLabelGroup", labelGroupName: "Places" });
-        });
+        harness.controller.handleEvent({ eventType: "addLabelGroup", labelGroupName: "Places" });
 
         expect(labelSummaries(harness.runtime, groupId)).toEqual([
             { word: "Alice", start: 0, end: 5, entityGroup: "character", dirty: false },
@@ -291,15 +299,14 @@ describe("edit controller", () => {
             { word: "Bob.", start: 16, end: 20, entityGroup: "character", dirty: true },
         ]);
         expect(harness.runtime.uiManager.segmentManager.getText()).toBe("Alice brave met Bob.");
-        expect(harness.result.current.labelGroupViews.map((view) => view.labelGroupName)).toEqual(["Places", "Characters"]);
+
+        expect(harness.labelGroupViews.map((view) => view.labelGroupName)).toEqual(["Places", "Characters"]);
         expect(harness.requestManager.enqueuedRequests.map((request) => request.variant)).toEqual([
             "textOp",
             "labelOp",
             "addLabelGroup",
             "addLabelGroup",
         ]);
-
-        harness.unmount();
     });
 
     it("updates visible label styles for active, clicked, hovered, and hidden groups", () => {
@@ -308,60 +315,45 @@ describe("edit controller", () => {
         const alice = labelByWord(harness.runtime, groupId, "Alice");
         const bob = labelByWord(harness.runtime, groupId, "Bob");
 
-        act(() => {
-            harness.result.current.handleEvent({ eventType: "switchMode", mode: "label" });
-        });
-        act(() => {
-            harness.result.current.handleEvent({ eventType: "switchLabelGroup", labelGroupId: groupId });
-        });
+        harness.controller.handleEvent({ eventType: "switchMode", mode: "label" });
+        harness.controller.handleEvent({ eventType: "switchLabelGroup", labelGroupId: groupId });
         expect(harness.runtime.uiManager.segmentManager.getLabel(alice.labelId).style[1].active).toBe(true);
         expect(harness.runtime.uiManager.segmentManager.getLabel(bob.labelId).style[1].active).toBe(true);
 
-        act(() => {
-            harness.result.current.handleEvent({ eventType: "clickPos", pos: 1 });
-        });
+        harness.controller.handleEvent({ eventType: "clickPos", pos: 1 });
         expect(harness.runtime.uiManager.segmentManager.getLabel(alice.labelId).style[1].cursorStatus).toBe("clicked");
         expect(harness.runtime.uiManager.segmentManager.getLabel(bob.labelId).style[1].cursorStatus).toBe("none");
 
-        act(() => {
-            harness.result.current.handleEvent({ eventType: "hoverPos", pos: 11 });
-        });
+        harness.controller.handleEvent({ eventType: "hoverPos", pos: 11 });
         expect(harness.runtime.uiManager.segmentManager.getLabel(alice.labelId).style[1].cursorStatus).toBe("clicked");
         expect(harness.runtime.uiManager.segmentManager.getLabel(bob.labelId).style[1].cursorStatus).toBe("hovered");
 
-        act(() => {
-            harness.result.current.handleEvent({ eventType: "toggleVisibility", labelGroupId: groupId, visible: false });
-        });
+        harness.controller.handleEvent({ eventType: "toggleVisibility", labelGroupId: groupId, visible: false });
         expect(harness.runtime.uiManager.segmentManager.getLabel(alice.labelId).style[1].visible).toBe(false);
         expect(harness.runtime.uiManager.segmentManager.getLabel(bob.labelId).style[1].visible).toBe(false);
-        expect(harness.result.current.labelGroupViews[0].visible).toBe(false);
 
-        harness.unmount();
+        expect(harness.labelGroupViews[0].visible).toBe(false);
     });
 
     it("reports permission and mode errors without mutating editor state", () => {
         const harness = renderController("viewer");
         const groupId = harness.getGroupId();
 
-        act(() => {
-            harness.result.current.handleEvent({ eventType: "switchMode", mode: "edit" });
-        });
+        harness.controller.handleEvent({ eventType: "switchMode", mode: "edit" });
         expect(harness.setMode).not.toHaveBeenCalledWith("edit");
         expect(harness.setErrors).toHaveBeenCalledWith([expect.objectContaining({
             message: "You do not have permission to switch to edit mode",
         })]);
 
-        act(() => {
-            harness.result.current.handleEvent({
-                eventType: "labelOp",
-                labelGroupId: groupId,
-                op: {
-                    op: "add",
-                    startPos: 6,
-                    endPos: 9,
-                    word: "met",
-                },
-            });
+        harness.controller.handleEvent({
+            eventType: "labelOp",
+            labelGroupId: groupId,
+            op: {
+                op: "add",
+                startPos: 6,
+                endPos: 9,
+                word: "met",
+            },
         });
         expect(harness.setErrors).toHaveBeenCalledWith([expect.objectContaining({
             message: "Received label operation event while not in label mode",
@@ -371,7 +363,5 @@ describe("edit controller", () => {
             { word: "Bob", start: 10, end: 13, entityGroup: "character", dirty: false },
         ]);
         expect(harness.runtime.uiManager.segmentManager.getText()).toBe("Alice met Bob.");
-
-        harness.unmount();
     });
 });

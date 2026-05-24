@@ -164,7 +164,7 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
                         }
                         
                     }
-                    return { status: cachedResult.status, signal: null, error : new FatalError("Failed to create label group", cachedResult.error instanceof Error ? cachedResult.error : new Error(String(cachedResult.error))) }
+                    return { status: cachedResult.status, signal: null, error : new FatalError("Failed to create label group", cachedResult.error instanceof Error ? cachedResult.error : new Error(JSON.stringify(cachedResult.error))) }
                 },
                 reservationRequest: {
                     reserveList: [ { id : provisionalGroupId, kind: "labelGroup", desiredState: "creating" } ],
@@ -223,7 +223,7 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
                         if (cachedResult.error?.cacheConflict) {
                             return { status: cachedResult.status, signal: null, error : new CacheConflictError("Request key conflict while creating label data", requestKey) }
                         }
-                        return { status: cachedResult.status, signal: null, error : new FatalError("Failed to create label data", cachedResult.error instanceof Error ? cachedResult.error : new Error(String(cachedResult.error))) }
+                        return { status: cachedResult.status, signal: null, error : new FatalError("Failed to create label data", cachedResult.error instanceof Error ? cachedResult.error : new Error(JSON.stringify(cachedResult.error))) }
                     }
                     
                 },
@@ -497,7 +497,7 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
                         if (cachedResult.error?.cacheConflict) {
                             return { status: cachedResult.status, signal: null, error : new CacheConflictError("Request key conflict while updating label data stream", requestKey) }
                         }
-                        return { status: cachedResult.status, signal: null, error : new FatalError("Failed to update label data stream", cachedResult.error instanceof Error ? cachedResult.error : new Error(String(cachedResult.error))) }
+                        return { status: cachedResult.status, signal: null, error : new FatalError("Failed to update label data stream", cachedResult.error instanceof Error ? cachedResult.error : new Error(JSON.stringify(cachedResult.error))) }
                     }
                 }
             }
@@ -680,7 +680,7 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
                         if (cachedResult.error?.cacheConflict) {
                             return { status: cachedResult.status, signal: null, error : new CacheConflictError("Request key conflict while modifying chapter content", requestKey) }
                         }
-                        return { status: cachedResult.status, signal: null, error : new FatalError("Failed to modify chapter content", cachedResult.error instanceof Error ? cachedResult.error : new Error(String(cachedResult.error))) }
+                        return { status: cachedResult.status, signal: null, error : new FatalError("Failed to modify chapter content", cachedResult.error instanceof Error ? cachedResult.error : new Error(JSON.stringify(cachedResult.error))) }
                     }
                 }
             },
@@ -980,6 +980,10 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
         labelGroupSyncHandler = handler
     }
 
+    const detachLabelGroupSyncHandler = () => {
+        labelGroupSyncHandler = () => {}
+    }
+
     return {
         addLabel: addLabel,
         addLabelGroup: addLabelGroup,
@@ -1001,6 +1005,7 @@ export function buildDataManager(ents : DataEntry[], idRepo : IDRepository, nove
         },
 
         getGroups,
-        attachLabelGroupSyncHandler
+        attachLabelGroupSyncHandler,
+        detachLabelGroupSyncHandler
     }
 }

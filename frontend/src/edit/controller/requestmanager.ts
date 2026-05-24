@@ -108,13 +108,17 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
         controllerSignalHandler = handler
     }
 
+    const detachControllerSignalHandler = () => {
+        controllerSignalHandler = () => {}
+    }
+
     const handleSignal = () => {
         return
     }
 
     const requestStatusQueries = () : Promise<CacheEntry>[] => {
         return statusQueries.map((request) => withTimeout(new Promise<CacheEntry>((resolve, reject) => {
-            getCachedResultCachedCachedIdGet({
+            void getCachedResultCachedCachedIdGet({
                 path: {
                     cachedId: request.requestKey
                 }
@@ -363,7 +367,23 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
                 debounceLock = false
             }, 1000)
             if (!requestLoopRunning) {
-                start()
+                void start()
+            }
+        }
+    }
+    
+    const waitFlush = async () => {
+        if (isQueueEmpty()) {
+            return
+        }
+        if (!requestLoopRunning) {
+            await start()
+        }
+        else {
+            while (requestLoopRunning) {
+                await new Promise((resolve) => {
+                    setTimeout(resolve, 100)
+                })
             }
         }
     }
@@ -375,6 +395,8 @@ export function buildRequestManager(idRepo : IDRepository, setErrors : (errors :
         onUserEvent,
         send,
         start,
-        attachControllerSignalHandler
+        waitFlush,
+        attachControllerSignalHandler,
+        detachControllerSignalHandler
     }
 }

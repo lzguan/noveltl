@@ -1,5 +1,5 @@
 import { createLabelDataLabelGroupsLabelGroupIdLabelDatasPost, type Chapter, type EditChapterData, type Novel } from "@/client";
-import { CacheConflictError, ConnectionError, FatalError, isLabelData, isRequestConflictErrorResponse, validateData, type DataEntry, type IDRepository, type ProvisionalId, type RequestManager, type Runtime } from "./types";
+import { CacheConflictError, ConnectionError, FatalError, isLabelData, isRequestConflictErrorResponse, validateData, type DataEntry, type IDRepository, type LabelGroupView, type ProvisionalId, type RequestManager, type Runtime } from "./types";
 import { buildIdRepository } from "./idRepository";
 import { buildRequestManager } from "./requestmanager";
 import { buildDataManager } from "./dataManager";
@@ -13,10 +13,13 @@ export function buildProvisionalChapterContentId(editChapterData: EditChapterDat
 export function buildDataEntries(editChapterData : EditChapterData, idRepo : IDRepository, requestManager : RequestManager, provisionalChapterContentId : ProvisionalId) : DataEntry[] {
     return editChapterData.labelGroupList.map((labelGroupEntry) : DataEntry => { 
         const labelGroupProvisionalId = idRepo.newIdAndBindId("labelGroup", labelGroupEntry.labelGroup.labelGroupId)
+        const provisionalLabelDataId = labelGroupEntry.labelData
+            ? idRepo.newIdAndBindId("labelData", labelGroupEntry.labelData.labelDataId)
+            : undefined
         return ({
             labelGroup: { ...labelGroupEntry.labelGroup, labelGroupId: labelGroupProvisionalId, provisional: true },
 
-            labelData: labelGroupEntry.labelData ? { ...labelGroupEntry.labelData, labelDataId: idRepo.newIdAndBindId("labelData", labelGroupEntry.labelData.labelDataId), provisional: true } : (()  => {
+            labelData: labelGroupEntry.labelData ? { ...labelGroupEntry.labelData, labelDataId: provisionalLabelDataId!, provisional: true } : (()  => {
                 const provisionalId = idRepo.newId("labelData")
                 requestManager.enqueueRequest({
                     retries: 3,
@@ -51,7 +54,7 @@ export function buildDataEntries(editChapterData : EditChapterData, idRepo : IDR
                             if (isRequestConflictErrorResponse(response.error) && response.error.detail.cacheConflict) {
                                 throw new CacheConflictError("Request key conflict while creating label data", requestKey)
                             }
-                            throw new FatalError(`Server returned an error while creating label data: ${response.error instanceof Error ? response.error.message : String(response.error)}`)
+                            throw new FatalError(`Server returned an error while creating label data: ${response.error instanceof Error ? response.error.message : JSON.stringify(response.error)}`)
                         }
                         else {
                             idRepo.bindServerId("labelData", provisionalId, response.data.labelDataId)
@@ -73,14 +76,14 @@ export function buildDataEntries(editChapterData : EditChapterData, idRepo : IDR
                             }
                             
                         }
-                        return { status: cachedResult.status, signal: null, error : new FatalError("Failed to create label data", cachedResult.error instanceof Error ? cachedResult.error : new Error(String(cachedResult.error))) }
+                        return { status: cachedResult.status, signal: null, error : new FatalError("Failed to create label data", cachedResult.error instanceof Error ? cachedResult.error : new Error(JSON.stringify(cachedResult.error))) }
                     },
                     variant: "addLabelData"
                 })
                 return { labelGroupId: labelGroupProvisionalId, labelDataId: provisionalId, chapterContentId: provisionalChapterContentId, provisional: true }
             })(),
 
-            labels: labelGroupEntry.labelData ? editChapterData.labelDataList.find((labelData) => labelData.labelDataId === labelGroupEntry.labelData!.labelDataId)?.labels.map((label) => ({ ...label, labelId: idRepo.newIdAndBindExists("label"), provisional: true })) || [] : [],
+            labels: labelGroupEntry.labelData ? editChapterData.labelDataList.find((labelData) => labelData.labelDataId === labelGroupEntry.labelData!.labelDataId)?.labels.map((label) => ({ ...label, labelId: idRepo.newIdAndBindExists("label"), labelDataId: provisionalLabelDataId!, provisional: true })) || [] : [],
 
             role: labelGroupEntry.role,
             loadingStatus: editChapterData.labelDataList.some((val) => val.labelDataId === labelGroupEntry.labelData?.labelDataId) ? "loaded" : "notLoaded"
@@ -129,3 +132,18 @@ export function buildRuntime(setErrors : (errors: Error[] | null) => void, novel
             visibilityMapping
         }
     }
+
+export function buildLabelGroupViews(
+    dataManager: Runtime["dataManager"],
+    visibilityMapping: Runtime["visibilityMapping"],
+    colorMapping: Runtime["colorMapping"]
+): LabelGroupView[] {
+    return dataManager.getGroups().map((group) : LabelGroupView => ({
+        labelGroupId: group.labelGroupId,
+        labelGroupName: dataManager.getForGroup.name(group.labelGroupId),
+        role: dataManager.getForGroup.role(group.labelGroupId),
+        loadingStatus: dataManager.getForGroup.loadingStatus(group.labelGroupId),
+        visible: visibilityMapping.get(group.labelGroupId) ?? false,
+        color: colorMapping.get(group.labelGroupId) ?? 0
+    }))
+}

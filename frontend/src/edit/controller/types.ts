@@ -272,6 +272,7 @@ export type DataManager = {
      * Attach a label group sync handler
      */
     attachLabelGroupSyncHandler : (handler : () => void) => void
+    detachLabelGroupSyncHandler : () => void
 }
 
 export type UIManager = {
@@ -338,11 +339,13 @@ export type RequestManager = {
     onUserEvent : (event : UserEvent) => void
     send : () => Promise<null | number> // returns null if no delay is needed or the delay until the next retry if a request was sent and needs to be retried
     start : () => Promise<void>
+    waitFlush : () => Promise<void> // await flush queue
 
     /**
      * Attach a handler for signals that are received by the request manager when processing request events.
      */
     attachControllerSignalHandler : (handler : (signal : Signal) => void) => void
+    detachControllerSignalHandler : () => void
 }
 
 
@@ -360,8 +363,8 @@ export interface Controller {
     uiManager : UIManager
     handleSignal : (signal : Signal) => void // not decorated
 
-    labelGroupViews : LabelGroupView[]
-    activeLabelGroupId : ProvisionalId | null
+    start : () => void
+    stop : () => Promise<void>
 }
 
 export type Runtime = {

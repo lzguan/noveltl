@@ -9,6 +9,7 @@ from pydantic import ConfigDict, Field, model_validator
 
 from src.labels.constants import LabelRole
 
+from ..autolabels.config import ModelName
 from ..autolabels.constants import MAX_PARAMS_FIELDS
 from ..autolabels.validators import SmallDict
 from ..schemas import Model
@@ -257,7 +258,7 @@ class CreateLabelDataByAutoLabel(Model):
         end: Optional filter on the greatest chapter number to include.
     """
 
-    model_name: str
+    model_name: ModelName
     model_params: SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
     chapter_ids: list[uuid.UUID] | None = None
     start: int | None = None

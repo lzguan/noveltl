@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session, defer
 from ..auth.models import User
 from ..novels import models as novel_models
 from . import models, schemas
+from .config import ModelName
 from .constants import AutoLabelProgress
 from .exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
 from .permissions import auto_label_mod_access_insert, auto_label_mod_access_select
@@ -53,7 +54,7 @@ def query_auto_labels(
     chapter_ids: list[uuid.UUID] | None,
     start: int | None,
     end: int | None,
-    model_names: list[str] | None,
+    model_names: list[ModelName] | None,
 ) -> list[schemas.AutoLabelMeta]:
     """
     Query auto-labels with filtering and return lightweight metadata.

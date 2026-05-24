@@ -1,1 +1,3 @@
-model_names: set[str] = {"cluener"}
+from typing import Literal
+
+ModelName = Literal["cluener"]

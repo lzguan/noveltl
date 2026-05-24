@@ -135,29 +135,6 @@ def chinese_xianxia_small_test_chapters(
 
 
 @pytest.fixture
-def chinese_xianxia_small_test_default_params_cluener() -> dict[str, Any]:
-    return {
-        "chunk_size": 500,
-        "separators": {
-            "\n": 1,
-            "!": 2,
-            ",": 3,
-            ".": 2,
-            ":": 3,
-            ";": 3,
-            "?": 2,
-            "\u3002": 2,
-            "\uff01": 2,
-            "\uff0c": 3,
-            "\uff1a": 3,
-            "\uff1b": 3,
-            "\uff1f": 2,
-        },
-        "force_chunk": False,
-    }
-
-
-@pytest.fixture
 def chinese_xianxia_small_test_autolabels_cluener(
     test_db: Session,
     chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],

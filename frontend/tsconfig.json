@@ -1,9 +1,5 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }],
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"]
@@ -12,6 +8,5 @@
     "types": []
   },
   "include": ["src"],
-  "exclude": ["**/node_modules/**"],
-  
+  "exclude": ["**/node_modules/**"]
 }

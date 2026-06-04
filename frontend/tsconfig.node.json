@@ -17,10 +17,11 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "allowImportingTsExtensions": true,
+    "emitDeclarationOnly": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "composite": true,
+    "composite": true
   },
   "include": ["vite.config.ts"]
 }

@@ -1,10 +1,40 @@
 # Project Structure
 
-**Last updated:** 2026-05-10
+**Last updated:** 2026-06-03
 
 This project is separated into a frontend and a backend. The backend is stateless and takes all data from either a Postgres database or a Redis cache. The backend can employ workers by sending tasks to the Redis cache, where the workers will pick up. Currently this project uses Arq to perform task queueing. This may change in the future.
 
-**mermaid diagram here**
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#1e293b', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#334155', 'lineColor': '#94a3b8', 'secondaryColor': '#0f172a', 'tertiaryColor': '#1e293b'}}}%%
+graph TD
+    subgraph Frontend
+        V[View Pages]
+        E[Edit Pages]
+        C[Controller]
+        API[Generated API Client]
+    end
+
+    subgraph Backend
+        FA[FastAPI Server]
+        W[Worker Process<br/>NER Model]
+    end
+
+    subgraph Storage
+        PG[(PostgreSQL)]
+        Q[Redis<br/>Task Queue<br/>db 0]
+        T[Redis<br/>Request Cache<br/>db 1]
+    end
+
+    E --> C
+    C --> API
+    V --> API
+    API -- OpenAPI / Hey API --> FA
+    FA --> PG
+    FA --> Q
+    FA --> T
+    W --> Q
+    W --> PG
+```
 
 ## Tools/technologies
 

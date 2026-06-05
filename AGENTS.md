@@ -40,7 +40,7 @@ Actively suggest ways for the user to improve their workflow, such as using plan
 ## Project scripts
 
 - Frontend: `pnpm --dir frontend check` (type check), `pnpm --dir frontend lint` (ESLint), `pnpm --dir frontend test` (vitest). See [`frontend/package.json`](frontend/package.json) for more details.
-- Backend: `uv --directory backend run ruff check` (lint), `uv --directory run pyrefly` (type check), `uv --directory run pytest` (tests). See [`backend/pyproject.toml`](backend/pyproject.toml) for more details.
+- Backend: `uv --directory backend run ruff check` (lint), `uv --directory run pyrefly check` (type check), `uv --directory run pytest` (tests). See [`backend/pyproject.toml`](backend/pyproject.toml) for more details.
 
 See [scripts.md](docs/scripts.md) for more scripts.
 

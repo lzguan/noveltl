@@ -9,7 +9,7 @@ from fastapi import FastAPI
 
 from .auth.router import router as auth_router
 from .autolabels.router import router as autolabel_router
-from .config import uvicorn_logger
+from .config import log_settings, uvicorn_logger
 from .editing.router import router as editing_router
 from .filters.router import router as filters_router
 from .labels.router import router as label_router
@@ -19,19 +19,28 @@ from .redis_conn import set_redis
 from .requests.router import router as requests_router
 
 logger = logging.getLogger("src")
-logger.setLevel(logging.DEBUG)
+if log_settings.LOG_LEVEL == "DEBUG":
+    logger.setLevel(logging.DEBUG)
+elif log_settings.LOG_LEVEL == "INFO":
+    logger.setLevel(logging.INFO)
+elif log_settings.LOG_LEVEL == "WARNING":
+    logger.setLevel(logging.WARNING)
+elif log_settings.LOG_LEVEL == "ERROR":
+    logger.setLevel(logging.ERROR)
 
-fh = logging.FileHandler("backend.log")
-fh.setLevel(logging.DEBUG)
-
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
 
-logger.addHandler(fh)
-logger.addHandler(ch)
+if log_settings.LOG_OUTPUT in ["FILE", "BOTH"]:
+    fh = logging.FileHandler(log_settings.LOG_OUTPUT_FILE)
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+
+if log_settings.LOG_OUTPUT in ["CONSOLE", "BOTH"]:
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
 
 
 @asynccontextmanager

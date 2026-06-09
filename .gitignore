@@ -14,3 +14,4 @@ handoff.md
 *.log
 .pnpm-store/
 .ruff_cache/
+backend/logs/

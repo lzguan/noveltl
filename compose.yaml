@@ -70,11 +70,11 @@ services:
       
       SECRET_KEY: ${SECRET_KEY} # purely to not crash on startup
     volumes:
-      - ./backend:/project
-      - /project/.venv
+      - ./backend:/home/newuser/backend
+      - /home/newuser/backend/.venv
+      - /home/newuser/backend/logs
     profiles:
       - manual
-
 
   backend:
     build: 
@@ -89,8 +89,9 @@ services:
 
       SECRET_KEY: ${SECRET_KEY}
     volumes:
-      - ./backend:/project
-      - /project/.venv
+      - ./backend:/home/newuser/backend
+      - /home/newuser/backend/.venv
+      - /home/newuser/backend/backend.log
     ports:
       - "${BACKEND_PORT}:8000"
 
@@ -99,7 +100,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     volumes:
-      - ./frontend:/project
+      - ./frontend:/home/newuser/frontend
+      - /home/newuser/frontend/node_modules
     ports:
       - "${FRONTEND_PORT}:5173"
 

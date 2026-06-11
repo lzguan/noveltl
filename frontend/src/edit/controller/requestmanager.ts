@@ -19,6 +19,7 @@ import {
 	FatalException,
 	NoCacheEntryException,
 	NotFoundException,
+	PendingException,
 	type AnyError,
 } from "./types/errors";
 
@@ -131,6 +132,10 @@ export const buildRequestManager = (
 						);
 					} else if (response.data.error) {
 						return yield* Effect.fail(new FatalException({ orig: response }));
+					} else if (response.data.status === "failure") {
+						return yield* Effect.fail(new FatalException({ orig: response }));
+					} else if (response.data.status === "pending") {
+						return yield* Effect.fail(new PendingException());
 					} else {
 						return response.data.response;
 					}
@@ -255,25 +260,30 @@ export const buildRequestManager = (
 				const newRetryRequests: KeyedRequestEvent[] = [];
 
 				const requeueRequest = (result: { error: AnyError; request: KeyedRequestEvent }) => {
-					const newRequest = consumeRetry(result.request);
-					if (result.error._tag === "CacheConflictException") {
-						newRetryRequests.push(regenerateKey(newRequest));
-						otherFailedRequests.push(result);
-					} else if (result.error._tag === "ConnectionException") {
-						newRetryRequests.push(newRequest);
-						otherFailedRequests.push(result);
-					} else if (result.error._tag === "TimeoutException") {
-						if (result.request.cached) {
-							newStatusQueries.push(result.request);
-						} else {
-							newRetryRequests.push(regenerateKey(newRequest));
-						}
-						otherFailedRequests.push(result);
-					} else if (result.error._tag === "NoCacheEntryException") {
-						newRetryRequests.push(regenerateKey(newRequest));
+					if (
+						result.request.cached &&
+						(result.error._tag === "TimeoutException" || result.error._tag === "PendingException")
+					) {
+						const newRequest = consumeRetry(result.request);
+						newStatusQueries.push(newRequest);
 						otherFailedRequests.push(result);
 					} else {
-						fatalFailedRequests.push(result);
+						const newRequest = consumeRetry(result.request);
+						if (result.error._tag === "CacheConflictException") {
+							newRetryRequests.push(regenerateKey(newRequest));
+							otherFailedRequests.push(result);
+						} else if (result.error._tag === "ConnectionException") {
+							newRetryRequests.push(newRequest);
+							otherFailedRequests.push(result);
+						} else if (result.error._tag === "TimeoutException") {
+							newRetryRequests.push(regenerateKey(newRequest));
+							otherFailedRequests.push(result);
+						} else if (result.error._tag === "NoCacheEntryException") {
+							newRetryRequests.push(regenerateKey(newRequest));
+							otherFailedRequests.push(result);
+						} else {
+							fatalFailedRequests.push(result);
+						}
 					}
 				};
 

@@ -81,19 +81,15 @@ export type RequestManager<TriggerEventT> = {
 	/**
 	 * Debounce the request queue.
 	 */
-	debounce: () => void;
-	/**
-	 * Send a batch of requests. Returns the delay until the next retry.
-	 */
-	send: () => Effect.Effect<number, Error>;
+	debounce: () => Effect.Effect<void>;
 	/**
 	 * Send requests until the queue is empty.
 	 */
-	start: () => Effect.Effect<void>;
+	start: () => Effect.Effect<void, Error>;
 	/**
 	 * Lock and wait until all requests are finished.
 	 */
-	waitFlush: () => Effect.Effect<void>; // await flush queue
+	waitFlush: () => Effect.Effect<void, Error>; // await flush queue
 
 	/**
 	 * Attach a trigger function.

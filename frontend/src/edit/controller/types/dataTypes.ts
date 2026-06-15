@@ -11,24 +11,34 @@ import type {
 	UpdateLabelOp,
 } from "@/api/models";
 import type { Effect } from "effect";
+import type { ChapterController } from "./controllerTypes";
 
 export type LabelOp = AddLabelOp | DeleteLabelOp | UpdateLabelOp;
 
-export type LoadingStatus = "notLoaded" | "loading" | "loaded" | "loadError";
+export type UnsyncedLoadingStatus =
+	| "notLoaded"
+	| "loading"
+	| "loadError"
+	| "notCreated"
+	| "creating";
+
+export type LoadingStatus = UnsyncedLoadingStatus | "loaded";
 
 export type LabelDataEntry =
-	| { status: "notLoaded" | "loading" | "loadError" }
+	| { status: UnsyncedLoadingStatus }
 	| {
 			status: "loaded";
 			labelData: Prov<LabelData>;
 			labels: Prov<Label>[]; // sorted by start position
 	  };
 
-export type ChapterDataEntry<ControllerT> =
-	| { status: "notLoaded" | "loading" | "loadError" }
-	| { status: "loaded"; controller: ControllerT };
+type _ChapterControllerEntry =
+	| { status: UnsyncedLoadingStatus }
+	| { status: "loaded"; controller: ChapterController };
 
-export type NovelDataManager<ChapterControllerT> = {
+export type ChapterControllerEntry = _ChapterControllerEntry & { chapter: Prov<Chapter> };
+
+export type NovelDataManager = {
 	addLabelGroup: (labelGroupName: string) => Effect.Effect<RequestEvent[]>;
 	addChapter: (
 		chapterNum: number,
@@ -37,8 +47,8 @@ export type NovelDataManager<ChapterControllerT> = {
 	) => Effect.Effect<RequestEvent[], Error>;
 	openChapter: (
 		chapterId: ProvId,
-		getMyState: () => "notLoaded" | "loading" | "loadError" | "loaded",
-		setMyState: (state: ChapterDataEntry<ChapterControllerT>) => void,
+		getMyState: () => LoadingStatus,
+		setMyState: (state: ChapterControllerEntry) => void,
 	) => Effect.Effect<RequestEvent[], Error>;
 
 	getters: {

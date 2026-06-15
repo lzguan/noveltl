@@ -19,6 +19,10 @@ const IdempotentCallable = <T>(fn: () => T): IdempotentCallable<T> => {
 
 export type Prov<T> = T & Brand.Brand<"Prov">;
 
+export function Prov<T>(value: Brand.Brand.Unbranded<Prov<T>>): Prov<T> {
+	return Brand.nominal<Prov<T>>()(value);
+}
+
 export function makeReservationRequest(
 	idRepo: IDRepository,
 	reserveList: Reservation[],

@@ -65,8 +65,21 @@ export type ChapterUserEvent =
 export type TriggerEvent =
 	| { eventType: "textChanged"; op: TextOp; chapterId: ProvId }
 	| { eventType: "labelChanged"; op: LabelOp; labelGroupId: ProvId; chapterId: ProvId }
+	| { eventType: "labelGroupAdded"; labelGroup: LabelGroup }
 	| {
 			eventType: "errorOccured";
 			from: "requestManager";
 			data: { error: Error; request: KeyedRequestEvent }[];
 	  };
+
+export interface NovelController extends BaseController<
+	NovelGetters,
+	NovelUserEvent,
+	TriggerEvent
+> {}
+
+export interface ChapterController extends BaseController<
+	ChapterGetters,
+	ChapterUserEvent,
+	TriggerEvent
+> {}

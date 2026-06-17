@@ -4,25 +4,21 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { Chapter } from './chapter';
 import type { ChapterContent } from './chapterContent';
-import type { LabelDataEntry } from './labelDataEntry';
-import type { LabelGroupListEntry } from './labelGroupListEntry';
-import type { Role } from './role';
+import type { EagerEntry } from './eagerEntry';
+import type { LabelGroup } from './labelGroup';
+import type { LazyEntry } from './lazyEntry';
 
 /**
  * Pydantic schema for the data needed to edit a chapter.
  *
  * Attributes:
- *     chapter: Chapter being edited.
  *     chapter_content: ChapterContent being edited.
- *     label_groups: List of LabelGroups in this novel.
- *     labels: List of Labels in this chapter content.
+ *     no_label_data: List of LabelGroup objects that have no label data associated with them.
  */
 export interface EditChapterData {
-  chapter: Chapter;
   chapterContent: ChapterContent;
-  labelDataList: LabelDataEntry[];
-  labelGroupList: LabelGroupListEntry[];
-  role: Role;
+  eagerLabelData: EagerEntry[];
+  lazyLabelData: LazyEntry[];
+  noLabelData: LabelGroup[];
 }

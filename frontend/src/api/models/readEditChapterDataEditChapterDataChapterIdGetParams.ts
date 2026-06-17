@@ -6,11 +6,9 @@
  */
 
 export type ReadEditChapterDataEditChapterDataChapterIdGetParams = {
-novelId: string;
 /**
- * @minimum 1
- * @maximum 20
+ * List of label group IDs for which to fetch eager label data
  */
-labelGroupsNum: number;
+eager: string[];
 subjectId?: string | null;
 };

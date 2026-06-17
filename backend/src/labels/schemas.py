@@ -33,6 +33,19 @@ class LabelGroup(Model):
     novel_id: uuid.UUID
 
 
+class LabelGroupWithRole(Model):
+    """
+    Pydantic schema for a label group with a user's role in that label group.
+
+    Attributes:
+        label_group: LabelGroup object.
+        role: Role of the user in this label group.
+    """
+
+    label_group: LabelGroup
+    role: LabelRole
+
+
 class CreateLabelGroup(Model):
     """
     Pydantic schema for validating forms for creating a label group.

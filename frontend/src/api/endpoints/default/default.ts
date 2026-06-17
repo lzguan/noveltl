@@ -34,6 +34,7 @@ import type {
   LabelContributor,
   LabelData,
   LabelGroup,
+  LabelGroupWithRole,
   Language,
   ModifyChapterContentResponse,
   Novel,
@@ -45,6 +46,7 @@ import type {
   ReadFlaggedInstancesFiltersFilterNameFlagInstancesPostBody,
   ReadLabelDatasByGroupChaptersLabelDatasGetParams,
   ReadLabelGroupsLabelGroupsGetParams,
+  ReadLabelGroupsWithRoleLabelGroupsWithRoleGetParams,
   ReadNovelsMineNovelsMineGetParams,
   ReadNovelsNovelsGetParams,
   ReadSourceWorksSourceWorksGetParams,
@@ -891,10 +893,11 @@ export const getReadEditChapterDataEditChapterDataChapterIdGetUrl = (chapterId: 
  *
  * Args:
  *     chapter_id: Chapter id of requested chapter
- *     novel_id: Novel id of requested chapter
+ *     eager: List of label group IDs for which to fetch eager label data
  *
  * Raises:
  *     404: Chapter not found (or insufficient permissions).
+ *     403: Insufficient permissions to access data for other user.
  * @summary Read Edit Chapter Data
  */
 export const readEditChapterDataEditChapterDataChapterIdGet = async (chapterId: string,
@@ -1563,6 +1566,63 @@ export const createLabelGroupLabelGroupsPost = async (createLabelGroup: CreateLa
 
   const data: createLabelGroupLabelGroupsPostResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as createLabelGroupLabelGroupsPostResponse
+}
+
+
+export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse200 = {
+  data: LabelGroupWithRole[]
+  status: 200
+}
+
+export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseSuccess = (readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse200) & {
+  headers: Headers;
+};
+export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseError = (readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse422) & {
+  headers: Headers;
+};
+
+export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse = (readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseSuccess | readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseError)
+
+export const getReadLabelGroupsWithRoleLabelGroupsWithRoleGetUrl = (params: ReadLabelGroupsWithRoleLabelGroupsWithRoleGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/label-groups-with-role?${stringifiedParams}` : `/label-groups-with-role`
+}
+
+/**
+ * Gets all label groups of the current user for a novel, along with their roles.
+ * @summary Read Label Groups With Role
+ */
+export const readLabelGroupsWithRoleLabelGroupsWithRoleGet = async (params: ReadLabelGroupsWithRoleLabelGroupsWithRoleGetParams, options?: RequestInit): Promise<readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse> => {
+
+  const res = await fetch(getReadLabelGroupsWithRoleLabelGroupsWithRoleGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse
 }
 
 

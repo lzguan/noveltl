@@ -53,6 +53,35 @@ def query_label_groups(db: Session, current_user: User, novel_id: uuid.UUID) -> 
     return result_rows
 
 
+def query_label_groups_with_contributor_info(
+    db: Session, current_user: User, novel_id: uuid.UUID
+) -> Sequence[schemas.LabelGroupWithRole]:
+    """
+    Queries all label groups that belong to current_user, along with the role of the user in each label group.
+
+    Args:
+        db: Database that we query from.
+        current_user: Current user.
+        novel_id: id of novel to query label groups for.
+    """
+    q = (
+        select(models.LabelGroup, models.LabelContributor.label_contributor_role)
+        .join(models.LabelContributor, models.LabelContributor.label_group_id == models.LabelGroup.label_group_id)
+        .where(models.LabelGroup.novel_id == novel_id)
+        .where(models.LabelContributor.user_id == current_user.user_id)
+    )
+    q = label_group_mod_access_select(q, current_user)
+    result = db.execute(q)
+    result_rows = result.all()
+    out: list[schemas.LabelGroupWithRole] = []
+    for lg, r in result_rows:
+        label_group: models.LabelGroup = lg
+        role: LabelRole = r
+        out.append(schemas.LabelGroupWithRole(label_group=label_group, role=role))
+
+    return out
+
+
 def query_label_group_by_id(db: Session, current_user: User, label_group_id: uuid.UUID) -> models.LabelGroup:
     """
     Queries a label group with specified id.

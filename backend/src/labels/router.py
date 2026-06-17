@@ -34,6 +34,7 @@ from .service import (
     query_label_datas,
     query_label_group_by_id,
     query_label_groups,
+    query_label_groups_with_contributor_info,
     query_labels_by_label_data_id,
 )
 
@@ -50,6 +51,18 @@ def read_label_groups(
     Gets all label groups of the current user for a novel.
     """
     return query_label_groups(db, current_user, novel_id)
+
+
+@router.get("/label-groups-with-role", response_model=list[schemas.LabelGroupWithRole])
+def read_label_groups_with_role(
+    novel_id: Annotated[uuid.UUID, Query(alias="novelId")],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """
+    Gets all label groups of the current user for a novel, along with their roles.
+    """
+    return query_label_groups_with_contributor_info(db, current_user, novel_id)
 
 
 @router.get("/label-groups/{labelGroupId}", response_model=schemas.LabelGroup)

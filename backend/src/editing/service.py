@@ -1,21 +1,20 @@
 import uuid
 
 from sqlalchemy import and_, select
-from sqlalchemy.exc import NoResultFound
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session
+
+from src.editing.schemas import EagerEntry, LazyEntry
+from src.labels.permissions import label_data_mod_access_select, label_group_mod_access_select
+from src.novels.service import query_chapter_content_by_most_recent
 
 from ..auth.models import User
 from ..labels import models as lm
 from ..labels import schemas as ls
-from ..labels.permissions import label_data_mod_access_select, label_group_mod_access_select
-from ..novels import models as nm
-from ..novels import schemas as ns
-from ..novels.exceptions import ChapterNotFoundException
-from .schemas import EditChapterData, LabelDataEntry, LabelGroupListEntry
+from .schemas import EditChapterData
 
 
 def query_edit_chapter_data(
-    db: Session, current_user: User, chapter_id: uuid.UUID, novel_id: uuid.UUID, label_groups_num: int
+    db: Session, current_user: User, chapter_id: uuid.UUID, eager: list[uuid.UUID]
 ) -> EditChapterData:
     """
     Validate that chapter with chapter_id is a chapter that belongs to novel with novel_id and return all data associated with the chapter required for editing
@@ -25,115 +24,70 @@ def query_edit_chapter_data(
         current_user: Current user
         chapter_id: Chapter id of requested chapter
         novel_id: Novel id of requested chapter
-        label_groups_num: Max number of label groups to get labels from
+        eager: List of label group IDs for which to fetch eager label data
 
     Raises:
-        ChapterNotFoundException: If chapter with chapter_id does not exist or does not belong to novel with novel_id or user does not have access to the chapter.
+        ChapterContentNotFoundException: If chapter with chapter_id does not exist or does not belong to novel with novel_id or user does not have access to the chapter.
     """
-    cc = aliased(nm.ChapterContent)
-    q = (
-        select(nm.Chapter, nm.ChapterContent, nm.NovelContributor)
-        .select_from(nm.ChapterContent)
-        .where(nm.ChapterContent.chapter_id == chapter_id)
-        .join(nm.Chapter, nm.Chapter.chapter_id == nm.ChapterContent.chapter_id)
-        .where(
-            and_(
-                nm.Chapter.novel_id == novel_id,
-                nm.Chapter.chapter_id == chapter_id,
-                nm.ChapterContent.chapter_content_version
-                == select(cc.chapter_content_version)
-                .where(cc.chapter_id == chapter_id)
-                .order_by(cc.chapter_content_version.desc())
-                .limit(1)
-                .scalar_subquery(),
-            )
-        )
-        .join(
-            nm.NovelContributor,
-            and_(nm.NovelContributor.novel_id == novel_id, nm.NovelContributor.user_id == current_user.user_id),
-        )
-    )
-    try:
-        result = db.execute(q)
-        cr, ccr, nc = result.one()
-        chapter = ns.Chapter.model_validate(cr)
-        chapter_content = ns.ChapterContent.model_validate(ccr)
-        novel_contributor: nm.NovelContributor = nc
-        role = novel_contributor.contributor_role
-    except NoResultFound as e:
-        raise ChapterNotFoundException from e
-    except Exception:
-        raise
+    chapter_content = query_chapter_content_by_most_recent(db, current_user, chapter_id)
 
-    lc = aliased(lm.LabelContributor)
     q = (
-        select(lm.LabelGroup, lm.LabelData, lc)
+        select(lm.LabelGroup, lm.LabelData)
         .select_from(lm.LabelGroup)
-        .where(lm.LabelGroup.novel_id == novel_id)
-        .outerjoin(
+        .join(
             lm.LabelData,
             and_(
-                lm.LabelData.label_group_id == lm.LabelGroup.label_group_id,
+                lm.LabelGroup.label_group_id == lm.LabelData.label_group_id,
                 lm.LabelData.chapter_content_id == chapter_content.chapter_content_id,
             ),
+            isouter=True,
         )
-        .join(
-            lc,
-            and_(lc.label_group_id == lm.LabelGroup.label_group_id, lc.user_id == current_user.user_id),
-        )
-        .order_by(lm.LabelData.updated_at.desc().nullslast(), lm.LabelGroup.label_group_id.asc())
     )
-
     q = label_group_mod_access_select(q, current_user)
-
     try:
         result = db.execute(q)
         result_rows = result.all()
-        label_group_list: list[LabelGroupListEntry] = [
-            LabelGroupListEntry(
-                label_group=ls.LabelGroup.model_validate(lg),
-                label_data=ls.LabelData.model_validate(ld) if ld is not None else None,
-                role=lc.label_contributor_role,
+    except Exception:
+        raise
+    no_label_data: list[ls.LabelGroup] = []
+    lazy_label_data: list[LazyEntry] = []
+    eager_to_be_fetched: list[tuple[ls.LabelGroup, ls.LabelData]] = []
+    for g, d in result_rows:
+        group: lm.LabelGroup = g
+        data: lm.LabelData | None = d
+        if data is None:
+            no_label_data.append(ls.LabelGroup.model_validate(group))
+        elif group.label_group_id in eager:
+            eager_to_be_fetched.append((ls.LabelGroup.model_validate(group), ls.LabelData.model_validate(data)))
+        else:
+            lazy_label_data.append(
+                LazyEntry(label_group=ls.LabelGroup.model_validate(group), label_data=ls.LabelData.model_validate(data))
             )
-            for lg, ld, lc in result_rows
-        ]
-    except Exception:
-        raise
-
-    all_label_data_ids = [entry.label_data.label_data_id for entry in label_group_list if entry.label_data is not None][
-        :label_groups_num
-    ]
-
+    eager_label_data_ids = [d.label_data_id for _, d in eager_to_be_fetched]
     q = (
-        select(lm.LabelData.label_data_id, lm.Label)
+        select(lm.Label)
         .select_from(lm.LabelData)
-        .where(lm.LabelData.label_data_id.in_(all_label_data_ids))
-        .join(lm.LabelGroup, lm.LabelGroup.label_group_id == lm.LabelData.label_group_id)
-        .join(lm.Label, lm.Label.label_data_id == lm.LabelData.label_data_id)
+        .join(lm.Label, lm.LabelData.label_data_id == lm.Label.label_data_id)
+        .where(lm.LabelData.label_data_id.in_(eager_label_data_ids))
     )
-
     q = label_data_mod_access_select(q, current_user)
-
     try:
         result = db.execute(q)
-        result_rows = result.all()
-        label_data_dict: dict[uuid.UUID, list[ls.Label]] = {}
-        for ld, lab in result_rows:
-            label_data_id: uuid.UUID = ld
-            label = ls.Label.model_validate(lab)
-            if label_data_id not in label_data_dict:
-                label_data_dict[label_data_id] = []
-            label_data_dict[label_data_id].append(label)
-        label_data_list: list[LabelDataEntry] = [
-            LabelDataEntry(label_data_id=id, labels=val) for id, val in label_data_dict.items()
-        ]
+        result_rows = result.scalars().all()
     except Exception:
         raise
 
+    label_data_ids_to_labels: dict[uuid.UUID, list[ls.Label]] = {id: [] for id in eager_label_data_ids}
+    for lab in result_rows:
+        label = ls.Label.model_validate(lab)
+        label_data_ids_to_labels[label.label_data_id].append(label)
+    eager_label_data = [
+        EagerEntry(label_group=group, label_data=data, labels=label_data_ids_to_labels[data.label_data_id])
+        for group, data in eager_to_be_fetched
+    ]
     return EditChapterData(
-        chapter=chapter,
         chapter_content=chapter_content,
-        role=role,
-        label_group_list=label_group_list,
-        label_data_list=label_data_list,
+        no_label_data=no_label_data,
+        lazy_label_data=lazy_label_data,
+        eager_label_data=eager_label_data,
     )

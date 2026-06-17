@@ -1,8 +1,5 @@
 import { createLogger } from "@/lib/logging";
 import {
-	isIdentifiableKind,
-	type ExistableKindMap,
-	type IdentifiableKindMap,
 	type IDRepository,
 	type IdStatus,
 	type Kind,
@@ -23,25 +20,26 @@ import { Effect } from "effect";
 
 const logger = createLogger("IdRepository");
 
-/**
- * As the current data model stands, most objects have an underlying ID. In order to synchronize the IDs that appear on the frontend and backend without sacrificing client responsiveness, we need a way to bridge the gap between client-side IDs and server-side IDs. This repository serves as a central place to manage this mapping and the state of these IDs.
- *
- * The ID repository provides the following functionalities:
- *
- * Generating new provisional IDs for objects that are being created on the client side but have not yet been persisted to the server.
- * Binding provisional IDs to server IDs once the server responds with the created object.
- * Tracking the existence of objects that may not have a server ID but are known to exist on the server.
- * Managing the state of IDs to prevent race conditions and ensure that operations on objects are performed in a consistent manner.
- *
- * The way it does so is as follows:
- * - Each provisional ID is keyed using a combination of its kind (e.g., "labelGroup", "labelData", "chapterContent") and a unique identifier (e.g., "provisional-1", "provisional-2", etc.).
- * - For each provisional ID, we associate it with a server ID (possibly null if it has not yet been created on the server) and a status (see types.ts for the possible statuses and state transitions).
- * - Any given provisional ID can be reserved for a specific state transition (e.g., from "pending" to "creating", from "clean" to "updating", etc.) if it is currently in the appropriate state and has the appropriate server ID existence status.
- * - Once an ID is reserved for a state transition, it cannot be reserved for another transition until it is released. The exception to this is the "locked" state, which can be reserved multiple times and only transitions back to "clean" once all locks are released.
- * - The repository provides methods to release reserved states on both success and failure, which will transition the ID to the appropriate next state based on the outcome of the operation.
- *
- * By centralizing this logic in a repository, we can ensure that all components that need to interact with IDs do so in a consistent manner, reducing the likelihood of bugs and race conditions related to ID management.
- */
+// Convenience types
+type IdentifiableKindMap = {
+	[K in IdentifiableKind]: Map<
+		ProvId,
+		{ serverId: ServId | null; status: IdStatus; lockCount: number }
+	>;
+};
+type ExistableKindMap = {
+	[K in ExistableKind]: Map<
+		ProvId,
+		{ serverExists: ServEx | null; status: IdStatus; lockCount: number }
+	>;
+};
+
+// convenience function
+function isIdentifiableKind(kind: Kind): kind is IdentifiableKind {
+	return (
+		kind === "labelGroup" || kind === "labelData" || kind === "chapterContent" || kind === "chapter"
+	);
+}
 
 type ServIdStatus = { serverId: ServId | null; status: IdStatus; lockCount: number };
 type ServExistsStatus = { serverExists: ServEx | null; status: IdStatus; lockCount: number };

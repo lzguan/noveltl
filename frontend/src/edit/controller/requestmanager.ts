@@ -22,6 +22,7 @@ import {
 	PendingException,
 	type AnyError,
 } from "./types/errors";
+import { UnknownException } from "effect/Cause";
 
 const logger = createLogger("RequestManager");
 
@@ -116,7 +117,7 @@ export const buildRequestManager = (
 					try: () => getCachedResultCachedCachedIdGet(request.requestKey),
 					catch: (err) => {
 						logger.error(`Failed to fetch status for request ${request.requestKey}`, {
-							error: err instanceof Error ? err : new Error(String(err)),
+							error: err instanceof Error ? err : new UnknownException(String(err)),
 						});
 						return new ConnectionException({ orig: err });
 					},
@@ -172,7 +173,7 @@ export const buildRequestManager = (
 						yield* Effect.forEach(request.reservationRequest.reserveList(), (reservation) =>
 							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
 						);
-						request.onFailure();
+						yield* request.onFailure();
 						logger.error(
 							`Request ${request.requestKey} has exceeded the maximum number of retries`,
 							{
@@ -184,7 +185,7 @@ export const buildRequestManager = (
 				}
 				if (limitExceeded.length > 0) {
 					return yield* Effect.fail(
-						new Error(
+						new UnknownException(
 							`${limitExceeded.length} requests have exceeded the maximum number of retries`,
 						),
 					);
@@ -202,7 +203,7 @@ export const buildRequestManager = (
 					yield* Effect.forEach(reservationRequest.reserveList(), (reservation) =>
 						idRepo.reserveIdObjState(reservation.kind, reservation.id, reservation.desiredState),
 					);
-					request.preSend();
+					yield* request.preSend();
 					fromQueueRequests.push(request);
 				}
 
@@ -319,7 +320,7 @@ export const buildRequestManager = (
 				}
 				if (fatalFailedRequests.length > 0) {
 					for (const { request, error } of fatalFailedRequests) {
-						request.onFatalError(error);
+						yield* request.onFatalError(error);
 						yield* Effect.forEach(request.reservationRequest.reserveList(), (reservation) =>
 							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
 						);
@@ -330,7 +331,7 @@ export const buildRequestManager = (
 						data: fatalFailedRequests,
 					});
 					return yield* Effect.fail(
-						new Error(`${fatalFailedRequests.length} requests failed fatally`),
+						new UnknownException(`${fatalFailedRequests.length} requests failed fatally`),
 					);
 				}
 				retryRequests.length = 0; // empty the array
@@ -349,7 +350,14 @@ export const buildRequestManager = (
 					yield* Effect.sleep(delay);
 				}
 			}
-		});
+		}).pipe(
+			Effect.mapError((err) => {
+				if (err._tag === "UnknownException") {
+					return err;
+				}
+				return new UnknownException(String(err));
+			}),
+		);
 
 		const start = () => startedMut.withPermits(1)(sendLoop);
 

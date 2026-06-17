@@ -1557,6 +1557,56 @@
         }
       }
     },
+    "/label-groups-with-role": {
+      "get": {
+        "summary": "Read Label Groups With Role",
+        "description": "Gets all label groups of the current user for a novel, along with their roles.",
+        "operationId": "read_label_groups_with_role_label_groups_with_role_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LabelGroupWithRole"
+                  },
+                  "title": "Response Read Label Groups With Role Label Groups With Role Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/label-groups/{labelGroupId}": {
       "get": {
         "summary": "Read Label Group",
@@ -2652,7 +2702,7 @@
     "/edit-chapter-data/{chapterId}": {
       "get": {
         "summary": "Read Edit Chapter Data",
-        "description": "Gets all data associated with a chapter required for editing.\n\nArgs:\n    chapter_id: Chapter id of requested chapter\n    novel_id: Novel id of requested chapter\n\nRaises:\n    404: Chapter not found (or insufficient permissions).",
+        "description": "Gets all data associated with a chapter required for editing.\n\nArgs:\n    chapter_id: Chapter id of requested chapter\n    eager: List of label group IDs for which to fetch eager label data\n\nRaises:\n    404: Chapter not found (or insufficient permissions).\n    403: Insufficient permissions to access data for other user.",
         "operationId": "read_edit_chapter_data_edit_chapter_data__chapterId__get",
         "security": [
           {
@@ -2671,25 +2721,19 @@
             }
           },
           {
-            "name": "novelId",
+            "name": "eager",
             "in": "query",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Novelid"
-            }
-          },
-          {
-            "name": "labelGroupsNum",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "maximum": 20,
-              "minimum": 1,
-              "title": "Labelgroupsnum"
-            }
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "List of label group IDs for which to fetch eager label data",
+              "title": "Eager"
+            },
+            "description": "List of label group IDs for which to fetch eager label data"
           },
           {
             "name": "subjectId",
@@ -3639,42 +3683,66 @@
         "title": "DetailHTTPErrorResponse",
         "description": "Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error."
       },
-      "EditChapterData": {
+      "EagerEntry": {
         "properties": {
-          "chapter": {
-            "$ref": "#/components/schemas/Chapter"
+          "labelGroup": {
+            "$ref": "#/components/schemas/LabelGroup"
           },
-          "chapterContent": {
-            "$ref": "#/components/schemas/ChapterContent"
+          "labelData": {
+            "$ref": "#/components/schemas/LabelData"
           },
-          "role": {
-            "$ref": "#/components/schemas/Role"
-          },
-          "labelGroupList": {
+          "labels": {
             "items": {
-              "$ref": "#/components/schemas/LabelGroupListEntry"
+              "$ref": "#/components/schemas/Label"
             },
             "type": "array",
-            "title": "Labelgrouplist"
-          },
-          "labelDataList": {
-            "items": {
-              "$ref": "#/components/schemas/LabelDataEntry"
-            },
-            "type": "array",
-            "title": "Labeldatalist"
+            "title": "Labels"
           }
         },
         "type": "object",
         "required": [
-          "chapter",
+          "labelGroup",
+          "labelData",
+          "labels"
+        ],
+        "title": "EagerEntry"
+      },
+      "EditChapterData": {
+        "properties": {
+          "chapterContent": {
+            "$ref": "#/components/schemas/ChapterContent"
+          },
+          "noLabelData": {
+            "items": {
+              "$ref": "#/components/schemas/LabelGroup"
+            },
+            "type": "array",
+            "title": "Nolabeldata"
+          },
+          "lazyLabelData": {
+            "items": {
+              "$ref": "#/components/schemas/LazyEntry"
+            },
+            "type": "array",
+            "title": "Lazylabeldata"
+          },
+          "eagerLabelData": {
+            "items": {
+              "$ref": "#/components/schemas/EagerEntry"
+            },
+            "type": "array",
+            "title": "Eagerlabeldata"
+          }
+        },
+        "type": "object",
+        "required": [
           "chapterContent",
-          "role",
-          "labelGroupList",
-          "labelDataList"
+          "noLabelData",
+          "lazyLabelData",
+          "eagerLabelData"
         ],
         "title": "EditChapterData",
-        "description": "Pydantic schema for the data needed to edit a chapter.\n\nAttributes:\n    chapter: Chapter being edited.\n    chapter_content: ChapterContent being edited.\n    label_groups: List of LabelGroups in this novel.\n    labels: List of Labels in this chapter content."
+        "description": "Pydantic schema for the data needed to edit a chapter.\n\nAttributes:\n    chapter_content: ChapterContent being edited.\n    no_label_data: List of LabelGroup objects that have no label data associated with them."
       },
       "HTTPValidationError": {
         "properties": {
@@ -3905,28 +3973,6 @@
         "title": "LabelData",
         "description": "Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling."
       },
-      "LabelDataEntry": {
-        "properties": {
-          "labelDataId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Labeldataid"
-          },
-          "labels": {
-            "items": {
-              "$ref": "#/components/schemas/Label"
-            },
-            "type": "array",
-            "title": "Labels"
-          }
-        },
-        "type": "object",
-        "required": [
-          "labelDataId",
-          "labels"
-        ],
-        "title": "LabelDataEntry"
-      },
       "LabelGroup": {
         "properties": {
           "labelGroupId": {
@@ -3954,20 +4000,10 @@
         "title": "LabelGroup",
         "description": "Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to."
       },
-      "LabelGroupListEntry": {
+      "LabelGroupWithRole": {
         "properties": {
           "labelGroup": {
             "$ref": "#/components/schemas/LabelGroup"
-          },
-          "labelData": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/LabelData"
-              },
-              {
-                "type": "null"
-              }
-            ]
           },
           "role": {
             "$ref": "#/components/schemas/LabelRole"
@@ -3976,10 +4012,10 @@
         "type": "object",
         "required": [
           "labelGroup",
-          "labelData",
           "role"
         ],
-        "title": "LabelGroupListEntry"
+        "title": "LabelGroupWithRole",
+        "description": "Pydantic schema for a label group with a user's role in that label group.\n\nAttributes:\n    label_group: LabelGroup object.\n    role: Role of the user in this label group."
       },
       "LabelRole": {
         "type": "string",
@@ -4008,6 +4044,22 @@
         ],
         "title": "Language",
         "description": "Pydantic schema for language.\n\nAttributes:\n    language_code: String code key to language.\n    language_name: String name of language."
+      },
+      "LazyEntry": {
+        "properties": {
+          "labelGroup": {
+            "$ref": "#/components/schemas/LabelGroup"
+          },
+          "labelData": {
+            "$ref": "#/components/schemas/LabelData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "labelGroup",
+          "labelData"
+        ],
+        "title": "LazyEntry"
       },
       "ModifyChapterContentResponse": {
         "properties": {
@@ -4171,15 +4223,6 @@
         ],
         "title": "RequestConflictErrorResponse",
         "description": "HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail."
-      },
-      "Role": {
-        "type": "string",
-        "enum": [
-          "owner",
-          "viewer",
-          "editor"
-        ],
-        "title": "Role"
       },
       "SchemaInfo": {
         "properties": {

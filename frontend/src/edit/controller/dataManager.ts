@@ -1,185 +1,386 @@
-import { createLogger } from "@/lib/logging";
-import type { ChapterControllerEntry, LoadingStatus, NovelDataManager } from "./types/dataTypes";
-import type { Chapter, LabelGroup, Novel } from "@/api/models";
 import { Effect, Schema } from "effect";
-import { FatalException, ConnectionException } from "./types/errors";
-import type { TimeoutException } from "effect/Cause";
-import { ProvId, ServId, type IDRepository } from "./types/idTypes";
-import type { RequestEvent } from "./types/requestTypes";
-import { makeReservationRequest, Prov } from "./types/helperTypes";
+import {
+	buildChapterIndex,
+	buildLabelGroupIndex,
+	buildRequestQueueDispatcher,
+	type ChapterIndex,
+	type LabelGroupIndex,
+} from "./dmHelpers";
+import {
+	AlreadyOpenException,
+	ConnectionException,
+	FatalException,
+	LoadingException,
+	NotFoundException,
+} from "./types/errors";
+import { TimeoutException, UnknownException } from "effect/Cause";
 import type { TriggerEvent } from "./types/controllerTypes";
-import { createLabelGroupLabelGroupsPost } from "@/api/endpoints/default/default";
-import { CreateLabelGroupLabelGroupsPost200Response } from "@/api/endpoints/default/default.effect";
-
-const logger = createLogger("DataManager");
-
-interface HasActiveAttribute {
-	active: boolean;
-}
-
-type Dequeuer<T extends HasActiveAttribute, Params extends unknown[]> = (
-	...params: [...Params]
-) => T[];
-
-type RequestQueueDispatcher<T extends HasActiveAttribute> = {
-	decorate: <Params extends unknown[]>(f: Dequeuer<T, Params>) => Dequeuer<T, Params>;
-	flush: () => T[];
-};
-
-function buildRequestQueueDispatcher<T extends HasActiveAttribute>(): RequestQueueDispatcher<T> {
-	const queue: T[] = [];
-	const decorate =
-		<Params extends unknown[]>(f: Dequeuer<T, Params>) =>
-		(...params: [...Params]) => {
-			const result = f(...params);
-			const out: T[] = [];
-			for (const item of result) {
-				if (item.active) {
-					out.push(...queue);
-					queue.length = 0;
-					out.push(item);
-				} else {
-					queue.push(item);
-				}
-			}
-			return out;
-		};
-
-	const flush = () => {
-		const out = [...queue];
-		queue.length = 0;
-		return out;
-	};
-
-	return {
-		decorate,
-		flush,
-	};
-}
+import {
+	type IDRepository,
+	type ProvChapter,
+	ProvId,
+	type ProvLabelGroup,
+	ServId,
+} from "./types/idTypes";
+import { makeReservationRequest, Prov } from "./types/helperTypes";
+import type { Chapter, EditChapterData, LabelGroup, LabelRole, Novel } from "@/api/models";
+import type { RequestEvent } from "./types/requestTypes";
+import {
+	CreateChapterNovelsNovelIdChaptersPost200Response,
+	CreateLabelGroupLabelGroupsPost200Response,
+	ReadEditChapterDataEditChapterDataChapterIdGet200Response,
+} from "@/api/endpoints/default/default.effect";
+import {
+	createChapterNovelsNovelIdChaptersPost,
+	createLabelGroupLabelGroupsPost,
+	readEditChapterDataEditChapterDataChapterIdGet,
+} from "@/api/endpoints/default/default";
+import type { Role } from "@/api/models/role";
+import type { ChapterDataManager, NovelDataManager } from "./types/dataTypes";
 
 type NovelData = {
 	novel: Novel;
 	chapters: Chapter[];
-	labelGroups: LabelGroup[];
+	labelGroups: { labelGroup: LabelGroup; role: LabelRole }[];
+	novelRole: Role;
 };
 
 export const buildNovelDataManager = (
 	fetchNovelData: () => Effect.Effect<NovelData, ConnectionException | TimeoutException>,
 	raiseTriggerEvent: (event: TriggerEvent) => void,
 	idRepo: IDRepository,
-): Effect.Effect<unknown, ConnectionException | TimeoutException> =>
+): Effect.Effect<NovelDataManager, ConnectionException | TimeoutException | FatalException> =>
 	Effect.gen(function* () {
 		const novelData = yield* fetchNovelData();
 
-		const controllers: Map<ProvId, ChapterControllerEntry> = new Map(
-			novelData.chapters.map<[ProvId, ChapterControllerEntry]>((val) => {
-				const chapterId = idRepo.newIdAndBindId("chapter", ServId(val.chapterId));
-				return [
-					ProvId(chapterId),
-					{ status: "notLoaded", chapter: Prov<Chapter>({ ...val, chapterId: chapterId }) },
-				];
+		const chaptersIndex: ChapterIndex = yield* buildChapterIndex(
+			novelData.chapters.map<[ProvId, { chapter: ProvChapter }]>((val) => {
+				const newId = idRepo.newIdAndBindId("chapter", ServId(val.chapterId));
+				return [ProvId(newId), { chapter: Prov({ ...val, chapterId: newId }) }];
 			}),
 		);
-		const labelGroups: Map<ProvId, { labelGroup: Prov<LabelGroup>; loadingStatus: LoadingStatus }> =
-			new Map(
-				novelData.labelGroups.map<
-					[ProvId, { labelGroup: Prov<LabelGroup>; loadingStatus: LoadingStatus }]
-				>((val) => {
-					const newId = idRepo.newIdAndBindId("labelGroup", ServId(val.labelGroupId));
+		const labelGroupsIndex: LabelGroupIndex = yield* buildLabelGroupIndex(
+			novelData.labelGroups.map<[ProvId, { labelGroup: ProvLabelGroup; role: LabelRole }]>(
+				(val) => {
+					const newId = idRepo.newIdAndBindId("labelGroup", ServId(val.labelGroup.labelGroupId));
 					return [
-						ProvId(val.labelGroupId),
+						ProvId(newId),
 						{
-							labelGroup: Prov<LabelGroup>({ ...val, labelGroupId: newId }),
-							loadingStatus: "loaded",
+							labelGroup: Prov({ ...val.labelGroup, labelGroupId: newId }),
+							role: val.role,
 						},
 					];
-				}),
-			);
-
-		const { decorate } = buildRequestQueueDispatcher<RequestEvent>();
-
-		const _addLabelGroup = (labelGroupName: string): RequestEvent[] => {
-			const newId = idRepo.newId("labelGroup");
-			const newLabelGroup: Prov<LabelGroup> = Prov({
-				labelGroupId: newId,
-				labelGroupName,
-				novelId: novelData.novel.novelId,
-			});
-			labelGroups.set(newId, { labelGroup: newLabelGroup, loadingStatus: "notLoaded" });
-			raiseTriggerEvent({ eventType: "labelGroupAdded", labelGroup: newLabelGroup });
-			const onError = () => {
-				const groupEntry = labelGroups.get(newId);
-				if (groupEntry) {
-					labelGroups.set(newId, {
-						labelGroup: groupEntry.labelGroup,
-						loadingStatus: "loadError",
-					});
-				}
-			};
-
-			return [
-				{
-					cached: false,
-					reservationRequest: makeReservationRequest(idRepo, [
-						{
-							id: newId,
-							desiredState: "creating",
-							kind: "labelGroup",
-						},
-					]),
-					variant: "addLabelGroup",
-					onFailure: onError,
-					onFatalError: onError,
-					retries: 3,
-					active: true,
-					preSend: () => {},
-					send: () =>
-						Effect.gen(function* () {
-							const resp = yield* Effect.tryPromise(() =>
-								createLabelGroupLabelGroupsPost({
-									labelGroupName,
-									novelId: novelData.novel.novelId,
-								}),
-							).pipe(
-								Effect.mapError(
-									(err) =>
-										new ConnectionException({
-											orig: err,
-										}),
-								),
-							);
-							if (resp.status !== 200) {
-								return yield* Effect.fail(
-									new FatalException({
-										orig: new Error(`Failed to create label group: ${resp}`),
-									}),
-								);
-							} else {
-								return resp.data;
-							}
-						}),
-					postSend: (data) =>
-						Effect.gen(function* () {
-							const validated = yield* Schema.validate(CreateLabelGroupLabelGroupsPost200Response)(
-								data,
-							);
-							idRepo.bindServerId("labelGroup", newId, ServId(validated.labelGroupId));
-						}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
 				},
-			];
-		};
+			),
+		);
+
+		const { decorate, flush } = buildRequestQueueDispatcher<RequestEvent>();
+
+		const _addLabelGroup = (
+			labelGroupName: string,
+		): Effect.Effect<RequestEvent[], UnknownException> =>
+			Effect.gen(function* () {
+				const newId = idRepo.newId("labelGroup");
+				const newLabelGroup: ProvLabelGroup = Prov({
+					labelGroupId: newId,
+					labelGroupName,
+					novelId: novelData.novel.novelId,
+				});
+				yield* labelGroupsIndex
+					.new(newId, { labelGroup: newLabelGroup, role: "owner" })
+					.pipe(
+						Effect.mapError(
+							() => new UnknownException({ message: "Failed to add label group to index" }),
+						),
+					);
+				yield* labelGroupsIndex
+					.increment(newId)
+					.pipe(
+						Effect.mapError(
+							() => new UnknownException({ message: "Failed to increment label group index" }),
+						),
+					);
+				raiseTriggerEvent({ eventType: "labelGroupAdded", labelGroup: newLabelGroup });
+				const onError = (): Effect.Effect<void> => {
+					return labelGroupsIndex
+						.decrement(newId)
+						.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+				};
+
+				return [
+					{
+						cached: false,
+						reservationRequest: makeReservationRequest(idRepo, [
+							{
+								id: newId,
+								desiredState: "creating",
+								kind: "labelGroup",
+							},
+						]),
+						variant: "addLabelGroup",
+						onFailure: onError,
+						onFatalError: onError,
+						retries: 3,
+						active: true,
+						preSend: () => {
+							return Effect.succeed(void 0);
+						},
+						send: () =>
+							Effect.gen(function* () {
+								const resp = yield* Effect.tryPromise(() =>
+									createLabelGroupLabelGroupsPost({
+										labelGroupName,
+										novelId: novelData.novel.novelId,
+									}),
+								).pipe(
+									Effect.mapError(
+										(err) =>
+											new ConnectionException({
+												orig: err,
+											}),
+									),
+								);
+								if (resp.status !== 200) {
+									return yield* Effect.fail(
+										new FatalException({
+											orig: new Error(`Failed to create label group: ${resp}`),
+										}),
+									);
+								} else {
+									return resp.data;
+								}
+							}),
+						postSend: (data) =>
+							Effect.gen(function* () {
+								const validated = yield* Schema.validate(
+									CreateLabelGroupLabelGroupsPost200Response,
+								)(data);
+								yield* idRepo.bindServerId("labelGroup", newId, ServId(validated.labelGroupId));
+								yield* labelGroupsIndex.decrement(newId);
+							}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
+					},
+				];
+			});
 		const addLabelGroup = decorate(_addLabelGroup);
+
 		const _addChapter = (
 			chapterNum: number,
 			chapterTitle: string,
 			chapterIsPublic: boolean,
-		): RequestEvent[] => {
-			const newId = idRepo.newId("chapter");
-		};
+		): Effect.Effect<RequestEvent[], UnknownException> =>
+			Effect.gen(function* () {
+				const newId = idRepo.newId("chapter");
+				const newChapter: ProvChapter = Prov({
+					chapterId: newId,
+					chapterNum,
+					chapterTitle,
+					chapterIsPublic,
+					novelId: novelData.novel.novelId,
+				});
+				yield* chaptersIndex
+					.new(newId, { chapter: newChapter })
+					.pipe(
+						Effect.mapError(
+							() => new UnknownException({ message: "Failed to add chapter to index" }),
+						),
+					);
+				yield* chaptersIndex
+					.increment(newId)
+					.pipe(
+						Effect.mapError(
+							() => new UnknownException({ message: "Failed to increment chapter index" }),
+						),
+					);
+				raiseTriggerEvent({ eventType: "chapterAdded", chapter: newChapter });
+				const onError = (): Effect.Effect<void> => {
+					return chaptersIndex.decrement(newId).pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+				};
+				return [
+					{
+						cached: false,
+						reservationRequest: makeReservationRequest(idRepo, [
+							{
+								id: newId,
+								desiredState: "creating",
+								kind: "chapter",
+							},
+						]),
+						variant: "addChapter",
+						onFailure: onError,
+						onFatalError: onError,
+						retries: 3,
+						active: true,
+						preSend: () => {
+							return Effect.succeed(void 0);
+						},
+						send: () =>
+							Effect.gen(function* () {
+								const resp = yield* Effect.tryPromise(() =>
+									createChapterNovelsNovelIdChaptersPost(novelData.novel.novelId, {
+										chapterNum,
+										chapterTitle,
+										chapterIsPublic,
+									}),
+								).pipe(
+									Effect.mapError(
+										(err) =>
+											new ConnectionException({
+												orig: err,
+											}),
+									),
+								);
+								if (resp.status !== 200) {
+									return yield* Effect.fail(
+										new FatalException({
+											orig: new Error(`Failed to create chapter: ${resp}`),
+										}),
+									);
+								} else {
+									return resp.data;
+								}
+							}),
+						postSend: (data) =>
+							Effect.gen(function* () {
+								const validated = yield* Schema.validate(
+									CreateChapterNovelsNovelIdChaptersPost200Response,
+								)(data);
+								yield* idRepo.bindServerId("chapter", newId, ServId(validated.metadata.chapterId));
+								yield* chaptersIndex.decrement(newId);
+							}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
+					},
+				];
+			});
+		const addChapter = decorate(_addChapter);
+
+		const _openChapter = (
+			chapterId: ProvId,
+			eager: ProvId[],
+		): Effect.Effect<
+			RequestEvent[],
+			AlreadyOpenException | NotFoundException | LoadingException | UnknownException
+		> =>
+			Effect.gen(function* () {
+				const chapter = yield* chaptersIndex.get(chapterId);
+				if (chapter.status === "ready") {
+					return yield* Effect.fail(new AlreadyOpenException({ id: chapterId }));
+				}
+				if (chapter.status === "loading") {
+					return yield* Effect.fail(new LoadingException({ id: chapterId }));
+				}
+				yield* chaptersIndex.setData(chapterId, { status: "loading" });
+				return [
+					{
+						cached: false,
+						variant: "openChapter",
+						reservationRequest: makeReservationRequest(idRepo, [
+							{
+								id: chapterId,
+								desiredState: "locked",
+								kind: "chapter",
+							},
+						]),
+						onFailure: () =>
+							chaptersIndex
+								.setData(chapterId, { status: "error" })
+								.pipe(Effect.catchAll(() => Effect.succeed(void 0))),
+						onFatalError: () =>
+							chaptersIndex
+								.setData(chapterId, { status: "error" })
+								.pipe(Effect.catchAll(() => Effect.succeed(void 0))),
+						retries: 3,
+						active: false,
+						preSend: () => Effect.succeed(void 0),
+						send: () =>
+							Effect.gen(function* () {
+								const chapterServId = yield* idRepo
+									.getServerId("chapter", chapterId)
+									.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
+								const esi = yield* Effect.all(
+									eager.map((id) => idRepo.getServerId("labelGroup", id)),
+								).pipe(Effect.mapError((err) => new FatalException({ orig: err })));
+								const eagerServIds = esi.filter((id) => id !== null);
+								if (chapterServId === null) {
+									return yield* Effect.fail(
+										new FatalException({
+											orig: new Error(`Unexpected: chapter ${chapterId} does not have a server id`),
+										}),
+									);
+								}
+								const resp = yield* Effect.tryPromise(async () => {
+									const inResp = await readEditChapterDataEditChapterDataChapterIdGet(
+										chapterServId,
+										{
+											eager: eagerServIds,
+										},
+									);
+									return inResp;
+								}).pipe(Effect.mapError((err) => new ConnectionException({ orig: err })));
+								if (resp.status !== 200) {
+									return yield* Effect.fail(
+										new FatalException({
+											orig: new Error(`Failed to read chapter data: ${resp.status}`),
+										}),
+									);
+								}
+								return resp.data;
+							}),
+						postSend: (resp: unknown) =>
+							Effect.gen(function* () {
+								const validated = yield* Schema.validate(
+									ReadEditChapterDataEditChapterDataChapterIdGet200Response,
+								)(resp).pipe(Effect.mapError((err) => new FatalException({ orig: err })));
+								const chapterDataManager = yield* buildChapterDataManager(
+									validated,
+									raiseTriggerEvent,
+									idRepo,
+									{},
+								).pipe(Effect.mapError((err) => new FatalException({ orig: err })));
+								yield* chaptersIndex
+									.setData(chapterId, {
+										status: "ready",
+										data: {
+											chapterData: chapterDataManager,
+										},
+									})
+									.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
+								raiseTriggerEvent({
+									eventType: "chapterOpened",
+									chapterId,
+								});
+							}),
+					},
+				];
+			});
+		const openChapter = (chapterId: ProvId, eager: ProvId[], now: boolean) =>
+			Effect.gen(function* () {
+				const reqEvents = yield* decorate(_openChapter)(chapterId, eager);
+				if (now) {
+					const flushEvents = yield* flush();
+					reqEvents.push(...flushEvents);
+				}
+				return reqEvents;
+			});
+		const getters = {};
 
 		return {
 			addLabelGroup,
+			addChapter,
+			openChapter,
+			flush,
+			getters,
 		};
+	});
+
+export const buildChapterDataManager = (
+	editChapterData: typeof ReadEditChapterDataEditChapterDataChapterIdGet200Response.Type,
+	raiseTriggerEvent: (event: TriggerEvent) => void,
+	idRepo: IDRepository,
+	getters: {},
+): Effect.Effect<ChapterDataManager, UnknownException> =>
+	Effect.gen(function* () {
+		return yield* Effect.fail(
+			new UnknownException({ message: "ChapterDataManager not implemented yet" }),
+		);
 	});
 
 export function buildDataManager(

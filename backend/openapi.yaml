@@ -644,34 +644,50 @@ components:
       - detail
       title: DetailHTTPErrorResponse
       type: object
+    EagerEntry:
+      properties:
+        labelData:
+          $ref: '#/components/schemas/LabelData'
+        labelGroup:
+          $ref: '#/components/schemas/LabelGroup'
+        labels:
+          items:
+            $ref: '#/components/schemas/Label'
+          title: Labels
+          type: array
+      required:
+      - labelGroup
+      - labelData
+      - labels
+      title: EagerEntry
+      type: object
     EditChapterData:
       description: "Pydantic schema for the data needed to edit a chapter.\n\nAttributes:\n\
-        \    chapter: Chapter being edited.\n    chapter_content: ChapterContent being\
-        \ edited.\n    label_groups: List of LabelGroups in this novel.\n    labels:\
-        \ List of Labels in this chapter content."
+        \    chapter_content: ChapterContent being edited.\n    no_label_data: List\
+        \ of LabelGroup objects that have no label data associated with them."
       properties:
-        chapter:
-          $ref: '#/components/schemas/Chapter'
         chapterContent:
           $ref: '#/components/schemas/ChapterContent'
-        labelDataList:
+        eagerLabelData:
           items:
-            $ref: '#/components/schemas/LabelDataEntry'
-          title: Labeldatalist
+            $ref: '#/components/schemas/EagerEntry'
+          title: Eagerlabeldata
           type: array
-        labelGroupList:
+        lazyLabelData:
           items:
-            $ref: '#/components/schemas/LabelGroupListEntry'
-          title: Labelgrouplist
+            $ref: '#/components/schemas/LazyEntry'
+          title: Lazylabeldata
           type: array
-        role:
-          $ref: '#/components/schemas/Role'
+        noLabelData:
+          items:
+            $ref: '#/components/schemas/LabelGroup'
+          title: Nolabeldata
+          type: array
       required:
-      - chapter
       - chapterContent
-      - role
-      - labelGroupList
-      - labelDataList
+      - noLabelData
+      - lazyLabelData
+      - eagerLabelData
       title: EditChapterData
       type: object
     HTTPValidationError:
@@ -864,22 +880,6 @@ components:
       - chapterContentId
       title: LabelData
       type: object
-    LabelDataEntry:
-      properties:
-        labelDataId:
-          format: uuid
-          title: Labeldataid
-          type: string
-        labels:
-          items:
-            $ref: '#/components/schemas/Label'
-          title: Labels
-          type: array
-      required:
-      - labelDataId
-      - labels
-      title: LabelDataEntry
-      type: object
     LabelGroup:
       description: "Pydantic schema for a label group.\n\nAttributes:\n    label_group_id:\
         \ UUID identifier for this label group.\n    label_group_name: Name of this\
@@ -903,21 +903,19 @@ components:
       - novelId
       title: LabelGroup
       type: object
-    LabelGroupListEntry:
+    LabelGroupWithRole:
+      description: "Pydantic schema for a label group with a user's role in that label\
+        \ group.\n\nAttributes:\n    label_group: LabelGroup object.\n    role: Role\
+        \ of the user in this label group."
       properties:
-        labelData:
-          anyOf:
-          - $ref: '#/components/schemas/LabelData'
-          - type: 'null'
         labelGroup:
           $ref: '#/components/schemas/LabelGroup'
         role:
           $ref: '#/components/schemas/LabelRole'
       required:
       - labelGroup
-      - labelData
       - role
-      title: LabelGroupListEntry
+      title: LabelGroupWithRole
       type: object
     LabelRole:
       enum:
@@ -940,6 +938,17 @@ components:
       - languageCode
       - languageName
       title: Language
+      type: object
+    LazyEntry:
+      properties:
+        labelData:
+          $ref: '#/components/schemas/LabelData'
+        labelGroup:
+          $ref: '#/components/schemas/LabelGroup'
+      required:
+      - labelGroup
+      - labelData
+      title: LazyEntry
       type: object
     ModifyChapterContentResponse:
       description: "Pydantic schema for the response after modifying chapter content.\n\
@@ -1070,13 +1079,6 @@ components:
       - detail
       title: RequestConflictErrorResponse
       type: object
-    Role:
-      enum:
-      - owner
-      - viewer
-      - editor
-      title: Role
-      type: string
     SchemaInfo:
       properties:
         apply_filter_options_schema:
@@ -2000,9 +2002,10 @@ paths:
   /edit-chapter-data/{chapterId}:
     get:
       description: "Gets all data associated with a chapter required for editing.\n\
-        \nArgs:\n    chapter_id: Chapter id of requested chapter\n    novel_id: Novel\
-        \ id of requested chapter\n\nRaises:\n    404: Chapter not found (or insufficient\
-        \ permissions)."
+        \nArgs:\n    chapter_id: Chapter id of requested chapter\n    eager: List\
+        \ of label group IDs for which to fetch eager label data\n\nRaises:\n    404:\
+        \ Chapter not found (or insufficient permissions).\n    403: Insufficient\
+        \ permissions to access data for other user."
       operationId: read_edit_chapter_data_edit_chapter_data__chapterId__get
       parameters:
       - in: path
@@ -2012,21 +2015,17 @@ paths:
           format: uuid
           title: Chapterid
           type: string
-      - in: query
-        name: novelId
+      - description: List of label group IDs for which to fetch eager label data
+        in: query
+        name: eager
         required: true
         schema:
-          format: uuid
-          title: Novelid
-          type: string
-      - in: query
-        name: labelGroupsNum
-        required: true
-        schema:
-          maximum: 20
-          minimum: 1
-          title: Labelgroupsnum
-          type: integer
+          description: List of label group IDs for which to fetch eager label data
+          items:
+            format: uuid
+            type: string
+          title: Eager
+          type: array
       - in: query
         name: subjectId
         required: false
@@ -2489,6 +2488,39 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Create Label Group
+  /label-groups-with-role:
+    get:
+      description: Gets all label groups of the current user for a novel, along with
+        their roles.
+      operationId: read_label_groups_with_role_label_groups_with_role_get
+      parameters:
+      - in: query
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/LabelGroupWithRole'
+                title: Response Read Label Groups With Role Label Groups With Role
+                  Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Label Groups With Role
   /label-groups/{labelGroupId}:
     get:
       description: "Gets a label group by id.\n\nRaises:\n    404: Label group not\

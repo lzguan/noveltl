@@ -21,16 +21,49 @@ export const ServId = Brand.nominal<ServId>();
 export type ServEx = true & Brand.Brand<"ServEx">;
 export const ServEx = Brand.nominal<ServEx>();
 
+// Provisional ids for data types
+export type LGProvId = ProvId & Brand.Brand<"LG">;
+export const LGProvId = Brand.nominal<LGProvId>();
+export type LDProvId = ProvId & Brand.Brand<"LD">;
+export const LDProvId = Brand.nominal<LDProvId>();
+export type CCProvId = ProvId & Brand.Brand<"CC">;
+export const CCProvId = Brand.nominal<CCProvId>();
+export type CProvId = ProvId & Brand.Brand<"C">;
+export const CProvId = Brand.nominal<CProvId>();
+export type LProvId = ProvId & Brand.Brand<"L">;
+export const LProvId = Brand.nominal<LProvId>();
+
+export type ProvTypes = {
+	labelGroup: LGProvId;
+	labelData: LDProvId;
+	chapterContent: CCProvId;
+	chapter: CProvId;
+	label: LProvId;
+};
+
+export const ProvTypes = {
+	labelGroup: LGProvId,
+	labelData: LDProvId,
+	chapterContent: CCProvId,
+	chapter: CProvId,
+	label: LProvId,
+} as const;
+
 // Provisional data types
-type ProvDataT<T, key extends string> = Prov<Omit<T, key> & { [K in key]: ProvId }>;
-export type ProvChapter = ProvDataT<Chapter, "chapterId">;
-export type ProvChapterContent = ProvDataT<ChapterContent, "chapterId" | "chapterContentId">;
+type ProvDataT<T, key extends Record<string, unknown>> = Prov<
+	Omit<T, keyof key> & { [K in keyof key]: key[K] }
+>;
+export type ProvChapter = ProvDataT<Chapter, { chapterId: CProvId }>;
+export type ProvChapterContent = ProvDataT<
+	ChapterContent,
+	{ chapterId: CProvId; chapterContentId: CCProvId }
+>;
 export type ProvLabelData = ProvDataT<
 	LabelData,
-	"labelDataId" | "chapterContentId" | "labelGroupId"
+	{ labelDataId: LDProvId; chapterContentId: CCProvId; labelGroupId: LGProvId }
 >;
-export type ProvLabel = ProvDataT<Label, "labelDataId">; // we don't use labelId
-export type ProvLabelGroup = ProvDataT<LabelGroup, "labelGroupId">;
+export type ProvLabel = ProvDataT<Label, { labelDataId: LDProvId; labelId: LProvId }>;
+export type ProvLabelGroup = ProvDataT<LabelGroup, { labelGroupId: LGProvId }>;
 
 /**
  * An id status is a status associated with a provisional id. Id statuses are split into two categories:
@@ -136,6 +169,14 @@ export type Kind = IdentifiableKind | ExistableKind;
 export type IdentifiableKind = "labelGroup" | "labelData" | "chapterContent" | "chapter";
 export type ExistableKind = "label";
 
+export const identifiableKinds: IdentifiableKind[] = [
+	"labelGroup",
+	"labelData",
+	"chapterContent",
+	"chapter",
+] as const;
+export const existableKinds: ExistableKind[] = ["label"] as const;
+export const kinds: Kind[] = [...identifiableKinds, ...existableKinds] as const;
 /**
  * Type to certify that some function that might do nothing did in fact do something. Used for functions where it is not desirable to throw an error when the function fails to do something.
  */
@@ -166,76 +207,195 @@ export interface IDRepository {
 	/**
 	 * Create a new id and manage it in the repository.
 	 */
-	newId(kind: Kind): ProvId;
+	newId(kind: "chapter"): ProvTypes["chapter"];
+	newId(kind: "chapterContent"): ProvTypes["chapterContent"];
+	newId(kind: "labelGroup"): ProvTypes["labelGroup"];
+	newId(kind: "labelData"): ProvTypes["labelData"];
+	newId(kind: "label"): ProvTypes["label"];
 
 	/**
 	 * Create a new id, bind it to the given server id, and manage it in the repository.
 	 */
-	newIdAndBindId(kind: IdentifiableKind, serverId: ServId): ProvId;
+	newIdAndBindId(kind: "chapter", serverId: ServId): ProvTypes["chapter"];
+	newIdAndBindId(kind: "chapterContent", serverId: ServId): ProvTypes["chapterContent"];
+	newIdAndBindId(kind: "labelGroup", serverId: ServId): ProvTypes["labelGroup"];
+	newIdAndBindId(kind: "labelData", serverId: ServId): ProvTypes["labelData"];
 	/**
 	 * Create a new id and bind it to the given server existence flag, and manage it in the repository.
 	 */
-	newIdAndBindExists(kind: ExistableKind): ProvId;
+	newIdAndBindExists(kind: "label"): ProvTypes["label"];
 
 	/**
 	 * Get the server id corresponding to a provisional id. If server id has not been bound yet, return null.
 	 */
 	getServerId(
-		kind: IdentifiableKind,
-		provisionalId: ProvId,
+		kind: "chapter",
+		provisionalId: ProvTypes["chapter"],
+	): Effect.Effect<ServId | null, NotFoundException>;
+	getServerId(
+		kind: "chapterContent",
+		provisionalId: ProvTypes["chapterContent"],
+	): Effect.Effect<ServId | null, NotFoundException>;
+	getServerId(
+		kind: "labelGroup",
+		provisionalId: ProvTypes["labelGroup"],
+	): Effect.Effect<ServId | null, NotFoundException>;
+	getServerId(
+		kind: "labelData",
+		provisionalId: ProvTypes["labelData"],
 	): Effect.Effect<ServId | null, NotFoundException>;
 	/**
 	 * Get the server existence flag corresponding to a provisional id. If existence flag has not been bound yet, return null.
 	 */
 	getServerExists(
-		kind: ExistableKind,
-		provisionalId: ProvId,
+		kind: "label",
+		provisionalId: ProvTypes["label"],
 	): Effect.Effect<ServEx | null, NotFoundException>;
 
 	/**
 	 * Bind a provisional id to a server id, so that the controller can update the corresponding entry with the new server id when it receives the signal from the request event.
 	 */
 	bindServerId(
-		kind: IdentifiableKind,
-		provisionalId: ProvId,
+		kind: "chapter",
+		provisionalId: ProvTypes["chapter"],
+		serverId: ServId,
+	): Effect.Effect<void, NotFoundException>;
+	bindServerId(
+		kind: "chapterContent",
+		provisionalId: ProvTypes["chapterContent"],
+		serverId: ServId,
+	): Effect.Effect<void, NotFoundException>;
+	bindServerId(
+		kind: "labelGroup",
+		provisionalId: ProvTypes["labelGroup"],
+		serverId: ServId,
+	): Effect.Effect<void, NotFoundException>;
+	bindServerId(
+		kind: "labelData",
+		provisionalId: ProvTypes["labelData"],
 		serverId: ServId,
 	): Effect.Effect<void, NotFoundException>;
 	/**
 	 * Bind a provisional id to a server existence flag, so that the controller can update the corresponding entry with the new server existence flag when it receives the signal from the request event.
 	 */
 	bindServerExists(
-		kind: ExistableKind,
-		provisionalId: ProvId,
+		kind: "label",
+		provisionalId: ProvTypes["label"],
 	): Effect.Effect<void, NotFoundException>;
 
 	/**
 	 * Get the current id status of a provisional id.
 	 */
-	idObjState(kind: Kind, id: ProvId): Effect.Effect<IdStatus, NotFoundException>;
+	idObjState(kind: "chapter", id: ProvTypes["chapter"]): Effect.Effect<IdStatus, NotFoundException>;
+	idObjState(
+		kind: "chapterContent",
+		id: ProvTypes["chapterContent"],
+	): Effect.Effect<IdStatus, NotFoundException>;
+	idObjState(
+		kind: "labelGroup",
+		id: ProvTypes["labelGroup"],
+	): Effect.Effect<IdStatus, NotFoundException>;
+	idObjState(
+		kind: "labelData",
+		id: ProvTypes["labelData"],
+	): Effect.Effect<IdStatus, NotFoundException>;
+	idObjState(kind: "label", id: ProvTypes["label"]): Effect.Effect<IdStatus, NotFoundException>;
 
 	/**
 	 * Check if a provisional id is reserveable for a desired in-flight status. This works according to the state transition rules defined above.
 	 */
 	isReserveable(
-		kind: Kind,
-		id: ProvId,
+		kind: "chapter",
+		id: ProvTypes["chapter"],
+		desiredState: InFlightIdStatus,
+	): Effect.Effect<boolean, NotFoundException>;
+	isReserveable(
+		kind: "chapterContent",
+		id: ProvTypes["chapterContent"],
+		desiredState: InFlightIdStatus,
+	): Effect.Effect<boolean, NotFoundException>;
+	isReserveable(
+		kind: "labelGroup",
+		id: ProvTypes["labelGroup"],
+		desiredState: InFlightIdStatus,
+	): Effect.Effect<boolean, NotFoundException>;
+	isReserveable(
+		kind: "labelData",
+		id: ProvTypes["labelData"],
+		desiredState: InFlightIdStatus,
+	): Effect.Effect<boolean, NotFoundException>;
+	isReserveable(
+		kind: "label",
+		id: ProvTypes["label"],
 		desiredState: InFlightIdStatus,
 	): Effect.Effect<boolean, NotFoundException>;
 
 	reserveIdObjState(
-		kind: Kind,
-		id: ProvId,
+		kind: "chapter",
+		id: ProvTypes["chapter"],
+		desiredState: InFlightIdStatus,
+	): Effect.Effect<void, NotFoundException | NotReserveableException>;
+	reserveIdObjState(
+		kind: "chapterContent",
+		id: ProvTypes["chapterContent"],
+		desiredState: InFlightIdStatus,
+	): Effect.Effect<void, NotFoundException | NotReserveableException>;
+	reserveIdObjState(
+		kind: "labelGroup",
+		id: ProvTypes["labelGroup"],
+		desiredState: InFlightIdStatus,
+	): Effect.Effect<void, NotFoundException | NotReserveableException>;
+	reserveIdObjState(
+		kind: "labelData",
+		id: ProvTypes["labelData"],
+		desiredState: InFlightIdStatus,
+	): Effect.Effect<void, NotFoundException | NotReserveableException>;
+	reserveIdObjState(
+		kind: "label",
+		id: ProvTypes["label"],
 		desiredState: InFlightIdStatus,
 	): Effect.Effect<void, NotFoundException | NotReserveableException>;
 
 	releaseIdObjStateOnSuccess(
-		kind: Kind,
-		id: ProvId,
+		kind: "chapter",
+		id: ProvTypes["chapter"],
+	): Effect.Effect<ActionHappened, NotFoundException>;
+	releaseIdObjStateOnSuccess(
+		kind: "chapterContent",
+		id: ProvTypes["chapterContent"],
+	): Effect.Effect<ActionHappened, NotFoundException>;
+	releaseIdObjStateOnSuccess(
+		kind: "labelGroup",
+		id: ProvTypes["labelGroup"],
+	): Effect.Effect<ActionHappened, NotFoundException>;
+	releaseIdObjStateOnSuccess(
+		kind: "labelData",
+		id: ProvTypes["labelData"],
+	): Effect.Effect<ActionHappened, NotFoundException>;
+	releaseIdObjStateOnSuccess(
+		kind: "label",
+		id: ProvTypes["label"],
 	): Effect.Effect<ActionHappened, NotFoundException>;
 
 	releaseIdObjStateOnFailure(
-		kind: Kind,
-		id: ProvId,
+		kind: "chapter",
+		id: ProvTypes["chapter"],
+	): Effect.Effect<ActionHappened, NotFoundException>;
+	releaseIdObjStateOnFailure(
+		kind: "chapterContent",
+		id: ProvTypes["chapterContent"],
+	): Effect.Effect<ActionHappened, NotFoundException>;
+	releaseIdObjStateOnFailure(
+		kind: "labelGroup",
+		id: ProvTypes["labelGroup"],
+	): Effect.Effect<ActionHappened, NotFoundException>;
+	releaseIdObjStateOnFailure(
+		kind: "labelData",
+		id: ProvTypes["labelData"],
+	): Effect.Effect<ActionHappened, NotFoundException>;
+	releaseIdObjStateOnFailure(
+		kind: "label",
+		id: ProvTypes["label"],
 	): Effect.Effect<ActionHappened, NotFoundException>;
 
 	gc(): void;

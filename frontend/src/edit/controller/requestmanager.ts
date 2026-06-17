@@ -149,14 +149,30 @@ export const buildRequestManager = (
 			Effect.gen(function* () {
 				if (request.reservationRequest.skip()) {
 					return yield* Effect.succeed("skip" as "skip");
-				} else if (request.reservationRequest.wait()) {
+				} else if (yield* request.reservationRequest.wait()) {
 					return yield* Effect.succeed("wait" as "wait");
 				}
-				const results = Effect.forEach(request.reservationRequest.reserveList(), (reservation) =>
-					idRepo.isReserveable(reservation.kind, reservation.id, reservation.desiredState),
-				);
+				const reserveList = request.reservationRequest.reserveList();
+				const results = Effect.all([
+					Effect.forEach(reserveList.chapter, (reservation) =>
+						idRepo.isReserveable(reservation.kind, reservation.id, reservation.desiredState),
+					),
+					Effect.forEach(reserveList.label, (reservation) =>
+						idRepo.isReserveable(reservation.kind, reservation.id, reservation.desiredState),
+					),
+					Effect.forEach(reserveList.labelData, (reservation) =>
+						idRepo.isReserveable(reservation.kind, reservation.id, reservation.desiredState),
+					),
+					Effect.forEach(reserveList.labelGroup, (reservation) =>
+						idRepo.isReserveable(reservation.kind, reservation.id, reservation.desiredState),
+					),
+					Effect.forEach(reserveList.chapterContent, (reservation) =>
+						idRepo.isReserveable(reservation.kind, reservation.id, reservation.desiredState),
+					),
+				]);
+
 				const allResults = yield* results;
-				return yield* allResults.every((isReserveable) => isReserveable)
+				return yield* allResults.flatMap((val) => val).every((isReserveable) => isReserveable)
 					? Effect.succeed("reserve" as "reserve")
 					: Effect.succeed("wait" as "wait");
 			});
@@ -170,7 +186,20 @@ export const buildRequestManager = (
 				const limitExceeded: KeyedRequestEvent[] = [];
 				for (const request of [...statusQueries, ...retryRequests]) {
 					if (request.retries < 0) {
-						yield* Effect.forEach(request.reservationRequest.reserveList(), (reservation) =>
+						const reserveList = request.reservationRequest.reserveList();
+						yield* Effect.forEach(reserveList.chapter, (reservation) =>
+							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
+						);
+						yield* Effect.forEach(reserveList.label, (reservation) =>
+							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
+						);
+						yield* Effect.forEach(reserveList.labelData, (reservation) =>
+							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
+						);
+						yield* Effect.forEach(reserveList.labelGroup, (reservation) =>
+							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
+						);
+						yield* Effect.forEach(reserveList.chapterContent, (reservation) =>
 							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
 						);
 						yield* request.onFailure();
@@ -200,7 +229,20 @@ export const buildRequestManager = (
 						continue;
 					}
 					const reservationRequest = request.reservationRequest;
-					yield* Effect.forEach(reservationRequest.reserveList(), (reservation) =>
+					const reserveList = reservationRequest.reserveList();
+					yield* Effect.forEach(reserveList.chapter, (reservation) =>
+						idRepo.reserveIdObjState(reservation.kind, reservation.id, reservation.desiredState),
+					);
+					yield* Effect.forEach(reserveList.label, (reservation) =>
+						idRepo.reserveIdObjState(reservation.kind, reservation.id, reservation.desiredState),
+					);
+					yield* Effect.forEach(reserveList.labelData, (reservation) =>
+						idRepo.reserveIdObjState(reservation.kind, reservation.id, reservation.desiredState),
+					);
+					yield* Effect.forEach(reserveList.labelGroup, (reservation) =>
+						idRepo.reserveIdObjState(reservation.kind, reservation.id, reservation.desiredState),
+					);
+					yield* Effect.forEach(reserveList.chapterContent, (reservation) =>
 						idRepo.reserveIdObjState(reservation.kind, reservation.id, reservation.desiredState),
 					);
 					yield* request.preSend();
@@ -313,7 +355,20 @@ export const buildRequestManager = (
 						fatalFailedRequests.push(result.left);
 					} else {
 						const request = result.right;
-						yield* Effect.forEach(request.reservationRequest.reserveList(), (reservation) =>
+						const reserveList = request.reservationRequest.reserveList();
+						yield* Effect.forEach(reserveList.chapter, (reservation) =>
+							idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id),
+						);
+						yield* Effect.forEach(reserveList.label, (reservation) =>
+							idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id),
+						);
+						yield* Effect.forEach(reserveList.labelData, (reservation) =>
+							idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id),
+						);
+						yield* Effect.forEach(reserveList.labelGroup, (reservation) =>
+							idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id),
+						);
+						yield* Effect.forEach(reserveList.chapterContent, (reservation) =>
 							idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id),
 						);
 					}
@@ -321,7 +376,20 @@ export const buildRequestManager = (
 				if (fatalFailedRequests.length > 0) {
 					for (const { request, error } of fatalFailedRequests) {
 						yield* request.onFatalError(error);
-						yield* Effect.forEach(request.reservationRequest.reserveList(), (reservation) =>
+						const reserveList = request.reservationRequest.reserveList();
+						yield* Effect.forEach(reserveList.chapter, (reservation) =>
+							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
+						);
+						yield* Effect.forEach(reserveList.label, (reservation) =>
+							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
+						);
+						yield* Effect.forEach(reserveList.labelData, (reservation) =>
+							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
+						);
+						yield* Effect.forEach(reserveList.labelGroup, (reservation) =>
+							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
+						);
+						yield* Effect.forEach(reserveList.chapterContent, (reservation) =>
 							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
 						);
 					}
@@ -359,7 +427,7 @@ export const buildRequestManager = (
 			}),
 		);
 
-		const start = () => startedMut.withPermits(1)(sendLoop);
+		const start = (): Effect.Effect<void, UnknownException> => startedMut.withPermits(1)(sendLoop);
 
 		const debounce = () =>
 			Effect.gen(function* () {
@@ -375,7 +443,7 @@ export const buildRequestManager = (
 				);
 			});
 
-		const waitFlush = () =>
+		const waitFlush = (): Effect.Effect<void, UnknownException> =>
 			Effect.gen(function* () {
 				shuttingDown = true;
 				yield* startedMut.withPermits(1)(sendLoop);

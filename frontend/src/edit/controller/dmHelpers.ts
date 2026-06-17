@@ -8,6 +8,8 @@ import {
 	DuplicateIdException,
 } from "./types/errors";
 import type {
+	CProvId,
+	LGProvId,
 	ProvChapter,
 	ProvId,
 	ProvLabel,
@@ -89,38 +91,47 @@ type Slot<Meta, Data = never> = { inFlight: number; error?: Error; meta: Meta } 
 /**
  * Interface for an index that stores slots.
  */
-interface SlotIndex<Meta, Data, IndexErrorT> {
+interface SlotIndex<IDT extends ProvId, Meta, Data, IndexErrorT> {
 	/**
 	 * Get slot by ID.
 	 */
-	get: (id: ProvId) => Effect.Effect<Slot<Meta, Data>, NotFoundException>;
+	get: (id: IDT) => Effect.Effect<Slot<Meta, Data>, NotFoundException>;
+	/**
+	 * Get all ids.
+	 */
+	getIds: () => Effect.Effect<IDT[]>;
 	/**
 	 * Set chapter slot metadata by ID. Does not allow changing chapterNum.
 	 */
-	setMeta: (id: ProvId, val: Meta) => Effect.Effect<void, NotFoundException | IndexErrorT>;
+	setMeta: (id: IDT, val: Meta) => Effect.Effect<void, NotFoundException | IndexErrorT>;
 	/**
 	 * Set slot data by ID.
 	 */
 	setData: (
-		id: ProvId,
+		id: IDT,
 		val: { status: "idle" | "loading" | "error" } | { status: "ready"; data: Data },
 	) => Effect.Effect<void, NotFoundException>;
 	/**
 	 * Increment the in-flight count for a slot by id.
 	 */
-	increment: (id: ProvId) => Effect.Effect<void, NotFoundException>;
+	increment: (id: IDT) => Effect.Effect<void, NotFoundException>;
 	/**
 	 * Decrement the in-flight count for a slot by id.
 	 */
-	decrement: (id: ProvId) => Effect.Effect<void, NotFoundException>;
+	decrement: (id: IDT) => Effect.Effect<void, NotFoundException>;
 	/**
 	 * Create a new slot with given id and metadata.
 	 */
-	new: (id: ProvId, meta: Meta) => Effect.Effect<void, DuplicateIdException | IndexErrorT>;
+	new: (id: IDT, meta: Meta) => Effect.Effect<void, DuplicateIdException | IndexErrorT>;
 }
 
-interface SlotIndexInternals<Meta, Data, IndexErrorT> extends SlotIndex<Meta, Data, IndexErrorT> {
-	index: Map<ProvId, Slot<Meta, Data>>;
+interface SlotIndexInternals<IDT extends ProvId, Meta, Data, IndexErrorT> extends SlotIndex<
+	IDT,
+	Meta,
+	Data,
+	IndexErrorT
+> {
+	index: Map<IDT, Slot<Meta, Data>>;
 }
 
 // -----------------------------------------
@@ -139,6 +150,7 @@ export type ChapterSlot = Slot<{ chapter: ProvChapter }, { chapterData: ChapterD
  * - Chapter ID is unique and immutable for each chapter.
  */
 export interface ChapterIndex extends SlotIndex<
+	CProvId,
 	{ chapter: ProvChapter },
 	{ chapterData: ChapterDataManager },
 	DuplicateChapterNumException
@@ -146,24 +158,26 @@ export interface ChapterIndex extends SlotIndex<
 	/**
 	 * Get chapter slot by chapter number.
 	 */
-	getByChapterNum: (chapterNum: number) => Effect.Effect<ProvId, NotFoundException>;
+	getByChapterNum: (chapterNum: number) => Effect.Effect<CProvId, NotFoundException>;
 }
 
 export interface LabelGroupIndex extends SlotIndex<
+	LGProvId,
 	{ labelGroup: ProvLabelGroup; role: LabelRole },
 	never,
 	never
 > {}
 
 export interface LabelDataIndex extends SlotIndex<
+	LGProvId,
 	{ labelData: ProvLabelData },
 	{ labels: readonly ProvLabel[] },
 	never
 > {}
 
-export const buildIndexInternals = <Meta, Data, IndexErrorT>(
-	items: [ProvId, Meta][],
-): Effect.Effect<SlotIndexInternals<Meta, Data, IndexErrorT>, FatalException> =>
+export const buildIndexInternals = <IDT extends ProvId, Meta, Data, IndexErrorT>(
+	items: [IDT, Meta][],
+): Effect.Effect<SlotIndexInternals<IDT, Meta, Data, IndexErrorT>, FatalException> =>
 	Effect.gen(function* () {
 		const ids = new Set(items.map(([id]) => id));
 		if (ids.size !== items.length) {
@@ -171,19 +185,20 @@ export const buildIndexInternals = <Meta, Data, IndexErrorT>(
 				new FatalException({ orig: new Error("Duplicate ID found in initial data") }),
 			);
 		}
-		const index: Map<ProvId, Slot<Meta, Data>> = new Map(
+		const index: Map<IDT, Slot<Meta, Data>> = new Map(
 			items.map(([id, meta]) => [id, { meta, inFlight: 0, status: "idle" }]),
 		);
 		return {
 			index,
-			get: (id: ProvId) => {
+			get: (id: IDT) => {
 				const item = index.get(id);
 				if (!item) {
 					return Effect.fail(new NotFoundException());
 				}
 				return Effect.succeed(item);
 			},
-			setMeta: (id: ProvId, meta: Meta) => {
+			getIds: () => Effect.succeed(Array.from(index.keys())),
+			setMeta: (id: IDT, meta: Meta) => {
 				const item = index.get(id);
 				if (!item) {
 					return Effect.fail(new NotFoundException());
@@ -192,7 +207,7 @@ export const buildIndexInternals = <Meta, Data, IndexErrorT>(
 				return Effect.succeed(void 0);
 			},
 			setData: (
-				id: ProvId,
+				id: IDT,
 				data: { status: "idle" | "loading" | "error" } | { status: "ready"; data: Data },
 			) => {
 				const item = index.get(id);
@@ -206,7 +221,7 @@ export const buildIndexInternals = <Meta, Data, IndexErrorT>(
 				});
 				return Effect.succeed(void 0);
 			},
-			increment: (id: ProvId) => {
+			increment: (id: IDT) => {
 				const item = index.get(id);
 				if (!item) {
 					return Effect.fail(new NotFoundException());
@@ -214,7 +229,7 @@ export const buildIndexInternals = <Meta, Data, IndexErrorT>(
 				index.set(id, { ...item, inFlight: item.inFlight + 1 });
 				return Effect.succeed(void 0);
 			},
-			decrement: (id: ProvId) => {
+			decrement: (id: IDT) => {
 				const item = index.get(id);
 				if (!item) {
 					return Effect.fail(new NotFoundException());
@@ -222,7 +237,7 @@ export const buildIndexInternals = <Meta, Data, IndexErrorT>(
 				index.set(id, { ...item, inFlight: item.inFlight - 1 });
 				return Effect.succeed(void 0);
 			},
-			new: (id: ProvId, meta: Meta) => {
+			new: (id: IDT, meta: Meta) => {
 				if (index.has(id)) {
 					return Effect.fail(new DuplicateIdException({ id }));
 				}
@@ -233,7 +248,7 @@ export const buildIndexInternals = <Meta, Data, IndexErrorT>(
 	});
 
 export const buildChapterIndex = (
-	items: [ProvId, { chapter: ProvChapter }][],
+	items: [CProvId, { chapter: ProvChapter }][],
 ): Effect.Effect<ChapterIndex, FatalException> =>
 	Effect.gen(function* () {
 		const nums = new Set(items.map(([, item]) => item.chapter.chapterNum));
@@ -245,6 +260,7 @@ export const buildChapterIndex = (
 			);
 		}
 		const internals = yield* buildIndexInternals<
+			CProvId,
 			{ chapter: ProvChapter },
 			{ chapterData: ChapterDataManager },
 			DuplicateChapterNumException
@@ -252,6 +268,15 @@ export const buildChapterIndex = (
 		const numIndex = new Map(items.map(([id, item]) => [item.chapter.chapterNum, id]));
 		return {
 			get: internals.get,
+			/**
+			 * Returns sorted list of all chapter ids based on chapterNum.
+			 */
+			getIds: () =>
+				Effect.succeed(
+					Array.from(numIndex.entries())
+						.sort(([a], [b]) => a - b)
+						.map(([, id]) => id),
+				),
 			getByChapterNum: (chapterNum: number) => {
 				const id = numIndex.get(chapterNum);
 				if (!id) {
@@ -286,9 +311,16 @@ export const buildChapterIndex = (
 	});
 
 export const buildLabelGroupIndex = (
-	items: [ProvId, { labelGroup: ProvLabelGroup; role: LabelRole }][],
+	items: [LGProvId, { labelGroup: ProvLabelGroup; role: LabelRole }][],
 ): Effect.Effect<LabelGroupIndex, FatalException> =>
-	buildIndexInternals<{ labelGroup: ProvLabelGroup; role: LabelRole }, never, never>(items);
+	buildIndexInternals<LGProvId, { labelGroup: ProvLabelGroup; role: LabelRole }, never, never>(
+		items,
+	);
 
 export const buildLabelDataIndex = (): Effect.Effect<LabelDataIndex, FatalException> =>
-	buildIndexInternals<{ labelData: ProvLabelData }, { labels: readonly ProvLabel[] }, never>([]);
+	buildIndexInternals<
+		LGProvId,
+		{ labelData: ProvLabelData },
+		{ labels: readonly ProvLabel[] },
+		never
+	>([]);

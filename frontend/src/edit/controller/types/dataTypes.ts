@@ -1,4 +1,4 @@
-import type { ProvId } from "./idTypes";
+import type { CProvId, LGProvId } from "./idTypes";
 import type { RequestEvent } from "./requestTypes";
 import type { AddLabelOp, DeleteLabelOp, UpdateLabelOp } from "@/api/models";
 import type { Effect } from "effect";
@@ -50,8 +50,8 @@ export type NovelDataManager = DataManager<
 		 * Load all data associated to a given chapter along with the required interfaces for data interaction and retrieval. Throws an error if chapter is already loaded. Lazy loads if now is false, and loads immediately if now is true.
 		 */
 		openChapter: (
-			chapterId: ProvId,
-			eager: ProvId[],
+			chapterId: CProvId,
+			eager: LGProvId[],
 			now: boolean,
 		) => Effect.Effect<
 			RequestEvent[],
@@ -60,7 +60,7 @@ export type NovelDataManager = DataManager<
 		/**
 		 * Flush any passive request events.
 		 */
-		flush: () => Effect.Effect<RequestEvent[]>;
+		flush: () => Effect.Effect<RequestEvent[], UnknownException>;
 	},
 	{}
 >;
@@ -73,39 +73,42 @@ export type NovelDataManager = DataManager<
 export type ChapterDataManager = DataManager<
 	{
 		/**
-		 * Add a label to a given label group for this chapter. Throws an error if one of the following occurs:
+		 * Add a label to a given label group for this chapter. Raises a trigger event with the new label's ProvId on success. Throws an error if one of the following occurs:
 		 * - The labels associated with the given label group is not loaded.
 		 * - The new label overlaps with an existing label.
+		 *
+		 * Returns any auto-flushed request events from a previous op type (e.g., pending text ops flushed when switching to label ops).
 		 */
 		addLabel: (
-			labelGroupId: string,
-			labelDataId: string,
+			labelGroupId: LGProvId,
 			startPos: number,
 			endPos: number,
 			word: string,
 			entityGroup?: string,
 			score?: number,
 			dirty?: boolean,
-		) => Effect.Effect<ProvId, UnknownException>;
+		) => Effect.Effect<RequestEvent[], UnknownException>;
 		/**
-		 * Delete a label from a given chapter and label group. Throws an error if one of the following occurs:
+		 * Delete a label from a given chapter and label group. Raises a trigger event on success. Throws an error if one of the following occurs:
 		 * - The labels associated with the given label group is not loaded.
 		 * - The label to be deleted does not exist.
+		 *
+		 * Returns any auto-flushed request events from a previous op type.
 		 */
 		deleteLabel: (
-			labelGroupId: string,
-			labelDataId: string,
+			labelGroupId: LGProvId,
 			startPos: number,
 			endPos: number,
-		) => Effect.Effect<ProvId, UnknownException>;
+		) => Effect.Effect<RequestEvent[], UnknownException>;
 		/**
-		 * Update a label in a given chapter and label group, keyed by the label group id, start position, and end position. Throws an error if one of the following occurs:
+		 * Update a label in a given chapter and label group, keyed by the label group id, start position, and end position. Raises a trigger event on success. Throws an error if one of the following occurs:
 		 * - The labels associated with the given label group is not loaded.
 		 * - The label to be updated does not exist.
+		 *
+		 * Returns any auto-flushed request events from a previous op type.
 		 */
 		updateLabel: (
-			labelGroupId: string,
-			labelDataId: string,
+			labelGroupId: LGProvId,
 			startPos: number,
 			endPos: number,
 			newStartPos?: number | null,
@@ -114,27 +117,34 @@ export type ChapterDataManager = DataManager<
 			entityGroup?: string,
 			score?: number,
 			dirty?: boolean,
-		) => Effect.Effect<ProvId, UnknownException>;
+		) => Effect.Effect<RequestEvent[], UnknownException>;
 		/**
-		 * Insert text at a given position in the chapter content. Throws an error if the position is invalid.
+		 * Insert text at a given position in the chapter content. Raises a trigger event on success. Throws an error if the position is invalid.
+		 *
+		 * Returns any auto-flushed request events from a previous op type (e.g., pending label ops flushed when switching to text ops).
 		 */
-		insertTextAt: (pos: number, text: string) => Effect.Effect<void, UnknownException>;
+		insertTextAt: (pos: number, text: string) => Effect.Effect<RequestEvent[], UnknownException>;
 		/**
-		 * Delete text in a given range in the chapter content. Throws an error if the range is invalid.
+		 * Delete text in a given range in the chapter content. Raises a trigger event on success. Throws an error if the range is invalid.
+		 *
+		 * Returns any auto-flushed request events from a previous op type.
 		 */
-		deleteTextAt: (startPos: number, endPos: number) => Effect.Effect<void, UnknownException>;
+		deleteTextAt: (
+			startPos: number,
+			endPos: number,
+		) => Effect.Effect<RequestEvent[], UnknownException>;
 		/**
-		 * Flush any passive request events.
+		 * Flush any passive request events from the current op queue.
 		 */
-		flush: () => Effect.Effect<RequestEvent[]>;
+		flush: () => Effect.Effect<RequestEvent[], UnknownException>;
 		/**
-		 * Load or reload a given label data for this chapter corresponding to a given label group.
+		 * Load or reload a given label data for this chapter corresponding to a given label group. Active request that flushes pending passive events.
 		 */
-		reloadGroup(labelGroupId: string): Effect.Effect<RequestEvent[]>;
+		reloadGroup(labelGroupId: LGProvId): Effect.Effect<RequestEvent[], UnknownException>;
 		/**
-		 * Cleans up internal state and emits necessary request events when the chapter is closed. Makes all other actions invalid after this is called. Throws an error if the chapter is already closed.
+		 * Cleans up internal state when the chapter is closed. Makes all other actions invalid after this is called. Throws an error if the chapter is already closed. Returns empty list (pending passive events are discarded).
 		 */
-		destroy: () => Effect.Effect<RequestEvent[]>;
+		destroy: () => Effect.Effect<RequestEvent[], UnknownException>;
 	},
 	{}
 >;

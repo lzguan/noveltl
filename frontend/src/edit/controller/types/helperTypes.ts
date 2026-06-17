@@ -1,6 +1,6 @@
-import type { IDRepository } from "./idTypes";
+import { type IDRepository } from "./idTypes";
 import { Brand, Effect } from "effect";
-import type { Reservation, ReservationRequest } from "./requestTypes";
+import type { ReservationRequest, ReserveList } from "./requestTypes";
 
 /**
  * Type that certifies that a callback with no parameters is idempotent, meaning that multiple calls to this callback will return the same value and have the same effect as a single call.
@@ -10,7 +10,7 @@ export type IdempotentCallable<T> = Brand.Brand<"IdempotentCallable"> & (() => T
 /**
  * Constructor for an IdempotentCallable. Makes a function idempotent by caching its result and ensuring that subsequent calls return the cached result without calling the original function again.
  */
-const IdempotentCallable = <T>(fn: () => T): IdempotentCallable<T> => {
+export const IdempotentCallable = <T>(fn: () => T): IdempotentCallable<T> => {
 	let called = false;
 	let result: T;
 	const callable = () => {
@@ -40,14 +40,44 @@ export function Prov<T>(value: Brand.Brand.Unbranded<Prov<T>>): Prov<T> {
  */
 export function makeReservationRequest(
 	idRepo: IDRepository,
-	reserveList: Reservation[],
+	reserveList: ReserveList,
 	skip?: () => boolean,
 ): ReservationRequest {
 	const wait = () =>
-		reserveList.some(
-			({ kind, id, desiredState }) =>
-				!Effect.runSyncExit(idRepo.isReserveable(kind, id, desiredState)),
-		);
+		Effect.gen(function* () {
+			for (const { kind, id, desiredState } of reserveList.chapter) {
+				const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
+				if (!reserveable) {
+					return true;
+				}
+			}
+			for (const { kind, id, desiredState } of reserveList.label) {
+				const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
+				if (!reserveable) {
+					return true;
+				}
+			}
+			for (const { kind, id, desiredState } of reserveList.labelData) {
+				const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
+				if (!reserveable) {
+					return true;
+				}
+			}
+			for (const { kind, id, desiredState } of reserveList.labelGroup) {
+				const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
+				if (!reserveable) {
+					return true;
+				}
+			}
+			for (const { kind, id, desiredState } of reserveList.chapterContent) {
+				const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
+				if (!reserveable) {
+					return true;
+				}
+			}
+			return false;
+		});
+
 	return {
 		reserveList: IdempotentCallable(() => reserveList),
 		skip: skip ?? (() => false),

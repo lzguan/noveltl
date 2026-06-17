@@ -1,7 +1,12 @@
-import type { InFlightIdStatus, Kind, ProvId } from "./idTypes";
+import type { InFlightIdStatus, Kind, ProvTypes } from "./idTypes";
 import { type IdempotentCallable } from "./helperTypes";
 import { Brand, type Effect } from "effect";
-import type { CacheConflictException, ConnectionException, FatalException } from "./errors";
+import type {
+	CacheConflictException,
+	ConnectionException,
+	FatalException,
+	NotFoundException,
+} from "./errors";
 import type { UnknownException } from "effect/Cause";
 
 /**
@@ -19,9 +24,9 @@ export type RequestVariant =
 /**
  * Type representing a desired reservation of a state transition for a given id and kind.
  */
-export type Reservation = {
-	kind: Kind;
-	id: ProvId;
+export type Reservation<K extends Kind> = {
+	kind: K;
+	id: ProvTypes[K];
 	desiredState: InFlightIdStatus;
 };
 
@@ -30,6 +35,8 @@ export type Reservation = {
  */
 export type RequestKey = string & Brand.Brand<"RequestKey">;
 export const RequestKey = Brand.nominal<RequestKey>();
+
+export type ReserveList = { [K in Kind]: Reservation<K>[] };
 
 /**
  * Type representing a request to reserve.
@@ -40,7 +47,7 @@ export type ReservationRequest = {
 	 *
 	 * Implementation note: when wait() returns false, all reservations in this list should be reserveable.
 	 */
-	reserveList: IdempotentCallable<Reservation[]>;
+	reserveList: IdempotentCallable<ReserveList>;
 	/**
 	 * Skip this request if this function returns true provided that wait() returns false.
 	 */
@@ -48,7 +55,7 @@ export type ReservationRequest = {
 	/**
 	 * Wait to send this request until this function returns false. If not provided, the request manager will not delay this request.
 	 */
-	wait: () => boolean;
+	wait: () => Effect.Effect<boolean, NotFoundException>; // we do not expect this to throw, but if it does we want to treat it as a fatal error and stop processing the request, so we allow for an unknown exception to be thrown
 };
 
 /**
@@ -159,7 +166,7 @@ export type RequestManager<TriggerEventT> = {
 	 */
 	start: () => Effect.Effect<void, UnknownException>;
 	/**
-	 * Lock and wait until all requests are finished.
+	 * Lock and wait until all requests are finished. Effectively shuts down the request manager.
 	 */
 	waitFlush: () => Effect.Effect<void, UnknownException>; // await flush queue
 

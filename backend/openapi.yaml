@@ -2051,6 +2051,61 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Read Edit Chapter Data
+  /edit-chapter-data/{chapterId}/label-data:
+    get:
+      description: "Fetch label data and labels for specific label groups on a chapter's\
+        \ most\nrecent content version. Used by the reload group operation.\n\nRaises:\n\
+        \    404: Chapter not found (or insufficient permissions).\n    403: Insufficient\
+        \ permissions to access data for other user."
+      operationId: read_edit_chapter_label_data_edit_chapter_data__chapterId__label_data_get
+      parameters:
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      - description: Label group IDs to fetch label data and labels for
+        in: query
+        name: labelGroupIds
+        required: true
+        schema:
+          description: Label group IDs to fetch label data and labels for
+          items:
+            format: uuid
+            type: string
+          title: Labelgroupids
+          type: array
+      - in: query
+        name: subjectId
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Subjectid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/EagerEntry'
+                title: Response Read Edit Chapter Label Data Edit Chapter Data  Chapterid  Label
+                  Data Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Edit Chapter Label Data
   /filters/schemas:
     get:
       description: "Retrieves the schemas for all registered filters, including the\

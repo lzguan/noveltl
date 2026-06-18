@@ -548,6 +548,71 @@ export const ReadEditChapterDataEditChapterDataChapterIdGet422Response = S.Struc
 })
 
 /**
+ * Fetch label data and labels for specific label groups on a chapter's most
+ * recent content version. Used by the reload group operation.
+ *
+ * Raises:
+ *     404: Chapter not found (or insufficient permissions).
+ *     403: Insufficient permissions to access data for other user.
+ * @summary Read Edit Chapter Label Data
+ */
+export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams = S.Struct({
+  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetQueryParams = S.Struct({
+  "labelGroupIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))).annotations({ description: 'Label group IDs to fetch label data and labels for' }),
+  "subjectId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+})
+
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelGroupLabelGroupNameMax = 31;
+
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelEndMin = 0;
+
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelEntityGroupOneMax = 64;
+
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelScoreMin = 0;
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelScoreMax = 1;
+
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelStartMin = 0;
+
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelWordMax = 128;
+
+
+
+export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseItem = S.Struct({
+  "labelData": S.Struct({
+  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotations({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' }),
+  "labelGroup": S.Struct({
+  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupName": S.String.pipe(S.maxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelGroupLabelGroupNameMax)),
+  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotations({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' }),
+  "labels": S.Array(S.Struct({
+  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDirty": S.Boolean,
+  "labelEnd": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelEndMin)),
+  "labelEntityGroup": S.Union(S.String.pipe(S.maxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelEntityGroupOneMax)), S.Null),
+  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelScore": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelScoreMin), S.lessThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelScoreMax)),
+  "labelStart": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelStartMin)),
+  "labelWord": S.String.pipe(S.maxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelWordMax))
+}).annotations({ description: 'Pydantic schema for a label that belongs to a LabelData.\nExtends LabelBase with a label_data_id foreign key and label_id pkey.' }))
+})
+export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200Response = S.Array(ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseItem)
+
+export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * Retrieves the schemas for all registered filters, including the instance, context, and options schemas for each filter.
  *
  * Returns:

@@ -26,6 +26,7 @@ import type {
   CreateUser,
   DeleteUserStatus,
   DetailHTTPErrorResponse,
+  EagerEntry,
   EditChapterData,
   HTTPValidationError,
   InstanceContextOptions,
@@ -42,6 +43,7 @@ import type {
   ReadAutolabelsAutoLabelsGetParams,
   ReadChaptersByNovelChaptersGetParams,
   ReadEditChapterDataEditChapterDataChapterIdGetParams,
+  ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams,
   ReadFilterSchemasFiltersSchemasGet200,
   ReadFlaggedInstancesFiltersFilterNameFlagInstancesPostBody,
   ReadLabelDatasByGroupChaptersLabelDatasGetParams,
@@ -917,6 +919,70 @@ export const readEditChapterDataEditChapterDataChapterIdGet = async (chapterId: 
 
   const data: readEditChapterDataEditChapterDataChapterIdGetResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as readEditChapterDataEditChapterDataChapterIdGetResponse
+}
+
+
+export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse200 = {
+  data: EagerEntry[]
+  status: 200
+}
+
+export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseSuccess = (readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse200) & {
+  headers: Headers;
+};
+export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseError = (readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse422) & {
+  headers: Headers;
+};
+
+export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse = (readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseSuccess | readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseError)
+
+export const getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetUrl = (chapterId: string,
+    params: ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/edit-chapter-data/${chapterId}/label-data?${stringifiedParams}` : `/edit-chapter-data/${chapterId}/label-data`
+}
+
+/**
+ * Fetch label data and labels for specific label groups on a chapter's most
+ * recent content version. Used by the reload group operation.
+ *
+ * Raises:
+ *     404: Chapter not found (or insufficient permissions).
+ *     403: Insufficient permissions to access data for other user.
+ * @summary Read Edit Chapter Label Data
+ */
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet = async (chapterId: string,
+    params: ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams, options?: RequestInit): Promise<readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse> => {
+
+  const res = await fetch(getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetUrl(chapterId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse
 }
 
 

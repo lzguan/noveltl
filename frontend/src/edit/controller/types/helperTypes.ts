@@ -1,5 +1,6 @@
 import { type IDRepository } from "./idTypes";
 import { Brand, Effect } from "effect";
+import type { NotFoundException } from "./errors";
 import type { ReservationRequest, ReserveList } from "./requestTypes";
 
 /**
@@ -36,6 +37,40 @@ export function Prov<T>(value: Brand.Brand.Unbranded<Prov<T>>): Prov<T> {
 }
 
 /**
+ * Checks whether all entries in a ReserveList are reserveable for their desired states.
+ * Short-circuits on the first non-reserveable entry.
+ *
+ * @returns true if all entries are reserveable, false if any is not.
+ */
+export const isAllReserveable = (
+	idRepo: IDRepository,
+	list: ReserveList,
+): Effect.Effect<boolean, NotFoundException> =>
+	Effect.gen(function* () {
+		for (const { kind, id, desiredState } of list.chapter) {
+			const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
+			if (!reserveable) return false;
+		}
+		for (const { kind, id, desiredState } of list.chapterContent) {
+			const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
+			if (!reserveable) return false;
+		}
+		for (const { kind, id, desiredState } of list.label) {
+			const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
+			if (!reserveable) return false;
+		}
+		for (const { kind, id, desiredState } of list.labelData) {
+			const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
+			if (!reserveable) return false;
+		}
+		for (const { kind, id, desiredState } of list.labelGroup) {
+			const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
+			if (!reserveable) return false;
+		}
+		return true;
+	});
+
+/**
  * Most reservation requests can be specified at queue time using only a single array of provisional ids. This is a convenience function that returns a proper request event using some provided provisional ids. It is not meant to cover all use cases, and more complex reservation requests can be constructed manually using the {@link ReservationRequest} type.
  */
 export function makeReservationRequest(
@@ -43,44 +78,9 @@ export function makeReservationRequest(
 	reserveList: ReserveList,
 	skip?: () => boolean,
 ): ReservationRequest {
-	const wait = () =>
-		Effect.gen(function* () {
-			for (const { kind, id, desiredState } of reserveList.chapter) {
-				const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
-				if (!reserveable) {
-					return true;
-				}
-			}
-			for (const { kind, id, desiredState } of reserveList.label) {
-				const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
-				if (!reserveable) {
-					return true;
-				}
-			}
-			for (const { kind, id, desiredState } of reserveList.labelData) {
-				const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
-				if (!reserveable) {
-					return true;
-				}
-			}
-			for (const { kind, id, desiredState } of reserveList.labelGroup) {
-				const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
-				if (!reserveable) {
-					return true;
-				}
-			}
-			for (const { kind, id, desiredState } of reserveList.chapterContent) {
-				const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
-				if (!reserveable) {
-					return true;
-				}
-			}
-			return false;
-		});
-
 	return {
 		reserveList: IdempotentCallable(() => reserveList),
 		skip: skip ?? (() => false),
-		wait,
+		wait: () => isAllReserveable(idRepo, reserveList).pipe(Effect.map((ready) => !ready)),
 	};
 }

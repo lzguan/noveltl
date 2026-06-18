@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 
 from src.editing.schemas import EagerEntry, LazyEntry
 from src.labels.permissions import label_data_mod_access_select, label_group_mod_access_select
-from src.novels.service import query_chapter_content_by_most_recent
+from src.novels.exceptions import ChapterContentNotFoundException
+from src.novels.service import query_chapter_content_by_most_recent, query_chapter_content_ids_by_chapter_id
 
 from ..auth.models import User
 from ..labels import models as lm
@@ -91,3 +92,73 @@ def query_edit_chapter_data(
         lazy_label_data=lazy_label_data,
         eager_label_data=eager_label_data,
     )
+
+
+def query_edit_chapter_data_only_label_data(
+    db: Session, current_user: User, chapter_id: uuid.UUID, label_group_ids: list[uuid.UUID]
+) -> list[EagerEntry]:
+    """
+    Fetch label data and labels for the specified label groups on the most recent
+    chapter content version. Used by the reload group operation on the frontend.
+
+    Only returns entries for label groups that:
+    - Are in the `label_group_ids` list
+    - Have an existing LabelData row for the most recent chapter content
+    - The current user has mod access to
+
+    Label groups that don't meet all three criteria are silently excluded.
+
+    Args:
+        db: Database session.
+        current_user: Current user.
+        chapter_id: Chapter whose most recent content version to query against.
+        label_group_ids: Label group IDs to fetch label data and labels for.
+
+    Raises:
+        ChapterContentNotFoundException: If no chapter content exists for the
+            given chapter_id, or the user lacks access.
+    """
+    chapter_contents = query_chapter_content_ids_by_chapter_id(db, current_user, chapter_id)
+    if len(chapter_contents) == 0:
+        raise ChapterContentNotFoundException("Chapter content not found or insufficient permissions.")
+    chapter_content = chapter_contents[0]
+    for cc in chapter_contents:
+        if cc.chapter_content_version > chapter_content.chapter_content_version:
+            chapter_content = cc
+
+    q = (
+        select(lm.LabelGroup, lm.LabelData, lm.Label)
+        .select_from(lm.LabelGroup)
+        .where(lm.LabelGroup.label_group_id.in_(label_group_ids))
+        .join(
+            lm.LabelData,
+            and_(
+                lm.LabelGroup.label_group_id == lm.LabelData.label_group_id,
+                lm.LabelData.chapter_content_id == chapter_content.chapter_content_id,
+            ),
+        )
+        .join(
+            lm.Label,
+            lm.LabelData.label_data_id == lm.Label.label_data_id,
+            isouter=True,
+        )
+    )
+    q = label_group_mod_access_select(q, current_user)
+    try:
+        result = db.execute(q)
+        result_rows = result.all()
+    except Exception:
+        raise
+
+    entries: dict[uuid.UUID, EagerEntry] = {}
+    for group, data, label in result_rows:
+        gid = group.label_group_id
+        if gid not in entries:
+            entries[gid] = EagerEntry(
+                label_group=ls.LabelGroup.model_validate(group),
+                label_data=ls.LabelData.model_validate(data),
+                labels=[],
+            )
+        if label is not None:
+            entries[gid].labels.append(ls.Label.model_validate(label))
+    return list(entries.values())

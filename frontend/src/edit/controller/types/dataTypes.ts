@@ -138,9 +138,12 @@ export type ChapterDataManager = DataManager<
 		 */
 		flush: () => Effect.Effect<RequestEvent[], UnknownException>;
 		/**
-		 * Load or reload a given label data for this chapter corresponding to a given label group. Active request that flushes pending passive events.
+		 * Reload label data and labels for a given label group from the server. Passive request (read-only). If now is true, immediately flushes the dispatcher queue to dispatch the event; otherwise it remains queued until an active event or explicit flush triggers it.
 		 */
-		reloadGroup(labelGroupId: LGProvId): Effect.Effect<RequestEvent[], UnknownException>;
+		reloadGroup(
+			labelGroupId: LGProvId,
+			now: boolean,
+		): Effect.Effect<RequestEvent[], UnknownException>;
 		/**
 		 * Cleans up internal state when the chapter is closed. Makes all other actions invalid after this is called. Throws an error if the chapter is already closed. Returns empty list (pending passive events are discarded).
 		 */

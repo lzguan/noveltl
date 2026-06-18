@@ -62,6 +62,7 @@ export * from './operationStatusStatus';
 export * from './readAutolabelsAutoLabelsGetParams';
 export * from './readChaptersByNovelChaptersGetParams';
 export * from './readEditChapterDataEditChapterDataChapterIdGetParams';
+export * from './readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams';
 export * from './readFilterSchemasFiltersSchemasGet200';
 export * from './readFlaggedInstancesFiltersFilterNameFlagInstancesPostBody';
 export * from './readLabelDatasByGroupChaptersLabelDatasGetParams';

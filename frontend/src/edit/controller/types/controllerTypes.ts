@@ -1,9 +1,8 @@
 import type { LabelOp } from "./dataTypes";
-import type { ProvChapter, ProvChapterContent, ProvId, ProvLabelGroup } from "./idTypes";
+import type { CProvId, LGProvId, ProvChapter, ProvLabelGroup, ServId } from "./idTypes";
 import type { TextOp } from "@/api/models";
 import { Effect } from "effect";
 import type { KeyedRequestEvent } from "./requestTypes";
-import type { LabelDataSlot } from "../dmHelpers";
 
 // Generics
 
@@ -34,41 +33,12 @@ export interface BaseController<GettersT, UserEventT, TriggerEventT> {
 }
 
 /**
- * Interface for exposed getters on a chapter controller. Not finalized.
- */
-export interface ChapterGetters {
-	/**
-	 * Get the content of this chapter.
-	 */
-	content: () => ProvChapterContent;
-	labelGroup: (labelGroupId: ProvId) => LabelDataSlot | null;
-}
-
-/**
- * Interface for exposed getters on a novel controller. Not finalized.
+ * Interface for exposed getters on a novel controller. Barebones for now.
  */
 export interface NovelGetters {
-	/**
-	 * Get novel id.
-	 */
-	id: () => ProvId;
-	/**
-	 * Get list of label groups in this novel.
-	 */
+	id: () => ServId;
 	labelGroups: () => readonly ProvLabelGroup[];
-	/**
-	 * Get list of chapters in this novel.
-	 */
 	chapters: () => readonly ProvChapter[];
-	/**
-	 * Get a given chapter for this novel.
-	 */
-	chapter: (
-		chapterId: ProvId,
-	) =>
-		| (ChapterGetters & { status: "loaded" })
-		| { status: "notLoaded" | "loading" | "loadError" }
-		| null;
 }
 
 /**
@@ -82,12 +52,12 @@ export interface NovelGetters {
  * - `addChapter`: adding a chapter.
  */
 export type NovelUserEvent =
-	| { eventType: "textOp"; op: TextOp; chapterId: ProvId }
-	| { eventType: "labelOp"; op: LabelOp; labelGroupId: ProvId; chapterId: ProvId }
+	| { eventType: "textOp"; op: TextOp; chapterId: CProvId }
+	| { eventType: "labelOp"; op: LabelOp; labelGroupId: LGProvId; chapterId: CProvId }
 	| { eventType: "addLabelGroup"; labelGroupName: string }
-	| { eventType: "loadLabelData"; labelGroupId: ProvId; chapterId: ProvId }
-	| { eventType: "openChapter"; chapterId: ProvId }
-	| { eventType: "closeChapter"; chapterId: ProvId }
+	| { eventType: "loadLabelData"; labelGroupId: LGProvId; chapterId: CProvId }
+	| { eventType: "openChapter"; chapterId: CProvId }
+	| { eventType: "closeChapter"; chapterId: CProvId }
 	| { eventType: "addChapter"; chapterNum: number; chapterTitle: string; chapterIsPublic: boolean };
 
 /**
@@ -107,8 +77,8 @@ export type NovelUserEvent =
  * 	- from data manager: when a request unsuccessfully completes (for example, due to illegal operations).
  */
 export type TriggerEvent =
-	| { eventType: "textChanged"; op: TextOp; chapterId: ProvId }
-	| { eventType: "labelChanged"; op: LabelOp; labelGroupId: ProvId; chapterId: ProvId }
+	| { eventType: "textChanged"; op: TextOp; chapterId: CProvId }
+	| { eventType: "labelChanged"; op: LabelOp; labelGroupId: LGProvId; chapterId: CProvId }
 	| { eventType: "labelGroupAdded"; labelGroup: ProvLabelGroup }
 	| { eventType: "chapterAdded"; chapter: ProvChapter }
 	| {
@@ -116,10 +86,14 @@ export type TriggerEvent =
 			from: "requestManager";
 			data: { error: Error; request: KeyedRequestEvent }[];
 	  }
-	| { eventType: "chapterOpened"; chapterId: ProvId };
+	| { eventType: "errorOccured"; from: "dataManager"; error: Error }
+	| { eventType: "chapterOpened"; chapterId: CProvId };
 
 export interface NovelController extends BaseController<
 	NovelGetters,
 	NovelUserEvent,
 	TriggerEvent
-> {}
+> {
+	start: () => void;
+	stop: () => Promise<void>;
+}

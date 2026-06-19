@@ -82,7 +82,8 @@ const logger = createLogger("RequestManager");
 
 export const buildRequestManager = (
 	idRepo: IDRepository,
-): Effect.Effect<RequestManager<TriggerEvent>> =>
+	raiseTriggerEvent: (event: TriggerEvent) => void,
+): Effect.Effect<RequestManager> =>
 	Effect.gen(function* () {
 		const requestQueue: KeyedRequestEvent[] = [];
 		const statusQueries: CachedKeyedRequestEvent[] = []; // requests for which we have sent the main request and are now polling for their status
@@ -92,16 +93,6 @@ export const buildRequestManager = (
 		let debounceLock: boolean = false; // if true do not send any requests to server
 		let shuttingDown: boolean = false;
 		let debounceFiber: Fiber.Fiber<void> | null = null;
-
-		let raiseTriggerEvent: (event: TriggerEvent) => void = () => {};
-
-		const attachTrigger = (raise: (event: TriggerEvent) => void) => {
-			raiseTriggerEvent = raise;
-		};
-
-		const detachTrigger = () => {
-			raiseTriggerEvent = () => {};
-		};
 
 		const isQueueEmpty = () =>
 			requestQueue.length === 0 && statusQueries.length === 0 && retryRequests.length === 0;
@@ -455,7 +446,5 @@ export const buildRequestManager = (
 			debounce,
 			start,
 			waitFlush,
-			attachTrigger,
-			detachTrigger,
 		};
 	});

@@ -1,4 +1,4 @@
-import type { CProvId, LGProvId } from "./idTypes";
+import type { CProvId, LGProvId, ProvChapter, ProvLabelGroup, ServId } from "./idTypes";
 import type { RequestEvent } from "./requestTypes";
 import type { AddLabelOp, DeleteLabelOp, UpdateLabelOp } from "@/api/models";
 import type { Effect } from "effect";
@@ -61,8 +61,16 @@ export type NovelDataManager = DataManager<
 		 * Flush any passive request events.
 		 */
 		flush: () => Effect.Effect<RequestEvent[], UnknownException>;
+		/**
+		 * Get the chapter data manager for a given chapter, or null if not loaded.
+		 */
+		getChapterDM: (chapterId: CProvId) => ChapterDataManager | null;
 	},
-	{}
+	{
+		id: () => ServId;
+		labelGroups: () => readonly ProvLabelGroup[];
+		chapters: () => readonly ProvChapter[];
+	}
 >;
 
 /**

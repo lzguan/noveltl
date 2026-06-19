@@ -16,7 +16,7 @@ import {
 	NotFoundException,
 } from "./types/errors";
 import { TimeoutException, UnknownException } from "effect/Cause";
-import type { TriggerEvent } from "./types/controllerTypes";
+import type { NovelGetters, TriggerEvent } from "./types/controllerTypes";
 import {
 	CProvId,
 	type IDRepository,
@@ -56,7 +56,7 @@ import {
 import type { Role } from "@/api/models/role";
 import type { ChapterDataManager, NovelDataManager } from "./types/dataTypes";
 
-type NovelData = {
+export type NovelData = {
 	novel: Novel;
 	chapters: Chapter[];
 	labelGroups: { labelGroup: LabelGroup; role: LabelRole }[];
@@ -65,7 +65,7 @@ type NovelData = {
 
 export const buildNovelDataManager = (
 	fetchNovelData: () => Effect.Effect<NovelData, ConnectionException | TimeoutException>,
-	raiseTriggerEvent: (event: TriggerEvent) => void,
+	raiseTriggerEvent: (getters: NovelGetters, event: TriggerEvent) => void,
 	idRepo: IDRepository,
 ): Effect.Effect<NovelDataManager, ConnectionException | TimeoutException | FatalException> =>
 	Effect.gen(function* () {
@@ -94,6 +94,36 @@ export const buildNovelDataManager = (
 
 		const { decorate, flush } = buildRequestQueueDispatcher<RequestEvent>();
 
+		const getters: NovelGetters = {
+			id: () => ServId(novelData.novel.novelId),
+			labelGroups: (): readonly ProvLabelGroup[] => {
+				const ids = Effect.runSync(
+					labelGroupsIndex.getIds().pipe(Effect.catchAll(() => Effect.succeed<LGProvId[]>([]))),
+				);
+				return ids
+					.map((lgId) => {
+						const slot = Effect.runSync(
+							labelGroupsIndex.get(lgId).pipe(Effect.catchAll(() => Effect.succeed(null))),
+						);
+						return slot?.meta.labelGroup;
+					})
+					.filter((lg): lg is ProvLabelGroup => lg != null);
+			},
+			chapters: (): readonly ProvChapter[] => {
+				const ids = Effect.runSync(
+					chaptersIndex.getIds().pipe(Effect.catchAll(() => Effect.succeed<CProvId[]>([]))),
+				);
+				return ids
+					.map((cId) => {
+						const slot = Effect.runSync(
+							chaptersIndex.get(cId).pipe(Effect.catchAll(() => Effect.succeed(null))),
+						);
+						return slot?.meta.chapter;
+					})
+					.filter((ch): ch is ProvChapter => ch != null);
+			},
+		};
+
 		const _addLabelGroup = (
 			labelGroupName: string,
 		): Effect.Effect<RequestEvent[], UnknownException> =>
@@ -118,7 +148,7 @@ export const buildNovelDataManager = (
 							() => new UnknownException({ message: "Failed to increment label group index" }),
 						),
 					);
-				raiseTriggerEvent({ eventType: "labelGroupAdded", labelGroup: newLabelGroup });
+				raiseTriggerEvent(getters, { eventType: "labelGroupAdded", labelGroup: newLabelGroup });
 				const onError = (): Effect.Effect<void> => {
 					return labelGroupsIndex
 						.decrement(newId)
@@ -215,7 +245,7 @@ export const buildNovelDataManager = (
 							() => new UnknownException({ message: "Failed to increment chapter index" }),
 						),
 					);
-				raiseTriggerEvent({ eventType: "chapterAdded", chapter: newChapter });
+				raiseTriggerEvent(getters, { eventType: "chapterAdded", chapter: newChapter });
 				const onError = (): Effect.Effect<void> => {
 					return chaptersIndex.decrement(newId).pipe(Effect.catchAll(() => Effect.succeed(void 0)));
 				};
@@ -368,7 +398,7 @@ export const buildNovelDataManager = (
 								const chapterDataManager = yield* buildChapterDataManager(
 									validated,
 									chapterId,
-									raiseTriggerEvent,
+									(event) => raiseTriggerEvent(getters, event),
 									idRepo,
 									{
 										labelGroupIds: () => labelGroupsIndex.getIds(),
@@ -383,7 +413,7 @@ export const buildNovelDataManager = (
 										},
 									})
 									.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
-								raiseTriggerEvent({
+								raiseTriggerEvent(getters, {
 									eventType: "chapterOpened",
 									chapterId,
 								});
@@ -400,13 +430,20 @@ export const buildNovelDataManager = (
 				}
 				return reqEvents;
 			});
-		const getters = {};
+		const getChapterDM = (id: CProvId): ChapterDataManager | null => {
+			const slot = Effect.runSync(
+				chaptersIndex.get(id).pipe(Effect.catchAll(() => Effect.succeed(null))),
+			);
+			if (!slot || slot.status !== "ready" || !slot.data) return null;
+			return slot.data.chapterData;
+		};
 
 		return {
 			addLabelGroup,
 			addChapter,
 			openChapter,
 			flush,
+			getChapterDM,
 			getters,
 		};
 	});

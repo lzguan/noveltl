@@ -147,7 +147,7 @@ export const consumeRetry = <T extends BaseRequestEvent>(request: T) => {
  * - If request A is enqueued before request B, there exists some resource R that both A and B depend on, and the corresponding reservations are incompatible, then A will be sent before B.
  * - For any request event, exactly one of the following functions will complete successfully: onFailure, onFatalError, or the postSend function if the request is successful.
  */
-export type RequestManager<TriggerEventT> = {
+export type RequestManager = {
 	/**
 	 * Returns true if there are no unfinished requests.
 	 */
@@ -169,13 +169,4 @@ export type RequestManager<TriggerEventT> = {
 	 * Lock and wait until all requests are finished. Effectively shuts down the request manager.
 	 */
 	waitFlush: () => Effect.Effect<void, UnknownException>; // await flush queue
-
-	/**
-	 * Attach a trigger function.
-	 */
-	attachTrigger: (trigger: (t: TriggerEventT) => void) => void;
-	/**
-	 * Detach the trigger function.
-	 */
-	detachTrigger: () => void;
 };

@@ -3,7 +3,6 @@ import type {
 	NovelController,
 	NovelGetters,
 	NovelUserEvent,
-	SubscriberFn,
 	TriggerEvent,
 } from "./types/controllerTypes";
 import { type NovelData, buildNovelDataManager } from "./dataManager";
@@ -11,26 +10,8 @@ import { buildRequestManager } from "./requestmanager";
 import { buildIdRepository } from "./idRepository";
 import type { RequestEvent } from "./types/requestTypes";
 import type { ConnectionException, FatalException } from "./types/errors";
-import type { TimeoutException } from "effect/Cause";
-
-function buildControllerCore<GettersT, TriggerEventT>() {
-	const subscribers = new Set<SubscriberFn<GettersT, TriggerEventT>>();
-
-	const subscribe = (fn: SubscriberFn<GettersT, TriggerEventT>): (() => void) => {
-		subscribers.add(fn);
-		return () => {
-			subscribers.delete(fn);
-		};
-	};
-
-	const raiseTriggerEvent = (getters: GettersT, event: TriggerEventT): void => {
-		for (const fn of subscribers) {
-			Effect.runSync(fn(getters, event));
-		}
-	};
-
-	return { subscribe, raiseTriggerEvent };
-}
+import type { TimeoutException, UnknownException } from "effect/Cause";
+import { buildPubSub } from "../utils/pubsub";
 
 export const buildNovelController = (
 	novelData: NovelData,
@@ -38,7 +19,7 @@ export const buildNovelController = (
 	Effect.gen(function* () {
 		const idRepo = buildIdRepository();
 
-		const { subscribe, raiseTriggerEvent } = buildControllerCore<NovelGetters, TriggerEvent>();
+		const { subscribe, raiseTriggerEvent } = buildPubSub<NovelGetters, TriggerEvent>();
 
 		const novelDM = yield* buildNovelDataManager(
 			() => Effect.succeed(novelData),
@@ -51,163 +32,194 @@ export const buildNovelController = (
 		);
 
 		let running = false;
-		let timer: ReturnType<typeof setInterval> | null = null;
 
-		const dispatch = (effect: Effect.Effect<RequestEvent[], unknown>): void => {
-			const result = Effect.runSync(
-				effect.pipe(
+		const dispatch = (effect: Effect.Effect<RequestEvent[], unknown>): Effect.Effect<void> =>
+			Effect.gen(function* () {
+				const result = yield* effect.pipe(
 					Effect.catchAll((err) => {
-						raiseTriggerEvent(novelDM.getters, {
+						return raiseTriggerEvent(novelDM.getters, {
 							eventType: "errorOccured",
 							from: "dataManager",
 							error: err instanceof Error ? err : new Error(String(err)),
-						});
-						return Effect.succeed<RequestEvent[]>([]);
+						}).pipe(Effect.andThen(() => Effect.succeed<RequestEvent[]>([])));
 					}),
-				),
-			);
-			for (const event of result) {
-				requestManager.enqueueRequest(event);
-			}
-		};
+				);
 
-		const handleUserEvent = (event: NovelUserEvent): void => {
-			if (!running) return;
+				for (const event of result) {
+					requestManager.enqueueRequest(event);
+				}
+			});
 
-			switch (event.eventType) {
-				case "textOp": {
-					const chapterDM = novelDM.getChapterDM(event.chapterId);
-					if (!chapterDM) {
-						raiseTriggerEvent(novelDM.getters, {
-							eventType: "errorOccured",
-							from: "dataManager",
-							error: new Error(`Chapter ${event.chapterId} is not loaded`),
-						});
+		const handleUserEvent = (event: NovelUserEvent): Effect.Effect<void> =>
+			Effect.gen(function* () {
+				if (!running) return Effect.succeed(undefined);
+
+				switch (event.eventType) {
+					case "textOp": {
+						const chapterDM = novelDM.getChapterDM(event.chapterId);
+						if (!chapterDM) {
+							yield* raiseTriggerEvent(novelDM.getters, {
+								eventType: "errorOccured",
+								from: "dataManager",
+								error: new Error(`Chapter ${event.chapterId} is not loaded`),
+							});
+							break;
+						}
+						if (event.op.op === "insert") {
+							yield* dispatch(chapterDM.insertTextAt(event.op.start, event.op.text));
+						} else {
+							yield* dispatch(
+								chapterDM.deleteTextAt(
+									event.op.start,
+									event.op.start + event.op.text.length,
+								),
+							);
+						}
 						break;
 					}
-					if (event.op.op === "insert") {
-						dispatch(chapterDM.insertTextAt(event.op.start, event.op.text));
-					} else {
-						dispatch(
-							chapterDM.deleteTextAt(
-								event.op.start,
-								event.op.start + event.op.text.length,
-							),
-						);
-					}
-					break;
-				}
-				case "labelOp": {
-					const chapterDM = novelDM.getChapterDM(event.chapterId);
-					if (!chapterDM) {
-						raiseTriggerEvent(novelDM.getters, {
-							eventType: "errorOccured",
-							from: "dataManager",
-							error: new Error(`Chapter ${event.chapterId} is not loaded`),
-						});
+					case "labelOp": {
+						const chapterDM = novelDM.getChapterDM(event.chapterId);
+						if (!chapterDM) {
+							yield* raiseTriggerEvent(novelDM.getters, {
+								eventType: "errorOccured",
+								from: "dataManager",
+								error: new Error(`Chapter ${event.chapterId} is not loaded`),
+							});
+							break;
+						}
+						if (event.op.op === "add") {
+							yield* dispatch(
+								chapterDM.addLabel(
+									event.labelGroupId,
+									event.op.startPos,
+									event.op.endPos,
+									event.op.word,
+									event.op.entityGroup ?? undefined,
+									event.op.score ?? undefined,
+									event.op.dirty ?? undefined,
+								),
+							);
+						} else if (event.op.op === "delete") {
+							yield* dispatch(
+								chapterDM.deleteLabel(
+									event.labelGroupId,
+									event.op.startPos,
+									event.op.endPos,
+								),
+							);
+						} else {
+							yield* dispatch(
+								chapterDM.updateLabel(
+									event.labelGroupId,
+									event.op.startPos,
+									event.op.endPos,
+									event.op.newStartPos,
+									event.op.newEndPos,
+									event.op.newWord,
+									event.op.entityGroup ?? undefined,
+									event.op.score ?? undefined,
+									event.op.dirty ?? undefined,
+								),
+							);
+						}
 						break;
 					}
-					if (event.op.op === "add") {
-						dispatch(
-							chapterDM.addLabel(
-								event.labelGroupId,
-								event.op.startPos,
-								event.op.endPos,
-								event.op.word,
-								event.op.entityGroup ?? undefined,
-								event.op.score ?? undefined,
-								event.op.dirty ?? undefined,
-							),
-						);
-					} else if (event.op.op === "delete") {
-						dispatch(
-							chapterDM.deleteLabel(
-								event.labelGroupId,
-								event.op.startPos,
-								event.op.endPos,
-							),
-						);
-					} else {
-						dispatch(
-							chapterDM.updateLabel(
-								event.labelGroupId,
-								event.op.startPos,
-								event.op.endPos,
-								event.op.newStartPos,
-								event.op.newEndPos,
-								event.op.newWord,
-								event.op.entityGroup ?? undefined,
-								event.op.score ?? undefined,
-								event.op.dirty ?? undefined,
-							),
-						);
+					case "addLabelGroup": {
+						yield* dispatch(novelDM.addLabelGroup(event.labelGroupName));
+						break;
 					}
-					break;
+					case "addChapter": {
+						yield* dispatch(
+							novelDM.addChapter(
+								event.chapterNum,
+								event.chapterTitle,
+								event.chapterIsPublic,
+							),
+						);
+						break;
+					}
+					case "openChapter": {
+						yield* dispatch(
+							novelDM.openChapter(
+								event.chapterId,
+								event.eagerLabelGroupIds,
+								event.flags,
+							),
+						);
+						break;
+					}
+					case "closeChapter": {
+						const chapterDM = novelDM.getChapterDM(event.chapterId);
+						if (!chapterDM) {
+							yield* raiseTriggerEvent(novelDM.getters, {
+								eventType: "errorOccured",
+								from: "dataManager",
+								error: new Error(`Chapter ${event.chapterId} is not loaded`),
+							});
+							break;
+						}
+						yield* dispatch(chapterDM.destroy());
+						break;
+					}
+					case "loadLabelData": {
+						const chapterDM = novelDM.getChapterDM(event.chapterId);
+						if (!chapterDM) {
+							yield* raiseTriggerEvent(novelDM.getters, {
+								eventType: "errorOccured",
+								from: "dataManager",
+								error: new Error(`Chapter ${event.chapterId} is not loaded`),
+							});
+							break;
+						}
+						yield* dispatch(chapterDM.reloadGroup(event.labelGroupId, true));
+						break;
+					}
 				}
-				case "addLabelGroup": {
-					dispatch(novelDM.addLabelGroup(event.labelGroupName));
-					break;
-				}
-				case "addChapter": {
-					dispatch(
-						novelDM.addChapter(
-							event.chapterNum,
-							event.chapterTitle,
-							event.chapterIsPublic,
+
+				yield* requestManager.debounce();
+			});
+
+		const start = (): Effect.Effect<void, UnknownException> => {
+			running = true;
+			return Effect.repeat(
+				Effect.gen(function* () {
+					yield* dispatch(novelDM.flush()).pipe(
+						Effect.tapError((err) =>
+							raiseTriggerEvent(novelDM.getters, {
+								eventType: "errorOccured",
+								from: "dataManager",
+								error: err,
+							}).pipe(
+								Effect.andThen(() => {
+									running = false;
+								}),
+							),
 						),
 					);
-					break;
-				}
-				case "openChapter": {
-					dispatch(novelDM.openChapter(event.chapterId, [], true));
-					break;
-				}
-				case "closeChapter": {
-					const chapterDM = novelDM.getChapterDM(event.chapterId);
-					if (!chapterDM) {
-						raiseTriggerEvent(novelDM.getters, {
-							eventType: "errorOccured",
-							from: "dataManager",
-							error: new Error(`Chapter ${event.chapterId} is not loaded`),
-						});
-						break;
-					}
-					dispatch(chapterDM.destroy());
-					break;
-				}
-				case "loadLabelData": {
-					const chapterDM = novelDM.getChapterDM(event.chapterId);
-					if (!chapterDM) {
-						raiseTriggerEvent(novelDM.getters, {
-							eventType: "errorOccured",
-							from: "dataManager",
-							error: new Error(`Chapter ${event.chapterId} is not loaded`),
-						});
-						break;
-					}
-					dispatch(chapterDM.reloadGroup(event.labelGroupId, true));
-					break;
-				}
-			}
-
-			void Effect.runPromise(requestManager.debounce());
+					yield* requestManager.start().pipe(
+						Effect.mapError((err) => {
+							running = false;
+							return err;
+						}),
+					);
+					yield* Effect.sleep("1 second");
+				}),
+				{ until: () => !running },
+			);
 		};
 
-		const start = (): void => {
-			running = true;
-			timer = setInterval(() => {
-				dispatch(novelDM.flush());
-				void Effect.runPromise(requestManager.start());
-			}, 1500);
-		};
-
-		const stop = async (): Promise<void> => {
+		const stop = (): Effect.Effect<void> => {
 			running = false;
-			if (timer !== null) {
-				clearInterval(timer);
-				timer = null;
-			}
-			await Effect.runPromise(requestManager.waitFlush());
+
+			return requestManager.waitFlush().pipe(
+				Effect.catchAll((err) => {
+					return raiseTriggerEvent(novelDM.getters, {
+						eventType: "errorOccured",
+						from: "dataManager",
+						error: err,
+					});
+				}),
+			);
 		};
 
 		return {

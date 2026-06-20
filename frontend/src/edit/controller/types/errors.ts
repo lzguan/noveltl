@@ -1,7 +1,7 @@
 import { Data } from "effect";
 import type { RequestKey } from "./requestTypes";
 import type { TimeoutException } from "effect/Cause";
-import type { ProvId } from "./idTypes";
+import type { CProvId, LGProvId, ProvId } from "./idTypes";
 
 /**
  * Represents a cache conflict on the backend.
@@ -62,6 +62,18 @@ export class AlreadyOpenException extends Data.TaggedError("AlreadyOpenException
 }> {}
 
 export class LoadingException extends Data.TaggedError("LoadingException")<{ id: ProvId }> {}
+
+export class ChapterLoadingException extends Data.TaggedError("ChapterLoadingException")<{
+	chapterId: CProvId;
+}> {}
+
+export class LabelGroupLoadingException extends Data.TaggedError("LabelGroupLoadingException")<{
+	labelGroupId: LGProvId;
+}> {}
+
+export class LabelDataLoadingException extends Data.TaggedError("LabelDataLoadingException")<{
+	labelGroupId: LGProvId;
+}> {}
 
 /**
  * Union of errors that can occur at the request processing level. DM-level errors

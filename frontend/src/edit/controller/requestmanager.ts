@@ -11,7 +11,7 @@ import {
 } from "./types/requestTypes";
 import type { IDRepository } from "./types/idTypes";
 import type { TriggerEvent } from "./types/controllerTypes";
-import { Effect, Either, Fiber } from "effect";
+import { Effect, Either } from "effect";
 import { getCachedResultCachedCachedIdGet } from "@/api/endpoints/default/default";
 import {
 	CacheConflictException,
@@ -23,6 +23,7 @@ import {
 	type AnyError,
 } from "./types/errors";
 import { UnknownException } from "effect/Cause";
+import type { DurationInput } from "effect/Duration";
 
 const logger = createLogger("RequestManager");
 
@@ -82,17 +83,17 @@ const logger = createLogger("RequestManager");
 
 export const buildRequestManager = (
 	idRepo: IDRepository,
-	raiseTriggerEvent: (event: TriggerEvent) => void,
+	raiseTriggerEvent: (event: TriggerEvent) => Effect.Effect<void>,
 ): Effect.Effect<RequestManager> =>
 	Effect.gen(function* () {
 		const requestQueue: KeyedRequestEvent[] = [];
 		const statusQueries: CachedKeyedRequestEvent[] = []; // requests for which we have sent the main request and are now polling for their status
 		const retryRequests: KeyedRequestEvent[] = []; // requests that have failed due to cache conflicts/known recoverable errors and should be retried
-		const startedMut = yield* Effect.makeSemaphore(1);
+		const sendMut = yield* Effect.makeSemaphore(1);
+		const debounceLatch = yield* Effect.makeLatch(true);
+		const startedLatch = yield* Effect.makeLatch(true);
 
-		let debounceLock: boolean = false; // if true do not send any requests to server
 		let shuttingDown: boolean = false;
-		let debounceFiber: Fiber.Fiber<void> | null = null;
 
 		const isQueueEmpty = () =>
 			requestQueue.length === 0 && statusQueries.length === 0 && retryRequests.length === 0;
@@ -196,7 +197,7 @@ export const buildRequestManager = (
 			Effect.gen(function* () {
 				const fromQueueRequests: KeyedRequestEvent[] = [];
 
-				let delay: number = 1000; // todo: implement exponential backoff for retries instead of fixed delay
+				let delay: DurationInput = "1 second"; // todo: implement exponential backoff for retries instead of fixed delay
 
 				const limitExceeded: KeyedRequestEvent[] = [];
 				for (const request of [...statusQueries, ...retryRequests]) {
@@ -432,7 +433,7 @@ export const buildRequestManager = (
 							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
 						);
 					}
-					raiseTriggerEvent({
+					yield* raiseTriggerEvent({
 						eventType: "errorOccured",
 						from: "requestManager",
 						data: fatalFailedRequests,
@@ -450,45 +451,38 @@ export const buildRequestManager = (
 
 				return delay;
 			});
-		const sendLoop = Effect.gen(function* () {
-			while (!isQueueEmpty()) {
-				if (debounceLock) {
-					yield* Effect.sleep(100);
-				} else {
-					const delay = yield* send();
-					yield* Effect.sleep(delay);
-				}
-			}
-		}).pipe(
-			Effect.mapError((err) => {
-				if (err._tag === "UnknownException") {
-					return err;
-				}
-				return new UnknownException(String(err));
-			}),
-		);
 
-		const start = (): Effect.Effect<void, UnknownException> =>
-			startedMut.withPermits(1)(sendLoop);
+		const sendLoop = (allowShutDown: boolean) =>
+			Effect.repeat(
+				sendMut
+					.withPermits(1)(send())
+					.pipe(Effect.andThen((delay) => Effect.sleep(delay)))
+					.pipe(debounceLatch.whenOpen, Effect.fork),
+				{ until: () => (allowShutDown ? isQueueEmpty() : shuttingDown || isQueueEmpty()) },
+			).pipe(Effect.mapError((err) => new UnknownException(String(err))));
+
+		const start = (): Effect.Effect<void, UnknownException> => {
+			return startedLatch.close
+				.pipe(Effect.andThen(() => sendLoop(false)))
+				.pipe(Effect.tapError(() => startedLatch.open))
+				.pipe(Effect.andThen(() => startedLatch.open))
+				.pipe(startedLatch.whenOpen, Effect.fork);
+		};
 
 		const debounce = () =>
 			Effect.gen(function* () {
-				debounceLock = true;
-				if (debounceFiber) yield* Fiber.interrupt(debounceFiber);
-				debounceFiber = yield* Effect.fork(
-					Effect.sleep(1000).pipe(
-						Effect.tap(() => {
-							debounceLock = false;
-							debounceFiber = null;
-						}),
-					),
+				yield* Effect.fork(
+					debounceLatch.close
+						.pipe(Effect.andThen(Effect.sleep("0.5 seconds")))
+						.pipe(Effect.andThen(debounceLatch.open)),
 				);
+				yield* Effect.sleep("0.1 seconds"); // wait for thread to start
 			});
 
 		const waitFlush = (): Effect.Effect<void, UnknownException> =>
 			Effect.gen(function* () {
 				shuttingDown = true;
-				yield* startedMut.withPermits(1)(sendLoop);
+				yield* sendLoop(true);
 			});
 
 		return {

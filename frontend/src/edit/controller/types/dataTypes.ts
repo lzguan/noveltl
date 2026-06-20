@@ -1,4 +1,4 @@
-import type { CProvId, LGProvId, LProvId, ProvChapter, ProvLabelGroup, ServId } from "./idTypes";
+import type { CProvId, LGProvId, LProvId } from "./idTypes";
 import type { RequestEvent } from "./requestTypes";
 import type { AddLabelOp, DeleteLabelOp, UpdateLabelOp } from "@/api/models";
 import type { Effect } from "effect";
@@ -9,6 +9,7 @@ import type {
 	LoadingException,
 	NotFoundException,
 } from "./errors";
+import type { ChapterGetters, NovelGetters } from "./controllerTypes";
 
 export type LabelOp = AddLabelOp | DeleteLabelOp | UpdateLabelOp;
 
@@ -47,16 +48,23 @@ export type NovelDataManager = DataManager<
 			chapterTitle: string,
 			chapterIsPublic: boolean,
 		) => Effect.Effect<RequestEvent[], UnknownException | DuplicateChapterNumException>;
+
 		/**
 		 * Loads chapter data from server. On success, the chapter becomes accessible via getChapterDM().
 		 * @param chapterId - Chapter to open.
 		 * @param eager - Label groups whose labels should be fetched immediately (others are lazy-loaded on demand via reloadGroup).
 		 * @param now - If true, dispatches immediately. If false, deferred until the next flush or mutating action.
+		 * @param flags - Additional flags for opening chapter. Follows the following rules:
+		 * - The `forEditor` flag indicates whether the chapter is being opened for the editor (as opposed to a background operation like preloading). If true, will simply emit the forEditor flag in the trigger event.
+		 * - The `fromCached` flag indicates whether the chapter data is being loaded from a cached state on the backend. If true, the controller will attempt to use cached data on the frontend for the chapter if available, and will emit the fromCached flag in the trigger event. If false, the controller will throw an error if the chapter data is already cached on the frontend. (these semantics are not so good, rethink this sometime)
+		 * - The `now` flag indicates whether the request events for opening the chapter should be dispatched immediately or deferred until the next flush or mutating action.
 		 */
 		openChapter: (
 			chapterId: CProvId,
 			eager: LGProvId[],
-			now: boolean,
+			flags: ({ now: boolean; forEditor: false } | { now: true; forEditor: true }) & {
+				fromCached: boolean;
+			},
 		) => Effect.Effect<
 			RequestEvent[],
 			NotFoundException | LoadingException | AlreadyOpenException | UnknownException
@@ -70,11 +78,7 @@ export type NovelDataManager = DataManager<
 		 */
 		getChapterDM: (chapterId: CProvId) => ChapterDataManager | null;
 	},
-	{
-		id: () => ServId;
-		labelGroups: () => readonly ProvLabelGroup[];
-		chapters: () => readonly ProvChapter[];
-	}
+	NovelGetters
 >;
 
 /**
@@ -176,5 +180,5 @@ export type ChapterDataManager = DataManager<
 		 */
 		destroy: () => Effect.Effect<RequestEvent[], UnknownException>;
 	},
-	{}
+	ChapterGetters
 >;

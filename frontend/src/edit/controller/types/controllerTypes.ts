@@ -1,8 +1,12 @@
 import type { IDLabelOp, LabelOp } from "./dataTypes";
-import type { CProvId, LGProvId, ProvChapter, ProvLabelGroup, ServId } from "./idTypes";
-import type { TextOp } from "@/api/models";
+import type { CProvId, LGProvId, ProvChapter, ProvLabelGroup } from "./idTypes";
+import type { Novel, TextOp } from "@/api/models";
 import { Effect } from "effect";
 import type { KeyedRequestEvent } from "./requestTypes";
+import type { NotFoundException } from "./errors";
+import type { ChapterGetterSlot, LabelDataSlot, LabelGroupSlot } from "./helperTypes";
+import type { Role } from "@/api/models/role";
+import type { UnknownException } from "effect/Cause";
 
 // Generics
 
@@ -19,18 +23,29 @@ export type SubscriberFn<GettersT, TriggerEventT> = (
  * Subscribers are keyed by reference — the returned unsubscribe function removes that exact reference.
  */
 export interface BaseController<GettersT, UserEventT, TriggerEventT> {
-	handleUserEvent: (event: UserEventT) => void;
+	handleUserEvent: (event: UserEventT) => Effect.Effect<void>;
 	getters: GettersT;
 	subscribe: (subscriberFn: SubscriberFn<GettersT, TriggerEventT>) => () => void;
 }
 
 /**
- * Interface for exposed getters on a novel controller. Barebones for now.
+ * Interface for exposed getters on a chapter data manager. Barebones for now.
+ */
+export interface ChapterGetters {
+	text: () => Effect.Effect<string>;
+	labelDataSlot: (labelGroupId: LGProvId) => Effect.Effect<LabelDataSlot, NotFoundException>;
+}
+
+/**
+ * Interface for exposed getters on a novel data manager (and controller). Barebones for now.
  */
 export interface NovelGetters {
-	id: () => ServId;
-	labelGroups: () => readonly ProvLabelGroup[];
-	chapters: () => readonly ProvChapter[];
+	novel: () => Effect.Effect<Novel>;
+	role: () => Effect.Effect<Role>;
+	labelGroupIds: () => Effect.Effect<readonly LGProvId[]>;
+	chapterIds: () => Effect.Effect<readonly CProvId[]>;
+	chapterGetterSlot: (chapterId: CProvId) => Effect.Effect<ChapterGetterSlot, NotFoundException>;
+	labelGroupSlot: (labelGroupId: LGProvId) => Effect.Effect<LabelGroupSlot, NotFoundException>;
 }
 
 /**
@@ -48,7 +63,18 @@ export type NovelUserEvent =
 	| { eventType: "labelOp"; op: LabelOp; labelGroupId: LGProvId; chapterId: CProvId }
 	| { eventType: "addLabelGroup"; labelGroupName: string }
 	| { eventType: "loadLabelData"; labelGroupId: LGProvId; chapterId: CProvId }
-	| { eventType: "openChapter"; chapterId: CProvId }
+	| {
+			eventType: "openChapter";
+			chapterId: CProvId;
+			eagerLabelGroupIds: LGProvId[];
+			flags: (
+				| {
+						now: boolean;
+						forEditor: false;
+				  }
+				| { now: true; forEditor: true }
+			) & { fromCached: boolean };
+	  }
 	| { eventType: "closeChapter"; chapterId: CProvId }
 	| {
 			eventType: "addChapter";
@@ -84,7 +110,7 @@ export type TriggerEvent =
 			data: { error: Error; request: KeyedRequestEvent }[];
 	  }
 	| { eventType: "errorOccured"; from: "dataManager"; error: Error }
-	| { eventType: "chapterOpened"; chapterId: CProvId };
+	| { eventType: "chapterOpened"; chapterId: CProvId; flags: { forEditor: boolean } };
 
 /**
  * Novel-level controller. Events are ignored until start() is called.
@@ -96,6 +122,12 @@ export interface NovelController extends BaseController<
 	NovelUserEvent,
 	TriggerEvent
 > {
-	start: () => void;
-	stop: () => Promise<void>;
+	/**
+	 * Use Effect.runPromise to run the returned effect.
+	 */
+	start: () => Effect.Effect<void, UnknownException>;
+	/**
+	 * Use Effect.runPromise to run the returned promise.
+	 */
+	stop: () => Effect.Effect<void, UnknownException>;
 }

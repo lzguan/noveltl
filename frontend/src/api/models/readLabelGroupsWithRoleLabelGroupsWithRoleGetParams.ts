@@ -6,5 +6,5 @@
  */
 
 export type ReadLabelGroupsWithRoleLabelGroupsWithRoleGetParams = {
-	novelId: string;
+novelId: string;
 };

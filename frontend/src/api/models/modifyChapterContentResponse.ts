@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { ModifyChapterContentResponseLabelDataIdMap } from "./modifyChapterContentResponseLabelDataIdMap";
+import type { ModifyChapterContentResponseLabelDataIdMap } from './modifyChapterContentResponseLabelDataIdMap';
 
 /**
  * Pydantic schema for the response after modifying chapter content.
@@ -15,7 +15,7 @@ import type { ModifyChapterContentResponseLabelDataIdMap } from "./modifyChapter
  *     label_data_id_map: A mapping from label data IDs before the text modification to label data IDs after the text modification
  */
 export interface ModifyChapterContentResponse {
-	chapterContentId: string;
-	chapterContentVersion: number;
-	labelDataIdMap: ModifyChapterContentResponseLabelDataIdMap;
+  chapterContentId: string;
+  chapterContentVersion: number;
+  labelDataIdMap: ModifyChapterContentResponseLabelDataIdMap;
 }

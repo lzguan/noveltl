@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { RequestConflictDetail } from "./requestConflictDetail";
+import type { RequestConflictDetail } from './requestConflictDetail';
 
 /**
  * HTTPException response body for request-key wrapped 409 responses.
@@ -13,5 +13,5 @@ import type { RequestConflictDetail } from "./requestConflictDetail";
  *     detail: Structured conflict detail.
  */
 export interface RequestConflictErrorResponse {
-	detail: RequestConflictDetail;
+  detail: RequestConflictDetail;
 }

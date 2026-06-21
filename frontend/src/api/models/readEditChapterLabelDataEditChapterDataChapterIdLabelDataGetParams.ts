@@ -6,9 +6,9 @@
  */
 
 export type ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams = {
-	/**
-	 * Label group IDs to fetch label data and labels for
-	 */
-	labelGroupIds: string[];
-	subjectId?: string | null;
+subjectId?: string | null;
+/**
+ * Label group IDs to fetch label data and labels for
+ */
+labelGroupIds?: string[] | null;
 };

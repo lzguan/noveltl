@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { UserType } from "./userType";
+import type { UserType } from './userType';
 
 /**
  * Pydantic model for user information.
@@ -15,7 +15,7 @@ import type { UserType } from "./userType";
  *     user_type: A value in UserType (e.g. 'admin', or 'user')
  */
 export interface User {
-	userId: string;
-	userName: string;
-	userType: UserType;
+  userId: string;
+  userName: string;
+  userType: UserType;
 }

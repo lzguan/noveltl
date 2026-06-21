@@ -14,7 +14,7 @@
  *     chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.
  */
 export interface ChapterContent {
-	chapterContentId: string;
-	chapterContentText: string;
-	chapterContentVersion: number;
+  chapterContentId: string;
+  chapterContentText: string;
+  chapterContentVersion: number;
 }

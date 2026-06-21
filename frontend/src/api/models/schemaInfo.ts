@@ -4,21 +4,21 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { SchemaInfoApplyFilterOptionsSchema } from "./schemaInfoApplyFilterOptionsSchema";
-import type { SchemaInfoContextSchema } from "./schemaInfoContextSchema";
-import type { SchemaInfoDecideInstancesOptionsSchema } from "./schemaInfoDecideInstancesOptionsSchema";
-import type { SchemaInfoFlagInstancesOptionsSchema } from "./schemaInfoFlagInstancesOptionsSchema";
-import type { SchemaInfoGetContextsOptionsSchema } from "./schemaInfoGetContextsOptionsSchema";
-import type { SchemaInfoInstanceSchema } from "./schemaInfoInstanceSchema";
+import type { SchemaInfoApplyFilterOptionsSchema } from './schemaInfoApplyFilterOptionsSchema';
+import type { SchemaInfoContextSchema } from './schemaInfoContextSchema';
+import type { SchemaInfoDecideInstancesOptionsSchema } from './schemaInfoDecideInstancesOptionsSchema';
+import type { SchemaInfoFlagInstancesOptionsSchema } from './schemaInfoFlagInstancesOptionsSchema';
+import type { SchemaInfoGetContextsOptionsSchema } from './schemaInfoGetContextsOptionsSchema';
+import type { SchemaInfoInstanceSchema } from './schemaInfoInstanceSchema';
 
 export interface SchemaInfo {
-	apply_filter_options_schema: SchemaInfoApplyFilterOptionsSchema;
-	context_schema: SchemaInfoContextSchema;
-	decide_instances_options_schema: SchemaInfoDecideInstancesOptionsSchema;
-	description: string;
-	flag_instances_options_schema: SchemaInfoFlagInstancesOptionsSchema;
-	get_contexts_options_schema: SchemaInfoGetContextsOptionsSchema;
-	instance_schema: SchemaInfoInstanceSchema;
-	supports_apply: boolean;
-	supports_decide: boolean;
+  apply_filter_options_schema: SchemaInfoApplyFilterOptionsSchema;
+  context_schema: SchemaInfoContextSchema;
+  decide_instances_options_schema: SchemaInfoDecideInstancesOptionsSchema;
+  description: string;
+  flag_instances_options_schema: SchemaInfoFlagInstancesOptionsSchema;
+  get_contexts_options_schema: SchemaInfoGetContextsOptionsSchema;
+  instance_schema: SchemaInfoInstanceSchema;
+  supports_apply: boolean;
+  supports_decide: boolean;
 }

@@ -6,6 +6,6 @@
  */
 
 export type ReadNovelsMineNovelsMineGetParams = {
-	editable?: boolean;
-	titleContains?: string | null;
+editable?: boolean;
+titleContains?: string | null;
 };

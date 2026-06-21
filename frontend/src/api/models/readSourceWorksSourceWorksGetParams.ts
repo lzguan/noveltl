@@ -6,6 +6,6 @@
  */
 
 export type ReadSourceWorksSourceWorksGetParams = {
-	titleContains?: string | null;
-	retNovels?: boolean;
+titleContains?: string | null;
+retNovels?: boolean;
 };

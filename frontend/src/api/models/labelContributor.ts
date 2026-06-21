@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { LabelRole } from "./labelRole";
+import type { LabelRole } from './labelRole';
 
 /**
  * Pydantic schema for a label contributor, which can be either a user or an autolabel model.
@@ -15,7 +15,7 @@ import type { LabelRole } from "./labelRole";
  *     user_id: UUID of user
  */
 export interface LabelContributor {
-	labelContributorRole: LabelRole;
-	labelGroupId: string;
-	userId: string;
+  labelContributorRole: LabelRole;
+  labelGroupId: string;
+  userId: string;
 }

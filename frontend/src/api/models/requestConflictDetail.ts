@@ -13,6 +13,6 @@
  *     cache_conflict: Whether the failure was caused by a request-key cache conflict.
  */
 export interface RequestConflictDetail {
-	cacheConflict: boolean;
-	detail: string;
+  cacheConflict: boolean;
+  detail: string;
 }

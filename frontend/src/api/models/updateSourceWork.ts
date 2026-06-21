@@ -13,6 +13,6 @@
  *     source_work_description: Updated description. If None, do not update.
  */
 export interface UpdateSourceWork {
-	sourceWorkDescription?: string | null;
-	sourceWorkTitle?: string | null;
+  sourceWorkDescription?: string | null;
+  sourceWorkTitle?: string | null;
 }

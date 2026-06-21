@@ -5,10 +5,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type NovelType = (typeof NovelType)[keyof typeof NovelType];
+export type NovelType = typeof NovelType[keyof typeof NovelType];
+
 
 export const NovelType = {
-	original: "original",
-	translation: "translation",
-	other: "other",
+  original: 'original',
+  translation: 'translation',
+  other: 'other',
 } as const;

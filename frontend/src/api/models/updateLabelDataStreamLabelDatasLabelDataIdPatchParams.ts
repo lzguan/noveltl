@@ -6,5 +6,5 @@
  */
 
 export type UpdateLabelDataStreamLabelDatasLabelDataIdPatchParams = {
-	requestKey?: string | null;
+requestKey?: string | null;
 };

@@ -6,5 +6,5 @@
  */
 
 export type UpdateChapterContentChaptersChapterIdContentPatchParams = {
-	requestKey?: string | null;
+requestKey?: string | null;
 };

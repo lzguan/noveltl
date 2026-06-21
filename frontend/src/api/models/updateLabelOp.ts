@@ -18,17 +18,17 @@
  *     score: Optional parameter. New score for the entity.
  */
 export interface UpdateLabelOp {
-	dirty?: boolean | null;
-	/** @minimum 0 */
-	endPos: number;
-	entityGroup?: string | null;
-	newEndPos?: number | null;
-	newStartPos?: number | null;
-	newWord?: string | null;
-	op: "update";
-	score?: number | null;
-	/** @minimum 0 */
-	startPos: number;
-	/** @maxLength 128 */
-	word: string;
+  dirty?: boolean | null;
+  /** @minimum 0 */
+  endPos: number;
+  entityGroup?: string | null;
+  newEndPos?: number | null;
+  newStartPos?: number | null;
+  newWord?: string | null;
+  op: 'update';
+  score?: number | null;
+  /** @minimum 0 */
+  startPos: number;
+  /** @maxLength 128 */
+  word: string;
 }

@@ -4,13 +4,13 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { CacheEntryResponse } from "./cacheEntryResponse";
-import type { CacheEntryStatus } from "./cacheEntryStatus";
-import type { CacheError } from "./cacheError";
+import type { CacheEntryResponse } from './cacheEntryResponse';
+import type { CacheEntryStatus } from './cacheEntryStatus';
+import type { CacheError } from './cacheError';
 
 export interface CacheEntry {
-	error: CacheError | null;
-	response: CacheEntryResponse;
-	status: CacheEntryStatus;
-	status_code: number | null;
+  error: CacheError | null;
+  response: CacheEntryResponse;
+  status: CacheEntryStatus;
+  status_code: number | null;
 }

@@ -14,9 +14,9 @@
  *     novel_id: UUID foreign key to the novel this chapter belongs to.
  */
 export interface Chapter {
-	chapterId: string;
-	chapterIsPublic: boolean;
-	chapterNum: number;
-	chapterTitle: string;
-	novelId: string;
+  chapterId: string;
+  chapterIsPublic: boolean;
+  chapterNum: number;
+  chapterTitle: string;
+  novelId: string;
 }

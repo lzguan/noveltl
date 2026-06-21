@@ -404,9 +404,11 @@ export const buildNovelDataManager = (
 									const inResp =
 										await readEditChapterDataEditChapterDataChapterIdGet(
 											chapterServId,
-											{
-												eager: eagerServIds,
-											},
+											eager.length > 0
+												? {
+														eager: eagerServIds,
+													}
+												: undefined,
 										);
 									return inResp;
 								}).pipe(

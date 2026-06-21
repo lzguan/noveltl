@@ -4,8 +4,8 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { Chapter } from "./chapter";
-import type { ChapterContent } from "./chapterContent";
+import type { Chapter } from './chapter';
+import type { ChapterContent } from './chapterContent';
 
 /**
  * Pydantic schema for aggregating a ChapterContent and a Chapter together.
@@ -15,6 +15,6 @@ import type { ChapterContent } from "./chapterContent";
  *     content: The text content of the chapter.
  */
 export interface ChapterData {
-	content: ChapterContent;
-	metadata: Chapter;
+  content: ChapterContent;
+  metadata: Chapter;
 }

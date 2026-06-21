@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { CreateAutoLabelsAutoLabelModelParams } from "./createAutoLabelsAutoLabelModelParams";
+import type { CreateAutoLabelsAutoLabelModelParams } from './createAutoLabelsAutoLabelModelParams';
 
 /**
  * Pydantic schema for creating an auto-labeled data entry.
@@ -19,11 +19,11 @@ import type { CreateAutoLabelsAutoLabelModelParams } from "./createAutoLabelsAut
  *     is_public: Optional parameter. Restrict to revisions with this specific public flag.
  */
 export interface CreateAutoLabels {
-	autoLabelModelName: "cluener";
-	autoLabelModelParams: CreateAutoLabelsAutoLabelModelParams;
-	chapterIds?: string[] | null;
-	end?: number | null;
-	isPublic?: boolean | null;
-	novelId: string;
-	start?: number | null;
+  autoLabelModelName: 'cluener';
+  autoLabelModelParams: CreateAutoLabelsAutoLabelModelParams;
+  chapterIds?: string[] | null;
+  end?: number | null;
+  isPublic?: boolean | null;
+  novelId: string;
+  start?: number | null;
 }

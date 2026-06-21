@@ -13,6 +13,6 @@
  *     source_work_description: Optional description.
  */
 export interface CreateSourceWork {
-	sourceWorkDescription?: string | null;
-	sourceWorkTitle: string;
+  sourceWorkDescription?: string | null;
+  sourceWorkTitle: string;
 }

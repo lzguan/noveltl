@@ -14,7 +14,7 @@
  *     chapter_is_public: Whether the chapter is publicly visible. Defaults to False.
  */
 export interface CreateChapter {
-	chapterIsPublic?: boolean;
-	chapterNum: number;
-	chapterTitle?: string;
+  chapterIsPublic?: boolean;
+  chapterNum: number;
+  chapterTitle?: string;
 }

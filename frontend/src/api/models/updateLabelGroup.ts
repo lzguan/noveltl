@@ -12,6 +12,6 @@
  *     label_group_name: New name of label group.
  */
 export interface UpdateLabelGroup {
-	/** @maxLength 31 */
-	labelGroupName: string;
+  /** @maxLength 31 */
+  labelGroupName: string;
 }

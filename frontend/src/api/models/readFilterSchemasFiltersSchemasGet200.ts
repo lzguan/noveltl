@@ -4,6 +4,6 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { SchemaInfo } from "./schemaInfo";
+import type { SchemaInfo } from './schemaInfo';
 
-export type ReadFilterSchemasFiltersSchemasGet200 = { [key: string]: SchemaInfo };
+export type ReadFilterSchemasFiltersSchemasGet200 = {[key: string]: SchemaInfo};

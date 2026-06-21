@@ -5,11 +5,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type Visibility = (typeof Visibility)[keyof typeof Visibility];
+export type Visibility = typeof Visibility[keyof typeof Visibility];
+
 
 export const Visibility = {
-	NUMBER_0: 0,
-	NUMBER_1: 1,
-	NUMBER_2: 2,
-	NUMBER_3: 3,
+  NUMBER_0: 0,
+  NUMBER_1: 1,
+  NUMBER_2: 2,
+  NUMBER_3: 3,
 } as const;

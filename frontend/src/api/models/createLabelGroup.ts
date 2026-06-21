@@ -13,7 +13,7 @@
  *     novel_id: UUID of novel this label group belongs to.
  */
 export interface CreateLabelGroup {
-	/** @maxLength 31 */
-	labelGroupName: string;
-	novelId: string;
+  /** @maxLength 31 */
+  labelGroupName: string;
+  novelId: string;
 }

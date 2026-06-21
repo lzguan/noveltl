@@ -12,5 +12,5 @@
  *     detail: Human-readable description of the error.
  */
 export interface DetailHTTPErrorResponse {
-	detail: string;
+  detail: string;
 }

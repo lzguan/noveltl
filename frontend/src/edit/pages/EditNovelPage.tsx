@@ -1,127 +1,146 @@
-import { extractParams } from "@/routes";
-import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
-import { buildController } from "../controller/controller";
-import { buildRuntime } from "../controller/utils";
-import {
-	readChapterByIdChaptersChapterIdGet,
-	readEditChapterDataEditChapterDataChapterIdGet,
-	readNovelNovelsNovelIdGet,
-} from "@/api/endpoints/default/default";
-import type { Chapter, EditChapterData, Novel } from "@/api/models";
-import type { Controller, LabelGroupView, EditorMode, Runtime } from "../controller/types";
+import { Profiler, useEffect, useRef, useState } from "react";
+import { Effect } from "effect";
+import { readChaptersByNovelChaptersGet, readLabelGroupsWithRoleLabelGroupsWithRoleGet, readNovelNovelsNovelIdGet } from "@/api/endpoints/default/default";
+import type { Chapter, LabelGroupWithRole, Novel } from "@/api/models";
+import { buildNovelController } from "../controller/controller";
+import type { NovelData } from "../controller/dataManager";
+import { buildEditorManager, type EditorManager, type EditorSMC } from "../managers/editorManager";
+import { ChapterPanel } from "../panels/ChapterPanel";
+import { EditorPanel } from "../panels/EditorPanel";
+import { LabelGroupPanel } from "../panels/LabelGroupPanel";
+import { ToolbarPanel } from "../panels/ToolbarPanel";
 
-function EditNovelPage({ userId }: { userId: string }) {
-	const { novelId } = useParams();
-	const [novel, setNovel] = useState<Novel | null>(null);
-	const [searchParams, setSearchParams] = useSearchParams();
-	const [chapterId, setChapterId] = useState<string | undefined>(
-		extractParams.edit.novel(searchParams).chapterId,
-	);
-	const [chapter, setChapter] = useState<null | Chapter>(null);
-	const [editChapterData, setEditChapterData] = useState<EditChapterData | null>(null);
-	const [error, setError] = useState<unknown>(null);
-
-	const [controller, setController] = useState<null | Controller>(null);
-
-	const [labelGroupViews, setLabelGroupViews] = useState<LabelGroupView[]>([]);
-	const [activeLabelGroupId, setActiveLabelGroupId] = useState<string | null>(null);
-	const [mode, setMode] = useState<EditorMode>("view");
-
-	useEffect(() => {
-		async function navigateToChapter(cid: string | undefined) {
-			setChapterId(cid);
-		}
-		const newChapterId = extractParams.edit.novel(searchParams).chapterId;
-		if (newChapterId !== chapterId) {
-			void navigateToChapter(newChapterId);
-		}
-		// oxlint-disable-next-line react-hooks/exhaustive-deps
-	}, [searchParams]);
-
-	useEffect(() => {
-		if (!novelId) {
-			setNovel(null);
-			setError(new Error("Novel ID is required"));
-			return;
-		}
-		if (chapterId) {
-			readNovelNovelsNovelIdGet(novelId)
-				.then((data) => {
-					if (data.status !== 200) {
-						throw data.data;
-					} else {
-						setNovel(data.data);
-						setError(null);
-					}
-				})
-				.catch((err) => {
-					setError(err);
-					setNovel(null);
-				})
-				.then(() => {
-					return readChapterByIdChaptersChapterIdGet(chapterId);
-				})
-				.catch((err) => {
-					setError(err);
-					setChapter(null);
-				})
-				.then((data) => {
-					if (!data) {
-						throw new Error("Unknown error");
-					} else if (data.status !== 200) {
-						throw data.data;
-					} else {
-						setError(null);
-						setChapter(data.data);
-					}
-				})
-				.catch((err) => {
-					setError(err);
-					setChapter(null);
-				})
-				.then(() => {
-					return readEditChapterDataEditChapterDataChapterIdGet(chapterId, {
-						novelId: novelId!,
-						labelGroupsNum: 3,
-					}).then((data) => {
-						if (data.status !== 200) {
-							throw data.data;
-						}
-						return data.data;
-					});
-				})
-				.catch((err) => {
-					setError(err);
-					setEditChapterData(null);
-				})
-				.then((data) => {
-					if (!data) {
-						throw new Error("Unknown error");
-					}
-					setEditChapterData(data);
-					setError(null);
-				})
-				.then(() => {
-					const rt = buildRuntime(setError, novel!, chapter!, editChapterData!, userId);
-					const ctrl = buildController(
-						editChapterData!,
-						() => mode,
-						setMode,
-						rt,
-						setError,
-						setLabelGroupViews,
-						setActiveLabelGroupId,
-					);
-					setController(ctrl);
-				});
-		} else {
-			setChapter(null);
-		}
-		// oxlint-disable-next-line react-hooks/exhaustive-deps
-	}, [chapterId, novelId]);
-
-	return <div>EditNovelPage</div>; // temp
+function makeNovelData(novel: Novel, chapters: Chapter[], labelGroups: LabelGroupWithRole[]): NovelData {
+	return {
+		novel,
+		chapters,
+		labelGroups,
+		novelRole: "owner",
+	};
 }
 
-export { EditNovelPage };
+export function EditNovelPage() {
+	const [novel, setNovel] = useState<Novel | null>(null);
+	const [novelId, setNovelId] = useState<string | null>(null);
+	const [chapters, setChapters] = useState<Chapter[]>([]);
+	const [labelGroups, setLabelGroups] = useState<LabelGroupWithRole[] | null>(null);
+	const [editorManager, setEditorManager] = useState<EditorManager | null>(null);
+	const [smc, setSmc] = useState<EditorSMC>({ segmentManager: null, chapterId: null });
+	const smcRef = useRef(smc);
+	smcRef.current = smc;
+	const [error, setError] = useState<unknown>(null);
+
+	// Fetch novel + chapters
+	useEffect(() => {
+		if (!novelId) return;
+		readNovelNovelsNovelIdGet(novelId).then((resp) => {
+			if (resp.status !== 200) {
+				setError(new Error(`Failed to load novel: ${resp.status}`));
+				return;
+			}
+			setNovel(resp.data);
+			setError(null);
+		}).then(() => {
+			return readChaptersByNovelChaptersGet({ novelId });
+		}).then((resp) => {
+			if (resp.status !== 200) {
+				setError(new Error(`Failed to load chapters: ${resp.status}`));
+				return;
+			}
+			setChapters(resp.data);
+		}).then(() => {
+			return readLabelGroupsWithRoleLabelGroupsWithRoleGet({ novelId });
+		}).then((resp) => {
+			if (resp.status !== 200) {
+				setError(new Error(`Failed to load label groups: ${resp.status}`));
+				return;
+			}
+			setLabelGroups(resp.data);
+		}).catch(setError);
+	}, [novelId]);
+
+	// Build controller + editor manager once novel + chapters + label groups are loaded
+	useEffect(() => {
+		if (!novel || chapters.length === 0 || !labelGroups) return;
+
+		const novelData = makeNovelData(novel, chapters, labelGroups);
+		const ctrl = Effect.runSync(buildNovelController(novelData));
+
+		// editorManager writes user events back to the controller
+		const controllerUserEvent = (event: Parameters<typeof ctrl.handleUserEvent>[0]) => {
+			console.time("ctrl.handleUserEvent");
+			setTimeout(() => {
+				Effect.runPromise(ctrl.handleUserEvent(event)).catch(() => {});
+				console.timeEnd("ctrl.handleUserEvent");
+			}, 0);
+		};
+
+		const em = buildEditorManager(
+			smcRef,
+			(newSmc) => {
+				smcRef.current = newSmc;
+				setSmc(newSmc);
+			},
+			controllerUserEvent,
+			ctrl.getters,
+		);
+
+		// Subscribe controller triggers → editor manager
+		ctrl.subscribe(em.handleTriggerEvent);
+
+		// Start the controller's request-processing loop
+		Effect.runFork(ctrl.start());
+
+		setEditorManager(em);
+	}, [novel, chapters, labelGroups]);
+
+	// Extract novelId from URL on mount
+	useEffect(() => {
+		const params = new URLSearchParams(window.location.search);
+		const cid = params.get("chapterId");
+		if (cid) {
+			// Load novel by chapter lookup... for POC just use a hardcoded novel ID
+		}
+		// POC: just load whatever novel ID is in the URL path
+		const pathParts = window.location.pathname.split("/");
+		const nidIdx = pathParts.indexOf("novels");
+		if (nidIdx >= 0 && pathParts[nidIdx + 1]) {
+			setNovelId(pathParts[nidIdx + 1]);
+		}
+	}, []);
+
+	if (error) {
+		return (
+			<div className="flex items-center justify-center h-full text-sm text-destructive">
+				{String(error)}
+			</div>
+		);
+	}
+
+	if (!editorManager) {
+		return (
+			<div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+				Loading...
+			</div>
+		);
+	}
+
+	return (
+		<Profiler id="EditNovelPage" onRender={(_id, phase, duration) => console.log(`${phase}: ${duration}ms`)}>
+		<div className="flex flex-col h-full">
+			<ToolbarPanel editorManager={editorManager} />
+			<div className="flex flex-1 overflow-hidden">
+				<div className="w-56 border-r overflow-y-auto shrink-0 flex flex-col">
+					<div className="border-b">
+						<ChapterPanel editorManager={editorManager} />
+					</div>
+					<div className="flex-1 overflow-y-auto">
+						<LabelGroupPanel editorManager={editorManager} />
+					</div>
+				</div>
+				<EditorPanel editorManager={editorManager} />
+			</div>
+		</div>
+		</Profiler>
+	);
+}

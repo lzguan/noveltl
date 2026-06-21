@@ -6,5 +6,5 @@
  */
 
 export type ReadNovelsNovelsGetParams = {
-	titleContains?: string | null;
+titleContains?: string | null;
 };

@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { TextOp } from "./textOp";
+import type { TextOp } from './textOp';
 
 /**
  * Pydantic schema to validate data for updating the text content of a chapter. The chapter_id is expected to be passed via the URL path.
@@ -14,6 +14,6 @@ import type { TextOp } from "./textOp";
  *     chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.
  */
 export interface UpdateChapterContent {
-	chapterContentId: string;
-	textOps: TextOp[];
+  chapterContentId: string;
+  textOps: TextOp[];
 }

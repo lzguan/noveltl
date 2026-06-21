@@ -5,194 +5,187 @@
  * OpenAPI spec version: 0.1.0
  */
 import type {
-	AutoLabel,
-	AutoLabelMeta,
-	BodyLoginForAccessTokenTokenPost,
-	CacheEntry,
-	Chapter,
-	ChapterContent,
-	ChapterContentMeta,
-	ChapterData,
-	CreateAutoLabels,
-	CreateChapter,
-	CreateLabelData,
-	CreateLabelDataByAutoLabel,
-	CreateLabelDataByAutoLabelStatus,
-	CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostParams,
-	CreateLabelGroup,
-	CreateLabelGroupLabelGroupsPostParams,
-	CreateNovel,
-	CreateSourceWork,
-	CreateUser,
-	DeleteUserStatus,
-	DetailHTTPErrorResponse,
-	EagerEntry,
-	EditChapterData,
-	HTTPValidationError,
-	InstanceContextOptions,
-	InstanceOptions,
-	Label,
-	LabelContributor,
-	LabelData,
-	LabelGroup,
-	LabelGroupWithRole,
-	Language,
-	ModifyChapterContentResponse,
-	Novel,
-	OperationStatus,
-	ReadAutolabelsAutoLabelsGetParams,
-	ReadChaptersByNovelChaptersGetParams,
-	ReadEditChapterDataEditChapterDataChapterIdGetParams,
-	ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams,
-	ReadFilterSchemasFiltersSchemasGet200,
-	ReadFlaggedInstancesFiltersFilterNameFlagInstancesPostBody,
-	ReadLabelDatasByGroupChaptersLabelDatasGetParams,
-	ReadLabelGroupsLabelGroupsGetParams,
-	ReadLabelGroupsWithRoleLabelGroupsWithRoleGetParams,
-	ReadNovelsMineNovelsMineGetParams,
-	ReadNovelsNovelsGetParams,
-	ReadSourceWorksSourceWorksGetParams,
-	RequestConflictErrorResponse,
-	SourceWork,
-	SourceWorkDataOutput,
-	Token,
-	UpdateChapter,
-	UpdateChapterContent,
-	UpdateChapterContentChaptersChapterIdContentPatchParams,
-	UpdateLabelDataStream,
-	UpdateLabelDataStreamLabelDatasLabelDataIdPatchParams,
-	UpdateLabelGroup,
-	UpdateNovel,
-	UpdateSourceWork,
-	User,
-} from "../../models";
+  AutoLabel,
+  AutoLabelMeta,
+  BodyLoginForAccessTokenTokenPost,
+  CacheEntry,
+  Chapter,
+  ChapterContent,
+  ChapterContentMeta,
+  ChapterData,
+  CreateAutoLabels,
+  CreateChapter,
+  CreateLabelData,
+  CreateLabelDataByAutoLabel,
+  CreateLabelDataByAutoLabelStatus,
+  CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostParams,
+  CreateLabelGroup,
+  CreateLabelGroupLabelGroupsPostParams,
+  CreateNovel,
+  CreateSourceWork,
+  CreateUser,
+  DeleteUserStatus,
+  DetailHTTPErrorResponse,
+  EagerEntry,
+  EditChapterData,
+  HTTPValidationError,
+  InstanceContextOptions,
+  InstanceOptions,
+  Label,
+  LabelContributor,
+  LabelData,
+  LabelGroup,
+  LabelGroupWithRole,
+  Language,
+  ModifyChapterContentResponse,
+  Novel,
+  OperationStatus,
+  ReadAutolabelsAutoLabelsGetParams,
+  ReadChaptersByNovelChaptersGetParams,
+  ReadEditChapterDataEditChapterDataChapterIdGetParams,
+  ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams,
+  ReadFilterSchemasFiltersSchemasGet200,
+  ReadFlaggedInstancesFiltersFilterNameFlagInstancesPostBody,
+  ReadLabelDatasByGroupChaptersLabelDatasGetParams,
+  ReadLabelGroupsLabelGroupsGetParams,
+  ReadLabelGroupsWithRoleLabelGroupsWithRoleGetParams,
+  ReadNovelsMineNovelsMineGetParams,
+  ReadNovelsNovelsGetParams,
+  ReadSourceWorksSourceWorksGetParams,
+  RequestConflictErrorResponse,
+  SourceWork,
+  SourceWorkDataOutput,
+  Token,
+  UpdateChapter,
+  UpdateChapterContent,
+  UpdateChapterContentChaptersChapterIdContentPatchParams,
+  UpdateLabelDataStream,
+  UpdateLabelDataStreamLabelDatasLabelDataIdPatchParams,
+  UpdateLabelGroup,
+  UpdateNovel,
+  UpdateSourceWork,
+  User
+} from '../../models';
 
-import { customFetch } from "../../custom-fetch";
+import { customFetch } from '../../custom-fetch';
 
 export type readAutolabelsAutoLabelsGetResponse200 = {
-	data: AutoLabelMeta[];
-	status: 200;
-};
+  data: AutoLabelMeta[]
+  status: 200
+}
 
 export type readAutolabelsAutoLabelsGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readAutolabelsAutoLabelsGetResponseSuccess = (readAutolabelsAutoLabelsGetResponse200) & {
+  headers: Headers;
+};
+export type readAutolabelsAutoLabelsGetResponseError = (readAutolabelsAutoLabelsGetResponse422) & {
+  headers: Headers;
 };
 
-export type readAutolabelsAutoLabelsGetResponseSuccess = readAutolabelsAutoLabelsGetResponse200 & {
-	headers: Headers;
-};
-export type readAutolabelsAutoLabelsGetResponseError = readAutolabelsAutoLabelsGetResponse422 & {
-	headers: Headers;
-};
+export type readAutolabelsAutoLabelsGetResponse = (readAutolabelsAutoLabelsGetResponseSuccess | readAutolabelsAutoLabelsGetResponseError)
 
-export type readAutolabelsAutoLabelsGetResponse =
-	| readAutolabelsAutoLabelsGetResponseSuccess
-	| readAutolabelsAutoLabelsGetResponseError;
+export const getReadAutolabelsAutoLabelsGetUrl = (params: ReadAutolabelsAutoLabelsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-export const getReadAutolabelsAutoLabelsGetUrl = (params: ReadAutolabelsAutoLabelsGetParams) => {
-	const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : String(value));
-		}
-	});
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
-	const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0
-		? `/api/auto-labels?${stringifiedParams}`
-		: `/api/auto-labels`;
-};
+  return stringifiedParams.length > 0 ? `/api/auto-labels?${stringifiedParams}` : `/api/auto-labels`
+}
 
 /**
  * @summary Read Autolabels
  */
-export const readAutolabelsAutoLabelsGet = async (
-	params: ReadAutolabelsAutoLabelsGetParams,
-	options?: RequestInit,
-): Promise<readAutolabelsAutoLabelsGetResponse> => {
-	return customFetch<readAutolabelsAutoLabelsGetResponse>(
-		getReadAutolabelsAutoLabelsGetUrl(params),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readAutolabelsAutoLabelsGet = async (params: ReadAutolabelsAutoLabelsGetParams, options?: RequestInit): Promise<readAutolabelsAutoLabelsGetResponse> => {
+
+  return customFetch<readAutolabelsAutoLabelsGetResponse>(getReadAutolabelsAutoLabelsGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type createAutolabelsAutoLabelsPostResponse200 = {
-	data: AutoLabelMeta[];
-	status: 200;
-};
+  data: AutoLabelMeta[]
+  status: 200
+}
 
 export type createAutolabelsAutoLabelsPostResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createAutolabelsAutoLabelsPostResponseSuccess = (createAutolabelsAutoLabelsPostResponse200) & {
+  headers: Headers;
+};
+export type createAutolabelsAutoLabelsPostResponseError = (createAutolabelsAutoLabelsPostResponse422) & {
+  headers: Headers;
 };
 
-export type createAutolabelsAutoLabelsPostResponseSuccess =
-	createAutolabelsAutoLabelsPostResponse200 & {
-		headers: Headers;
-	};
-export type createAutolabelsAutoLabelsPostResponseError =
-	createAutolabelsAutoLabelsPostResponse422 & {
-		headers: Headers;
-	};
-
-export type createAutolabelsAutoLabelsPostResponse =
-	| createAutolabelsAutoLabelsPostResponseSuccess
-	| createAutolabelsAutoLabelsPostResponseError;
+export type createAutolabelsAutoLabelsPostResponse = (createAutolabelsAutoLabelsPostResponseSuccess | createAutolabelsAutoLabelsPostResponseError)
 
 export const getCreateAutolabelsAutoLabelsPostUrl = () => {
-	return `/api/auto-labels`;
-};
+
+
+
+
+  return `/api/auto-labels`
+}
 
 /**
  * @summary Create Autolabels
  */
-export const createAutolabelsAutoLabelsPost = async (
-	createAutoLabels: CreateAutoLabels,
-	options?: RequestInit,
-): Promise<createAutolabelsAutoLabelsPostResponse> => {
-	return customFetch<createAutolabelsAutoLabelsPostResponse>(
-		getCreateAutolabelsAutoLabelsPostUrl(),
-		{
-			...options,
-			method: "POST",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(createAutoLabels),
-		},
-	);
-};
+export const createAutolabelsAutoLabelsPost = async (createAutoLabels: CreateAutoLabels, options?: RequestInit): Promise<createAutolabelsAutoLabelsPostResponse> => {
+
+  return customFetch<createAutolabelsAutoLabelsPostResponse>(getCreateAutolabelsAutoLabelsPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createAutoLabels)
+  }
+);}
+
 
 export type readAutolabelByIdAutoLabelsAutoLabelIdGetResponse200 = {
-	data: AutoLabel;
-	status: 200;
-};
+  data: AutoLabel
+  status: 200
+}
 
 export type readAutolabelByIdAutoLabelsAutoLabelIdGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readAutolabelByIdAutoLabelsAutoLabelIdGetResponseSuccess = (readAutolabelByIdAutoLabelsAutoLabelIdGetResponse200) & {
+  headers: Headers;
+};
+export type readAutolabelByIdAutoLabelsAutoLabelIdGetResponseError = (readAutolabelByIdAutoLabelsAutoLabelIdGetResponse422) & {
+  headers: Headers;
 };
 
-export type readAutolabelByIdAutoLabelsAutoLabelIdGetResponseSuccess =
-	readAutolabelByIdAutoLabelsAutoLabelIdGetResponse200 & {
-		headers: Headers;
-	};
-export type readAutolabelByIdAutoLabelsAutoLabelIdGetResponseError =
-	readAutolabelByIdAutoLabelsAutoLabelIdGetResponse422 & {
-		headers: Headers;
-	};
+export type readAutolabelByIdAutoLabelsAutoLabelIdGetResponse = (readAutolabelByIdAutoLabelsAutoLabelIdGetResponseSuccess | readAutolabelByIdAutoLabelsAutoLabelIdGetResponseError)
 
-export type readAutolabelByIdAutoLabelsAutoLabelIdGetResponse =
-	| readAutolabelByIdAutoLabelsAutoLabelIdGetResponseSuccess
-	| readAutolabelByIdAutoLabelsAutoLabelIdGetResponseError;
+export const getReadAutolabelByIdAutoLabelsAutoLabelIdGetUrl = (autoLabelId: string,) => {
 
-export const getReadAutolabelByIdAutoLabelsAutoLabelIdGetUrl = (autoLabelId: string) => {
-	return `/api/auto-labels/${autoLabelId}`;
-};
+
+
+
+  return `/api/auto-labels/${autoLabelId}`
+}
 
 /**
  * Endpoint for retrieving autolabel from database.
@@ -203,97 +196,91 @@ export const getReadAutolabelByIdAutoLabelsAutoLabelIdGetUrl = (autoLabelId: str
  *     current_user: Current user dependency.
  * @summary Read Autolabel By Id
  */
-export const readAutolabelByIdAutoLabelsAutoLabelIdGet = async (
-	autoLabelId: string,
-	options?: RequestInit,
-): Promise<readAutolabelByIdAutoLabelsAutoLabelIdGetResponse> => {
-	return customFetch<readAutolabelByIdAutoLabelsAutoLabelIdGetResponse>(
-		getReadAutolabelByIdAutoLabelsAutoLabelIdGetUrl(autoLabelId),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readAutolabelByIdAutoLabelsAutoLabelIdGet = async (autoLabelId: string, options?: RequestInit): Promise<readAutolabelByIdAutoLabelsAutoLabelIdGetResponse> => {
+
+  return customFetch<readAutolabelByIdAutoLabelsAutoLabelIdGetResponse>(getReadAutolabelByIdAutoLabelsAutoLabelIdGetUrl(autoLabelId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type getCachedResultCachedCachedIdGetResponse200 = {
-	data: CacheEntry;
-	status: 200;
-};
+  data: CacheEntry
+  status: 200
+}
 
 export type getCachedResultCachedCachedIdGetResponse404 = {
-	data: DetailHTTPErrorResponse;
-	status: 404;
-};
+  data: DetailHTTPErrorResponse
+  status: 404
+}
 
 export type getCachedResultCachedCachedIdGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getCachedResultCachedCachedIdGetResponseSuccess = (getCachedResultCachedCachedIdGetResponse200) & {
+  headers: Headers;
+};
+export type getCachedResultCachedCachedIdGetResponseError = (getCachedResultCachedCachedIdGetResponse404 | getCachedResultCachedCachedIdGetResponse422) & {
+  headers: Headers;
 };
 
-export type getCachedResultCachedCachedIdGetResponseSuccess =
-	getCachedResultCachedCachedIdGetResponse200 & {
-		headers: Headers;
-	};
-export type getCachedResultCachedCachedIdGetResponseError = (
-	| getCachedResultCachedCachedIdGetResponse404
-	| getCachedResultCachedCachedIdGetResponse422
-) & {
-	headers: Headers;
-};
+export type getCachedResultCachedCachedIdGetResponse = (getCachedResultCachedCachedIdGetResponseSuccess | getCachedResultCachedCachedIdGetResponseError)
 
-export type getCachedResultCachedCachedIdGetResponse =
-	| getCachedResultCachedCachedIdGetResponseSuccess
-	| getCachedResultCachedCachedIdGetResponseError;
+export const getGetCachedResultCachedCachedIdGetUrl = (cachedId: string,) => {
 
-export const getGetCachedResultCachedCachedIdGetUrl = (cachedId: string) => {
-	return `/api/cached/${cachedId}`;
-};
+
+
+
+  return `/api/cached/${cachedId}`
+}
 
 /**
  * @summary Get Cached Result
  */
-export const getCachedResultCachedCachedIdGet = async (
-	cachedId: string,
-	options?: RequestInit,
-): Promise<getCachedResultCachedCachedIdGetResponse> => {
-	return customFetch<getCachedResultCachedCachedIdGetResponse>(
-		getGetCachedResultCachedCachedIdGetUrl(cachedId),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const getCachedResultCachedCachedIdGet = async (cachedId: string, options?: RequestInit): Promise<getCachedResultCachedCachedIdGetResponse> => {
+
+  return customFetch<getCachedResultCachedCachedIdGetResponse>(getGetCachedResultCachedCachedIdGetUrl(cachedId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type readChapterContentByIdChapterContentsChapterContentIdGetResponse200 = {
-	data: ChapterContent;
-	status: 200;
-};
+  data: ChapterContent
+  status: 200
+}
 
 export type readChapterContentByIdChapterContentsChapterContentIdGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readChapterContentByIdChapterContentsChapterContentIdGetResponseSuccess = (readChapterContentByIdChapterContentsChapterContentIdGetResponse200) & {
+  headers: Headers;
+};
+export type readChapterContentByIdChapterContentsChapterContentIdGetResponseError = (readChapterContentByIdChapterContentsChapterContentIdGetResponse422) & {
+  headers: Headers;
 };
 
-export type readChapterContentByIdChapterContentsChapterContentIdGetResponseSuccess =
-	readChapterContentByIdChapterContentsChapterContentIdGetResponse200 & {
-		headers: Headers;
-	};
-export type readChapterContentByIdChapterContentsChapterContentIdGetResponseError =
-	readChapterContentByIdChapterContentsChapterContentIdGetResponse422 & {
-		headers: Headers;
-	};
+export type readChapterContentByIdChapterContentsChapterContentIdGetResponse = (readChapterContentByIdChapterContentsChapterContentIdGetResponseSuccess | readChapterContentByIdChapterContentsChapterContentIdGetResponseError)
 
-export type readChapterContentByIdChapterContentsChapterContentIdGetResponse =
-	| readChapterContentByIdChapterContentsChapterContentIdGetResponseSuccess
-	| readChapterContentByIdChapterContentsChapterContentIdGetResponseError;
+export const getReadChapterContentByIdChapterContentsChapterContentIdGetUrl = (chapterContentId: string,) => {
 
-export const getReadChapterContentByIdChapterContentsChapterContentIdGetUrl = (
-	chapterContentId: string,
-) => {
-	return `/api/chapter-contents/${chapterContentId}`;
-};
+
+
+
+  return `/api/chapter-contents/${chapterContentId}`
+}
 
 /**
  * Endpoint for retrieving a specific version of chapter content by its id.
@@ -302,57 +289,51 @@ export const getReadChapterContentByIdChapterContentsChapterContentIdGetUrl = (
  *     404: Chapter content not found (or insufficient permissions).
  * @summary Read Chapter Content By Id
  */
-export const readChapterContentByIdChapterContentsChapterContentIdGet = async (
-	chapterContentId: string,
-	options?: RequestInit,
-): Promise<readChapterContentByIdChapterContentsChapterContentIdGetResponse> => {
-	return customFetch<readChapterContentByIdChapterContentsChapterContentIdGetResponse>(
-		getReadChapterContentByIdChapterContentsChapterContentIdGetUrl(chapterContentId),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readChapterContentByIdChapterContentsChapterContentIdGet = async (chapterContentId: string, options?: RequestInit): Promise<readChapterContentByIdChapterContentsChapterContentIdGetResponse> => {
+
+  return customFetch<readChapterContentByIdChapterContentsChapterContentIdGetResponse>(getReadChapterContentByIdChapterContentsChapterContentIdGetUrl(chapterContentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type readChaptersByNovelChaptersGetResponse200 = {
-	data: Chapter[];
-	status: 200;
-};
+  data: Chapter[]
+  status: 200
+}
 
 export type readChaptersByNovelChaptersGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readChaptersByNovelChaptersGetResponseSuccess = (readChaptersByNovelChaptersGetResponse200) & {
+  headers: Headers;
+};
+export type readChaptersByNovelChaptersGetResponseError = (readChaptersByNovelChaptersGetResponse422) & {
+  headers: Headers;
 };
 
-export type readChaptersByNovelChaptersGetResponseSuccess =
-	readChaptersByNovelChaptersGetResponse200 & {
-		headers: Headers;
-	};
-export type readChaptersByNovelChaptersGetResponseError =
-	readChaptersByNovelChaptersGetResponse422 & {
-		headers: Headers;
-	};
+export type readChaptersByNovelChaptersGetResponse = (readChaptersByNovelChaptersGetResponseSuccess | readChaptersByNovelChaptersGetResponseError)
 
-export type readChaptersByNovelChaptersGetResponse =
-	| readChaptersByNovelChaptersGetResponseSuccess
-	| readChaptersByNovelChaptersGetResponseError;
+export const getReadChaptersByNovelChaptersGetUrl = (params: ReadChaptersByNovelChaptersGetParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-export const getReadChaptersByNovelChaptersGetUrl = (
-	params: ReadChaptersByNovelChaptersGetParams,
-) => {
-	const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : String(value));
-		}
-	});
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
-	const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0 ? `/api/chapters?${stringifiedParams}` : `/api/chapters`;
-};
+  return stringifiedParams.length > 0 ? `/api/chapters?${stringifiedParams}` : `/api/chapters`
+}
 
 /**
  * Endpoint for retrieving chapters by novel_id.
@@ -361,45 +342,44 @@ export const getReadChaptersByNovelChaptersGetUrl = (
  *     404: Novel not found (or insufficient permissions).
  * @summary Read Chapters By Novel
  */
-export const readChaptersByNovelChaptersGet = async (
-	params: ReadChaptersByNovelChaptersGetParams,
-	options?: RequestInit,
-): Promise<readChaptersByNovelChaptersGetResponse> => {
-	return customFetch<readChaptersByNovelChaptersGetResponse>(
-		getReadChaptersByNovelChaptersGetUrl(params),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readChaptersByNovelChaptersGet = async (params: ReadChaptersByNovelChaptersGetParams, options?: RequestInit): Promise<readChaptersByNovelChaptersGetResponse> => {
+
+  return customFetch<readChaptersByNovelChaptersGetResponse>(getReadChaptersByNovelChaptersGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type deleteChapterChaptersChapterIdDeleteResponse200 = {
-	data: OperationStatus;
-	status: 200;
-};
+  data: OperationStatus
+  status: 200
+}
 
 export type deleteChapterChaptersChapterIdDeleteResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type deleteChapterChaptersChapterIdDeleteResponseSuccess = (deleteChapterChaptersChapterIdDeleteResponse200) & {
+  headers: Headers;
+};
+export type deleteChapterChaptersChapterIdDeleteResponseError = (deleteChapterChaptersChapterIdDeleteResponse422) & {
+  headers: Headers;
 };
 
-export type deleteChapterChaptersChapterIdDeleteResponseSuccess =
-	deleteChapterChaptersChapterIdDeleteResponse200 & {
-		headers: Headers;
-	};
-export type deleteChapterChaptersChapterIdDeleteResponseError =
-	deleteChapterChaptersChapterIdDeleteResponse422 & {
-		headers: Headers;
-	};
+export type deleteChapterChaptersChapterIdDeleteResponse = (deleteChapterChaptersChapterIdDeleteResponseSuccess | deleteChapterChaptersChapterIdDeleteResponseError)
 
-export type deleteChapterChaptersChapterIdDeleteResponse =
-	| deleteChapterChaptersChapterIdDeleteResponseSuccess
-	| deleteChapterChaptersChapterIdDeleteResponseError;
+export const getDeleteChapterChaptersChapterIdDeleteUrl = (chapterId: string,) => {
 
-export const getDeleteChapterChaptersChapterIdDeleteUrl = (chapterId: string) => {
-	return `/api/chapters/${chapterId}`;
-};
+
+
+
+  return `/api/chapters/${chapterId}`
+}
 
 /**
  * Delete a chapter from the database.
@@ -410,45 +390,44 @@ export const getDeleteChapterChaptersChapterIdDeleteUrl = (chapterId: string) =>
  *     500: Delete failed for other reasons.
  * @summary Delete Chapter
  */
-export const deleteChapterChaptersChapterIdDelete = async (
-	chapterId: string,
-	options?: RequestInit,
-): Promise<deleteChapterChaptersChapterIdDeleteResponse> => {
-	return customFetch<deleteChapterChaptersChapterIdDeleteResponse>(
-		getDeleteChapterChaptersChapterIdDeleteUrl(chapterId),
-		{
-			...options,
-			method: "DELETE",
-		},
-	);
-};
+export const deleteChapterChaptersChapterIdDelete = async (chapterId: string, options?: RequestInit): Promise<deleteChapterChaptersChapterIdDeleteResponse> => {
+
+  return customFetch<deleteChapterChaptersChapterIdDeleteResponse>(getDeleteChapterChaptersChapterIdDeleteUrl(chapterId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
 
 export type readChapterByIdChaptersChapterIdGetResponse200 = {
-	data: Chapter;
-	status: 200;
-};
+  data: Chapter
+  status: 200
+}
 
 export type readChapterByIdChaptersChapterIdGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readChapterByIdChaptersChapterIdGetResponseSuccess = (readChapterByIdChaptersChapterIdGetResponse200) & {
+  headers: Headers;
+};
+export type readChapterByIdChaptersChapterIdGetResponseError = (readChapterByIdChaptersChapterIdGetResponse422) & {
+  headers: Headers;
 };
 
-export type readChapterByIdChaptersChapterIdGetResponseSuccess =
-	readChapterByIdChaptersChapterIdGetResponse200 & {
-		headers: Headers;
-	};
-export type readChapterByIdChaptersChapterIdGetResponseError =
-	readChapterByIdChaptersChapterIdGetResponse422 & {
-		headers: Headers;
-	};
+export type readChapterByIdChaptersChapterIdGetResponse = (readChapterByIdChaptersChapterIdGetResponseSuccess | readChapterByIdChaptersChapterIdGetResponseError)
 
-export type readChapterByIdChaptersChapterIdGetResponse =
-	| readChapterByIdChaptersChapterIdGetResponseSuccess
-	| readChapterByIdChaptersChapterIdGetResponseError;
+export const getReadChapterByIdChaptersChapterIdGetUrl = (chapterId: string,) => {
 
-export const getReadChapterByIdChaptersChapterIdGetUrl = (chapterId: string) => {
-	return `/api/chapters/${chapterId}`;
-};
+
+
+
+  return `/api/chapters/${chapterId}`
+}
 
 /**
  * Endpoint for retrieving chapter by id.
@@ -457,45 +436,44 @@ export const getReadChapterByIdChaptersChapterIdGetUrl = (chapterId: string) => 
  *     404: Chapter not found (or insufficient permissions).
  * @summary Read Chapter By Id
  */
-export const readChapterByIdChaptersChapterIdGet = async (
-	chapterId: string,
-	options?: RequestInit,
-): Promise<readChapterByIdChaptersChapterIdGetResponse> => {
-	return customFetch<readChapterByIdChaptersChapterIdGetResponse>(
-		getReadChapterByIdChaptersChapterIdGetUrl(chapterId),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readChapterByIdChaptersChapterIdGet = async (chapterId: string, options?: RequestInit): Promise<readChapterByIdChaptersChapterIdGetResponse> => {
+
+  return customFetch<readChapterByIdChaptersChapterIdGetResponse>(getReadChapterByIdChaptersChapterIdGetUrl(chapterId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type updateChapterChaptersChapterIdPatchResponse200 = {
-	data: Chapter;
-	status: 200;
-};
+  data: Chapter
+  status: 200
+}
 
 export type updateChapterChaptersChapterIdPatchResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateChapterChaptersChapterIdPatchResponseSuccess = (updateChapterChaptersChapterIdPatchResponse200) & {
+  headers: Headers;
+};
+export type updateChapterChaptersChapterIdPatchResponseError = (updateChapterChaptersChapterIdPatchResponse422) & {
+  headers: Headers;
 };
 
-export type updateChapterChaptersChapterIdPatchResponseSuccess =
-	updateChapterChaptersChapterIdPatchResponse200 & {
-		headers: Headers;
-	};
-export type updateChapterChaptersChapterIdPatchResponseError =
-	updateChapterChaptersChapterIdPatchResponse422 & {
-		headers: Headers;
-	};
+export type updateChapterChaptersChapterIdPatchResponse = (updateChapterChaptersChapterIdPatchResponseSuccess | updateChapterChaptersChapterIdPatchResponseError)
 
-export type updateChapterChaptersChapterIdPatchResponse =
-	| updateChapterChaptersChapterIdPatchResponseSuccess
-	| updateChapterChaptersChapterIdPatchResponseError;
+export const getUpdateChapterChaptersChapterIdPatchUrl = (chapterId: string,) => {
 
-export const getUpdateChapterChaptersChapterIdPatchUrl = (chapterId: string) => {
-	return `/api/chapters/${chapterId}`;
-};
+
+
+
+  return `/api/chapters/${chapterId}`
+}
 
 /**
  * Update chapter metadata.
@@ -506,48 +484,45 @@ export const getUpdateChapterChaptersChapterIdPatchUrl = (chapterId: string) => 
  *     400: Field in request too long.
  * @summary Update Chapter
  */
-export const updateChapterChaptersChapterIdPatch = async (
-	chapterId: string,
-	updateChapter: UpdateChapter,
-	options?: RequestInit,
-): Promise<updateChapterChaptersChapterIdPatchResponse> => {
-	return customFetch<updateChapterChaptersChapterIdPatchResponse>(
-		getUpdateChapterChaptersChapterIdPatchUrl(chapterId),
-		{
-			...options,
-			method: "PATCH",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(updateChapter),
-		},
-	);
-};
+export const updateChapterChaptersChapterIdPatch = async (chapterId: string,
+    updateChapter: UpdateChapter, options?: RequestInit): Promise<updateChapterChaptersChapterIdPatchResponse> => {
+
+  return customFetch<updateChapterChaptersChapterIdPatchResponse>(getUpdateChapterChaptersChapterIdPatchUrl(chapterId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateChapter)
+  }
+);}
+
 
 export type readChapterContentChaptersChapterIdContentGetResponse200 = {
-	data: ChapterContent;
-	status: 200;
-};
+  data: ChapterContent
+  status: 200
+}
 
 export type readChapterContentChaptersChapterIdContentGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readChapterContentChaptersChapterIdContentGetResponseSuccess = (readChapterContentChaptersChapterIdContentGetResponse200) & {
+  headers: Headers;
+};
+export type readChapterContentChaptersChapterIdContentGetResponseError = (readChapterContentChaptersChapterIdContentGetResponse422) & {
+  headers: Headers;
 };
 
-export type readChapterContentChaptersChapterIdContentGetResponseSuccess =
-	readChapterContentChaptersChapterIdContentGetResponse200 & {
-		headers: Headers;
-	};
-export type readChapterContentChaptersChapterIdContentGetResponseError =
-	readChapterContentChaptersChapterIdContentGetResponse422 & {
-		headers: Headers;
-	};
+export type readChapterContentChaptersChapterIdContentGetResponse = (readChapterContentChaptersChapterIdContentGetResponseSuccess | readChapterContentChaptersChapterIdContentGetResponseError)
 
-export type readChapterContentChaptersChapterIdContentGetResponse =
-	| readChapterContentChaptersChapterIdContentGetResponseSuccess
-	| readChapterContentChaptersChapterIdContentGetResponseError;
+export const getReadChapterContentChaptersChapterIdContentGetUrl = (chapterId: string,) => {
 
-export const getReadChapterContentChaptersChapterIdContentGetUrl = (chapterId: string) => {
-	return `/api/chapters/${chapterId}/content`;
-};
+
+
+
+  return `/api/chapters/${chapterId}/content`
+}
 
 /**
  * Endpoint for retrieving the most recent content of a chapter.
@@ -556,79 +531,67 @@ export const getReadChapterContentChaptersChapterIdContentGetUrl = (chapterId: s
  *     404: Chapter not found, or chapter has no content.
  * @summary Read Chapter Content
  */
-export const readChapterContentChaptersChapterIdContentGet = async (
-	chapterId: string,
-	options?: RequestInit,
-): Promise<readChapterContentChaptersChapterIdContentGetResponse> => {
-	return customFetch<readChapterContentChaptersChapterIdContentGetResponse>(
-		getReadChapterContentChaptersChapterIdContentGetUrl(chapterId),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readChapterContentChaptersChapterIdContentGet = async (chapterId: string, options?: RequestInit): Promise<readChapterContentChaptersChapterIdContentGetResponse> => {
+
+  return customFetch<readChapterContentChaptersChapterIdContentGetResponse>(getReadChapterContentChaptersChapterIdContentGetUrl(chapterId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type updateChapterContentChaptersChapterIdContentPatchResponse200 = {
-	data: ModifyChapterContentResponse;
-	status: 200;
-};
+  data: ModifyChapterContentResponse
+  status: 200
+}
 
 export type updateChapterContentChaptersChapterIdContentPatchResponse401 = {
-	data: DetailHTTPErrorResponse;
-	status: 401;
-};
+  data: DetailHTTPErrorResponse
+  status: 401
+}
 
 export type updateChapterContentChaptersChapterIdContentPatchResponse404 = {
-	data: DetailHTTPErrorResponse;
-	status: 404;
-};
+  data: DetailHTTPErrorResponse
+  status: 404
+}
 
 export type updateChapterContentChaptersChapterIdContentPatchResponse409 = {
-	data: RequestConflictErrorResponse;
-	status: 409;
-};
+  data: RequestConflictErrorResponse
+  status: 409
+}
 
 export type updateChapterContentChaptersChapterIdContentPatchResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateChapterContentChaptersChapterIdContentPatchResponseSuccess = (updateChapterContentChaptersChapterIdContentPatchResponse200) & {
+  headers: Headers;
+};
+export type updateChapterContentChaptersChapterIdContentPatchResponseError = (updateChapterContentChaptersChapterIdContentPatchResponse401 | updateChapterContentChaptersChapterIdContentPatchResponse404 | updateChapterContentChaptersChapterIdContentPatchResponse409 | updateChapterContentChaptersChapterIdContentPatchResponse422) & {
+  headers: Headers;
 };
 
-export type updateChapterContentChaptersChapterIdContentPatchResponseSuccess =
-	updateChapterContentChaptersChapterIdContentPatchResponse200 & {
-		headers: Headers;
-	};
-export type updateChapterContentChaptersChapterIdContentPatchResponseError = (
-	| updateChapterContentChaptersChapterIdContentPatchResponse401
-	| updateChapterContentChaptersChapterIdContentPatchResponse404
-	| updateChapterContentChaptersChapterIdContentPatchResponse409
-	| updateChapterContentChaptersChapterIdContentPatchResponse422
-) & {
-	headers: Headers;
-};
+export type updateChapterContentChaptersChapterIdContentPatchResponse = (updateChapterContentChaptersChapterIdContentPatchResponseSuccess | updateChapterContentChaptersChapterIdContentPatchResponseError)
 
-export type updateChapterContentChaptersChapterIdContentPatchResponse =
-	| updateChapterContentChaptersChapterIdContentPatchResponseSuccess
-	| updateChapterContentChaptersChapterIdContentPatchResponseError;
+export const getUpdateChapterContentChaptersChapterIdContentPatchUrl = (chapterId: string,
+    params?: UpdateChapterContentChaptersChapterIdContentPatchParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-export const getUpdateChapterContentChaptersChapterIdContentPatchUrl = (
-	chapterId: string,
-	params?: UpdateChapterContentChaptersChapterIdContentPatchParams,
-) => {
-	const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : String(value));
-		}
-	});
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
-	const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0
-		? `/api/chapters/${chapterId}/content?${stringifiedParams}`
-		: `/api/chapters/${chapterId}/content`;
-};
+  return stringifiedParams.length > 0 ? `/api/chapters/${chapterId}/content?${stringifiedParams}` : `/api/chapters/${chapterId}/content`
+}
 
 /**
  * Apply text operations to the most recent content of a chapter. Uses optimistic concurrency
@@ -641,52 +604,47 @@ export const getUpdateChapterContentChaptersChapterIdContentPatchUrl = (
  *     401: Insufficient permissions to modify this chapter.
  * @summary Update Chapter Content
  */
-export const updateChapterContentChaptersChapterIdContentPatch = async (
-	chapterId: string,
-	updateChapterContent: UpdateChapterContent,
-	params?: UpdateChapterContentChaptersChapterIdContentPatchParams,
-	options?: RequestInit,
-): Promise<updateChapterContentChaptersChapterIdContentPatchResponse> => {
-	return customFetch<updateChapterContentChaptersChapterIdContentPatchResponse>(
-		getUpdateChapterContentChaptersChapterIdContentPatchUrl(chapterId, params),
-		{
-			...options,
-			method: "PATCH",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(updateChapterContent),
-		},
-	);
-};
+export const updateChapterContentChaptersChapterIdContentPatch = async (chapterId: string,
+    updateChapterContent: UpdateChapterContent,
+    params?: UpdateChapterContentChaptersChapterIdContentPatchParams, options?: RequestInit): Promise<updateChapterContentChaptersChapterIdContentPatchResponse> => {
+
+  return customFetch<updateChapterContentChaptersChapterIdContentPatchResponse>(getUpdateChapterContentChaptersChapterIdContentPatchUrl(chapterId,params),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateChapterContent)
+  }
+);}
+
 
 export type readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponse200 = {
-	data: OperationStatus;
-	status: 200;
-};
+  data: OperationStatus
+  status: 200
+}
 
 export type readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponseSuccess = (readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponse200) & {
+  headers: Headers;
+};
+export type readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponseError = (readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponse422) & {
+  headers: Headers;
 };
 
-export type readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponseSuccess =
-	readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponse200 & {
-		headers: Headers;
-	};
-export type readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponseError =
-	readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponse422 & {
-		headers: Headers;
-	};
+export type readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponse = (readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponseSuccess | readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponseError)
 
-export type readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponse =
-	| readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponseSuccess
-	| readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponseError;
+export const getReadChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetUrl = (chapterId: string,
+    chapterContentId: string,) => {
 
-export const getReadChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetUrl = (
-	chapterId: string,
-	chapterContentId: string,
-) => {
-	return `/api/chapters/${chapterId}/content-status/${chapterContentId}`;
-};
+
+
+
+  return `/api/chapters/${chapterId}/content-status/${chapterContentId}`
+}
 
 /**
  * Check whether a chapter_content_id is the latest version for a chapter.
@@ -696,96 +654,89 @@ export const getReadChapterContentStatusChaptersChapterIdContentStatusChapterCon
  *     409: Chapter content is outdated.
  * @summary Read Chapter Content Status
  */
-export const readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGet = async (
-	chapterId: string,
-	chapterContentId: string,
-	options?: RequestInit,
-): Promise<readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponse> => {
-	return customFetch<readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponse>(
-		getReadChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetUrl(
-			chapterId,
-			chapterContentId,
-		),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGet = async (chapterId: string,
+    chapterContentId: string, options?: RequestInit): Promise<readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponse> => {
+
+  return customFetch<readChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetResponse>(getReadChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetUrl(chapterId,chapterContentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type readChapterContentVersionsChaptersChapterIdContentVersionsGetResponse200 = {
-	data: ChapterContentMeta[];
-	status: 200;
-};
+  data: ChapterContentMeta[]
+  status: 200
+}
 
 export type readChapterContentVersionsChaptersChapterIdContentVersionsGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readChapterContentVersionsChaptersChapterIdContentVersionsGetResponseSuccess = (readChapterContentVersionsChaptersChapterIdContentVersionsGetResponse200) & {
+  headers: Headers;
+};
+export type readChapterContentVersionsChaptersChapterIdContentVersionsGetResponseError = (readChapterContentVersionsChaptersChapterIdContentVersionsGetResponse422) & {
+  headers: Headers;
 };
 
-export type readChapterContentVersionsChaptersChapterIdContentVersionsGetResponseSuccess =
-	readChapterContentVersionsChaptersChapterIdContentVersionsGetResponse200 & {
-		headers: Headers;
-	};
-export type readChapterContentVersionsChaptersChapterIdContentVersionsGetResponseError =
-	readChapterContentVersionsChaptersChapterIdContentVersionsGetResponse422 & {
-		headers: Headers;
-	};
+export type readChapterContentVersionsChaptersChapterIdContentVersionsGetResponse = (readChapterContentVersionsChaptersChapterIdContentVersionsGetResponseSuccess | readChapterContentVersionsChaptersChapterIdContentVersionsGetResponseError)
 
-export type readChapterContentVersionsChaptersChapterIdContentVersionsGetResponse =
-	| readChapterContentVersionsChaptersChapterIdContentVersionsGetResponseSuccess
-	| readChapterContentVersionsChaptersChapterIdContentVersionsGetResponseError;
+export const getReadChapterContentVersionsChaptersChapterIdContentVersionsGetUrl = (chapterId: string,) => {
 
-export const getReadChapterContentVersionsChaptersChapterIdContentVersionsGetUrl = (
-	chapterId: string,
-) => {
-	return `/api/chapters/${chapterId}/content-versions`;
-};
+
+
+
+  return `/api/chapters/${chapterId}/content-versions`
+}
 
 /**
  * Endpoint for retrieving all content version metadata for a chapter.
  * Returns an empty list if the chapter has no content versions or doesn't exist.
  * @summary Read Chapter Content Versions
  */
-export const readChapterContentVersionsChaptersChapterIdContentVersionsGet = async (
-	chapterId: string,
-	options?: RequestInit,
-): Promise<readChapterContentVersionsChaptersChapterIdContentVersionsGetResponse> => {
-	return customFetch<readChapterContentVersionsChaptersChapterIdContentVersionsGetResponse>(
-		getReadChapterContentVersionsChaptersChapterIdContentVersionsGetUrl(chapterId),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readChapterContentVersionsChaptersChapterIdContentVersionsGet = async (chapterId: string, options?: RequestInit): Promise<readChapterContentVersionsChaptersChapterIdContentVersionsGetResponse> => {
+
+  return customFetch<readChapterContentVersionsChaptersChapterIdContentVersionsGetResponse>(getReadChapterContentVersionsChaptersChapterIdContentVersionsGetUrl(chapterId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type actionPublishChapterChaptersChapterIdPublishPostResponse200 = {
-	data: Chapter;
-	status: 200;
-};
+  data: Chapter
+  status: 200
+}
 
 export type actionPublishChapterChaptersChapterIdPublishPostResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type actionPublishChapterChaptersChapterIdPublishPostResponseSuccess = (actionPublishChapterChaptersChapterIdPublishPostResponse200) & {
+  headers: Headers;
+};
+export type actionPublishChapterChaptersChapterIdPublishPostResponseError = (actionPublishChapterChaptersChapterIdPublishPostResponse422) & {
+  headers: Headers;
 };
 
-export type actionPublishChapterChaptersChapterIdPublishPostResponseSuccess =
-	actionPublishChapterChaptersChapterIdPublishPostResponse200 & {
-		headers: Headers;
-	};
-export type actionPublishChapterChaptersChapterIdPublishPostResponseError =
-	actionPublishChapterChaptersChapterIdPublishPostResponse422 & {
-		headers: Headers;
-	};
+export type actionPublishChapterChaptersChapterIdPublishPostResponse = (actionPublishChapterChaptersChapterIdPublishPostResponseSuccess | actionPublishChapterChaptersChapterIdPublishPostResponseError)
 
-export type actionPublishChapterChaptersChapterIdPublishPostResponse =
-	| actionPublishChapterChaptersChapterIdPublishPostResponseSuccess
-	| actionPublishChapterChaptersChapterIdPublishPostResponseError;
+export const getActionPublishChapterChaptersChapterIdPublishPostUrl = (chapterId: string,) => {
 
-export const getActionPublishChapterChaptersChapterIdPublishPostUrl = (chapterId: string) => {
-	return `/api/chapters/${chapterId}/publish`;
-};
+
+
+
+  return `/api/chapters/${chapterId}/publish`
+}
 
 /**
  * Publish a chapter (make it public).
@@ -795,60 +746,52 @@ export const getActionPublishChapterChaptersChapterIdPublishPostUrl = (chapterId
  *     401: Insufficient permissions.
  * @summary Action Publish Chapter
  */
-export const actionPublishChapterChaptersChapterIdPublishPost = async (
-	chapterId: string,
-	options?: RequestInit,
-): Promise<actionPublishChapterChaptersChapterIdPublishPostResponse> => {
-	return customFetch<actionPublishChapterChaptersChapterIdPublishPostResponse>(
-		getActionPublishChapterChaptersChapterIdPublishPostUrl(chapterId),
-		{
-			...options,
-			method: "POST",
-		},
-	);
-};
+export const actionPublishChapterChaptersChapterIdPublishPost = async (chapterId: string, options?: RequestInit): Promise<actionPublishChapterChaptersChapterIdPublishPostResponse> => {
+
+  return customFetch<actionPublishChapterChaptersChapterIdPublishPostResponse>(getActionPublishChapterChaptersChapterIdPublishPostUrl(chapterId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
 
 export type readEditChapterDataEditChapterDataChapterIdGetResponse200 = {
-	data: EditChapterData;
-	status: 200;
-};
+  data: EditChapterData
+  status: 200
+}
 
 export type readEditChapterDataEditChapterDataChapterIdGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readEditChapterDataEditChapterDataChapterIdGetResponseSuccess = (readEditChapterDataEditChapterDataChapterIdGetResponse200) & {
+  headers: Headers;
+};
+export type readEditChapterDataEditChapterDataChapterIdGetResponseError = (readEditChapterDataEditChapterDataChapterIdGetResponse422) & {
+  headers: Headers;
 };
 
-export type readEditChapterDataEditChapterDataChapterIdGetResponseSuccess =
-	readEditChapterDataEditChapterDataChapterIdGetResponse200 & {
-		headers: Headers;
-	};
-export type readEditChapterDataEditChapterDataChapterIdGetResponseError =
-	readEditChapterDataEditChapterDataChapterIdGetResponse422 & {
-		headers: Headers;
-	};
+export type readEditChapterDataEditChapterDataChapterIdGetResponse = (readEditChapterDataEditChapterDataChapterIdGetResponseSuccess | readEditChapterDataEditChapterDataChapterIdGetResponseError)
 
-export type readEditChapterDataEditChapterDataChapterIdGetResponse =
-	| readEditChapterDataEditChapterDataChapterIdGetResponseSuccess
-	| readEditChapterDataEditChapterDataChapterIdGetResponseError;
+export const getReadEditChapterDataEditChapterDataChapterIdGetUrl = (chapterId: string,
+    params?: ReadEditChapterDataEditChapterDataChapterIdGetParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-export const getReadEditChapterDataEditChapterDataChapterIdGetUrl = (
-	chapterId: string,
-	params: ReadEditChapterDataEditChapterDataChapterIdGetParams,
-) => {
-	const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : String(value));
-		}
-	});
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
-	const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0
-		? `/api/edit-chapter-data/${chapterId}?${stringifiedParams}`
-		: `/api/edit-chapter-data/${chapterId}`;
-};
+  return stringifiedParams.length > 0 ? `/api/edit-chapter-data/${chapterId}?${stringifiedParams}` : `/api/edit-chapter-data/${chapterId}`
+}
 
 /**
  * Gets all data associated with a chapter required for editing.
@@ -862,61 +805,53 @@ export const getReadEditChapterDataEditChapterDataChapterIdGetUrl = (
  *     403: Insufficient permissions to access data for other user.
  * @summary Read Edit Chapter Data
  */
-export const readEditChapterDataEditChapterDataChapterIdGet = async (
-	chapterId: string,
-	params: ReadEditChapterDataEditChapterDataChapterIdGetParams,
-	options?: RequestInit,
-): Promise<readEditChapterDataEditChapterDataChapterIdGetResponse> => {
-	return customFetch<readEditChapterDataEditChapterDataChapterIdGetResponse>(
-		getReadEditChapterDataEditChapterDataChapterIdGetUrl(chapterId, params),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readEditChapterDataEditChapterDataChapterIdGet = async (chapterId: string,
+    params?: ReadEditChapterDataEditChapterDataChapterIdGetParams, options?: RequestInit): Promise<readEditChapterDataEditChapterDataChapterIdGetResponse> => {
+
+  return customFetch<readEditChapterDataEditChapterDataChapterIdGetResponse>(getReadEditChapterDataEditChapterDataChapterIdGetUrl(chapterId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse200 = {
-	data: EagerEntry[];
-	status: 200;
-};
+  data: EagerEntry[]
+  status: 200
+}
 
 export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseSuccess = (readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse200) & {
+  headers: Headers;
+};
+export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseError = (readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse422) & {
+  headers: Headers;
 };
 
-export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseSuccess =
-	readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse200 & {
-		headers: Headers;
-	};
-export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseError =
-	readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse422 & {
-		headers: Headers;
-	};
+export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse = (readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseSuccess | readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseError)
 
-export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse =
-	| readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseSuccess
-	| readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseError;
+export const getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetUrl = (chapterId: string,
+    params?: ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-export const getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetUrl = (
-	chapterId: string,
-	params: ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams,
-) => {
-	const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : String(value));
-		}
-	});
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
-	const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0
-		? `/api/edit-chapter-data/${chapterId}/label-data?${stringifiedParams}`
-		: `/api/edit-chapter-data/${chapterId}/label-data`;
-};
+  return stringifiedParams.length > 0 ? `/api/edit-chapter-data/${chapterId}/label-data?${stringifiedParams}` : `/api/edit-chapter-data/${chapterId}/label-data`
+}
 
 /**
  * Fetch label data and labels for specific label groups on a chapter's most
@@ -927,36 +862,38 @@ export const getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetUrl 
  *     403: Insufficient permissions to access data for other user.
  * @summary Read Edit Chapter Label Data
  */
-export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet = async (
-	chapterId: string,
-	params: ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams,
-	options?: RequestInit,
-): Promise<readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse> => {
-	return customFetch<readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse>(
-		getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetUrl(chapterId, params),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet = async (chapterId: string,
+    params?: ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams, options?: RequestInit): Promise<readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse> => {
+
+  return customFetch<readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse>(getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetUrl(chapterId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type readFilterSchemasFiltersSchemasGetResponse200 = {
-	data: ReadFilterSchemasFiltersSchemasGet200;
-	status: 200;
+  data: ReadFilterSchemasFiltersSchemasGet200
+  status: 200
+}
+
+export type readFilterSchemasFiltersSchemasGetResponseSuccess = (readFilterSchemasFiltersSchemasGetResponse200) & {
+  headers: Headers;
 };
+;
 
-export type readFilterSchemasFiltersSchemasGetResponseSuccess =
-	readFilterSchemasFiltersSchemasGetResponse200 & {
-		headers: Headers;
-	};
-
-export type readFilterSchemasFiltersSchemasGetResponse =
-	readFilterSchemasFiltersSchemasGetResponseSuccess;
+export type readFilterSchemasFiltersSchemasGetResponse = (readFilterSchemasFiltersSchemasGetResponseSuccess)
 
 export const getReadFilterSchemasFiltersSchemasGetUrl = () => {
-	return `/api/filters/schemas`;
-};
+
+
+
+
+  return `/api/filters/schemas`
+}
 
 /**
  * Retrieves the schemas for all registered filters, including the instance, context, and options schemas for each filter.
@@ -965,44 +902,44 @@ export const getReadFilterSchemasFiltersSchemasGetUrl = () => {
  *     A dictionary mapping filter names to their schema information.
  * @summary Read Filter Schemas
  */
-export const readFilterSchemasFiltersSchemasGet = async (
-	options?: RequestInit,
-): Promise<readFilterSchemasFiltersSchemasGetResponse> => {
-	return customFetch<readFilterSchemasFiltersSchemasGetResponse>(
-		getReadFilterSchemasFiltersSchemasGetUrl(),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readFilterSchemasFiltersSchemasGet = async ( options?: RequestInit): Promise<readFilterSchemasFiltersSchemasGetResponse> => {
+
+  return customFetch<readFilterSchemasFiltersSchemasGetResponse>(getReadFilterSchemasFiltersSchemasGetUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type applyFilterFiltersFilterNameApplyPostResponse204 = {
-	data: void;
-	status: 204;
-};
+  data: void
+  status: 204
+}
 
 export type applyFilterFiltersFilterNameApplyPostResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type applyFilterFiltersFilterNameApplyPostResponseSuccess = (applyFilterFiltersFilterNameApplyPostResponse204) & {
+  headers: Headers;
+};
+export type applyFilterFiltersFilterNameApplyPostResponseError = (applyFilterFiltersFilterNameApplyPostResponse422) & {
+  headers: Headers;
 };
 
-export type applyFilterFiltersFilterNameApplyPostResponseSuccess =
-	applyFilterFiltersFilterNameApplyPostResponse204 & {
-		headers: Headers;
-	};
-export type applyFilterFiltersFilterNameApplyPostResponseError =
-	applyFilterFiltersFilterNameApplyPostResponse422 & {
-		headers: Headers;
-	};
+export type applyFilterFiltersFilterNameApplyPostResponse = (applyFilterFiltersFilterNameApplyPostResponseSuccess | applyFilterFiltersFilterNameApplyPostResponseError)
 
-export type applyFilterFiltersFilterNameApplyPostResponse =
-	| applyFilterFiltersFilterNameApplyPostResponseSuccess
-	| applyFilterFiltersFilterNameApplyPostResponseError;
+export const getApplyFilterFiltersFilterNameApplyPostUrl = (filterName: string,) => {
 
-export const getApplyFilterFiltersFilterNameApplyPostUrl = (filterName: string) => {
-	return `/api/filters/${filterName}/apply`;
-};
+
+
+
+  return `/api/filters/${filterName}/apply`
+}
 
 /**
  * Applies a filter to a label group for a list of instances using specified options.
@@ -1014,48 +951,45 @@ export const getApplyFilterFiltersFilterNameApplyPostUrl = (filterName: string) 
  *     current_user: The user making the request, which may be relevant for certain filters.
  * @summary Apply Filter
  */
-export const applyFilterFiltersFilterNameApplyPost = async (
-	filterName: string,
-	instanceOptions: InstanceOptions,
-	options?: RequestInit,
-): Promise<applyFilterFiltersFilterNameApplyPostResponse> => {
-	return customFetch<applyFilterFiltersFilterNameApplyPostResponse>(
-		getApplyFilterFiltersFilterNameApplyPostUrl(filterName),
-		{
-			...options,
-			method: "POST",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(instanceOptions),
-		},
-	);
-};
+export const applyFilterFiltersFilterNameApplyPost = async (filterName: string,
+    instanceOptions: InstanceOptions, options?: RequestInit): Promise<applyFilterFiltersFilterNameApplyPostResponse> => {
+
+  return customFetch<applyFilterFiltersFilterNameApplyPostResponse>(getApplyFilterFiltersFilterNameApplyPostUrl(filterName),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(instanceOptions)
+  }
+);}
+
 
 export type readDecisionsFiltersFilterNameDecideInstancesPostResponse200 = {
-	data: boolean[];
-	status: 200;
-};
+  data: boolean[]
+  status: 200
+}
 
 export type readDecisionsFiltersFilterNameDecideInstancesPostResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readDecisionsFiltersFilterNameDecideInstancesPostResponseSuccess = (readDecisionsFiltersFilterNameDecideInstancesPostResponse200) & {
+  headers: Headers;
+};
+export type readDecisionsFiltersFilterNameDecideInstancesPostResponseError = (readDecisionsFiltersFilterNameDecideInstancesPostResponse422) & {
+  headers: Headers;
 };
 
-export type readDecisionsFiltersFilterNameDecideInstancesPostResponseSuccess =
-	readDecisionsFiltersFilterNameDecideInstancesPostResponse200 & {
-		headers: Headers;
-	};
-export type readDecisionsFiltersFilterNameDecideInstancesPostResponseError =
-	readDecisionsFiltersFilterNameDecideInstancesPostResponse422 & {
-		headers: Headers;
-	};
+export type readDecisionsFiltersFilterNameDecideInstancesPostResponse = (readDecisionsFiltersFilterNameDecideInstancesPostResponseSuccess | readDecisionsFiltersFilterNameDecideInstancesPostResponseError)
 
-export type readDecisionsFiltersFilterNameDecideInstancesPostResponse =
-	| readDecisionsFiltersFilterNameDecideInstancesPostResponseSuccess
-	| readDecisionsFiltersFilterNameDecideInstancesPostResponseError;
+export const getReadDecisionsFiltersFilterNameDecideInstancesPostUrl = (filterName: string,) => {
 
-export const getReadDecisionsFiltersFilterNameDecideInstancesPostUrl = (filterName: string) => {
-	return `/api/filters/${filterName}/decide-instances`;
-};
+
+
+
+  return `/api/filters/${filterName}/decide-instances`
+}
 
 /**
  * Decides whether instances pass a filter in given contexts using specified options.
@@ -1067,50 +1001,45 @@ export const getReadDecisionsFiltersFilterNameDecideInstancesPostUrl = (filterNa
  *     current_user: The user making the request, which may be relevant for certain filters.
  * @summary Read Decisions
  */
-export const readDecisionsFiltersFilterNameDecideInstancesPost = async (
-	filterName: string,
-	instanceContextOptions: InstanceContextOptions,
-	options?: RequestInit,
-): Promise<readDecisionsFiltersFilterNameDecideInstancesPostResponse> => {
-	return customFetch<readDecisionsFiltersFilterNameDecideInstancesPostResponse>(
-		getReadDecisionsFiltersFilterNameDecideInstancesPostUrl(filterName),
-		{
-			...options,
-			method: "POST",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(instanceContextOptions),
-		},
-	);
-};
+export const readDecisionsFiltersFilterNameDecideInstancesPost = async (filterName: string,
+    instanceContextOptions: InstanceContextOptions, options?: RequestInit): Promise<readDecisionsFiltersFilterNameDecideInstancesPostResponse> => {
+
+  return customFetch<readDecisionsFiltersFilterNameDecideInstancesPostResponse>(getReadDecisionsFiltersFilterNameDecideInstancesPostUrl(filterName),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(instanceContextOptions)
+  }
+);}
+
 
 export type readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponse200 = {
-	data: unknown[];
-	status: 200;
-};
+  data: unknown[]
+  status: 200
+}
 
 export type readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponseSuccess = (readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponse200) & {
+  headers: Headers;
+};
+export type readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponseError = (readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponse422) & {
+  headers: Headers;
 };
 
-export type readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponseSuccess =
-	readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponse200 & {
-		headers: Headers;
-	};
-export type readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponseError =
-	readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponse422 & {
-		headers: Headers;
-	};
+export type readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponse = (readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponseSuccess | readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponseError)
 
-export type readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponse =
-	| readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponseSuccess
-	| readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponseError;
+export const getReadFlaggedInstancesFiltersFilterNameFlagInstancesPostUrl = (filterName: string,) => {
 
-export const getReadFlaggedInstancesFiltersFilterNameFlagInstancesPostUrl = (
-	filterName: string,
-) => {
-	return `/api/filters/${filterName}/flag-instances`;
-};
+
+
+
+  return `/api/filters/${filterName}/flag-instances`
+}
 
 /**
  * Flags instances using a specified filter and options.
@@ -1122,48 +1051,45 @@ export const getReadFlaggedInstancesFiltersFilterNameFlagInstancesPostUrl = (
  *     current_user: The user making the request, which may be relevant for certain filters.
  * @summary Read Flagged Instances
  */
-export const readFlaggedInstancesFiltersFilterNameFlagInstancesPost = async (
-	filterName: string,
-	readFlaggedInstancesFiltersFilterNameFlagInstancesPostBody: ReadFlaggedInstancesFiltersFilterNameFlagInstancesPostBody,
-	options?: RequestInit,
-): Promise<readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponse> => {
-	return customFetch<readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponse>(
-		getReadFlaggedInstancesFiltersFilterNameFlagInstancesPostUrl(filterName),
-		{
-			...options,
-			method: "POST",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(readFlaggedInstancesFiltersFilterNameFlagInstancesPostBody),
-		},
-	);
-};
+export const readFlaggedInstancesFiltersFilterNameFlagInstancesPost = async (filterName: string,
+    readFlaggedInstancesFiltersFilterNameFlagInstancesPostBody: ReadFlaggedInstancesFiltersFilterNameFlagInstancesPostBody, options?: RequestInit): Promise<readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponse> => {
+
+  return customFetch<readFlaggedInstancesFiltersFilterNameFlagInstancesPostResponse>(getReadFlaggedInstancesFiltersFilterNameFlagInstancesPostUrl(filterName),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(readFlaggedInstancesFiltersFilterNameFlagInstancesPostBody)
+  }
+);}
+
 
 export type readContextsFiltersFilterNameGetContextsPostResponse200 = {
-	data: unknown[];
-	status: 200;
-};
+  data: unknown[]
+  status: 200
+}
 
 export type readContextsFiltersFilterNameGetContextsPostResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readContextsFiltersFilterNameGetContextsPostResponseSuccess = (readContextsFiltersFilterNameGetContextsPostResponse200) & {
+  headers: Headers;
+};
+export type readContextsFiltersFilterNameGetContextsPostResponseError = (readContextsFiltersFilterNameGetContextsPostResponse422) & {
+  headers: Headers;
 };
 
-export type readContextsFiltersFilterNameGetContextsPostResponseSuccess =
-	readContextsFiltersFilterNameGetContextsPostResponse200 & {
-		headers: Headers;
-	};
-export type readContextsFiltersFilterNameGetContextsPostResponseError =
-	readContextsFiltersFilterNameGetContextsPostResponse422 & {
-		headers: Headers;
-	};
+export type readContextsFiltersFilterNameGetContextsPostResponse = (readContextsFiltersFilterNameGetContextsPostResponseSuccess | readContextsFiltersFilterNameGetContextsPostResponseError)
 
-export type readContextsFiltersFilterNameGetContextsPostResponse =
-	| readContextsFiltersFilterNameGetContextsPostResponseSuccess
-	| readContextsFiltersFilterNameGetContextsPostResponseError;
+export const getReadContextsFiltersFilterNameGetContextsPostUrl = (filterName: string,) => {
 
-export const getReadContextsFiltersFilterNameGetContextsPostUrl = (filterName: string) => {
-	return `/api/filters/${filterName}/get-contexts`;
-};
+
+
+
+  return `/api/filters/${filterName}/get-contexts`
+}
 
 /**
  * Retrieves contexts for a list of instances using a specified filter and options.
@@ -1176,106 +1102,95 @@ export const getReadContextsFiltersFilterNameGetContextsPostUrl = (filterName: s
  *     current_user: The user making the request, which may be relevant for certain filters.
  * @summary Read Contexts
  */
-export const readContextsFiltersFilterNameGetContextsPost = async (
-	filterName: string,
-	instanceOptions: InstanceOptions,
-	options?: RequestInit,
-): Promise<readContextsFiltersFilterNameGetContextsPostResponse> => {
-	return customFetch<readContextsFiltersFilterNameGetContextsPostResponse>(
-		getReadContextsFiltersFilterNameGetContextsPostUrl(filterName),
-		{
-			...options,
-			method: "POST",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(instanceOptions),
-		},
-	);
-};
+export const readContextsFiltersFilterNameGetContextsPost = async (filterName: string,
+    instanceOptions: InstanceOptions, options?: RequestInit): Promise<readContextsFiltersFilterNameGetContextsPostResponse> => {
+
+  return customFetch<readContextsFiltersFilterNameGetContextsPostResponse>(getReadContextsFiltersFilterNameGetContextsPostUrl(filterName),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(instanceOptions)
+  }
+);}
+
 
 export type readLabelDatasByGroupChaptersLabelDatasGetResponse200 = {
-	data: LabelData[];
-	status: 200;
-};
+  data: LabelData[]
+  status: 200
+}
 
 export type readLabelDatasByGroupChaptersLabelDatasGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readLabelDatasByGroupChaptersLabelDatasGetResponseSuccess = (readLabelDatasByGroupChaptersLabelDatasGetResponse200) & {
+  headers: Headers;
+};
+export type readLabelDatasByGroupChaptersLabelDatasGetResponseError = (readLabelDatasByGroupChaptersLabelDatasGetResponse422) & {
+  headers: Headers;
 };
 
-export type readLabelDatasByGroupChaptersLabelDatasGetResponseSuccess =
-	readLabelDatasByGroupChaptersLabelDatasGetResponse200 & {
-		headers: Headers;
-	};
-export type readLabelDatasByGroupChaptersLabelDatasGetResponseError =
-	readLabelDatasByGroupChaptersLabelDatasGetResponse422 & {
-		headers: Headers;
-	};
+export type readLabelDatasByGroupChaptersLabelDatasGetResponse = (readLabelDatasByGroupChaptersLabelDatasGetResponseSuccess | readLabelDatasByGroupChaptersLabelDatasGetResponseError)
 
-export type readLabelDatasByGroupChaptersLabelDatasGetResponse =
-	| readLabelDatasByGroupChaptersLabelDatasGetResponseSuccess
-	| readLabelDatasByGroupChaptersLabelDatasGetResponseError;
+export const getReadLabelDatasByGroupChaptersLabelDatasGetUrl = (params: ReadLabelDatasByGroupChaptersLabelDatasGetParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-export const getReadLabelDatasByGroupChaptersLabelDatasGetUrl = (
-	params: ReadLabelDatasByGroupChaptersLabelDatasGetParams,
-) => {
-	const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : String(value));
-		}
-	});
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
-	const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0
-		? `/api/label-datas?${stringifiedParams}`
-		: `/api/label-datas`;
-};
+  return stringifiedParams.length > 0 ? `/api/label-datas?${stringifiedParams}` : `/api/label-datas`
+}
 
 /**
  * Gets all label datas in a label group, optionally filtered by chapter range.
  * @summary Read Label Datas By Group Chapters
  */
-export const readLabelDatasByGroupChaptersLabelDatasGet = async (
-	params: ReadLabelDatasByGroupChaptersLabelDatasGetParams,
-	options?: RequestInit,
-): Promise<readLabelDatasByGroupChaptersLabelDatasGetResponse> => {
-	return customFetch<readLabelDatasByGroupChaptersLabelDatasGetResponse>(
-		getReadLabelDatasByGroupChaptersLabelDatasGetUrl(params),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readLabelDatasByGroupChaptersLabelDatasGet = async (params: ReadLabelDatasByGroupChaptersLabelDatasGetParams, options?: RequestInit): Promise<readLabelDatasByGroupChaptersLabelDatasGetResponse> => {
+
+  return customFetch<readLabelDatasByGroupChaptersLabelDatasGetResponse>(getReadLabelDatasByGroupChaptersLabelDatasGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type readLabelDataLabelDatasLabelDataIdGetResponse200 = {
-	data: LabelData;
-	status: 200;
-};
+  data: LabelData
+  status: 200
+}
 
 export type readLabelDataLabelDatasLabelDataIdGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readLabelDataLabelDatasLabelDataIdGetResponseSuccess = (readLabelDataLabelDatasLabelDataIdGetResponse200) & {
+  headers: Headers;
+};
+export type readLabelDataLabelDatasLabelDataIdGetResponseError = (readLabelDataLabelDatasLabelDataIdGetResponse422) & {
+  headers: Headers;
 };
 
-export type readLabelDataLabelDatasLabelDataIdGetResponseSuccess =
-	readLabelDataLabelDatasLabelDataIdGetResponse200 & {
-		headers: Headers;
-	};
-export type readLabelDataLabelDatasLabelDataIdGetResponseError =
-	readLabelDataLabelDatasLabelDataIdGetResponse422 & {
-		headers: Headers;
-	};
+export type readLabelDataLabelDatasLabelDataIdGetResponse = (readLabelDataLabelDatasLabelDataIdGetResponseSuccess | readLabelDataLabelDatasLabelDataIdGetResponseError)
 
-export type readLabelDataLabelDatasLabelDataIdGetResponse =
-	| readLabelDataLabelDatasLabelDataIdGetResponseSuccess
-	| readLabelDataLabelDatasLabelDataIdGetResponseError;
+export const getReadLabelDataLabelDatasLabelDataIdGetUrl = (labelDataId: string,) => {
 
-export const getReadLabelDataLabelDatasLabelDataIdGetUrl = (labelDataId: string) => {
-	return `/api/label-datas/${labelDataId}`;
-};
+
+
+
+  return `/api/label-datas/${labelDataId}`
+}
 
 /**
  * Gets a label data by id.
@@ -1284,79 +1199,67 @@ export const getReadLabelDataLabelDatasLabelDataIdGetUrl = (labelDataId: string)
  *     404: Label data not found (or insufficient permissions).
  * @summary Read Label Data
  */
-export const readLabelDataLabelDatasLabelDataIdGet = async (
-	labelDataId: string,
-	options?: RequestInit,
-): Promise<readLabelDataLabelDatasLabelDataIdGetResponse> => {
-	return customFetch<readLabelDataLabelDatasLabelDataIdGetResponse>(
-		getReadLabelDataLabelDatasLabelDataIdGetUrl(labelDataId),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readLabelDataLabelDatasLabelDataIdGet = async (labelDataId: string, options?: RequestInit): Promise<readLabelDataLabelDatasLabelDataIdGetResponse> => {
+
+  return customFetch<readLabelDataLabelDatasLabelDataIdGetResponse>(getReadLabelDataLabelDatasLabelDataIdGetUrl(labelDataId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponse204 = {
-	data: void;
-	status: 204;
-};
+  data: void
+  status: 204
+}
 
 export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponse400 = {
-	data: DetailHTTPErrorResponse;
-	status: 400;
-};
+  data: DetailHTTPErrorResponse
+  status: 400
+}
 
 export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponse404 = {
-	data: DetailHTTPErrorResponse;
-	status: 404;
-};
+  data: DetailHTTPErrorResponse
+  status: 404
+}
 
 export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponse409 = {
-	data: RequestConflictErrorResponse;
-	status: 409;
-};
+  data: RequestConflictErrorResponse
+  status: 409
+}
 
 export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponseSuccess = (updateLabelDataStreamLabelDatasLabelDataIdPatchResponse204) & {
+  headers: Headers;
+};
+export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponseError = (updateLabelDataStreamLabelDatasLabelDataIdPatchResponse400 | updateLabelDataStreamLabelDatasLabelDataIdPatchResponse404 | updateLabelDataStreamLabelDatasLabelDataIdPatchResponse409 | updateLabelDataStreamLabelDatasLabelDataIdPatchResponse422) & {
+  headers: Headers;
 };
 
-export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponseSuccess =
-	updateLabelDataStreamLabelDatasLabelDataIdPatchResponse204 & {
-		headers: Headers;
-	};
-export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponseError = (
-	| updateLabelDataStreamLabelDatasLabelDataIdPatchResponse400
-	| updateLabelDataStreamLabelDatasLabelDataIdPatchResponse404
-	| updateLabelDataStreamLabelDatasLabelDataIdPatchResponse409
-	| updateLabelDataStreamLabelDatasLabelDataIdPatchResponse422
-) & {
-	headers: Headers;
-};
+export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponse = (updateLabelDataStreamLabelDatasLabelDataIdPatchResponseSuccess | updateLabelDataStreamLabelDatasLabelDataIdPatchResponseError)
 
-export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponse =
-	| updateLabelDataStreamLabelDatasLabelDataIdPatchResponseSuccess
-	| updateLabelDataStreamLabelDatasLabelDataIdPatchResponseError;
+export const getUpdateLabelDataStreamLabelDatasLabelDataIdPatchUrl = (labelDataId: string,
+    params?: UpdateLabelDataStreamLabelDatasLabelDataIdPatchParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-export const getUpdateLabelDataStreamLabelDatasLabelDataIdPatchUrl = (
-	labelDataId: string,
-	params?: UpdateLabelDataStreamLabelDatasLabelDataIdPatchParams,
-) => {
-	const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : String(value));
-		}
-	});
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
-	const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0
-		? `/api/label-datas/${labelDataId}?${stringifiedParams}`
-		: `/api/label-datas/${labelDataId}`;
-};
+  return stringifiedParams.length > 0 ? `/api/label-datas/${labelDataId}?${stringifiedParams}` : `/api/label-datas/${labelDataId}`
+}
 
 /**
  * Applies a stream of edit operations to labels.
@@ -1367,184 +1270,161 @@ export const getUpdateLabelDataStreamLabelDatasLabelDataIdPatchUrl = (
  *     400: Operation positions out of bounds or invalid operation.
  * @summary Update Label Data Stream
  */
-export const updateLabelDataStreamLabelDatasLabelDataIdPatch = async (
-	labelDataId: string,
-	updateLabelDataStream: UpdateLabelDataStream,
-	params?: UpdateLabelDataStreamLabelDatasLabelDataIdPatchParams,
-	options?: RequestInit,
-): Promise<updateLabelDataStreamLabelDatasLabelDataIdPatchResponse> => {
-	return customFetch<updateLabelDataStreamLabelDatasLabelDataIdPatchResponse>(
-		getUpdateLabelDataStreamLabelDatasLabelDataIdPatchUrl(labelDataId, params),
-		{
-			...options,
-			method: "PATCH",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(updateLabelDataStream),
-		},
-	);
-};
+export const updateLabelDataStreamLabelDatasLabelDataIdPatch = async (labelDataId: string,
+    updateLabelDataStream: UpdateLabelDataStream,
+    params?: UpdateLabelDataStreamLabelDatasLabelDataIdPatchParams, options?: RequestInit): Promise<updateLabelDataStreamLabelDatasLabelDataIdPatchResponse> => {
+
+  return customFetch<updateLabelDataStreamLabelDatasLabelDataIdPatchResponse>(getUpdateLabelDataStreamLabelDatasLabelDataIdPatchUrl(labelDataId,params),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateLabelDataStream)
+  }
+);}
+
 
 export type readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponse200 = {
-	data: Label[];
-	status: 200;
-};
+  data: Label[]
+  status: 200
+}
 
 export type readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponseSuccess = (readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponse200) & {
+  headers: Headers;
+};
+export type readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponseError = (readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponse422) & {
+  headers: Headers;
 };
 
-export type readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponseSuccess =
-	readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponse200 & {
-		headers: Headers;
-	};
-export type readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponseError =
-	readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponse422 & {
-		headers: Headers;
-	};
+export type readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponse = (readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponseSuccess | readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponseError)
 
-export type readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponse =
-	| readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponseSuccess
-	| readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponseError;
+export const getReadLabelsByLabelDataLabelDatasLabelDataIdLabelsGetUrl = (labelDataId: string,) => {
 
-export const getReadLabelsByLabelDataLabelDatasLabelDataIdLabelsGetUrl = (labelDataId: string) => {
-	return `/api/label-datas/${labelDataId}/labels`;
-};
+
+
+
+  return `/api/label-datas/${labelDataId}/labels`
+}
 
 /**
  * Get the specific list of labels inside a label data entry.
  * @summary Read Labels By Label Data
  */
-export const readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet = async (
-	labelDataId: string,
-	options?: RequestInit,
-): Promise<readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponse> => {
-	return customFetch<readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponse>(
-		getReadLabelsByLabelDataLabelDatasLabelDataIdLabelsGetUrl(labelDataId),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet = async (labelDataId: string, options?: RequestInit): Promise<readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponse> => {
+
+  return customFetch<readLabelsByLabelDataLabelDatasLabelDataIdLabelsGetResponse>(getReadLabelsByLabelDataLabelDatasLabelDataIdLabelsGetUrl(labelDataId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type readLabelGroupsLabelGroupsGetResponse200 = {
-	data: LabelGroup[];
-	status: 200;
-};
+  data: LabelGroup[]
+  status: 200
+}
 
 export type readLabelGroupsLabelGroupsGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readLabelGroupsLabelGroupsGetResponseSuccess = (readLabelGroupsLabelGroupsGetResponse200) & {
+  headers: Headers;
+};
+export type readLabelGroupsLabelGroupsGetResponseError = (readLabelGroupsLabelGroupsGetResponse422) & {
+  headers: Headers;
 };
 
-export type readLabelGroupsLabelGroupsGetResponseSuccess =
-	readLabelGroupsLabelGroupsGetResponse200 & {
-		headers: Headers;
-	};
-export type readLabelGroupsLabelGroupsGetResponseError =
-	readLabelGroupsLabelGroupsGetResponse422 & {
-		headers: Headers;
-	};
+export type readLabelGroupsLabelGroupsGetResponse = (readLabelGroupsLabelGroupsGetResponseSuccess | readLabelGroupsLabelGroupsGetResponseError)
 
-export type readLabelGroupsLabelGroupsGetResponse =
-	| readLabelGroupsLabelGroupsGetResponseSuccess
-	| readLabelGroupsLabelGroupsGetResponseError;
+export const getReadLabelGroupsLabelGroupsGetUrl = (params: ReadLabelGroupsLabelGroupsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-export const getReadLabelGroupsLabelGroupsGetUrl = (
-	params: ReadLabelGroupsLabelGroupsGetParams,
-) => {
-	const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : String(value));
-		}
-	});
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
-	const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0
-		? `/api/label-groups?${stringifiedParams}`
-		: `/api/label-groups`;
-};
+  return stringifiedParams.length > 0 ? `/api/label-groups?${stringifiedParams}` : `/api/label-groups`
+}
 
 /**
  * Gets all label groups of the current user for a novel.
  * @summary Read Label Groups
  */
-export const readLabelGroupsLabelGroupsGet = async (
-	params: ReadLabelGroupsLabelGroupsGetParams,
-	options?: RequestInit,
-): Promise<readLabelGroupsLabelGroupsGetResponse> => {
-	return customFetch<readLabelGroupsLabelGroupsGetResponse>(
-		getReadLabelGroupsLabelGroupsGetUrl(params),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readLabelGroupsLabelGroupsGet = async (params: ReadLabelGroupsLabelGroupsGetParams, options?: RequestInit): Promise<readLabelGroupsLabelGroupsGetResponse> => {
+
+  return customFetch<readLabelGroupsLabelGroupsGetResponse>(getReadLabelGroupsLabelGroupsGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type createLabelGroupLabelGroupsPostResponse200 = {
-	data: LabelGroup;
-	status: 200;
-};
+  data: LabelGroup
+  status: 200
+}
 
 export type createLabelGroupLabelGroupsPostResponse400 = {
-	data: DetailHTTPErrorResponse;
-	status: 400;
-};
+  data: DetailHTTPErrorResponse
+  status: 400
+}
 
 export type createLabelGroupLabelGroupsPostResponse404 = {
-	data: DetailHTTPErrorResponse;
-	status: 404;
-};
+  data: DetailHTTPErrorResponse
+  status: 404
+}
 
 export type createLabelGroupLabelGroupsPostResponse409 = {
-	data: RequestConflictErrorResponse;
-	status: 409;
-};
+  data: RequestConflictErrorResponse
+  status: 409
+}
 
 export type createLabelGroupLabelGroupsPostResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createLabelGroupLabelGroupsPostResponseSuccess = (createLabelGroupLabelGroupsPostResponse200) & {
+  headers: Headers;
+};
+export type createLabelGroupLabelGroupsPostResponseError = (createLabelGroupLabelGroupsPostResponse400 | createLabelGroupLabelGroupsPostResponse404 | createLabelGroupLabelGroupsPostResponse409 | createLabelGroupLabelGroupsPostResponse422) & {
+  headers: Headers;
 };
 
-export type createLabelGroupLabelGroupsPostResponseSuccess =
-	createLabelGroupLabelGroupsPostResponse200 & {
-		headers: Headers;
-	};
-export type createLabelGroupLabelGroupsPostResponseError = (
-	| createLabelGroupLabelGroupsPostResponse400
-	| createLabelGroupLabelGroupsPostResponse404
-	| createLabelGroupLabelGroupsPostResponse409
-	| createLabelGroupLabelGroupsPostResponse422
-) & {
-	headers: Headers;
-};
+export type createLabelGroupLabelGroupsPostResponse = (createLabelGroupLabelGroupsPostResponseSuccess | createLabelGroupLabelGroupsPostResponseError)
 
-export type createLabelGroupLabelGroupsPostResponse =
-	| createLabelGroupLabelGroupsPostResponseSuccess
-	| createLabelGroupLabelGroupsPostResponseError;
+export const getCreateLabelGroupLabelGroupsPostUrl = (params?: CreateLabelGroupLabelGroupsPostParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-export const getCreateLabelGroupLabelGroupsPostUrl = (
-	params?: CreateLabelGroupLabelGroupsPostParams,
-) => {
-	const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : String(value));
-		}
-	});
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
-	const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0
-		? `/api/label-groups?${stringifiedParams}`
-		: `/api/label-groups`;
-};
+  return stringifiedParams.length > 0 ? `/api/label-groups?${stringifiedParams}` : `/api/label-groups`
+}
 
 /**
  * Creates a new label group.
@@ -1554,106 +1434,95 @@ export const getCreateLabelGroupLabelGroupsPostUrl = (
  *     400: Label group name is too long.
  * @summary Create Label Group
  */
-export const createLabelGroupLabelGroupsPost = async (
-	createLabelGroup: CreateLabelGroup,
-	params?: CreateLabelGroupLabelGroupsPostParams,
-	options?: RequestInit,
-): Promise<createLabelGroupLabelGroupsPostResponse> => {
-	return customFetch<createLabelGroupLabelGroupsPostResponse>(
-		getCreateLabelGroupLabelGroupsPostUrl(params),
-		{
-			...options,
-			method: "POST",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(createLabelGroup),
-		},
-	);
-};
+export const createLabelGroupLabelGroupsPost = async (createLabelGroup: CreateLabelGroup,
+    params?: CreateLabelGroupLabelGroupsPostParams, options?: RequestInit): Promise<createLabelGroupLabelGroupsPostResponse> => {
+
+  return customFetch<createLabelGroupLabelGroupsPostResponse>(getCreateLabelGroupLabelGroupsPostUrl(params),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createLabelGroup)
+  }
+);}
+
 
 export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse200 = {
-	data: LabelGroupWithRole[];
-	status: 200;
-};
+  data: LabelGroupWithRole[]
+  status: 200
+}
 
 export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseSuccess = (readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse200) & {
+  headers: Headers;
+};
+export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseError = (readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse422) & {
+  headers: Headers;
 };
 
-export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseSuccess =
-	readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse200 & {
-		headers: Headers;
-	};
-export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseError =
-	readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse422 & {
-		headers: Headers;
-	};
+export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse = (readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseSuccess | readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseError)
 
-export type readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse =
-	| readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseSuccess
-	| readLabelGroupsWithRoleLabelGroupsWithRoleGetResponseError;
+export const getReadLabelGroupsWithRoleLabelGroupsWithRoleGetUrl = (params: ReadLabelGroupsWithRoleLabelGroupsWithRoleGetParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-export const getReadLabelGroupsWithRoleLabelGroupsWithRoleGetUrl = (
-	params: ReadLabelGroupsWithRoleLabelGroupsWithRoleGetParams,
-) => {
-	const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : String(value));
-		}
-	});
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
-	const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0
-		? `/api/label-groups-with-role?${stringifiedParams}`
-		: `/api/label-groups-with-role`;
-};
+  return stringifiedParams.length > 0 ? `/api/label-groups-with-role?${stringifiedParams}` : `/api/label-groups-with-role`
+}
 
 /**
  * Gets all label groups of the current user for a novel, along with their roles.
  * @summary Read Label Groups With Role
  */
-export const readLabelGroupsWithRoleLabelGroupsWithRoleGet = async (
-	params: ReadLabelGroupsWithRoleLabelGroupsWithRoleGetParams,
-	options?: RequestInit,
-): Promise<readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse> => {
-	return customFetch<readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse>(
-		getReadLabelGroupsWithRoleLabelGroupsWithRoleGetUrl(params),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readLabelGroupsWithRoleLabelGroupsWithRoleGet = async (params: ReadLabelGroupsWithRoleLabelGroupsWithRoleGetParams, options?: RequestInit): Promise<readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse> => {
+
+  return customFetch<readLabelGroupsWithRoleLabelGroupsWithRoleGetResponse>(getReadLabelGroupsWithRoleLabelGroupsWithRoleGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type readLabelGroupLabelGroupsLabelGroupIdGetResponse200 = {
-	data: LabelGroup;
-	status: 200;
-};
+  data: LabelGroup
+  status: 200
+}
 
 export type readLabelGroupLabelGroupsLabelGroupIdGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readLabelGroupLabelGroupsLabelGroupIdGetResponseSuccess = (readLabelGroupLabelGroupsLabelGroupIdGetResponse200) & {
+  headers: Headers;
+};
+export type readLabelGroupLabelGroupsLabelGroupIdGetResponseError = (readLabelGroupLabelGroupsLabelGroupIdGetResponse422) & {
+  headers: Headers;
 };
 
-export type readLabelGroupLabelGroupsLabelGroupIdGetResponseSuccess =
-	readLabelGroupLabelGroupsLabelGroupIdGetResponse200 & {
-		headers: Headers;
-	};
-export type readLabelGroupLabelGroupsLabelGroupIdGetResponseError =
-	readLabelGroupLabelGroupsLabelGroupIdGetResponse422 & {
-		headers: Headers;
-	};
+export type readLabelGroupLabelGroupsLabelGroupIdGetResponse = (readLabelGroupLabelGroupsLabelGroupIdGetResponseSuccess | readLabelGroupLabelGroupsLabelGroupIdGetResponseError)
 
-export type readLabelGroupLabelGroupsLabelGroupIdGetResponse =
-	| readLabelGroupLabelGroupsLabelGroupIdGetResponseSuccess
-	| readLabelGroupLabelGroupsLabelGroupIdGetResponseError;
+export const getReadLabelGroupLabelGroupsLabelGroupIdGetUrl = (labelGroupId: string,) => {
 
-export const getReadLabelGroupLabelGroupsLabelGroupIdGetUrl = (labelGroupId: string) => {
-	return `/api/label-groups/${labelGroupId}`;
-};
+
+
+
+  return `/api/label-groups/${labelGroupId}`
+}
 
 /**
  * Gets a label group by id.
@@ -1662,45 +1531,44 @@ export const getReadLabelGroupLabelGroupsLabelGroupIdGetUrl = (labelGroupId: str
  *     404: Label group not found (or insufficient permissions).
  * @summary Read Label Group
  */
-export const readLabelGroupLabelGroupsLabelGroupIdGet = async (
-	labelGroupId: string,
-	options?: RequestInit,
-): Promise<readLabelGroupLabelGroupsLabelGroupIdGetResponse> => {
-	return customFetch<readLabelGroupLabelGroupsLabelGroupIdGetResponse>(
-		getReadLabelGroupLabelGroupsLabelGroupIdGetUrl(labelGroupId),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readLabelGroupLabelGroupsLabelGroupIdGet = async (labelGroupId: string, options?: RequestInit): Promise<readLabelGroupLabelGroupsLabelGroupIdGetResponse> => {
+
+  return customFetch<readLabelGroupLabelGroupsLabelGroupIdGetResponse>(getReadLabelGroupLabelGroupsLabelGroupIdGetUrl(labelGroupId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type updateLabelGroupLabelGroupsLabelGroupIdPatchResponse200 = {
-	data: LabelGroup;
-	status: 200;
-};
+  data: LabelGroup
+  status: 200
+}
 
 export type updateLabelGroupLabelGroupsLabelGroupIdPatchResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateLabelGroupLabelGroupsLabelGroupIdPatchResponseSuccess = (updateLabelGroupLabelGroupsLabelGroupIdPatchResponse200) & {
+  headers: Headers;
+};
+export type updateLabelGroupLabelGroupsLabelGroupIdPatchResponseError = (updateLabelGroupLabelGroupsLabelGroupIdPatchResponse422) & {
+  headers: Headers;
 };
 
-export type updateLabelGroupLabelGroupsLabelGroupIdPatchResponseSuccess =
-	updateLabelGroupLabelGroupsLabelGroupIdPatchResponse200 & {
-		headers: Headers;
-	};
-export type updateLabelGroupLabelGroupsLabelGroupIdPatchResponseError =
-	updateLabelGroupLabelGroupsLabelGroupIdPatchResponse422 & {
-		headers: Headers;
-	};
+export type updateLabelGroupLabelGroupsLabelGroupIdPatchResponse = (updateLabelGroupLabelGroupsLabelGroupIdPatchResponseSuccess | updateLabelGroupLabelGroupsLabelGroupIdPatchResponseError)
 
-export type updateLabelGroupLabelGroupsLabelGroupIdPatchResponse =
-	| updateLabelGroupLabelGroupsLabelGroupIdPatchResponseSuccess
-	| updateLabelGroupLabelGroupsLabelGroupIdPatchResponseError;
+export const getUpdateLabelGroupLabelGroupsLabelGroupIdPatchUrl = (labelGroupId: string,) => {
 
-export const getUpdateLabelGroupLabelGroupsLabelGroupIdPatchUrl = (labelGroupId: string) => {
-	return `/api/label-groups/${labelGroupId}`;
-};
+
+
+
+  return `/api/label-groups/${labelGroupId}`
+}
 
 /**
  * Updates a label group (e.g. rename).
@@ -1710,122 +1578,106 @@ export const getUpdateLabelGroupLabelGroupsLabelGroupIdPatchUrl = (labelGroupId:
  *     400: Label group name is too long.
  * @summary Update Label Group
  */
-export const updateLabelGroupLabelGroupsLabelGroupIdPatch = async (
-	labelGroupId: string,
-	updateLabelGroup: UpdateLabelGroup,
-	options?: RequestInit,
-): Promise<updateLabelGroupLabelGroupsLabelGroupIdPatchResponse> => {
-	return customFetch<updateLabelGroupLabelGroupsLabelGroupIdPatchResponse>(
-		getUpdateLabelGroupLabelGroupsLabelGroupIdPatchUrl(labelGroupId),
-		{
-			...options,
-			method: "PATCH",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(updateLabelGroup),
-		},
-	);
-};
+export const updateLabelGroupLabelGroupsLabelGroupIdPatch = async (labelGroupId: string,
+    updateLabelGroup: UpdateLabelGroup, options?: RequestInit): Promise<updateLabelGroupLabelGroupsLabelGroupIdPatchResponse> => {
+
+  return customFetch<updateLabelGroupLabelGroupsLabelGroupIdPatchResponse>(getUpdateLabelGroupLabelGroupsLabelGroupIdPatchUrl(labelGroupId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateLabelGroup)
+  }
+);}
+
 
 export type readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse200 = {
-	data: LabelContributor[];
-	status: 200;
-};
+  data: LabelContributor[]
+  status: 200
+}
 
 export type readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponseSuccess = (readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse200) & {
+  headers: Headers;
+};
+export type readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponseError = (readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse422) & {
+  headers: Headers;
 };
 
-export type readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponseSuccess =
-	readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse200 & {
-		headers: Headers;
-	};
-export type readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponseError =
-	readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse422 & {
-		headers: Headers;
-	};
+export type readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse = (readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponseSuccess | readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponseError)
 
-export type readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse =
-	| readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponseSuccess
-	| readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponseError;
+export const getReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetUrl = (labelGroupId: string,) => {
 
-export const getReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetUrl = (
-	labelGroupId: string,
-) => {
-	return `/api/label-groups/${labelGroupId}/contributors`;
-};
+
+
+
+  return `/api/label-groups/${labelGroupId}/contributors`
+}
 
 /**
  * Get the list of contributors for a label group.
  * @summary Read Label Contributors
  */
-export const readLabelContributorsLabelGroupsLabelGroupIdContributorsGet = async (
-	labelGroupId: string,
-	options?: RequestInit,
-): Promise<readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse> => {
-	return customFetch<readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse>(
-		getReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetUrl(labelGroupId),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readLabelContributorsLabelGroupsLabelGroupIdContributorsGet = async (labelGroupId: string, options?: RequestInit): Promise<readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse> => {
+
+  return customFetch<readLabelContributorsLabelGroupsLabelGroupIdContributorsGetResponse>(getReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetUrl(labelGroupId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse200 = {
-	data: LabelData;
-	status: 200;
-};
+  data: LabelData
+  status: 200
+}
 
 export type createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse404 = {
-	data: DetailHTTPErrorResponse;
-	status: 404;
-};
+  data: DetailHTTPErrorResponse
+  status: 404
+}
 
 export type createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse409 = {
-	data: RequestConflictErrorResponse;
-	status: 409;
-};
+  data: RequestConflictErrorResponse
+  status: 409
+}
 
 export type createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponseSuccess = (createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse200) & {
+  headers: Headers;
+};
+export type createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponseError = (createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse404 | createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse409 | createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse422) & {
+  headers: Headers;
 };
 
-export type createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponseSuccess =
-	createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse200 & {
-		headers: Headers;
-	};
-export type createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponseError = (
-	| createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse404
-	| createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse409
-	| createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse422
-) & {
-	headers: Headers;
-};
+export type createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse = (createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponseSuccess | createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponseError)
 
-export type createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse =
-	| createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponseSuccess
-	| createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponseError;
+export const getCreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostUrl = (labelGroupId: string,
+    params?: CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-export const getCreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostUrl = (
-	labelGroupId: string,
-	params?: CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostParams,
-) => {
-	const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : String(value));
-		}
-	});
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
-	const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0
-		? `/api/label-groups/${labelGroupId}/label-datas?${stringifiedParams}`
-		: `/api/label-groups/${labelGroupId}/label-datas`;
-};
+  return stringifiedParams.length > 0 ? `/api/label-groups/${labelGroupId}/label-datas?${stringifiedParams}` : `/api/label-groups/${labelGroupId}/label-datas`
+}
 
 /**
  * Creates a label data entry for a revision text in a label group.
@@ -1835,91 +1687,83 @@ export const getCreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostUrl = (
  *     409: Label data for this revision text already exists in this group.
  * @summary Create Label Data
  */
-export const createLabelDataLabelGroupsLabelGroupIdLabelDatasPost = async (
-	labelGroupId: string,
-	createLabelData: CreateLabelData,
-	params?: CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostParams,
-	options?: RequestInit,
-): Promise<createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse> => {
-	return customFetch<createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse>(
-		getCreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostUrl(labelGroupId, params),
-		{
-			...options,
-			method: "POST",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(createLabelData),
-		},
-	);
+export const createLabelDataLabelGroupsLabelGroupIdLabelDatasPost = async (labelGroupId: string,
+    createLabelData: CreateLabelData,
+    params?: CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostParams, options?: RequestInit): Promise<createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse> => {
+
+  return customFetch<createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse>(getCreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostUrl(labelGroupId,params),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createLabelData)
+  }
+);}
+
+
+export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse200 = {
+  data: CreateLabelDataByAutoLabelStatus
+  status: 200
+}
+
+export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseSuccess = (createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse200) & {
+  headers: Headers;
+};
+export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseError = (createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse422) & {
+  headers: Headers;
 };
 
-export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse200 =
-	{
-		data: CreateLabelDataByAutoLabelStatus;
-		status: 200;
-	};
+export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse = (createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseSuccess | createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseError)
 
-export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse422 =
-	{
-		data: HTTPValidationError;
-		status: 422;
-	};
+export const getCreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostUrl = (labelGroupId: string,) => {
 
-export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseSuccess =
-	createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse200 & {
-		headers: Headers;
-	};
-export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseError =
-	createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse422 & {
-		headers: Headers;
-	};
 
-export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse =
-	| createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseSuccess
-	| createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseError;
 
-export const getCreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostUrl = (
-	labelGroupId: string,
-) => {
-	return `/api/label-groups/${labelGroupId}/label-datas/auto-labels`;
-};
+
+  return `/api/label-groups/${labelGroupId}/label-datas/auto-labels`
+}
 
 /**
  * Creates label datas and populates labels from autolabel results.
  * @summary Create Label Datas By Auto Labels
  */
-export const createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost = async (
-	labelGroupId: string,
-	createLabelDataByAutoLabel: CreateLabelDataByAutoLabel,
-	options?: RequestInit,
-): Promise<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse> => {
-	return customFetch<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse>(
-		getCreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostUrl(
-			labelGroupId,
-		),
-		{
-			...options,
-			method: "POST",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(createLabelDataByAutoLabel),
-		},
-	);
-};
+export const createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost = async (labelGroupId: string,
+    createLabelDataByAutoLabel: CreateLabelDataByAutoLabel, options?: RequestInit): Promise<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse> => {
+
+  return customFetch<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse>(getCreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostUrl(labelGroupId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createLabelDataByAutoLabel)
+  }
+);}
+
 
 export type readAllLanguagesLanguagesGetResponse200 = {
-	data: Language[];
-	status: 200;
+  data: Language[]
+  status: 200
+}
+
+export type readAllLanguagesLanguagesGetResponseSuccess = (readAllLanguagesLanguagesGetResponse200) & {
+  headers: Headers;
 };
+;
 
-export type readAllLanguagesLanguagesGetResponseSuccess =
-	readAllLanguagesLanguagesGetResponse200 & {
-		headers: Headers;
-	};
-
-export type readAllLanguagesLanguagesGetResponse = readAllLanguagesLanguagesGetResponseSuccess;
+export type readAllLanguagesLanguagesGetResponse = (readAllLanguagesLanguagesGetResponseSuccess)
 
 export const getReadAllLanguagesLanguagesGetUrl = () => {
-	return `/api/languages`;
-};
+
+
+
+
+  return `/api/languages`
+}
 
 /**
  * Retrieves all languages in the database.
@@ -1928,41 +1772,44 @@ export const getReadAllLanguagesLanguagesGetUrl = () => {
  *     db: Database session.
  * @summary Read All Languages
  */
-export const readAllLanguagesLanguagesGet = async (
-	options?: RequestInit,
-): Promise<readAllLanguagesLanguagesGetResponse> => {
-	return customFetch<readAllLanguagesLanguagesGetResponse>(getReadAllLanguagesLanguagesGetUrl(), {
-		...options,
-		method: "GET",
-	});
-};
+export const readAllLanguagesLanguagesGet = async ( options?: RequestInit): Promise<readAllLanguagesLanguagesGetResponse> => {
+
+  return customFetch<readAllLanguagesLanguagesGetResponse>(getReadAllLanguagesLanguagesGetUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type readLanguageByCodeLanguagesLanguageCodeGetResponse200 = {
-	data: Language;
-	status: 200;
-};
+  data: Language
+  status: 200
+}
 
 export type readLanguageByCodeLanguagesLanguageCodeGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readLanguageByCodeLanguagesLanguageCodeGetResponseSuccess = (readLanguageByCodeLanguagesLanguageCodeGetResponse200) & {
+  headers: Headers;
+};
+export type readLanguageByCodeLanguagesLanguageCodeGetResponseError = (readLanguageByCodeLanguagesLanguageCodeGetResponse422) & {
+  headers: Headers;
 };
 
-export type readLanguageByCodeLanguagesLanguageCodeGetResponseSuccess =
-	readLanguageByCodeLanguagesLanguageCodeGetResponse200 & {
-		headers: Headers;
-	};
-export type readLanguageByCodeLanguagesLanguageCodeGetResponseError =
-	readLanguageByCodeLanguagesLanguageCodeGetResponse422 & {
-		headers: Headers;
-	};
+export type readLanguageByCodeLanguagesLanguageCodeGetResponse = (readLanguageByCodeLanguagesLanguageCodeGetResponseSuccess | readLanguageByCodeLanguagesLanguageCodeGetResponseError)
 
-export type readLanguageByCodeLanguagesLanguageCodeGetResponse =
-	| readLanguageByCodeLanguagesLanguageCodeGetResponseSuccess
-	| readLanguageByCodeLanguagesLanguageCodeGetResponseError;
+export const getReadLanguageByCodeLanguagesLanguageCodeGetUrl = (languageCode: string,) => {
 
-export const getReadLanguageByCodeLanguagesLanguageCodeGetUrl = (languageCode: string) => {
-	return `/api/languages/${languageCode}`;
-};
+
+
+
+  return `/api/languages/${languageCode}`
+}
 
 /**
  * Retrieves a language by its code.
@@ -1972,92 +1819,94 @@ export const getReadLanguageByCodeLanguagesLanguageCodeGetUrl = (languageCode: s
  *     db: Database session.
  * @summary Read Language By Code
  */
-export const readLanguageByCodeLanguagesLanguageCodeGet = async (
-	languageCode: string,
-	options?: RequestInit,
-): Promise<readLanguageByCodeLanguagesLanguageCodeGetResponse> => {
-	return customFetch<readLanguageByCodeLanguagesLanguageCodeGetResponse>(
-		getReadLanguageByCodeLanguagesLanguageCodeGetUrl(languageCode),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readLanguageByCodeLanguagesLanguageCodeGet = async (languageCode: string, options?: RequestInit): Promise<readLanguageByCodeLanguagesLanguageCodeGetResponse> => {
+
+  return customFetch<readLanguageByCodeLanguagesLanguageCodeGetResponse>(getReadLanguageByCodeLanguagesLanguageCodeGetUrl(languageCode),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type readNovelsNovelsGetResponse200 = {
-	data: Novel[];
-	status: 200;
-};
+  data: Novel[]
+  status: 200
+}
 
 export type readNovelsNovelsGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readNovelsNovelsGetResponseSuccess = (readNovelsNovelsGetResponse200) & {
+  headers: Headers;
+};
+export type readNovelsNovelsGetResponseError = (readNovelsNovelsGetResponse422) & {
+  headers: Headers;
 };
 
-export type readNovelsNovelsGetResponseSuccess = readNovelsNovelsGetResponse200 & {
-	headers: Headers;
-};
-export type readNovelsNovelsGetResponseError = readNovelsNovelsGetResponse422 & {
-	headers: Headers;
-};
+export type readNovelsNovelsGetResponse = (readNovelsNovelsGetResponseSuccess | readNovelsNovelsGetResponseError)
 
-export type readNovelsNovelsGetResponse =
-	| readNovelsNovelsGetResponseSuccess
-	| readNovelsNovelsGetResponseError;
+export const getReadNovelsNovelsGetUrl = (params?: ReadNovelsNovelsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-export const getReadNovelsNovelsGetUrl = (params?: ReadNovelsNovelsGetParams) => {
-	const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : String(value));
-		}
-	});
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
-	const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0 ? `/api/novels?${stringifiedParams}` : `/api/novels`;
-};
+  return stringifiedParams.length > 0 ? `/api/novels?${stringifiedParams}` : `/api/novels`
+}
 
 /**
  * Endpoint for retrieving novels in bulk.
  * @summary Read Novels
  */
-export const readNovelsNovelsGet = async (
-	params?: ReadNovelsNovelsGetParams,
-	options?: RequestInit,
-): Promise<readNovelsNovelsGetResponse> => {
-	return customFetch<readNovelsNovelsGetResponse>(getReadNovelsNovelsGetUrl(params), {
-		...options,
-		method: "GET",
-	});
-};
+export const readNovelsNovelsGet = async (params?: ReadNovelsNovelsGetParams, options?: RequestInit): Promise<readNovelsNovelsGetResponse> => {
+
+  return customFetch<readNovelsNovelsGetResponse>(getReadNovelsNovelsGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type createNovelNovelsPostResponse200 = {
-	data: Novel;
-	status: 200;
-};
+  data: Novel
+  status: 200
+}
 
 export type createNovelNovelsPostResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createNovelNovelsPostResponseSuccess = (createNovelNovelsPostResponse200) & {
+  headers: Headers;
+};
+export type createNovelNovelsPostResponseError = (createNovelNovelsPostResponse422) & {
+  headers: Headers;
 };
 
-export type createNovelNovelsPostResponseSuccess = createNovelNovelsPostResponse200 & {
-	headers: Headers;
-};
-export type createNovelNovelsPostResponseError = createNovelNovelsPostResponse422 & {
-	headers: Headers;
-};
-
-export type createNovelNovelsPostResponse =
-	| createNovelNovelsPostResponseSuccess
-	| createNovelNovelsPostResponseError;
+export type createNovelNovelsPostResponse = (createNovelNovelsPostResponseSuccess | createNovelNovelsPostResponseError)
 
 export const getCreateNovelNovelsPostUrl = () => {
-	return `/api/novels`;
-};
+
+
+
+
+  return `/api/novels`
+}
 
 /**
  * Add a new novel to the database.
@@ -2067,96 +1916,94 @@ export const getCreateNovelNovelsPostUrl = () => {
  *     400: Data in some field is too long.
  * @summary Create Novel
  */
-export const createNovelNovelsPost = async (
-	createNovel: CreateNovel,
-	options?: RequestInit,
-): Promise<createNovelNovelsPostResponse> => {
-	return customFetch<createNovelNovelsPostResponse>(getCreateNovelNovelsPostUrl(), {
-		...options,
-		method: "POST",
-		headers: { "Content-Type": "application/json", ...options?.headers },
-		body: JSON.stringify(createNovel),
-	});
-};
+export const createNovelNovelsPost = async (createNovel: CreateNovel, options?: RequestInit): Promise<createNovelNovelsPostResponse> => {
+
+  return customFetch<createNovelNovelsPostResponse>(getCreateNovelNovelsPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createNovel)
+  }
+);}
+
 
 export type readNovelsMineNovelsMineGetResponse200 = {
-	data: Novel[];
-	status: 200;
-};
+  data: Novel[]
+  status: 200
+}
 
 export type readNovelsMineNovelsMineGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readNovelsMineNovelsMineGetResponseSuccess = (readNovelsMineNovelsMineGetResponse200) & {
+  headers: Headers;
+};
+export type readNovelsMineNovelsMineGetResponseError = (readNovelsMineNovelsMineGetResponse422) & {
+  headers: Headers;
 };
 
-export type readNovelsMineNovelsMineGetResponseSuccess = readNovelsMineNovelsMineGetResponse200 & {
-	headers: Headers;
-};
-export type readNovelsMineNovelsMineGetResponseError = readNovelsMineNovelsMineGetResponse422 & {
-	headers: Headers;
-};
+export type readNovelsMineNovelsMineGetResponse = (readNovelsMineNovelsMineGetResponseSuccess | readNovelsMineNovelsMineGetResponseError)
 
-export type readNovelsMineNovelsMineGetResponse =
-	| readNovelsMineNovelsMineGetResponseSuccess
-	| readNovelsMineNovelsMineGetResponseError;
+export const getReadNovelsMineNovelsMineGetUrl = (params?: ReadNovelsMineNovelsMineGetParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-export const getReadNovelsMineNovelsMineGetUrl = (params?: ReadNovelsMineNovelsMineGetParams) => {
-	const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : String(value));
-		}
-	});
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
-	const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0
-		? `/api/novels/mine?${stringifiedParams}`
-		: `/api/novels/mine`;
-};
+  return stringifiedParams.length > 0 ? `/api/novels/mine?${stringifiedParams}` : `/api/novels/mine`
+}
 
 /**
  * Endpoint for retrieving novels that the user has special access to.
  * @summary Read Novels Mine
  */
-export const readNovelsMineNovelsMineGet = async (
-	params?: ReadNovelsMineNovelsMineGetParams,
-	options?: RequestInit,
-): Promise<readNovelsMineNovelsMineGetResponse> => {
-	return customFetch<readNovelsMineNovelsMineGetResponse>(
-		getReadNovelsMineNovelsMineGetUrl(params),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readNovelsMineNovelsMineGet = async (params?: ReadNovelsMineNovelsMineGetParams, options?: RequestInit): Promise<readNovelsMineNovelsMineGetResponse> => {
+
+  return customFetch<readNovelsMineNovelsMineGetResponse>(getReadNovelsMineNovelsMineGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type readNovelNovelsNovelIdGetResponse200 = {
-	data: Novel;
-	status: 200;
-};
+  data: Novel
+  status: 200
+}
 
 export type readNovelNovelsNovelIdGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readNovelNovelsNovelIdGetResponseSuccess = (readNovelNovelsNovelIdGetResponse200) & {
+  headers: Headers;
+};
+export type readNovelNovelsNovelIdGetResponseError = (readNovelNovelsNovelIdGetResponse422) & {
+  headers: Headers;
 };
 
-export type readNovelNovelsNovelIdGetResponseSuccess = readNovelNovelsNovelIdGetResponse200 & {
-	headers: Headers;
-};
-export type readNovelNovelsNovelIdGetResponseError = readNovelNovelsNovelIdGetResponse422 & {
-	headers: Headers;
-};
+export type readNovelNovelsNovelIdGetResponse = (readNovelNovelsNovelIdGetResponseSuccess | readNovelNovelsNovelIdGetResponseError)
 
-export type readNovelNovelsNovelIdGetResponse =
-	| readNovelNovelsNovelIdGetResponseSuccess
-	| readNovelNovelsNovelIdGetResponseError;
+export const getReadNovelNovelsNovelIdGetUrl = (novelId: string,) => {
 
-export const getReadNovelNovelsNovelIdGetUrl = (novelId: string) => {
-	return `/api/novels/${novelId}`;
-};
+
+
+
+  return `/api/novels/${novelId}`
+}
 
 /**
  * Endpoint for retrieving a novel by id.
@@ -2165,45 +2012,44 @@ export const getReadNovelNovelsNovelIdGetUrl = (novelId: string) => {
  *     404: Novel not found (or insufficient permissions).
  * @summary Read Novel
  */
-export const readNovelNovelsNovelIdGet = async (
-	novelId: string,
-	options?: RequestInit,
-): Promise<readNovelNovelsNovelIdGetResponse> => {
-	return customFetch<readNovelNovelsNovelIdGetResponse>(
-		getReadNovelNovelsNovelIdGetUrl(novelId),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readNovelNovelsNovelIdGet = async (novelId: string, options?: RequestInit): Promise<readNovelNovelsNovelIdGetResponse> => {
+
+  return customFetch<readNovelNovelsNovelIdGetResponse>(getReadNovelNovelsNovelIdGetUrl(novelId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type updateNovelNovelsNovelIdPatchResponse200 = {
-	data: Novel;
-	status: 200;
-};
+  data: Novel
+  status: 200
+}
 
 export type updateNovelNovelsNovelIdPatchResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateNovelNovelsNovelIdPatchResponseSuccess = (updateNovelNovelsNovelIdPatchResponse200) & {
+  headers: Headers;
+};
+export type updateNovelNovelsNovelIdPatchResponseError = (updateNovelNovelsNovelIdPatchResponse422) & {
+  headers: Headers;
 };
 
-export type updateNovelNovelsNovelIdPatchResponseSuccess =
-	updateNovelNovelsNovelIdPatchResponse200 & {
-		headers: Headers;
-	};
-export type updateNovelNovelsNovelIdPatchResponseError =
-	updateNovelNovelsNovelIdPatchResponse422 & {
-		headers: Headers;
-	};
+export type updateNovelNovelsNovelIdPatchResponse = (updateNovelNovelsNovelIdPatchResponseSuccess | updateNovelNovelsNovelIdPatchResponseError)
 
-export type updateNovelNovelsNovelIdPatchResponse =
-	| updateNovelNovelsNovelIdPatchResponseSuccess
-	| updateNovelNovelsNovelIdPatchResponseError;
+export const getUpdateNovelNovelsNovelIdPatchUrl = (novelId: string,) => {
 
-export const getUpdateNovelNovelsNovelIdPatchUrl = (novelId: string) => {
-	return `/api/novels/${novelId}`;
-};
+
+
+
+  return `/api/novels/${novelId}`
+}
 
 /**
  * Update the novel with novel_id.
@@ -2214,48 +2060,45 @@ export const getUpdateNovelNovelsNovelIdPatchUrl = (novelId: string) => {
  *     400: Data in some field exceeds maximum length.
  * @summary Update Novel
  */
-export const updateNovelNovelsNovelIdPatch = async (
-	novelId: string,
-	updateNovel: UpdateNovel,
-	options?: RequestInit,
-): Promise<updateNovelNovelsNovelIdPatchResponse> => {
-	return customFetch<updateNovelNovelsNovelIdPatchResponse>(
-		getUpdateNovelNovelsNovelIdPatchUrl(novelId),
-		{
-			...options,
-			method: "PATCH",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(updateNovel),
-		},
-	);
-};
+export const updateNovelNovelsNovelIdPatch = async (novelId: string,
+    updateNovel: UpdateNovel, options?: RequestInit): Promise<updateNovelNovelsNovelIdPatchResponse> => {
+
+  return customFetch<updateNovelNovelsNovelIdPatchResponse>(getUpdateNovelNovelsNovelIdPatchUrl(novelId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateNovel)
+  }
+);}
+
 
 export type createChapterNovelsNovelIdChaptersPostResponse200 = {
-	data: ChapterData;
-	status: 200;
-};
+  data: ChapterData
+  status: 200
+}
 
 export type createChapterNovelsNovelIdChaptersPostResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createChapterNovelsNovelIdChaptersPostResponseSuccess = (createChapterNovelsNovelIdChaptersPostResponse200) & {
+  headers: Headers;
+};
+export type createChapterNovelsNovelIdChaptersPostResponseError = (createChapterNovelsNovelIdChaptersPostResponse422) & {
+  headers: Headers;
 };
 
-export type createChapterNovelsNovelIdChaptersPostResponseSuccess =
-	createChapterNovelsNovelIdChaptersPostResponse200 & {
-		headers: Headers;
-	};
-export type createChapterNovelsNovelIdChaptersPostResponseError =
-	createChapterNovelsNovelIdChaptersPostResponse422 & {
-		headers: Headers;
-	};
+export type createChapterNovelsNovelIdChaptersPostResponse = (createChapterNovelsNovelIdChaptersPostResponseSuccess | createChapterNovelsNovelIdChaptersPostResponseError)
 
-export type createChapterNovelsNovelIdChaptersPostResponse =
-	| createChapterNovelsNovelIdChaptersPostResponseSuccess
-	| createChapterNovelsNovelIdChaptersPostResponseError;
+export const getCreateChapterNovelsNovelIdChaptersPostUrl = (novelId: string,) => {
 
-export const getCreateChapterNovelsNovelIdChaptersPostUrl = (novelId: string) => {
-	return `/api/novels/${novelId}/chapters`;
-};
+
+
+
+  return `/api/novels/${novelId}/chapters`
+}
 
 /**
  * Insert a new chapter into the database. Returns chapter metadata and initial empty content.
@@ -2266,46 +2109,45 @@ export const getCreateChapterNovelsNovelIdChaptersPostUrl = (novelId: string) =>
  *     401: Insufficient permissions.
  * @summary Create Chapter
  */
-export const createChapterNovelsNovelIdChaptersPost = async (
-	novelId: string,
-	createChapter: CreateChapter,
-	options?: RequestInit,
-): Promise<createChapterNovelsNovelIdChaptersPostResponse> => {
-	return customFetch<createChapterNovelsNovelIdChaptersPostResponse>(
-		getCreateChapterNovelsNovelIdChaptersPostUrl(novelId),
-		{
-			...options,
-			method: "POST",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(createChapter),
-		},
-	);
-};
+export const createChapterNovelsNovelIdChaptersPost = async (novelId: string,
+    createChapter: CreateChapter, options?: RequestInit): Promise<createChapterNovelsNovelIdChaptersPostResponse> => {
+
+  return customFetch<createChapterNovelsNovelIdChaptersPostResponse>(getCreateChapterNovelsNovelIdChaptersPostUrl(novelId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createChapter)
+  }
+);}
+
 
 export type registerUserRegisterPostResponse200 = {
-	data: User;
-	status: 200;
-};
+  data: User
+  status: 200
+}
 
 export type registerUserRegisterPostResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type registerUserRegisterPostResponseSuccess = (registerUserRegisterPostResponse200) & {
+  headers: Headers;
+};
+export type registerUserRegisterPostResponseError = (registerUserRegisterPostResponse422) & {
+  headers: Headers;
 };
 
-export type registerUserRegisterPostResponseSuccess = registerUserRegisterPostResponse200 & {
-	headers: Headers;
-};
-export type registerUserRegisterPostResponseError = registerUserRegisterPostResponse422 & {
-	headers: Headers;
-};
-
-export type registerUserRegisterPostResponse =
-	| registerUserRegisterPostResponseSuccess
-	| registerUserRegisterPostResponseError;
+export type registerUserRegisterPostResponse = (registerUserRegisterPostResponseSuccess | registerUserRegisterPostResponseError)
 
 export const getRegisterUserRegisterPostUrl = () => {
-	return `/api/register`;
-};
+
+
+
+
+  return `/api/register`
+}
 
 /**
  * Endpoint for registering a new user. Client with registration request must not be logged in.
@@ -2316,102 +2158,94 @@ export const getRegisterUserRegisterPostUrl = () => {
  *     current_user: Optional user dependency. Should be None for this function to succeed.
  * @summary Register User
  */
-export const registerUserRegisterPost = async (
-	createUser: CreateUser,
-	options?: RequestInit,
-): Promise<registerUserRegisterPostResponse> => {
-	return customFetch<registerUserRegisterPostResponse>(getRegisterUserRegisterPostUrl(), {
-		...options,
-		method: "POST",
-		headers: { "Content-Type": "application/json", ...options?.headers },
-		body: JSON.stringify(createUser),
-	});
-};
+export const registerUserRegisterPost = async (createUser: CreateUser, options?: RequestInit): Promise<registerUserRegisterPostResponse> => {
+
+  return customFetch<registerUserRegisterPostResponse>(getRegisterUserRegisterPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createUser)
+  }
+);}
+
 
 export type readSourceWorksSourceWorksGetResponse200 = {
-	data: SourceWorkDataOutput[];
-	status: 200;
-};
+  data: SourceWorkDataOutput[]
+  status: 200
+}
 
 export type readSourceWorksSourceWorksGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readSourceWorksSourceWorksGetResponseSuccess = (readSourceWorksSourceWorksGetResponse200) & {
+  headers: Headers;
+};
+export type readSourceWorksSourceWorksGetResponseError = (readSourceWorksSourceWorksGetResponse422) & {
+  headers: Headers;
 };
 
-export type readSourceWorksSourceWorksGetResponseSuccess =
-	readSourceWorksSourceWorksGetResponse200 & {
-		headers: Headers;
-	};
-export type readSourceWorksSourceWorksGetResponseError =
-	readSourceWorksSourceWorksGetResponse422 & {
-		headers: Headers;
-	};
+export type readSourceWorksSourceWorksGetResponse = (readSourceWorksSourceWorksGetResponseSuccess | readSourceWorksSourceWorksGetResponseError)
 
-export type readSourceWorksSourceWorksGetResponse =
-	| readSourceWorksSourceWorksGetResponseSuccess
-	| readSourceWorksSourceWorksGetResponseError;
+export const getReadSourceWorksSourceWorksGetUrl = (params?: ReadSourceWorksSourceWorksGetParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-export const getReadSourceWorksSourceWorksGetUrl = (
-	params?: ReadSourceWorksSourceWorksGetParams,
-) => {
-	const normalizedParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : String(value));
-		}
-	});
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
-	const stringifiedParams = normalizedParams.toString();
+  const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0
-		? `/api/source-works?${stringifiedParams}`
-		: `/api/source-works`;
-};
+  return stringifiedParams.length > 0 ? `/api/source-works?${stringifiedParams}` : `/api/source-works`
+}
 
 /**
  * Endpoint for retrieving source works in bulk, optionally filtered by title substring.
  * @summary Read Source Works
  */
-export const readSourceWorksSourceWorksGet = async (
-	params?: ReadSourceWorksSourceWorksGetParams,
-	options?: RequestInit,
-): Promise<readSourceWorksSourceWorksGetResponse> => {
-	return customFetch<readSourceWorksSourceWorksGetResponse>(
-		getReadSourceWorksSourceWorksGetUrl(params),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readSourceWorksSourceWorksGet = async (params?: ReadSourceWorksSourceWorksGetParams, options?: RequestInit): Promise<readSourceWorksSourceWorksGetResponse> => {
+
+  return customFetch<readSourceWorksSourceWorksGetResponse>(getReadSourceWorksSourceWorksGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type createSourceWorkSourceWorksPostResponse200 = {
-	data: SourceWork;
-	status: 200;
-};
+  data: SourceWork
+  status: 200
+}
 
 export type createSourceWorkSourceWorksPostResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createSourceWorkSourceWorksPostResponseSuccess = (createSourceWorkSourceWorksPostResponse200) & {
+  headers: Headers;
+};
+export type createSourceWorkSourceWorksPostResponseError = (createSourceWorkSourceWorksPostResponse422) & {
+  headers: Headers;
 };
 
-export type createSourceWorkSourceWorksPostResponseSuccess =
-	createSourceWorkSourceWorksPostResponse200 & {
-		headers: Headers;
-	};
-export type createSourceWorkSourceWorksPostResponseError =
-	createSourceWorkSourceWorksPostResponse422 & {
-		headers: Headers;
-	};
-
-export type createSourceWorkSourceWorksPostResponse =
-	| createSourceWorkSourceWorksPostResponseSuccess
-	| createSourceWorkSourceWorksPostResponseError;
+export type createSourceWorkSourceWorksPostResponse = (createSourceWorkSourceWorksPostResponseSuccess | createSourceWorkSourceWorksPostResponseError)
 
 export const getCreateSourceWorkSourceWorksPostUrl = () => {
-	return `/api/source-works`;
-};
+
+
+
+
+  return `/api/source-works`
+}
 
 /**
  * Create a new source work.
@@ -2420,47 +2254,44 @@ export const getCreateSourceWorkSourceWorksPostUrl = () => {
  *     400: Data in some field is too long.
  * @summary Create Source Work
  */
-export const createSourceWorkSourceWorksPost = async (
-	createSourceWork: CreateSourceWork,
-	options?: RequestInit,
-): Promise<createSourceWorkSourceWorksPostResponse> => {
-	return customFetch<createSourceWorkSourceWorksPostResponse>(
-		getCreateSourceWorkSourceWorksPostUrl(),
-		{
-			...options,
-			method: "POST",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(createSourceWork),
-		},
-	);
-};
+export const createSourceWorkSourceWorksPost = async (createSourceWork: CreateSourceWork, options?: RequestInit): Promise<createSourceWorkSourceWorksPostResponse> => {
+
+  return customFetch<createSourceWorkSourceWorksPostResponse>(getCreateSourceWorkSourceWorksPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createSourceWork)
+  }
+);}
+
 
 export type readSourceWorkSourceWorksSourceWorkIdGetResponse200 = {
-	data: SourceWork;
-	status: 200;
-};
+  data: SourceWork
+  status: 200
+}
 
 export type readSourceWorkSourceWorksSourceWorkIdGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readSourceWorkSourceWorksSourceWorkIdGetResponseSuccess = (readSourceWorkSourceWorksSourceWorkIdGetResponse200) & {
+  headers: Headers;
+};
+export type readSourceWorkSourceWorksSourceWorkIdGetResponseError = (readSourceWorkSourceWorksSourceWorkIdGetResponse422) & {
+  headers: Headers;
 };
 
-export type readSourceWorkSourceWorksSourceWorkIdGetResponseSuccess =
-	readSourceWorkSourceWorksSourceWorkIdGetResponse200 & {
-		headers: Headers;
-	};
-export type readSourceWorkSourceWorksSourceWorkIdGetResponseError =
-	readSourceWorkSourceWorksSourceWorkIdGetResponse422 & {
-		headers: Headers;
-	};
+export type readSourceWorkSourceWorksSourceWorkIdGetResponse = (readSourceWorkSourceWorksSourceWorkIdGetResponseSuccess | readSourceWorkSourceWorksSourceWorkIdGetResponseError)
 
-export type readSourceWorkSourceWorksSourceWorkIdGetResponse =
-	| readSourceWorkSourceWorksSourceWorkIdGetResponseSuccess
-	| readSourceWorkSourceWorksSourceWorkIdGetResponseError;
+export const getReadSourceWorkSourceWorksSourceWorkIdGetUrl = (sourceWorkId: string,) => {
 
-export const getReadSourceWorkSourceWorksSourceWorkIdGetUrl = (sourceWorkId: string) => {
-	return `/api/source-works/${sourceWorkId}`;
-};
+
+
+
+  return `/api/source-works/${sourceWorkId}`
+}
 
 /**
  * Endpoint for retrieving a source work by id.
@@ -2469,45 +2300,44 @@ export const getReadSourceWorkSourceWorksSourceWorkIdGetUrl = (sourceWorkId: str
  *     404: Source work not found (or insufficient permissions).
  * @summary Read Source Work
  */
-export const readSourceWorkSourceWorksSourceWorkIdGet = async (
-	sourceWorkId: string,
-	options?: RequestInit,
-): Promise<readSourceWorkSourceWorksSourceWorkIdGetResponse> => {
-	return customFetch<readSourceWorkSourceWorksSourceWorkIdGetResponse>(
-		getReadSourceWorkSourceWorksSourceWorkIdGetUrl(sourceWorkId),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readSourceWorkSourceWorksSourceWorkIdGet = async (sourceWorkId: string, options?: RequestInit): Promise<readSourceWorkSourceWorksSourceWorkIdGetResponse> => {
+
+  return customFetch<readSourceWorkSourceWorksSourceWorkIdGetResponse>(getReadSourceWorkSourceWorksSourceWorkIdGetUrl(sourceWorkId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type updateSourceWorkSourceWorksSourceWorkIdPatchResponse200 = {
-	data: SourceWork;
-	status: 200;
-};
+  data: SourceWork
+  status: 200
+}
 
 export type updateSourceWorkSourceWorksSourceWorkIdPatchResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateSourceWorkSourceWorksSourceWorkIdPatchResponseSuccess = (updateSourceWorkSourceWorksSourceWorkIdPatchResponse200) & {
+  headers: Headers;
+};
+export type updateSourceWorkSourceWorksSourceWorkIdPatchResponseError = (updateSourceWorkSourceWorksSourceWorkIdPatchResponse422) & {
+  headers: Headers;
 };
 
-export type updateSourceWorkSourceWorksSourceWorkIdPatchResponseSuccess =
-	updateSourceWorkSourceWorksSourceWorkIdPatchResponse200 & {
-		headers: Headers;
-	};
-export type updateSourceWorkSourceWorksSourceWorkIdPatchResponseError =
-	updateSourceWorkSourceWorksSourceWorkIdPatchResponse422 & {
-		headers: Headers;
-	};
+export type updateSourceWorkSourceWorksSourceWorkIdPatchResponse = (updateSourceWorkSourceWorksSourceWorkIdPatchResponseSuccess | updateSourceWorkSourceWorksSourceWorkIdPatchResponseError)
 
-export type updateSourceWorkSourceWorksSourceWorkIdPatchResponse =
-	| updateSourceWorkSourceWorksSourceWorkIdPatchResponseSuccess
-	| updateSourceWorkSourceWorksSourceWorkIdPatchResponseError;
+export const getUpdateSourceWorkSourceWorksSourceWorkIdPatchUrl = (sourceWorkId: string,) => {
 
-export const getUpdateSourceWorkSourceWorksSourceWorkIdPatchUrl = (sourceWorkId: string) => {
-	return `/api/source-works/${sourceWorkId}`;
-};
+
+
+
+  return `/api/source-works/${sourceWorkId}`
+}
 
 /**
  * Update a source work's metadata.
@@ -2518,50 +2348,45 @@ export const getUpdateSourceWorkSourceWorksSourceWorkIdPatchUrl = (sourceWorkId:
  *     400: Data in some field exceeds maximum length.
  * @summary Update Source Work
  */
-export const updateSourceWorkSourceWorksSourceWorkIdPatch = async (
-	sourceWorkId: string,
-	updateSourceWork: UpdateSourceWork,
-	options?: RequestInit,
-): Promise<updateSourceWorkSourceWorksSourceWorkIdPatchResponse> => {
-	return customFetch<updateSourceWorkSourceWorksSourceWorkIdPatchResponse>(
-		getUpdateSourceWorkSourceWorksSourceWorkIdPatchUrl(sourceWorkId),
-		{
-			...options,
-			method: "PATCH",
-			headers: { "Content-Type": "application/json", ...options?.headers },
-			body: JSON.stringify(updateSourceWork),
-		},
-	);
-};
+export const updateSourceWorkSourceWorksSourceWorkIdPatch = async (sourceWorkId: string,
+    updateSourceWork: UpdateSourceWork, options?: RequestInit): Promise<updateSourceWorkSourceWorksSourceWorkIdPatchResponse> => {
+
+  return customFetch<updateSourceWorkSourceWorksSourceWorkIdPatchResponse>(getUpdateSourceWorkSourceWorksSourceWorkIdPatchUrl(sourceWorkId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateSourceWork)
+  }
+);}
+
 
 export type readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponse200 = {
-	data: Novel[];
-	status: 200;
-};
+  data: Novel[]
+  status: 200
+}
 
 export type readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponseSuccess = (readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponse200) & {
+  headers: Headers;
+};
+export type readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponseError = (readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponse422) & {
+  headers: Headers;
 };
 
-export type readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponseSuccess =
-	readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponse200 & {
-		headers: Headers;
-	};
-export type readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponseError =
-	readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponse422 & {
-		headers: Headers;
-	};
+export type readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponse = (readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponseSuccess | readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponseError)
 
-export type readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponse =
-	| readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponseSuccess
-	| readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponseError;
+export const getReadNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetUrl = (sourceWorkId: string,) => {
 
-export const getReadNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetUrl = (
-	sourceWorkId: string,
-) => {
-	return `/api/source-works/${sourceWorkId}/novels`;
-};
+
+
+
+  return `/api/source-works/${sourceWorkId}/novels`
+}
 
 /**
  * Endpoint for retrieving novels belonging to a source work.
@@ -2570,52 +2395,49 @@ export const getReadNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetUrl = (
  *     404: Source work not found (or insufficient permissions).
  * @summary Read Novels By Source Work
  */
-export const readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGet = async (
-	sourceWorkId: string,
-	options?: RequestInit,
-): Promise<readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponse> => {
-	return customFetch<readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponse>(
-		getReadNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetUrl(sourceWorkId),
-		{
-			...options,
-			method: "GET",
-		},
-	);
-};
+export const readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGet = async (sourceWorkId: string, options?: RequestInit): Promise<readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponse> => {
+
+  return customFetch<readNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetResponse>(getReadNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetUrl(sourceWorkId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type loginForAccessTokenTokenPostResponse200 = {
-	data: Token;
-	status: 200;
-};
+  data: Token
+  status: 200
+}
 
 export type loginForAccessTokenTokenPostResponse401 = {
-	data: void;
-	status: 401;
-};
+  data: void
+  status: 401
+}
 
 export type loginForAccessTokenTokenPostResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type loginForAccessTokenTokenPostResponseSuccess = (loginForAccessTokenTokenPostResponse200) & {
+  headers: Headers;
+};
+export type loginForAccessTokenTokenPostResponseError = (loginForAccessTokenTokenPostResponse401 | loginForAccessTokenTokenPostResponse422) & {
+  headers: Headers;
 };
 
-export type loginForAccessTokenTokenPostResponseSuccess =
-	loginForAccessTokenTokenPostResponse200 & {
-		headers: Headers;
-	};
-export type loginForAccessTokenTokenPostResponseError = (
-	| loginForAccessTokenTokenPostResponse401
-	| loginForAccessTokenTokenPostResponse422
-) & {
-	headers: Headers;
-};
-
-export type loginForAccessTokenTokenPostResponse =
-	| loginForAccessTokenTokenPostResponseSuccess
-	| loginForAccessTokenTokenPostResponseError;
+export type loginForAccessTokenTokenPostResponse = (loginForAccessTokenTokenPostResponseSuccess | loginForAccessTokenTokenPostResponseError)
 
 export const getLoginForAccessTokenTokenPostUrl = () => {
-	return `/api/token`;
-};
+
+
+
+
+  return `/api/token`
+}
 
 /**
  * Verifies a client's login request and returns a token if it succeeds.
@@ -2625,67 +2447,59 @@ export const getLoginForAccessTokenTokenPostUrl = () => {
  *     form_data: OAuth2PasswordRequestForm dependency.
  * @summary Login For Access Token
  */
-export const loginForAccessTokenTokenPost = async (
-	bodyLoginForAccessTokenTokenPost: BodyLoginForAccessTokenTokenPost,
-	options?: RequestInit,
-): Promise<loginForAccessTokenTokenPostResponse> => {
-	const formUrlEncoded = new URLSearchParams();
-	if (
-		bodyLoginForAccessTokenTokenPost.client_id !== undefined &&
-		bodyLoginForAccessTokenTokenPost.client_id !== null
-	) {
-		formUrlEncoded.append(`client_id`, bodyLoginForAccessTokenTokenPost.client_id);
-	}
-	if (
-		bodyLoginForAccessTokenTokenPost.client_secret !== undefined &&
-		bodyLoginForAccessTokenTokenPost.client_secret !== null
-	) {
-		formUrlEncoded.append(`client_secret`, bodyLoginForAccessTokenTokenPost.client_secret);
-	}
-	if (
-		bodyLoginForAccessTokenTokenPost.grant_type !== undefined &&
-		bodyLoginForAccessTokenTokenPost.grant_type !== null
-	) {
-		formUrlEncoded.append(`grant_type`, bodyLoginForAccessTokenTokenPost.grant_type);
-	}
-	formUrlEncoded.append(`password`, bodyLoginForAccessTokenTokenPost.password);
-	if (bodyLoginForAccessTokenTokenPost.scope !== undefined) {
-		formUrlEncoded.append(`scope`, bodyLoginForAccessTokenTokenPost.scope);
-	}
-	formUrlEncoded.append(`username`, bodyLoginForAccessTokenTokenPost.username);
+export const loginForAccessTokenTokenPost = async (bodyLoginForAccessTokenTokenPost: BodyLoginForAccessTokenTokenPost, options?: RequestInit): Promise<loginForAccessTokenTokenPostResponse> => {
+    const formUrlEncoded = new URLSearchParams();
+if(bodyLoginForAccessTokenTokenPost.client_id !== undefined && bodyLoginForAccessTokenTokenPost.client_id !== null) {
+ formUrlEncoded.append(`client_id`, bodyLoginForAccessTokenTokenPost.client_id);
+ }
+if(bodyLoginForAccessTokenTokenPost.client_secret !== undefined && bodyLoginForAccessTokenTokenPost.client_secret !== null) {
+ formUrlEncoded.append(`client_secret`, bodyLoginForAccessTokenTokenPost.client_secret);
+ }
+if(bodyLoginForAccessTokenTokenPost.grant_type !== undefined && bodyLoginForAccessTokenTokenPost.grant_type !== null) {
+ formUrlEncoded.append(`grant_type`, bodyLoginForAccessTokenTokenPost.grant_type);
+ }
+formUrlEncoded.append(`password`, bodyLoginForAccessTokenTokenPost.password);
+if(bodyLoginForAccessTokenTokenPost.scope !== undefined) {
+ formUrlEncoded.append(`scope`, bodyLoginForAccessTokenTokenPost.scope);
+ }
+formUrlEncoded.append(`username`, bodyLoginForAccessTokenTokenPost.username);
 
-	return customFetch<loginForAccessTokenTokenPostResponse>(getLoginForAccessTokenTokenPostUrl(), {
-		...options,
-		method: "POST",
-		headers: { "Content-Type": "application/x-www-form-urlencoded", ...options?.headers },
-		body: formUrlEncoded,
-	});
-};
+  return customFetch<loginForAccessTokenTokenPostResponse>(getLoginForAccessTokenTokenPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...options?.headers },
+    body: formUrlEncoded
+  }
+);}
+
 
 export type createUserUsersPostResponse200 = {
-	data: User;
-	status: 200;
-};
+  data: User
+  status: 200
+}
 
 export type createUserUsersPostResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createUserUsersPostResponseSuccess = (createUserUsersPostResponse200) & {
+  headers: Headers;
+};
+export type createUserUsersPostResponseError = (createUserUsersPostResponse422) & {
+  headers: Headers;
 };
 
-export type createUserUsersPostResponseSuccess = createUserUsersPostResponse200 & {
-	headers: Headers;
-};
-export type createUserUsersPostResponseError = createUserUsersPostResponse422 & {
-	headers: Headers;
-};
-
-export type createUserUsersPostResponse =
-	| createUserUsersPostResponseSuccess
-	| createUserUsersPostResponseError;
+export type createUserUsersPostResponse = (createUserUsersPostResponseSuccess | createUserUsersPostResponseError)
 
 export const getCreateUserUsersPostUrl = () => {
-	return `/api/users`;
-};
+
+
+
+
+  return `/api/users`
+}
 
 /**
  * Creates a user with metadata request, provided that the current_user has sufficient permissions.
@@ -2696,60 +2510,73 @@ export const getCreateUserUsersPostUrl = () => {
  *     request: Metadata of user to be added.
  * @summary Create User
  */
-export const createUserUsersPost = async (
-	createUser: CreateUser,
-	options?: RequestInit,
-): Promise<createUserUsersPostResponse> => {
-	return customFetch<createUserUsersPostResponse>(getCreateUserUsersPostUrl(), {
-		...options,
-		method: "POST",
-		headers: { "Content-Type": "application/json", ...options?.headers },
-		body: JSON.stringify(createUser),
-	});
-};
+export const createUserUsersPost = async (createUser: CreateUser, options?: RequestInit): Promise<createUserUsersPostResponse> => {
+
+  return customFetch<createUserUsersPostResponse>(getCreateUserUsersPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createUser)
+  }
+);}
+
 
 export type deleteUserMeUsersMeDeleteResponse200 = {
-	data: DeleteUserStatus;
-	status: 200;
-};
+  data: DeleteUserStatus
+  status: 200
+}
 
-export type deleteUserMeUsersMeDeleteResponseSuccess = deleteUserMeUsersMeDeleteResponse200 & {
-	headers: Headers;
+export type deleteUserMeUsersMeDeleteResponseSuccess = (deleteUserMeUsersMeDeleteResponse200) & {
+  headers: Headers;
 };
+;
 
-export type deleteUserMeUsersMeDeleteResponse = deleteUserMeUsersMeDeleteResponseSuccess;
+export type deleteUserMeUsersMeDeleteResponse = (deleteUserMeUsersMeDeleteResponseSuccess)
 
 export const getDeleteUserMeUsersMeDeleteUrl = () => {
-	return `/api/users/me`;
-};
+
+
+
+
+  return `/api/users/me`
+}
 
 /**
  * Delete the user currently logged in.
  * @summary Delete User Me
  */
-export const deleteUserMeUsersMeDelete = async (
-	options?: RequestInit,
-): Promise<deleteUserMeUsersMeDeleteResponse> => {
-	return customFetch<deleteUserMeUsersMeDeleteResponse>(getDeleteUserMeUsersMeDeleteUrl(), {
-		...options,
-		method: "DELETE",
-	});
-};
+export const deleteUserMeUsersMeDelete = async ( options?: RequestInit): Promise<deleteUserMeUsersMeDeleteResponse> => {
+
+  return customFetch<deleteUserMeUsersMeDeleteResponse>(getDeleteUserMeUsersMeDeleteUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
 
 export type readUserMeUsersMeGetResponse200 = {
-	data: User;
-	status: 200;
-};
+  data: User
+  status: 200
+}
 
-export type readUserMeUsersMeGetResponseSuccess = readUserMeUsersMeGetResponse200 & {
-	headers: Headers;
+export type readUserMeUsersMeGetResponseSuccess = (readUserMeUsersMeGetResponse200) & {
+  headers: Headers;
 };
+;
 
-export type readUserMeUsersMeGetResponse = readUserMeUsersMeGetResponseSuccess;
+export type readUserMeUsersMeGetResponse = (readUserMeUsersMeGetResponseSuccess)
 
 export const getReadUserMeUsersMeGetUrl = () => {
-	return `/api/users/me`;
-};
+
+
+
+
+  return `/api/users/me`
+}
 
 /**
  * Return the current logged in user.
@@ -2758,81 +2585,87 @@ export const getReadUserMeUsersMeGetUrl = () => {
  *     current_user: Current user dependency.
  * @summary Read User Me
  */
-export const readUserMeUsersMeGet = async (
-	options?: RequestInit,
-): Promise<readUserMeUsersMeGetResponse> => {
-	return customFetch<readUserMeUsersMeGetResponse>(getReadUserMeUsersMeGetUrl(), {
-		...options,
-		method: "GET",
-	});
-};
+export const readUserMeUsersMeGet = async ( options?: RequestInit): Promise<readUserMeUsersMeGetResponse> => {
+
+  return customFetch<readUserMeUsersMeGetResponse>(getReadUserMeUsersMeGetUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type deleteUserUsersUserIdDeleteResponse200 = {
-	data: DeleteUserStatus;
-	status: 200;
-};
+  data: DeleteUserStatus
+  status: 200
+}
 
 export type deleteUserUsersUserIdDeleteResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type deleteUserUsersUserIdDeleteResponseSuccess = (deleteUserUsersUserIdDeleteResponse200) & {
+  headers: Headers;
+};
+export type deleteUserUsersUserIdDeleteResponseError = (deleteUserUsersUserIdDeleteResponse422) & {
+  headers: Headers;
 };
 
-export type deleteUserUsersUserIdDeleteResponseSuccess = deleteUserUsersUserIdDeleteResponse200 & {
-	headers: Headers;
-};
-export type deleteUserUsersUserIdDeleteResponseError = deleteUserUsersUserIdDeleteResponse422 & {
-	headers: Headers;
-};
+export type deleteUserUsersUserIdDeleteResponse = (deleteUserUsersUserIdDeleteResponseSuccess | deleteUserUsersUserIdDeleteResponseError)
 
-export type deleteUserUsersUserIdDeleteResponse =
-	| deleteUserUsersUserIdDeleteResponseSuccess
-	| deleteUserUsersUserIdDeleteResponseError;
+export const getDeleteUserUsersUserIdDeleteUrl = (userId: string,) => {
 
-export const getDeleteUserUsersUserIdDeleteUrl = (userId: string) => {
-	return `/api/users/${userId}`;
-};
+
+
+
+  return `/api/users/${userId}`
+}
 
 /**
  * Delete the user with user_id if the current user has sufficient permissions to perform this action. Throw an exception if the user currently logged in has insufficient permissions.
  * @summary Delete User
  */
-export const deleteUserUsersUserIdDelete = async (
-	userId: string,
-	options?: RequestInit,
-): Promise<deleteUserUsersUserIdDeleteResponse> => {
-	return customFetch<deleteUserUsersUserIdDeleteResponse>(
-		getDeleteUserUsersUserIdDeleteUrl(userId),
-		{
-			...options,
-			method: "DELETE",
-		},
-	);
-};
+export const deleteUserUsersUserIdDelete = async (userId: string, options?: RequestInit): Promise<deleteUserUsersUserIdDeleteResponse> => {
+
+  return customFetch<deleteUserUsersUserIdDeleteResponse>(getDeleteUserUsersUserIdDeleteUrl(userId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
 
 export type readUserUsersUserNameGetResponse200 = {
-	data: User;
-	status: 200;
-};
+  data: User
+  status: 200
+}
 
 export type readUserUsersUserNameGetResponse422 = {
-	data: HTTPValidationError;
-	status: 422;
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readUserUsersUserNameGetResponseSuccess = (readUserUsersUserNameGetResponse200) & {
+  headers: Headers;
+};
+export type readUserUsersUserNameGetResponseError = (readUserUsersUserNameGetResponse422) & {
+  headers: Headers;
 };
 
-export type readUserUsersUserNameGetResponseSuccess = readUserUsersUserNameGetResponse200 & {
-	headers: Headers;
-};
-export type readUserUsersUserNameGetResponseError = readUserUsersUserNameGetResponse422 & {
-	headers: Headers;
-};
+export type readUserUsersUserNameGetResponse = (readUserUsersUserNameGetResponseSuccess | readUserUsersUserNameGetResponseError)
 
-export type readUserUsersUserNameGetResponse =
-	| readUserUsersUserNameGetResponseSuccess
-	| readUserUsersUserNameGetResponseError;
+export const getReadUserUsersUserNameGetUrl = (userName: string,) => {
 
-export const getReadUserUsersUserNameGetUrl = (userName: string) => {
-	return `/api/users/${userName}`;
-};
+
+
+
+  return `/api/users/${userName}`
+}
 
 /**
  * Get user by username.
@@ -2842,12 +2675,15 @@ export const getReadUserUsersUserNameGetUrl = (userName: string) => {
  *     db: Database dependency.
  * @summary Read User
  */
-export const readUserUsersUserNameGet = async (
-	userName: string,
-	options?: RequestInit,
-): Promise<readUserUsersUserNameGetResponse> => {
-	return customFetch<readUserUsersUserNameGetResponse>(getReadUserUsersUserNameGetUrl(userName), {
-		...options,
-		method: "GET",
-	});
-};
+export const readUserUsersUserNameGet = async (userName: string, options?: RequestInit): Promise<readUserUsersUserNameGetResponse> => {
+
+  return customFetch<readUserUsersUserNameGetResponse>(getReadUserUsersUserNameGetUrl(userName),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+

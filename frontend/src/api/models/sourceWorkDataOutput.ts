@@ -4,8 +4,8 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { Novel } from "./novel";
-import type { SourceWork } from "./sourceWork";
+import type { Novel } from './novel';
+import type { SourceWork } from './sourceWork';
 
 /**
  * Pydantic schema to represent a source work and all its associated novels.
@@ -15,6 +15,6 @@ import type { SourceWork } from "./sourceWork";
  *     novels: A list of novels associated with this source work.
  */
 export interface SourceWorkDataOutput {
-	novels: Novel[];
-	sourceWork: SourceWork;
+  novels: Novel[];
+  sourceWork: SourceWork;
 }

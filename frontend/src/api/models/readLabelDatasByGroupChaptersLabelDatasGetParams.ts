@@ -6,7 +6,7 @@
  */
 
 export type ReadLabelDatasByGroupChaptersLabelDatasGetParams = {
-	labelGroupId: string;
-	start?: number | null;
-	end?: number | null;
+labelGroupId: string;
+start?: number | null;
+end?: number | null;
 };

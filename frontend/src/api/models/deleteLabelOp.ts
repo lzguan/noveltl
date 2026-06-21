@@ -12,11 +12,11 @@
  *     op: The string literal 'delete'.
  */
 export interface DeleteLabelOp {
-	/** @minimum 0 */
-	endPos: number;
-	op: "delete";
-	/** @minimum 0 */
-	startPos: number;
-	/** @maxLength 128 */
-	word: string;
+  /** @minimum 0 */
+  endPos: number;
+  op: 'delete';
+  /** @minimum 0 */
+  startPos: number;
+  /** @maxLength 128 */
+  word: string;
 }

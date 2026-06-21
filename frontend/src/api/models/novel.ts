@@ -4,8 +4,8 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { NovelType } from "./novelType";
-import type { Visibility } from "./visibility";
+import type { NovelType } from './novelType';
+import type { Visibility } from './visibility';
 
 /**
  * Pydantic schema for novel.
@@ -21,12 +21,12 @@ import type { Visibility } from "./visibility";
  *     source_work_id: UUID foreign key to source work of the novel.
  */
 export interface Novel {
-	languageCode: string;
-	novelAuthor?: string | null;
-	novelDescription?: string | null;
-	novelId: string;
-	novelTitle: string;
-	novelType: NovelType;
-	novelVisibility: Visibility;
-	sourceWorkId: string;
+  languageCode: string;
+  novelAuthor?: string | null;
+  novelDescription?: string | null;
+  novelId: string;
+  novelTitle: string;
+  novelType: NovelType;
+  novelVisibility: Visibility;
+  sourceWorkId: string;
 }

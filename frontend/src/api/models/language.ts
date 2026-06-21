@@ -13,6 +13,6 @@
  *     language_name: String name of language.
  */
 export interface Language {
-	languageCode: string;
-	languageName: string;
+  languageCode: string;
+  languageName: string;
 }

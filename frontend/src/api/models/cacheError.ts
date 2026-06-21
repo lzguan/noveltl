@@ -6,6 +6,6 @@
  */
 
 export interface CacheError {
-	cacheConflict: boolean;
-	detail: string;
+  cacheConflict: boolean;
+  detail: string;
 }

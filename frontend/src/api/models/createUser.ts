@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { UserType } from "./userType";
+import type { UserType } from './userType';
 
 /**
  * Pydantic schema to validate data required to create a user.
@@ -16,7 +16,7 @@ import type { UserType } from "./userType";
  * Notes:
  */
 export interface CreateUser {
-	userName: string;
-	userPassword: string;
-	userType: UserType;
+  userName: string;
+  userPassword: string;
+  userType: UserType;
 }

@@ -91,7 +91,6 @@ export const buildRequestManager = (
 		const retryRequests: KeyedRequestEvent[] = []; // requests that have failed due to cache conflicts/known recoverable errors and should be retried
 		const sendMut = yield* Effect.makeSemaphore(1);
 		const debounceLatch = yield* Effect.makeLatch(true);
-		const startedLatch = yield* Effect.makeLatch(true);
 
 		let shuttingDown: boolean = false;
 
@@ -100,6 +99,7 @@ export const buildRequestManager = (
 
 		const enqueueRequest = (request: RequestEvent) => {
 			if (shuttingDown) return;
+			console.log("enqueueRequest", request.variant);
 			requestQueue.push({ ...request, requestKey: RequestKey(crypto.randomUUID()) });
 		};
 
@@ -195,6 +195,7 @@ export const buildRequestManager = (
 
 		const send = () =>
 			Effect.gen(function* () {
+				console.log("send() starting, queue=%d", requestQueue.length);
 				const fromQueueRequests: KeyedRequestEvent[] = [];
 
 				let delay: DurationInput = "1 second"; // todo: implement exponential backoff for retries instead of fixed delay
@@ -237,6 +238,11 @@ export const buildRequestManager = (
 				}
 				while (requestQueue.length > 0) {
 					const action = yield* reserveAction(requestQueue[0]);
+					console.log(
+						"reserveAction: variant=%s action=%s",
+						requestQueue[0].variant,
+						action,
+					);
 					if (action === "wait") {
 						break;
 					}
@@ -297,11 +303,13 @@ export const buildRequestManager = (
 
 				const fromQueueEffect = Effect.partition(
 					fromQueueRequests,
-					(requestEvent) =>
-						sem
+					(requestEvent) => {
+						console.log("firing request", requestEvent.variant, requestEvent.requestKey);
+						return sem
 							.withPermits(1)(requestEvent.send(requestEvent.requestKey))
 							.pipe(Effect.timeout("10 seconds"))
-							.pipe(handleReturn(requestEvent)),
+							.pipe(handleReturn(requestEvent));
+					},
 					{ concurrency: "unbounded" },
 				);
 				const statusQueriesEffect = Effect.partition(
@@ -331,6 +339,15 @@ export const buildRequestManager = (
 				] = yield* Effect.all([fromQueueEffect, statusQueriesEffect, retryRequestsEffect], {
 					concurrency: "unbounded",
 				});
+				console.log(
+					"send() results: fromQueue pass=%d fail=%d statusQuery pass=%d fail=%d retry pass=%d fail=%d",
+					fromQueueResultPass.length,
+					fromQueueResultFail.length,
+					statusQueryResultPass.length,
+					statusQueryResultFail.length,
+					retryResultPass.length,
+					retryResultFail.length,
+				);
 
 				const fatalFailedRequests: { error: AnyError; request: KeyedRequestEvent }[] = [];
 				const otherFailedRequests: { error: AnyError; request: KeyedRequestEvent }[] = [];
@@ -452,21 +469,30 @@ export const buildRequestManager = (
 				return delay;
 			});
 
-		const sendLoop = (allowShutDown: boolean) =>
-			Effect.repeat(
-				sendMut
-					.withPermits(1)(send())
-					.pipe(Effect.andThen((delay) => Effect.sleep(delay)))
-					.pipe(debounceLatch.whenOpen, Effect.fork),
-				{ until: () => (allowShutDown ? isQueueEmpty() : shuttingDown || isQueueEmpty()) },
-			).pipe(Effect.mapError((err) => new UnknownException(String(err))));
+		const sendLoop = () =>
+			Effect.forever(
+				Effect.gen(function* () {
+					console.log(
+						"sendLoop: queue=%d status=%d retry=%d",
+						requestQueue.length,
+						statusQueries.length,
+						retryRequests.length,
+					);
+					yield* sendMut
+						.withPermits(1)(send())
+						.pipe(
+							Effect.catchAll(() => Effect.sleep("1 second")),
+							Effect.andThen(() => Effect.sleep("0.5 seconds")),
+						);
+				}),
+			);
 
 		const start = (): Effect.Effect<void, UnknownException> => {
-			return startedLatch.close
-				.pipe(Effect.andThen(() => sendLoop(false)))
-				.pipe(Effect.tapError(() => startedLatch.open))
-				.pipe(Effect.andThen(() => startedLatch.open))
-				.pipe(startedLatch.whenOpen, Effect.fork);
+			console.log("requestManager.start forking sendLoop");
+			return Effect.fork(sendLoop()).pipe(
+				Effect.mapError((err) => new UnknownException(String(err))),
+				Effect.andThen(() => Effect.succeed(void 0)),
+			);
 		};
 
 		const debounce = () =>
@@ -482,7 +508,12 @@ export const buildRequestManager = (
 		const waitFlush = (): Effect.Effect<void, UnknownException> =>
 			Effect.gen(function* () {
 				shuttingDown = true;
-				yield* sendLoop(true);
+				yield* Effect.repeat(
+					sendMut.withPermits(1)(send()),
+					{ until: () => isQueueEmpty() },
+				).pipe(
+					Effect.mapError((err) => new UnknownException(String(err))),
+				);
 			});
 
 		return {

@@ -12,5 +12,5 @@
  *     chapter_content_id: UUID of chapter content being labelled.
  */
 export interface CreateLabelData {
-	chapterContentId: string;
+  chapterContentId: string;
 }

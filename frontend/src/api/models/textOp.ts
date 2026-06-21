@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { TextOpOp } from "./textOpOp";
+import type { TextOpOp } from './textOpOp';
 
 /**
  * Pydantic schema to update text content of a chapter.
@@ -15,7 +15,7 @@ import type { TextOpOp } from "./textOpOp";
  *     text: The text to insert (for insert operations) or the text to delete (for delete operations).
  */
 export interface TextOp {
-	op: TextOpOp;
-	start: number;
-	text: string;
+  op: TextOpOp;
+  start: number;
+  text: string;
 }

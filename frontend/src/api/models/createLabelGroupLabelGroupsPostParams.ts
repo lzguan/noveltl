@@ -6,5 +6,5 @@
  */
 
 export type CreateLabelGroupLabelGroupsPostParams = {
-	requestKey?: string | null;
+requestKey?: string | null;
 };

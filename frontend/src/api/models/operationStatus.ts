@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { OperationStatusStatus } from "./operationStatusStatus";
+import type { OperationStatusStatus } from './operationStatusStatus';
 
 /**
  * Pydantic model to signal return status of operation.
@@ -17,6 +17,6 @@ import type { OperationStatusStatus } from "./operationStatusStatus";
  *     Unless under exceptional circumstances, should not return fail and just raise an exception.
  */
 export interface OperationStatus {
-	detail?: string | null;
-	status: OperationStatusStatus;
+  detail?: string | null;
+  status: OperationStatusStatus;
 }

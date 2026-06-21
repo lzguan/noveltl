@@ -4,10 +4,10 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { LabelData } from "./labelData";
-import type { LabelGroup } from "./labelGroup";
+import type { LabelData } from './labelData';
+import type { LabelGroup } from './labelGroup';
 
 export interface LazyEntry {
-	labelData: LabelData;
-	labelGroup: LabelGroup;
+  labelData: LabelData;
+  labelGroup: LabelGroup;
 }

@@ -4,13 +4,13 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { InstanceContextOptionsOptions } from "./instanceContextOptionsOptions";
+import type { InstanceContextOptionsOptions } from './instanceContextOptionsOptions';
 
 export interface InstanceContextOptions {
-	/**
-	 * @items.minItems 2
-	 * @items.maxItems 2
-	 */
-	instanceContexts: [unknown, unknown][];
-	options: InstanceContextOptionsOptions;
+  /**
+     * @items.minItems 2
+     * @items.maxItems 2
+     */
+  instanceContexts: [unknown, unknown][];
+  options: InstanceContextOptionsOptions;
 }

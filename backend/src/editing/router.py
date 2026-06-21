@@ -19,12 +19,13 @@ router = APIRouter()
 @router.get("/edit-chapter-data/{chapterId}", response_model=EditChapterData)
 def read_edit_chapter_data(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
-    eager: Annotated[
-        list[uuid.UUID], Query(alias="eager", description="List of label group IDs for which to fetch eager label data")
-    ],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     subject_id: Annotated[uuid.UUID | None, Query(alias="subjectId")] = None,
+    eager: Annotated[
+        list[uuid.UUID] | None,
+        Query(alias="eager", description="List of label group IDs for which to fetch eager label data"),
+    ] = None,
 ):
     """
     Gets all data associated with a chapter required for editing.
@@ -47,8 +48,8 @@ def read_edit_chapter_data(
             subject_user = db.execute(q).scalar_one_or_none()
             if subject_user is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject user not found.")
-            return query_edit_chapter_data(db, subject_user, chapter_id, eager)
-        return query_edit_chapter_data(db, current_user, chapter_id, eager)
+            return query_edit_chapter_data(db, subject_user, chapter_id, eager if eager is not None else [])
+        return query_edit_chapter_data(db, current_user, chapter_id, eager if eager is not None else [])
     except ChapterContentNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or insufficient permissions."
@@ -58,13 +59,13 @@ def read_edit_chapter_data(
 @router.get("/edit-chapter-data/{chapterId}/label-data", response_model=list[EagerEntry])
 def read_edit_chapter_label_data(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
-    label_group_ids: Annotated[
-        list[uuid.UUID],
-        Query(alias="labelGroupIds", description="Label group IDs to fetch label data and labels for"),
-    ],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     subject_id: Annotated[uuid.UUID | None, Query(alias="subjectId")] = None,
+    label_group_ids: Annotated[
+        list[uuid.UUID] | None,
+        Query(alias="labelGroupIds", description="Label group IDs to fetch label data and labels for"),
+    ] = None,
 ):
     """
     Fetch label data and labels for specific label groups on a chapter's most
@@ -84,8 +85,12 @@ def read_edit_chapter_label_data(
             subject_user = db.execute(q).scalar_one_or_none()
             if subject_user is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject user not found.")
-            return query_edit_chapter_data_only_label_data(db, subject_user, chapter_id, label_group_ids)
-        return query_edit_chapter_data_only_label_data(db, current_user, chapter_id, label_group_ids)
+            return query_edit_chapter_data_only_label_data(
+                db, subject_user, chapter_id, label_group_ids if label_group_ids is not None else []
+            )
+        return query_edit_chapter_data_only_label_data(
+            db, current_user, chapter_id, label_group_ids if label_group_ids is not None else []
+        )
     except ChapterContentNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or insufficient permissions."

@@ -4,9 +4,9 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { InstanceOptionsOptions } from "./instanceOptionsOptions";
+import type { InstanceOptionsOptions } from './instanceOptionsOptions';
 
 export interface InstanceOptions {
-	instances: unknown[];
-	options: InstanceOptionsOptions;
+  instances: unknown[];
+  options: InstanceOptionsOptions;
 }

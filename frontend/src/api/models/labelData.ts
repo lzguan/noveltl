@@ -14,7 +14,7 @@
  *     chapter_content_id: UUID of chapter content this LabelData is labelling.
  */
 export interface LabelData {
-	chapterContentId: string;
-	labelDataId: string;
-	labelGroupId: string;
+  chapterContentId: string;
+  labelDataId: string;
+  labelGroupId: string;
 }

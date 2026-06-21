@@ -6,9 +6,9 @@
  */
 
 export type ReadAutolabelsAutoLabelsGetParams = {
-	novelId: string;
-	chapterIds?: string[] | null;
-	start?: number | null;
-	end?: number | null;
-	modelNames?: "cluener"[] | null;
+novelId: string;
+chapterIds?: string[] | null;
+start?: number | null;
+end?: number | null;
+modelNames?: 'cluener'[] | null;
 };

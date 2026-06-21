@@ -10,19 +10,19 @@
  * Extends LabelBase with a label_data_id foreign key and label_id pkey.
  */
 export interface Label {
-	labelDataId: string;
-	labelDirty: boolean;
-	/** @minimum 0 */
-	labelEnd: number;
-	labelEntityGroup: string | null;
-	labelId: string;
-	/**
-	 * @minimum 0
-	 * @maximum 1
-	 */
-	labelScore: number;
-	/** @minimum 0 */
-	labelStart: number;
-	/** @maxLength 128 */
-	labelWord: string;
+  labelDataId: string;
+  labelDirty: boolean;
+  /** @minimum 0 */
+  labelEnd: number;
+  labelEntityGroup: string | null;
+  labelId: string;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  labelScore: number;
+  /** @minimum 0 */
+  labelStart: number;
+  /** @maxLength 128 */
+  labelWord: string;
 }

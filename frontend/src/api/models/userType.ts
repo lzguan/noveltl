@@ -8,9 +8,10 @@
 /**
  * Enum of possible user types.
  */
-export type UserType = (typeof UserType)[keyof typeof UserType];
+export type UserType = typeof UserType[keyof typeof UserType];
+
 
 export const UserType = {
-	user: "user",
-	admin: "admin",
+  user: 'user',
+  admin: 'admin',
 } as const;

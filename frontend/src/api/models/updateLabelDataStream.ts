@@ -4,9 +4,9 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { AddLabelOp } from "./addLabelOp";
-import type { DeleteLabelOp } from "./deleteLabelOp";
-import type { UpdateLabelOp } from "./updateLabelOp";
+import type { AddLabelOp } from './addLabelOp';
+import type { DeleteLabelOp } from './deleteLabelOp';
+import type { UpdateLabelOp } from './updateLabelOp';
 
 /**
  * Pydantic schema for a buffered stream of label operations.
@@ -15,5 +15,5 @@ import type { UpdateLabelOp } from "./updateLabelOp";
  *     ops: A list of label operations.
  */
 export interface UpdateLabelDataStream {
-	ops: (AddLabelOp | DeleteLabelOp | UpdateLabelOp)[];
+  ops: (AddLabelOp | DeleteLabelOp | UpdateLabelOp)[];
 }

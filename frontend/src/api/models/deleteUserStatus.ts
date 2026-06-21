@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { DeleteUserStatusStatus } from "./deleteUserStatusStatus";
+import type { DeleteUserStatusStatus } from './deleteUserStatusStatus';
 
 /**
  * Pydantic schema to return status after deleting a user
@@ -14,6 +14,6 @@ import type { DeleteUserStatusStatus } from "./deleteUserStatusStatus";
  *     detail: String denoting details of operation.
  */
 export interface DeleteUserStatus {
-	detail?: string | null;
-	status: DeleteUserStatusStatus;
+  detail?: string | null;
+  status: DeleteUserStatusStatus;
 }

@@ -6,5 +6,5 @@
  */
 
 export type ReadLabelGroupsLabelGroupsGetParams = {
-	novelId: string;
+novelId: string;
 };

@@ -4,8 +4,8 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { AutoLabelMetaAutoLabelModelParams } from "./autoLabelMetaAutoLabelModelParams";
-import type { AutoLabelProgress } from "./autoLabelProgress";
+import type { AutoLabelMetaAutoLabelModelParams } from './autoLabelMetaAutoLabelModelParams';
+import type { AutoLabelProgress } from './autoLabelProgress';
 
 /**
  * Pydantic schema for auto-label metadata.
@@ -20,11 +20,11 @@ import type { AutoLabelProgress } from "./autoLabelProgress";
  *     auto_label_last_job_id: Job id of last job that was run on this AutoLabel.
  */
 export interface AutoLabelMeta {
-	autoLabelId: string;
-	autoLabelLastJobId: string;
-	autoLabelMessage?: string | null;
-	autoLabelModelName: "cluener";
-	autoLabelModelParams: AutoLabelMetaAutoLabelModelParams;
-	autoLabelStatus: AutoLabelProgress;
-	chapterContentId: string;
+  autoLabelId: string;
+  autoLabelLastJobId: string;
+  autoLabelMessage?: string | null;
+  autoLabelModelName: 'cluener';
+  autoLabelModelParams: AutoLabelMetaAutoLabelModelParams;
+  autoLabelStatus: AutoLabelProgress;
+  chapterContentId: string;
 }

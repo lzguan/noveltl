@@ -6,7 +6,7 @@
  */
 
 export type ReadChaptersByNovelChaptersGetParams = {
-	novelId: string;
-	start?: number | null;
-	end?: number | null;
+novelId: string;
+start?: number | null;
+end?: number | null;
 };

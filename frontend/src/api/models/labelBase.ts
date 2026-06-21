@@ -22,17 +22,17 @@
  *     label_word must have length label_end - label_start. Otherwise a ValueError will occur.
  */
 export interface LabelBase {
-	labelDirty: boolean;
-	/** @minimum 0 */
-	labelEnd: number;
-	labelEntityGroup: string | null;
-	/**
-	 * @minimum 0
-	 * @maximum 1
-	 */
-	labelScore: number;
-	/** @minimum 0 */
-	labelStart: number;
-	/** @maxLength 128 */
-	labelWord: string;
+  labelDirty: boolean;
+  /** @minimum 0 */
+  labelEnd: number;
+  labelEntityGroup: string | null;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  labelScore: number;
+  /** @minimum 0 */
+  labelStart: number;
+  /** @maxLength 128 */
+  labelWord: string;
 }

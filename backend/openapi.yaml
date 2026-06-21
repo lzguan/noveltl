@@ -2015,17 +2015,6 @@ paths:
           format: uuid
           title: Chapterid
           type: string
-      - description: List of label group IDs for which to fetch eager label data
-        in: query
-        name: eager
-        required: true
-        schema:
-          description: List of label group IDs for which to fetch eager label data
-          items:
-            format: uuid
-            type: string
-          title: Eager
-          type: array
       - in: query
         name: subjectId
         required: false
@@ -2035,6 +2024,19 @@ paths:
             type: string
           - type: 'null'
           title: Subjectid
+      - description: List of label group IDs for which to fetch eager label data
+        in: query
+        name: eager
+        required: false
+        schema:
+          anyOf:
+          - items:
+              format: uuid
+              type: string
+            type: array
+          - type: 'null'
+          description: List of label group IDs for which to fetch eager label data
+          title: Eager
       responses:
         '200':
           content:
@@ -2066,17 +2068,6 @@ paths:
           format: uuid
           title: Chapterid
           type: string
-      - description: Label group IDs to fetch label data and labels for
-        in: query
-        name: labelGroupIds
-        required: true
-        schema:
-          description: Label group IDs to fetch label data and labels for
-          items:
-            format: uuid
-            type: string
-          title: Labelgroupids
-          type: array
       - in: query
         name: subjectId
         required: false
@@ -2086,6 +2077,19 @@ paths:
             type: string
           - type: 'null'
           title: Subjectid
+      - description: Label group IDs to fetch label data and labels for
+        in: query
+        name: labelGroupIds
+        required: false
+        schema:
+          anyOf:
+          - items:
+              format: uuid
+              type: string
+            type: array
+          - type: 'null'
+          description: Label group IDs to fetch label data and labels for
+          title: Labelgroupids
       responses:
         '200':
           content:

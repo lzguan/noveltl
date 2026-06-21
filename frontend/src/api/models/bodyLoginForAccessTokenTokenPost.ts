@@ -6,10 +6,10 @@
  */
 
 export interface BodyLoginForAccessTokenTokenPost {
-	client_id?: string | null;
-	client_secret?: string | null;
-	grant_type?: string | null;
-	password: string;
-	scope?: string;
-	username: string;
+  client_id?: string | null;
+  client_secret?: string | null;
+  grant_type?: string | null;
+  password: string;
+  scope?: string;
+  username: string;
 }

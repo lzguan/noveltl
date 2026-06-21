@@ -5,10 +5,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CacheEntryStatus = (typeof CacheEntryStatus)[keyof typeof CacheEntryStatus];
+export type CacheEntryStatus = typeof CacheEntryStatus[keyof typeof CacheEntryStatus];
+
 
 export const CacheEntryStatus = {
-	pending: "pending",
-	success: "success",
-	failure: "failure",
+  pending: 'pending',
+  success: 'success',
+  failure: 'failure',
 } as const;

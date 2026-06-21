@@ -50,9 +50,10 @@ export const buildNovelController = (
 				}
 			});
 
-		const handleUserEvent = (event: NovelUserEvent): Effect.Effect<void> =>
+	const handleUserEvent = (event: NovelUserEvent): Effect.Effect<void> =>
 			Effect.gen(function* () {
 				if (!running) return Effect.succeed(undefined);
+				console.log("handleUserEvent", event.eventType, new Date().toISOString());
 
 				switch (event.eventType) {
 					case "textOp": {
@@ -181,31 +182,28 @@ export const buildNovelController = (
 
 		const start = (): Effect.Effect<void, UnknownException> => {
 			running = true;
-			return Effect.repeat(
-				Effect.gen(function* () {
-					yield* dispatch(novelDM.flush()).pipe(
-						Effect.tapError((err) =>
-							raiseTriggerEvent(novelDM.getters, {
-								eventType: "errorOccured",
-								from: "dataManager",
-								error: err,
-							}).pipe(
-								Effect.andThen(() => {
-									running = false;
-								}),
+			return Effect.gen(function* () {
+				yield* requestManager.start();
+				yield* Effect.repeat(
+					Effect.gen(function* () {
+						yield* dispatch(novelDM.flush()).pipe(
+							Effect.tapError((err) =>
+								raiseTriggerEvent(novelDM.getters, {
+									eventType: "errorOccured",
+									from: "dataManager",
+									error: err,
+								}).pipe(
+									Effect.andThen(() => {
+										running = false;
+									}),
+								),
 							),
-						),
-					);
-					yield* requestManager.start().pipe(
-						Effect.mapError((err) => {
-							running = false;
-							return err;
-						}),
-					);
-					yield* Effect.sleep("1 second");
-				}),
-				{ until: () => !running },
-			);
+						);
+						yield* Effect.sleep("1 second");
+					}),
+					{ until: () => !running },
+				);
+			});
 		};
 
 		const stop = (): Effect.Effect<void> => {

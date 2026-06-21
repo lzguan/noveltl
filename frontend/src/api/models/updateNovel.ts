@@ -4,8 +4,8 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { NovelType } from "./novelType";
-import type { Visibility } from "./visibility";
+import type { NovelType } from './novelType';
+import type { Visibility } from './visibility';
 
 /**
  * Pydantic schema to validate forms for updating a novel. The novel id will be passed into the router endpoint.
@@ -18,9 +18,9 @@ import type { Visibility } from "./visibility";
  *     novel_type: Updated novel type. If None, then do not update.
  */
 export interface UpdateNovel {
-	novelAuthor?: string | null;
-	novelDescription?: string | null;
-	novelTitle?: string | null;
-	novelType?: NovelType | null;
-	novelVisibility?: Visibility | null;
+  novelAuthor?: string | null;
+  novelDescription?: string | null;
+  novelTitle?: string | null;
+  novelType?: NovelType | null;
+  novelVisibility?: Visibility | null;
 }

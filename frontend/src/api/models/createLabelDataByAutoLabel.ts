@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { CreateLabelDataByAutoLabelModelParams } from "./createLabelDataByAutoLabelModelParams";
+import type { CreateLabelDataByAutoLabelModelParams } from './createLabelDataByAutoLabelModelParams';
 
 /**
  * Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.
@@ -17,9 +17,9 @@ import type { CreateLabelDataByAutoLabelModelParams } from "./createLabelDataByA
  *     end: Optional filter on the greatest chapter number to include.
  */
 export interface CreateLabelDataByAutoLabel {
-	chapterIds?: string[] | null;
-	end?: number | null;
-	modelName: "cluener";
-	modelParams: CreateLabelDataByAutoLabelModelParams;
-	start?: number | null;
+  chapterIds?: string[] | null;
+  end?: number | null;
+  modelName: 'cluener';
+  modelParams: CreateLabelDataByAutoLabelModelParams;
+  start?: number | null;
 }

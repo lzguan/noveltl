@@ -2721,21 +2721,6 @@
             }
           },
           {
-            "name": "eager",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "description": "List of label group IDs for which to fetch eager label data",
-              "title": "Eager"
-            },
-            "description": "List of label group IDs for which to fetch eager label data"
-          },
-          {
             "name": "subjectId",
             "in": "query",
             "required": false,
@@ -2751,6 +2736,28 @@
               ],
               "title": "Subjectid"
             }
+          },
+          {
+            "name": "eager",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "List of label group IDs for which to fetch eager label data",
+              "title": "Eager"
+            },
+            "description": "List of label group IDs for which to fetch eager label data"
           }
         ],
         "responses": {
@@ -2799,21 +2806,6 @@
             }
           },
           {
-            "name": "labelGroupIds",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "description": "Label group IDs to fetch label data and labels for",
-              "title": "Labelgroupids"
-            },
-            "description": "Label group IDs to fetch label data and labels for"
-          },
-          {
             "name": "subjectId",
             "in": "query",
             "required": false,
@@ -2829,6 +2821,28 @@
               ],
               "title": "Subjectid"
             }
+          },
+          {
+            "name": "labelGroupIds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Label group IDs to fetch label data and labels for",
+              "title": "Labelgroupids"
+            },
+            "description": "Label group IDs to fetch label data and labels for"
           }
         ],
         "responses": {

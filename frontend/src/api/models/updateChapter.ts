@@ -12,5 +12,5 @@
  *     chapter_title: The new title for the chapter.
  */
 export interface UpdateChapter {
-	chapterTitle: string;
+  chapterTitle: string;
 }

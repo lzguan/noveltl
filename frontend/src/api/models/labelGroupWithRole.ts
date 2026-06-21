@@ -4,8 +4,8 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { LabelGroup } from "./labelGroup";
-import type { LabelRole } from "./labelRole";
+import type { LabelGroup } from './labelGroup';
+import type { LabelRole } from './labelRole';
 
 /**
  * Pydantic schema for a label group with a user's role in that label group.
@@ -15,6 +15,6 @@ import type { LabelRole } from "./labelRole";
  *     role: Role of the user in this label group.
  */
 export interface LabelGroupWithRole {
-	labelGroup: LabelGroup;
-	role: LabelRole;
+  labelGroup: LabelGroup;
+  role: LabelRole;
 }

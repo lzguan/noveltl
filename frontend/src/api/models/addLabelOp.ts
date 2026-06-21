@@ -15,18 +15,18 @@
  *     score: Float score between 0.0 and 1.0 representing how likely this label is to be an entity.
  */
 export interface AddLabelOp {
-	dirty?: boolean;
-	/** @minimum 0 */
-	endPos: number;
-	entityGroup?: string | null;
-	op: "add";
-	/**
-	 * @minimum 0
-	 * @maximum 1
-	 */
-	score?: number;
-	/** @minimum 0 */
-	startPos: number;
-	/** @maxLength 128 */
-	word: string;
+  dirty?: boolean;
+  /** @minimum 0 */
+  endPos: number;
+  entityGroup?: string | null;
+  op: 'add';
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  score?: number;
+  /** @minimum 0 */
+  startPos: number;
+  /** @maxLength 128 */
+  word: string;
 }

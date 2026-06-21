@@ -13,14 +13,14 @@
  *     errors: List of tuples of (chapter_id, chapter_content_id, error message) for failed inserts.
  */
 export interface CreateLabelDataByAutoLabelStatus {
-	/**
-	 * @items.minItems 3
-	 * @items.maxItems 3
-	 */
-	errors: [string, string, string][];
-	/**
-	 * @items.minItems 2
-	 * @items.maxItems 2
-	 */
-	success: [string, string][];
+  /**
+     * @items.minItems 3
+     * @items.maxItems 3
+     */
+  errors: [string, string, string][];
+  /**
+     * @items.minItems 2
+     * @items.maxItems 2
+     */
+  success: [string, string][];
 }

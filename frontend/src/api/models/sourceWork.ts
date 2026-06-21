@@ -14,7 +14,7 @@
  *     source_work_description: Optional description of the source work.
  */
 export interface SourceWork {
-	sourceWorkDescription?: string | null;
-	sourceWorkId: string;
-	sourceWorkTitle: string;
+  sourceWorkDescription?: string | null;
+  sourceWorkId: string;
+  sourceWorkTitle: string;
 }

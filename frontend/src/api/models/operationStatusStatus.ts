@@ -5,10 +5,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type OperationStatusStatus =
-	(typeof OperationStatusStatus)[keyof typeof OperationStatusStatus];
+export type OperationStatusStatus = typeof OperationStatusStatus[keyof typeof OperationStatusStatus];
+
 
 export const OperationStatusStatus = {
-	success: "success",
-	fail: "fail",
+  success: 'success',
+  fail: 'fail',
 } as const;

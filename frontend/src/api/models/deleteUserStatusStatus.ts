@@ -5,11 +5,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type DeleteUserStatusStatus =
-	(typeof DeleteUserStatusStatus)[keyof typeof DeleteUserStatusStatus];
+export type DeleteUserStatusStatus = typeof DeleteUserStatusStatus[keyof typeof DeleteUserStatusStatus];
+
 
 export const DeleteUserStatusStatus = {
-	success: "success",
-	fail: "fail",
-	verify: "verify",
+  success: 'success',
+  fail: 'fail',
+  verify: 'verify',
 } as const;

@@ -129,6 +129,13 @@ export const buildIndexInternals = <IDT extends ProvId, Meta, Data, IndexErrorT>
 				return Effect.succeed(item);
 			},
 			getIds: () => Effect.succeed(Array.from(index.keys())),
+			delete: (id: IDT) => {
+				if (!index.has(id)) {
+					return Effect.fail(new NotFoundException());
+				}
+				index.delete(id);
+				return Effect.succeed(void 0);
+			},
 			setMeta: (id: IDT, meta: Meta) => {
 				const item = index.get(id);
 				if (!item) {
@@ -215,6 +222,7 @@ export const buildChapterIndex = (
 				}
 				return Effect.succeed(id);
 			},
+			delete: internals.delete,
 			setMeta: (id, val) => {
 				const item = internals.index.get(id);
 				if (!item) {

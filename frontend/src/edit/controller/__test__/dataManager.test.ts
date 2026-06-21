@@ -32,9 +32,10 @@ function buildTestChapterDM() {
 	return Effect.gen(function* () {
 		const idRepo = buildIdRepository();
 		const triggerEvents: TriggerEvent[] = [];
-		const raiseTriggerEvent = (event: TriggerEvent) => {
-			triggerEvents.push(event);
-		};
+		const raiseTriggerEvent = (event: TriggerEvent) =>
+			Effect.sync(() => {
+				triggerEvents.push(event);
+			});
 
 		const chapterId = idRepo.newIdAndBindId("chapter", ServId(UUID1));
 		const labelGroupProvId = idRepo.newIdAndBindId("labelGroup", ServId(UUID3));

@@ -1402,15 +1402,50 @@ export const buildChapterDataManager = (
 					return yield* Effect.fail(
 						new UnknownException({ message: "Chapter is destroyed" }),
 					);
-				const slot = yield* labelDataIndex.get(labelGroupId).pipe(
-					Effect.mapError(
-						() =>
-							new UnknownException({
-								message: `Label group ${labelGroupId} not found`,
+				// Check if label group still exists in getters. If not, delete from index and raise event.
+				const labelGroupSlotEither = yield* Effect.either(getters.labelGroup(labelGroupId));
+				if (labelGroupSlotEither._tag === "Left") {
+					const slot = yield* Effect.either(labelDataIndex.get(labelGroupId));
+					if (slot._tag === "Right") {
+						yield* labelDataIndex
+							.delete(labelGroupId)
+							.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+					}
+					yield* raiseTriggerEvent({
+						eventType: "labelDataLoaded",
+						chapterId,
+						labelGroupId,
+						wasDeleted: true,
+					});
+					return [];
+				}
+				// label group exists, proceed with reload
+				const slotEither = yield* Effect.either(labelDataIndex.get(labelGroupId));
+				if (slotEither._tag === "Left") {
+					yield* labelDataIndex
+						.new(labelGroupId, {
+							labelData: Prov({
+								labelDataId: idRepo.newId("labelData"),
+								chapterContentId,
+								labelGroupId,
 							}),
-					),
-				);
+						})
+						.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+				}
+				const slot =
+					slotEither._tag === "Right"
+						? slotEither.right
+						: yield* labelDataIndex
+								.get(labelGroupId)
+								.pipe(
+									Effect.mapError((err) => new UnknownException({ orig: err })),
+								);
 				if (slot.status === "loading") return [];
+				yield* raiseTriggerEvent({
+					eventType: "labelDataReloading",
+					chapterId,
+					labelGroupId,
+				});
 				yield* labelDataIndex
 					.setData(labelGroupId, { status: "loading" })
 					.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
@@ -1435,18 +1470,51 @@ export const buildChapterDataManager = (
 							.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
 					});
 
-				const reloadReserveList: ReserveList = {
-					chapter: [],
-					chapterContent: [],
-					labelGroup: [{ id: labelGroupId, kind: "labelGroup", desiredState: "locked" }],
-					labelData: [
-						{ id: oldLabelDataProvId, kind: "labelData", desiredState: "detaching" },
-					],
-					label: oldLabelIds.map((id) => ({
-						id,
-						kind: "label" as const,
-						desiredState: "detaching" as const,
-					})),
+				const reloadReserveList: () => ReserveList = () => {
+					const curLabelDataState = Effect.runSyncExit(
+						idRepo.idObjState("labelData", oldLabelDataProvId),
+					);
+					if (curLabelDataState._tag === "Failure") {
+						return {
+							chapter: [],
+							chapterContent: [],
+							labelGroup: [
+								{ id: labelGroupId, kind: "labelGroup", desiredState: "locked" },
+							],
+							labelData: [],
+							label: oldLabelIds.map((id) => ({
+								id,
+								kind: "label" as const,
+								desiredState: "detaching" as const,
+							})),
+						};
+					}
+					const curState = curLabelDataState.value;
+					let desiredState: "detaching" | "killing";
+					if (curState === "pending") {
+						desiredState = "killing";
+					} else {
+						desiredState = "detaching";
+					}
+					return {
+						chapter: [],
+						chapterContent: [],
+						labelGroup: [
+							{ id: labelGroupId, kind: "labelGroup", desiredState: "locked" },
+						],
+						labelData: [
+							{
+								id: oldLabelDataProvId,
+								kind: "labelData",
+								desiredState: desiredState,
+							},
+						],
+						label: oldLabelIds.map((id) => ({
+							id,
+							kind: "label" as const,
+							desiredState: "detaching" as const,
+						})),
+					};
 				};
 
 				const event: RequestEvent = {
@@ -1455,10 +1523,10 @@ export const buildChapterDataManager = (
 					active: false,
 					retries: 3,
 					reservationRequest: {
-						reserveList: IdempotentCallable(() => reloadReserveList),
+						reserveList: IdempotentCallable(reloadReserveList),
 						skip: () => false,
 						wait: () =>
-							isAllReserveable(idRepo, reloadReserveList).pipe(
+							isAllReserveable(idRepo, reloadReserveList()).pipe(
 								Effect.map((ready) => !ready),
 							),
 					},
@@ -1549,6 +1617,12 @@ export const buildChapterDataManager = (
 							yield* labelDataIndex
 								.decrement(labelGroupId)
 								.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+							yield* raiseTriggerEvent({
+								eventType: "labelDataLoaded",
+								labelGroupId,
+								chapterId,
+								wasDeleted: false,
+							});
 						}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
 				};
 				const flushedOps = yield* autoFlushIfTagMismatch("neither");

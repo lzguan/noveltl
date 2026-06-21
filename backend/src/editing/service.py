@@ -1,10 +1,14 @@
 import uuid
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, exists, insert, literal, select, union_all
 from sqlalchemy.orm import Session
 
 from src.editing.schemas import EagerEntry, LazyEntry
-from src.labels.permissions import label_data_mod_access_select, label_group_mod_access_select
+from src.labels.permissions import (
+    label_data_mod_access_insert,
+    label_data_mod_access_select,
+    label_group_mod_access_select,
+)
 from src.novels.exceptions import ChapterContentNotFoundException
 from src.novels.service import query_chapter_content_by_most_recent, query_chapter_content_ids_by_chapter_id
 
@@ -101,12 +105,15 @@ def query_edit_chapter_data_only_label_data(
     Fetch label data and labels for the specified label groups on the most recent
     chapter content version. Used by the reload group operation on the frontend.
 
+    LabelData rows are lazily created for label groups the user has edit access
+    to, so the frontend never receives an empty response for a group the user
+    can annotate.
+
     Only returns entries for label groups that:
     - Are in the `label_group_ids` list
-    - Have an existing LabelData row for the most recent chapter content
-    - The current user has mod access to
+    - The current user has mod access to (view for labels, edit for auto-creation)
 
-    Label groups that don't meet all three criteria are silently excluded.
+    Label groups that don't meet these criteria are silently excluded.
 
     Args:
         db: Database session.
@@ -125,6 +132,28 @@ def query_edit_chapter_data_only_label_data(
     for cc in chapter_contents:
         if cc.chapter_content_version > chapter_content.chapter_content_version:
             chapter_content = cc
+
+    parts = []
+    for label_group_id in label_group_ids:
+        sub = select(
+            literal(label_group_id),
+            literal(chapter_content.chapter_content_id),
+        )
+        sub = label_data_mod_access_insert(sub, current_user, label_group_id)
+        sub = sub.where(
+            ~exists().where(
+                lm.LabelData.label_group_id == label_group_id,
+                lm.LabelData.chapter_content_id == chapter_content.chapter_content_id,
+            )
+        )
+        parts.append(sub)
+
+    if parts:
+        stmt = insert(lm.LabelData).from_select(
+            [lm.LabelData.label_group_id, lm.LabelData.chapter_content_id],
+            union_all(*parts).subquery(),
+        )
+        db.execute(stmt)
 
     q = (
         select(lm.LabelGroup, lm.LabelData, lm.Label)

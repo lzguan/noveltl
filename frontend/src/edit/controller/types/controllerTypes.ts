@@ -110,7 +110,14 @@ export type TriggerEvent =
 			data: { error: Error; request: KeyedRequestEvent }[];
 	  }
 	| { eventType: "errorOccured"; from: "dataManager"; error: Error }
-	| { eventType: "chapterOpened"; chapterId: CProvId; flags: { forEditor: boolean } };
+	| { eventType: "chapterOpened"; chapterId: CProvId; flags: { forEditor: boolean } }
+	| { eventType: "labelDataReloading"; chapterId: CProvId; labelGroupId: LGProvId }
+	| {
+			eventType: "labelDataLoaded";
+			chapterId: CProvId;
+			labelGroupId: LGProvId;
+			wasDeleted: boolean;
+	  };
 
 /**
  * Novel-level controller. Events are ignored until start() is called.

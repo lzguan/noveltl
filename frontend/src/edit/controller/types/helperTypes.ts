@@ -150,6 +150,10 @@ export interface SlotIndex<IDT extends ProvId, Meta, Data, IndexErrorT> {
 		val: { status: "idle" | "loading" | "error" } | { status: "ready"; data: Data },
 	) => Effect.Effect<void, NotFoundException>;
 	/**
+	 * Delete slot by ID.
+	 */
+	delete: (id: IDT) => Effect.Effect<void, NotFoundException>;
+	/**
 	 * Increment the in-flight count for a slot by id.
 	 */
 	increment: (id: IDT) => Effect.Effect<void, NotFoundException>;

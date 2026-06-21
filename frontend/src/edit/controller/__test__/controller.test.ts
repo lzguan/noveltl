@@ -43,30 +43,34 @@ describe("buildNovelController", () => {
 			return Effect.succeed(void 0);
 		});
 
-		controller.handleUserEvent({
-			eventType: "addLabelGroup",
-			labelGroupName: "Test",
-		});
+		Effect.runSync(
+			controller.handleUserEvent({
+				eventType: "addLabelGroup",
+				labelGroupName: "Test",
+			}),
+		);
 
 		expect(events).toHaveLength(0);
-		expect(controller.getters.labelGroups()).toHaveLength(0);
+		expect(Effect.runSync(controller.getters.labelGroupIds())).toHaveLength(0);
 	});
 
-	it("raises error trigger event when chapter not loaded", () => {
+	it("raises error trigger event when chapter not loaded", async () => {
 		const controller = Effect.runSync(buildNovelController(makeNovelData()));
 		const events: TriggerEvent[] = [];
 		controller.subscribe((_getters: NovelGetters, event: TriggerEvent) => {
 			events.push(event);
 			return Effect.succeed(void 0);
 		});
-		controller.start();
+		controller.start(); // sets running = true synchronously
 
 		const fakeChapterId = CProvId("00000000-0000-0000-0000-ffffffffffff");
-		controller.handleUserEvent({
-			eventType: "textOp",
-			op: { op: "insert", start: 0, text: "Hello" },
-			chapterId: fakeChapterId,
-		});
+		await Effect.runPromise(
+			controller.handleUserEvent({
+				eventType: "textOp",
+				op: { op: "insert", start: 0, text: "Hello" },
+				chapterId: fakeChapterId,
+			}),
+		);
 
 		const errorEvent = events.find(
 			(e) => e.eventType === "errorOccured" && e.from === "dataManager",
@@ -74,61 +78,67 @@ describe("buildNovelController", () => {
 		expect(errorEvent).toBeDefined();
 	});
 
-	it("subscribe returns working unsubscribe function", () => {
+	it("subscribe returns working unsubscribe function", async () => {
 		const controller = Effect.runSync(buildNovelController(makeNovelData()));
 		const events: TriggerEvent[] = [];
-		const unsubscribe = controller.subscribe((_getters: NovelGetters, event: TriggerEvent) => {
-			events.push(event);
-			return Effect.succeed(void 0);
-		});
-		controller.start();
+		const unsubscribe = controller.subscribe(
+			(_getters: NovelGetters, event: TriggerEvent) => {
+				events.push(event);
+				return Effect.succeed(void 0);
+			},
+		);
+		controller.start(); // sets running = true synchronously
 
 		const fakeChapterId = CProvId("00000000-0000-0000-0000-ffffffffffff");
-		controller.handleUserEvent({
-			eventType: "textOp",
-			op: { op: "insert", start: 0, text: "A" },
-			chapterId: fakeChapterId,
-		});
+		await Effect.runPromise(
+			controller.handleUserEvent({
+				eventType: "textOp",
+				op: { op: "insert", start: 0, text: "A" },
+				chapterId: fakeChapterId,
+			}),
+		);
 		expect(events.length).toBeGreaterThan(0);
 
 		const countBefore = events.length;
 		unsubscribe();
 
-		controller.handleUserEvent({
-			eventType: "textOp",
-			op: { op: "insert", start: 0, text: "B" },
-			chapterId: fakeChapterId,
-		});
+		await Effect.runPromise(
+			controller.handleUserEvent({
+				eventType: "textOp",
+				op: { op: "insert", start: 0, text: "B" },
+				chapterId: fakeChapterId,
+			}),
+		);
 		expect(events.length).toBe(countBefore);
 	});
 
 	it("provides getters with novel data", () => {
 		const controller = Effect.runSync(buildNovelController(makeNovelData()));
 
-		expect(controller.getters.id()).toBe(NOVEL_UUID);
-		const chapters = controller.getters.chapters();
+		expect(Effect.runSync(controller.getters.novel()).novelId).toBe(NOVEL_UUID);
+		const chapters = Effect.runSync(controller.getters.chapterIds());
 		expect(chapters).toHaveLength(1);
-		expect(chapters[0].chapterNum).toBe(1);
-		expect(chapters[0].chapterTitle).toBe("Chapter 1");
-		expect(controller.getters.labelGroups()).toHaveLength(0);
+		expect(Effect.runSync(controller.getters.labelGroupIds())).toHaveLength(0);
 	});
 
-	it("processes addLabelGroup when running", () => {
+	it("processes addLabelGroup when running", async () => {
 		const controller = Effect.runSync(buildNovelController(makeNovelData()));
 		const events: TriggerEvent[] = [];
 		controller.subscribe((_getters: NovelGetters, event: TriggerEvent) => {
 			events.push(event);
 			return Effect.succeed(void 0);
 		});
-		controller.start();
+		controller.start(); // sets running = true synchronously
 
-		controller.handleUserEvent({
-			eventType: "addLabelGroup",
-			labelGroupName: "Characters",
-		});
+		await Effect.runPromise(
+			controller.handleUserEvent({
+				eventType: "addLabelGroup",
+				labelGroupName: "Characters",
+			}),
+		);
 
 		const addEvent = events.find((e) => e.eventType === "labelGroupAdded");
 		expect(addEvent).toBeDefined();
-		expect(controller.getters.labelGroups()).toHaveLength(1);
+		expect(Effect.runSync(controller.getters.labelGroupIds())).toHaveLength(1);
 	});
 });

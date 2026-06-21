@@ -142,6 +142,11 @@ export type SegmentManager<S extends Style, L extends StyledLabel<S>, ID extends
 	 */
 	getLabel(id: ID): L;
 	/**
+	 * Returns the IDs of all labels that cover the given absolute position.
+	 * @param pos
+	 */
+	labelsAt(pos: number): ID[];
+	/**
 	 * Insert text at a given position. This may cause segments to split or merge depending on the implementation. The position is absolute. If the position is out of bounds, throw an error.
 	 * @param pos
 	 * @param text
@@ -304,6 +309,16 @@ export function makeBasicSegmentManager<
 					end: label.interval.end + segment.start,
 				},
 			};
+		},
+
+		labelsAt(pos: number) {
+			const idx = this.querySegment(pos);
+			const bound = this.bounds[idx];
+			const seg = this.segmentsById.get(bound.id)!;
+			const relPos = pos - bound.start;
+			return seg.labels
+				.filter((l) => l.interval.start <= relPos && relPos < l.interval.end)
+				.map((l) => l.id);
 		},
 
 		subscribe(listener: () => void) {

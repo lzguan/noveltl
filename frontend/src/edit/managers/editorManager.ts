@@ -21,6 +21,8 @@ import { buildPubSub } from "../utils/pubsub";
 import { generateRandomColor, type Color } from "@/components/labeled-text-lib/builtin/colors";
 import { UnknownException } from "effect/Cause";
 
+// parts of this file are vibe coded, look through carefully later.
+
 export type LabelStyle = ProductStyle<
 	[
 		ColorStyle,
@@ -159,8 +161,8 @@ export function buildEditorManager(
 ): EditorManager {
 	let loading = false;
 	let mode: EditorMode = "view" as EditorMode;
-	let _curHoverPos: number | null = null;
-	let _caret: Caret | null = null;
+	let prevHoverPos: number | null = null;
+	let prevCaret: Caret | null = null;
 
 	const trackedLabelGroups = new Map<
 		LGProvId,
@@ -606,11 +608,86 @@ export function buildEditorManager(
 		Effect.runSync(raiseTriggerEvent(getters, { eventType: "modeChange", mode: newMode }));
 	};
 	const hoverPos = (pos: number | null) => {
-		_curHoverPos = pos;
+		if (prevHoverPos !== null && segmentManager) {
+			const caretPos = prevCaret?.focus ?? null;
+			const caretIds = caretPos !== null ? segmentManager.labelsAt(caretPos) : [];
+			for (const id of segmentManager.labelsAt(prevHoverPos)) {
+				if (caretIds.includes(id)) continue;
+				try {
+					const label = segmentManager.getLabel(id);
+					if (label.style[1].cursorStatus !== "hovered") continue;
+					segmentManager.updateLabel(id, {
+						...label,
+						style: [
+							label.style[0],
+							{ ...label.style[1], cursorStatus: "none" as const },
+						] as typeof label.style,
+					} as typeof label);
+				} catch {
+					// Label may have been removed.
+				}
+			}
+		}
+		prevHoverPos = pos;
+		if (pos !== null && segmentManager) {
+			for (const id of segmentManager.labelsAt(pos)) {
+				try {
+					const label = segmentManager.getLabel(id);
+					if (label.style[1].cursorStatus === "clicked") continue;
+					segmentManager.updateLabel(id, {
+						...label,
+						style: [
+							label.style[0],
+							{ ...label.style[1], cursorStatus: "hovered" as const },
+						] as typeof label.style,
+					} as typeof label);
+				} catch {
+					// Label may have been removed.
+				}
+			}
+		}
 		Effect.runSync(raiseTriggerEvent(getters, { eventType: "hoverPosChange", pos }));
 	};
 	const setCaret = (newCaret: Caret | null) => {
-		_caret = newCaret;
+		const oldPos = prevCaret?.focus ?? null;
+		const pos = newCaret?.focus ?? null;
+		if (oldPos !== null && segmentManager) {
+			const hoverIds = prevHoverPos !== null ? segmentManager.labelsAt(prevHoverPos) : [];
+			for (const id of segmentManager.labelsAt(oldPos)) {
+				try {
+					const label = segmentManager.getLabel(id);
+					const newStatus: "hovered" | "none" = hoverIds.includes(id)
+						? "hovered"
+						: "none";
+					segmentManager.updateLabel(id, {
+						...label,
+						style: [
+							label.style[0],
+							{ ...label.style[1], cursorStatus: newStatus },
+						] as typeof label.style,
+					} as typeof label);
+				} catch {
+					// Label may have been removed.
+				}
+			}
+		}
+		prevCaret = newCaret;
+		if (pos !== null && segmentManager) {
+			for (const id of segmentManager.labelsAt(pos)) {
+				try {
+					const label = segmentManager.getLabel(id);
+					segmentManager.updateLabel(id, {
+						...label,
+						style: [
+							label.style[0],
+							{ ...label.style[1], cursorStatus: "clicked" as const },
+						] as typeof label.style,
+					} as typeof label);
+				} catch {
+					// Label may have been removed.
+				}
+			}
+		}
 		Effect.runSync(raiseTriggerEvent(getters, { eventType: "caretChange", caret: newCaret }));
 	};
 	const toggleVisibility = (labelGroupId: LGProvId) => {

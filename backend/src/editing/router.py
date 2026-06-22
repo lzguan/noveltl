@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -16,16 +16,16 @@ from .service import query_edit_chapter_data, query_edit_chapter_data_only_label
 router = APIRouter()
 
 
-@router.get("/edit-chapter-data/{chapterId}", response_model=EditChapterData)
+@router.post("/edit-chapter-data/{chapterId}", response_model=EditChapterData)
 def read_edit_chapter_data(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-    subject_id: Annotated[uuid.UUID | None, Query(alias="subjectId")] = None,
     eager: Annotated[
-        list[uuid.UUID] | None,
-        Query(alias="eager", description="List of label group IDs for which to fetch eager label data"),
-    ] = None,
+        list[uuid.UUID],
+        Body(alias="eager", description="List of label group IDs for which to fetch eager label data"),
+    ],
+    subject_id: Annotated[uuid.UUID | None, Query(alias="subjectId")] = None,
 ):
     """
     Gets all data associated with a chapter required for editing.
@@ -48,24 +48,24 @@ def read_edit_chapter_data(
             subject_user = db.execute(q).scalar_one_or_none()
             if subject_user is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject user not found.")
-            return query_edit_chapter_data(db, subject_user, chapter_id, eager if eager is not None else [])
-        return query_edit_chapter_data(db, current_user, chapter_id, eager if eager is not None else [])
+            return query_edit_chapter_data(db, subject_user, chapter_id, eager)
+        return query_edit_chapter_data(db, current_user, chapter_id, eager)
     except ChapterContentNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or insufficient permissions."
         ) from e
 
 
-@router.get("/edit-chapter-data/{chapterId}/label-data", response_model=list[EagerEntry])
+@router.post("/edit-chapter-data/{chapterId}/label-data", response_model=list[EagerEntry])
 def read_edit_chapter_label_data(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-    subject_id: Annotated[uuid.UUID | None, Query(alias="subjectId")] = None,
     label_group_ids: Annotated[
-        list[uuid.UUID] | None,
-        Query(alias="labelGroupIds", description="Label group IDs to fetch label data and labels for"),
-    ] = None,
+        list[uuid.UUID],
+        Body(alias="labelGroupIds", description="Label group IDs to fetch label data and labels for"),
+    ],
+    subject_id: Annotated[uuid.UUID | None, Query(alias="subjectId")] = None,
 ):
     """
     Fetch label data and labels for specific label groups on a chapter's most
@@ -85,12 +85,8 @@ def read_edit_chapter_label_data(
             subject_user = db.execute(q).scalar_one_or_none()
             if subject_user is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject user not found.")
-            return query_edit_chapter_data_only_label_data(
-                db, subject_user, chapter_id, label_group_ids if label_group_ids is not None else []
-            )
-        return query_edit_chapter_data_only_label_data(
-            db, current_user, chapter_id, label_group_ids if label_group_ids is not None else []
-        )
+            return query_edit_chapter_data_only_label_data(db, subject_user, chapter_id, label_group_ids)
+        return query_edit_chapter_data_only_label_data(db, current_user, chapter_id, label_group_ids)
     except ChapterContentNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or insufficient permissions."

@@ -42,8 +42,8 @@ import type {
   OperationStatus,
   ReadAutolabelsAutoLabelsGetParams,
   ReadChaptersByNovelChaptersGetParams,
-  ReadEditChapterDataEditChapterDataChapterIdGetParams,
-  ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams,
+  ReadEditChapterDataEditChapterDataChapterIdPostParams,
+  ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostParams,
   ReadFilterSchemasFiltersSchemasGet200,
   ReadFlaggedInstancesFiltersFilterNameFlagInstancesPostBody,
   ReadLabelDatasByGroupChaptersLabelDatasGetParams,
@@ -758,27 +758,27 @@ export const actionPublishChapterChaptersChapterIdPublishPost = async (chapterId
 );}
 
 
-export type readEditChapterDataEditChapterDataChapterIdGetResponse200 = {
+export type readEditChapterDataEditChapterDataChapterIdPostResponse200 = {
   data: EditChapterData
   status: 200
 }
 
-export type readEditChapterDataEditChapterDataChapterIdGetResponse422 = {
+export type readEditChapterDataEditChapterDataChapterIdPostResponse422 = {
   data: HTTPValidationError
   status: 422
 }
 
-export type readEditChapterDataEditChapterDataChapterIdGetResponseSuccess = (readEditChapterDataEditChapterDataChapterIdGetResponse200) & {
+export type readEditChapterDataEditChapterDataChapterIdPostResponseSuccess = (readEditChapterDataEditChapterDataChapterIdPostResponse200) & {
   headers: Headers;
 };
-export type readEditChapterDataEditChapterDataChapterIdGetResponseError = (readEditChapterDataEditChapterDataChapterIdGetResponse422) & {
+export type readEditChapterDataEditChapterDataChapterIdPostResponseError = (readEditChapterDataEditChapterDataChapterIdPostResponse422) & {
   headers: Headers;
 };
 
-export type readEditChapterDataEditChapterDataChapterIdGetResponse = (readEditChapterDataEditChapterDataChapterIdGetResponseSuccess | readEditChapterDataEditChapterDataChapterIdGetResponseError)
+export type readEditChapterDataEditChapterDataChapterIdPostResponse = (readEditChapterDataEditChapterDataChapterIdPostResponseSuccess | readEditChapterDataEditChapterDataChapterIdPostResponseError)
 
-export const getReadEditChapterDataEditChapterDataChapterIdGetUrl = (chapterId: string,
-    params?: ReadEditChapterDataEditChapterDataChapterIdGetParams,) => {
+export const getReadEditChapterDataEditChapterDataChapterIdPostUrl = (chapterId: string,
+    params?: ReadEditChapterDataEditChapterDataChapterIdPostParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -805,40 +805,41 @@ export const getReadEditChapterDataEditChapterDataChapterIdGetUrl = (chapterId: 
  *     403: Insufficient permissions to access data for other user.
  * @summary Read Edit Chapter Data
  */
-export const readEditChapterDataEditChapterDataChapterIdGet = async (chapterId: string,
-    params?: ReadEditChapterDataEditChapterDataChapterIdGetParams, options?: RequestInit): Promise<readEditChapterDataEditChapterDataChapterIdGetResponse> => {
+export const readEditChapterDataEditChapterDataChapterIdPost = async (chapterId: string,
+    readEditChapterDataEditChapterDataChapterIdPostBody: string[],
+    params?: ReadEditChapterDataEditChapterDataChapterIdPostParams, options?: RequestInit): Promise<readEditChapterDataEditChapterDataChapterIdPostResponse> => {
 
-  return customFetch<readEditChapterDataEditChapterDataChapterIdGetResponse>(getReadEditChapterDataEditChapterDataChapterIdGetUrl(chapterId,params),
+  return customFetch<readEditChapterDataEditChapterDataChapterIdPostResponse>(getReadEditChapterDataEditChapterDataChapterIdPostUrl(chapterId,params),
   {
     ...options,
-    method: 'GET'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(readEditChapterDataEditChapterDataChapterIdPostBody)
   }
 );}
 
 
-export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse200 = {
+export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse200 = {
   data: EagerEntry[]
   status: 200
 }
 
-export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse422 = {
+export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse422 = {
   data: HTTPValidationError
   status: 422
 }
 
-export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseSuccess = (readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse200) & {
+export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponseSuccess = (readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse200) & {
   headers: Headers;
 };
-export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseError = (readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse422) & {
+export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponseError = (readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse422) & {
   headers: Headers;
 };
 
-export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse = (readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseSuccess | readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponseError)
+export type readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse = (readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponseSuccess | readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponseError)
 
-export const getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetUrl = (chapterId: string,
-    params?: ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams,) => {
+export const getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostUrl = (chapterId: string,
+    params?: ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -862,15 +863,16 @@ export const getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetUrl 
  *     403: Insufficient permissions to access data for other user.
  * @summary Read Edit Chapter Label Data
  */
-export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet = async (chapterId: string,
-    params?: ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams, options?: RequestInit): Promise<readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse> => {
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost = async (chapterId: string,
+    readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostBody: string[],
+    params?: ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostParams, options?: RequestInit): Promise<readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse> => {
 
-  return customFetch<readEditChapterLabelDataEditChapterDataChapterIdLabelDataGetResponse>(getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetUrl(chapterId,params),
+  return customFetch<readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse>(getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostUrl(chapterId,params),
   {
     ...options,
-    method: 'GET'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostBody)
   }
 );}
 

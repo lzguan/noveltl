@@ -1,32 +1,28 @@
-import { useEffect, useState } from "react";
-import { Effect } from "effect";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
-import type { EditorManager } from "../managers/editorManager";
+import type { CProvId, ProvChapter } from "../controller/types/idTypes";
 
-export function ChapterPanel({ editorManager }: { editorManager: EditorManager }) {
-	const [chapterIds, setChapterIds] = useState(editorManager.getters.chapterIds());
-	const [currentId, setCurrentId] = useState(editorManager.getters.currentChapterId());
+export function ChapterPanel({
+	chapters,
+	currentChapterId,
+	onSwitchChapter,
+	onAddChapter,
+}: {
+	chapters: ProvChapter[];
+	currentChapterId: CProvId | null;
+	onSwitchChapter: (id: CProvId) => void;
+	onAddChapter: (num: number, title: string, isPublic: boolean) => void;
+}) {
 	const [showAdd, setShowAdd] = useState(false);
 	const [newNum, setNewNum] = useState("");
 	const [newTitle, setNewTitle] = useState("");
 
-	useEffect(() => {
-		const unsub = editorManager.subscribe(() => {
-			setChapterIds(editorManager.getters.chapterIds());
-			setCurrentId(editorManager.getters.currentChapterId());
-			return Effect.succeed(void 0);
-		});
-		return unsub;
-	}, [editorManager]);
-
 	const handleAdd = () => {
 		const num = parseInt(newNum, 10);
 		if (isNaN(num) || !newTitle.trim()) return;
-		console.time("addChapter full cycle");
-		editorManager.addChapter(num, newTitle.trim(), false);
-		console.timeEnd("addChapter full cycle");
+		onAddChapter(num, newTitle.trim(), false);
 		setNewNum("");
 		setNewTitle("");
 		setShowAdd(false);
@@ -76,20 +72,20 @@ export function ChapterPanel({ editorManager }: { editorManager: EditorManager }
 					</Button>
 				</div>
 			)}
-			{chapterIds.map((id) => (
+			{chapters.map((c) => (
 				<div
-					key={id}
+					key={c.chapterId}
 					className={`px-1.5 py-1 rounded cursor-pointer text-xs ${
-						id === currentId
+						c.chapterId === currentChapterId
 							? "bg-accent font-medium"
 							: "hover:bg-accent/50 text-muted-foreground"
 					}`}
-					onClick={() => editorManager.switchChapter(id)}
+					onClick={() => onSwitchChapter(c.chapterId)}
 				>
-					{id}
+					Ch.{c.chapterNum}: {c.chapterTitle}
 				</div>
 			))}
-			{chapterIds.length === 0 && (
+			{chapters.length === 0 && (
 				<div className="px-1.5 py-1 text-xs text-muted-foreground">
 					No chapters yet.
 				</div>

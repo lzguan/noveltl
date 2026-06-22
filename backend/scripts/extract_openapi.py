@@ -11,6 +11,7 @@ def generate_openapi_json():
 
     with open(Path(__file__).parent.parent / "openapi.json", "w") as f:
         json.dump(openapi_schema, f, indent=2)
+    print("OpenAPI JSON schema generated successfully.")
 
 
 def generate_openapi_yaml():
@@ -18,6 +19,7 @@ def generate_openapi_yaml():
 
     with open(Path(__file__).parent.parent / "openapi.yaml", "w") as f:
         yaml.dump(openapi_schema, f, indent=2)
+    print("OpenAPI YAML schema generated successfully.")
 
 
 if __name__ == "__main__":

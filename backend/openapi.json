@@ -2700,10 +2700,10 @@
       }
     },
     "/edit-chapter-data/{chapterId}": {
-      "get": {
+      "post": {
         "summary": "Read Edit Chapter Data",
         "description": "Gets all data associated with a chapter required for editing.\n\nArgs:\n    chapter_id: Chapter id of requested chapter\n    eager: List of label group IDs for which to fetch eager label data\n\nRaises:\n    404: Chapter not found (or insufficient permissions).\n    403: Insufficient permissions to access data for other user.",
-        "operationId": "read_edit_chapter_data_edit_chapter_data__chapterId__get",
+        "operationId": "read_edit_chapter_data_edit_chapter_data__chapterId__post",
         "security": [
           {
             "OAuth2PasswordBearer": []
@@ -2736,30 +2736,24 @@
               ],
               "title": "Subjectid"
             }
-          },
-          {
-            "name": "eager",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "format": "uuid"
-                  }
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "List of label group IDs for which to fetch eager label data",
-              "title": "Eager"
-            },
-            "description": "List of label group IDs for which to fetch eager label data"
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "List of label group IDs for which to fetch eager label data",
+                "title": "Eager"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2785,10 +2779,10 @@
       }
     },
     "/edit-chapter-data/{chapterId}/label-data": {
-      "get": {
+      "post": {
         "summary": "Read Edit Chapter Label Data",
         "description": "Fetch label data and labels for specific label groups on a chapter's most\nrecent content version. Used by the reload group operation.\n\nRaises:\n    404: Chapter not found (or insufficient permissions).\n    403: Insufficient permissions to access data for other user.",
-        "operationId": "read_edit_chapter_label_data_edit_chapter_data__chapterId__label_data_get",
+        "operationId": "read_edit_chapter_label_data_edit_chapter_data__chapterId__label_data_post",
         "security": [
           {
             "OAuth2PasswordBearer": []
@@ -2821,30 +2815,24 @@
               ],
               "title": "Subjectid"
             }
-          },
-          {
-            "name": "labelGroupIds",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "format": "uuid"
-                  }
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Label group IDs to fetch label data and labels for",
-              "title": "Labelgroupids"
-            },
-            "description": "Label group IDs to fetch label data and labels for"
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Label group IDs to fetch label data and labels for",
+                "title": "Labelgroupids"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2855,7 +2843,7 @@
                   "items": {
                     "$ref": "#/components/schemas/EagerEntry"
                   },
-                  "title": "Response Read Edit Chapter Label Data Edit Chapter Data  Chapterid  Label Data Get"
+                  "title": "Response Read Edit Chapter Label Data Edit Chapter Data  Chapterid  Label Data Post"
                 }
               }
             }

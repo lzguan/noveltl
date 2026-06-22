@@ -42,15 +42,15 @@ import type { LabelOp } from "./types/dataTypes";
 import {
 	CreateChapterNovelsNovelIdChaptersPost200Response,
 	CreateLabelGroupLabelGroupsPost200Response,
-	ReadEditChapterDataEditChapterDataChapterIdGet200Response,
-	ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200Response,
+	ReadEditChapterDataEditChapterDataChapterIdPost200Response,
+	ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200Response,
 	UpdateChapterContentChaptersChapterIdContentPatch200Response,
 } from "@/api/endpoints/default/default.effect";
 import {
 	createChapterNovelsNovelIdChaptersPost,
 	createLabelGroupLabelGroupsPost,
-	readEditChapterDataEditChapterDataChapterIdGet,
-	readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet,
+	readEditChapterDataEditChapterDataChapterIdPost,
+	readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
 	updateChapterContentChaptersChapterIdContentPatch,
 	updateLabelDataStreamLabelDatasLabelDataIdPatch,
 } from "@/api/endpoints/default/default";
@@ -402,13 +402,9 @@ export const buildNovelDataManager = (
 								}
 								const resp = yield* Effect.tryPromise(async () => {
 									const inResp =
-										await readEditChapterDataEditChapterDataChapterIdGet(
+										await readEditChapterDataEditChapterDataChapterIdPost(
 											chapterServId,
-											eager.length > 0
-												? {
-														eager: eagerServIds,
-													}
-												: undefined,
+											eagerServIds,
 										);
 									return inResp;
 								}).pipe(
@@ -430,7 +426,7 @@ export const buildNovelDataManager = (
 						postSend: (resp: unknown) =>
 							Effect.gen(function* () {
 								const validated = yield* Schema.validate(
-									ReadEditChapterDataEditChapterDataChapterIdGet200Response,
+									ReadEditChapterDataEditChapterDataChapterIdPost200Response,
 								)(resp).pipe(
 									Effect.mapError((err) => new FatalException({ orig: err })),
 								);
@@ -516,7 +512,7 @@ export const buildNovelDataManager = (
 	});
 
 export const buildChapterDataManager = (
-	editChapterData: typeof ReadEditChapterDataEditChapterDataChapterIdGet200Response.Type,
+	editChapterData: typeof ReadEditChapterDataEditChapterDataChapterIdPost200Response.Type,
 	chapterId: CProvId,
 	raiseTriggerEvent: (event: TriggerEvent) => Effect.Effect<void>,
 	idRepo: IDRepository,
@@ -1551,11 +1547,9 @@ export const buildChapterDataManager = (
 								);
 							}
 							const resp = yield* Effect.tryPromise(() =>
-								readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet(
+								readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost(
 									servChapterId,
-									{
-										labelGroupIds: [servLabelGroupId],
-									},
+									[servLabelGroupId],
 								),
 							).pipe(
 								Effect.mapError((err) => new ConnectionException({ orig: err })),
@@ -1572,7 +1566,7 @@ export const buildChapterDataManager = (
 					postSend: (data: unknown) =>
 						Effect.gen(function* () {
 							const validated = yield* Schema.decodeUnknown(
-								ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200Response,
+								ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200Response,
 							)(data).pipe(
 								Effect.mapError((err) => new FatalException({ orig: err })),
 							);

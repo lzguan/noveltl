@@ -1,7 +1,6 @@
 import "./App.css";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppRoutes } from "./routes";
-import { Test } from "./Test";
 import { LoginPage } from "./auth/pages/LoginPage";
 import { SourceWorksPage } from "./view/pages/SourceWorksPage";
 import { ViewShell, EditShell } from "./components/navigation/AppShell";
@@ -17,7 +16,6 @@ function App() {
 		<Routes>
 			<Route path={AppRoutes.ROOT} element={<Navigate to={AppRoutes.DASHBOARD} replace />} />
 			<Route path={AppRoutes.LOGIN} element={<LoginPage />} />
-			<Route path={AppRoutes.TEST} element={<Test />} />
 			<Route element={<ViewShell />}>
 				<Route path={AppRoutes.DASHBOARD} element={<DashboardPage />} />
 				<Route path={AppRoutes.VIEW.SOURCEWORKS} element={<SourceWorksPage />} />

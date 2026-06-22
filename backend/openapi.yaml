@@ -2000,13 +2000,13 @@ paths:
       - OAuth2PasswordBearer: []
       summary: Action Publish Chapter
   /edit-chapter-data/{chapterId}:
-    get:
+    post:
       description: "Gets all data associated with a chapter required for editing.\n\
         \nArgs:\n    chapter_id: Chapter id of requested chapter\n    eager: List\
         \ of label group IDs for which to fetch eager label data\n\nRaises:\n    404:\
         \ Chapter not found (or insufficient permissions).\n    403: Insufficient\
         \ permissions to access data for other user."
-      operationId: read_edit_chapter_data_edit_chapter_data__chapterId__get
+      operationId: read_edit_chapter_data_edit_chapter_data__chapterId__post
       parameters:
       - in: path
         name: chapterId
@@ -2024,19 +2024,18 @@ paths:
             type: string
           - type: 'null'
           title: Subjectid
-      - description: List of label group IDs for which to fetch eager label data
-        in: query
-        name: eager
-        required: false
-        schema:
-          anyOf:
-          - items:
-              format: uuid
-              type: string
-            type: array
-          - type: 'null'
-          description: List of label group IDs for which to fetch eager label data
-          title: Eager
+      requestBody:
+        content:
+          application/json:
+            schema:
+              description: List of label group IDs for which to fetch eager label
+                data
+              items:
+                format: uuid
+                type: string
+              title: Eager
+              type: array
+        required: true
       responses:
         '200':
           content:
@@ -2054,12 +2053,12 @@ paths:
       - OAuth2PasswordBearer: []
       summary: Read Edit Chapter Data
   /edit-chapter-data/{chapterId}/label-data:
-    get:
+    post:
       description: "Fetch label data and labels for specific label groups on a chapter's\
         \ most\nrecent content version. Used by the reload group operation.\n\nRaises:\n\
         \    404: Chapter not found (or insufficient permissions).\n    403: Insufficient\
         \ permissions to access data for other user."
-      operationId: read_edit_chapter_label_data_edit_chapter_data__chapterId__label_data_get
+      operationId: read_edit_chapter_label_data_edit_chapter_data__chapterId__label_data_post
       parameters:
       - in: path
         name: chapterId
@@ -2077,19 +2076,17 @@ paths:
             type: string
           - type: 'null'
           title: Subjectid
-      - description: Label group IDs to fetch label data and labels for
-        in: query
-        name: labelGroupIds
-        required: false
-        schema:
-          anyOf:
-          - items:
-              format: uuid
-              type: string
-            type: array
-          - type: 'null'
-          description: Label group IDs to fetch label data and labels for
-          title: Labelgroupids
+      requestBody:
+        content:
+          application/json:
+            schema:
+              description: Label group IDs to fetch label data and labels for
+              items:
+                format: uuid
+                type: string
+              title: Labelgroupids
+              type: array
+        required: true
       responses:
         '200':
           content:
@@ -2098,7 +2095,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/EagerEntry'
                 title: Response Read Edit Chapter Label Data Edit Chapter Data  Chapterid  Label
-                  Data Get
+                  Data Post
                 type: array
           description: Successful Response
         '422':

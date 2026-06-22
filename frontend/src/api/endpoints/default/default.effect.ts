@@ -464,35 +464,37 @@ export const ActionPublishChapterChaptersChapterIdPublishPost422Response = S.Str
  *     403: Insufficient permissions to access data for other user.
  * @summary Read Edit Chapter Data
  */
-export const ReadEditChapterDataEditChapterDataChapterIdGetParams = S.Struct({
+export const ReadEditChapterDataEditChapterDataChapterIdPostParams = S.Struct({
   "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
-export const ReadEditChapterDataEditChapterDataChapterIdGetQueryParams = S.Struct({
-  "subjectId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
-  "eager": S.optional(S.Union(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))), S.Null)).annotations({ description: 'List of label group IDs for which to fetch eager label data' })
+export const ReadEditChapterDataEditChapterDataChapterIdPostQueryParams = S.Struct({
+  "subjectId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
 })
 
-export const readEditChapterDataEditChapterDataChapterIdGet200ResponseEagerLabelDataItemLabelGroupLabelGroupNameMax = 31;
+export const ReadEditChapterDataEditChapterDataChapterIdPostBodyItem = S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+export const ReadEditChapterDataEditChapterDataChapterIdPostBody = S.Array(ReadEditChapterDataEditChapterDataChapterIdPostBodyItem)
 
-export const readEditChapterDataEditChapterDataChapterIdGet200ResponseEagerLabelDataItemLabelsItemLabelEndMin = 0;
+export const readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelGroupLabelGroupNameMax = 31;
 
-export const readEditChapterDataEditChapterDataChapterIdGet200ResponseEagerLabelDataItemLabelsItemLabelEntityGroupOneMax = 64;
+export const readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelEndMin = 0;
 
-export const readEditChapterDataEditChapterDataChapterIdGet200ResponseEagerLabelDataItemLabelsItemLabelScoreMin = 0;
-export const readEditChapterDataEditChapterDataChapterIdGet200ResponseEagerLabelDataItemLabelsItemLabelScoreMax = 1;
+export const readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelEntityGroupOneMax = 64;
 
-export const readEditChapterDataEditChapterDataChapterIdGet200ResponseEagerLabelDataItemLabelsItemLabelStartMin = 0;
+export const readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelScoreMin = 0;
+export const readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelScoreMax = 1;
 
-export const readEditChapterDataEditChapterDataChapterIdGet200ResponseEagerLabelDataItemLabelsItemLabelWordMax = 128;
+export const readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelStartMin = 0;
 
-export const readEditChapterDataEditChapterDataChapterIdGet200ResponseLazyLabelDataItemLabelGroupLabelGroupNameMax = 31;
+export const readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelWordMax = 128;
 
-export const readEditChapterDataEditChapterDataChapterIdGet200ResponseNoLabelDataItemLabelGroupNameMax = 31;
+export const readEditChapterDataEditChapterDataChapterIdPost200ResponseLazyLabelDataItemLabelGroupLabelGroupNameMax = 31;
+
+export const readEditChapterDataEditChapterDataChapterIdPost200ResponseNoLabelDataItemLabelGroupNameMax = 31;
 
 
 
-export const ReadEditChapterDataEditChapterDataChapterIdGet200Response = S.Struct({
+export const ReadEditChapterDataEditChapterDataChapterIdPost200Response = S.Struct({
   "chapterContent": S.Struct({
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterContentText": S.String,
@@ -506,18 +508,18 @@ export const ReadEditChapterDataEditChapterDataChapterIdGet200Response = S.Struc
 }).annotations({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' }),
   "labelGroup": S.Struct({
   "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupName": S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdGet200ResponseEagerLabelDataItemLabelGroupLabelGroupNameMax)),
+  "labelGroupName": S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelGroupLabelGroupNameMax)),
   "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 }).annotations({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' }),
   "labels": S.Array(S.Struct({
   "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "labelDirty": S.Boolean,
-  "labelEnd": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdGet200ResponseEagerLabelDataItemLabelsItemLabelEndMin)),
-  "labelEntityGroup": S.Union(S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdGet200ResponseEagerLabelDataItemLabelsItemLabelEntityGroupOneMax)), S.Null),
+  "labelEnd": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelEndMin)),
+  "labelEntityGroup": S.Union(S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelEntityGroupOneMax)), S.Null),
   "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelScore": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdGet200ResponseEagerLabelDataItemLabelsItemLabelScoreMin), S.lessThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdGet200ResponseEagerLabelDataItemLabelsItemLabelScoreMax)),
-  "labelStart": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdGet200ResponseEagerLabelDataItemLabelsItemLabelStartMin)),
-  "labelWord": S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdGet200ResponseEagerLabelDataItemLabelsItemLabelWordMax))
+  "labelScore": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelScoreMin), S.lessThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelScoreMax)),
+  "labelStart": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelStartMin)),
+  "labelWord": S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelWordMax))
 }).annotations({ description: 'Pydantic schema for a label that belongs to a LabelData.\nExtends LabelBase with a label_data_id foreign key and label_id pkey.' }))
 })),
   "lazyLabelData": S.Array(S.Struct({
@@ -528,18 +530,18 @@ export const ReadEditChapterDataEditChapterDataChapterIdGet200Response = S.Struc
 }).annotations({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' }),
   "labelGroup": S.Struct({
   "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupName": S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdGet200ResponseLazyLabelDataItemLabelGroupLabelGroupNameMax)),
+  "labelGroupName": S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseLazyLabelDataItemLabelGroupLabelGroupNameMax)),
   "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 }).annotations({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' })
 })),
   "noLabelData": S.Array(S.Struct({
   "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupName": S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdGet200ResponseNoLabelDataItemLabelGroupNameMax)),
+  "labelGroupName": S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseNoLabelDataItemLabelGroupNameMax)),
   "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 }).annotations({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' }))
 }).annotations({ description: 'Pydantic schema for the data needed to edit a chapter.\n\nAttributes:\n    chapter_content: ChapterContent being edited.\n    no_label_data: List of LabelGroup objects that have no label data associated with them.' })
 
-export const ReadEditChapterDataEditChapterDataChapterIdGet422Response = S.Struct({
+export const ReadEditChapterDataEditChapterDataChapterIdPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "loc": S.Array(S.Union(S.String, S.Number)),
   "msg": S.String,
@@ -556,31 +558,33 @@ export const ReadEditChapterDataEditChapterDataChapterIdGet422Response = S.Struc
  *     403: Insufficient permissions to access data for other user.
  * @summary Read Edit Chapter Label Data
  */
-export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetParams = S.Struct({
+export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostParams = S.Struct({
   "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
-export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGetQueryParams = S.Struct({
-  "subjectId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
-  "labelGroupIds": S.optional(S.Union(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))), S.Null)).annotations({ description: 'Label group IDs to fetch label data and labels for' })
+export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostQueryParams = S.Struct({
+  "subjectId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
 })
 
-export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelGroupLabelGroupNameMax = 31;
+export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostBodyItem = S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostBody = S.Array(ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostBodyItem)
 
-export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelEndMin = 0;
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelGroupLabelGroupNameMax = 31;
 
-export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelEntityGroupOneMax = 64;
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelEndMin = 0;
 
-export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelScoreMin = 0;
-export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelScoreMax = 1;
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelEntityGroupOneMax = 64;
 
-export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelStartMin = 0;
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelScoreMin = 0;
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelScoreMax = 1;
 
-export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelWordMax = 128;
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelStartMin = 0;
+
+export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelWordMax = 128;
 
 
 
-export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseItem = S.Struct({
+export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseItem = S.Struct({
   "labelData": S.Struct({
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -588,23 +592,23 @@ export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200Resp
 }).annotations({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' }),
   "labelGroup": S.Struct({
   "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupName": S.String.pipe(S.maxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelGroupLabelGroupNameMax)),
+  "labelGroupName": S.String.pipe(S.maxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelGroupLabelGroupNameMax)),
   "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 }).annotations({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' }),
   "labels": S.Array(S.Struct({
   "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "labelDirty": S.Boolean,
-  "labelEnd": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelEndMin)),
-  "labelEntityGroup": S.Union(S.String.pipe(S.maxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelEntityGroupOneMax)), S.Null),
+  "labelEnd": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelEndMin)),
+  "labelEntityGroup": S.Union(S.String.pipe(S.maxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelEntityGroupOneMax)), S.Null),
   "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelScore": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelScoreMin), S.lessThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelScoreMax)),
-  "labelStart": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelStartMin)),
-  "labelWord": S.String.pipe(S.maxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseLabelsItemLabelWordMax))
+  "labelScore": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelScoreMin), S.lessThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelScoreMax)),
+  "labelStart": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelStartMin)),
+  "labelWord": S.String.pipe(S.maxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelWordMax))
 }).annotations({ description: 'Pydantic schema for a label that belongs to a LabelData.\nExtends LabelBase with a label_data_id foreign key and label_id pkey.' }))
 })
-export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200Response = S.Array(ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGet200ResponseItem)
+export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200Response = S.Array(ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseItem)
 
-export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataGet422Response = S.Struct({
+export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "loc": S.Array(S.Union(S.String, S.Number)),
   "msg": S.String,

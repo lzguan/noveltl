@@ -3,37 +3,41 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Eye, EyeOff, Plus, RefreshCw } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Effect } from "effect";
-import type { EditorManager, LabelGroupEntry } from "../managers/editorManager";
+import { useState } from "react";
+import type { LGProvId } from "../controller/types/idTypes";
+import type { LabelGroupView } from "../hooks/useTrackedLabelGroups";
 
 function LabelGroupRow({
-	entry,
+	id,
+	view,
 	chapterOpen,
-	editorManager,
+	onSetActive,
+	onToggleVisibility,
+	onReloadLabelData,
 }: {
-	entry: LabelGroupEntry;
+	id: LGProvId;
+	view: LabelGroupView;
 	chapterOpen: boolean;
-	editorManager: EditorManager;
+	onSetActive: (id: LGProvId | null) => void;
+	onToggleVisibility: (id: LGProvId) => void;
+	onReloadLabelData: (id: LGProvId) => void;
 }) {
-	const isActive = entry.active;
-	const isVisible = entry.visible;
-	const isLoading = entry.status === "loading";
-	const canReload = chapterOpen && (entry.status === "ready" || entry.status === "error");
+	const isLoading = view.status === "loading";
+	const canReload = chapterOpen && (view.status === "ready" || view.status === "error");
 
 	return (
 		<div
 			className={cn(
 				"flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm",
-				isActive && "bg-accent",
+				view.active && "bg-accent",
 			)}
-			onClick={() => editorManager.setActive(entry.id)}
+			onClick={() => onSetActive(id)}
 		>
 			<div
 				className="w-3 h-3 rounded-full shrink-0"
-				style={{ backgroundColor: `#${entry.color.toString(16).padStart(6, "0")}` }}
+				style={{ backgroundColor: `#${view.color.toString(16).padStart(6, "0")}` }}
 			/>
-			<span className="flex-1 truncate">{entry.name}</span>
+			<span className="flex-1 truncate">{view.labelGroup.labelGroupName}</span>
 			{isLoading ? (
 				<Skeleton className="h-4 w-4 rounded" />
 			) : (
@@ -43,10 +47,14 @@ function LabelGroupRow({
 					className="h-6 w-6 shrink-0"
 					onClick={(e) => {
 						e.stopPropagation();
-						editorManager.toggleVisibility(entry.id);
+						onToggleVisibility(id);
 					}}
 				>
-					{isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+					{view.visible ? (
+						<Eye className="h-3.5 w-3.5" />
+					) : (
+						<EyeOff className="h-3.5 w-3.5" />
+					)}
 				</Button>
 			)}
 			{canReload && (
@@ -56,7 +64,7 @@ function LabelGroupRow({
 					className="h-6 w-6 shrink-0"
 					onClick={(e) => {
 						e.stopPropagation();
-						editorManager.reloadLabelData(entry.id);
+						onReloadLabelData(id);
 					}}
 				>
 					<RefreshCw className="h-3.5 w-3.5" />
@@ -66,29 +74,30 @@ function LabelGroupRow({
 	);
 }
 
-export function LabelGroupPanel({ editorManager }: { editorManager: EditorManager }) {
-	const [entries, setEntries] = useState<LabelGroupEntry[]>(
-		editorManager.getters.labelGroups(),
-	);
+export function LabelGroupPanel({
+	labelGroups,
+	chapterOpen,
+	onToggleVisibility,
+	onSetActive,
+	onAddLabelGroup,
+	onReloadLabelData,
+}: {
+	labelGroups: [LGProvId, LabelGroupView][];
+	chapterOpen: boolean;
+	onToggleVisibility: (id: LGProvId) => void;
+	onSetActive: (id: LGProvId | null) => void;
+	onAddLabelGroup: (name: string) => void;
+	onReloadLabelData: (id: LGProvId) => void;
+}) {
 	const [showAdd, setShowAdd] = useState(false);
 	const [newName, setNewName] = useState("");
 
-	useEffect(() => {
-		const unsub = editorManager.subscribe(() => {
-			setEntries(editorManager.getters.labelGroups());
-			return Effect.succeed(void 0);
-		});
-		return unsub;
-	}, [editorManager]);
-
 	const handleAdd = () => {
 		if (!newName.trim()) return;
-		editorManager.addLabelGroup(newName.trim());
+		onAddLabelGroup(newName.trim());
 		setNewName("");
 		setShowAdd(false);
 	};
-
-	const chapterOpen = editorManager.getters.currentChapterId() !== null;
 
 	return (
 		<div className="flex flex-col gap-0.5 p-2">
@@ -122,17 +131,20 @@ export function LabelGroupPanel({ editorManager }: { editorManager: EditorManage
 					</Button>
 				</div>
 			)}
-			{entries.length === 0 ? (
+			{labelGroups.length === 0 ? (
 				<div className="px-1.5 py-1 text-xs text-muted-foreground">
 					No label groups yet.
 				</div>
 			) : (
-				entries.map((e) => (
+				labelGroups.map(([id, view]) => (
 					<LabelGroupRow
-						key={e.id}
-						entry={e}
+						key={id}
+						id={id}
+						view={view}
 						chapterOpen={chapterOpen}
-						editorManager={editorManager}
+						onSetActive={onSetActive}
+						onToggleVisibility={onToggleVisibility}
+						onReloadLabelData={onReloadLabelData}
 					/>
 				))
 			)}

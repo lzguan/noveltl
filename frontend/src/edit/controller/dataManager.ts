@@ -96,7 +96,22 @@ export const buildNovelDataManager = (
 			),
 		);
 
-		const { decorate, flush } = buildRequestQueueDispatcher<RequestEvent>();
+		const { decorate, flush: _flush } = buildRequestQueueDispatcher<RequestEvent>();
+
+		const flush: () => Effect.Effect<RequestEvent[], UnknownException> = () =>
+			Effect.gen(function* () {
+				const events = yield* _flush();
+				for (const chapterId of yield* chaptersIndex.getIds()) {
+					const slot = yield* chaptersIndex
+						.get(chapterId)
+						.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+					if (slot.status === "ready") {
+						const flushResult = yield* slot.data.chapterData.flush();
+						events.push(...flushResult);
+					}
+				}
+				return events;
+			});
 
 		const getters: NovelGetters = {
 			novel: () => Effect.succeed(novelData.novel),

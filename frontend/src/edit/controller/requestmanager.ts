@@ -195,7 +195,13 @@ export const buildRequestManager = (
 
 		const send = () =>
 			Effect.gen(function* () {
-				console.log("send() starting, queue=%d", requestQueue.length);
+				const qLen =
+					requestQueue.length +
+					statusQueries.length +
+					retryRequests.length;
+				if (qLen > 0) {
+					console.log("send() starting, queue=%d", requestQueue.length);
+				}
 				const fromQueueRequests: KeyedRequestEvent[] = [];
 
 				let delay: DurationInput = "1 second"; // todo: implement exponential backoff for retries instead of fixed delay
@@ -339,15 +345,24 @@ export const buildRequestManager = (
 				] = yield* Effect.all([fromQueueEffect, statusQueriesEffect, retryRequestsEffect], {
 					concurrency: "unbounded",
 				});
-				console.log(
-					"send() results: fromQueue pass=%d fail=%d statusQuery pass=%d fail=%d retry pass=%d fail=%d",
-					fromQueueResultPass.length,
-					fromQueueResultFail.length,
-					statusQueryResultPass.length,
-					statusQueryResultFail.length,
-					retryResultPass.length,
-					retryResultFail.length,
-				);
+				const totalResults =
+					fromQueueResultPass.length +
+					fromQueueResultFail.length +
+					statusQueryResultPass.length +
+					statusQueryResultFail.length +
+					retryResultPass.length +
+					retryResultFail.length;
+				if (totalResults > 0) {
+					console.log(
+						"send() results: fromQueue pass=%d fail=%d statusQuery pass=%d fail=%d retry pass=%d fail=%d",
+						fromQueueResultPass.length,
+						fromQueueResultFail.length,
+						statusQueryResultPass.length,
+						statusQueryResultFail.length,
+						retryResultPass.length,
+						retryResultFail.length,
+					);
+				}
 
 				const fatalFailedRequests: { error: AnyError; request: KeyedRequestEvent }[] = [];
 				const otherFailedRequests: { error: AnyError; request: KeyedRequestEvent }[] = [];
@@ -472,12 +487,18 @@ export const buildRequestManager = (
 		const sendLoop = () =>
 			Effect.forever(
 				Effect.gen(function* () {
-					console.log(
-						"sendLoop: queue=%d status=%d retry=%d",
-						requestQueue.length,
-						statusQueries.length,
-						retryRequests.length,
-					);
+					const total =
+						requestQueue.length +
+						statusQueries.length +
+						retryRequests.length;
+					if (total > 0) {
+						console.log(
+							"sendLoop: queue=%d status=%d retry=%d",
+							requestQueue.length,
+							statusQueries.length,
+							retryRequests.length,
+						);
+					}
 					yield* sendMut
 						.withPermits(1)(send())
 						.pipe(

@@ -132,7 +132,11 @@ async def read_user_me(current_user: Annotated[schemas.User, Depends(get_current
 
 
 @router.get("/users/{userName}", response_model=schemas.User)
-async def read_user(user_name: Annotated[str, Path(alias="userName")], db: Annotated[Session, Depends(get_db)]):
+async def read_user(
+    user_name: Annotated[str, Path(alias="userName")],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[schemas.User | None, Depends(get_optional_user)],
+):
     """
     Get user by username.
 

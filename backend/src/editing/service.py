@@ -178,6 +178,7 @@ def query_edit_chapter_data_only_label_data(
         result_rows = result.all()
     except Exception:
         raise
+    db.commit()
 
     entries: dict[uuid.UUID, EagerEntry] = {}
     for group, data, label in result_rows:

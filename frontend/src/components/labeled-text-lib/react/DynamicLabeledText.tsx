@@ -157,7 +157,7 @@ function DynamicLabeledText<S extends Style, L extends StyledLabel<S>, ID extend
 	return (
 		<div
 			onPointerDown={(e) => {
-				hiddenContentEditableRef.current?.focus();
+				hiddenContentEditableRef.current?.focus({ preventScroll: true });
 				callbacks.onPointerDown?.({ event: e, manager, caret });
 			}}
 			onPointerMove={(e) => callbacks.onPointerMove?.({ event: e, manager, caret })}
@@ -213,10 +213,12 @@ function DynamicLabeledText<S extends Style, L extends StyledLabel<S>, ID extend
 				contentEditable={true}
 				key={"__hidden__"}
 				style={{
-					position: "absolute",
-					left: -9999,
-					width: 0,
-					height: 0,
+					position: "fixed",
+					top: 0,
+					left: 0,
+					width: 1,
+					height: 1,
+					opacity: 0,
 					overflow: "hidden",
 				}}
 				onKeyDown={(e) => callbacks.onKeyDown?.({ event: e, manager, caret })}

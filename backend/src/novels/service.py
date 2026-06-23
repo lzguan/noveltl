@@ -770,7 +770,6 @@ def modify_chapter_content(
     try:
         result = db.execute(stmt)
         new_chapter_content_id, new_chapter_content_version = result.one()
-        db.commit()
     except NoResultFound as e:
         db.rollback()
         # Distinguish between outdated text and insufficient write permissions.

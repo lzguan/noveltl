@@ -78,8 +78,8 @@ function AppShell({ title, subtitle, side, homeHref }: AppShellProps) {
 	}
 
 	return (
-		<div className="min-h-screen bg-background">
-			<header className="border-b bg-background/95 backdrop-blur">
+		<div className="flex h-screen flex-col bg-background">
+			<header className="border-b bg-background/95 backdrop-blur shrink-0">
 				<div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 py-3 lg:flex-row lg:items-center lg:justify-between">
 					<div className="flex items-center gap-3 min-w-0">
 						<Link
@@ -168,7 +168,14 @@ function AppShell({ title, subtitle, side, homeHref }: AppShellProps) {
 				</div>
 			</header>
 
-			<Outlet />
+			<div
+				className={cn(
+					"flex-1 min-h-0",
+					side === "edit" ? "overflow-hidden" : "overflow-y-auto",
+				)}
+			>
+				<Outlet />
+			</div>
 		</div>
 	);
 }

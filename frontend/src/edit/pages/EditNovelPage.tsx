@@ -185,15 +185,15 @@ export function EditNovelPage() {
 				console.log(`${phase}: ${duration}ms`)
 			}
 		>
-			<div className="flex flex-col h-full">
+			<div className="flex flex-col h-full min-h-0">
 				<ToolbarPanel
 					mode={editorState.mode}
 					loading={editorState.data.loading}
 					onSetMode={editorState.setMode}
 				/>
-				<div className="flex flex-1 overflow-hidden">
-					<div className="w-56 border-r overflow-y-auto shrink-0 flex flex-col">
-						<div className="border-b">
+				<div className="flex flex-1 min-h-0 overflow-hidden">
+					<div className="w-56 border-r shrink-0 flex flex-col min-h-0">
+						<div className="border-b shrink-0 max-h-[45%] overflow-y-auto">
 							<ChapterPanel
 								chapters={chapterList.chapterList}
 								currentChapterId={currentChapterId}
@@ -201,7 +201,7 @@ export function EditNovelPage() {
 								onAddChapter={managers.chapterMgr.addChapter}
 							/>
 						</div>
-						<div className="flex-1 overflow-y-auto">
+						<div className="flex-1 min-h-0 overflow-y-auto">
 							<LabelGroupPanel
 								labelGroups={trackedLabelGroups.labelGroups}
 								chapterOpen={!editorState.data.loading}

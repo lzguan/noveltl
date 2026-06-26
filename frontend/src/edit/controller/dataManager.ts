@@ -930,21 +930,6 @@ export const buildChapterDataManager = (
 			UnknownException
 		> =>
 			Effect.gen(function* () {
-				const slot = yield* labelDataIndex.get(labelGroupId).pipe(
-					Effect.mapError(
-						() =>
-							new UnknownException({
-								message: `Label group ${labelGroupId} not found`,
-							}),
-					),
-				);
-				if (slot.status !== "ready" || !slot.data) {
-					return yield* Effect.fail(
-						new UnknownException({
-							message: `Labels for group ${labelGroupId} not loaded`,
-						}),
-					);
-				}
 				const labelGroupSlot = yield* getters.labelGroup(labelGroupId).pipe(
 					Effect.catchAll(() =>
 						Effect.fail(
@@ -954,6 +939,32 @@ export const buildChapterDataManager = (
 						),
 					),
 				);
+				const slot = yield* labelDataIndex
+					.get(labelGroupId)
+					.pipe(
+						Effect.catch("_tag", {
+							failure: "NotFoundException",
+							onFailure: () =>
+								Effect.gen(function* () {
+									yield* labelDataIndex.new(labelGroupId, {
+										labelData: Prov({
+											labelDataId: idRepo.newId("labelData"),
+											chapterContentId,
+											labelGroupId,
+										}),
+									});
+									return yield* labelDataIndex.get(labelGroupId);
+								}),
+						}),
+					)
+					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+				if (slot.status !== "ready" || !slot.data) {
+					return yield* Effect.fail(
+						new UnknownException({
+							message: `Labels for group ${labelGroupId} not loaded`,
+						}),
+					);
+				}
 				if (editOnly && labelGroupSlot.meta.role === "viewer") {
 					return yield* Effect.fail(
 						new UnknownException({ message: "Viewer role cannot edit labels" }),
@@ -1494,7 +1505,13 @@ export const buildChapterDataManager = (
 							labelGroup: [
 								{ id: labelGroupId, kind: "labelGroup", desiredState: "locked" },
 							],
-							labelData: [],
+							labelData: [
+								{
+									id: newLabelDataProvId,
+									kind: "labelData",
+									desiredState: "loading",
+								},
+							],
 							label: oldLabelIds.map((id) => ({
 								id,
 								kind: "label" as const,
@@ -1520,6 +1537,11 @@ export const buildChapterDataManager = (
 								id: oldLabelDataProvId,
 								kind: "labelData",
 								desiredState: desiredState,
+							},
+							{
+								id: newLabelDataProvId,
+								kind: "labelData",
+								desiredState: "loading",
 							},
 						],
 						label: oldLabelIds.map((id) => ({

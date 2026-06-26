@@ -1,4 +1,4 @@
-import { Profiler, useEffect, useState } from "react";
+import { Profiler, useEffect, useMemo, useState } from "react";
 import { Effect } from "effect";
 import { readChaptersByNovelChaptersGet, readLabelGroupsWithRoleLabelGroupsWithRoleGet, readNovelNovelsNovelIdGet } from "@/api/endpoints/default/default";
 import type { Chapter, LabelGroupWithRole, Novel } from "@/api/models";
@@ -13,6 +13,9 @@ import { useTrackedLabelGroups } from "../hooks/useTrackedLabelGroups";
 import { createChapterManager } from "../managers/chapterManager";
 import { createLabelGroupManager } from "../managers/labelGroupManager";
 import { createEditorManager } from "../managers/editorManager";
+import { buildErrorManager } from "../managers/errorManager";
+import { makeActiveGroupLabelSource } from "../labeling/activeGroupLabelSource";
+import type { LabelEditing, LabelSink } from "../labeling/types";
 import { ChapterPanel } from "../panels/ChapterPanel";
 import { EditorPanel } from "../panels/EditorPanel";
 import { LabelGroupPanel } from "../panels/LabelGroupPanel";
@@ -48,6 +51,39 @@ export function EditNovelPage() {
 		labelGroupMgr: ReturnType<typeof createLabelGroupManager>;
 		editorMgr: ReturnType<typeof createEditorManager>;
 	} | null>(null);
+
+	const labeling = useMemo<LabelEditing>(() => {
+		const source = makeActiveGroupLabelSource({
+			getSegmentManager: () => {
+				const data = editorState.dataRef.current;
+				return data.loading ? null : data.segmentManager;
+			},
+			getGroups: () => trackedLabelGroups.labelGroupsRef.current,
+		});
+		const sink: LabelSink = {
+			add: (target, range, meta) => {
+				managers?.editorMgr.labelOp(
+					{
+						op: "add",
+						startPos: range.start,
+						endPos: range.end,
+						word: range.word,
+						entityGroup: meta.entityGroup,
+						score: meta.score,
+						dirty: meta.dirty,
+					},
+					target,
+				);
+			},
+			remove: (target, range) => {
+				managers?.editorMgr.labelOp(
+					{ op: "delete", startPos: range.start, endPos: range.end, word: range.word },
+					target,
+				);
+			},
+		};
+		return { source, sink };
+	}, [managers, editorState.dataRef, trackedLabelGroups.labelGroupsRef]);
 
 	// Fetch data
 	useEffect(() => {
@@ -105,10 +141,12 @@ export function EditNovelPage() {
 			setLoading: editorState.setLoading,
 			labelGroupsRef: trackedLabelGroups.labelGroupsRef,
 		});
+		const errorMgr = buildErrorManager();
 
 		ctrl.subscribe(chapterMgr.handleControllerEvent);
 		ctrl.subscribe(labelGroupMgr.handleControllerEvent);
-		ctrl.subscribe(editorMgr.handleControllerEvent);
+		ctrl.subscribe(editorMgr.handleControllerEvent, 0);
+		ctrl.subscribe(errorMgr.handleTriggerEvent);
 
 		// Seed chapters from controller
 		Effect.runSync(
@@ -217,7 +255,7 @@ export function EditNovelPage() {
 						mode={editorState.mode}
 						onSetCaret={editorState.setCaret}
 						onTextOp={managers.editorMgr.textOp}
-						onLabelOp={managers.editorMgr.labelOp}
+						labeling={labeling}
 					/>
 				</div>
 			</div>

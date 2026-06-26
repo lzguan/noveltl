@@ -25,7 +25,10 @@ export type SubscriberFn<GettersT, TriggerEventT> = (
 export interface BaseController<GettersT, UserEventT, TriggerEventT> {
 	handleUserEvent: (event: UserEventT) => Effect.Effect<void>;
 	getters: GettersT;
-	subscribe: (subscriberFn: SubscriberFn<GettersT, TriggerEventT>) => () => void;
+	subscribe: (
+		subscriberFn: SubscriberFn<GettersT, TriggerEventT>,
+		priority?: number,
+	) => () => void;
 }
 
 /**

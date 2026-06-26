@@ -180,7 +180,7 @@ export const kinds: Kind[] = [...identifiableKinds, ...existableKinds] as const;
 /**
  * Type to certify that some function that might do nothing did in fact do something. Used for functions where it is not desirable to throw an error when the function fails to do something.
  */
-type ActionHappened = boolean & Brand.Brand<"ActionHappened">;
+export type ActionHappened = boolean & Brand.Brand<"ActionHappened">;
 export const ActionHappened = Brand.nominal<ActionHappened>();
 
 /**

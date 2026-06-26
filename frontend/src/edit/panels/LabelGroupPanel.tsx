@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Eye, EyeOff, Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import type { LGProvId } from "../controller/types/idTypes";
@@ -22,8 +21,20 @@ function LabelGroupRow({
 	onToggleVisibility: (id: LGProvId) => void;
 	onReloadLabelData: (id: LGProvId) => void;
 }) {
-	const isLoading = view.status === "loading";
-	const canReload = chapterOpen && (view.status === "ready" || view.status === "error");
+	const canReload = chapterOpen;
+
+	const statusClass = (() => {
+		switch (view.status) {
+			case "ready":
+				return "shadow-sm ring-1 ring-foreground/10";
+			case "loading":
+				return "animate-pulse";
+			case "error":
+				return "ring-1 ring-red-500";
+			default:
+				return "opacity-30";
+		}
+	})();
 
 	return (
 		<div
@@ -34,29 +45,25 @@ function LabelGroupRow({
 			onClick={() => onSetActive(id)}
 		>
 			<div
-				className="w-3 h-3 rounded-full shrink-0"
+				className={cn("w-3 h-3 rounded-full shrink-0", statusClass)}
 				style={{ backgroundColor: `#${view.color.toString(16).padStart(6, "0")}` }}
 			/>
 			<span className="flex-1 truncate">{view.labelGroup.labelGroupName}</span>
-			{isLoading ? (
-				<Skeleton className="h-4 w-4 rounded" />
-			) : (
-				<Button
-					variant="ghost"
-					size="icon-sm"
-					className="h-6 w-6 shrink-0"
-					onClick={(e) => {
-						e.stopPropagation();
-						onToggleVisibility(id);
-					}}
-				>
-					{view.visible ? (
-						<Eye className="h-3.5 w-3.5" />
-					) : (
-						<EyeOff className="h-3.5 w-3.5" />
-					)}
-				</Button>
-			)}
+			<Button
+				variant="ghost"
+				size="icon-sm"
+				className="h-6 w-6 shrink-0"
+				onClick={(e) => {
+					e.stopPropagation();
+					onToggleVisibility(id);
+				}}
+			>
+				{view.visible ? (
+					<Eye className="h-3.5 w-3.5" />
+				) : (
+					<EyeOff className="h-3.5 w-3.5" />
+				)}
+			</Button>
 			{canReload && (
 				<Button
 					variant="ghost"

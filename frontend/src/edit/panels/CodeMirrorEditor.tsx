@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	Compartment,
 	EditorState,
@@ -15,6 +15,10 @@ import type { Caret } from "@/components/labeled-text-lib/react/DynamicLabeledTe
 import type { EditorMode, LabelStyle } from "../managers/editorManager";
 import type { LProvId } from "../controller/types/idTypes";
 import type { TextOp } from "@/api/models";
+import { LabelContextMenu } from "../labeling/LabelContextMenu";
+import { AddLabelForm } from "../labeling/AddLabelForm";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import type { AddTarget, EditorLabel, LabelEditing } from "../labeling/types";
 
 type SM = SegmentManager<LabelStyle, StyledLabel<LabelStyle>, LProvId>;
 
@@ -62,23 +66,36 @@ const editorTheme = EditorView.theme({
 	"&.cm-focused": { outline: "none" },
 });
 
+type MenuCtx = {
+	selection: { from: number; to: number; word: string } | null;
+	labels: EditorLabel[];
+};
+
+type FormState = {
+	coords: { left: number; top: number };
+	word: string;
+	range: { from: number; to: number };
+	targets: AddTarget[];
+};
+
 /**
- * CodeMirror-backed editing surface. Phase 1: CodeMirror owns the rendered
- * document and caret (fixing IME / end-of-text caret), reads labels from the
- * existing SegmentManager as read-only decorations, and emits TextOps for the
- * controller. Label creation, validation wiring, and SegmentManager removal are
- * intentionally deferred.
+ * CodeMirror-backed editing surface. CodeMirror owns the rendered document and
+ * caret; labels are read-only decorations from the SegmentManager. In `label`
+ * mode, a right-click context menu drives label add/delete via the injected
+ * {@link LabelEditing} seam (text editing stays disabled).
  */
 export function CodeMirrorEditor({
 	sm,
 	mode,
 	onSetCaret,
 	onTextOp,
+	labeling,
 }: {
 	sm: SM;
 	mode: EditorMode;
 	onSetCaret: (c: Caret | null) => void;
 	onTextOp: (op: TextOp) => void;
+	labeling: LabelEditing;
 }) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const viewRef = useRef<EditorView | null>(null);
@@ -87,10 +104,11 @@ export function CodeMirrorEditor({
 	onSetCaretRef.current = onSetCaret;
 	const onTextOpRef = useRef(onTextOp);
 	onTextOpRef.current = onTextOp;
-	const modeRef = useRef(mode);
-	modeRef.current = mode;
 
-	const editableCompartment = useMemo(() => new Compartment(), []);
+	const [menuCtx, setMenuCtx] = useState<MenuCtx>({ selection: null, labels: [] });
+	const [form, setForm] = useState<FormState | null>(null);
+
+	const readOnlyCompartment = useMemo(() => new Compartment(), []);
 
 	useEffect(() => {
 		const parent = containerRef.current;
@@ -117,7 +135,7 @@ export function CodeMirrorEditor({
 					keymap.of([...defaultKeymap, ...historyKeymap]),
 					EditorView.lineWrapping,
 					decorationsField,
-					editableCompartment.of(EditorView.editable.of(modeRef.current === "edit")),
+					readOnlyCompartment.of(EditorState.readOnly.of(mode !== "edit")),
 					editorTheme,
 					EditorView.updateListener.of((update) => {
 						if (update.docChanged) {
@@ -158,13 +176,145 @@ export function CodeMirrorEditor({
 			view.destroy();
 			viewRef.current = null;
 		};
-	}, [sm, editableCompartment]);
+		// `mode` is intentionally only used for the initial editable state; live
+		// changes are handled by the reconfigure effect below.
+		// oxlint-disable-next-line react-hooks/exhaustive-deps
+	}, [sm, readOnlyCompartment]);
 
 	useEffect(() => {
 		viewRef.current?.dispatch({
-			effects: editableCompartment.reconfigure(EditorView.editable.of(mode === "edit")),
+			effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(mode !== "edit")),
 		});
-	}, [mode, editableCompartment]);
+	}, [mode, readOnlyCompartment]);
 
-	return <div ref={containerRef} style={{ height: "100%" }} />;
+	useEffect(() => {
+		if (!form) return;
+		const scroller = viewRef.current?.scrollDOM;
+		if (!scroller) return;
+		const onScroll = () => setForm(null);
+		scroller.addEventListener("scroll", onScroll, { passive: true });
+		return () => scroller.removeEventListener("scroll", onScroll);
+	}, [form]);
+
+	const handleContextMenu = useCallback(
+		(event: React.MouseEvent<HTMLDivElement>) => {
+			if (mode !== "label") return;
+			const view = viewRef.current;
+			if (!view) return;
+
+			const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+
+			let selection: MenuCtx["selection"] = null;
+			const domSelection = window.getSelection();
+			if (domSelection && domSelection.rangeCount > 0 && !domSelection.isCollapsed) {
+				const range = domSelection.getRangeAt(0);
+				if (
+					view.dom.contains(range.startContainer) &&
+					view.dom.contains(range.endContainer)
+				) {
+					const a = view.posAtDOM(range.startContainer, range.startOffset);
+					const b = view.posAtDOM(range.endContainer, range.endOffset);
+					const from = Math.min(a, b);
+					const to = Math.max(a, b);
+					if (to > from) {
+						selection = { from, to, word: view.state.doc.sliceString(from, to) };
+					}
+				}
+			}
+
+			const labels = pos === null ? [] : labeling.source.labelsAt(pos);
+			setMenuCtx({ selection, labels });
+		},
+		[mode, labeling],
+	);
+
+	const handleAdd = useCallback(() => {
+		const view = viewRef.current;
+		if (!view || !menuCtx.selection) return;
+		const selection = menuCtx.selection;
+		const targets = labeling.source.addTargets();
+		const rect = view.coordsAtPos(selection.from);
+		const coords = rect ? { left: rect.left, top: rect.bottom } : { left: 12, top: 12 };
+		// Defer until the context menu has fully closed; otherwise the menu's
+		// dismissal is treated as an outside-interaction that immediately closes
+		// the popover.
+		setTimeout(() => {
+			setForm({
+				coords,
+				word: selection.word,
+				range: { from: selection.from, to: selection.to },
+				targets,
+			});
+		}, 0);
+	}, [menuCtx, labeling]);
+
+	const handleDelete = useCallback(
+		(label: EditorLabel) => {
+			labeling.sink.remove(label.labelGroupId, {
+				start: label.start,
+				end: label.end,
+				word: label.word,
+			});
+		},
+		[labeling],
+	);
+
+	const canAdd = menuCtx.selection !== null && labeling.source.addTargets().length > 0;
+
+	return (
+		<>
+			<LabelContextMenu
+				enabled={mode === "label"}
+				hasSelection={menuCtx.selection !== null}
+				canAdd={canAdd}
+				labels={menuCtx.labels}
+				onAdd={handleAdd}
+				onDelete={handleDelete}
+			>
+				<div
+					style={{ height: "100%" }}
+					onContextMenu={handleContextMenu}
+					onDragStart={(e) => {
+						if (mode !== "edit") e.preventDefault();
+					}}
+				>
+					<div ref={containerRef} style={{ height: "100%" }} />
+				</div>
+			</LabelContextMenu>
+			{form && (
+				<Popover
+					modal
+					open
+					onOpenChange={(open) => {
+						if (!open) setForm(null);
+					}}
+				>
+					<PopoverAnchor asChild>
+						<div
+							style={{
+								position: "fixed",
+								left: form.coords.left,
+								top: form.coords.top,
+								width: 0,
+								height: 0,
+							}}
+						/>
+					</PopoverAnchor>
+					<PopoverContent side="bottom" align="start" collisionPadding={8}>
+						<AddLabelForm
+							word={form.word}
+							targets={form.targets}
+							onSubmit={(target, meta) => {
+									const op = { start: form.range.from, end: form.range.to, word: form.word };
+									console.log("[addLabel] target=%s range=[%d,%d) word=%s", target, op.start, op.end, op.word, meta);
+									labeling.sink.add(target, op, meta);
+									setForm(null);
+								}}
+							onCancel={() => setForm(null)}
+						/>
+					</PopoverContent>
+				</Popover>
+			)}
+		</>
+	);
 }

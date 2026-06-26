@@ -16,8 +16,15 @@ export function useTrackedLabelGroups() {
 
 	const set = useCallback((id: LGProvId, entry: LabelGroupView) => {
 		const curEntry = labelGroupsRef.current.get(id);
-		if (curEntry && curEntry.labelGroup === entry.labelGroup) {
-			// No need to update if the label group data is the same
+		if (
+			curEntry &&
+			curEntry.labelGroup === entry.labelGroup &&
+			curEntry.color === entry.color &&
+			curEntry.visible === entry.visible &&
+			curEntry.active === entry.active &&
+			curEntry.status === entry.status
+		) {
+			// Nothing changed; skip to avoid a redundant re-render.
 			return;
 		} else if (curEntry) {
 			labelGroupsRef.current.set(id, entry);

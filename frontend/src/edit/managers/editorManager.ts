@@ -8,7 +8,7 @@ import type {
 	TriggerEvent,
 } from "../controller/types/controllerTypes";
 import type { LGProvId } from "../controller/types/idTypes";
-import type { IDLabelOp } from "../controller/types/dataTypes";
+import type { LabelOp } from "../controller/types/dataTypes";
 import { ChapterLoadingException } from "../controller/types/errors";
 import type { EditorData, LoadingPayload } from "../hooks/useEditorState";
 import { gatherLabelData, makeStyledLabel } from "./readers";
@@ -19,7 +19,9 @@ export type LabelStyle = ProductStyle<
 		ColorStyle,
 		{
 			cursorStatus: "clicked" | "hovered" | "none";
-		} & ({ visible: true; active: true } | { visible: boolean; active: false }),
+			visible: boolean;
+			active: boolean;
+		},
 	]
 >;
 
@@ -146,15 +148,14 @@ export function createEditorManager({
 		controllerUserEvent({ eventType: "textOp", op, chapterId: current.chapterId });
 	}
 
-	function labelOp(op: IDLabelOp) {
+	function labelOp(op: LabelOp, labelGroupId: LGProvId) {
 		if (modeRef.current !== "label") return;
 		const current = dataRef.current;
 		if (current.loading) return;
-		if (current.chapterId !== op.chapterId) return;
 		controllerUserEvent({
 			eventType: "labelOp",
 			op,
-			labelGroupId: op.labelGroupId,
+			labelGroupId,
 			chapterId: current.chapterId,
 		});
 	}

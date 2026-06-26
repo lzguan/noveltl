@@ -21,9 +21,8 @@ export function makeStyledLabel(
 			{ color },
 			{
 				cursorStatus: "none" as const,
-				...(active
-					? ({ active: true, visible: true } as const)
-					: ({ active: false, visible } as const)),
+				active,
+				visible,
 			},
 		],
 		id: label.labelId,

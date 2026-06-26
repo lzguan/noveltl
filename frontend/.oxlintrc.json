@@ -12,5 +12,8 @@
 		"typeAware": true,
 		"typeCheck": true
 	},
-	"plugins": ["react"]
+	"plugins": ["react"],
+	"ignorePatterns": [
+		"src/api/**/*", "!src/api/custom-fetch.ts"
+	]
 }

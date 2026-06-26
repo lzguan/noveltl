@@ -6,7 +6,7 @@ import type {
 	NovelUserEvent,
 	TriggerEvent,
 } from "../controller/types/controllerTypes";
-import type { CProvId, LGProvId, LProvId } from "../controller/types/idTypes";
+import { ActionHappened, CProvId, LGProvId, LProvId } from "../controller/types/idTypes";
 import { Prov } from "../controller/types/helperTypes";
 import type { useTrackedLabelGroups, LabelGroupView } from "../hooks/useTrackedLabelGroups";
 import type { EditorData } from "../hooks/useEditorState";
@@ -30,19 +30,34 @@ function labelGroupView(
 	};
 }
 
-function withStatus(
-	v: LabelGroupView,
-	status: LabelGroupView["status"],
-): LabelGroupView {
-	return { labelGroup: v.labelGroup, color: v.color, visible: v.visible, active: v.active, status };
+function withStatus(v: LabelGroupView, status: LabelGroupView["status"]): LabelGroupView {
+	return {
+		labelGroup: v.labelGroup,
+		color: v.color,
+		visible: v.visible,
+		active: v.active,
+		status,
+	};
 }
 
 function withActive(v: LabelGroupView, active: boolean): LabelGroupView {
-	return { labelGroup: v.labelGroup, color: v.color, visible: v.visible, active, status: v.status };
+	return {
+		labelGroup: v.labelGroup,
+		color: v.color,
+		visible: v.visible,
+		active,
+		status: v.status,
+	};
 }
 
 function withVisible(v: LabelGroupView, visible: boolean): LabelGroupView {
-	return { labelGroup: v.labelGroup, color: v.color, visible, active: v.active, status: v.status };
+	return {
+		labelGroup: v.labelGroup,
+		color: v.color,
+		visible,
+		active: v.active,
+		status: v.status,
+	};
 }
 
 export function createLabelGroupManager({
@@ -63,6 +78,24 @@ export function createLabelGroupManager({
 		return current.loading ? null : current.chapterId;
 	}
 
+	/**
+	 * Updates a single label group's tracked status and, when a chapter is
+	 * open, synchronises the SegmentManager labels for that group.
+	 *
+	 * @param labelGroupId - The provisional ID of the label group to update.
+	 * @param transition    - What phase the group is entering.
+	 *   - `"trackOnly"`:     	ensures the group is tracked (looked up from
+	 *                         	controller getters), but does not touch the
+	 *                         	open chapter's SegmentManager.
+	 *   - `"startLoading"`:   	Removes all of the group's labels from the open
+	 * 							chapter's SegmentManager and sets
+	 *                         	the tracked status to {@code "loading"}.
+	 *   - `"finishLoading"`:  	Reads the freshly-arrived labels from the controller
+	 *                       getters, adds them to the SegmentManager in a
+	 *                       batch, and sets the tracked status to either
+	 *                       {@code "ready"} (on success) or {@code "error"}
+	 *                       (on failure).
+	 */
 	const updateLabelGroupStatus = (
 		labelGroupId: LGProvId,
 		transition: LabelGroupTransition,
@@ -109,7 +142,11 @@ export function createLabelGroupManager({
 					.pipe(Effect.catchAll(() => Effect.succeed(null)));
 				if (oldSlot && oldSlot.status === "ready") {
 					for (const label of oldSlot.data.labels) {
-						try { sm.removeLabel(label.labelId); } catch { /* ignore */ }
+						try {
+							sm.removeLabel(label.labelId);
+						} catch {
+							/* ignore */
+						}
 					}
 				}
 				trackedLabelGroups.setLabelGroup(labelGroupId, withStatus(groupStatus, "loading"));
@@ -120,17 +157,26 @@ export function createLabelGroupManager({
 					.pipe(Effect.catchAll(() => Effect.succeed(null)));
 
 				if (!labelDataSlot || labelDataSlot.status !== "ready") {
-					trackedLabelGroups.setLabelGroup(labelGroupId, withStatus(groupStatus, "error"));
+					trackedLabelGroups.setLabelGroup(
+						labelGroupId,
+						withStatus(groupStatus, "error"),
+					);
 					return;
 				}
 
-				const currentGroup = trackedLabelGroups.labelGroupsRef.current.get(labelGroupId) ?? groupStatus;
+				const currentGroup =
+					trackedLabelGroups.labelGroupsRef.current.get(labelGroupId) ?? groupStatus;
 				const labels = labelDataSlot.data.labels;
 				const addedIds: LProvId[] = [];
 				let batchFailed = false;
 				sm.batch(() => {
 					for (const label of labels) {
-						const styled = makeStyledLabel(label, currentGroup.color, currentGroup.active, currentGroup.visible);
+						const styled = makeStyledLabel(
+							label,
+							currentGroup.color,
+							currentGroup.active,
+							currentGroup.visible,
+						);
 						try {
 							sm.addLabel(label.labelId, styled);
 							addedIds.push(label.labelId);
@@ -141,18 +187,52 @@ export function createLabelGroupManager({
 					}
 					if (batchFailed) {
 						for (const id of addedIds) {
-							try { sm.removeLabel(id); } catch { /* ignore */ }
+							try {
+								sm.removeLabel(id);
+							} catch {
+								/* ignore */
+							}
 						}
 					}
 				});
 
 				if (batchFailed) {
-					trackedLabelGroups.setLabelGroup(labelGroupId, withStatus(groupStatus, "error"));
+					trackedLabelGroups.setLabelGroup(
+						labelGroupId,
+						withStatus(groupStatus, "error"),
+					);
 					return;
 				}
 
 				trackedLabelGroups.setLabelGroup(labelGroupId, withStatus(groupStatus, "ready"));
 			}
+		});
+
+	const updateAllLabelGroupsStatus = (): Effect.Effect<ActionHappened> =>
+		Effect.gen(function* () {
+			const chapterId = readChapterId();
+			if (!chapterId) return ActionHappened(false);
+			const chapterSlot = yield* controllerGetters
+				.chapterGetterSlot(chapterId)
+				.pipe(Effect.catchAll(() => Effect.succeed(null)));
+			if (!chapterSlot || chapterSlot.status !== "ready") return ActionHappened(false);
+			for (const [
+				labelGroupId,
+				groupView,
+			] of trackedLabelGroups.labelGroupsRef.current.entries()) {
+				const labelDataSlot = yield* chapterSlot.data.chapterGetters
+					.labelDataSlot(labelGroupId)
+					.pipe(Effect.catchAll(() => Effect.succeed(null)));
+				if (!labelDataSlot) {
+					trackedLabelGroups.setLabelGroup(labelGroupId, withStatus(groupView, "idle"));
+				} else {
+					trackedLabelGroups.setLabelGroup(
+						labelGroupId,
+						withStatus(groupView, labelDataSlot.status),
+					);
+				}
+			}
+			return ActionHappened(true);
 		});
 
 	const updateLabelGroupView = (
@@ -186,8 +266,17 @@ export function createLabelGroupManager({
 			const sm = current.segmentManager;
 			sm.batch(() => {
 				for (const label of labelDataSlot.data.labels) {
-					const styled = makeStyledLabel(label, updated.color, updated.active, updated.visible);
-					try { sm.updateLabel(label.labelId, styled); } catch { /* ignore */ }
+					const styled = makeStyledLabel(
+						label,
+						updated.color,
+						updated.active,
+						updated.visible,
+					);
+					try {
+						sm.updateLabel(label.labelId, styled);
+					} catch {
+						/* ignore */
+					}
 				}
 			});
 		});
@@ -198,9 +287,9 @@ export function createLabelGroupManager({
 		const cid = readChapterId();
 		if (!group) {
 			const nameSlot = Effect.runSync(
-				controllerGetters.labelGroupSlot(labelGroupId).pipe(
-					Effect.catchAll(() => Effect.succeed(null)),
-				),
+				controllerGetters
+					.labelGroupSlot(labelGroupId)
+					.pipe(Effect.catchAll(() => Effect.succeed(null))),
 			);
 			trackedLabelGroups.setLabelGroup(
 				labelGroupId,
@@ -296,6 +385,10 @@ export function createLabelGroupManager({
 					if (event.chapterId !== readChapterId()) break;
 					yield* updateLabelGroupStatus(event.labelGroupId, "startLoading");
 					break;
+				case "chapterOpened":
+					if (!event.flags.forEditor) break;
+					yield* updateAllLabelGroupsStatus();
+					break;
 			}
 		});
 	}
@@ -306,5 +399,6 @@ export function createLabelGroupManager({
 		setActive,
 		addLabelGroup,
 		reloadLabelData,
+		updateLabelGroupStatus,
 	};
 }

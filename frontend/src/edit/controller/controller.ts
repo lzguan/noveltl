@@ -40,7 +40,23 @@ export const buildNovelController = (
 						return raiseTriggerEvent(novelDM.getters, {
 							eventType: "errorOccured",
 							from: "dataManager",
-							error: err instanceof Error ? err : new Error(String(err)),
+							error: (() => {
+								if (err instanceof Error) return err;
+								if (typeof err !== "object" || err === null)
+									return new Error(String(err));
+								if ("cause" in err) {
+									const c = err.cause;
+									if (
+										typeof c === "object" &&
+										c !== null &&
+										"message" in c
+									)
+										return new Error(String(c.message));
+								}
+								if ("message" in err)
+									return new Error(String(err.message));
+								return new Error(String(err));
+							})(),
 						}).pipe(Effect.andThen(() => Effect.succeed<RequestEvent[]>([])));
 					}),
 				);

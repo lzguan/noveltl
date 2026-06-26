@@ -8,6 +8,7 @@ can navigate more easily.
 """
 
 from collections.abc import Sequence
+from typing import Any
 
 import pytest
 from sqlalchemy import select
@@ -407,7 +408,7 @@ def chinese_xianxia_small_test_scenario(
     chinese_xianxia_small_test_label_group: LabelGroup,
     chinese_xianxia_small_test_label_contributor: LabelContributor,
     chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],
-    chinese_xianxia_small_test_default_params_cluener: dict[str, object],
+    cluener_testconfig_params: dict[str, Any],
 ) -> ScenarioBundle:
     """Scenario bundle for the loader-backed chinese_xianxia_small_test dataset."""
     scenario = _build_scenario_bundle(
@@ -423,7 +424,7 @@ def chinese_xianxia_small_test_scenario(
         label_datas=[],
         labels=[],
     )
-    scenario.novels[0].model_params_by_name["cluener"] = chinese_xianxia_small_test_default_params_cluener
+    scenario.novels[0].model_params_by_name["cluener"] = cluener_testconfig_params
     return scenario
 
 

@@ -9,6 +9,7 @@ from pydantic import ConfigDict, Field, model_validator
 
 from ..labels.schemas import LabelBase
 from ..schemas import Model, SkipDefaultModel
+from .config import ModelName
 from .constants import MAX_PARAMS_FIELDS, AutoLabelProgress, SepPriority
 from .validators import SmallDict
 
@@ -79,7 +80,7 @@ class AutoLabel(Model):
     model_config = ConfigDict(from_attributes=True)
     auto_label_id: uuid.UUID
     auto_label_data: list[LabelBase] | None
-    auto_label_model_name: str
+    auto_label_model_name: ModelName
     auto_label_model_params: SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
     auto_label_status: AutoLabelProgress
     auto_label_message: str | None = None
@@ -104,7 +105,7 @@ class AutoLabelMeta(Model):
     model_config = ConfigDict(from_attributes=True)
 
     auto_label_id: uuid.UUID
-    auto_label_model_name: str
+    auto_label_model_name: ModelName
     auto_label_model_params: SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
     auto_label_status: AutoLabelProgress
     auto_label_message: str | None = None
@@ -128,7 +129,7 @@ class CreateAutoLabels(Model):
     """
 
     novel_id: uuid.UUID
-    auto_label_model_name: str
+    auto_label_model_name: ModelName
     auto_label_model_params: SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
     chapter_ids: list[uuid.UUID] | None = None
     start: int | None = None

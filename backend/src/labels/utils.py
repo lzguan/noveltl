@@ -69,17 +69,14 @@ def _apply_add(db: Session, current_user: User, label_data_id: uuid.UUID, text: 
         result = db.execute(stmt)
         result.scalar_one()
     except NoResultFound as e:
-        db.rollback()
         raise LabelDataNotFoundException from e
     except IntegrityError as e:
-        db.rollback()
         if isinstance(e.orig, PgError):
             pgcode = e.orig.pgcode
             if pgcode == errorcodes.EXCLUSION_VIOLATION:
                 raise LabelExclusionViolationInvalidOperationException from e
         raise
     except Exception:
-        db.rollback()
         raise
 
 
@@ -151,17 +148,14 @@ def _apply_update(
         result = db.execute(stmt)
         result.scalar_one()
     except NoResultFound as e:
-        db.rollback()
         raise LabelDataNotFoundException from e
     except IntegrityError as e:
-        db.rollback()
         if isinstance(e.orig, PgError):
             pgcode = e.orig.pgcode
             if pgcode == errorcodes.EXCLUSION_VIOLATION:
                 raise LabelExclusionViolationInvalidOperationException from e
         raise
     except Exception:
-        db.rollback()
         raise
 
 
@@ -202,10 +196,8 @@ def _apply_delete(
         result = db.execute(stmt)
         result.scalar_one()
     except NoResultFound as e:
-        db.rollback()
         raise LabelNotExistsInvalidOperationException from e
     except Exception:
-        db.rollback()
         raise
 
 

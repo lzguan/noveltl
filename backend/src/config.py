@@ -3,6 +3,7 @@
 """This module provides global config variables."""
 
 import logging
+from typing import Literal
 
 from arq.connections import RedisSettings
 from pydantic import Field
@@ -40,7 +41,16 @@ class _RedisSettings(BaseConfig):
     REDIS_PORT: int = Field(default=6379, gt=0)
 
 
+class LogSettings(BaseConfig):
+    """Settings class for logging config variables."""
+
+    LOG_LEVEL: Literal["INFO", "WARNING", "ERROR", "DEBUG"] = Field(default="INFO", min_length=1)
+    LOG_OUTPUT: Literal["FILE", "STREAM", "BOTH"] = Field(default="BOTH", min_length=1)
+    LOG_OUTPUT_FILE: str = Field(default="logs/backend.log", min_length=1)
+
+
 database_settings = DatabaseSettings()
 auth_settings = AuthSettings()
 _redis_settings = _RedisSettings()
+log_settings = LogSettings()
 redis_settings = RedisSettings(host=_redis_settings.REDIS_HOST, port=_redis_settings.REDIS_PORT, database=0)

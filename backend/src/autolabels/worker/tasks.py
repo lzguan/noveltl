@@ -7,15 +7,16 @@ from sqlalchemy import CursorResult, select, update
 from sqlalchemy.exc import NoResultFound
 
 from ...novels.models import ChapterContent
+from ..config import ModelName
 from ..constants import AutoLabelProgress
 from ..models import AutoLabel
 from .config import SessionLocal
 from .interfaces import NERModel
 
-model_cache: dict[str, NERModel[Any]] = {}
+model_cache: dict[ModelName, NERModel[Any]] = {}
 
 
-def get_ner_model(model_name: str) -> NERModel[Any]:
+def get_ner_model(model_name: ModelName) -> NERModel[Any]:
     if model_name in model_cache:
         return model_cache[model_name]
 
@@ -23,7 +24,7 @@ def get_ner_model(model_name: str) -> NERModel[Any]:
 
 
 async def autolabel_infer(
-    ctx: Any, job_id: str, auto_label_id: uuid.UUID, model_name: str, model_params: dict[str, Any]
+    ctx: Any, job_id: str, auto_label_id: uuid.UUID, model_name: ModelName, model_params: dict[str, Any]
 ) -> None:
     base_update = (
         update(AutoLabel)

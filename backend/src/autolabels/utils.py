@@ -4,6 +4,7 @@ from typing import Protocol
 from arq import ArqRedis
 from redis.exceptions import ConnectionError, ResponseError, TimeoutError
 
+from .config import ModelName
 from .exceptions import EnqueueFailedException, QueueFullException
 
 
@@ -16,7 +17,7 @@ class AutoLabelDispatcher(Protocol):
         self,
         job_id: str,
         auto_label_id: uuid.UUID,
-        model_name: str,
+        model_name: ModelName,
         model_params: dict[str, str | int | float | bool],
     ) -> None:
         """
@@ -43,7 +44,7 @@ class ArqDispatcher(AutoLabelDispatcher):
         self,
         job_id: str,
         auto_label_id: uuid.UUID,
-        model_name: str,
+        model_name: ModelName,
         model_params: dict[str, str | int | float | bool],
     ) -> None:
         try:

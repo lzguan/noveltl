@@ -1,0 +1,65 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "lsp": {
+        "pyright": { "disabled": true },
+        "typescript": { "disabled": true },
+        "pyrefly": {
+            "command": ["uv", "--directory", "backend", "run", "pyrefly", "lsp"],
+            "extensions": [".py", ".pyi"]
+        },
+        "ruff": {
+            "command": ["uv", "--directory", "backend", "run", "ruff", "server"],
+            "extensions": [".py", ".pyi"]
+        },
+        "tsgo": {
+            "command": ["pnpm", "--dir", "frontend", "exec", "tsgo", "--lsp", "--stdio"],
+            "extensions": [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]
+        },
+        "oxlint": {
+            "command": ["pnpm", "exec", "oxlint", "--lsp"],
+            "extensions": [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]
+        },
+    },
+    "permission": {
+        "bash": {
+            "*": "ask",
+            "ls *": "allow",
+            "cat *": "allow",
+            "echo *": "allow",
+            "cd *": "allow",
+            "pwd *": "allow",
+            "head *": "allow",
+            "tail *": "allow",
+            "grep *": "allow",
+            "find *": "allow",
+            "ps *": "allow",
+            "file *": "allow",
+            "ws *": "allow",
+            "du *": "allow",
+            "df *": "allow",
+
+            "git log *": "allow",
+            "git status *": "allow",
+            "git diff *": "allow",
+            "git show *": "allow",
+            "git rev-parse *": "allow",
+
+            "uv pip list *": "allow",
+            "uv pip show *": "allow",
+            "uv tree *": "allow",
+            "uv help *": "allow",
+        },
+        "edit": {
+            "*": "ask",
+            "opencode.json": "deny",
+            "frontend/**": "allow",
+            "backend/**": "allow",
+            "docs/**": "allow",
+            "**/Dockerfile": "ask",
+        },
+        "read": {
+            "*": "allow",
+            ".env": "deny",
+        }
+    }
+}

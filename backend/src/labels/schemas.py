@@ -9,6 +9,7 @@ from pydantic import ConfigDict, Field, model_validator
 
 from src.labels.constants import LabelRole
 
+from ..autolabels.config import ModelName
 from ..autolabels.constants import MAX_PARAMS_FIELDS
 from ..autolabels.validators import SmallDict
 from ..schemas import Model
@@ -30,6 +31,19 @@ class LabelGroup(Model):
     label_group_id: uuid.UUID
     label_group_name: str = Field(max_length=MAX_LABEL_GROUP_NAME_LEN)
     novel_id: uuid.UUID
+
+
+class LabelGroupWithRole(Model):
+    """
+    Pydantic schema for a label group with a user's role in that label group.
+
+    Attributes:
+        label_group: LabelGroup object.
+        role: Role of the user in this label group.
+    """
+
+    label_group: LabelGroup
+    role: LabelRole
 
 
 class CreateLabelGroup(Model):
@@ -257,7 +271,7 @@ class CreateLabelDataByAutoLabel(Model):
         end: Optional filter on the greatest chapter number to include.
     """
 
-    model_name: str
+    model_name: ModelName
     model_params: SmallDict = Field(max_length=MAX_PARAMS_FIELDS)
     chapter_ids: list[uuid.UUID] | None = None
     start: int | None = None

@@ -1,0 +1,3340 @@
+components:
+  schemas:
+    AddLabelOp:
+      description: "Pydantic schema for a label add operation. Inherits all attributes\
+        \ from LabelOpBase.\n\nAttributes:\n    op: The string literal 'add'.\n  \
+        \  dirty: Boolean whether to mark the label as dirty.\n    entity_group: String\
+        \ representing what entity group this label belongs to. If none, then set\
+        \ a default value.\n    score: Float score between 0.0 and 1.0 representing\
+        \ how likely this label is to be an entity."
+      properties:
+        dirty:
+          default: true
+          title: Dirty
+          type: boolean
+        endPos:
+          minimum: 0.0
+          title: Endpos
+          type: integer
+        entityGroup:
+          anyOf:
+          - maxLength: 64
+            type: string
+          - type: 'null'
+          title: Entitygroup
+        op:
+          const: add
+          title: Op
+          type: string
+        score:
+          default: 1.0
+          maximum: 1.0
+          minimum: 0.0
+          title: Score
+          type: number
+        startPos:
+          minimum: 0.0
+          title: Startpos
+          type: integer
+        word:
+          maxLength: 128
+          title: Word
+          type: string
+      required:
+      - startPos
+      - endPos
+      - word
+      - op
+      title: AddLabelOp
+      type: object
+    AutoLabel:
+      description: "Pydantic schema for an auto-labeled data entry.\n\nAttributes:\n\
+        \    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_data:\
+        \ Dictionary containing the auto-labeled data.\n    auto_label_model_name:\
+        \ Name of the model used to generate the auto labels.\n    auto_label_model_params:\
+        \ Parameters used for the model to generate the auto labels.\n    auto_label_status:\
+        \ Labeling progress for this autolabel.\n    auto_label_message: Details on\
+        \ status.\n    chapter_content_id: UUID of chapter content this AutoLabel\
+        \ is associated with.\n    auto_label_last_job_id: Job id of last job that\
+        \ was run on this AutoLabel."
+      properties:
+        autoLabelData:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/LabelBase'
+            type: array
+          - type: 'null'
+          title: Autolabeldata
+        autoLabelId:
+          format: uuid
+          title: Autolabelid
+          type: string
+        autoLabelLastJobId:
+          title: Autolabellastjobid
+          type: string
+        autoLabelMessage:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Autolabelmessage
+        autoLabelModelName:
+          const: cluener
+          title: Autolabelmodelname
+          type: string
+        autoLabelModelParams:
+          additionalProperties: true
+          maxProperties: 50
+          title: Autolabelmodelparams
+          type: object
+        autoLabelStatus:
+          $ref: '#/components/schemas/AutoLabelProgress'
+        chapterContentId:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+      required:
+      - autoLabelId
+      - autoLabelData
+      - autoLabelModelName
+      - autoLabelModelParams
+      - autoLabelStatus
+      - chapterContentId
+      - autoLabelLastJobId
+      title: AutoLabel
+      type: object
+    AutoLabelMeta:
+      description: "Pydantic schema for auto-label metadata.\n\nAttributes:\n    auto_label_id:\
+        \ UUID identifier for this AutoLabel.\n    auto_label_model_name: Name of\
+        \ the model used to generate the auto labels.\n    auto_label_model_params:\
+        \ Parameters used for the model to generate the auto labels.\n    auto_label_status:\
+        \ Labeling progress for this autolabel.\n    auto_label_message: Details on\
+        \ status.\n    chapter_content_id: UUID of chapter content this AutoLabel\
+        \ is associated with.\n    auto_label_last_job_id: Job id of last job that\
+        \ was run on this AutoLabel."
+      properties:
+        autoLabelId:
+          format: uuid
+          title: Autolabelid
+          type: string
+        autoLabelLastJobId:
+          title: Autolabellastjobid
+          type: string
+        autoLabelMessage:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Autolabelmessage
+        autoLabelModelName:
+          const: cluener
+          title: Autolabelmodelname
+          type: string
+        autoLabelModelParams:
+          additionalProperties: true
+          maxProperties: 50
+          title: Autolabelmodelparams
+          type: object
+        autoLabelStatus:
+          $ref: '#/components/schemas/AutoLabelProgress'
+        chapterContentId:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+      required:
+      - autoLabelId
+      - autoLabelModelName
+      - autoLabelModelParams
+      - autoLabelStatus
+      - chapterContentId
+      - autoLabelLastJobId
+      title: AutoLabelMeta
+      type: object
+    AutoLabelProgress:
+      description: Status for an autolabel in database. One of 'failed', 'pending',
+        'processing', 'done'
+      enum:
+      - failed
+      - pending
+      - processing
+      - done
+      title: AutoLabelProgress
+      type: string
+    Body_login_for_access_token_token_post:
+      properties:
+        client_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Client Id
+        client_secret:
+          anyOf:
+          - type: string
+          - type: 'null'
+          format: password
+          title: Client Secret
+        grant_type:
+          anyOf:
+          - pattern: ^password$
+            type: string
+          - type: 'null'
+          title: Grant Type
+        password:
+          format: password
+          title: Password
+          type: string
+        scope:
+          default: ''
+          title: Scope
+          type: string
+        username:
+          title: Username
+          type: string
+      required:
+      - username
+      - password
+      title: Body_login_for_access_token_token_post
+      type: object
+    CacheEntry:
+      properties:
+        error:
+          anyOf:
+          - $ref: '#/components/schemas/CacheError'
+          - type: 'null'
+        response:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Response
+        status:
+          enum:
+          - pending
+          - success
+          - failure
+          title: Status
+          type: string
+        status_code:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Status Code
+      required:
+      - status
+      - status_code
+      - response
+      - error
+      title: CacheEntry
+      type: object
+    CacheError:
+      properties:
+        cacheConflict:
+          title: Cacheconflict
+          type: boolean
+        detail:
+          title: Detail
+          type: string
+      required:
+      - detail
+      - cacheConflict
+      title: CacheError
+      type: object
+    Chapter:
+      description: "Pydantic schema for chapter metadata. Represents a single \"chapter\"\
+        \ entry, which groups all its revisions.\n\nAttributes:\n    chapter_id: UUID\
+        \ primary key identifier.\n    chapter_num: The chapter number.\n    novel_id:\
+        \ UUID foreign key to the novel this chapter belongs to."
+      properties:
+        chapterId:
+          format: uuid
+          title: Chapterid
+          type: string
+        chapterIsPublic:
+          title: Chapterispublic
+          type: boolean
+        chapterNum:
+          title: Chapternum
+          type: integer
+        chapterTitle:
+          title: Chaptertitle
+          type: string
+        novelId:
+          format: uuid
+          title: Novelid
+          type: string
+      required:
+      - chapterId
+      - chapterNum
+      - chapterTitle
+      - chapterIsPublic
+      - novelId
+      title: Chapter
+      type: object
+    ChapterContent:
+      description: "Pydantic schema for the text content of a chapter.\n\nAttributes:\n\
+        \    chapter_content_text: The full text content of the chapter.\n    chapter_content_version:\
+        \ The version number of the text content, used for optimistic concurrency\
+        \ control when updating text.\n    chapter_content_id: The UUID of the text\
+        \ content, used for optimistic concurrency control when updating text."
+      properties:
+        chapterContentId:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+        chapterContentText:
+          title: Chaptercontenttext
+          type: string
+        chapterContentVersion:
+          title: Chaptercontentversion
+          type: integer
+      required:
+      - chapterContentText
+      - chapterContentVersion
+      - chapterContentId
+      title: ChapterContent
+      type: object
+    ChapterContentMeta:
+      description: "Metadata for a ChapterContent.\n\nAttributes:\n    chapter_content_version:\
+        \ The version number of the text content, used for optimistic concurrency\
+        \ control when updating text.\n    chapter_content_id: The UUID of the text\
+        \ content, used for optimistic concurrency control when updating text."
+      properties:
+        chapterContentId:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+        chapterContentVersion:
+          title: Chaptercontentversion
+          type: integer
+      required:
+      - chapterContentVersion
+      - chapterContentId
+      title: ChapterContentMeta
+      type: object
+    ChapterData:
+      description: "Pydantic schema for aggregating a ChapterContent and a Chapter\
+        \ together.\n\nAttributes:\n    metadata: The metadata of the chapter, such\
+        \ as title and whether it's primary.\n    content: The text content of the\
+        \ chapter."
+      properties:
+        content:
+          $ref: '#/components/schemas/ChapterContent'
+        metadata:
+          $ref: '#/components/schemas/Chapter'
+      required:
+      - metadata
+      - content
+      title: ChapterData
+      type: object
+    CreateAutoLabels:
+      description: "Pydantic schema for creating an auto-labeled data entry.\n\nAttributes:\n\
+        \    novel_id: UUID of novel to create auto labels for.\n    auto_label_model_name:\
+        \ Name of the model used to generate the auto labels.\n    auto_label_model_params:\
+        \ Parameters used for the model to generate the auto labels.\n    chapter_ids:\
+        \ Optional parameter. Restrict to revisions with specific chapter UUIDs.\n\
+        \    start: Optional parameter. Restrict to revisions with chapter num >=\
+        \ start.\n    end: Optional parameter. Restrict to revisions with chapter\
+        \ num < end.\n    is_public: Optional parameter. Restrict to revisions with\
+        \ this specific public flag."
+      properties:
+        autoLabelModelName:
+          const: cluener
+          title: Autolabelmodelname
+          type: string
+        autoLabelModelParams:
+          additionalProperties: true
+          maxProperties: 50
+          title: Autolabelmodelparams
+          type: object
+        chapterIds:
+          anyOf:
+          - items:
+              format: uuid
+              type: string
+            type: array
+          - type: 'null'
+          title: Chapterids
+        end:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: End
+        isPublic:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Ispublic
+        novelId:
+          format: uuid
+          title: Novelid
+          type: string
+        start:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Start
+      required:
+      - novelId
+      - autoLabelModelName
+      - autoLabelModelParams
+      title: CreateAutoLabels
+      type: object
+    CreateChapter:
+      description: "Pydantic schema to validate data for creating a new chapter. The\
+        \ novel_id is expected to be passed via the URL path.\n\nAttributes:\n   \
+        \ chapter_num: The chapter number to create.\n    chapter_title: Title of\
+        \ the chapter. Defaults to empty string.\n    chapter_is_public: Whether the\
+        \ chapter is publicly visible. Defaults to False."
+      properties:
+        chapterIsPublic:
+          default: false
+          title: Chapterispublic
+          type: boolean
+        chapterNum:
+          title: Chapternum
+          type: integer
+        chapterTitle:
+          default: ''
+          title: Chaptertitle
+          type: string
+      required:
+      - chapterNum
+      title: CreateChapter
+      type: object
+    CreateLabelData:
+      description: "Pydantic schema for validating create requests for label data.\n\
+        \nAttributes:\n    chapter_content_id: UUID of chapter content being labelled."
+      properties:
+        chapterContentId:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+      required:
+      - chapterContentId
+      title: CreateLabelData
+      type: object
+    CreateLabelDataByAutoLabel:
+      description: "Pydantic schema to specifiy a set of AutoLabels to be moved to\
+        \ LabelDatas.\n\nAttributes:\n    model_name: Name of NER model that performed\
+        \ the autolabeling.\n    model_params: Parameters of model used.\n    chapter_ids:\
+        \ Optional filter on what chapters to include.\n    start: Optional filter\
+        \ on the least chapter number to include.\n    end: Optional filter on the\
+        \ greatest chapter number to include."
+      properties:
+        chapterIds:
+          anyOf:
+          - items:
+              format: uuid
+              type: string
+            type: array
+          - type: 'null'
+          title: Chapterids
+        end:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: End
+        modelName:
+          const: cluener
+          title: Modelname
+          type: string
+        modelParams:
+          additionalProperties: true
+          maxProperties: 50
+          title: Modelparams
+          type: object
+        start:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Start
+      required:
+      - modelName
+      - modelParams
+      title: CreateLabelDataByAutoLabel
+      type: object
+    CreateLabelDataByAutoLabelStatus:
+      description: "Return message for CreateLabelDataByAutoLabel.\n\nAttributes:\n\
+        \    success: List of tuples of (chapter_id, chapter_content_id) for successful\
+        \ inserts.\n    errors: List of tuples of (chapter_id, chapter_content_id,\
+        \ error message) for failed inserts."
+      properties:
+        errors:
+          items:
+            maxItems: 3
+            minItems: 3
+            prefixItems:
+            - format: uuid
+              type: string
+            - format: uuid
+              type: string
+            - type: string
+            type: array
+          title: Errors
+          type: array
+        success:
+          items:
+            maxItems: 2
+            minItems: 2
+            prefixItems:
+            - format: uuid
+              type: string
+            - format: uuid
+              type: string
+            type: array
+          title: Success
+          type: array
+      required:
+      - success
+      - errors
+      title: CreateLabelDataByAutoLabelStatus
+      type: object
+    CreateLabelGroup:
+      description: "Pydantic schema for validating forms for creating a label group.\n\
+        \nAttributes:\n    label_group_name: Name of label group to create.\n    novel_id:\
+        \ UUID of novel this label group belongs to."
+      properties:
+        labelGroupName:
+          maxLength: 31
+          title: Labelgroupname
+          type: string
+        novelId:
+          format: uuid
+          title: Novelid
+          type: string
+      required:
+      - labelGroupName
+      - novelId
+      title: CreateLabelGroup
+      type: object
+    CreateNovel:
+      description: "Pydantic schema to validate forms for creating a novel.\n\nAttributes:\n\
+        \    novel_title: Novel title to create.\n    novel_description: Description\
+        \ of novel we are creating.\n    novel_author: Author of novel we are creating.\n\
+        \    novel_visibility: Visibility level of novel we are creating.\n    novel_type:\
+        \ Type of novel we are creating.\n    language_code: String code key to language\
+        \ of novel we are creating.\n    source_work_id: Optional source work to attach\
+        \ to. If None, a new source work is auto-created."
+      properties:
+        languageCode:
+          title: Languagecode
+          type: string
+        novelAuthor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Novelauthor
+        novelDescription:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Noveldescription
+        novelTitle:
+          title: Noveltitle
+          type: string
+        novelType:
+          $ref: '#/components/schemas/NovelType'
+        novelVisibility:
+          $ref: '#/components/schemas/Visibility'
+        sourceWorkId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Sourceworkid
+      required:
+      - novelTitle
+      - novelVisibility
+      - novelType
+      - languageCode
+      title: CreateNovel
+      type: object
+    CreateSourceWork:
+      description: "Pydantic schema to validate forms for creating a source work.\n\
+        \nAttributes:\n    source_work_title: Title of the source work to create.\n\
+        \    source_work_description: Optional description."
+      properties:
+        sourceWorkDescription:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sourceworkdescription
+        sourceWorkTitle:
+          title: Sourceworktitle
+          type: string
+      required:
+      - sourceWorkTitle
+      title: CreateSourceWork
+      type: object
+    CreateUser:
+      description: "Pydantic schema to validate data required to create a user.\n\n\
+        Attributes:\n    user_name: Username of user being created.\n    user_password:\
+        \ Unhashed password of user being create.\n    user_type: UserType type of\
+        \ user to be created.\nNotes:"
+      properties:
+        userName:
+          title: Username
+          type: string
+        userPassword:
+          title: Userpassword
+          type: string
+        userType:
+          $ref: '#/components/schemas/UserType'
+      required:
+      - userName
+      - userPassword
+      - userType
+      title: CreateUser
+      type: object
+    DeleteLabelOp:
+      description: "Pydantic schema for a label delete operation. Inherits all attributes\
+        \ from LabelOpBase.\n\nAttributes:\n    op: The string literal 'delete'."
+      properties:
+        endPos:
+          minimum: 0.0
+          title: Endpos
+          type: integer
+        op:
+          const: delete
+          title: Op
+          type: string
+        startPos:
+          minimum: 0.0
+          title: Startpos
+          type: integer
+        word:
+          maxLength: 128
+          title: Word
+          type: string
+      required:
+      - startPos
+      - endPos
+      - word
+      - op
+      title: DeleteLabelOp
+      type: object
+    DeleteUserStatus:
+      description: "Pydantic schema to return status after deleting a user\n\nAttributes:\n\
+        \    status: One of 'success', 'fail', 'verify'.\n    detail: String denoting\
+        \ details of operation."
+      properties:
+        detail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Detail
+        status:
+          enum:
+          - success
+          - fail
+          - verify
+          title: Status
+          type: string
+      required:
+      - status
+      title: DeleteUserStatus
+      type: object
+    DetailHTTPErrorResponse:
+      description: "Generic error payload for HTTPException responses that only return\
+        \ a detail string.\n\nAttributes:\n    detail: Human-readable description\
+        \ of the error."
+      properties:
+        detail:
+          title: Detail
+          type: string
+      required:
+      - detail
+      title: DetailHTTPErrorResponse
+      type: object
+    EagerEntry:
+      properties:
+        labelData:
+          $ref: '#/components/schemas/LabelData'
+        labelGroup:
+          $ref: '#/components/schemas/LabelGroup'
+        labels:
+          items:
+            $ref: '#/components/schemas/Label'
+          title: Labels
+          type: array
+      required:
+      - labelGroup
+      - labelData
+      - labels
+      title: EagerEntry
+      type: object
+    EditChapterData:
+      description: "Pydantic schema for the data needed to edit a chapter.\n\nAttributes:\n\
+        \    chapter_content: ChapterContent being edited.\n    no_label_data: List\
+        \ of LabelGroup objects that have no label data associated with them."
+      properties:
+        chapterContent:
+          $ref: '#/components/schemas/ChapterContent'
+        eagerLabelData:
+          items:
+            $ref: '#/components/schemas/EagerEntry'
+          title: Eagerlabeldata
+          type: array
+        lazyLabelData:
+          items:
+            $ref: '#/components/schemas/LazyEntry'
+          title: Lazylabeldata
+          type: array
+        noLabelData:
+          items:
+            $ref: '#/components/schemas/LabelGroup'
+          title: Nolabeldata
+          type: array
+      required:
+      - chapterContent
+      - noLabelData
+      - lazyLabelData
+      - eagerLabelData
+      title: EditChapterData
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    InstanceContextOptions:
+      properties:
+        instanceContexts:
+          items:
+            maxItems: 2
+            minItems: 2
+            prefixItems:
+            - {}
+            - {}
+            type: array
+          title: Instancecontexts
+          type: array
+        options:
+          additionalProperties: true
+          title: Options
+          type: object
+      required:
+      - instanceContexts
+      - options
+      title: InstanceContextOptions
+      type: object
+    InstanceOptions:
+      properties:
+        instances:
+          items: {}
+          title: Instances
+          type: array
+        options:
+          additionalProperties: true
+          title: Options
+          type: object
+      required:
+      - instances
+      - options
+      title: InstanceOptions
+      type: object
+    Label:
+      description: 'Pydantic schema for a label that belongs to a LabelData.
+
+        Extends LabelBase with a label_data_id foreign key and label_id pkey.'
+      properties:
+        labelDataId:
+          format: uuid
+          title: Labeldataid
+          type: string
+        labelDirty:
+          title: Labeldirty
+          type: boolean
+        labelEnd:
+          minimum: 0.0
+          title: Labelend
+          type: integer
+        labelEntityGroup:
+          anyOf:
+          - maxLength: 64
+            type: string
+          - type: 'null'
+          title: Labelentitygroup
+        labelId:
+          format: uuid
+          title: Labelid
+          type: string
+        labelScore:
+          maximum: 1.0
+          minimum: 0.0
+          title: Labelscore
+          type: number
+        labelStart:
+          minimum: 0.0
+          title: Labelstart
+          type: integer
+        labelWord:
+          maxLength: 128
+          title: Labelword
+          type: string
+      required:
+      - labelEntityGroup
+      - labelScore
+      - labelWord
+      - labelStart
+      - labelEnd
+      - labelDirty
+      - labelDataId
+      - labelId
+      title: Label
+      type: object
+    LabelBase:
+      description: "Pydantic schema for a single label without a parent LabelData\
+        \ reference.\nUsed by autolabels and other contexts where labels exist independently\
+        \ of a LabelData.\n\nAttributes:\n    label_entity_group: Some arbitrary string\
+        \ denoting the entity group this label belongs to (e.g. PERSON, LOCATION,\
+        \ etc.).\n    label_score: Some float corresponding to how likely a label\
+        \ is to be correct. Used by label autogeneration modules (TBD).\n    label_word:\
+        \ Word that this label is labeling.\n    label_start: Start position of this\
+        \ label in text.\n    label_end: End position of this label in text.\n   \
+        \ label_dirty: Use TBD, most likely will be for score calculations in LabelData\
+        \ aggregate operations.\n\nNote:\n    label_start must be strictly less than\
+        \ label_end. Otherwise a ValueError will occur.\n    label_word must have\
+        \ length label_end - label_start. Otherwise a ValueError will occur."
+      properties:
+        labelDirty:
+          title: Labeldirty
+          type: boolean
+        labelEnd:
+          minimum: 0.0
+          title: Labelend
+          type: integer
+        labelEntityGroup:
+          anyOf:
+          - maxLength: 64
+            type: string
+          - type: 'null'
+          title: Labelentitygroup
+        labelScore:
+          maximum: 1.0
+          minimum: 0.0
+          title: Labelscore
+          type: number
+        labelStart:
+          minimum: 0.0
+          title: Labelstart
+          type: integer
+        labelWord:
+          maxLength: 128
+          title: Labelword
+          type: string
+      required:
+      - labelEntityGroup
+      - labelScore
+      - labelWord
+      - labelStart
+      - labelEnd
+      - labelDirty
+      title: LabelBase
+      type: object
+    LabelContributor:
+      description: "Pydantic schema for a label contributor, which can be either a\
+        \ user or an autolabel model.\n\nAttributes:\n    label_contributor_role:\
+        \ Role of the contributor, either a user or an autolabel model.\n    label_group_id:\
+        \ UUID of label group this contributor belongs to.\n    user_id: UUID of user"
+      properties:
+        labelContributorRole:
+          $ref: '#/components/schemas/LabelRole'
+        labelGroupId:
+          format: uuid
+          title: Labelgroupid
+          type: string
+        userId:
+          format: uuid
+          title: Userid
+          type: string
+      required:
+      - labelContributorRole
+      - labelGroupId
+      - userId
+      title: LabelContributor
+      type: object
+    LabelData:
+      description: "Pydantic schema for a list of labels in some text.\n\nAttributes:\n\
+        \    label_data_id: UUID identifier for this LabelData.\n    label_group_id:\
+        \ UUID of label group this LabelData belongs to.\n    chapter_content_id:\
+        \ UUID of chapter content this LabelData is labelling."
+      properties:
+        chapterContentId:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+        labelDataId:
+          format: uuid
+          title: Labeldataid
+          type: string
+        labelGroupId:
+          format: uuid
+          title: Labelgroupid
+          type: string
+      required:
+      - labelDataId
+      - labelGroupId
+      - chapterContentId
+      title: LabelData
+      type: object
+    LabelGroup:
+      description: "Pydantic schema for a label group.\n\nAttributes:\n    label_group_id:\
+        \ UUID identifier for this label group.\n    label_group_name: Name of this\
+        \ label group.\n    novel_id: UUID of novel this label group belongs to."
+      properties:
+        labelGroupId:
+          format: uuid
+          title: Labelgroupid
+          type: string
+        labelGroupName:
+          maxLength: 31
+          title: Labelgroupname
+          type: string
+        novelId:
+          format: uuid
+          title: Novelid
+          type: string
+      required:
+      - labelGroupId
+      - labelGroupName
+      - novelId
+      title: LabelGroup
+      type: object
+    LabelGroupWithRole:
+      description: "Pydantic schema for a label group with a user's role in that label\
+        \ group.\n\nAttributes:\n    label_group: LabelGroup object.\n    role: Role\
+        \ of the user in this label group."
+      properties:
+        labelGroup:
+          $ref: '#/components/schemas/LabelGroup'
+        role:
+          $ref: '#/components/schemas/LabelRole'
+      required:
+      - labelGroup
+      - role
+      title: LabelGroupWithRole
+      type: object
+    LabelRole:
+      enum:
+      - owner
+      - viewer
+      - editor
+      title: LabelRole
+      type: string
+    Language:
+      description: "Pydantic schema for language.\n\nAttributes:\n    language_code:\
+        \ String code key to language.\n    language_name: String name of language."
+      properties:
+        languageCode:
+          title: Languagecode
+          type: string
+        languageName:
+          title: Languagename
+          type: string
+      required:
+      - languageCode
+      - languageName
+      title: Language
+      type: object
+    LazyEntry:
+      properties:
+        labelData:
+          $ref: '#/components/schemas/LabelData'
+        labelGroup:
+          $ref: '#/components/schemas/LabelGroup'
+      required:
+      - labelGroup
+      - labelData
+      title: LazyEntry
+      type: object
+    ModifyChapterContentResponse:
+      description: "Pydantic schema for the response after modifying chapter content.\n\
+        \nAttributes:\n    chapter_content_version: The new version number of the\
+        \ text content after applying the modifications.\n    chapter_content_id:\
+        \ The UUID of the text content that was modified.\n    label_data_id_map:\
+        \ A mapping from label data IDs before the text modification to label data\
+        \ IDs after the text modification"
+      properties:
+        chapterContentId:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+        chapterContentVersion:
+          title: Chaptercontentversion
+          type: integer
+        labelDataIdMap:
+          additionalProperties:
+            format: uuid
+            type: string
+          propertyNames:
+            format: uuid
+          title: Labeldataidmap
+          type: object
+      required:
+      - chapterContentVersion
+      - chapterContentId
+      - labelDataIdMap
+      title: ModifyChapterContentResponse
+      type: object
+    Novel:
+      description: "Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID\
+        \ id of novel in db.\n    novel_title: String title of novel.\n    novel_description:\
+        \ String summary or description of novel.\n    novel_author: String author\
+        \ or description of novel.\n    novel_visibility: Visibility enum of novel.\n\
+        \    novel_type: NovelType enum of novel.\n    language_code: String code\
+        \ key to language of the novel.\n    source_work_id: UUID foreign key to source\
+        \ work of the novel."
+      properties:
+        languageCode:
+          title: Languagecode
+          type: string
+        novelAuthor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Novelauthor
+        novelDescription:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Noveldescription
+        novelId:
+          format: uuid
+          title: Novelid
+          type: string
+        novelTitle:
+          title: Noveltitle
+          type: string
+        novelType:
+          $ref: '#/components/schemas/NovelType'
+        novelVisibility:
+          $ref: '#/components/schemas/Visibility'
+        sourceWorkId:
+          format: uuid
+          title: Sourceworkid
+          type: string
+      required:
+      - novelId
+      - novelTitle
+      - novelVisibility
+      - novelType
+      - languageCode
+      - sourceWorkId
+      title: Novel
+      type: object
+    NovelType:
+      enum:
+      - original
+      - translation
+      - other
+      title: NovelType
+      type: string
+    OperationStatus:
+      description: "Pydantic model to signal return status of operation.\n\nAttributes:\n\
+        \    status: One of \"success\", \"fail\".\n    detail: Details on operation.\n\
+        \nNotes:\n    Unless under exceptional circumstances, should not return fail\
+        \ and just raise an exception."
+      properties:
+        detail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Detail
+        status:
+          enum:
+          - success
+          - fail
+          title: Status
+          type: string
+      required:
+      - status
+      title: OperationStatus
+      type: object
+    RequestConflictDetail:
+      description: "Structured detail payload used by request-key wrapped 409 responses.\n\
+        \nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict:\
+        \ Whether the failure was caused by a request-key cache conflict."
+      properties:
+        cacheConflict:
+          title: Cacheconflict
+          type: boolean
+        detail:
+          title: Detail
+          type: string
+      required:
+      - detail
+      - cacheConflict
+      title: RequestConflictDetail
+      type: object
+    RequestConflictErrorResponse:
+      description: "HTTPException response body for request-key wrapped 409 responses.\n\
+        \nAttributes:\n    detail: Structured conflict detail."
+      properties:
+        detail:
+          $ref: '#/components/schemas/RequestConflictDetail'
+      required:
+      - detail
+      title: RequestConflictErrorResponse
+      type: object
+    SchemaInfo:
+      properties:
+        apply_filter_options_schema:
+          additionalProperties: true
+          title: Apply Filter Options Schema
+          type: object
+        context_schema:
+          additionalProperties: true
+          title: Context Schema
+          type: object
+        decide_instances_options_schema:
+          additionalProperties: true
+          title: Decide Instances Options Schema
+          type: object
+        description:
+          title: Description
+          type: string
+        flag_instances_options_schema:
+          additionalProperties: true
+          title: Flag Instances Options Schema
+          type: object
+        get_contexts_options_schema:
+          additionalProperties: true
+          title: Get Contexts Options Schema
+          type: object
+        instance_schema:
+          additionalProperties: true
+          title: Instance Schema
+          type: object
+        supports_apply:
+          title: Supports Apply
+          type: boolean
+        supports_decide:
+          title: Supports Decide
+          type: boolean
+      required:
+      - description
+      - supports_decide
+      - supports_apply
+      - instance_schema
+      - context_schema
+      - flag_instances_options_schema
+      - get_contexts_options_schema
+      - decide_instances_options_schema
+      - apply_filter_options_schema
+      title: SchemaInfo
+      type: object
+    SourceWork:
+      description: "Pydantic schema for a source work.\n\nAttributes:\n    source_work_id:\
+        \ UUID id of source work in db.\n    source_work_title: Title of the source\
+        \ work.\n    source_work_description: Optional description of the source work."
+      properties:
+        sourceWorkDescription:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sourceworkdescription
+        sourceWorkId:
+          format: uuid
+          title: Sourceworkid
+          type: string
+        sourceWorkTitle:
+          title: Sourceworktitle
+          type: string
+      required:
+      - sourceWorkId
+      - sourceWorkTitle
+      title: SourceWork
+      type: object
+    SourceWorkData-Input:
+      description: "Pydantic schema to represent a source work and all its associated\
+        \ novels.\n\nAttributes:\n    source_work: The source work metadata.\n   \
+        \ novels: A list of novels associated with this source work."
+      properties:
+        novels:
+          items:
+            $ref: '#/components/schemas/Novel'
+          title: Novels
+          type: array
+        sourceWork:
+          $ref: '#/components/schemas/SourceWork'
+      required:
+      - sourceWork
+      - novels
+      title: SourceWorkData
+      type: object
+    SourceWorkData-Output:
+      description: "Pydantic schema to represent a source work and all its associated\
+        \ novels.\n\nAttributes:\n    source_work: The source work metadata.\n   \
+        \ novels: A list of novels associated with this source work."
+      properties:
+        novels:
+          items:
+            $ref: '#/components/schemas/Novel'
+          title: Novels
+          type: array
+        sourceWork:
+          $ref: '#/components/schemas/SourceWork'
+      required:
+      - sourceWork
+      - novels
+      title: SourceWorkData
+      type: object
+    TextOp:
+      description: "Pydantic schema to update text content of a chapter.\n\nAttributes:\n\
+        \    op: The text operation, either \"insert\" or \"delete\".\n    start:\
+        \ The starting index in the text content where the operation should be applied.\n\
+        \    text: The text to insert (for insert operations) or the text to delete\
+        \ (for delete operations)."
+      properties:
+        op:
+          enum:
+          - insert
+          - delete
+          title: Op
+          type: string
+        start:
+          title: Start
+          type: integer
+        text:
+          title: Text
+          type: string
+      required:
+      - op
+      - start
+      - text
+      title: TextOp
+      type: object
+    Token:
+      description: "Pydantic schema for a JWT\n\nAttributes:\n    access_token: Payload.\n\
+        \    token_type: Type of token."
+      properties:
+        access_token:
+          title: Access Token
+          type: string
+        token_type:
+          title: Token Type
+          type: string
+      required:
+      - access_token
+      - token_type
+      title: Token
+      type: object
+    UpdateChapter:
+      description: "Pydantic schema to validate data for updating chapter metadata.\n\
+        \nAttributes:\n    chapter_title: The new title for the chapter."
+      properties:
+        chapterTitle:
+          title: Chaptertitle
+          type: string
+      required:
+      - chapterTitle
+      title: UpdateChapter
+      type: object
+    UpdateChapterContent:
+      description: "Pydantic schema to validate data for updating the text content\
+        \ of a chapter. The chapter_id is expected to be passed via the URL path.\n\
+        \nAttributes:\n    text_ops: A list of text operations (insertions or deletions)\
+        \ to apply to the existing text content.\n    chapter_content_id: The UUID\
+        \ of the text content, used for optimistic concurrency control when updating\
+        \ text."
+      properties:
+        chapterContentId:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+        textOps:
+          items:
+            $ref: '#/components/schemas/TextOp'
+          title: Textops
+          type: array
+      required:
+      - textOps
+      - chapterContentId
+      title: UpdateChapterContent
+      type: object
+    UpdateLabelDataStream:
+      description: "Pydantic schema for a buffered stream of label operations.\n\n\
+        Attributes:\n    ops: A list of label operations."
+      properties:
+        ops:
+          items:
+            discriminator:
+              mapping:
+                add: '#/components/schemas/AddLabelOp'
+                delete: '#/components/schemas/DeleteLabelOp'
+                update: '#/components/schemas/UpdateLabelOp'
+              propertyName: op
+            oneOf:
+            - $ref: '#/components/schemas/AddLabelOp'
+            - $ref: '#/components/schemas/DeleteLabelOp'
+            - $ref: '#/components/schemas/UpdateLabelOp'
+          title: Ops
+          type: array
+      required:
+      - ops
+      title: UpdateLabelDataStream
+      type: object
+    UpdateLabelGroup:
+      description: "Pydantic schema for validating forms for updating a label group.\n\
+        \nAttributes:\n    label_group_name: New name of label group."
+      properties:
+        labelGroupName:
+          maxLength: 31
+          title: Labelgroupname
+          type: string
+      required:
+      - labelGroupName
+      title: UpdateLabelGroup
+      type: object
+    UpdateLabelOp:
+      description: "Pydantic schema for a label update operation. Inherits all attributes\
+        \ from LabelOpBase.\n\nAttributes:\n    op: The string literal 'update'.\n\
+        \    new_start_pos: Optional parameter. The new start position of the label.\n\
+        \    new_end_pos: Optional parameter. The new end position of the label.\n\
+        \    new_word: Optional parameter. The new word the label is labelling. Must\
+        \ satisfy `new_word == chapter_text[new_start_pos : new_end_pos]`.\n    dirty:\
+        \ Optional parameter. Value to change the current label's dirty value to.\n\
+        \    entity_group: Optional parameter. New entity group for this label.\n\
+        \    score: Optional parameter. New score for the entity."
+      properties:
+        dirty:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Dirty
+        endPos:
+          minimum: 0.0
+          title: Endpos
+          type: integer
+        entityGroup:
+          anyOf:
+          - maxLength: 64
+            type: string
+          - type: 'null'
+          title: Entitygroup
+        newEndPos:
+          anyOf:
+          - minimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Newendpos
+        newStartPos:
+          anyOf:
+          - minimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Newstartpos
+        newWord:
+          anyOf:
+          - maxLength: 128
+            type: string
+          - type: 'null'
+          title: Newword
+        op:
+          const: update
+          title: Op
+          type: string
+        score:
+          anyOf:
+          - maximum: 1.0
+            minimum: 0.0
+            type: number
+          - type: 'null'
+          title: Score
+        startPos:
+          minimum: 0.0
+          title: Startpos
+          type: integer
+        word:
+          maxLength: 128
+          title: Word
+          type: string
+      required:
+      - startPos
+      - endPos
+      - word
+      - op
+      title: UpdateLabelOp
+      type: object
+    UpdateNovel:
+      description: "Pydantic schema to validate forms for updating a novel. The novel\
+        \ id will be passed into the router endpoint.\n\nAttributes:\n    novel_title:\
+        \ Updated title to novel we are updating. If None, then do not update.\n \
+        \   novel_description: Updated description of novel we are updating. If None,\
+        \ then do not update.\n    novel_author: Author of novel we are creating.\
+        \ If None, then do not update.\n    novel_visibility: Updated visibility level\
+        \ of novel we are updating. If None, then do not update.\n    novel_type:\
+        \ Updated novel type. If None, then do not update."
+      properties:
+        novelAuthor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Novelauthor
+        novelDescription:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Noveldescription
+        novelTitle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Noveltitle
+        novelType:
+          anyOf:
+          - $ref: '#/components/schemas/NovelType'
+          - type: 'null'
+        novelVisibility:
+          anyOf:
+          - $ref: '#/components/schemas/Visibility'
+          - type: 'null'
+      title: UpdateNovel
+      type: object
+    UpdateSourceWork:
+      description: "Pydantic schema to validate forms for updating a source work.\n\
+        \nAttributes:\n    source_work_title: Updated title. If None, do not update.\n\
+        \    source_work_description: Updated description. If None, do not update."
+      properties:
+        sourceWorkDescription:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sourceworkdescription
+        sourceWorkTitle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sourceworktitle
+      title: UpdateSourceWork
+      type: object
+    User:
+      description: "Pydantic model for user information.\n\nAttributes:\n    user_id:\
+        \ id of this user.\n    user_name: Username for this user.\n    user_type:\
+        \ A value in UserType (e.g. 'admin', or 'user')"
+      properties:
+        userId:
+          format: uuid
+          title: Userid
+          type: string
+        userName:
+          title: Username
+          type: string
+        userType:
+          $ref: '#/components/schemas/UserType'
+      required:
+      - userId
+      - userName
+      - userType
+      title: User
+      type: object
+    UserType:
+      description: Enum of possible user types.
+      enum:
+      - user
+      - admin
+      title: UserType
+      type: string
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+    Visibility:
+      enum:
+      - 0
+      - 1
+      - 2
+      - 3
+      title: Visibility
+      type: integer
+  securitySchemes:
+    OAuth2PasswordBearer:
+      flows:
+        password:
+          scopes: {}
+          tokenUrl: token
+      type: oauth2
+info:
+  title: FastAPI
+  version: 0.1.0
+openapi: 3.1.0
+paths:
+  /auto-labels:
+    get:
+      operationId: read_autolabels_auto_labels_get
+      parameters:
+      - in: query
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      - in: query
+        name: chapterIds
+        required: false
+        schema:
+          anyOf:
+          - items:
+              format: uuid
+              type: string
+            type: array
+          - type: 'null'
+          title: Chapterids
+      - in: query
+        name: start
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Start
+      - in: query
+        name: end
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: End
+      - in: query
+        name: modelNames
+        required: false
+        schema:
+          anyOf:
+          - items:
+              const: cluener
+              type: string
+            type: array
+          - type: 'null'
+          title: Modelnames
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/AutoLabelMeta'
+                title: Response Read Autolabels Auto Labels Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Autolabels
+    post:
+      operationId: create_autolabels_auto_labels_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAutoLabels'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/AutoLabelMeta'
+                title: Response Create Autolabels Auto Labels Post
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Create Autolabels
+  /auto-labels/{autoLabelId}:
+    get:
+      description: "Endpoint for retrieving autolabel from database.\n\nArgs:\n  \
+        \  auto_label_id: UUID for auto label.\n    db: Database dependency.\n   \
+        \ current_user: Current user dependency."
+      operationId: read_autolabel_by_id_auto_labels__autoLabelId__get
+      parameters:
+      - in: path
+        name: autoLabelId
+        required: true
+        schema:
+          format: uuid
+          title: Autolabelid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoLabel'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Autolabel By Id
+  /cached/{cachedId}:
+    get:
+      operationId: get_cached_result_cached__cachedId__get
+      parameters:
+      - in: path
+        name: cachedId
+        required: true
+        schema:
+          format: uuid
+          title: Cachedid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheEntry'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Cached result not found.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Cached Result
+  /chapter-contents/{chapterContentId}:
+    get:
+      description: "Endpoint for retrieving a specific version of chapter content\
+        \ by its id.\n\nRaises:\n    404: Chapter content not found (or insufficient\
+        \ permissions)."
+      operationId: read_chapter_content_by_id_chapter_contents__chapterContentId__get
+      parameters:
+      - in: path
+        name: chapterContentId
+        required: true
+        schema:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterContent'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Chapter Content By Id
+  /chapters:
+    get:
+      description: "Endpoint for retrieving chapters by novel_id.\n\nRaises:\n   \
+        \ 404: Novel not found (or insufficient permissions)."
+      operationId: read_chapters_by_novel_chapters_get
+      parameters:
+      - in: query
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      - in: query
+        name: start
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Start
+      - in: query
+        name: end
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: End
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Chapter'
+                title: Response Read Chapters By Novel Chapters Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Chapters By Novel
+  /chapters/{chapterId}:
+    delete:
+      description: "Delete a chapter from the database.\n\nRaises:\n    404: Chapter\
+        \ not found.\n    401: Insufficient permissions.\n    500: Delete failed for\
+        \ other reasons."
+      operationId: delete_chapter_chapters__chapterId__delete
+      parameters:
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Delete Chapter
+    get:
+      description: "Endpoint for retrieving chapter by id.\n\nRaises:\n    404: Chapter\
+        \ not found (or insufficient permissions)."
+      operationId: read_chapter_by_id_chapters__chapterId__get
+      parameters:
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chapter'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Chapter By Id
+    patch:
+      description: "Update chapter metadata.\n\nRaises:\n    404: Chapter not found.\n\
+        \    401: Insufficient permissions.\n    400: Field in request too long."
+      operationId: update_chapter_chapters__chapterId__patch
+      parameters:
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateChapter'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chapter'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Update Chapter
+  /chapters/{chapterId}/content:
+    get:
+      description: "Endpoint for retrieving the most recent content of a chapter.\n\
+        \nRaises:\n    404: Chapter not found, or chapter has no content."
+      operationId: read_chapter_content_chapters__chapterId__content_get
+      parameters:
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterContent'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Chapter Content
+    patch:
+      description: "Apply text operations to the most recent content of a chapter.\
+        \ Uses optimistic concurrency\nvia chapter_content_id -- if the content has\
+        \ been modified since the client last fetched it,\na 409 is returned.\n\n\
+        Raises:\n    404: Chapter content not found.\n    409: Chapter content is\
+        \ outdated (someone else modified it).\n    401: Insufficient permissions\
+        \ to modify this chapter."
+      operationId: update_chapter_content_chapters__chapterId__content_patch
+      parameters:
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      - in: query
+        name: requestKey
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Requestkey
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateChapterContent'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModifyChapterContentResponse'
+          description: Successful Response
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Insufficient permissions to modify this chapter.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Chapter content not found.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestConflictErrorResponse'
+          description: Chapter content is outdated, or the request key already exists.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Update Chapter Content
+  /chapters/{chapterId}/content-status/{chapterContentId}:
+    get:
+      description: "Check whether a chapter_content_id is the latest version for a\
+        \ chapter.\n\nRaises:\n    404: Chapter content not found (or insufficient\
+        \ read permissions).\n    409: Chapter content is outdated."
+      operationId: read_chapter_content_status_chapters__chapterId__content_status__chapterContentId__get
+      parameters:
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      - in: path
+        name: chapterContentId
+        required: true
+        schema:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationStatus'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Chapter Content Status
+  /chapters/{chapterId}/content-versions:
+    get:
+      description: 'Endpoint for retrieving all content version metadata for a chapter.
+
+        Returns an empty list if the chapter has no content versions or doesn''t exist.'
+      operationId: read_chapter_content_versions_chapters__chapterId__content_versions_get
+      parameters:
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ChapterContentMeta'
+                title: Response Read Chapter Content Versions Chapters  Chapterid  Content
+                  Versions Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Chapter Content Versions
+  /chapters/{chapterId}/publish:
+    post:
+      description: "Publish a chapter (make it public).\n\nRaises:\n    404: Chapter\
+        \ not found.\n    401: Insufficient permissions."
+      operationId: action_publish_chapter_chapters__chapterId__publish_post
+      parameters:
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chapter'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Action Publish Chapter
+  /edit-chapter-data/{chapterId}:
+    post:
+      description: "Gets all data associated with a chapter required for editing.\n\
+        \nArgs:\n    chapter_id: Chapter id of requested chapter\n    eager: List\
+        \ of label group IDs for which to fetch eager label data\n\nRaises:\n    404:\
+        \ Chapter not found (or insufficient permissions).\n    403: Insufficient\
+        \ permissions to access data for other user."
+      operationId: read_edit_chapter_data_edit_chapter_data__chapterId__post
+      parameters:
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      - in: query
+        name: subjectId
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Subjectid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              description: List of label group IDs for which to fetch eager label
+                data
+              items:
+                format: uuid
+                type: string
+              title: Eager
+              type: array
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EditChapterData'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Edit Chapter Data
+  /edit-chapter-data/{chapterId}/label-data:
+    post:
+      description: "Fetch label data and labels for specific label groups on a chapter's\
+        \ most\nrecent content version. Used by the reload group operation.\n\nRaises:\n\
+        \    404: Chapter not found (or insufficient permissions).\n    403: Insufficient\
+        \ permissions to access data for other user."
+      operationId: read_edit_chapter_label_data_edit_chapter_data__chapterId__label_data_post
+      parameters:
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      - in: query
+        name: subjectId
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Subjectid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              description: Label group IDs to fetch label data and labels for
+              items:
+                format: uuid
+                type: string
+              title: Labelgroupids
+              type: array
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/EagerEntry'
+                title: Response Read Edit Chapter Label Data Edit Chapter Data  Chapterid  Label
+                  Data Post
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Edit Chapter Label Data
+  /filters/schemas:
+    get:
+      description: "Retrieves the schemas for all registered filters, including the\
+        \ instance, context, and options schemas for each filter.\n\nReturns:\n  \
+        \  A dictionary mapping filter names to their schema information."
+      operationId: read_filter_schemas_filters_schemas_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  $ref: '#/components/schemas/SchemaInfo'
+                title: Response Read Filter Schemas Filters Schemas Get
+                type: object
+          description: Successful Response
+      summary: Read Filter Schemas
+  /filters/{filterName}/apply:
+    post:
+      description: "Applies a filter to a label group for a list of instances using\
+        \ specified options.\n\nArgs:\n    filter_name: The name of the filter to\
+        \ apply.\n    body: An InstanceOptions object containing the list of instances\
+        \ and the options for applying the filter. Each instance will be validated\
+        \ against the filter's instance schema, and the options will be validated\
+        \ against the filter's apply filter options schema.\n    db: Database session\
+        \ for any necessary database access during filter application.\n    current_user:\
+        \ The user making the request, which may be relevant for certain filters."
+      operationId: apply_filter_filters__filterName__apply_post
+      parameters:
+      - in: path
+        name: filterName
+        required: true
+        schema:
+          title: Filtername
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstanceOptions'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Apply Filter
+  /filters/{filterName}/decide-instances:
+    post:
+      description: "Decides whether instances pass a filter in given contexts using\
+        \ specified options.\n\nArgs:\n    filter_name: The name of the filter to\
+        \ use.\n    body: An InstanceContextOptions object containing the list of\
+        \ instance-context pairs and the options for deciding instances. Each instance\
+        \ and context will be validated against the filter's schemas.\n    db: Database\
+        \ session for any necessary database access during the decision process.\n\
+        \    current_user: The user making the request, which may be relevant for\
+        \ certain filters."
+      operationId: read_decisions_filters__filterName__decide_instances_post
+      parameters:
+      - in: path
+        name: filterName
+        required: true
+        schema:
+          title: Filtername
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstanceContextOptions'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  type: boolean
+                title: Response Read Decisions Filters  Filtername  Decide Instances
+                  Post
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Decisions
+  /filters/{filterName}/flag-instances:
+    post:
+      description: "Flags instances using a specified filter and options.\n\nArgs:\n\
+        \    filter_name: The name of the filter to use.\n    options: The options\
+        \ for flagging instances, which will be validated against the filter's schema.\n\
+        \    db: Database session for any necessary database access during filtering.\n\
+        \    current_user: The user making the request, which may be relevant for\
+        \ certain filters."
+      operationId: read_flagged_instances_filters__filterName__flag_instances_post
+      parameters:
+      - in: path
+        name: filterName
+        required: true
+        schema:
+          title: Filtername
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              title: Options
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items: {}
+                title: Response Read Flagged Instances Filters  Filtername  Flag Instances
+                  Post
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Flagged Instances
+  /filters/{filterName}/get-contexts:
+    post:
+      description: "Retrieves contexts for a list of instances using a specified filter\
+        \ and options.\n\nArgs:\n    filter_name: The name of the filter to use.\n\
+        \    instances: The list of instances to retrieve contexts for. Each instance\
+        \ will be validated against the filter's instance schema.\n    options: The\
+        \ options for retrieving contexts, which will be validated against the filter's\
+        \ schema.\n    db: Database session for any necessary database access during\
+        \ context retrieval.\n    current_user: The user making the request, which\
+        \ may be relevant for certain filters."
+      operationId: read_contexts_filters__filterName__get_contexts_post
+      parameters:
+      - in: path
+        name: filterName
+        required: true
+        schema:
+          title: Filtername
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstanceOptions'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items: {}
+                title: Response Read Contexts Filters  Filtername  Get Contexts Post
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Contexts
+  /label-datas:
+    get:
+      description: Gets all label datas in a label group, optionally filtered by chapter
+        range.
+      operationId: read_label_datas_by_group_chapters_label_datas_get
+      parameters:
+      - in: query
+        name: labelGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Labelgroupid
+          type: string
+      - in: query
+        name: start
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Start
+      - in: query
+        name: end
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: End
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/LabelData'
+                title: Response Read Label Datas By Group Chapters Label Datas Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Label Datas By Group Chapters
+  /label-datas/{labelDataId}:
+    get:
+      description: "Gets a label data by id.\n\nRaises:\n    404: Label data not found\
+        \ (or insufficient permissions)."
+      operationId: read_label_data_label_datas__labelDataId__get
+      parameters:
+      - in: path
+        name: labelDataId
+        required: true
+        schema:
+          format: uuid
+          title: Labeldataid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelData'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Label Data
+    patch:
+      description: "Applies a stream of edit operations to labels.\n\nRaises:\n  \
+        \  404: Label data or its underlying revision text not found, or target label\
+        \ does not exist.\n    409: Word mismatch or label overlap detected.\n   \
+        \ 400: Operation positions out of bounds or invalid operation."
+      operationId: update_label_data_stream_label_datas__labelDataId__patch
+      parameters:
+      - in: path
+        name: labelDataId
+        required: true
+        schema:
+          format: uuid
+          title: Labeldataid
+          type: string
+      - in: query
+        name: requestKey
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Requestkey
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLabelDataStream'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Operation positions are out of bounds or the operation is otherwise
+            invalid.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Label data, chapter content, or target label not found.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestConflictErrorResponse'
+          description: Label stream conflict, such as word mismatch, overlap violation,
+            or request-key conflict.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Update Label Data Stream
+  /label-datas/{labelDataId}/labels:
+    get:
+      description: Get the specific list of labels inside a label data entry.
+      operationId: read_labels_by_label_data_label_datas__labelDataId__labels_get
+      parameters:
+      - in: path
+        name: labelDataId
+        required: true
+        schema:
+          format: uuid
+          title: Labeldataid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Label'
+                title: Response Read Labels By Label Data Label Datas  Labeldataid  Labels
+                  Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Labels By Label Data
+  /label-groups:
+    get:
+      description: Gets all label groups of the current user for a novel.
+      operationId: read_label_groups_label_groups_get
+      parameters:
+      - in: query
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/LabelGroup'
+                title: Response Read Label Groups Label Groups Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Label Groups
+    post:
+      description: "Creates a new label group.\n\nRaises:\n    404: Novel not found.\n\
+        \    400: Label group name is too long."
+      operationId: create_label_group_label_groups_post
+      parameters:
+      - in: query
+        name: requestKey
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Requestkey
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLabelGroup'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelGroup'
+          description: Successful Response
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Label group name is too long.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Novel associated with this label group not found.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestConflictErrorResponse'
+          description: Request key conflict.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Create Label Group
+  /label-groups-with-role:
+    get:
+      description: Gets all label groups of the current user for a novel, along with
+        their roles.
+      operationId: read_label_groups_with_role_label_groups_with_role_get
+      parameters:
+      - in: query
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/LabelGroupWithRole'
+                title: Response Read Label Groups With Role Label Groups With Role
+                  Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Label Groups With Role
+  /label-groups/{labelGroupId}:
+    get:
+      description: "Gets a label group by id.\n\nRaises:\n    404: Label group not\
+        \ found (or insufficient permissions)."
+      operationId: read_label_group_label_groups__labelGroupId__get
+      parameters:
+      - in: path
+        name: labelGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Labelgroupid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelGroup'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Label Group
+    patch:
+      description: "Updates a label group (e.g. rename).\n\nRaises:\n    404: Label\
+        \ group not found.\n    400: Label group name is too long."
+      operationId: update_label_group_label_groups__labelGroupId__patch
+      parameters:
+      - in: path
+        name: labelGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Labelgroupid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLabelGroup'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelGroup'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Update Label Group
+  /label-groups/{labelGroupId}/contributors:
+    get:
+      description: Get the list of contributors for a label group.
+      operationId: read_label_contributors_label_groups__labelGroupId__contributors_get
+      parameters:
+      - in: path
+        name: labelGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Labelgroupid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/LabelContributor'
+                title: Response Read Label Contributors Label Groups  Labelgroupid  Contributors
+                  Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Label Contributors
+  /label-groups/{labelGroupId}/label-datas:
+    post:
+      description: "Creates a label data entry for a revision text in a label group.\n\
+        \nRaises:\n    404: Label group or revision text not found.\n    409: Label\
+        \ data for this revision text already exists in this group."
+      operationId: create_label_data_label_groups__labelGroupId__label_datas_post
+      parameters:
+      - in: path
+        name: labelGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Labelgroupid
+          type: string
+      - in: query
+        name: requestKey
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Requestkey
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLabelData'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelData'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Label group or chapter content not found.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestConflictErrorResponse'
+          description: Label data already exists for this chapter content in the label
+            group, or the request key already exists.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Create Label Data
+  /label-groups/{labelGroupId}/label-datas/auto-labels:
+    post:
+      description: Creates label datas and populates labels from autolabel results.
+      operationId: create_label_datas_by_auto_labels_label_groups__labelGroupId__label_datas_auto_labels_post
+      parameters:
+      - in: path
+        name: labelGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Labelgroupid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLabelDataByAutoLabel'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateLabelDataByAutoLabelStatus'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Create Label Datas By Auto Labels
+  /languages:
+    get:
+      description: "Retrieves all languages in the database.\n\nArgs:\n    db: Database\
+        \ session."
+      operationId: read_all_languages_languages_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Language'
+                title: Response Read All Languages Languages Get
+                type: array
+          description: Successful Response
+      summary: Read All Languages
+  /languages/{languageCode}:
+    get:
+      description: "Retrieves a language by its code.\n\nArgs:\n    language_code:\
+        \ The code of the language to retrieve.\n    db: Database session."
+      operationId: read_language_by_code_languages__languageCode__get
+      parameters:
+      - in: path
+        name: languageCode
+        required: true
+        schema:
+          title: Languagecode
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Language'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Read Language By Code
+  /novels:
+    get:
+      description: Endpoint for retrieving novels in bulk.
+      operationId: read_novels_novels_get
+      parameters:
+      - in: query
+        name: titleContains
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Titlecontains
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Novel'
+                title: Response Read Novels Novels Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Novels
+    post:
+      description: "Add a new novel to the database.\n\nRaises:\n    404: Language\
+        \ code or source work not found.\n    400: Data in some field is too long."
+      operationId: create_novel_novels_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNovel'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Novel'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Create Novel
+  /novels/mine:
+    get:
+      description: Endpoint for retrieving novels that the user has special access
+        to.
+      operationId: read_novels_mine_novels_mine_get
+      parameters:
+      - in: query
+        name: editable
+        required: false
+        schema:
+          default: false
+          title: Editable
+          type: boolean
+      - in: query
+        name: titleContains
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Titlecontains
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Novel'
+                title: Response Read Novels Mine Novels Mine Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Novels Mine
+  /novels/{novelId}:
+    get:
+      description: "Endpoint for retrieving a novel by id.\n\nRaises:\n    404: Novel\
+        \ not found (or insufficient permissions)."
+      operationId: read_novel_novels__novelId__get
+      parameters:
+      - in: path
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Novel'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Novel
+    patch:
+      description: "Update the novel with novel_id.\n\nRaises:\n    404: Novel not\
+        \ found.\n    401: Insufficient permissions (user is not owner/editor).\n\
+        \    400: Data in some field exceeds maximum length."
+      operationId: update_novel_novels__novelId__patch
+      parameters:
+      - in: path
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNovel'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Novel'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Update Novel
+  /novels/{novelId}/chapters:
+    post:
+      description: "Insert a new chapter into the database. Returns chapter metadata\
+        \ and initial empty content.\n\nRaises:\n    404: Novel not found.\n    409:\
+        \ Chapter with this chapter number already exists in this novel.\n    401:\
+        \ Insufficient permissions."
+      operationId: create_chapter_novels__novelId__chapters_post
+      parameters:
+      - in: path
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChapter'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterData'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Create Chapter
+  /register:
+    post:
+      description: "Endpoint for registering a new user. Client with registration\
+        \ request must not be logged in.\n\nArgs:\n    request: Create user request.\n\
+        \    db: Database dependency.\n    current_user: Optional user dependency.\
+        \ Should be None for this function to succeed."
+      operationId: register_user_register_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUser'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Register User
+  /source-works:
+    get:
+      description: Endpoint for retrieving source works in bulk, optionally filtered
+        by title substring.
+      operationId: read_source_works_source_works_get
+      parameters:
+      - in: query
+        name: titleContains
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Titlecontains
+      - in: query
+        name: retNovels
+        required: false
+        schema:
+          default: false
+          title: Retnovels
+          type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/SourceWorkData-Output'
+                title: Response Read Source Works Source Works Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Source Works
+    post:
+      description: "Create a new source work.\n\nRaises:\n    400: Data in some field\
+        \ is too long."
+      operationId: create_source_work_source_works_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSourceWork'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceWork'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Create Source Work
+  /source-works/{sourceWorkId}:
+    get:
+      description: "Endpoint for retrieving a source work by id.\n\nRaises:\n    404:\
+        \ Source work not found (or insufficient permissions)."
+      operationId: read_source_work_source_works__sourceWorkId__get
+      parameters:
+      - in: path
+        name: sourceWorkId
+        required: true
+        schema:
+          format: uuid
+          title: Sourceworkid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceWork'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Source Work
+    patch:
+      description: "Update a source work's metadata.\n\nRaises:\n    404: Source work\
+        \ not found.\n    401: Insufficient permissions.\n    400: Data in some field\
+        \ exceeds maximum length."
+      operationId: update_source_work_source_works__sourceWorkId__patch
+      parameters:
+      - in: path
+        name: sourceWorkId
+        required: true
+        schema:
+          format: uuid
+          title: Sourceworkid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSourceWork'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceWork'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Update Source Work
+  /source-works/{sourceWorkId}/novels:
+    get:
+      description: "Endpoint for retrieving novels belonging to a source work.\n\n\
+        Raises:\n    404: Source work not found (or insufficient permissions)."
+      operationId: read_novels_by_source_work_source_works__sourceWorkId__novels_get
+      parameters:
+      - in: path
+        name: sourceWorkId
+        required: true
+        schema:
+          format: uuid
+          title: Sourceworkid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Novel'
+                title: Response Read Novels By Source Work Source Works  Sourceworkid  Novels
+                  Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Novels By Source Work
+  /token:
+    post:
+      description: "Verifies a client's login request and returns a token if it succeeds.\n\
+        \nArgs:\n    db: Database dependency.\n    form_data: OAuth2PasswordRequestForm\
+        \ dependency."
+      operationId: login_for_access_token_token_post
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Body_login_for_access_token_token_post'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+          description: Successful Response
+        '401':
+          description: Password does not match.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Login For Access Token
+  /users:
+    post:
+      description: "Creates a user with metadata request, provided that the current_user\
+        \ has sufficient permissions.\n\nArgs:\n    db: Database dependency.\n   \
+        \ current_user: Current user dependency. Must not be None (e.g. user must\
+        \ be logged in).\n    request: Metadata of user to be added."
+      operationId: create_user_users_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUser'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Create User
+  /users/me:
+    delete:
+      description: Delete the user currently logged in.
+      operationId: delete_user_me_users_me_delete
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteUserStatus'
+          description: Successful Response
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Delete User Me
+    get:
+      description: "Return the current logged in user.\n\nArgs:\n    current_user:\
+        \ Current user dependency."
+      operationId: read_user_me_users_me_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: Successful Response
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read User Me
+  /users/{userId}:
+    delete:
+      description: Delete the user with user_id if the current user has sufficient
+        permissions to perform this action. Throw an exception if the user currently
+        logged in has insufficient permissions.
+      operationId: delete_user_users__userId__delete
+      parameters:
+      - in: path
+        name: userId
+        required: true
+        schema:
+          format: uuid
+          title: Userid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteUserStatus'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Delete User
+  /users/{userName}:
+    get:
+      description: "Get user by username.\n\nArgs:\n    user_name: Username of user.\n\
+        \    db: Database dependency."
+      operationId: read_user_users__userName__get
+      parameters:
+      - in: path
+        name: userName
+        required: true
+        schema:
+          title: Username
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Read User

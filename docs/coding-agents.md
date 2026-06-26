@@ -18,6 +18,8 @@ See [onboarding](onboarding.md) for devcontainer setup.
     - `pnpm add -g @openai/codex`.
     - `sudo apt update`.
     - `sudo apt install bubblewrap`.
+- [Opencode](https://opencode.ai/docs/):
+    - `curl -fsSL https://opencode.ai/install | bash`
 
 ### On local
 

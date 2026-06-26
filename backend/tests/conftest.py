@@ -1,3 +1,4 @@
+import json
 import os
 from collections.abc import Generator
 from pathlib import Path
@@ -205,3 +206,39 @@ def autolabel_loader() -> DataLoader:
     """
     base_path = Path(__file__).parent / "test_data" / "autolabels"
     return DataLoader(base_path, "*.json")
+
+
+@pytest.fixture(scope="session")
+def cluener_testconfig_params() -> dict[str, Any]:
+    """
+    Load cluener model params from tests/test_data/testconfig.json.
+
+    Returns a dict with ``SepPriority`` enum values for separator entries,
+    suitable for passing to ``CluenerModelParams.model_validate()`` or
+    serialising as ``model_params`` in ``CreateLabelDataByAutoLabel``.
+
+    Raises a ``RuntimeError`` if ``testconfig.json`` differs from
+    ``testconfig.lock.json``, indicating that the autolabel test data was
+    generated with a different config and must be regenerated.
+    """
+    from src.autolabels.constants import SepPriority
+
+    config_path = Path(__file__).parent / "test_data" / "testconfig.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+
+    lock_path = config_path.parent / "testconfig.lock.json"
+    if lock_path.exists():
+        lock_config = json.loads(lock_path.read_text(encoding="utf-8"))
+        if json.dumps(config, sort_keys=True) != json.dumps(lock_config, sort_keys=True):
+            raise RuntimeError(
+                "testconfig.json differs from testconfig.lock.json.\n"
+                "Regenerate autolabel test data with:\n"
+                "  uv run -m scripts.populate_test_data"
+            )
+
+    model_config = config["models"]["cluener"]
+
+    sep_map = {"high": SepPriority.HIGH, "med": SepPriority.MED, "low": SepPriority.LOW}
+    params = dict(model_config)
+    params["separators"] = {k: sep_map[v.lower()] for k, v in model_config["separators"].items()}
+    return params

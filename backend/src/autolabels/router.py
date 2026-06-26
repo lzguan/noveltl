@@ -8,6 +8,7 @@ from ..auth.dependencies import get_current_user
 from ..auth.models import User
 from ..database import get_db
 from . import schemas
+from .config import ModelName
 from .dependencies import get_arq_dispatcher
 from .exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
 from .service import insert_auto_labels, query_auto_label_by_id, query_auto_labels
@@ -45,7 +46,7 @@ async def read_autolabels(
     chapter_ids: Annotated[list[uuid.UUID] | None, Query(alias="chapterIds")] = None,
     start: int | None = None,
     end: int | None = None,
-    model_names: Annotated[list[str] | None, Query(alias="modelNames")] = None,
+    model_names: Annotated[list[ModelName] | None, Query(alias="modelNames")] = None,
 ):
     auto_labels = query_auto_labels(db, current_user, novel_id, chapter_ids, start, end, model_names)
     return auto_labels

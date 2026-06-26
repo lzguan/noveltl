@@ -14,6 +14,8 @@ To get started with devcontainers, open the project in VSCode and install the [D
 
 Devcontainer configurations are found in [`../devcontainer`](../.devcontainer/). The devcontainer is configured to save Github CLI configs and agent conversations as volumes and load them on devcontainer creation for convenience. Currently this is supported for Claude Code and Codex. All tools mentioned [here](project-structure.md#toolstechnologies) are configured in the devcontainer. Coding agents must be installed separately.
 
+> Note for Windows users: make sure to clone this repository onto the WSL filesystem and not the mounted Windows filesystem. 
+
 ## Local
 
 Local setup not yet documented, we recommend using devcontainers for now.

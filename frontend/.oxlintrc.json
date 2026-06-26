@@ -1,0 +1,19 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"categories": {
+		"correctness": "warn"
+	},
+	"rules": {
+		"eslint/no-unused-vars": "error",
+		"eslint/no-unused-expressions": "error",
+		"import/no-cycle": "warn"
+	},
+	"options": {
+		"typeAware": true,
+		"typeCheck": true
+	},
+	"plugins": ["react"],
+	"ignorePatterns": [
+		"src/api/**/*", "!src/api/custom-fetch.ts"
+	]
+}

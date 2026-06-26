@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   # Update this to the name of the service you want to work with in your docker-compose.yml file
   dev:
@@ -16,8 +15,8 @@ services:
       - ..:/workspaces:cached
       - claude-code-config:/home/node/.claude
       - gh-cli-config:/home/node/.config/gh
+      - opencode-cli-config:/home/node/.local/share/opencode
       - codex-cli-config:/home/node/.codex
-      - /workspaces/frontend/node_modules
 
 
     # Uncomment the next four lines if you will use a ptrace-based debugger like C++, Go, and Rust.
@@ -33,3 +32,4 @@ volumes:
   claude-code-config:
   gh-cli-config:
   codex-cli-config:
+  opencode-cli-config:

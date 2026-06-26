@@ -53,9 +53,12 @@ def copy_label_group(
     label_group_id: uuid.UUID,
     new_label_group_name: str,
     keep_contributors: bool = True,
+    commit: bool = True,
 ) -> label_models.LabelGroup:
     """
     Copies a label group with a new name. Only editors may copy label groups. The new label group will have the same novel association as the original. The label data and labels associated with the original label group will also be copied to the new label group.
+
+    Owns the transaction if commit is True. Otherwise, the caller must commit and rollback the transaction.
 
     Args:
         db: SQLAlchemy session for database access.
@@ -78,7 +81,8 @@ def copy_label_group(
     except NoResultFound as e:
         raise LabelGroupNotFoundException(label_group_id) from e
     except Exception:
-        db.rollback()
+        if commit:
+            db.rollback()
         raise
 
     stmt = (
@@ -89,7 +93,8 @@ def copy_label_group(
     try:
         new_label_group = db.execute(stmt).scalar_one()
     except Exception:
-        db.rollback()
+        if commit:
+            db.rollback()
         raise
 
     # contributors
@@ -119,7 +124,8 @@ def copy_label_group(
     try:
         db.execute(stmt)
     except Exception:
-        db.rollback()
+        if commit:
+            db.rollback()
         raise
 
     # label datas
@@ -134,7 +140,8 @@ def copy_label_group(
     try:
         db.execute(stmt)
     except Exception:
-        db.rollback()
+        if commit:
+            db.rollback()
         raise
 
     # labels
@@ -169,9 +176,11 @@ def copy_label_group(
     try:
         db.execute(stmt)
     except Exception:
-        db.rollback()
+        if commit:
+            db.rollback()
         raise
 
-    db.commit()
+    if commit:
+        db.commit()
     db.refresh(new_label_group)
     return new_label_group

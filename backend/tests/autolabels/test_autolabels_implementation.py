@@ -1,6 +1,6 @@
 import logging
 from collections.abc import Generator
-from typing import Protocol
+from typing import Any, Protocol
 
 import pytest
 
@@ -39,10 +39,12 @@ class TestCluenerPredict:
 
     @pytest.mark.slow
     @pytest.mark.dependency(name="autolabels::implementation::pure_chinese_fantasy", scope="session")
-    def test_pure_chinese_fantasy(self, cluener: ModelWrapper, chapter_loader: Loader):
+    def test_pure_chinese_fantasy(
+        self, cluener: ModelWrapper, chapter_loader: Loader, cluener_testconfig_params: dict[str, Any]
+    ):
         chapters = chapter_loader("chinese/pure_chinese_fantasy", recursive=True)
         for chapter in chapters:
-            res, err = cluener.model.predict(chapter, CluenerModelParams())
+            res, err = cluener.model.predict(chapter, CluenerModelParams.model_validate(cluener_testconfig_params))
             assert all(
                 cluener.model.normalize(chapter[label.label_start : label.label_end]) == label.label_word
                 for label in res
@@ -59,10 +61,12 @@ class TestCluenerPredict:
 
     @pytest.mark.slow
     @pytest.mark.dependency(name="autolabels::implementation::mixed_chinese_scifi", scope="session")
-    def test_mixed_chinese_scifi(self, cluener: ModelWrapper, chapter_loader: Loader):
+    def test_mixed_chinese_scifi(
+        self, cluener: ModelWrapper, chapter_loader: Loader, cluener_testconfig_params: dict[str, Any]
+    ):
         chapters = chapter_loader("chinese/mixed_chinese_scifi", recursive=True)
         for chapter in chapters:
-            res, err = cluener.model.predict(chapter, CluenerModelParams())
+            res, err = cluener.model.predict(chapter, CluenerModelParams.model_validate(cluener_testconfig_params))
             assert all(
                 cluener.model.normalize(chapter[label.label_start : label.label_end]) == label.label_word
                 for label in res

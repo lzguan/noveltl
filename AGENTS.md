@@ -39,8 +39,8 @@ Actively suggest ways for the user to improve their workflow, such as using plan
 
 ## Project scripts
 
-- Frontend: `pnpm check` (type check), `pnpm lint` (ESLint), `pnpm test` (vitest). See [`frontend/package.json`](frontend/package.json) for more details.
-- Backend: `uv run ruff check` (lint), `uv run pyrefly` (type check), `uv run pytest` (tests). See [`backend/pyproject.toml`](backend/pyproject.toml) for more details.
+- Frontend: `pnpm --dir frontend check` (type check), `pnpm --dir frontend lint` (ESLint), `pnpm --dir frontend test` (vitest). See [`frontend/package.json`](frontend/package.json) for more details.
+- Backend: `uv --directory backend run ruff check` (lint), `uv --directory run pyrefly check` (type check), `uv --directory run pytest` (tests). See [`backend/pyproject.toml`](backend/pyproject.toml) for more details.
 
 See [scripts.md](docs/scripts.md) for more scripts.
 
@@ -49,3 +49,5 @@ If any scripts time out, it may be due to lacking hardware. Confirm with the use
 ## Other
 
 If an issue is caused by a typo, describe it as a typo when communicating with the user. Do not overstate the severity of minor wording or spelling mistakes.
+
+Don't cast variables without permission (i.e. don't use the `as` keyword on the frontend).

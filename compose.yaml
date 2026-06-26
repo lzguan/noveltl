@@ -70,10 +70,11 @@ services:
       
       SECRET_KEY: ${SECRET_KEY} # purely to not crash on startup
     volumes:
-      - ./backend:/project
+      - ./backend:/home/newuser/backend
+      - /home/newuser/backend/.venv
+      - /home/newuser/backend/logs
     profiles:
       - manual
-
 
   backend:
     build: 
@@ -88,23 +89,21 @@ services:
 
       SECRET_KEY: ${SECRET_KEY}
     volumes:
-      - ./backend:/project
+      - ./backend:/home/newuser/backend
+      - /home/newuser/backend/.venv
+      - /home/newuser/backend/backend.log
     ports:
       - "${BACKEND_PORT}:8000"
-    command: uv run python -m src.main --no-sync
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     volumes:
-      - ./frontend:/project
-      - /project/node_modules
-      - pnpm-store:/pnpm/store
+      - ./frontend:/home/newuser/frontend
+      - /home/newuser/frontend/node_modules
     ports:
       - "${FRONTEND_PORT}:5173"
 
-
 volumes:
   db_data:
-  pnpm-store:

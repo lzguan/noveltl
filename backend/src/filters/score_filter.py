@@ -232,7 +232,9 @@ class ScoreFilter(
     ) -> None:
         label_group_id = options.label_group_id
         if options.create_copy:
-            new_label_group = copy_label_group(db, current_user, label_group_id, str(options.new_label_group_name))
+            new_label_group = copy_label_group(
+                db, current_user, label_group_id, str(options.new_label_group_name), commit=False
+            )
             label_group_id = new_label_group.label_group_id
 
         instance_tuples = [

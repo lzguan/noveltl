@@ -53,7 +53,7 @@ Categorically, for a given novel we track five categories of resource, or **kind
 
 Some of this data is exposed through getters. The novel-level getters live on a `NovelGetters` object, and the controller surfaces them as `controller.getters`. Chapter-level reads (text, label data for a group) live on a separate `ChapterGetters` object obtained through the novel getters once a chapter is open. The exact fields are elaborated on in subsequent chapters; see [types/controllerTypes.ts](../../frontend/src/edit/controller/types/controllerTypes.ts).
 
-We furthermore need an interface through which to handle user events. The controller accepts a `NovelUserEvent` — a data-friendly translation of any user action that can affect stored data. The current variants include text ops, label ops, adding a label group, loading label data for a group, and the chapter-lifecycle events (`openChapter`, `closeChapter`, `addChapter`). Note that purely cosmetic interactions (hovering, clicking, switching focus/mode, toggling visibility) are **not** handled here — they live in the UI/manager layer described in [README.md](./README.md). Events carry branded provisional IDs (e.g. a chapter ID) rather than raw strings, and most are scoped to a specific chapter.
+We furthermore need an interface through which to handle user events. The controller accepts a `NovelUserEvent` — a data-friendly translation of any user action that can affect stored data. The current variants include text ops, label ops, adding a label group, loading label data for a group, and the chapter-lifecycle events (`openChapter`, `closeChapter`, `addChapter`). Note that purely cosmetic interactions (hovering, clicking, switching focus/mode, toggling visibility) are **not** handled here — they live in the UI/manager layer described in the [Managers and Hooks](./managers.md) chapter. Events carry branded provisional IDs (e.g. a chapter ID) rather than raw strings, and most are scoped to a specific chapter.
 
 The controller handles these via:
 
@@ -330,7 +330,7 @@ The controller is the orchestrator. Its `handleUserEvent` is a router:
 3. Each call returns a list of request events, which a small `dispatch` helper enqueues onto the request manager (translating any data-manager error into an `errorOccured` trigger).
 4. After dispatching, the controller calls `requestManager.debounce()`.
 
-Crucially, the controller does **not** drive the UI directly. There is no UI/segment manager wired into the controller. Instead, every state mutation inside the data manager raises a `TriggerEvent` through the pub/sub (via the `raiseTriggerEvent` callback the data manager was constructed with), and subscribers — the managers and hooks described in [README.md](./README.md) — re-render in response. The data manager stays oblivious to the subscription system; it just announces what changed.
+Crucially, the controller does **not** drive the UI directly. There is no UI/segment manager wired into the controller. Instead, every state mutation inside the data manager raises a `TriggerEvent` through the pub/sub (via the `raiseTriggerEvent` callback the data manager was constructed with), and subscribers — the managers and hooks described in the [Managers and Hooks](./managers.md) chapter — re-render in response. The data manager stays oblivious to the subscription system; it just announces what changed.
 
 For example, a text-op event flows through:
 

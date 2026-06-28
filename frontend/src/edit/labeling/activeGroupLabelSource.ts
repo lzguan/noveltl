@@ -1,5 +1,5 @@
-import type { SegmentManager } from "@/components/labeled-text-lib/core/segmentManager";
-import type { StyledLabel } from "@/components/labeled-text-lib/core/types";
+import type { SegmentManager } from "@/edit/lib/text-model/core/segmentManager";
+import type { StyledLabel } from "@/edit/lib/text-model/core/types";
 import type { LGProvId, LProvId } from "../controller/types/idTypes";
 import type { LabelStyle } from "../managers/editorManager";
 import type { LabelGroupView } from "../hooks/useTrackedLabelGroups";

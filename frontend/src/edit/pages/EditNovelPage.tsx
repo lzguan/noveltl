@@ -6,7 +6,7 @@ import { buildNovelController } from "../controller/controller";
 import type { NovelData } from "../controller/dataManager";
 import { Prov } from "../controller/types/helperTypes";
 import type { ProvChapter } from "../controller/types/idTypes";
-import { generateRandomColor } from "@/components/labeled-text-lib/builtin/colors";
+import { generateRandomColor } from "@/edit/lib/text-model/builtin/colors";
 import { useEditorState } from "../hooks/useEditorState";
 import { useChapterList } from "../hooks/useChapterList";
 import { useTrackedLabelGroups } from "../hooks/useTrackedLabelGroups";
@@ -56,7 +56,7 @@ export function EditNovelPage() {
 		const source = makeActiveGroupLabelSource({
 			getSegmentManager: () => {
 				const data = editorState.dataRef.current;
-				return data.loading ? null : data.segmentManager;
+				return data.empty || data.loading ? null : data.segmentManager;
 			},
 			getGroups: () => trackedLabelGroups.labelGroupsRef.current,
 		});
@@ -212,7 +212,7 @@ export function EditNovelPage() {
 		);
 	}
 
-	const currentChapterId = editorState.data.loading
+	const currentChapterId = editorState.data.empty ? null : editorState.data.loading
 		? null
 		: editorState.data.chapterId;
 
@@ -226,7 +226,7 @@ export function EditNovelPage() {
 			<div className="flex flex-col h-full min-h-0">
 				<ToolbarPanel
 					mode={editorState.mode}
-					loading={editorState.data.loading}
+					loading={!editorState.data.empty && editorState.data.loading}
 					onSetMode={editorState.setMode}
 				/>
 				<div className="flex flex-1 min-h-0 overflow-hidden">
@@ -242,7 +242,7 @@ export function EditNovelPage() {
 						<div className="flex-1 min-h-0 overflow-y-auto">
 							<LabelGroupPanel
 								labelGroups={trackedLabelGroups.labelGroups}
-								chapterOpen={!editorState.data.loading}
+								chapterOpen={!editorState.data.empty && !editorState.data.loading}
 								onToggleVisibility={managers.labelGroupMgr.toggleVisibility}
 								onSetActive={managers.labelGroupMgr.setActive}
 								onAddLabelGroup={managers.labelGroupMgr.addLabelGroup}

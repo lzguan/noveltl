@@ -1,5 +1,5 @@
 import { CodeMirrorEditor } from "./CodeMirrorEditor";
-import type { Caret } from "@/components/labeled-text-lib/react/DynamicLabeledText";
+import type { Caret } from "../hooks/useEditorState";
 import type { EditorMode } from "../managers/editorManager";
 import type { EditorData } from "../hooks/useEditorState";
 import type { TextOp } from "@/api/models";
@@ -18,6 +18,13 @@ export function EditorPanel({
 	onTextOp: (op: TextOp) => void;
 	labeling: LabelEditing;
 }) {
+	if (data.empty) {
+		return (
+			<div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+				No chapter selected
+			</div>
+		);
+	}
 	if (data.loading) {
 		return (
 			<div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">

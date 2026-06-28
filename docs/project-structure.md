@@ -28,7 +28,7 @@ graph TD
     E --> C
     C --> API
     V --> API
-    API -- OpenAPI / Hey API --> FA
+    API -- OpenAPI / Orval --> FA
     FA --> PG
     FA --> Q
     FA --> T
@@ -44,7 +44,7 @@ We use [uv](https://docs.astral.sh/uv/) as package manager, [Pyrefly](https://py
 
 The frontend is written in Typescript and uses React and ShadCN for the component library. We use pnpm for our package manager.
 
-The frontend and backend are synchronized using FastAPI's OpenAPI generation capabilities and [Hey API](https://heyapi.dev/openapi-ts/get-started) to convert OpenAPI schema to typescript.
+The frontend and backend are synchronized using FastAPI's OpenAPI generation capabilities and [Orval](https://orval.dev/) to convert OpenAPI schema to typescript.
 
 We use pytest for backend testing and Vitest for frontend testing. We plan to use Playwright for integration testing.
 
@@ -86,4 +86,4 @@ The exact files a certain service contains varies. At the top level, the backend
 
 The frontend is divided into a view side and an edit side. These can be found respectively in [frontend/src/view](../frontend/src/view/) and [frontend/src/edit](../frontend/src/edit/). The view side of the application should be purely for displaying novels for reading and should hence be kept as static as possible. Meanwhile, the edit side should be as dynamic as possible to reduce latency from user actions. Routes to different pages are centralized in [frontend/src/routes.ts](../frontend/src/routes.ts).
 
-The view side of the application is relatively straightforward and can be understood simply by reading the source code. The edit side consists of a navigation page primarily to switch between novels, as well as a [novel editor](../frontend/src/edit/pages/EditNovelPage.tsx). It uses a controller found in [frontend/src/edit/pages/controller](../frontend/src/edit/pages/controller/) to synchronize the backend and frontend state using (some homemade version of) [operational transformations](https://en.wikipedia.org/wiki/Operational_transformation) as well as a custom-made rendering library found in [frontend/src/components/labeled-text-lib/](../frontend/src/components/labeled-text-lib/). Real time collaboration is not supported (yet). All corresponding documentation can be found in the [editor docs](editor/).
+The view side of the application is relatively straightforward and can be understood simply by reading the source code. The edit side consists of a navigation page primarily to switch between novels, as well as a [novel editor](../frontend/src/edit/pages/EditNovelPage.tsx). It uses a controller found in [frontend/src/edit/controller](../frontend/src/edit/controller/) to synchronize the backend and frontend state using (some homemade version of) [operational transformations](https://en.wikipedia.org/wiki/Operational_transformation). Rendering is handled by [CodeMirror](https://codemirror.net/), backed by a text/label model found in [frontend/src/edit/lib/text-model/](../frontend/src/edit/lib/text-model/). Real time collaboration is not supported (yet). All corresponding documentation can be found in the [editor docs](editor/).

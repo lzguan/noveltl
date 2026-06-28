@@ -1,6 +1,6 @@
 # Documentation for text/label editor
 
-**Last updated:** 2026-06-02
+**Last updated:** 2026-06-28
 
 This directory contains the documentation for the text/label editor. Since this is a fairly complex piece of code, we will organize the documentation into several chapters. 
 
@@ -34,4 +34,5 @@ The text/label editor does not need to provide functionality between simultaneou
 
 1. Backend - [backend.md](./backend.md)
 2. Controller - [controller.md](./controller.md)
-3. Rendering - [rendering.md](./rendering.md)
+3. Managers and Hooks - [managers.md](./managers.md)
+4. Rendering - [rendering.md](./rendering.md)

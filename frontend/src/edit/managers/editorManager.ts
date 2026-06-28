@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import type { TextOp } from "@/api/models";
-import { makeBasicSegmentManager } from "@/components/labeled-text-lib/core/segmentManager";
-import type { ColorStyle, ProductStyle } from "@/components/labeled-text-lib/builtin/reducers";
+import { makeBasicSegmentManager } from "@/edit/lib/text-model/core/segmentManager";
+import type { ColorStyle, ProductStyle } from "@/edit/lib/text-model/builtin/reducers";
 import type {
 	NovelGetters,
 	NovelUserEvent,
@@ -77,6 +77,7 @@ export function createEditorManager({
 						loading: false,
 						segmentManager: makeBasicSegmentManager(text, flatLabelData),
 						chapterId: event.chapterId,
+						empty: false,
 					});
 					if (couldNotLoad.length > 0) {
 						console.warn(
@@ -87,6 +88,7 @@ export function createEditorManager({
 				}
 				case "textChanged": {
 					const current = dataRef.current;
+					if (current.empty) return;
 					if (current.loading) break;
 					if (event.chapterId !== current.chapterId) break;
 					const sm = current.segmentManager;
@@ -99,6 +101,7 @@ export function createEditorManager({
 				}
 				case "labelChanged": {
 					const current = dataRef.current;
+					if (current.empty) return;
 					if (current.loading) break;
 					if (event.op.chapterId !== current.chapterId) break;
 					const groupStatus = labelGroupsRef.current.get(event.op.labelGroupId);
@@ -144,6 +147,7 @@ export function createEditorManager({
 	function textOp(op: TextOp) {
 		if (modeRef.current !== "edit") return;
 		const current = dataRef.current;
+		if (current.empty) return;
 		if (current.loading) return;
 		controllerUserEvent({ eventType: "textOp", op, chapterId: current.chapterId });
 	}
@@ -151,6 +155,7 @@ export function createEditorManager({
 	function labelOp(op: LabelOp, labelGroupId: LGProvId) {
 		if (modeRef.current !== "label") return;
 		const current = dataRef.current;
+		if (current.empty) return;
 		if (current.loading) return;
 		controllerUserEvent({
 			eventType: "labelOp",

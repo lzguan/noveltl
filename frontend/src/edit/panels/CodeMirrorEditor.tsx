@@ -8,10 +8,10 @@ import {
 } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, keymap } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import type { SegmentManager } from "@/components/labeled-text-lib/core/segmentManager";
-import type { StyledLabel } from "@/components/labeled-text-lib/core/types";
-import { blue, green, red, toHex } from "@/components/labeled-text-lib/builtin/colors";
-import type { Caret } from "@/components/labeled-text-lib/react/DynamicLabeledText";
+import type { SegmentManager } from "@/edit/lib/text-model/core/segmentManager";
+import type { StyledLabel } from "@/edit/lib/text-model/core/types";
+import { blue, green, red, toHex } from "@/edit/lib/text-model/builtin/colors";
+import type { Caret } from "../hooks/useEditorState";
 import type { EditorMode, LabelStyle } from "../managers/editorManager";
 import type { LProvId } from "../controller/types/idTypes";
 import type { TextOp } from "@/api/models";

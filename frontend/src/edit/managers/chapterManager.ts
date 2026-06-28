@@ -29,8 +29,12 @@ export function createChapterManager({
 		return Effect.succeed(void 0);
 	}
 
-	function switchChapter(chapterId: CProvId) {
-		setLoading({ loading: true });
+	function switchChapter(chapterId: CProvId | null) {
+		if (chapterId === null) {
+			setLoading({ empty: true });
+			return;
+		}
+		setLoading({ loading: true, empty: false });
 		controllerUserEvent({
 			eventType: "openChapter",
 			chapterId,

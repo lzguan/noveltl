@@ -61,5 +61,12 @@
             "*": "allow",
             ".env": "deny",
         }
+    },
+    "mcp": {
+        "playwright": {
+            "type": "local",
+            "command": ["pnpm", "dlx", "@playwright/mcp@latest",  "--output-dir", "playwright-mcp-output", "--output-mode", "file", "--browser", "firefox"],
+            "enabled": true
+        }
     }
 }

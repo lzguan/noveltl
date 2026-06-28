@@ -9,7 +9,7 @@
 		"lint": "oxlint",
 		"lint:fix": "oxlint --fix",
 		"format": "oxfmt",
-		"check": "tsgo -b --noEmit",
+		"check": "tsgo -b",
 		"preview": "vite preview",
 		"test": "vitest --config vitest.config.ts"
 	},

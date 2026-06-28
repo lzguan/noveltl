@@ -1,7 +1,7 @@
 import { Effect } from "effect";
-import type { Color } from "@/components/labeled-text-lib/builtin/colors";
-import type { ManagedLabel } from "@/components/labeled-text-lib/core/segmentManager";
-import type { StyledLabel } from "@/components/labeled-text-lib/core/types";
+import type { Color } from "@/edit/lib/text-model/builtin/colors";
+import type { ManagedLabel } from "@/edit/lib/text-model/core/segmentManager";
+import type { StyledLabel } from "@/edit/lib/text-model/core/types";
 import type { LGProvId, LProvId, ProvLabel } from "../controller/types/idTypes";
 import type { LabelStyle } from "./editorManager";
 import type { LabelGroupView } from "../hooks/useTrackedLabelGroups";

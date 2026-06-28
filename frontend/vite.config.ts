@@ -20,6 +20,7 @@ export default defineConfig({
 				rewrite: (path) => path.replace(/^\/api/, ""),
 			},
 		},
+		allowedHosts: ["localhost", "frontend"],
 	},
 	resolve: {
 		alias: {

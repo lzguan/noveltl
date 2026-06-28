@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import type { Color } from "@/components/labeled-text-lib/builtin/colors";
-import { generateRandomColor } from "@/components/labeled-text-lib/builtin/colors";
+import type { Color } from "@/edit/lib/text-model/builtin/colors";
+import { generateRandomColor } from "@/edit/lib/text-model/builtin/colors";
 import type {
 	NovelGetters,
 	NovelUserEvent,
@@ -75,7 +75,7 @@ export function createLabelGroupManager({
 
 	function readChapterId(): CProvId | null {
 		const current = dataRef.current;
-		return current.loading ? null : current.chapterId;
+		return current.empty || current.loading ? null : current.chapterId;
 	}
 
 	/**
@@ -127,6 +127,7 @@ export function createLabelGroupManager({
 			if (transition === "trackOnly") return;
 
 			const current = dataRef.current;
+			if (current.empty) return;
 			if (current.loading) return;
 			const cid = current.chapterId;
 
@@ -250,6 +251,7 @@ export function createLabelGroupManager({
 			trackedLabelGroups.setLabelGroup(labelGroupId, updated);
 
 			const current = dataRef.current;
+			if (current.empty) return;
 			if (current.loading) return;
 			const cid = current.chapterId;
 
@@ -319,7 +321,7 @@ export function createLabelGroupManager({
 
 	function setActive(labelGroupId: LGProvId | null) {
 		const current = dataRef.current;
-		if (current.loading) {
+		if (current.empty || current.loading) {
 			if (activeLabelGroup) {
 				const prev = trackedLabelGroups.labelGroupsRef.current.get(activeLabelGroup);
 				if (prev) {

@@ -15,3 +15,6 @@ handoff.md
 .pnpm-store/
 .ruff_cache/
 backend/logs/
+playwright-mcp-output
+.playwright-mcp
+tsconfig.tsbuildinfo

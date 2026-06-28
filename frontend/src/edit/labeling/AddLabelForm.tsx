@@ -10,7 +10,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { toHex } from "@/components/labeled-text-lib/builtin/colors";
+import { toHex } from "@/edit/lib/text-model/builtin/colors";
 import type { LGProvId } from "../controller/types/idTypes";
 import type { AddTarget, LabelMeta } from "./types";
 

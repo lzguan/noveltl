@@ -1,6 +1,6 @@
 # Editor backend
 
-**Last updated:** 2026-06-02
+**Last updated:** 2026-06-28
 
 This is the first in a series of chapters that describes how editor works. This document details the backend architecture for the controller.
 
@@ -22,20 +22,20 @@ Recall in the data model for a label, a given label can be specified by its text
 ```
 We will call such an identifier a **text position identifier**.
 
-If we need to specify a label group/label data as well, we will replace the `chapterContentId` field with a `labelDataId` field. We will then call such an identifier a **label identifier**.
+For a label operation we additionally need to know which label data it targets. The label data is identified by the `labelDataId` path parameter of the endpoint (`PATCH /label-datas/{labelDataId}`) rather than a field inside the operation; the operation body itself carries the text-range identifier. We will call the combination a **label identifier**.
 
-Note that for both identifiers, the keys in an identifier may vary slightly; for example, in a label operation we may see `start` and `text` replaced by `labelStart` and `labelText`. Read the schemas for details on exactly what is used where.
+Note that the exact keys vary by context. A label operation identifies its range with `startPos`, `endPos`, and `word` (the backend schema fields are `start_pos`, `end_pos`, `word`), and the corresponding columns on a stored label are `label_start`, `label_end`, and `label_word`. Read the schemas for details on exactly what is used where.
 
-The backend will then validate any operation that sends an identifier with the following expression:
+The backend will then validate any operation that sends an identifier with the following expression (note that `end_pos == start_pos + len(word)` is enforced by the schema):
 ```python
-text[labelStart : labelStart + len(labelText)] == labelText
+text[start_pos : end_pos] == word
 ```
 
-As an example, if we need to validate that there exists a label with said identifier in some label data, then we can perform an SQL query of the form 
+As an example, if we need to validate that there exists a label with said identifier in some label data, then we can perform an SQL query of the form
 ```sql
-SELECT * FROM labels 
-WHERE labels.label_start = [labelStart] 
-AND labels.label_text = [labelText] 
+SELECT * FROM labels
+WHERE labels.label_start = [start_pos]
+AND labels.label_word = [word]
 AND labels.label_data_id = [labelDataId];
 ```
 and check if our query returns nonempty data.
@@ -73,24 +73,24 @@ The specific algorithm can be found at the endpoint `PATCH /label-datas/${labelD
 
 ### Text operations
 
-There are two types of text operations a user can perform:
+There are two types of text operations a user can perform (the `op` field is the literal `"insert"` or `"delete"`):
 
-- An add operation takes a text position and a text and simply inserts that text at that position.
+- An insert operation takes a text position and a text and simply inserts that text at that position.
 - A delete operation takes a text position identifier and deletes the text at that position.
 
 Compared to label operations, it is more important that end users have a consistent view of the text. This is because a text operation should semantically modify all labels for that chapter. We follow the semantics below for deciding what happens to labels after a text operation:
 
 
-- For add operations:
-    - Any label that ends before the start of an add operation should remain in the same position
-    - Any label that contains the start position of the add operation should be deleted
-    - Any label that starts after the start position of the add operation should be shifted right by the length of the text added
+- For insert operations:
+    - Any label that ends before the start of an insert operation should remain in the same position
+    - Any label that contains the start position of the insert operation should be deleted
+    - Any label that starts after the start position of the insert operation should be shifted right by the length of the text added
 - For delete operations:
     - Any label that ends before the start position of the delete operation should remain in the same position
     - Any label whose range overlaps with the delete range should be deleted
     - Any label whose start position is after the end position of the delete operation should be shifted left by the corresponding length of text being deleted
 
-To ensure a consistent data model, we store text data in chapter content snapshots (see the `chapter_content` table for details). The idea here is to have a list of immutable chapter contents for each chapter, where each chapter content has an associated version and id. Furthermore, the version attribute should be unique for each chapter id (enforced by a `UniqueConstraint` on the database). The frontend should keep track of the latest chapter content id (chapter content id with the latest version). 
+To ensure a consistent data model, we store text data in chapter content snapshots (see the `chapter_contents` table for details). The idea here is to have a list of immutable chapter contents for each chapter, where each chapter content has an associated version and id. Furthermore, the version attribute should be unique for each chapter id (enforced by a `UniqueConstraint` on the database). The frontend should keep track of the latest chapter content id (chapter content id with the latest version). 
 
 When any update comes through, the frontend should send its copy of the chapter content id it is working with and the backend should verify that the chapter content associated with this id is the latest version for the corresponding chapter. Any updates performed to the database should then be in the form of inserting new chapter contents with version being one more than the previous max version. If any of these operations fail, it is most likely due to a race condition and the backend should roll back the corresponding database transaction and notify the frontend.
 
@@ -113,7 +113,7 @@ sequenceDiagram
     participant B as Backend
     participant D as Database
 
-    C->>B: PATCH /chapters/{id}/content<br/>[{op, start, text}, ...]
+    C->>B: PATCH /chapters/{id}/content<br/>{chapterContentId, textOps: [{op, start, text}, ...]}
     B->>D: Fetch chapter_content<br/>WHERE id = expectedId AND version = MAX(version)
     alt Version mismatch (race condition)
         B-->>C: 409 Conflict (outdated)
@@ -147,19 +147,27 @@ Without the feature that we will explain below, the client has two options:
 1. Retry the same request. This may perform an additional unintended operation on the backend and leave the data on the frontend in an inconsistent state with the backend.
 2. Force a refresh. This will keep the data in a consistent state, but will consume an expensive operation and may disrupt the workflow of the user.
 
-To mitigate this problem, we will temporarily store requests in a Redis cache. Specifically, for certain requests associated with the editor, we will give the frontend the option to send a uuid field called `requestKey`, and if a `requestKey` is received by the backend, then the JSON payload and `requestKey` are stored into the Redis cache as a key-value pair `requestKey : [request status, request JSON, return object]`. A request status is simply one of `pending`, `success`, or `failed`. The return object is simply the result of processing the request that would normally be sent to the user.
+To mitigate this problem, we will temporarily store request *results* in a Redis cache. For certain editor requests, the frontend may send a uuid query parameter called `requestKey`. If a `requestKey` is received, the backend stores a cache entry keyed by that `requestKey` with a short TTL. The entry is a small record of the form:
 
-Specifically, some functions will have the following workflow:
+```python
+{
+    "status": "pending" | "success" | "failure",
+    "status_code": int | None,   # the HTTP status the original request resolved to
+    "response": dict | None,      # the serialized success payload, if any
+    "error": { "detail": ..., "cacheConflict": bool } | None,
+}
+```
 
-1. Check if a request key is included in the payload.
-2. If a request key is included:
-    - Store the key-value pair `requestKey : [pending, request JSON]` into the redis cache with some TTL, or throw an error if such a request key already exists
-    - Try processing the request.
-    - If an error occurs, set the request status to `failed` and throw the corresponding HTTP error normally.
-    - If the request succeeds, set the request status to `success` and the return payload to the desired payload in the Redis cache, then return 
-3. Otherwise, just process the request normally.
+Note that the request body itself is **not** stored — only the status, the resolved status code, the success response, and any error. The entry shape lives in [backend/src/requests/cache.py](../../backend/src/requests/cache.py).
 
-This workflow is implemented using a decorator in [backend/src/requests/decorators.py](../../backend/src/requests/decorators.py).
+A request that uses this feature follows this workflow:
+
+1. If no `requestKey` is provided, process the request normally (no caching).
+2. If a `requestKey` is provided:
+    - Atomically insert `requestKey -> {status: "pending", ...}` into Redis (a set-if-absent). If the key already exists, the request is a duplicate: reject it with a **409** whose body sets `cacheConflict: true`.
+    - Otherwise process the request. On success, overwrite the entry with `{status: "success", status_code, response}`. On an `HTTPException`, overwrite it with `{status: "failure", status_code, error}` and re-raise. (A genuine 409 from the handler is re-surfaced with `cacheConflict: false`, so the client can distinguish a real conflict from a duplicate-key collision.)
+
+This workflow is implemented as a pair of decorators in [backend/src/requests/decorators.py](../../backend/src/requests/decorators.py) — `ttl_cache` for synchronous endpoints and `attl_cache` for async endpoints — together with an `svp` helper that serializes the success payload. Cached editor endpoints include `POST /label-groups`, `POST /label-groups/{labelGroupId}/label-datas`, `PATCH /label-datas/{labelDataId}`, and `PATCH /chapters/{chapterId}/content`.
 
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#1e293b', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#334155', 'lineColor': '#94a3b8', 'secondaryColor': '#0f172a', 'tertiaryColor': '#1e293b'}}}%%
@@ -168,41 +176,41 @@ sequenceDiagram
     participant B as Backend
     participant R as Redis Cache
 
-    C->>B: POST /labels {requestKey: uuid, ...}
-    B->>R: SET uuid = {pending, request}
-    B->>B: Process request
-    alt Success
-        B->>R: SET uuid = {success, response}
-        B-->>C: 200 OK + response
-    else Failure
-        B->>R: SET uuid = {failed, error}
-        B-->>C: 4xx/5xx Error
+    C->>B: POST /label-groups?requestKey=uuid<br/>{ ...body... }
+    B->>R: SET uuid = {pending} if absent
+    alt requestKey already present (duplicate)
+        B-->>C: 409 Conflict {cacheConflict: true}
+    else first time
+        B->>B: Process request
+        alt Success
+            B->>R: SET uuid = {success, status_code, response}
+            B-->>C: 200 OK + response
+        else Failure
+            B->>R: SET uuid = {failure, status_code, error}
+            B-->>C: 4xx/5xx Error
+        end
     end
 
-    Note over C,B: If response is lost (timeout)...
+    Note over C,B: If the response is lost (timeout)...
     C->>B: GET /cached/{uuid}
     B->>R: GET uuid
-    alt pending
-        B-->>C: 202 Retry
-    else success
-        B-->>C: 200 Cached response
-    else failed
-        B-->>C: 422 Cached failure
+    alt key found
+        B-->>C: 200 OK + cache entry<br/>(client reads status from body)
     else key not found (TTL expired / lost)
         B-->>C: 404 Not found
         Note over C: Regenerate key and resend
     end
 ```
 
-A client can then request to see the status of a request that they previously sent by querying the `requestKey`. Specifically, the client can perform the following sequence of operations:
+A client can then poll the status of a request it previously sent by querying its `requestKey`. The poll endpoint (`GET /cached/{requestKey}`) returns the cache entry with a `200` when the key is present and a `404` when it is missing; the client branches on the entry's `status` field. The full sequence is:
 
-1. Generate a collision-resistant key (uuid) and send the request with this request key
+1. Generate a collision-resistant key (uuid) and send the request with this request key.
 2. If the client receives a successful response, then all is well.
-3. If the client receives a response that the backend failed to process the request, it knows that its request must be invalid in some way (or an internal server error happened, in which case there might be a bug)
-4. If the client does not receive a response/the client times out, then they can query the request key to the backend. 
-    - If the backend sends a response and the request is pending, the client can wait.
-    - If the backend sends a response and the request failed, the client knows that its request was invalid somehow, similar to how a regular failure happened.
-    - If the backend sends a response and the request was a success, then all is well.
-    - If the backend sends a response that the key does not exist, then either the TTL expired in Redis (this should not happen with proper frontend controls), or the request was lost when sending from frontend -> backend. In this case, the frontend can simply regenerate a request key and resend the request.
+3. If the client receives a response that the backend failed to process the request, it knows that its request must be invalid in some way (or an internal server error happened, in which case there might be a bug).
+4. If the client does not receive a response/the client times out, then it can poll the request key.
+    - `status: "pending"` — the request is still being processed, so the client waits.
+    - `status: "failure"` — the request was invalid somehow, similar to a regular failure.
+    - `status: "success"` — all is well, and the cached `response` can be used.
+    - `404` (key does not exist) — either the TTL expired in Redis (this should not happen with proper frontend controls), or the request was lost on the way from frontend -> backend. In this case the frontend regenerates a request key and resends the request. (Resending with the *same* key would instead hit the duplicate-key `cacheConflict` 409 described above.)
 
 We will see in the subsequent chapters that this is almost exactly the workflow that the frontend adopts.

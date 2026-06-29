@@ -6,7 +6,7 @@
  */
 import type {
   AutoLabel,
-  AutoLabelMeta,
+  AutoLabelMetaOutput,
   BodyLoginForAccessTokenTokenPost,
   CacheEntry,
   Chapter,
@@ -70,7 +70,7 @@ import type {
 import { customFetch } from '../../custom-fetch';
 
 export type readAutolabelsAutoLabelsGetResponse200 = {
-  data: AutoLabelMeta[]
+  data: AutoLabelMetaOutput[]
   status: 200
 }
 
@@ -119,7 +119,7 @@ export const readAutolabelsAutoLabelsGet = async (params: ReadAutolabelsAutoLabe
 
 
 export type createAutolabelsAutoLabelsPostResponse200 = {
-  data: AutoLabelMeta[]
+  data: AutoLabelMetaOutput[]
   status: 200
 }
 

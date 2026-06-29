@@ -17,18 +17,33 @@ export const ReadAutolabelsAutoLabelsGetQueryParams = S.Struct({
   "chapterIds": S.optional(S.Union(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))), S.Null)),
   "start": S.optional(S.Union(S.Number, S.Null)),
   "end": S.optional(S.Union(S.Number, S.Null)),
-  "modelNames": S.optional(S.Union(S.Array(S.Literal("cluener")), S.Null))
+  "modelNames": S.optional(S.Union(S.Array(S.Literal('cluener', 'do_nothing')), S.Null))
 })
+
+export const readAutolabelsAutoLabelsGet200ResponseAutoLabelModelParamsOneChunkSizeDefault = 500;
+export const readAutolabelsAutoLabelsGet200ResponseAutoLabelModelParamsOneChunkSizeExclusiveMin = 0;
+export const readAutolabelsAutoLabelsGet200ResponseAutoLabelModelParamsOneChunkSizeMax = 512;
+
+export const readAutolabelsAutoLabelsGet200ResponseAutoLabelModelParamsOneForceChunkDefault = false;
+export const readAutolabelsAutoLabelsGet200ResponseAutoLabelModelParamsOneModelNameDefault = `cluener`;
+export const readAutolabelsAutoLabelsGet200ResponseAutoLabelModelParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 };
+export const readAutolabelsAutoLabelsGet200ResponseAutoLabelModelParamsTwoModelNameDefault = `do_nothing`;
 
 export const ReadAutolabelsAutoLabelsGet200ResponseItem = S.Struct({
   "autoLabelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "autoLabelLastJobId": S.String,
   "autoLabelMessage": S.optional(S.Union(S.String, S.Null)),
-  "autoLabelModelName": S.Literal("cluener"),
-  "autoLabelModelParams": S.Record({ key: S.String, value: S.Unknown }),
+  "autoLabelModelParams": S.Union(S.Struct({
+  "chunkSize": S.optionalWith(S.Number.pipe(S.greaterThan(readAutolabelsAutoLabelsGet200ResponseAutoLabelModelParamsOneChunkSizeExclusiveMin), S.lessThanOrEqualTo(readAutolabelsAutoLabelsGet200ResponseAutoLabelModelParamsOneChunkSizeMax)), { default: () => readAutolabelsAutoLabelsGet200ResponseAutoLabelModelParamsOneChunkSizeDefault }),
+  "forceChunk": S.optionalWith(S.Boolean, { default: () => readAutolabelsAutoLabelsGet200ResponseAutoLabelModelParamsOneForceChunkDefault }),
+  "modelName": S.optionalWith(S.Literal("cluener"), { default: () => readAutolabelsAutoLabelsGet200ResponseAutoLabelModelParamsOneModelNameDefault }),
+  "separators": S.optionalWith(S.Record({ key: S.String, value: S.Union(S.Literal(1), S.Literal(2), S.Literal(3)) }), { default: () => readAutolabelsAutoLabelsGet200ResponseAutoLabelModelParamsOneSeparatorsDefault })
+}).annotations({ description: 'Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size: Integer between 1 and 512. Determines max size of chunks passed to NER model. Has default value 500.\n    separators: Dictionary of the form `char : SepPriority`. The predict algorithm will prioritize chunks ending in higher priority separators. Has default value (read the code to see what it is.)\n    force_chunk: If no separators found in some interval, force the chunker to chunk mid-sentence. Has default value False.\n\nNotes:\n    To validate this model without injecting default values, call `CluenerModelParams.model_validate(..., context={\'skip_default_values\' : True})`.' }), S.Struct({
+  "modelName": S.optionalWith(S.Literal("do_nothing"), { default: () => readAutolabelsAutoLabelsGet200ResponseAutoLabelModelParamsTwoModelNameDefault })
+}).annotations({ description: 'Pydantic schema for a DoNothing model.\n\nAttributes:\n    model_name: Literal \"do_nothing\".' })),
   "autoLabelStatus": S.Literal('failed', 'pending', 'processing', 'done').annotations({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for auto-label metadata.\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_model_name: Name of the model used to generate the auto labels.\n    auto_label_model_params: Parameters used for the model to generate the auto labels.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    chapter_content_id: UUID of chapter content this AutoLabel is associated with.\n    auto_label_last_job_id: Job id of last job that was run on this AutoLabel.' })
+}).annotations({ description: 'Pydantic schema for auto-label metadata.\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_model_params: Parameters used for the model to generate the auto labels.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    chapter_content_id: UUID of chapter content this AutoLabel is associated with.\n    auto_label_last_job_id: Job id of last job that was run on this AutoLabel.' })
 export const ReadAutolabelsAutoLabelsGet200Response = S.Array(ReadAutolabelsAutoLabelsGet200ResponseItem)
 
 export const ReadAutolabelsAutoLabelsGet422Response = S.Struct({
@@ -42,25 +57,55 @@ export const ReadAutolabelsAutoLabelsGet422Response = S.Struct({
 /**
  * @summary Create Autolabels
  */
+export const createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeDefault = 500;
+export const createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeExclusiveMin = 0;
+export const createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeMax = 512;
+
+export const createAutolabelsAutoLabelsPostBodyParamsOneForceChunkDefault = false;
+export const createAutolabelsAutoLabelsPostBodyParamsOneModelNameDefault = `cluener`;
+export const createAutolabelsAutoLabelsPostBodyParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 };
+export const createAutolabelsAutoLabelsPostBodyParamsTwoModelNameDefault = `do_nothing`;
+
 export const CreateAutolabelsAutoLabelsPostBody = S.Struct({
-  "autoLabelModelName": S.Literal("cluener"),
-  "autoLabelModelParams": S.Record({ key: S.String, value: S.Unknown }),
   "chapterIds": S.optional(S.Union(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))), S.Null)),
   "end": S.optional(S.Union(S.Number, S.Null)),
   "isPublic": S.optional(S.Union(S.Boolean, S.Null)),
   "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "params": S.Union(S.Struct({
+  "chunkSize": S.optionalWith(S.Number.pipe(S.greaterThan(createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeExclusiveMin), S.lessThanOrEqualTo(createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeMax)), { default: () => createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeDefault }),
+  "forceChunk": S.optionalWith(S.Boolean, { default: () => createAutolabelsAutoLabelsPostBodyParamsOneForceChunkDefault }),
+  "modelName": S.optionalWith(S.Literal("cluener"), { default: () => createAutolabelsAutoLabelsPostBodyParamsOneModelNameDefault }),
+  "separators": S.optionalWith(S.Record({ key: S.String, value: S.Union(S.Literal(1), S.Literal(2), S.Literal(3)) }), { default: () => createAutolabelsAutoLabelsPostBodyParamsOneSeparatorsDefault })
+}).annotations({ description: 'Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size: Integer between 1 and 512. Determines max size of chunks passed to NER model. Has default value 500.\n    separators: Dictionary of the form `char : SepPriority`. The predict algorithm will prioritize chunks ending in higher priority separators. Has default value (read the code to see what it is.)\n    force_chunk: If no separators found in some interval, force the chunker to chunk mid-sentence. Has default value False.\n\nNotes:\n    To validate this model without injecting default values, call `CluenerModelParams.model_validate(..., context={\'skip_default_values\' : True})`.' }), S.Struct({
+  "modelName": S.optionalWith(S.Literal("do_nothing"), { default: () => createAutolabelsAutoLabelsPostBodyParamsTwoModelNameDefault })
+}).annotations({ description: 'Pydantic schema for a DoNothing model.\n\nAttributes:\n    model_name: Literal \"do_nothing\".' })),
   "start": S.optional(S.Union(S.Number, S.Null))
-}).annotations({ description: 'Pydantic schema for creating an auto-labeled data entry.\n\nAttributes:\n    novel_id: UUID of novel to create auto labels for.\n    auto_label_model_name: Name of the model used to generate the auto labels.\n    auto_label_model_params: Parameters used for the model to generate the auto labels.\n    chapter_ids: Optional parameter. Restrict to revisions with specific chapter UUIDs.\n    start: Optional parameter. Restrict to revisions with chapter num >= start.\n    end: Optional parameter. Restrict to revisions with chapter num < end.\n    is_public: Optional parameter. Restrict to revisions with this specific public flag.' })
+}).annotations({ description: 'Pydantic schema for creating an auto-labeled data entry.\n\nAttributes:\n    novel_id: UUID of novel to create auto labels for.\n    params: Parameters for the NER model. Disciminated by model_name attribute.\n    chapter_ids: Optional parameter. Restrict to revisions with specific chapter UUIDs.\n    start: Optional parameter. Restrict to revisions with chapter num >= start.\n    end: Optional parameter. Restrict to revisions with chapter num < end.\n    is_public: Optional parameter. Restrict to revisions with this specific public flag.' })
+
+export const createAutolabelsAutoLabelsPost200ResponseAutoLabelModelParamsOneChunkSizeDefault = 500;
+export const createAutolabelsAutoLabelsPost200ResponseAutoLabelModelParamsOneChunkSizeExclusiveMin = 0;
+export const createAutolabelsAutoLabelsPost200ResponseAutoLabelModelParamsOneChunkSizeMax = 512;
+
+export const createAutolabelsAutoLabelsPost200ResponseAutoLabelModelParamsOneForceChunkDefault = false;
+export const createAutolabelsAutoLabelsPost200ResponseAutoLabelModelParamsOneModelNameDefault = `cluener`;
+export const createAutolabelsAutoLabelsPost200ResponseAutoLabelModelParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 };
+export const createAutolabelsAutoLabelsPost200ResponseAutoLabelModelParamsTwoModelNameDefault = `do_nothing`;
 
 export const CreateAutolabelsAutoLabelsPost200ResponseItem = S.Struct({
   "autoLabelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "autoLabelLastJobId": S.String,
   "autoLabelMessage": S.optional(S.Union(S.String, S.Null)),
-  "autoLabelModelName": S.Literal("cluener"),
-  "autoLabelModelParams": S.Record({ key: S.String, value: S.Unknown }),
+  "autoLabelModelParams": S.Union(S.Struct({
+  "chunkSize": S.optionalWith(S.Number.pipe(S.greaterThan(createAutolabelsAutoLabelsPost200ResponseAutoLabelModelParamsOneChunkSizeExclusiveMin), S.lessThanOrEqualTo(createAutolabelsAutoLabelsPost200ResponseAutoLabelModelParamsOneChunkSizeMax)), { default: () => createAutolabelsAutoLabelsPost200ResponseAutoLabelModelParamsOneChunkSizeDefault }),
+  "forceChunk": S.optionalWith(S.Boolean, { default: () => createAutolabelsAutoLabelsPost200ResponseAutoLabelModelParamsOneForceChunkDefault }),
+  "modelName": S.optionalWith(S.Literal("cluener"), { default: () => createAutolabelsAutoLabelsPost200ResponseAutoLabelModelParamsOneModelNameDefault }),
+  "separators": S.optionalWith(S.Record({ key: S.String, value: S.Union(S.Literal(1), S.Literal(2), S.Literal(3)) }), { default: () => createAutolabelsAutoLabelsPost200ResponseAutoLabelModelParamsOneSeparatorsDefault })
+}).annotations({ description: 'Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size: Integer between 1 and 512. Determines max size of chunks passed to NER model. Has default value 500.\n    separators: Dictionary of the form `char : SepPriority`. The predict algorithm will prioritize chunks ending in higher priority separators. Has default value (read the code to see what it is.)\n    force_chunk: If no separators found in some interval, force the chunker to chunk mid-sentence. Has default value False.\n\nNotes:\n    To validate this model without injecting default values, call `CluenerModelParams.model_validate(..., context={\'skip_default_values\' : True})`.' }), S.Struct({
+  "modelName": S.optionalWith(S.Literal("do_nothing"), { default: () => createAutolabelsAutoLabelsPost200ResponseAutoLabelModelParamsTwoModelNameDefault })
+}).annotations({ description: 'Pydantic schema for a DoNothing model.\n\nAttributes:\n    model_name: Literal \"do_nothing\".' })),
   "autoLabelStatus": S.Literal('failed', 'pending', 'processing', 'done').annotations({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for auto-label metadata.\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_model_name: Name of the model used to generate the auto labels.\n    auto_label_model_params: Parameters used for the model to generate the auto labels.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    chapter_content_id: UUID of chapter content this AutoLabel is associated with.\n    auto_label_last_job_id: Job id of last job that was run on this AutoLabel.' })
+}).annotations({ description: 'Pydantic schema for auto-label metadata.\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_model_params: Parameters used for the model to generate the auto labels.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    chapter_content_id: UUID of chapter content this AutoLabel is associated with.\n    auto_label_last_job_id: Job id of last job that was run on this AutoLabel.' })
 export const CreateAutolabelsAutoLabelsPost200Response = S.Array(CreateAutolabelsAutoLabelsPost200ResponseItem)
 
 export const CreateAutolabelsAutoLabelsPost422Response = S.Struct({
@@ -95,7 +140,14 @@ export const readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOn
 
 export const readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOneItemLabelWordMax = 128;
 
+export const readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelModelParamsOneChunkSizeDefault = 500;
+export const readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelModelParamsOneChunkSizeExclusiveMin = 0;
+export const readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelModelParamsOneChunkSizeMax = 512;
 
+export const readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelModelParamsOneForceChunkDefault = false;
+export const readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelModelParamsOneModelNameDefault = `cluener`;
+export const readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelModelParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 };
+export const readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelModelParamsTwoModelNameDefault = `do_nothing`;
 
 export const ReadAutolabelByIdAutoLabelsAutoLabelIdGet200Response = S.Struct({
   "autoLabelData": S.Union(S.Array(S.Struct({
@@ -109,11 +161,17 @@ export const ReadAutolabelByIdAutoLabelsAutoLabelIdGet200Response = S.Struct({
   "autoLabelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "autoLabelLastJobId": S.String,
   "autoLabelMessage": S.optional(S.Union(S.String, S.Null)),
-  "autoLabelModelName": S.Literal("cluener"),
-  "autoLabelModelParams": S.Record({ key: S.String, value: S.Unknown }),
+  "autoLabelModelParams": S.Union(S.Struct({
+  "chunkSize": S.optionalWith(S.Number.pipe(S.greaterThan(readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelModelParamsOneChunkSizeExclusiveMin), S.lessThanOrEqualTo(readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelModelParamsOneChunkSizeMax)), { default: () => readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelModelParamsOneChunkSizeDefault }),
+  "forceChunk": S.optionalWith(S.Boolean, { default: () => readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelModelParamsOneForceChunkDefault }),
+  "modelName": S.optionalWith(S.Literal("cluener"), { default: () => readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelModelParamsOneModelNameDefault }),
+  "separators": S.optionalWith(S.Record({ key: S.String, value: S.Union(S.Literal(1), S.Literal(2), S.Literal(3)) }), { default: () => readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelModelParamsOneSeparatorsDefault })
+}).annotations({ description: 'Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size: Integer between 1 and 512. Determines max size of chunks passed to NER model. Has default value 500.\n    separators: Dictionary of the form `char : SepPriority`. The predict algorithm will prioritize chunks ending in higher priority separators. Has default value (read the code to see what it is.)\n    force_chunk: If no separators found in some interval, force the chunker to chunk mid-sentence. Has default value False.\n\nNotes:\n    To validate this model without injecting default values, call `CluenerModelParams.model_validate(..., context={\'skip_default_values\' : True})`.' }), S.Struct({
+  "modelName": S.optionalWith(S.Literal("do_nothing"), { default: () => readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelModelParamsTwoModelNameDefault })
+}).annotations({ description: 'Pydantic schema for a DoNothing model.\n\nAttributes:\n    model_name: Literal \"do_nothing\".' })),
   "autoLabelStatus": S.Literal('failed', 'pending', 'processing', 'done').annotations({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for an auto-labeled data entry.\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_data: Dictionary containing the auto-labeled data.\n    auto_label_model_name: Name of the model used to generate the auto labels.\n    auto_label_model_params: Parameters used for the model to generate the auto labels.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    chapter_content_id: UUID of chapter content this AutoLabel is associated with.\n    auto_label_last_job_id: Job id of last job that was run on this AutoLabel.' })
+}).annotations({ description: 'Pydantic schema for an auto-labeled data entry.\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_data: Dictionary containing the auto-labeled data.\n    auto_label_model_params: Parameters used for the model to generate the auto labels.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    chapter_content_id: UUID of chapter content this AutoLabel is associated with.\n    auto_label_last_job_id: Job id of last job that was run on this AutoLabel.' })
 
 export const ReadAutolabelByIdAutoLabelsAutoLabelIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
@@ -1201,11 +1259,27 @@ export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLa
   "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
+export const createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBodyModelParamsOneChunkSizeDefault = 500;
+export const createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBodyModelParamsOneChunkSizeExclusiveMin = 0;
+export const createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBodyModelParamsOneChunkSizeMax = 512;
+
+export const createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBodyModelParamsOneForceChunkDefault = false;
+export const createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBodyModelParamsOneModelNameDefault = `cluener`;
+export const createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBodyModelParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 };
+export const createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBodyModelParamsTwoModelNameDefault = `do_nothing`;
+
 export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBody = S.Struct({
   "chapterIds": S.optional(S.Union(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))), S.Null)),
   "end": S.optional(S.Union(S.Number, S.Null)),
-  "modelName": S.Literal("cluener"),
-  "modelParams": S.Record({ key: S.String, value: S.Unknown }),
+  "modelName": S.Literal('cluener', 'do_nothing'),
+  "modelParams": S.Union(S.Struct({
+  "chunkSize": S.optionalWith(S.Number.pipe(S.greaterThan(createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBodyModelParamsOneChunkSizeExclusiveMin), S.lessThanOrEqualTo(createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBodyModelParamsOneChunkSizeMax)), { default: () => createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBodyModelParamsOneChunkSizeDefault }),
+  "forceChunk": S.optionalWith(S.Boolean, { default: () => createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBodyModelParamsOneForceChunkDefault }),
+  "modelName": S.optionalWith(S.Literal("cluener"), { default: () => createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBodyModelParamsOneModelNameDefault }),
+  "separators": S.optionalWith(S.Record({ key: S.String, value: S.Union(S.Literal(1), S.Literal(2), S.Literal(3)) }), { default: () => createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBodyModelParamsOneSeparatorsDefault })
+}).annotations({ description: 'Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size: Integer between 1 and 512. Determines max size of chunks passed to NER model. Has default value 500.\n    separators: Dictionary of the form `char : SepPriority`. The predict algorithm will prioritize chunks ending in higher priority separators. Has default value (read the code to see what it is.)\n    force_chunk: If no separators found in some interval, force the chunker to chunk mid-sentence. Has default value False.\n\nNotes:\n    To validate this model without injecting default values, call `CluenerModelParams.model_validate(..., context={\'skip_default_values\' : True})`.' }), S.Struct({
+  "modelName": S.optionalWith(S.Literal("do_nothing"), { default: () => createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBodyModelParamsTwoModelNameDefault })
+}).annotations({ description: 'Pydantic schema for a DoNothing model.\n\nAttributes:\n    model_name: Literal \"do_nothing\".' })),
   "start": S.optional(S.Union(S.Number, S.Null))
 }).annotations({ description: 'Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.\n\nAttributes:\n    model_name: Name of NER model that performed the autolabeling.\n    model_params: Parameters of model used.\n    chapter_ids: Optional filter on what chapters to include.\n    start: Optional filter on the least chapter number to include.\n    end: Optional filter on the greatest chapter number to include.' })
 

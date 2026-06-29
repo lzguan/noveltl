@@ -7,22 +7,19 @@
 import type { AutoLabelProgress } from './autoLabelProgress';
 import type { CluenerParams } from './cluenerParams';
 import type { DoNothingParams } from './doNothingParams';
-import type { LabelBase } from './labelBase';
 
 /**
- * Pydantic schema for an auto-labeled data entry.
+ * Pydantic schema for auto-label metadata.
  *
  * Attributes:
  *     auto_label_id: UUID identifier for this AutoLabel.
- *     auto_label_data: Dictionary containing the auto-labeled data.
  *     auto_label_model_params: Parameters used for the model to generate the auto labels.
  *     auto_label_status: Labeling progress for this autolabel.
  *     auto_label_message: Details on status.
  *     chapter_content_id: UUID of chapter content this AutoLabel is associated with.
  *     auto_label_last_job_id: Job id of last job that was run on this AutoLabel.
  */
-export interface AutoLabel {
-  autoLabelData: LabelBase[] | null;
+export interface AutoLabelMetaInput {
   autoLabelId: string;
   autoLabelLastJobId: string;
   autoLabelMessage?: string | null;

@@ -10,5 +10,5 @@ novelId: string;
 chapterIds?: string[] | null;
 start?: number | null;
 end?: number | null;
-modelNames?: 'cluener'[] | null;
+modelNames?: ('cluener' | 'do_nothing')[] | null;
 };

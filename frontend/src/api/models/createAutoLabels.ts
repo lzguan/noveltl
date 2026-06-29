@@ -4,26 +4,25 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { CreateAutoLabelsAutoLabelModelParams } from './createAutoLabelsAutoLabelModelParams';
+import type { CluenerParams } from './cluenerParams';
+import type { DoNothingParams } from './doNothingParams';
 
 /**
  * Pydantic schema for creating an auto-labeled data entry.
  *
  * Attributes:
  *     novel_id: UUID of novel to create auto labels for.
- *     auto_label_model_name: Name of the model used to generate the auto labels.
- *     auto_label_model_params: Parameters used for the model to generate the auto labels.
+ *     params: Parameters for the NER model. Disciminated by model_name attribute.
  *     chapter_ids: Optional parameter. Restrict to revisions with specific chapter UUIDs.
  *     start: Optional parameter. Restrict to revisions with chapter num >= start.
  *     end: Optional parameter. Restrict to revisions with chapter num < end.
  *     is_public: Optional parameter. Restrict to revisions with this specific public flag.
  */
 export interface CreateAutoLabels {
-  autoLabelModelName: 'cluener';
-  autoLabelModelParams: CreateAutoLabelsAutoLabelModelParams;
   chapterIds?: string[] | null;
   end?: number | null;
   isPublic?: boolean | null;
   novelId: string;
+  params: CluenerParams | DoNothingParams;
   start?: number | null;
 }

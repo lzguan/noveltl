@@ -50,8 +50,7 @@ components:
     AutoLabel:
       description: "Pydantic schema for an auto-labeled data entry.\n\nAttributes:\n\
         \    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_data:\
-        \ Dictionary containing the auto-labeled data.\n    auto_label_model_name:\
-        \ Name of the model used to generate the auto labels.\n    auto_label_model_params:\
+        \ Dictionary containing the auto-labeled data.\n    auto_label_model_params:\
         \ Parameters used for the model to generate the auto labels.\n    auto_label_status:\
         \ Labeling progress for this autolabel.\n    auto_label_message: Details on\
         \ status.\n    chapter_content_id: UUID of chapter content this AutoLabel\
@@ -77,15 +76,11 @@ components:
           - type: string
           - type: 'null'
           title: Autolabelmessage
-        autoLabelModelName:
-          const: cluener
-          title: Autolabelmodelname
-          type: string
         autoLabelModelParams:
-          additionalProperties: true
-          maxProperties: 50
+          anyOf:
+          - $ref: '#/components/schemas/CluenerParams'
+          - $ref: '#/components/schemas/DoNothingParams'
           title: Autolabelmodelparams
-          type: object
         autoLabelStatus:
           $ref: '#/components/schemas/AutoLabelProgress'
         chapterContentId:
@@ -95,18 +90,16 @@ components:
       required:
       - autoLabelId
       - autoLabelData
-      - autoLabelModelName
       - autoLabelModelParams
       - autoLabelStatus
       - chapterContentId
       - autoLabelLastJobId
       title: AutoLabel
       type: object
-    AutoLabelMeta:
+    AutoLabelMeta-Input:
       description: "Pydantic schema for auto-label metadata.\n\nAttributes:\n    auto_label_id:\
-        \ UUID identifier for this AutoLabel.\n    auto_label_model_name: Name of\
-        \ the model used to generate the auto labels.\n    auto_label_model_params:\
-        \ Parameters used for the model to generate the auto labels.\n    auto_label_status:\
+        \ UUID identifier for this AutoLabel.\n    auto_label_model_params: Parameters\
+        \ used for the model to generate the auto labels.\n    auto_label_status:\
         \ Labeling progress for this autolabel.\n    auto_label_message: Details on\
         \ status.\n    chapter_content_id: UUID of chapter content this AutoLabel\
         \ is associated with.\n    auto_label_last_job_id: Job id of last job that\
@@ -124,15 +117,11 @@ components:
           - type: string
           - type: 'null'
           title: Autolabelmessage
-        autoLabelModelName:
-          const: cluener
-          title: Autolabelmodelname
-          type: string
         autoLabelModelParams:
-          additionalProperties: true
-          maxProperties: 50
+          anyOf:
+          - $ref: '#/components/schemas/CluenerParams'
+          - $ref: '#/components/schemas/DoNothingParams'
           title: Autolabelmodelparams
-          type: object
         autoLabelStatus:
           $ref: '#/components/schemas/AutoLabelProgress'
         chapterContentId:
@@ -141,7 +130,46 @@ components:
           type: string
       required:
       - autoLabelId
-      - autoLabelModelName
+      - autoLabelModelParams
+      - autoLabelStatus
+      - chapterContentId
+      - autoLabelLastJobId
+      title: AutoLabelMeta
+      type: object
+    AutoLabelMeta-Output:
+      description: "Pydantic schema for auto-label metadata.\n\nAttributes:\n    auto_label_id:\
+        \ UUID identifier for this AutoLabel.\n    auto_label_model_params: Parameters\
+        \ used for the model to generate the auto labels.\n    auto_label_status:\
+        \ Labeling progress for this autolabel.\n    auto_label_message: Details on\
+        \ status.\n    chapter_content_id: UUID of chapter content this AutoLabel\
+        \ is associated with.\n    auto_label_last_job_id: Job id of last job that\
+        \ was run on this AutoLabel."
+      properties:
+        autoLabelId:
+          format: uuid
+          title: Autolabelid
+          type: string
+        autoLabelLastJobId:
+          title: Autolabellastjobid
+          type: string
+        autoLabelMessage:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Autolabelmessage
+        autoLabelModelParams:
+          anyOf:
+          - $ref: '#/components/schemas/CluenerParams'
+          - $ref: '#/components/schemas/DoNothingParams'
+          title: Autolabelmodelparams
+        autoLabelStatus:
+          $ref: '#/components/schemas/AutoLabelProgress'
+        chapterContentId:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+      required:
+      - autoLabelId
       - autoLabelModelParams
       - autoLabelStatus
       - chapterContentId
@@ -324,26 +352,66 @@ components:
       - content
       title: ChapterData
       type: object
+    CluenerParams:
+      description: "Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size:\
+        \ Integer between 1 and 512. Determines max size of chunks passed to NER model.\
+        \ Has default value 500.\n    separators: Dictionary of the form `char : SepPriority`.\
+        \ The predict algorithm will prioritize chunks ending in higher priority separators.\
+        \ Has default value (read the code to see what it is.)\n    force_chunk: If\
+        \ no separators found in some interval, force the chunker to chunk mid-sentence.\
+        \ Has default value False.\n\nNotes:\n    To validate this model without injecting\
+        \ default values, call `CluenerModelParams.model_validate(..., context={'skip_default_values'\
+        \ : True})`."
+      properties:
+        chunkSize:
+          default: 500
+          exclusiveMinimum: 0.0
+          maximum: 512.0
+          title: Chunksize
+          type: integer
+        forceChunk:
+          default: false
+          title: Forcechunk
+          type: boolean
+        modelName:
+          const: cluener
+          default: cluener
+          title: Modelname
+          type: string
+        separators:
+          additionalProperties:
+            $ref: '#/components/schemas/SepPriority'
+          default:
+            ? '
+
+              '
+            : 1
+            '!': 2
+            ',': 3
+            .: 2
+            ':': 3
+            ;: 3
+            '?': 2
+            "\u3002": 2
+            "\uFF01": 2
+            "\uFF0C": 3
+            "\uFF1A": 3
+            "\uFF1B": 3
+            "\uFF1F": 2
+          title: Separators
+          type: object
+      title: CluenerParams
+      type: object
     CreateAutoLabels:
       description: "Pydantic schema for creating an auto-labeled data entry.\n\nAttributes:\n\
-        \    novel_id: UUID of novel to create auto labels for.\n    auto_label_model_name:\
-        \ Name of the model used to generate the auto labels.\n    auto_label_model_params:\
-        \ Parameters used for the model to generate the auto labels.\n    chapter_ids:\
+        \    novel_id: UUID of novel to create auto labels for.\n    params: Parameters\
+        \ for the NER model. Disciminated by model_name attribute.\n    chapter_ids:\
         \ Optional parameter. Restrict to revisions with specific chapter UUIDs.\n\
         \    start: Optional parameter. Restrict to revisions with chapter num >=\
         \ start.\n    end: Optional parameter. Restrict to revisions with chapter\
         \ num < end.\n    is_public: Optional parameter. Restrict to revisions with\
         \ this specific public flag."
       properties:
-        autoLabelModelName:
-          const: cluener
-          title: Autolabelmodelname
-          type: string
-        autoLabelModelParams:
-          additionalProperties: true
-          maxProperties: 50
-          title: Autolabelmodelparams
-          type: object
         chapterIds:
           anyOf:
           - items:
@@ -366,6 +434,16 @@ components:
           format: uuid
           title: Novelid
           type: string
+        params:
+          discriminator:
+            mapping:
+              cluener: '#/components/schemas/CluenerParams'
+              do_nothing: '#/components/schemas/DoNothingParams'
+            propertyName: modelName
+          oneOf:
+          - $ref: '#/components/schemas/CluenerParams'
+          - $ref: '#/components/schemas/DoNothingParams'
+          title: Params
         start:
           anyOf:
           - type: integer
@@ -373,8 +451,7 @@ components:
           title: Start
       required:
       - novelId
-      - autoLabelModelName
-      - autoLabelModelParams
+      - params
       title: CreateAutoLabels
       type: object
     CreateChapter:
@@ -433,14 +510,21 @@ components:
           - type: 'null'
           title: End
         modelName:
-          const: cluener
+          enum:
+          - cluener
+          - do_nothing
           title: Modelname
           type: string
         modelParams:
-          additionalProperties: true
-          maxProperties: 50
+          discriminator:
+            mapping:
+              cluener: '#/components/schemas/CluenerParams'
+              do_nothing: '#/components/schemas/DoNothingParams'
+            propertyName: modelName
+          oneOf:
+          - $ref: '#/components/schemas/CluenerParams'
+          - $ref: '#/components/schemas/DoNothingParams'
           title: Modelparams
-          type: object
         start:
           anyOf:
           - type: integer
@@ -643,6 +727,17 @@ components:
       required:
       - detail
       title: DetailHTTPErrorResponse
+      type: object
+    DoNothingParams:
+      description: "Pydantic schema for a DoNothing model.\n\nAttributes:\n    model_name:\
+        \ Literal \"do_nothing\"."
+      properties:
+        modelName:
+          const: do_nothing
+          default: do_nothing
+          title: Modelname
+          type: string
+      title: DoNothingParams
       type: object
     EagerEntry:
       properties:
@@ -1126,6 +1221,13 @@ components:
       - apply_filter_options_schema
       title: SchemaInfo
       type: object
+    SepPriority:
+      enum:
+      - 1
+      - 2
+      - 3
+      title: SepPriority
+      type: integer
     SourceWork:
       description: "Pydantic schema for a source work.\n\nAttributes:\n    source_work_id:\
         \ UUID id of source work in db.\n    source_work_title: Title of the source\
@@ -1523,7 +1625,9 @@ paths:
         schema:
           anyOf:
           - items:
-              const: cluener
+              enum:
+              - cluener
+              - do_nothing
               type: string
             type: array
           - type: 'null'
@@ -1534,7 +1638,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/AutoLabelMeta'
+                  $ref: '#/components/schemas/AutoLabelMeta-Output'
                 title: Response Read Autolabels Auto Labels Get
                 type: array
           description: Successful Response
@@ -1561,7 +1665,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/AutoLabelMeta'
+                  $ref: '#/components/schemas/AutoLabelMeta-Output'
                 title: Response Create Autolabels Auto Labels Post
                 type: array
           description: Successful Response
@@ -3337,4 +3441,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
       summary: Read User

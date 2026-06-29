@@ -16,9 +16,9 @@ import { createEditorManager } from "../managers/editorManager";
 import { buildErrorManager } from "../managers/errorManager";
 import { makeActiveGroupLabelSource } from "../labeling/activeGroupLabelSource";
 import type { LabelEditing, LabelSink } from "../labeling/types";
-import { ChapterPanel } from "../panels/ChapterPanel";
 import { EditorPanel } from "../panels/EditorPanel";
-import { LabelGroupPanel } from "../panels/LabelGroupPanel";
+import { LeftPanel } from "../panels/LeftPanel";
+import { RightPanel } from "../panels/RightPanel";
 import { ToolbarPanel } from "../panels/ToolbarPanel";
 
 function makeNovelData(novel: Novel, chapters: Chapter[], labelGroups: LabelGroupWithRole[]): NovelData {
@@ -231,24 +231,18 @@ export function EditNovelPage() {
 				/>
 				<div className="flex flex-1 min-h-0 overflow-hidden">
 					<div className="w-56 border-r shrink-0 flex flex-col min-h-0">
-						<div className="border-b shrink-0 max-h-[45%] overflow-y-auto">
-							<ChapterPanel
-								chapters={chapterList.chapterList}
-								currentChapterId={currentChapterId}
-								onSwitchChapter={managers.chapterMgr.switchChapter}
-								onAddChapter={managers.chapterMgr.addChapter}
-							/>
-						</div>
-						<div className="flex-1 min-h-0 overflow-y-auto">
-							<LabelGroupPanel
-								labelGroups={trackedLabelGroups.labelGroups}
-								chapterOpen={!editorState.data.empty && !editorState.data.loading}
-								onToggleVisibility={managers.labelGroupMgr.toggleVisibility}
-								onSetActive={managers.labelGroupMgr.setActive}
-								onAddLabelGroup={managers.labelGroupMgr.addLabelGroup}
-								onReloadLabelData={managers.labelGroupMgr.reloadLabelData}
-							/>
-						</div>
+						<LeftPanel
+							chapters={chapterList.chapterList}
+							currentChapterId={currentChapterId}
+							onSwitchChapter={managers.chapterMgr.switchChapter}
+							onAddChapter={managers.chapterMgr.addChapter}
+							labelGroups={trackedLabelGroups.labelGroups}
+							chapterOpen={!editorState.data.empty && !editorState.data.loading}
+							onToggleVisibility={managers.labelGroupMgr.toggleVisibility}
+							onSetActive={managers.labelGroupMgr.setActive}
+							onAddLabelGroup={managers.labelGroupMgr.addLabelGroup}
+							onReloadLabelData={managers.labelGroupMgr.reloadLabelData}
+						/>
 					</div>
 					<EditorPanel
 						data={editorState.data}
@@ -257,6 +251,9 @@ export function EditNovelPage() {
 						onTextOp={managers.editorMgr.textOp}
 						labeling={labeling}
 					/>
+					<div className="w-64 border-l shrink-0 flex flex-col min-h-0">
+						<RightPanel />
+					</div>
 				</div>
 			</div>
 		</Profiler>

@@ -32,7 +32,7 @@ from tests.fixtures.bundles import (
 )
 
 
-def _build_label_group_bundle[LFBT: LabelFixtureBundle](
+def _build_label_group_bundle(
     *,
     label_group: LabelGroup,
     contributors: list[LabelContributor],

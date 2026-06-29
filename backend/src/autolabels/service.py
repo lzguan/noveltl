@@ -121,7 +121,7 @@ async def insert_auto_labels(
     q = (
         select(
             literal(request.params.model_name),
-            literal(request.params.model_dump(), type_=JSONB),
+            literal(request.params.model_dump(mode="json"), type_=JSONB),
             literal(AutoLabelProgress.PENDING),
             literal("Waiting to be queued."),
             novel_models.ChapterContent.chapter_content_id,
@@ -153,7 +153,7 @@ async def insert_auto_labels(
                     and_(
                         models.AutoLabel.chapter_content_id == novel_models.ChapterContent.chapter_content_id,
                         models.AutoLabel.auto_label_model_name == request.params.model_name,
-                        models.AutoLabel.auto_label_model_params == request.params.model_dump(),
+                        models.AutoLabel.auto_label_model_params == request.params.model_dump(mode="json"),
                     )
                 )
             )

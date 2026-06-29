@@ -1,8 +1,6 @@
 from enum import IntEnum, StrEnum
 
 MAX_MODEL_NAME_LEN = 128
-MAX_PARAMS_SIZE_BYTES = 10240
-MAX_PARAMS_FIELDS = 50
 
 
 class AutoLabelProgress(StrEnum):

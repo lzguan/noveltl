@@ -425,7 +425,7 @@ def insert_label_datas_by_autolabels(
         )
         .join(novel_models.Chapter, novel_models.Chapter.chapter_id == novel_models.ChapterContent.chapter_id)
         .join(novel_models.Novel, novel_models.Novel.novel_id == novel_models.Chapter.novel_id)
-        .where(autolabel_models.AutoLabel.auto_label_model_name == request.model_name)
+        .where(autolabel_models.AutoLabel.auto_label_model_name == request.model_params.model_name)
         .where(autolabel_models.AutoLabel.auto_label_model_params == request.model_params.model_dump(mode="json"))
         .where(autolabel_models.AutoLabel.auto_label_status == AutoLabelProgress.DONE)
         .where(novel_models.Novel.novel_id == models.LabelGroup.novel_id)

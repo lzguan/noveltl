@@ -209,19 +209,19 @@ def autolabel_loader() -> DataLoader:
 
 
 @pytest.fixture(scope="session")
-def cluener_testconfig_params() -> dict[str, Any]:
+def cluener_testconfig_params():
     """
     Load cluener model params from tests/test_data/testconfig.json.
 
-    Returns a dict with ``SepPriority`` enum values for separator entries,
-    suitable for passing to ``CluenerModelParams.model_validate()`` or
-    serialising as ``model_params`` in ``CreateLabelDataByAutoLabel``.
+    Returns a ``CluenerParams`` instance, suitable for passing directly to
+    model prediction or serialising in ``CreateLabelDataByAutoLabel``.
 
     Raises a ``RuntimeError`` if ``testconfig.json`` differs from
     ``testconfig.lock.json``, indicating that the autolabel test data was
     generated with a different config and must be regenerated.
     """
     from src.autolabels.constants import SepPriority
+    from src.autolabels.params import CluenerParams
 
     config_path = Path(__file__).parent / "test_data" / "testconfig.json"
     config = json.loads(config_path.read_text(encoding="utf-8"))
@@ -239,6 +239,9 @@ def cluener_testconfig_params() -> dict[str, Any]:
     model_config = config["models"]["cluener"]
 
     sep_map = {"high": SepPriority.HIGH, "med": SepPriority.MED, "low": SepPriority.LOW}
-    params = dict(model_config)
-    params["separators"] = {k: sep_map[v.lower()] for k, v in model_config["separators"].items()}
-    return params
+    return CluenerParams(
+        model_name="cluener",
+        chunk_size=model_config["chunk_size"],
+        separators={k: sep_map[str(v).lower()] for k, v in model_config["separators"].items()},
+        force_chunk=model_config.get("force_chunk", False),
+    )

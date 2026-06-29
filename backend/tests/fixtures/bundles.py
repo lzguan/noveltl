@@ -16,6 +16,7 @@ from typing import Any
 from src.auth.constants import UserType
 from src.auth.models import User
 from src.autolabels.models import AutoLabel
+from src.autolabels.params import NERParams
 from src.labels.constants import LabelRole
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.novels.constants import Role
@@ -125,9 +126,9 @@ class NovelFixtureBundle:
     editor_users: list[User]
     viewer_users: list[User]
     chapters: list[ChapterBundle]
+    model_params_by_name: dict[str, NERParams]
     label_groups: list[LabelFixtureBundle] = field(default_factory=typed_list(LabelFixtureBundle))
     autolabels_by_name: dict[str, list[AutoLabel]] = field(default_factory=typed_dict(str, list[AutoLabel]))
-    model_params_by_name: dict[str, dict[str, Any]] = field(default_factory=typed_dict(str, dict[str, Any]))
 
     @property
     def user(self) -> User:

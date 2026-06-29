@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from src.autolabels.constants import AutoLabelProgress, SepPriority
 from src.autolabels.models import AutoLabel
+from src.autolabels.params import CluenerParams
 from src.autolabels.schemas import CreateAutoLabels
 from src.autolabels.service import insert_auto_labels
 from src.autolabels.utils import ArqDispatcher
@@ -42,9 +43,8 @@ class TestInsertAutoLabels:
             ArqDispatcher(redis),
             CreateAutoLabels(
                 chapter_ids=[chapter_bundle.chapter.chapter_id for chapter_bundle in novel_bundle.chapters],
-                auto_label_model_name="cluener",
-                auto_label_model_params={},
                 novel_id=novel_bundle.novel.novel_id,
+                params=CluenerParams(model_name="cluener"),
             ),
         )
         assert len(novel_bundle.chapters) > 0
@@ -73,9 +73,8 @@ class TestInsertAutoLabels:
             ArqDispatcher(redis),
             CreateAutoLabels(
                 chapter_ids=[chapter_bundle.chapter.chapter_id for chapter_bundle in novel_bundle.chapters],
-                auto_label_model_name="cluener",
-                auto_label_model_params={"separators": {"\n": SepPriority.HIGH}},
                 novel_id=novel_bundle.novel.novel_id,
+                params=CluenerParams(model_name="cluener", separators={"\n": SepPriority.HIGH}),
             ),
         )
 
@@ -93,9 +92,8 @@ class TestInsertAutoLabels:
             ArqDispatcher(redis),
             CreateAutoLabels(
                 chapter_ids=[chapter_bundle.chapter.chapter_id for chapter_bundle in novel_bundle.chapters],
-                auto_label_model_name="cluener",
-                auto_label_model_params={"separators": {"\n": SepPriority.HIGH}},
                 novel_id=novel_bundle.novel.novel_id,
+                params=CluenerParams(model_name="cluener", separators={"\n": SepPriority.HIGH}),
             ),
         )
         q = select(AutoLabel)
@@ -109,9 +107,8 @@ class TestInsertAutoLabels:
             ArqDispatcher(redis),
             CreateAutoLabels(
                 chapter_ids=[chapter_bundle.chapter.chapter_id for chapter_bundle in novel_bundle.chapters],
-                auto_label_model_name="cluener",
-                auto_label_model_params={"separators": {"\n": SepPriority.HIGH}},
                 novel_id=novel_bundle.novel.novel_id,
+                params=CluenerParams(model_name="cluener", separators={"\n": SepPriority.HIGH}),
             ),
         )
         assert len(ret) == 0

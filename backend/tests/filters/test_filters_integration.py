@@ -48,6 +48,7 @@ class TestFlagInstances:
         score_filter: ScoreFilter,
     ):
         options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=0.8)
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         results = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
         assert len(results) == 2
@@ -62,6 +63,7 @@ class TestFlagInstances:
         score_filter: ScoreFilter,
     ):
         options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=0.4)
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         results = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
         assert len(results) == 1
@@ -75,6 +77,7 @@ class TestFlagInstances:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=0.95)
         results = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
@@ -106,6 +109,7 @@ class TestGetContexts:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=0.8)
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
@@ -143,6 +147,7 @@ class TestGetContexts:
         )
 
         context_options = ScoreGetContextOptions()
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         contexts = score_filter.get_contexts(test_db, label_bundle.novel.user, [fake_instance], context_options)
 
         assert len(contexts) == 1
@@ -171,6 +176,7 @@ class TestDecideInstances:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=0.0)
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
@@ -192,6 +198,7 @@ class TestDecideInstances:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=1.0)
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
@@ -214,6 +221,7 @@ class TestDecideInstances:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=1.0)
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
@@ -235,6 +243,7 @@ class TestDecideInstances:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=1.0)
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
 
@@ -273,6 +282,7 @@ class TestApplyFilter:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         # Flag low-score labels
         options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=0.8)
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
@@ -304,6 +314,7 @@ class TestApplyFilter:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         # Flag all labels
         options = ScoreFlagInstancesOptions(label_group_id=label_bundle.label_group.label_group_id, min_score=1.0)
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, options)
@@ -338,6 +349,7 @@ class TestApplyFilter:
         label_bundle: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         # Apply filter with empty list
         apply_options = ScoreApplyFilterOptions(
             create_copy=False, label_group_id=label_bundle.label_group.label_group_id
@@ -394,6 +406,7 @@ class TestDecideInstancesStaleness:
         score_filter: ScoreFilter,
     ):
         """Flag instances on current version, then create v2 → decide should reject."""
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         chapter, old_cc = label_bundle.novel.chapter, label_bundle.novel.chapter_content
 
         # Flag instances while revision text is still current
@@ -424,6 +437,7 @@ class TestDecideInstancesStaleness:
         score_filter: ScoreFilter,
     ):
         """Without staleness, decide_instances should work normally."""
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         flag_options = ScoreFlagInstancesOptions(
             label_group_id=label_bundle.label_group.label_group_id,
             min_score=0.8,
@@ -461,6 +475,7 @@ class TestApplyFilterStaleness:
         score_filter: ScoreFilter,
     ):
         """Flag instances, then create v2 → apply_filter should reject."""
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         chapter, old_cc = label_bundle.novel.chapter, label_bundle.novel.chapter_content
 
         flag_options = ScoreFlagInstancesOptions(
@@ -493,6 +508,7 @@ class TestApplyFilterStaleness:
             label_group_id=label_bundle.label_group.label_group_id,
             min_score=0.8,
         )
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         instances = score_filter.flag_instances(test_db, label_bundle.novel.user, flag_options)
         assert len(instances) == 2
 
@@ -511,6 +527,7 @@ class TestApplyFilterStaleness:
         score_filter: ScoreFilter,
     ):
         """Empty instances list should not trigger staleness check."""
+        assert label_bundle.novel is not None, "label_bundle.novel should not be None"
         chapter, old_cc = label_bundle.novel.chapter, label_bundle.novel.chapter_content
         _create_v2(test_db, chapter, old_cc)
 

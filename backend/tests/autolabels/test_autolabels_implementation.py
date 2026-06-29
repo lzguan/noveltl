@@ -1,10 +1,10 @@
 import logging
 from collections.abc import Generator
-from typing import Any, Protocol
+from typing import Protocol
 
 import pytest
 
-from src.autolabels.schemas import CluenerModelParams
+from src.autolabels.params import CluenerParams
 from src.autolabels.worker.interfaces import NERModel
 from tests.gate_logging import log_gate
 
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class ModelWrapper(Protocol):
-    model: NERModel[CluenerModelParams]
+    model: NERModel[CluenerParams]
 
 
 class Loader(Protocol):
@@ -40,11 +40,11 @@ class TestCluenerPredict:
     @pytest.mark.slow
     @pytest.mark.dependency(name="autolabels::implementation::pure_chinese_fantasy", scope="session")
     def test_pure_chinese_fantasy(
-        self, cluener: ModelWrapper, chapter_loader: Loader, cluener_testconfig_params: dict[str, Any]
+        self, cluener: ModelWrapper, chapter_loader: Loader, cluener_testconfig_params: CluenerParams
     ):
         chapters = chapter_loader("chinese/pure_chinese_fantasy", recursive=True)
         for chapter in chapters:
-            res, err = cluener.model.predict(chapter, CluenerModelParams.model_validate(cluener_testconfig_params))
+            res, err = cluener.model.predict(chapter, cluener_testconfig_params)
             assert all(
                 cluener.model.normalize(chapter[label.label_start : label.label_end]) == label.label_word
                 for label in res
@@ -62,11 +62,11 @@ class TestCluenerPredict:
     @pytest.mark.slow
     @pytest.mark.dependency(name="autolabels::implementation::mixed_chinese_scifi", scope="session")
     def test_mixed_chinese_scifi(
-        self, cluener: ModelWrapper, chapter_loader: Loader, cluener_testconfig_params: dict[str, Any]
+        self, cluener: ModelWrapper, chapter_loader: Loader, cluener_testconfig_params: CluenerParams
     ):
         chapters = chapter_loader("chinese/mixed_chinese_scifi", recursive=True)
         for chapter in chapters:
-            res, err = cluener.model.predict(chapter, CluenerModelParams.model_validate(cluener_testconfig_params))
+            res, err = cluener.model.predict(chapter, cluener_testconfig_params)
             assert all(
                 cluener.model.normalize(chapter[label.label_start : label.label_end]) == label.label_word
                 for label in res

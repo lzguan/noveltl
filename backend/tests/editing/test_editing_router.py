@@ -80,11 +80,9 @@ class TestReadEditChapterData:
         actor = _versioned_user(versioned_chapter_scenario, "to_user")
         chapter_bundle = versioned_chapter_scenario.chapters[0]
 
-        response = client.get(
+        response = client.post(
             _editing_url(chapter_bundle.chapter.chapter_id),
-            params={
-                "eager": _eager_params(versioned_chapter_scenario, "Group 1", "Group 2"),
-            },
+            json=_eager_params(versioned_chapter_scenario, "Group 1", "Group 2"),
             headers=_auth_headers(actor),
         )
 
@@ -111,14 +109,15 @@ class TestReadEditChapterData:
         chapter_bundle = versioned_chapter_scenario.chapters[0]
 
         eager = _eager_params(versioned_chapter_scenario, "Group 1", "Group 2")
-        owner_response = client.get(
+        owner_response = client.post(
             _editing_url(chapter_bundle.chapter.chapter_id),
-            params={"eager": eager},
+            json=eager,
             headers=_auth_headers(owner),
         )
-        admin_response = client.get(
+        admin_response = client.post(
             _editing_url(chapter_bundle.chapter.chapter_id),
-            params={"eager": eager, "subjectId": str(owner.user_id)},
+            json=eager,
+            params={"subjectId": str(owner.user_id)},
             headers=_auth_headers(admin),
         )
 
@@ -136,12 +135,10 @@ class TestReadEditChapterData:
         other_user = _versioned_user(versioned_chapter_scenario, "to_other")
         chapter_bundle = versioned_chapter_scenario.chapters[0]
 
-        response = client.get(
+        response = client.post(
             _editing_url(chapter_bundle.chapter.chapter_id),
-            params={
-                "eager": _eager_params(versioned_chapter_scenario, "Group 1", "Group 2"),
-                "subjectId": str(owner.user_id),
-            },
+            json=_eager_params(versioned_chapter_scenario, "Group 1", "Group 2"),
+            params={"subjectId": str(owner.user_id)},
             headers=_auth_headers(other_user),
         )
 
@@ -156,12 +153,10 @@ class TestReadEditChapterData:
         admin = _versioned_user(versioned_chapter_scenario, "to_admin")
         chapter_bundle = versioned_chapter_scenario.chapters[0]
 
-        response = client.get(
+        response = client.post(
             _editing_url(chapter_bundle.chapter.chapter_id),
-            params={
-                "eager": _eager_params(versioned_chapter_scenario, "Group 1", "Group 2"),
-                "subjectId": str(uuid.uuid4()),
-            },
+            json=_eager_params(versioned_chapter_scenario, "Group 1", "Group 2"),
+            params={"subjectId": str(uuid.uuid4())},
             headers=_auth_headers(admin),
         )
 
@@ -224,14 +219,12 @@ class TestReadEditChapterData:
         test_db.commit()
 
         # Eager: only Group 1 and Group 3
-        response = client.get(
+        response = client.post(
             _editing_url(chapter_bundle.chapter.chapter_id),
-            params={
-                "eager": [
-                    str(versioned_chapter_scenario.label_groups_by_name["Group 1"].label_group.label_group_id),
-                    str(extra_group_with_data.label_group_id),
-                ],
-            },
+            json=[
+                str(versioned_chapter_scenario.label_groups_by_name["Group 1"].label_group.label_group_id),
+                str(extra_group_with_data.label_group_id),
+            ],
             headers=_auth_headers(actor),
         )
 
@@ -269,8 +262,8 @@ def _reload_url(chapter_id: uuid.UUID) -> str:
     return f"/edit-chapter-data/{chapter_id}/label-data"
 
 
-def _reload_params(*label_group_ids: uuid.UUID) -> dict[str, object]:
-    return {"labelGroupIds": [str(gid) for gid in label_group_ids]}
+def _reload_params(*label_group_ids: uuid.UUID) -> list[str]:
+    return [str(gid) for gid in label_group_ids]
 
 
 class TestReadEditChapterLabelData:
@@ -287,9 +280,9 @@ class TestReadEditChapterLabelData:
         chapter_bundle = versioned_chapter_scenario.chapters[0]
         lg1 = versioned_chapter_scenario.label_groups_by_name["Group 1"]
 
-        response = client.get(
+        response = client.post(
             _reload_url(chapter_bundle.chapter.chapter_id),
-            params=_reload_params(lg1.label_group.label_group_id),
+            json=_reload_params(lg1.label_group.label_group_id),
             headers=_auth_headers(actor),
         )
 
@@ -336,9 +329,9 @@ class TestReadEditChapterLabelData:
             is None
         )
 
-        response = client.get(
+        response = client.post(
             _reload_url(chapter_bundle.chapter.chapter_id),
-            params=_reload_params(new_group.label_group_id),
+            json=_reload_params(new_group.label_group_id),
             headers=_auth_headers(actor),
         )
 
@@ -394,9 +387,9 @@ class TestReadEditChapterLabelData:
         )
         test_db.commit()
 
-        response = client.get(
+        response = client.post(
             _reload_url(chapter_bundle.chapter.chapter_id),
-            params=_reload_params(new_group.label_group_id),
+            json=_reload_params(new_group.label_group_id),
             headers=_auth_headers(viewer),
         )
 
@@ -441,9 +434,9 @@ class TestReadEditChapterLabelData:
         )
         test_db.commit()
 
-        response = client.get(
+        response = client.post(
             _reload_url(chapter_bundle.chapter.chapter_id),
-            params=_reload_params(lg1.label_group.label_group_id, new_group.label_group_id),
+            json=_reload_params(lg1.label_group.label_group_id, new_group.label_group_id),
             headers=_auth_headers(actor),
         )
 
@@ -472,17 +465,15 @@ class TestReadEditChapterLabelData:
         chapter_bundle = versioned_chapter_scenario.chapters[0]
         lg1 = versioned_chapter_scenario.label_groups_by_name["Group 1"]
 
-        owner_response = client.get(
+        owner_response = client.post(
             _reload_url(chapter_bundle.chapter.chapter_id),
-            params=_reload_params(lg1.label_group.label_group_id),
+            json=_reload_params(lg1.label_group.label_group_id),
             headers=_auth_headers(owner),
         )
-        admin_response = client.get(
+        admin_response = client.post(
             _reload_url(chapter_bundle.chapter.chapter_id),
-            params={
-                **_reload_params(lg1.label_group.label_group_id),
-                "subjectId": str(owner.user_id),
-            },
+            json=_reload_params(lg1.label_group.label_group_id),
+            params={"subjectId": str(owner.user_id)},
             headers=_auth_headers(admin),
         )
 
@@ -501,12 +492,10 @@ class TestReadEditChapterLabelData:
         chapter_bundle = versioned_chapter_scenario.chapters[0]
         lg1 = versioned_chapter_scenario.label_groups_by_name["Group 1"]
 
-        response = client.get(
+        response = client.post(
             _reload_url(chapter_bundle.chapter.chapter_id),
-            params={
-                **_reload_params(lg1.label_group.label_group_id),
-                "subjectId": str(owner.user_id),
-            },
+            json=_reload_params(lg1.label_group.label_group_id),
+            params={"subjectId": str(owner.user_id)},
             headers=_auth_headers(other_user),
         )
 
@@ -522,12 +511,10 @@ class TestReadEditChapterLabelData:
         chapter_bundle = versioned_chapter_scenario.chapters[0]
         lg1 = versioned_chapter_scenario.label_groups_by_name["Group 1"]
 
-        response = client.get(
+        response = client.post(
             _reload_url(chapter_bundle.chapter.chapter_id),
-            params={
-                **_reload_params(lg1.label_group.label_group_id),
-                "subjectId": str(uuid.uuid4()),
-            },
+            json=_reload_params(lg1.label_group.label_group_id),
+            params={"subjectId": str(uuid.uuid4())},
             headers=_auth_headers(admin),
         )
 
@@ -544,14 +531,14 @@ class TestReadEditChapterLabelData:
         chapter_bundle = versioned_chapter_scenario.chapters[0]
         lg1 = versioned_chapter_scenario.label_groups_by_name["Group 1"]
 
-        response1 = client.get(
+        response1 = client.post(
             _reload_url(chapter_bundle.chapter.chapter_id),
-            params=_reload_params(lg1.label_group.label_group_id),
+            json=_reload_params(lg1.label_group.label_group_id),
             headers=_auth_headers(actor),
         )
-        response2 = client.get(
+        response2 = client.post(
             _reload_url(chapter_bundle.chapter.chapter_id),
-            params=_reload_params(lg1.label_group.label_group_id),
+            json=_reload_params(lg1.label_group.label_group_id),
             headers=_auth_headers(actor),
         )
 

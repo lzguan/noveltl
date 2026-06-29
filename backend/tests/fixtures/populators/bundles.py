@@ -8,7 +8,6 @@ can navigate more easily.
 """
 
 from collections.abc import Sequence
-from typing import Any
 
 import pytest
 from sqlalchemy import select
@@ -16,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from src.auth.models import User
 from src.autolabels.models import AutoLabel
+from src.autolabels.params import CluenerParams
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.labels.schemas import CreateLabelDataByAutoLabel
 from src.labels.service import insert_label_datas_by_autolabels
@@ -32,7 +32,7 @@ from tests.fixtures.bundles import (
 )
 
 
-def _build_label_group_bundle(
+def _build_label_group_bundle[LFBT: LabelFixtureBundle](
     *,
     label_group: LabelGroup,
     contributors: list[LabelContributor],
@@ -98,6 +98,7 @@ def _build_novel_bundle(
         viewer_users=viewer_users,
         chapters=chapter_bundles,
         label_groups=label_groups,
+        model_params_by_name={"cluener": CluenerParams()},
     )
     for chapter_bundle in chapter_bundles:
         chapter_bundle.novel = novel_bundle
@@ -408,7 +409,7 @@ def chinese_xianxia_small_test_scenario(
     chinese_xianxia_small_test_label_group: LabelGroup,
     chinese_xianxia_small_test_label_contributor: LabelContributor,
     chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],
-    cluener_testconfig_params: dict[str, Any],
+    cluener_testconfig_params: CluenerParams,
 ) -> ScenarioBundle:
     """Scenario bundle for the loader-backed chinese_xianxia_small_test dataset."""
     scenario = _build_scenario_bundle(

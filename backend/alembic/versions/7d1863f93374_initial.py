@@ -217,7 +217,7 @@ def upgrade():
             (sa.text("int4range(label_start, label_end, '[)')"), "&&"),
             using="gist",
             name="no_overlapping_labels_per_group",
-        ),  # type: ignore
+        ),
         sa.CheckConstraint("label_score >= 0.0 AND label_score <= 1.0", name="chk_score_bounds"),
         sa.CheckConstraint("label_start < label_end", name="chk_label_start_lt_label_end"),
         sa.ForeignKeyConstraint(

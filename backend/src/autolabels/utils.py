@@ -4,8 +4,6 @@ from typing import Protocol
 from arq import ArqRedis
 from redis.exceptions import ConnectionError, ResponseError, TimeoutError
 
-from src.autolabels.params import NERParams
-
 from .exceptions import EnqueueFailedException, QueueFullException
 
 
@@ -18,7 +16,6 @@ class AutoLabelDispatcher(Protocol):
         self,
         job_id: str,
         auto_label_id: uuid.UUID,
-        params: NERParams,
     ) -> None:
         """
         Enqueue a request.
@@ -43,10 +40,9 @@ class ArqDispatcher(AutoLabelDispatcher):
         self,
         job_id: str,
         auto_label_id: uuid.UUID,
-        params: NERParams,
     ) -> None:
         try:
-            await self.redis.enqueue_job("autolabel_infer", job_id, auto_label_id, params, _job_id=job_id)
+            await self.redis.enqueue_job("autolabel_infer", job_id, auto_label_id, _job_id=job_id)
         except (ConnectionError, TimeoutError, OSError) as e:
             raise EnqueueFailedException(f"Redis connection failed: {str(e)}") from e
         except ResponseError as e:

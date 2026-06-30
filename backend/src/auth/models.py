@@ -13,6 +13,7 @@ from ..models import Base
 from .constants import MAX_USER_NAME_LEN, UserType
 
 if TYPE_CHECKING:
+    from ..autolabels.models import AutoLabelRun
     from ..labels.models import LabelContributor
     from ..novels.models import NovelContributor
 
@@ -44,5 +45,6 @@ class User(Base):
     label_contributors_with_user: Mapped[list["LabelContributor"]] = relationship(
         back_populates="user_of_label_contributor"
     )
+    autolabel_runs: Mapped[list["AutoLabelRun"]] = relationship(back_populates="triggered_by_user")
 
     __table_args__ = (UniqueConstraint("user_name", name="uq_user_name"),)

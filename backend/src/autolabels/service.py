@@ -10,15 +10,13 @@ from uuid import uuid4
 
 from psycopg2 import Error as PgError
 from psycopg2 import errorcodes
-from sqlalchemy import and_, exists, func, insert, literal, not_, select
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import exists, func, insert, literal, select
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session, defer
 
-from src.autolabels.params import ModelName
-
 from ..auth.models import User
 from ..novels import models as novel_models
+from ..novels.permissions import novel_mod_access_select
 from . import models, schemas
 from .constants import AutoLabelProgress
 from .exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
@@ -31,9 +29,9 @@ def query_auto_label_by_id(db: Session, current_user: User, auto_label_id: uuid.
     Query an autolabel with a specific id from database.
 
     Args:
-        db: Databse to query from.
+        db: Database to query from.
         current_user: User querying the autolabel.
-        autolabel_id: id of autolabel to query.
+        auto_label_id: id of autolabel to query.
 
     Raises:
         AutoLabelNotFoundException: Auto label not found in database.
@@ -48,83 +46,119 @@ def query_auto_label_by_id(db: Session, current_user: User, auto_label_id: uuid.
     return autolabel
 
 
-def query_auto_labels(
+def query_auto_label_runs(
     db: Session,
     current_user: User,
     novel_id: uuid.UUID,
-    chapter_ids: list[uuid.UUID] | None,
-    start: int | None,
-    end: int | None,
-    model_names: list[ModelName] | None,
-) -> list[schemas.AutoLabelMeta]:
+    mine: bool = False,
+) -> list[schemas.AutoLabelRun]:
     """
-    Query auto-labels with filtering and return lightweight metadata.
+    Query autolabel runs for a novel.
 
     Args:
         db: Database session.
-        current_user: The user requesting the data. Non-admins only see public chapters.
+        current_user: User requesting the data.
         novel_id: ID of the novel to filter by.
-        chapter_ids: Optional list of chapter IDs to filter.
+        mine: If True, only return runs triggered by the current user.
+    """
+    q = select(models.AutoLabelRun).where(models.AutoLabelRun.novel_id == novel_id)
+    if mine:
+        q = q.where(models.AutoLabelRun.triggered_by == current_user.user_id)
+    # Verify the user has access to the novel.
+    subq = select(1).select_from(novel_models.Novel).where(novel_models.Novel.novel_id == novel_id)
+    subq = novel_mod_access_select(subq, current_user)
+    q = q.where(exists(subq))
+    result = db.execute(q)
+    rows = result.scalars().all()
+    return [schemas.AutoLabelRun.model_validate(row) for row in rows]
+
+
+def query_auto_labels_by_run(
+    db: Session,
+    current_user: User,
+    run_id: uuid.UUID,
+    start: int | None = None,
+    end: int | None = None,
+) -> list[schemas.AutoLabelMeta]:
+    """
+    Query autolabels belonging to a specific run.
+
+    Args:
+        db: Database session.
+        current_user: User requesting the data.
+        run_id: ID of the run to query autolabels for.
         start: Optional start chapter number (inclusive).
         end: Optional end chapter number (exclusive).
-        model_names: Optional names of the auto-label model to filter by.
     """
     q = (
         select(models.AutoLabel)
         .options(defer(models.AutoLabel.auto_label_data))
-        .join(
+        .where(models.AutoLabel.run_id == run_id)
+    )
+    if start is not None or end is not None:
+        q = q.join(
             novel_models.ChapterContent,
             novel_models.ChapterContent.chapter_content_id == models.AutoLabel.chapter_content_id,
-        )
-        .join(novel_models.Chapter, novel_models.Chapter.chapter_id == novel_models.ChapterContent.chapter_id)
-        .join(novel_models.Novel, novel_models.Novel.novel_id == novel_models.Chapter.novel_id)
-        .where(novel_models.Novel.novel_id == novel_id)
-    )
-    if chapter_ids is not None and len(chapter_ids) > 0:
-        q = q.where(novel_models.Chapter.chapter_id.in_(chapter_ids))
-    if start is not None:
-        q = q.where(novel_models.Chapter.chapter_num >= start)
-    if end is not None:
-        q = q.where(novel_models.Chapter.chapter_num < end)
-    if model_names is not None and len(model_names) > 0:
-        q = q.where(models.AutoLabel.auto_label_model_name.in_(model_names))
+        ).join(novel_models.Chapter, novel_models.Chapter.chapter_id == novel_models.ChapterContent.chapter_id)
+        if start is not None:
+            q = q.where(novel_models.Chapter.chapter_num >= start)
+        if end is not None:
+            q = q.where(novel_models.Chapter.chapter_num < end)
     q = auto_label_mod_access_select(q, current_user)
     result = db.execute(q)
-    result_rows = result.scalars().all()
-    return [schemas.AutoLabelMeta.model_validate(row) for row in result_rows]
+    rows = result.scalars().all()
+    return [schemas.AutoLabelMeta.model_validate(row) for row in rows]
 
 
 async def insert_auto_labels(
-    db: Session, current_user: User, dispatcher: AutoLabelDispatcher, request: schemas.CreateAutoLabels
-) -> list[schemas.AutoLabelMeta]:
+    db: Session,
+    current_user: User,
+    dispatcher: AutoLabelDispatcher,
+    request: schemas.CreateAutoLabels,
+) -> schemas.CreateAutoLabelsResponse:
     """
-    Insert new autolabels that correspond to the request, queue the corresponding tasks, and return a list of autolabels that were newly inserted.
+    Create a new autolabel run and insert autolabels for matching chapters.
 
     Args:
         db: Database to insert into.
         current_user: User performing the action.
-        request: Request metadata.
+        dispatcher: Queue dispatcher for worker tasks.
+        request: Request specifying novel, model params, and chapter filters.
 
     Raises:
-        AutoLabelDuplicateException: If insertion violates a unique constraint. Will most likely occur when there is a race condition.
+        AutoLabelDuplicateException: If insertion violates the unique constraint.
 
     Notes:
-        This function ignores all chapter content IDs that do not exist and chapters that the user has insufficient permissions for.
+        This function ignores chapters the user has insufficient permissions for
+        and chapters whose latest content already has an autolabel for this run.
     """
-    columns: list[Any] = [
-        models.AutoLabel.auto_label_model_name,
-        models.AutoLabel.auto_label_model_params,
+    model_name = request.params.model_name
+    model_params_dump = request.params.model_dump(mode="json")
+
+    # 1. Create the run.
+    run = models.AutoLabelRun(
+        novel_id=request.novel_id,
+        triggered_by=current_user.user_id,
+        model_name=model_name,
+        model_params=model_params_dump,
+    )
+    db.add(run)
+    # Flush to get the server-generated run_id before we insert autolabels.
+    db.flush()
+
+    # 2. Insert autolabels for matching chapter contents.
+    columns = [
         models.AutoLabel.auto_label_status,
         models.AutoLabel.auto_label_message,
         models.AutoLabel.chapter_content_id,
+        models.AutoLabel.run_id,
     ]
     q = (
         select(
-            literal(request.params.model_name),
-            literal(request.params.model_dump(mode="json"), type_=JSONB),
             literal(AutoLabelProgress.PENDING),
             literal("Waiting to be queued."),
             novel_models.ChapterContent.chapter_content_id,
+            literal(run.run_id),
         )
         .select_from(novel_models.ChapterContent)
         .join(novel_models.Chapter, novel_models.Chapter.chapter_id == novel_models.ChapterContent.chapter_id)
@@ -146,19 +180,6 @@ async def insert_auto_labels(
     if request.is_public is not None:
         q = q.where(novel_models.Chapter.chapter_is_public == request.is_public)
     q = auto_label_mod_access_insert(q, current_user)
-    q = q.where(
-        not_(
-            exists(
-                select(models.AutoLabel).where(
-                    and_(
-                        models.AutoLabel.chapter_content_id == novel_models.ChapterContent.chapter_content_id,
-                        models.AutoLabel.auto_label_model_name == request.params.model_name,
-                        models.AutoLabel.auto_label_model_params == request.params.model_dump(mode="json"),
-                    )
-                )
-            )
-        )
-    )
     stmt = insert(models.AutoLabel).from_select(columns, q).returning(models.AutoLabel)
     try:
         result = db.execute(stmt)
@@ -175,11 +196,12 @@ async def insert_auto_labels(
         db.rollback()
         raise
 
+    # 3. Dispatch worker tasks.
     tasks: list[Coroutine[Any, Any, None]] = []
     for autolabel in result_rows:
         job_id = str(uuid4())
         autolabel.auto_label_last_job_id = job_id
-        tasks.append(dispatcher.enqueue(job_id, autolabel.auto_label_id, request.params))
+        tasks.append(dispatcher.enqueue(job_id, autolabel.auto_label_id))
     try:
         db.commit()
     except Exception:
@@ -200,7 +222,11 @@ async def insert_auto_labels(
     except Exception:
         db.rollback()
         raise
-    return [schemas.AutoLabelMeta.model_validate(autolabel) for autolabel in result_rows]
+
+    # 4. Build response.
+    run_schema = schemas.AutoLabelRun.model_validate(run)
+    autolabel_schemas = [schemas.AutoLabelMeta.model_validate(al) for al in result_rows]
+    return schemas.CreateAutoLabelsResponse(run=run_schema, autolabels=autolabel_schemas)
 
 
 def regenerate_auto_labels():

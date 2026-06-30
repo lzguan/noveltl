@@ -6,7 +6,8 @@
  */
 import type {
   AutoLabel,
-  AutoLabelMetaOutput,
+  AutoLabelMeta,
+  AutoLabelRunOutput,
   BodyLoginForAccessTokenTokenPost,
   CacheEntry,
   Chapter,
@@ -14,11 +15,13 @@ import type {
   ChapterContentMeta,
   ChapterData,
   CreateAutoLabels,
+  CreateAutoLabelsResponse,
   CreateChapter,
   CreateLabelData,
   CreateLabelDataByAutoLabel,
   CreateLabelDataByAutoLabelStatus,
   CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostParams,
+  CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostParams,
   CreateLabelGroup,
   CreateLabelGroupLabelGroupsPostParams,
   CreateNovel,
@@ -40,7 +43,8 @@ import type {
   ModifyChapterContentResponse,
   Novel,
   OperationStatus,
-  ReadAutolabelsAutoLabelsGetParams,
+  ReadAutoLabelRunsAutoLabelRunsGetParams,
+  ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetParams,
   ReadChaptersByNovelChaptersGetParams,
   ReadEditChapterDataEditChapterDataChapterIdPostParams,
   ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostParams,
@@ -69,26 +73,26 @@ import type {
 
 import { customFetch } from '../../custom-fetch';
 
-export type readAutolabelsAutoLabelsGetResponse200 = {
-  data: AutoLabelMetaOutput[]
+export type readAutoLabelRunsAutoLabelRunsGetResponse200 = {
+  data: AutoLabelRunOutput[]
   status: 200
 }
 
-export type readAutolabelsAutoLabelsGetResponse422 = {
+export type readAutoLabelRunsAutoLabelRunsGetResponse422 = {
   data: HTTPValidationError
   status: 422
 }
 
-export type readAutolabelsAutoLabelsGetResponseSuccess = (readAutolabelsAutoLabelsGetResponse200) & {
+export type readAutoLabelRunsAutoLabelRunsGetResponseSuccess = (readAutoLabelRunsAutoLabelRunsGetResponse200) & {
   headers: Headers;
 };
-export type readAutolabelsAutoLabelsGetResponseError = (readAutolabelsAutoLabelsGetResponse422) & {
+export type readAutoLabelRunsAutoLabelRunsGetResponseError = (readAutoLabelRunsAutoLabelRunsGetResponse422) & {
   headers: Headers;
 };
 
-export type readAutolabelsAutoLabelsGetResponse = (readAutolabelsAutoLabelsGetResponseSuccess | readAutolabelsAutoLabelsGetResponseError)
+export type readAutoLabelRunsAutoLabelRunsGetResponse = (readAutoLabelRunsAutoLabelRunsGetResponseSuccess | readAutoLabelRunsAutoLabelRunsGetResponseError)
 
-export const getReadAutolabelsAutoLabelsGetUrl = (params: ReadAutolabelsAutoLabelsGetParams,) => {
+export const getReadAutoLabelRunsAutoLabelRunsGetUrl = (params: ReadAutoLabelRunsAutoLabelRunsGetParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -100,15 +104,77 @@ export const getReadAutolabelsAutoLabelsGetUrl = (params: ReadAutolabelsAutoLabe
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/auto-labels?${stringifiedParams}` : `/api/auto-labels`
+  return stringifiedParams.length > 0 ? `/api/auto-label-runs?${stringifiedParams}` : `/api/auto-label-runs`
 }
 
 /**
- * @summary Read Autolabels
+ * List autolabel runs for a novel.
+ *
+ * Args:
+ *     novel_id: UUID of novel to query runs for.
+ *     mine: If true, only return runs triggered by the current user.
+ * @summary Read Auto Label Runs
  */
-export const readAutolabelsAutoLabelsGet = async (params: ReadAutolabelsAutoLabelsGetParams, options?: RequestInit): Promise<readAutolabelsAutoLabelsGetResponse> => {
+export const readAutoLabelRunsAutoLabelRunsGet = async (params: ReadAutoLabelRunsAutoLabelRunsGetParams, options?: RequestInit): Promise<readAutoLabelRunsAutoLabelRunsGetResponse> => {
 
-  return customFetch<readAutolabelsAutoLabelsGetResponse>(getReadAutolabelsAutoLabelsGetUrl(params),
+  return customFetch<readAutoLabelRunsAutoLabelRunsGetResponse>(getReadAutoLabelRunsAutoLabelRunsGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+export type readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetResponse200 = {
+  data: AutoLabelMeta[]
+  status: 200
+}
+
+export type readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetResponseSuccess = (readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetResponse200) & {
+  headers: Headers;
+};
+export type readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetResponseError = (readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetResponse422) & {
+  headers: Headers;
+};
+
+export type readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetResponse = (readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetResponseSuccess | readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetResponseError)
+
+export const getReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetUrl = (runId: string,
+    params?: ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/auto-label-runs/${runId}/auto-labels?${stringifiedParams}` : `/api/auto-label-runs/${runId}/auto-labels`
+}
+
+/**
+ * Get autolabel metadata for all autolabels in a run.
+ *
+ * Args:
+ *     run_id: UUID of the run.
+ *     start: Optional inclusive lower bound on chapter number.
+ *     end: Optional exclusive upper bound on chapter number.
+ * @summary Read Auto Labels By Run
+ */
+export const readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet = async (runId: string,
+    params?: ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetParams, options?: RequestInit): Promise<readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetResponse> => {
+
+  return customFetch<readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetResponse>(getReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetUrl(runId,params),
   {
     ...options,
     method: 'GET'
@@ -119,7 +185,7 @@ export const readAutolabelsAutoLabelsGet = async (params: ReadAutolabelsAutoLabe
 
 
 export type createAutolabelsAutoLabelsPostResponse200 = {
-  data: AutoLabelMetaOutput[]
+  data: CreateAutoLabelsResponse
   status: 200
 }
 
@@ -146,6 +212,10 @@ export const getCreateAutolabelsAutoLabelsPostUrl = () => {
 }
 
 /**
+ * Create a new autolabel run and autolabels for matching chapters.
+ *
+ * The run is created first, then autolabel entries are inserted for each
+ * matching chapter. Worker tasks are dispatched for each autolabel.
  * @summary Create Autolabels
  */
 export const createAutolabelsAutoLabelsPost = async (createAutoLabels: CreateAutoLabels, options?: RequestInit): Promise<createAutolabelsAutoLabelsPostResponse> => {
@@ -188,12 +258,10 @@ export const getReadAutolabelByIdAutoLabelsAutoLabelIdGetUrl = (autoLabelId: str
 }
 
 /**
- * Endpoint for retrieving autolabel from database.
+ * Retrieve a single autolabel with its label data.
  *
  * Args:
- *     auto_label_id: UUID for auto label.
- *     db: Database dependency.
- *     current_user: Current user dependency.
+ *     auto_label_id: UUID of the autolabel.
  * @summary Read Autolabel By Id
  */
 export const readAutolabelByIdAutoLabelsAutoLabelIdGet = async (autoLabelId: string, options?: RequestInit): Promise<readAutolabelByIdAutoLabelsAutoLabelIdGetResponse> => {
@@ -1722,12 +1790,20 @@ export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLab
 
 export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse = (createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseSuccess | createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseError)
 
-export const getCreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostUrl = (labelGroupId: string,) => {
+export const getCreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostUrl = (labelGroupId: string,
+    params?: CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/label-groups/${labelGroupId}/label-datas/auto-labels`
+  return stringifiedParams.length > 0 ? `/api/label-groups/${labelGroupId}/label-datas/auto-labels?${stringifiedParams}` : `/api/label-groups/${labelGroupId}/label-datas/auto-labels`
 }
 
 /**
@@ -1735,9 +1811,10 @@ export const getCreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAut
  * @summary Create Label Datas By Auto Labels
  */
 export const createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost = async (labelGroupId: string,
-    createLabelDataByAutoLabel: CreateLabelDataByAutoLabel, options?: RequestInit): Promise<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse> => {
+    createLabelDataByAutoLabel: CreateLabelDataByAutoLabel,
+    params?: CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostParams, options?: RequestInit): Promise<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse> => {
 
-  return customFetch<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse>(getCreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostUrl(labelGroupId),
+  return customFetch<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse>(getCreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostUrl(labelGroupId,params),
   {
     ...options,
     method: 'POST',

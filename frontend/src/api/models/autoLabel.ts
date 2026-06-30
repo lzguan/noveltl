@@ -5,28 +5,26 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AutoLabelProgress } from './autoLabelProgress';
-import type { CluenerParams } from './cluenerParams';
-import type { DoNothingParams } from './doNothingParams';
 import type { LabelBase } from './labelBase';
 
 /**
- * Pydantic schema for an auto-labeled data entry.
+ * Pydantic schema for a single auto-labeled data entry with its label data.
  *
  * Attributes:
  *     auto_label_id: UUID identifier for this AutoLabel.
- *     auto_label_data: Dictionary containing the auto-labeled data.
- *     auto_label_model_params: Parameters used for the model to generate the auto labels.
+ *     auto_label_data: List of labels produced by the NER model, or None if not yet complete.
  *     auto_label_status: Labeling progress for this autolabel.
- *     auto_label_message: Details on status.
- *     chapter_content_id: UUID of chapter content this AutoLabel is associated with.
- *     auto_label_last_job_id: Job id of last job that was run on this AutoLabel.
+ *     auto_label_message: Details on status (e.g. failure reason).
+ *     auto_label_last_job_id: Job id of last request to autogenerate.
+ *     chapter_content_id: UUID of chapter content this AutoLabel is for.
+ *     run_id: UUID of the AutoLabelRun this autolabel belongs to.
  */
 export interface AutoLabel {
-  autoLabelData: LabelBase[] | null;
+  autoLabelData?: LabelBase[] | null;
   autoLabelId: string;
-  autoLabelLastJobId: string;
+  autoLabelLastJobId?: string | null;
   autoLabelMessage?: string | null;
-  autoLabelModelParams: CluenerParams | DoNothingParams;
   autoLabelStatus: AutoLabelProgress;
   chapterContentId: string;
+  runId: string;
 }

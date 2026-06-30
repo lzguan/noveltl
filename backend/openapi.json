@@ -2147,6 +2147,23 @@
               "format": "uuid",
               "title": "Labelgroupid"
             }
+          },
+          {
+            "name": "requestKey",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Requestkey"
+            }
           }
         ],
         "requestBody": {
@@ -2183,10 +2200,152 @@
         }
       }
     },
+    "/auto-label-runs": {
+      "get": {
+        "summary": "Read Auto Label Runs",
+        "description": "List autolabel runs for a novel.\n\nArgs:\n    novel_id: UUID of novel to query runs for.\n    mine: If true, only return runs triggered by the current user.",
+        "operationId": "read_auto_label_runs_auto_label_runs_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          },
+          {
+            "name": "mine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Mine"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AutoLabelRun-Output"
+                  },
+                  "title": "Response Read Auto Label Runs Auto Label Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auto-label-runs/{runId}/auto-labels": {
+      "get": {
+        "summary": "Read Auto Labels By Run",
+        "description": "Get autolabel metadata for all autolabels in a run.\n\nArgs:\n    run_id: UUID of the run.\n    start: Optional inclusive lower bound on chapter number.\n    end: Optional exclusive upper bound on chapter number.",
+        "operationId": "read_auto_labels_by_run_auto_label_runs__runId__auto_labels_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Runid"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AutoLabelMeta"
+                  },
+                  "title": "Response Read Auto Labels By Run Auto Label Runs  Runid  Auto Labels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auto-labels/{autoLabelId}": {
       "get": {
         "summary": "Read Autolabel By Id",
-        "description": "Endpoint for retrieving autolabel from database.\n\nArgs:\n    auto_label_id: UUID for auto label.\n    db: Database dependency.\n    current_user: Current user dependency.",
+        "description": "Retrieve a single autolabel with its label data.\n\nArgs:\n    auto_label_id: UUID of the autolabel.",
         "operationId": "read_autolabel_by_id_auto_labels__autoLabelId__get",
         "security": [
           {
@@ -2230,145 +2389,19 @@
       }
     },
     "/auto-labels": {
-      "get": {
-        "summary": "Read Autolabels",
-        "operationId": "read_autolabels_auto_labels_get",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "novelId",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Novelid"
-            }
-          },
-          {
-            "name": "chapterIds",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "format": "uuid"
-                  }
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Chapterids"
-            }
-          },
-          {
-            "name": "start",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Start"
-            }
-          },
-          {
-            "name": "end",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "End"
-            }
-          },
-          {
-            "name": "modelNames",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "enum": [
-                      "cluener",
-                      "do_nothing"
-                    ],
-                    "type": "string"
-                  }
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Modelnames"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/AutoLabelMeta-Output"
-                  },
-                  "title": "Response Read Autolabels Auto Labels Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "summary": "Create Autolabels",
+        "description": "Create a new autolabel run and autolabels for matching chapters.\n\nThe run is created first, then autolabel entries are inserted for each\nmatching chapter. Worker tasks are dispatched for each autolabel.",
         "operationId": "create_autolabels_auto_labels_post",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateAutoLabels"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -2376,11 +2409,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/AutoLabelMeta-Output"
-                  },
-                  "title": "Response Create Autolabels Auto Labels Post"
+                  "$ref": "#/components/schemas/CreateAutoLabelsResponse"
                 }
               }
             }
@@ -2395,7 +2424,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
       }
     },
     "/languages/{languageCode}": {
@@ -3000,17 +3034,6 @@
             ],
             "title": "Autolabeldata"
           },
-          "autoLabelModelParams": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CluenerParams"
-              },
-              {
-                "$ref": "#/components/schemas/DoNothingParams"
-              }
-            ],
-            "title": "Autolabelmodelparams"
-          },
           "autoLabelStatus": {
             "$ref": "#/components/schemas/AutoLabelProgress"
           },
@@ -3025,45 +3048,44 @@
             ],
             "title": "Autolabelmessage"
           },
+          "autoLabelLastJobId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Autolabellastjobid"
+          },
           "chapterContentId": {
             "type": "string",
             "format": "uuid",
             "title": "Chaptercontentid"
           },
-          "autoLabelLastJobId": {
+          "runId": {
             "type": "string",
-            "title": "Autolabellastjobid"
+            "format": "uuid",
+            "title": "Runid"
           }
         },
         "type": "object",
         "required": [
           "autoLabelId",
-          "autoLabelData",
-          "autoLabelModelParams",
           "autoLabelStatus",
           "chapterContentId",
-          "autoLabelLastJobId"
+          "runId"
         ],
         "title": "AutoLabel",
-        "description": "Pydantic schema for an auto-labeled data entry.\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_data: Dictionary containing the auto-labeled data.\n    auto_label_model_params: Parameters used for the model to generate the auto labels.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    chapter_content_id: UUID of chapter content this AutoLabel is associated with.\n    auto_label_last_job_id: Job id of last job that was run on this AutoLabel."
+        "description": "Pydantic schema for a single auto-labeled data entry with its label data.\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_data: List of labels produced by the NER model, or None if not yet complete.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status (e.g. failure reason).\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to."
       },
-      "AutoLabelMeta-Input": {
+      "AutoLabelMeta": {
         "properties": {
           "autoLabelId": {
             "type": "string",
             "format": "uuid",
             "title": "Autolabelid"
-          },
-          "autoLabelModelParams": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CluenerParams"
-              },
-              {
-                "$ref": "#/components/schemas/DoNothingParams"
-              }
-            ],
-            "title": "Autolabelmodelparams"
           },
           "autoLabelStatus": {
             "$ref": "#/components/schemas/AutoLabelProgress"
@@ -3079,49 +3101,7 @@
             ],
             "title": "Autolabelmessage"
           },
-          "chapterContentId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Chaptercontentid"
-          },
           "autoLabelLastJobId": {
-            "type": "string",
-            "title": "Autolabellastjobid"
-          }
-        },
-        "type": "object",
-        "required": [
-          "autoLabelId",
-          "autoLabelModelParams",
-          "autoLabelStatus",
-          "chapterContentId",
-          "autoLabelLastJobId"
-        ],
-        "title": "AutoLabelMeta",
-        "description": "Pydantic schema for auto-label metadata.\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_model_params: Parameters used for the model to generate the auto labels.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    chapter_content_id: UUID of chapter content this AutoLabel is associated with.\n    auto_label_last_job_id: Job id of last job that was run on this AutoLabel."
-      },
-      "AutoLabelMeta-Output": {
-        "properties": {
-          "autoLabelId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Autolabelid"
-          },
-          "autoLabelModelParams": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CluenerParams"
-              },
-              {
-                "$ref": "#/components/schemas/DoNothingParams"
-              }
-            ],
-            "title": "Autolabelmodelparams"
-          },
-          "autoLabelStatus": {
-            "$ref": "#/components/schemas/AutoLabelProgress"
-          },
-          "autoLabelMessage": {
             "anyOf": [
               {
                 "type": "string"
@@ -3130,28 +3110,28 @@
                 "type": "null"
               }
             ],
-            "title": "Autolabelmessage"
+            "title": "Autolabellastjobid"
           },
           "chapterContentId": {
             "type": "string",
             "format": "uuid",
             "title": "Chaptercontentid"
           },
-          "autoLabelLastJobId": {
+          "runId": {
             "type": "string",
-            "title": "Autolabellastjobid"
+            "format": "uuid",
+            "title": "Runid"
           }
         },
         "type": "object",
         "required": [
           "autoLabelId",
-          "autoLabelModelParams",
           "autoLabelStatus",
           "chapterContentId",
-          "autoLabelLastJobId"
+          "runId"
         ],
         "title": "AutoLabelMeta",
-        "description": "Pydantic schema for auto-label metadata.\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_model_params: Parameters used for the model to generate the auto labels.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    chapter_content_id: UUID of chapter content this AutoLabel is associated with.\n    auto_label_last_job_id: Job id of last job that was run on this AutoLabel."
+        "description": "Pydantic schema for auto-label metadata (no label data payload).\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to."
       },
       "AutoLabelProgress": {
         "type": "string",
@@ -3163,6 +3143,106 @@
         ],
         "title": "AutoLabelProgress",
         "description": "Status for an autolabel in database. One of 'failed', 'pending', 'processing', 'done'"
+      },
+      "AutoLabelRun-Input": {
+        "properties": {
+          "runId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Runid"
+          },
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "triggeredBy": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Triggeredby"
+          },
+          "modelName": {
+            "type": "string",
+            "title": "Modelname"
+          },
+          "modelParams": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CluenerParams"
+              },
+              {
+                "$ref": "#/components/schemas/DoNothingParams"
+              }
+            ],
+            "title": "Modelparams"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "runId",
+          "novelId",
+          "triggeredBy",
+          "modelName",
+          "modelParams",
+          "createdAt"
+        ],
+        "title": "AutoLabelRun",
+        "description": "Pydantic schema for an autolabel run (batch).\n\nA run groups autolabels created together in a single request.\n\nAttributes:\n    run_id: UUID identifier for this run.\n    triggered_by: UUID of user who triggered the run, or None.\n    model_name: Name of the NER model used.\n    model_params: Parameters for the NER model.\n    created_at: When the run was created."
+      },
+      "AutoLabelRun-Output": {
+        "properties": {
+          "runId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Runid"
+          },
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "triggeredBy": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Triggeredby"
+          },
+          "modelName": {
+            "type": "string",
+            "title": "Modelname"
+          },
+          "modelParams": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CluenerParams"
+              },
+              {
+                "$ref": "#/components/schemas/DoNothingParams"
+              }
+            ],
+            "title": "Modelparams"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "runId",
+          "novelId",
+          "triggeredBy",
+          "modelName",
+          "modelParams",
+          "createdAt"
+        ],
+        "title": "AutoLabelRun",
+        "description": "Pydantic schema for an autolabel run (batch).\n\nA run groups autolabels created together in a single request.\n\nAttributes:\n    run_id: UUID identifier for this run.\n    triggered_by: UUID of user who triggered the run, or None.\n    model_name: Name of the NER model used.\n    model_params: Parameters for the NER model.\n    created_at: When the run was created."
       },
       "Body_login_for_access_token_token_post": {
         "properties": {
@@ -3520,7 +3600,28 @@
           "params"
         ],
         "title": "CreateAutoLabels",
-        "description": "Pydantic schema for creating an auto-labeled data entry.\n\nAttributes:\n    novel_id: UUID of novel to create auto labels for.\n    params: Parameters for the NER model. Disciminated by model_name attribute.\n    chapter_ids: Optional parameter. Restrict to revisions with specific chapter UUIDs.\n    start: Optional parameter. Restrict to revisions with chapter num >= start.\n    end: Optional parameter. Restrict to revisions with chapter num < end.\n    is_public: Optional parameter. Restrict to revisions with this specific public flag."
+        "description": "Pydantic schema for creating a new autolabel run.\n\nAttributes:\n    novel_id: UUID of novel to create auto labels for.\n    params: Parameters for the NER model. Discriminated by model_name attribute.\n    chapter_ids: Optional. Restrict to specific chapter UUIDs.\n    start: Optional. Restrict to chapters with number >= start.\n    end: Optional. Restrict to chapters with number < end.\n    is_public: Optional. Restrict to chapters with this specific public flag."
+      },
+      "CreateAutoLabelsResponse": {
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/AutoLabelRun-Output"
+          },
+          "autolabels": {
+            "items": {
+              "$ref": "#/components/schemas/AutoLabelMeta"
+            },
+            "type": "array",
+            "title": "Autolabels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run",
+          "autolabels"
+        ],
+        "title": "CreateAutoLabelsResponse",
+        "description": "Pydantic schema for the response after creating autolabels.\n\nAttributes:\n    run: The autolabel run that was created.\n    autolabels: The list of autolabel entries created in this run."
       },
       "CreateChapter": {
         "properties": {
@@ -3563,31 +3664,10 @@
       },
       "CreateLabelDataByAutoLabel": {
         "properties": {
-          "modelName": {
+          "runId": {
             "type": "string",
-            "enum": [
-              "cluener",
-              "do_nothing"
-            ],
-            "title": "Modelname"
-          },
-          "modelParams": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/CluenerParams"
-              },
-              {
-                "$ref": "#/components/schemas/DoNothingParams"
-              }
-            ],
-            "title": "Modelparams",
-            "discriminator": {
-              "propertyName": "modelName",
-              "mapping": {
-                "cluener": "#/components/schemas/CluenerParams",
-                "do_nothing": "#/components/schemas/DoNothingParams"
-              }
-            }
+            "format": "uuid",
+            "title": "Runid"
           },
           "chapterIds": {
             "anyOf": [
@@ -3629,11 +3709,10 @@
         },
         "type": "object",
         "required": [
-          "modelName",
-          "modelParams"
+          "runId"
         ],
         "title": "CreateLabelDataByAutoLabel",
-        "description": "Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.\n\nAttributes:\n    model_name: Name of NER model that performed the autolabeling.\n    model_params: Parameters of model used.\n    chapter_ids: Optional filter on what chapters to include.\n    start: Optional filter on the least chapter number to include.\n    end: Optional filter on the greatest chapter number to include."
+        "description": "Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.\n\nAttributes:\n    run_id: UUID of the autolabel run whose results should be promoted.\n    chapter_ids: Optional filter on what chapters to include.\n    start: Optional filter on the least chapter number to include.\n    end: Optional filter on the greatest chapter number to include."
       },
       "CreateLabelDataByAutoLabelStatus": {
         "properties": {

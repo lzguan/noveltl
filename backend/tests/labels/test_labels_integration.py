@@ -25,14 +25,13 @@ class TestInsertLabelDatasByAutolabels:
     @pytest.mark.dependency(name="labels::integration::insert_label_datas_by_autolabels", scope="session")
     def test_basic(
         self,
-        chinese_xianxia_small_test_autolabels_scenario: ScenarioBundle,
+        xianxia_autolabels_scenario: ScenarioBundle,
         test_db: Session,
     ):
-        novel_bundle = chinese_xianxia_small_test_autolabels_scenario.novels[0]
-        label_bundle = chinese_xianxia_small_test_autolabels_scenario.label_groups[0]
+        novel_bundle = xianxia_autolabels_scenario.novels[0]
+        label_bundle = xianxia_autolabels_scenario.label_groups[0]
         request = CreateLabelDataByAutoLabel(
-            model_name="cluener",
-            model_params=novel_bundle.model_params_by_name["cluener"],
+            run_id=novel_bundle.autolabel_runs_by_name["cluener"].run_id,
         )
         res = insert_label_datas_by_autolabels(
             test_db,
@@ -79,6 +78,9 @@ class TestInsertLabelDatasByAutolabels:
                 .scalars()
                 .all()
             )
+            if source_labels is None:
+                assert len(db_labels) == 0
+                continue
             sorted_source_labels = sorted(source_labels, key=lambda x: x["label_start"])
 
             assert len(db_labels) == len(sorted_source_labels)

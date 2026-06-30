@@ -4,27 +4,24 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { AutoLabelMetaAutoLabelModelParams } from './autoLabelMetaAutoLabelModelParams';
 import type { AutoLabelProgress } from './autoLabelProgress';
 
 /**
- * Pydantic schema for auto-label metadata.
+ * Pydantic schema for auto-label metadata (no label data payload).
  *
  * Attributes:
  *     auto_label_id: UUID identifier for this AutoLabel.
- *     auto_label_model_name: Name of the model used to generate the auto labels.
- *     auto_label_model_params: Parameters used for the model to generate the auto labels.
  *     auto_label_status: Labeling progress for this autolabel.
  *     auto_label_message: Details on status.
- *     chapter_content_id: UUID of chapter content this AutoLabel is associated with.
- *     auto_label_last_job_id: Job id of last job that was run on this AutoLabel.
+ *     auto_label_last_job_id: Job id of last request to autogenerate.
+ *     chapter_content_id: UUID of chapter content this AutoLabel is for.
+ *     run_id: UUID of the AutoLabelRun this autolabel belongs to.
  */
 export interface AutoLabelMeta {
   autoLabelId: string;
-  autoLabelLastJobId: string;
+  autoLabelLastJobId?: string | null;
   autoLabelMessage?: string | null;
-  autoLabelModelName: 'cluener';
-  autoLabelModelParams: AutoLabelMetaAutoLabelModelParams;
   autoLabelStatus: AutoLabelProgress;
   chapterContentId: string;
+  runId: string;
 }

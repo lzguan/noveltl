@@ -31,12 +31,12 @@ class TestInsertAutoLabels:
     @pytest.mark.dependency(name="autolabels::worker::basic", scope="session")
     async def test_basic(
         self,
-        chinese_xianxia_small_test_scenario: ScenarioBundle,
+        xianxia_scenario: ScenarioBundle,
         redis: ArqRedis,
         test_db: Session,
         worker_mock: Worker,
     ):
-        novel_bundle = chinese_xianxia_small_test_scenario.novels[0]
+        novel_bundle = xianxia_scenario.novels[0]
         ret = await insert_auto_labels(
             test_db,
             novel_bundle.user,
@@ -48,12 +48,14 @@ class TestInsertAutoLabels:
             ),
         )
         assert len(novel_bundle.chapters) > 0
-        assert len(ret) == len(novel_bundle.chapters)
+        assert len(ret.autolabels) == len(novel_bundle.chapters)
         logger.info("ret.inserts: %s", ret)
-        assert all(a.auto_label_status == AutoLabelProgress.PENDING for a in ret)
+        assert all(a.auto_label_status == AutoLabelProgress.PENDING for a in ret.autolabels)
 
         await worker_mock.main()
-        q = select(AutoLabel).where(AutoLabel.auto_label_id.in_([a.auto_label_id for a in ret]))
+        q = select(AutoLabel).where(
+            AutoLabel.auto_label_id.in_([a.auto_label_id for a in ret.autolabels])
+        )
         rows = test_db.execute(q).scalars().all()
         for row in rows:
             logger.info("AutoLabel row: %s", row.__dict__)
@@ -62,11 +64,11 @@ class TestInsertAutoLabels:
     @pytest.mark.dependency(name="autolabels::worker::set_params", scope="session")
     async def test_set_params(
         self,
-        chinese_xianxia_small_test_scenario: ScenarioBundle,
+        xianxia_scenario: ScenarioBundle,
         redis: ArqRedis,
         test_db: Session,
     ):
-        novel_bundle = chinese_xianxia_small_test_scenario.novels[0]
+        novel_bundle = xianxia_scenario.novels[0]
         await insert_auto_labels(
             test_db,
             novel_bundle.user,
@@ -81,11 +83,11 @@ class TestInsertAutoLabels:
     @pytest.mark.dependency(name="autolabels::worker::insert_twice_is_idempotent", scope="session")
     async def test_insert_twice_is_idempotent(
         self,
-        chinese_xianxia_small_test_scenario: ScenarioBundle,
+        xianxia_scenario: ScenarioBundle,
         redis: ArqRedis,
         test_db: Session,
     ):
-        novel_bundle = chinese_xianxia_small_test_scenario.novels[0]
+        novel_bundle = xianxia_scenario.novels[0]
         ret = await insert_auto_labels(
             test_db,
             novel_bundle.user,
@@ -96,24 +98,28 @@ class TestInsertAutoLabels:
                 params=CluenerParams(model_name="cluener", separators={"\n": SepPriority.HIGH}),
             ),
         )
+        assert len(ret.autolabels) == len(novel_bundle.chapters)
+        assert all(a.auto_label_status == AutoLabelProgress.PENDING for a in ret.autolabels)
+
+        # Second insert with the same params creates a new run — not
+        # idempotent in the old sense, but each run is independent and
+        # the unique constraint is (chapter_content_id, run_id).
+        ret2 = await insert_auto_labels(
+            test_db,
+            novel_bundle.user,
+            ArqDispatcher(redis),
+            CreateAutoLabels(
+                chapter_ids=[chapter_bundle.chapter.chapter_id for chapter_bundle in novel_bundle.chapters],
+                novel_id=novel_bundle.novel.novel_id,
+                params=CluenerParams(model_name="cluener", separators={"\n": SepPriority.HIGH}),
+            ),
+        )
+        assert len(ret2.autolabels) == len(novel_bundle.chapters)
+
+        # Total autolabels in DB should be double (two runs).
         q = select(AutoLabel)
         result_rows = test_db.execute(q).scalars().all()
-        assert len(result_rows) == len(novel_bundle.chapters)
-        assert all(row.auto_label_status == AutoLabelProgress.PENDING for row in result_rows)
-        assert len(ret) == len(novel_bundle.chapters)
-        ret = await insert_auto_labels(
-            test_db,
-            novel_bundle.user,
-            ArqDispatcher(redis),
-            CreateAutoLabels(
-                chapter_ids=[chapter_bundle.chapter.chapter_id for chapter_bundle in novel_bundle.chapters],
-                novel_id=novel_bundle.novel.novel_id,
-                params=CluenerParams(model_name="cluener", separators={"\n": SepPriority.HIGH}),
-            ),
-        )
-        assert len(ret) == 0
-        result_rows = test_db.execute(q).scalars().all()
-        assert len(result_rows) == len(novel_bundle.chapters)
+        assert len(result_rows) == len(novel_bundle.chapters) * 2
 
     @pytest.mark.slow
     @pytest.mark.dependency(

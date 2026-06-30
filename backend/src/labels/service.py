@@ -420,15 +420,17 @@ def insert_label_datas_by_autolabels(
         .select_from(autolabel_models.AutoLabel)
         .join(models.LabelGroup, models.LabelGroup.label_group_id == label_group_id)
         .join(
+            autolabel_models.AutoLabelRun,
+            autolabel_models.AutoLabelRun.run_id == autolabel_models.AutoLabel.run_id,
+        )
+        .join(
             novel_models.ChapterContent,
             novel_models.ChapterContent.chapter_content_id == autolabel_models.AutoLabel.chapter_content_id,
         )
         .join(novel_models.Chapter, novel_models.Chapter.chapter_id == novel_models.ChapterContent.chapter_id)
-        .join(novel_models.Novel, novel_models.Novel.novel_id == novel_models.Chapter.novel_id)
-        .where(autolabel_models.AutoLabel.auto_label_model_name == request.model_params.model_name)
-        .where(autolabel_models.AutoLabel.auto_label_model_params == request.model_params.model_dump(mode="json"))
+        .where(autolabel_models.AutoLabel.run_id == request.run_id)
         .where(autolabel_models.AutoLabel.auto_label_status == AutoLabelProgress.DONE)
-        .where(novel_models.Novel.novel_id == models.LabelGroup.novel_id)
+        .where(autolabel_models.AutoLabelRun.novel_id == models.LabelGroup.novel_id)
         .where(
             novel_models.ChapterContent.chapter_content_version
             == select(func.max(novel_models.ChapterContent.chapter_content_version))
@@ -453,7 +455,7 @@ def insert_label_datas_by_autolabels(
         autolabel: autolabel_models.AutoLabel = a
         chapter_content: novel_models.ChapterContent = r
         try:
-            if not all(
+            if autolabel.auto_label_data and not all(
                 chapter_content.chapter_content_text[label["label_start"] : label["label_end"]] == label["label_word"]
                 for label in autolabel.auto_label_data
             ):

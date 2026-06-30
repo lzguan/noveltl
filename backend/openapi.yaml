@@ -48,14 +48,14 @@ components:
       title: AddLabelOp
       type: object
     AutoLabel:
-      description: "Pydantic schema for an auto-labeled data entry.\n\nAttributes:\n\
-        \    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_data:\
-        \ Dictionary containing the auto-labeled data.\n    auto_label_model_params:\
-        \ Parameters used for the model to generate the auto labels.\n    auto_label_status:\
-        \ Labeling progress for this autolabel.\n    auto_label_message: Details on\
-        \ status.\n    chapter_content_id: UUID of chapter content this AutoLabel\
-        \ is associated with.\n    auto_label_last_job_id: Job id of last job that\
-        \ was run on this AutoLabel."
+      description: "Pydantic schema for a single auto-labeled data entry with its\
+        \ label data.\n\nAttributes:\n    auto_label_id: UUID identifier for this\
+        \ AutoLabel.\n    auto_label_data: List of labels produced by the NER model,\
+        \ or None if not yet complete.\n    auto_label_status: Labeling progress for\
+        \ this autolabel.\n    auto_label_message: Details on status (e.g. failure\
+        \ reason).\n    auto_label_last_job_id: Job id of last request to autogenerate.\n\
+        \    chapter_content_id: UUID of chapter content this AutoLabel is for.\n\
+        \    run_id: UUID of the AutoLabelRun this autolabel belongs to."
       properties:
         autoLabelData:
           anyOf:
@@ -69,111 +69,69 @@ components:
           title: Autolabelid
           type: string
         autoLabelLastJobId:
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Autolabellastjobid
-          type: string
         autoLabelMessage:
           anyOf:
           - type: string
           - type: 'null'
           title: Autolabelmessage
-        autoLabelModelParams:
-          anyOf:
-          - $ref: '#/components/schemas/CluenerParams'
-          - $ref: '#/components/schemas/DoNothingParams'
-          title: Autolabelmodelparams
         autoLabelStatus:
           $ref: '#/components/schemas/AutoLabelProgress'
         chapterContentId:
           format: uuid
           title: Chaptercontentid
           type: string
+        runId:
+          format: uuid
+          title: Runid
+          type: string
       required:
       - autoLabelId
-      - autoLabelData
-      - autoLabelModelParams
       - autoLabelStatus
       - chapterContentId
-      - autoLabelLastJobId
+      - runId
       title: AutoLabel
       type: object
-    AutoLabelMeta-Input:
-      description: "Pydantic schema for auto-label metadata.\n\nAttributes:\n    auto_label_id:\
-        \ UUID identifier for this AutoLabel.\n    auto_label_model_params: Parameters\
-        \ used for the model to generate the auto labels.\n    auto_label_status:\
-        \ Labeling progress for this autolabel.\n    auto_label_message: Details on\
-        \ status.\n    chapter_content_id: UUID of chapter content this AutoLabel\
-        \ is associated with.\n    auto_label_last_job_id: Job id of last job that\
-        \ was run on this AutoLabel."
+    AutoLabelMeta:
+      description: "Pydantic schema for auto-label metadata (no label data payload).\n\
+        \nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n  \
+        \  auto_label_status: Labeling progress for this autolabel.\n    auto_label_message:\
+        \ Details on status.\n    auto_label_last_job_id: Job id of last request to\
+        \ autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel\
+        \ is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to."
       properties:
         autoLabelId:
           format: uuid
           title: Autolabelid
           type: string
         autoLabelLastJobId:
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Autolabellastjobid
-          type: string
         autoLabelMessage:
           anyOf:
           - type: string
           - type: 'null'
           title: Autolabelmessage
-        autoLabelModelParams:
-          anyOf:
-          - $ref: '#/components/schemas/CluenerParams'
-          - $ref: '#/components/schemas/DoNothingParams'
-          title: Autolabelmodelparams
         autoLabelStatus:
           $ref: '#/components/schemas/AutoLabelProgress'
         chapterContentId:
           format: uuid
           title: Chaptercontentid
           type: string
-      required:
-      - autoLabelId
-      - autoLabelModelParams
-      - autoLabelStatus
-      - chapterContentId
-      - autoLabelLastJobId
-      title: AutoLabelMeta
-      type: object
-    AutoLabelMeta-Output:
-      description: "Pydantic schema for auto-label metadata.\n\nAttributes:\n    auto_label_id:\
-        \ UUID identifier for this AutoLabel.\n    auto_label_model_params: Parameters\
-        \ used for the model to generate the auto labels.\n    auto_label_status:\
-        \ Labeling progress for this autolabel.\n    auto_label_message: Details on\
-        \ status.\n    chapter_content_id: UUID of chapter content this AutoLabel\
-        \ is associated with.\n    auto_label_last_job_id: Job id of last job that\
-        \ was run on this AutoLabel."
-      properties:
-        autoLabelId:
+        runId:
           format: uuid
-          title: Autolabelid
-          type: string
-        autoLabelLastJobId:
-          title: Autolabellastjobid
-          type: string
-        autoLabelMessage:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Autolabelmessage
-        autoLabelModelParams:
-          anyOf:
-          - $ref: '#/components/schemas/CluenerParams'
-          - $ref: '#/components/schemas/DoNothingParams'
-          title: Autolabelmodelparams
-        autoLabelStatus:
-          $ref: '#/components/schemas/AutoLabelProgress'
-        chapterContentId:
-          format: uuid
-          title: Chaptercontentid
+          title: Runid
           type: string
       required:
       - autoLabelId
-      - autoLabelModelParams
       - autoLabelStatus
       - chapterContentId
-      - autoLabelLastJobId
+      - runId
       title: AutoLabelMeta
       type: object
     AutoLabelProgress:
@@ -186,6 +144,86 @@ components:
       - done
       title: AutoLabelProgress
       type: string
+    AutoLabelRun-Input:
+      description: "Pydantic schema for an autolabel run (batch).\n\nA run groups\
+        \ autolabels created together in a single request.\n\nAttributes:\n    run_id:\
+        \ UUID identifier for this run.\n    triggered_by: UUID of user who triggered\
+        \ the run, or None.\n    model_name: Name of the NER model used.\n    model_params:\
+        \ Parameters for the NER model.\n    created_at: When the run was created."
+      properties:
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        modelName:
+          title: Modelname
+          type: string
+        modelParams:
+          anyOf:
+          - $ref: '#/components/schemas/CluenerParams'
+          - $ref: '#/components/schemas/DoNothingParams'
+          title: Modelparams
+        novelId:
+          format: uuid
+          title: Novelid
+          type: string
+        runId:
+          format: uuid
+          title: Runid
+          type: string
+        triggeredBy:
+          format: uuid
+          title: Triggeredby
+          type: string
+      required:
+      - runId
+      - novelId
+      - triggeredBy
+      - modelName
+      - modelParams
+      - createdAt
+      title: AutoLabelRun
+      type: object
+    AutoLabelRun-Output:
+      description: "Pydantic schema for an autolabel run (batch).\n\nA run groups\
+        \ autolabels created together in a single request.\n\nAttributes:\n    run_id:\
+        \ UUID identifier for this run.\n    triggered_by: UUID of user who triggered\
+        \ the run, or None.\n    model_name: Name of the NER model used.\n    model_params:\
+        \ Parameters for the NER model.\n    created_at: When the run was created."
+      properties:
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        modelName:
+          title: Modelname
+          type: string
+        modelParams:
+          anyOf:
+          - $ref: '#/components/schemas/CluenerParams'
+          - $ref: '#/components/schemas/DoNothingParams'
+          title: Modelparams
+        novelId:
+          format: uuid
+          title: Novelid
+          type: string
+        runId:
+          format: uuid
+          title: Runid
+          type: string
+        triggeredBy:
+          format: uuid
+          title: Triggeredby
+          type: string
+      required:
+      - runId
+      - novelId
+      - triggeredBy
+      - modelName
+      - modelParams
+      - createdAt
+      title: AutoLabelRun
+      type: object
     Body_login_for_access_token_token_post:
       properties:
         client_id:
@@ -403,14 +441,13 @@ components:
       title: CluenerParams
       type: object
     CreateAutoLabels:
-      description: "Pydantic schema for creating an auto-labeled data entry.\n\nAttributes:\n\
+      description: "Pydantic schema for creating a new autolabel run.\n\nAttributes:\n\
         \    novel_id: UUID of novel to create auto labels for.\n    params: Parameters\
-        \ for the NER model. Disciminated by model_name attribute.\n    chapter_ids:\
-        \ Optional parameter. Restrict to revisions with specific chapter UUIDs.\n\
-        \    start: Optional parameter. Restrict to revisions with chapter num >=\
-        \ start.\n    end: Optional parameter. Restrict to revisions with chapter\
-        \ num < end.\n    is_public: Optional parameter. Restrict to revisions with\
-        \ this specific public flag."
+        \ for the NER model. Discriminated by model_name attribute.\n    chapter_ids:\
+        \ Optional. Restrict to specific chapter UUIDs.\n    start: Optional. Restrict\
+        \ to chapters with number >= start.\n    end: Optional. Restrict to chapters\
+        \ with number < end.\n    is_public: Optional. Restrict to chapters with this\
+        \ specific public flag."
       properties:
         chapterIds:
           anyOf:
@@ -454,6 +491,23 @@ components:
       - params
       title: CreateAutoLabels
       type: object
+    CreateAutoLabelsResponse:
+      description: "Pydantic schema for the response after creating autolabels.\n\n\
+        Attributes:\n    run: The autolabel run that was created.\n    autolabels:\
+        \ The list of autolabel entries created in this run."
+      properties:
+        autolabels:
+          items:
+            $ref: '#/components/schemas/AutoLabelMeta'
+          title: Autolabels
+          type: array
+        run:
+          $ref: '#/components/schemas/AutoLabelRun-Output'
+      required:
+      - run
+      - autolabels
+      title: CreateAutoLabelsResponse
+      type: object
     CreateChapter:
       description: "Pydantic schema to validate data for creating a new chapter. The\
         \ novel_id is expected to be passed via the URL path.\n\nAttributes:\n   \
@@ -490,11 +544,10 @@ components:
       type: object
     CreateLabelDataByAutoLabel:
       description: "Pydantic schema to specifiy a set of AutoLabels to be moved to\
-        \ LabelDatas.\n\nAttributes:\n    model_name: Name of NER model that performed\
-        \ the autolabeling.\n    model_params: Parameters of model used.\n    chapter_ids:\
-        \ Optional filter on what chapters to include.\n    start: Optional filter\
-        \ on the least chapter number to include.\n    end: Optional filter on the\
-        \ greatest chapter number to include."
+        \ LabelDatas.\n\nAttributes:\n    run_id: UUID of the autolabel run whose\
+        \ results should be promoted.\n    chapter_ids: Optional filter on what chapters\
+        \ to include.\n    start: Optional filter on the least chapter number to include.\n\
+        \    end: Optional filter on the greatest chapter number to include."
       properties:
         chapterIds:
           anyOf:
@@ -509,30 +562,17 @@ components:
           - type: integer
           - type: 'null'
           title: End
-        modelName:
-          enum:
-          - cluener
-          - do_nothing
-          title: Modelname
+        runId:
+          format: uuid
+          title: Runid
           type: string
-        modelParams:
-          discriminator:
-            mapping:
-              cluener: '#/components/schemas/CluenerParams'
-              do_nothing: '#/components/schemas/DoNothingParams'
-            propertyName: modelName
-          oneOf:
-          - $ref: '#/components/schemas/CluenerParams'
-          - $ref: '#/components/schemas/DoNothingParams'
-          title: Modelparams
         start:
           anyOf:
           - type: integer
           - type: 'null'
           title: Start
       required:
-      - modelName
-      - modelParams
+      - runId
       title: CreateLabelDataByAutoLabel
       type: object
     CreateLabelDataByAutoLabelStatus:
@@ -1581,9 +1621,12 @@ info:
   version: 0.1.0
 openapi: 3.1.0
 paths:
-  /auto-labels:
+  /auto-label-runs:
     get:
-      operationId: read_autolabels_auto_labels_get
+      description: "List autolabel runs for a novel.\n\nArgs:\n    novel_id: UUID\
+        \ of novel to query runs for.\n    mine: If true, only return runs triggered\
+        \ by the current user."
+      operationId: read_auto_label_runs_auto_label_runs_get
       parameters:
       - in: query
         name: novelId
@@ -1593,16 +1636,45 @@ paths:
           title: Novelid
           type: string
       - in: query
-        name: chapterIds
+        name: mine
         required: false
         schema:
-          anyOf:
-          - items:
-              format: uuid
-              type: string
-            type: array
-          - type: 'null'
-          title: Chapterids
+          default: false
+          title: Mine
+          type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/AutoLabelRun-Output'
+                title: Response Read Auto Label Runs Auto Label Runs Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Auto Label Runs
+  /auto-label-runs/{runId}/auto-labels:
+    get:
+      description: "Get autolabel metadata for all autolabels in a run.\n\nArgs:\n\
+        \    run_id: UUID of the run.\n    start: Optional inclusive lower bound on\
+        \ chapter number.\n    end: Optional exclusive upper bound on chapter number."
+      operationId: read_auto_labels_by_run_auto_label_runs__runId__auto_labels_get
+      parameters:
+      - in: path
+        name: runId
+        required: true
+        schema:
+          format: uuid
+          title: Runid
+          type: string
       - in: query
         name: start
         required: false
@@ -1619,27 +1691,15 @@ paths:
           - type: integer
           - type: 'null'
           title: End
-      - in: query
-        name: modelNames
-        required: false
-        schema:
-          anyOf:
-          - items:
-              enum:
-              - cluener
-              - do_nothing
-              type: string
-            type: array
-          - type: 'null'
-          title: Modelnames
       responses:
         '200':
           content:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/AutoLabelMeta-Output'
-                title: Response Read Autolabels Auto Labels Get
+                  $ref: '#/components/schemas/AutoLabelMeta'
+                title: Response Read Auto Labels By Run Auto Label Runs  Runid  Auto
+                  Labels Get
                 type: array
           description: Successful Response
         '422':
@@ -1650,8 +1710,15 @@ paths:
           description: Validation Error
       security:
       - OAuth2PasswordBearer: []
-      summary: Read Autolabels
+      summary: Read Auto Labels By Run
+  /auto-labels:
     post:
+      description: 'Create a new autolabel run and autolabels for matching chapters.
+
+
+        The run is created first, then autolabel entries are inserted for each
+
+        matching chapter. Worker tasks are dispatched for each autolabel.'
       operationId: create_autolabels_auto_labels_post
       requestBody:
         content:
@@ -1664,10 +1731,7 @@ paths:
           content:
             application/json:
               schema:
-                items:
-                  $ref: '#/components/schemas/AutoLabelMeta-Output'
-                title: Response Create Autolabels Auto Labels Post
-                type: array
+                $ref: '#/components/schemas/CreateAutoLabelsResponse'
           description: Successful Response
         '422':
           content:
@@ -1680,9 +1744,8 @@ paths:
       summary: Create Autolabels
   /auto-labels/{autoLabelId}:
     get:
-      description: "Endpoint for retrieving autolabel from database.\n\nArgs:\n  \
-        \  auto_label_id: UUID for auto label.\n    db: Database dependency.\n   \
-        \ current_user: Current user dependency."
+      description: "Retrieve a single autolabel with its label data.\n\nArgs:\n  \
+        \  auto_label_id: UUID of the autolabel."
       operationId: read_autolabel_by_id_auto_labels__autoLabelId__get
       parameters:
       - in: path
@@ -2846,6 +2909,15 @@ paths:
           format: uuid
           title: Labelgroupid
           type: string
+      - in: query
+        name: requestKey
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Requestkey
       requestBody:
         content:
           application/json:

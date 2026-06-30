@@ -33,10 +33,10 @@ pytestmark = pytest.mark.dependency(
 @pytest.fixture
 def dd_label_group(
     test_db: Session,
-    chinese_xianxia_small_test_scenario: ScenarioBundle,
+    xianxia_scenario: ScenarioBundle,
 ) -> LabelGroup:
     """Create a label group for the test novel."""
-    novel_bundle = chinese_xianxia_small_test_scenario.novels[0]
+    novel_bundle = xianxia_scenario.novels[0]
     group = LabelGroup(
         label_group_name="Data Driven Test Group",
         novel_id=novel_bundle.novel.novel_id,
@@ -57,7 +57,7 @@ def dd_label_group(
 @pytest.fixture
 def dd_chapter_0_labels(
     test_db: Session,
-    chinese_xianxia_small_test_scenario: ScenarioBundle,
+    xianxia_scenario: ScenarioBundle,
     dd_label_group: LabelGroup,
     autolabel_loader: DataLoader,
 ) -> tuple[ChapterContent, list[LabelModel]]:
@@ -65,7 +65,7 @@ def dd_chapter_0_labels(
     Load autolabel data for chapter 0 and insert as real Labels in the DB.
     Returns the ChapterContent and the created labels.
     """
-    cc = chinese_xianxia_small_test_scenario.novels[0].chapters[0].latest_content
+    cc = xianxia_scenario.novels[0].chapters[0].latest_content
 
     # Load autolabel JSON for chapter 0
     autolabel_json = json.loads(next(autolabel_loader("chinese/chinese_xianxia/small_test/cluener")))
@@ -103,14 +103,14 @@ class TestDataDrivenModifyChapterContent:
     def test_delete_substring_matches_in_memory(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_scenario: ScenarioBundle,
+        xianxia_scenario: ScenarioBundle,
         dd_chapter_0_labels: tuple[ChapterContent, list[LabelModel]],
     ):
         """
         Delete the first line of chapter 0 and verify that the service function
         produces the same text and label positions as apply_text_ops in memory.
         """
-        chapter_bundle = chinese_xianxia_small_test_scenario.novels[0].chapters[0]
+        chapter_bundle = xianxia_scenario.novels[0].chapters[0]
         chapter, cc = chapter_bundle.chapter, chapter_bundle.latest_content
         _, db_labels = dd_chapter_0_labels
 
@@ -126,7 +126,7 @@ class TestDataDrivenModifyChapterContent:
         # Service function
         modify_chapter_content(
             test_db,
-            chinese_xianxia_small_test_scenario.novels[0].user,
+            xianxia_scenario.novels[0].user,
             chapter.chapter_id,
             cc.chapter_content_id,
             ops,
@@ -170,13 +170,13 @@ class TestDataDrivenModifyChapterContent:
     def test_insert_text_matches_in_memory(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_scenario: ScenarioBundle,
+        xianxia_scenario: ScenarioBundle,
         dd_chapter_0_labels: tuple[ChapterContent, list[LabelModel]],
     ):
         """
         Insert text at the beginning of chapter 0 and verify service matches in-memory.
         """
-        chapter_bundle = chinese_xianxia_small_test_scenario.novels[0].chapters[0]
+        chapter_bundle = xianxia_scenario.novels[0].chapters[0]
         chapter, cc = chapter_bundle.chapter, chapter_bundle.latest_content
         _, db_labels = dd_chapter_0_labels
 
@@ -191,7 +191,7 @@ class TestDataDrivenModifyChapterContent:
         # Service
         modify_chapter_content(
             test_db,
-            chinese_xianxia_small_test_scenario.novels[0].user,
+            xianxia_scenario.novels[0].user,
             chapter.chapter_id,
             cc.chapter_content_id,
             ops,
@@ -233,13 +233,13 @@ class TestDataDrivenModifyChapterContent:
     def test_multiple_ops_match_in_memory(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_scenario: ScenarioBundle,
+        xianxia_scenario: ScenarioBundle,
         dd_chapter_0_labels: tuple[ChapterContent, list[LabelModel]],
     ):
         """
         Apply multiple operations (delete first line, insert prefix) and verify match.
         """
-        chapter_bundle = chinese_xianxia_small_test_scenario.novels[0].chapters[0]
+        chapter_bundle = xianxia_scenario.novels[0].chapters[0]
         chapter, cc = chapter_bundle.chapter, chapter_bundle.latest_content
         _, db_labels = dd_chapter_0_labels
 
@@ -257,7 +257,7 @@ class TestDataDrivenModifyChapterContent:
         # Service
         modify_chapter_content(
             test_db,
-            chinese_xianxia_small_test_scenario.novels[0].user,
+            xianxia_scenario.novels[0].user,
             chapter.chapter_id,
             cc.chapter_content_id,
             ops,

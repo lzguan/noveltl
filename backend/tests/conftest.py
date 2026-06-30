@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import redis as r
 from arq import ArqRedis, create_pool
 from arq.connections import RedisSettings
 from arq.worker import Worker
@@ -48,7 +49,7 @@ class FakeTTLCacheAsyncRedis:
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    """Drop all tables in test_db before test session begins."""
+    """Drop all tables in test_db before test session begins + drop redis cache."""
     url = os.getenv("TEST_URL")
     if url is None:
         return
@@ -58,10 +59,15 @@ def pytest_configure(config: pytest.Config) -> None:
         conn.commit()
     engine.dispose()
 
+    with r.Redis(host="test_redis", port=6379) as red:
+        red.flushall()
+        red.close()
+
 
 pytest_plugins = [
     "tests.fixtures.populators.sample",
-    "tests.fixtures.populators.chinese_xianxia_small_test",
+    "tests.fixtures.populators.xianxia",
+    "tests.fixtures.populators.scifi",
     "tests.fixtures.populators.permissions_one",
     "tests.fixtures.populators.label_permissions",
     "tests.fixtures.populators.novel_permissions",

@@ -7,7 +7,6 @@ from typing import Annotated, Literal, Self
 
 from pydantic import ConfigDict, Field, model_validator
 
-from src.autolabels.params import NERParams
 from src.labels.constants import LabelRole
 
 from ..schemas import Model
@@ -262,13 +261,13 @@ class CreateLabelDataByAutoLabel(Model):
     Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.
 
     Attributes:
-        model_params: Parameters of model used.
+        run_id: UUID of the autolabel run whose results should be promoted.
         chapter_ids: Optional filter on what chapters to include.
         start: Optional filter on the least chapter number to include.
         end: Optional filter on the greatest chapter number to include.
     """
 
-    model_params: NERParams = Field(discriminator="model_name")
+    run_id: uuid.UUID
     chapter_ids: list[uuid.UUID] | None = None
     start: int | None = None
     end: int | None = None

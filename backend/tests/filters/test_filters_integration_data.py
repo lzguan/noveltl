@@ -33,13 +33,13 @@ pytestmark = pytest.mark.dependency(
 
 @pytest.fixture
 def cxst_labels_populated(
-    chinese_xianxia_small_test_labels_scenario: ScenarioBundle,
+    xianxia_labels_scenario: ScenarioBundle,
 ) -> LabelFixtureBundle:
     """
     Populates the label group with labels from autolabels.
     Returns the label group after population.
     """
-    return chinese_xianxia_small_test_labels_scenario.label_groups[0]
+    return xianxia_labels_scenario.label_groups[0]
 
 
 class TestFlagInstancesCompleteness:
@@ -49,7 +49,7 @@ class TestFlagInstancesCompleteness:
     def test_all_labels_above_threshold_are_returned(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_labels_scenario: ScenarioBundle,
+        xianxia_labels_scenario: ScenarioBundle,
         cxst_labels_populated: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
@@ -58,7 +58,7 @@ class TestFlagInstancesCompleteness:
         """
         min_score = 0.7
 
-        user = chinese_xianxia_small_test_labels_scenario.novels[0].user
+        user = xianxia_labels_scenario.novels[0].user
         # Get expected count from database
         expected_count = test_db.execute(
             select(func.count())
@@ -80,14 +80,14 @@ class TestFlagInstancesCompleteness:
     def test_all_labels_returned_at_zero_threshold(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_labels_scenario: ScenarioBundle,
+        xianxia_labels_scenario: ScenarioBundle,
         cxst_labels_populated: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
         """
         COMPLETENESS: With min_score=0, ALL labels should be returned.
         """
-        user = chinese_xianxia_small_test_labels_scenario.novels[0].user
+        user = xianxia_labels_scenario.novels[0].user
         # Get total label count
         total_count = test_db.execute(
             select(func.count())
@@ -122,7 +122,7 @@ class TestFlagInstancesCorrectness:
     def test_no_labels_below_threshold_are_returned(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_labels_scenario: ScenarioBundle,
+        xianxia_labels_scenario: ScenarioBundle,
         cxst_labels_populated: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
@@ -132,7 +132,7 @@ class TestFlagInstancesCorrectness:
         min_score = 0.7
 
         options = ScoreFlagInstancesOptions(label_group_id=cxst_labels_populated.label_group_id, min_score=min_score)
-        user = chinese_xianxia_small_test_labels_scenario.novels[0].user
+        user = xianxia_labels_scenario.novels[0].user
         results = score_filter.flag_instances(test_db, user, options)
 
         for result in results:
@@ -145,7 +145,7 @@ class TestFlagInstancesCorrectness:
     def test_returns_empty_when_threshold_exceeds_all_scores(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_labels_scenario: ScenarioBundle,
+        xianxia_labels_scenario: ScenarioBundle,
         cxst_labels_populated: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
@@ -153,7 +153,7 @@ class TestFlagInstancesCorrectness:
         CORRECTNESS: If min_score < min score in data, return empty list.
         """
         options = ScoreFlagInstancesOptions(label_group_id=cxst_labels_populated.label_group_id, min_score=0.0)
-        user = chinese_xianxia_small_test_labels_scenario.novels[0].user
+        user = xianxia_labels_scenario.novels[0].user
         results = score_filter.flag_instances(test_db, user, options)
 
         assert len(results) == 0
@@ -177,7 +177,7 @@ class TestFlagInstancesScorePartition:
     def test_flagged_plus_unflagged_equals_total(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_labels_scenario: ScenarioBundle,
+        xianxia_labels_scenario: ScenarioBundle,
         cxst_labels_populated: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
@@ -187,7 +187,7 @@ class TestFlagInstancesScorePartition:
         """
         min_score = 0.7
 
-        user = chinese_xianxia_small_test_labels_scenario.novels[0].user
+        user = xianxia_labels_scenario.novels[0].user
         # Get total count
         total_count = test_db.execute(
             select(func.count())
@@ -233,14 +233,14 @@ class TestApplyFilterPreservation:
     def test_copy_preserves_all_original_labels(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_labels_scenario: ScenarioBundle,
+        xianxia_labels_scenario: ScenarioBundle,
         cxst_labels_populated: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
         """
         PRESERVATION: When create_copy=True, original label group is unchanged.
         """
-        user = chinese_xianxia_small_test_labels_scenario.novels[0].user
+        user = xianxia_labels_scenario.novels[0].user
         # Get original count
         original_count = test_db.execute(
             select(func.count())
@@ -290,7 +290,7 @@ class TestApplyFilterDeletion:
     def test_deletes_exactly_flagged_labels(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_labels_scenario: ScenarioBundle,
+        xianxia_labels_scenario: ScenarioBundle,
         cxst_labels_populated: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
@@ -299,7 +299,7 @@ class TestApplyFilterDeletion:
         """
         min_score = 0.8
 
-        user = chinese_xianxia_small_test_labels_scenario.novels[0].user
+        user = xianxia_labels_scenario.novels[0].user
         # Get initial counts
         initial_total = test_db.execute(
             select(func.count())
@@ -336,7 +336,7 @@ class TestApplyFilterDeletion:
     def test_remaining_labels_are_below_threshold(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_labels_scenario: ScenarioBundle,
+        xianxia_labels_scenario: ScenarioBundle,
         cxst_labels_populated: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
@@ -345,7 +345,7 @@ class TestApplyFilterDeletion:
         """
         min_score = 0.7
 
-        user = chinese_xianxia_small_test_labels_scenario.novels[0].user
+        user = xianxia_labels_scenario.novels[0].user
         # Flag and delete labels above threshold
         options = ScoreFlagInstancesOptions(label_group_id=cxst_labels_populated.label_group_id, min_score=min_score)
         instances = score_filter.flag_instances(test_db, user, options)
@@ -383,14 +383,14 @@ class TestGetContextsRealData:
     def test_contexts_contain_label_word(
         self,
         test_db: Session,
-        chinese_xianxia_small_test_labels_scenario: ScenarioBundle,
+        xianxia_labels_scenario: ScenarioBundle,
         cxst_labels_populated: LabelFixtureBundle,
         score_filter: ScoreFilter,
     ):
         """
         Verify that extracted contexts contain the labeled word.
         """
-        user = chinese_xianxia_small_test_labels_scenario.novels[0].user
+        user = xianxia_labels_scenario.novels[0].user
         options = ScoreFlagInstancesOptions(
             label_group_id=cxst_labels_populated.label_group_id,
             min_score=0.9,  # High threshold for fewer results

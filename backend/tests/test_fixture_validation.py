@@ -236,17 +236,17 @@ class TestAdditionalScenarioBundlesCreateData:
         assert "Group 1" in versioned_chapter_scenario.label_groups_by_name
         assert "Group 2" in versioned_chapter_scenario.label_groups_by_name
 
-    @pytest.mark.dependency(name="fixture_validation::chinese_xianxia_small_test_scenario", scope="session")
-    def test_chinese_xianxia_small_test_scenario_has_loader_backed_data(
-        self, chinese_xianxia_small_test_autolabels_scenario: ScenarioBundle
+    @pytest.mark.dependency(name="fixture_validation::xianxia_scenario", scope="session")
+    def test_xianxia_scenario_has_loader_backed_data(
+        self, xianxia_autolabels_scenario: ScenarioBundle
     ) -> None:
-        novel_bundle = chinese_xianxia_small_test_autolabels_scenario.novels[0]
+        novel_bundle = xianxia_autolabels_scenario.novels[0]
         logger.info(
             "Chinese xianxia small test summary=%s autolabel_models=%s",
-            chinese_xianxia_small_test_autolabels_scenario.summary(),
+            xianxia_autolabels_scenario.summary(),
             sorted(novel_bundle.autolabels_by_name),
         )
-        assert chinese_xianxia_small_test_autolabels_scenario.name == "chinese_xianxia_small_test_scenario"
+        assert xianxia_autolabels_scenario.name == "xianxia_scenario"
         assert len(novel_bundle.chapters) > 0
         assert len(novel_bundle.label_groups) == 1
         assert len(novel_bundle.autolabels_by_name["cluener"]) > 0
@@ -259,7 +259,7 @@ class TestAdditionalScenarioBundlesCreateData:
             "fixture_validation::novel_resource_scenario",
             "fixture_validation::label_access_scenario",
             "fixture_validation::versioned_chapter_scenario",
-            "fixture_validation::chinese_xianxia_small_test_scenario",
+            "fixture_validation::xianxia_scenario",
         ],
         scope="session",
     )

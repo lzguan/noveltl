@@ -8,15 +8,15 @@ import type { CluenerParams } from './cluenerParams';
 import type { DoNothingParams } from './doNothingParams';
 
 /**
- * Pydantic schema for creating an auto-labeled data entry.
+ * Pydantic schema for creating a new autolabel run.
  *
  * Attributes:
  *     novel_id: UUID of novel to create auto labels for.
- *     params: Parameters for the NER model. Disciminated by model_name attribute.
- *     chapter_ids: Optional parameter. Restrict to revisions with specific chapter UUIDs.
- *     start: Optional parameter. Restrict to revisions with chapter num >= start.
- *     end: Optional parameter. Restrict to revisions with chapter num < end.
- *     is_public: Optional parameter. Restrict to revisions with this specific public flag.
+ *     params: Parameters for the NER model. Discriminated by model_name attribute.
+ *     chapter_ids: Optional. Restrict to specific chapter UUIDs.
+ *     start: Optional. Restrict to chapters with number >= start.
+ *     end: Optional. Restrict to chapters with number < end.
+ *     is_public: Optional. Restrict to chapters with this specific public flag.
  */
 export interface CreateAutoLabels {
   chapterIds?: string[] | null;

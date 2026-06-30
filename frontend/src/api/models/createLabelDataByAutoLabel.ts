@@ -4,16 +4,12 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { CluenerParams } from './cluenerParams';
-import type { CreateLabelDataByAutoLabelModelName } from './createLabelDataByAutoLabelModelName';
-import type { DoNothingParams } from './doNothingParams';
 
 /**
  * Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.
  *
  * Attributes:
- *     model_name: Name of NER model that performed the autolabeling.
- *     model_params: Parameters of model used.
+ *     run_id: UUID of the autolabel run whose results should be promoted.
  *     chapter_ids: Optional filter on what chapters to include.
  *     start: Optional filter on the least chapter number to include.
  *     end: Optional filter on the greatest chapter number to include.
@@ -21,7 +17,6 @@ import type { DoNothingParams } from './doNothingParams';
 export interface CreateLabelDataByAutoLabel {
   chapterIds?: string[] | null;
   end?: number | null;
-  modelName: CreateLabelDataByAutoLabelModelName;
-  modelParams: CluenerParams | DoNothingParams;
+  runId: string;
   start?: number | null;
 }

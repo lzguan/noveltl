@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.auth.models import User
-from src.autolabels.models import AutoLabel
+from src.autolabels.models import AutoLabel, AutoLabelRun
 from src.autolabels.params import CluenerParams
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.labels.schemas import CreateLabelDataByAutoLabel
@@ -401,27 +401,27 @@ def label_bundle(score_filter_scenario_bundle: ScenarioBundle) -> LabelFixtureBu
 
 
 @pytest.fixture
-def chinese_xianxia_small_test_scenario(
-    chinese_xianxia_small_test_user: User,
-    chinese_xianxia_small_test_source_work: SourceWork,
-    chinese_xianxia_small_test_novel: Novel,
-    chinese_xianxia_small_test_contributor: NovelContributor,
-    chinese_xianxia_small_test_label_group: LabelGroup,
-    chinese_xianxia_small_test_label_contributor: LabelContributor,
-    chinese_xianxia_small_test_chapters: list[tuple[Chapter, ChapterContent]],
+def xianxia_scenario(
+    xianxia_user: User,
+    xianxia_source_work: SourceWork,
+    xianxia_novel: Novel,
+    xianxia_contributor: NovelContributor,
+    xianxia_label_group: LabelGroup,
+    xianxia_label_contributor: LabelContributor,
+    xianxia_chapters: list[tuple[Chapter, ChapterContent]],
     cluener_testconfig_params: CluenerParams,
 ) -> ScenarioBundle:
     """Scenario bundle for the loader-backed chinese_xianxia_small_test dataset."""
     scenario = _build_scenario_bundle(
-        name="chinese_xianxia_small_test_scenario",
-        users=[chinese_xianxia_small_test_user],
-        source_works=[chinese_xianxia_small_test_source_work],
-        novels=[chinese_xianxia_small_test_novel],
-        novel_contributors=[chinese_xianxia_small_test_contributor],
-        chapters=[chapter for chapter, _ in chinese_xianxia_small_test_chapters],
-        chapter_contents=[chapter_content for _, chapter_content in chinese_xianxia_small_test_chapters],
-        label_groups=[chinese_xianxia_small_test_label_group],
-        label_contributors=[chinese_xianxia_small_test_label_contributor],
+        name="xianxia_scenario",
+        users=[xianxia_user],
+        source_works=[xianxia_source_work],
+        novels=[xianxia_novel],
+        novel_contributors=[xianxia_contributor],
+        chapters=[chapter for chapter, _ in xianxia_chapters],
+        chapter_contents=[chapter_content for _, chapter_content in xianxia_chapters],
+        label_groups=[xianxia_label_group],
+        label_contributors=[xianxia_label_contributor],
         label_datas=[],
         labels=[],
     )
@@ -430,30 +430,36 @@ def chinese_xianxia_small_test_scenario(
 
 
 @pytest.fixture
-def chinese_xianxia_small_test_autolabels_scenario(
-    chinese_xianxia_small_test_scenario: ScenarioBundle,
-    chinese_xianxia_small_test_autolabels_cluener: list[AutoLabel],
+def xianxia_autolabels_scenario(
+    xianxia_scenario: ScenarioBundle,
+    xianxia_autolabels_cluener: list[AutoLabel],
+    test_db: Session,
 ) -> ScenarioBundle:
     """Loader-backed scenario with cluener autolabel rows inserted."""
-    chinese_xianxia_small_test_scenario.novels[0].autolabels_by_name["cluener"] = (
-        chinese_xianxia_small_test_autolabels_cluener
+    xianxia_scenario.novels[0].autolabels_by_name["cluener"] = (
+        xianxia_autolabels_cluener
     )
-    return chinese_xianxia_small_test_scenario
+    run = test_db.execute(
+        select(AutoLabelRun).where(
+            AutoLabelRun.run_id == xianxia_autolabels_cluener[0].run_id
+        )
+    ).scalar_one()
+    xianxia_scenario.novels[0].autolabel_runs_by_name["cluener"] = run
+    return xianxia_scenario
 
 
 @pytest.fixture
-def chinese_xianxia_small_test_labels_scenario(
-    chinese_xianxia_small_test_autolabels_scenario: ScenarioBundle,
+def xianxia_labels_scenario(
+    xianxia_autolabels_scenario: ScenarioBundle,
     test_db: Session,
 ) -> ScenarioBundle:
     """
     Dataset bundle after populating the default label group from cluener autolabels.
     """
-    novel_bundle = chinese_xianxia_small_test_autolabels_scenario.novels[0]
-    label_bundle = chinese_xianxia_small_test_autolabels_scenario.label_groups[0]
+    novel_bundle = xianxia_autolabels_scenario.novels[0]
+    label_bundle = xianxia_autolabels_scenario.label_groups[0]
     request = CreateLabelDataByAutoLabel(
-        model_name="cluener",
-        model_params=novel_bundle.model_params_by_name["cluener"],
+        run_id=novel_bundle.autolabel_runs_by_name["cluener"].run_id,
     )
     result = insert_label_datas_by_autolabels(
         test_db,
@@ -483,11 +489,57 @@ def chinese_xianxia_small_test_labels_scenario(
             label_data=label_data,
             chapter_content=next(
                 content
-                for content in chinese_xianxia_small_test_autolabels_scenario.chapter_contents
+                for content in xianxia_autolabels_scenario.chapter_contents
                 if content.chapter_content_id == label_data.chapter_content_id
             ),
             labels=[label for label in labels if label.label_data_id == label_data.label_data_id],
         )
         for label_data in label_datas
     ]
-    return chinese_xianxia_small_test_autolabels_scenario
+    return xianxia_autolabels_scenario
+
+
+@pytest.fixture
+def scifi_scenario(
+    scifi_user: User,
+    scifi_source_work: SourceWork,
+    scifi_novel: Novel,
+    scifi_contributor: NovelContributor,
+    scifi_label_group: LabelGroup,
+    scifi_label_contributor: LabelContributor,
+    scifi_chapters: list[tuple[Chapter, ChapterContent]],
+) -> ScenarioBundle:
+    """Scenario bundle for the loader-backed mixed_chinese_scifi small_test dataset."""
+    scenario = _build_scenario_bundle(
+        name="scifi_scenario",
+        users=[scifi_user],
+        source_works=[scifi_source_work],
+        novels=[scifi_novel],
+        novel_contributors=[scifi_contributor],
+        chapters=[chapter for chapter, _ in scifi_chapters],
+        chapter_contents=[chapter_content for _, chapter_content in scifi_chapters],
+        label_groups=[scifi_label_group],
+        label_contributors=[scifi_label_contributor],
+        label_datas=[],
+        labels=[],
+    )
+    return scenario
+
+
+@pytest.fixture
+def scifi_autolabels_scenario(
+    scifi_scenario: ScenarioBundle,
+    scifi_autolabels_cluener: list[AutoLabel],
+    test_db: Session,
+) -> ScenarioBundle:
+    """Loader-backed scenario with cluener autolabel rows inserted for scifi test data."""
+    scifi_scenario.novels[0].autolabels_by_name["cluener"] = (
+        scifi_autolabels_cluener
+    )
+    run = test_db.execute(
+        select(AutoLabelRun).where(
+            AutoLabelRun.run_id == scifi_autolabels_cluener[0].run_id
+        )
+    ).scalar_one()
+    scifi_scenario.novels[0].autolabel_runs_by_name["cluener"] = run
+    return scifi_scenario

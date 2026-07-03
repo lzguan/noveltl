@@ -13,7 +13,5 @@
 		"typeCheck": true
 	},
 	"plugins": ["react"],
-	"ignorePatterns": [
-		"src/api/**/*", "!src/api/custom-fetch.ts"
-	]
+	"ignorePatterns": ["src/api/**/*", "!src/api/custom-fetch.ts"]
 }

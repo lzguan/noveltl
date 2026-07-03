@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-	Compartment,
-	EditorState,
-	type Range,
-	StateEffect,
-	StateField,
-} from "@codemirror/state";
+import { Compartment, EditorState, type Range, StateEffect, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, keymap } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import type { SegmentManager } from "@/edit/lib/text-model/core/segmentManager";
@@ -148,7 +142,11 @@ export function CodeMirrorEditor({
 								}
 								const insertedText = inserted.toString();
 								if (insertedText.length > 0) {
-									onTextOpRef.current({ op: "insert", start, text: insertedText });
+									onTextOpRef.current({
+										op: "insert",
+										start,
+										text: insertedText,
+									});
 								}
 								shift += insertedText.length - removed.length;
 							});
@@ -305,11 +303,22 @@ export function CodeMirrorEditor({
 							word={form.word}
 							targets={form.targets}
 							onSubmit={(target, meta) => {
-									const op = { start: form.range.from, end: form.range.to, word: form.word };
-									console.log("[addLabel] target=%s range=[%d,%d) word=%s", target, op.start, op.end, op.word, meta);
-									labeling.sink.add(target, op, meta);
-									setForm(null);
-								}}
+								const op = {
+									start: form.range.from,
+									end: form.range.to,
+									word: form.word,
+								};
+								console.log(
+									"[addLabel] target=%s range=[%d,%d) word=%s",
+									target,
+									op.start,
+									op.end,
+									op.word,
+									meta,
+								);
+								labeling.sink.add(target, op, meta);
+								setForm(null);
+							}}
 							onCancel={() => setForm(null)}
 						/>
 					</PopoverContent>

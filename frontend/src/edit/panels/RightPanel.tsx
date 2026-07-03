@@ -1,10 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export function RightPanel({
-	children,
-}: {
-	children?: React.ReactNode;
-}) {
+export function RightPanel({ children }: { children?: React.ReactNode }) {
 	return (
 		<Tabs defaultValue="auto-labels" className="h-full flex flex-col">
 			<TabsList variant="line" className="w-full px-1 pt-1">

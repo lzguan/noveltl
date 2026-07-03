@@ -1,6 +1,10 @@
 import { Profiler, useEffect, useMemo, useState } from "react";
 import { Effect } from "effect";
-import { readChaptersByNovelChaptersGet, readLabelGroupsWithRoleLabelGroupsWithRoleGet, readNovelNovelsNovelIdGet } from "@/api/endpoints/default/default";
+import {
+	readChaptersByNovelChaptersGet,
+	readLabelGroupsWithRoleLabelGroupsWithRoleGet,
+	readNovelNovelsNovelIdGet,
+} from "@/api/endpoints/default/default";
 import type { Chapter, LabelGroupWithRole, Novel } from "@/api/models";
 import { buildNovelController } from "../controller/controller";
 import type { NovelData } from "../controller/dataManager";
@@ -21,7 +25,11 @@ import { LeftPanel } from "../panels/LeftPanel";
 import { RightPanel } from "../panels/RightPanel";
 import { ToolbarPanel } from "../panels/ToolbarPanel";
 
-function makeNovelData(novel: Novel, chapters: Chapter[], labelGroups: LabelGroupWithRole[]): NovelData {
+function makeNovelData(
+	novel: Novel,
+	chapters: Chapter[],
+	labelGroups: LabelGroupWithRole[],
+): NovelData {
 	return { novel, chapters, labelGroups, novelRole: "owner" };
 }
 
@@ -101,7 +109,8 @@ export function EditNovelPage() {
 			})
 			.then(() => readLabelGroupsWithRoleLabelGroupsWithRoleGet({ novelId }))
 			.then((resp) => {
-				if (resp.status !== 200) throw new Error(`Failed to load label groups: ${resp.status}`);
+				if (resp.status !== 200)
+					throw new Error(`Failed to load label groups: ${resp.status}`);
 				setLabelGroups(resp.data);
 			})
 			.catch(setError);
@@ -114,9 +123,7 @@ export function EditNovelPage() {
 		const novelData = makeNovelData(novel, chapters, labelGroups);
 		const ctrl = Effect.runSync(buildNovelController(novelData));
 
-		const controllerUserEvent = (
-			event: Parameters<typeof ctrl.handleUserEvent>[0],
-		) => {
+		const controllerUserEvent = (event: Parameters<typeof ctrl.handleUserEvent>[0]) => {
 			setTimeout(() => {
 				Effect.runPromise(ctrl.handleUserEvent(event)).catch(() => {});
 			}, 0);
@@ -169,8 +176,7 @@ export function EditNovelPage() {
 					if (!slot) continue;
 					trackedLabelGroups.setLabelGroup(id, {
 						labelGroup: Prov({
-							labelGroupName:
-								slot.meta?.labelGroup?.labelGroupName ?? "???",
+							labelGroupName: slot.meta?.labelGroup?.labelGroupName ?? "???",
 						}),
 						color: generateRandomColor(),
 						visible: true,
@@ -184,7 +190,7 @@ export function EditNovelPage() {
 		Effect.runFork(ctrl.start());
 
 		setManagers({ chapterMgr, labelGroupMgr, editorMgr });
-	// oxlint-disable-next-line react-hooks/exhaustive-deps
+		// oxlint-disable-next-line react-hooks/exhaustive-deps
 	}, [novel, chapters, labelGroups]);
 
 	// Extract novelId from URL
@@ -212,16 +218,16 @@ export function EditNovelPage() {
 		);
 	}
 
-	const currentChapterId = editorState.data.empty ? null : editorState.data.loading
+	const currentChapterId = editorState.data.empty
 		? null
-		: editorState.data.chapterId;
+		: editorState.data.loading
+			? null
+			: editorState.data.chapterId;
 
 	return (
 		<Profiler
 			id="EditNovelPage"
-			onRender={(_id, phase, duration) =>
-				console.log(`${phase}: ${duration}ms`)
-			}
+			onRender={(_id, phase, duration) => console.log(`${phase}: ${duration}ms`)}
 		>
 			<div className="flex flex-col h-full min-h-0">
 				<ToolbarPanel

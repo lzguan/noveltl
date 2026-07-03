@@ -3,14 +3,10 @@ import { Effect } from "effect";
 import { buildRequestManager } from "../requestmanager";
 import { buildIdRepository } from "../idRepository";
 import { IdempotentCallable } from "../types/helperTypes";
-import {
-	CacheConflictException,
-	FatalException,
-} from "../types/errors";
+import { CacheConflictException, FatalException } from "../types/errors";
 import type { TriggerEvent } from "../types/controllerTypes";
 import type { RequestEvent, RequestKey, ReserveList } from "../types/requestTypes";
 import { getCachedResultCachedCachedIdGet } from "@/api/endpoints/default/default";
-import { CacheEntryStatus } from "@/api/models/cacheEntryStatus";
 
 vi.mock("@/api/endpoints/default/default", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@/api/endpoints/default/default")>();
@@ -33,21 +29,12 @@ describe("buildRequestManager", () => {
 		vi.clearAllMocks();
 	});
 
-	it("polls cached request status after a cached cache conflict", async () => {
+	it("retries cached requests with a new key after a cache conflict", async () => {
 		const getCachedResultMock = vi.mocked(getCachedResultCachedCachedIdGet);
-		getCachedResultMock.mockResolvedValue({
-			status: 200,
-			data: {
-				status: CacheEntryStatus.success,
-				status_code: 200,
-				response: { ok: true },
-				error: null,
-			},
-			headers: new Headers(),
-		});
 		const sentKeys: RequestKey[] = [];
 		const postSendResults: unknown[] = [];
 		const errors: TriggerEvent[] = [];
+		let sendAttempts = 0;
 		const requestManager = Effect.runSync(
 			buildRequestManager(buildIdRepository(), (event) =>
 				Effect.sync(() => {
@@ -70,10 +57,13 @@ describe("buildRequestManager", () => {
 			preSend: () => Effect.succeed(void 0),
 			send: (requestKey) =>
 				Effect.sync(() => {
+					sendAttempts += 1;
 					sentKeys.push(requestKey);
 				}).pipe(
-					Effect.andThen(
-						Effect.fail(new CacheConflictException({ requestKey })),
+					Effect.andThen(() =>
+						sendAttempts === 1
+							? Effect.fail(new CacheConflictException({ requestKey }))
+							: Effect.succeed({ ok: true }),
 					),
 				),
 			postSend: (data) =>
@@ -86,36 +76,17 @@ describe("buildRequestManager", () => {
 		await Effect.runPromise(requestManager.waitFlush());
 
 		expect(errors).toEqual([]);
-		expect(sentKeys).toHaveLength(1);
-		expect(getCachedResultMock).toHaveBeenCalledWith(sentKeys[0]);
+		expect(sentKeys).toHaveLength(2);
+		expect(sentKeys[1]).not.toBe(sentKeys[0]);
+		expect(getCachedResultMock).not.toHaveBeenCalled();
 		expect(postSendResults).toEqual([{ ok: true }]);
 	});
 
-	it("keeps polling cached request status while the backend reports pending", async () => {
+	it("regenerates the request key for each cache conflict retry", async () => {
 		const getCachedResultMock = vi.mocked(getCachedResultCachedCachedIdGet);
-		getCachedResultMock
-			.mockResolvedValueOnce({
-				status: 200,
-				data: {
-					status: CacheEntryStatus.pending,
-					status_code: null,
-					response: null,
-					error: null,
-				},
-				headers: new Headers(),
-			})
-			.mockResolvedValueOnce({
-				status: 200,
-				data: {
-					status: CacheEntryStatus.success,
-					status_code: 200,
-					response: { ok: true },
-					error: null,
-				},
-				headers: new Headers(),
-			});
 		const sentKeys: RequestKey[] = [];
 		const postSendResults: unknown[] = [];
+		let sendAttempts = 0;
 		const requestManager = Effect.runSync(
 			buildRequestManager(buildIdRepository(), () => Effect.succeed(void 0)),
 		);
@@ -134,10 +105,13 @@ describe("buildRequestManager", () => {
 			preSend: () => Effect.succeed(void 0),
 			send: (requestKey) =>
 				Effect.sync(() => {
+					sendAttempts += 1;
 					sentKeys.push(requestKey);
 				}).pipe(
-					Effect.andThen(
-						Effect.fail(new CacheConflictException({ requestKey })),
+					Effect.andThen(() =>
+						sendAttempts <= 2
+							? Effect.fail(new CacheConflictException({ requestKey }))
+							: Effect.succeed({ ok: true }),
 					),
 				),
 			postSend: (data) =>
@@ -149,10 +123,9 @@ describe("buildRequestManager", () => {
 		requestManager.enqueueRequest(request);
 		await Effect.runPromise(requestManager.waitFlush());
 
-		expect(sentKeys).toHaveLength(1);
-		expect(getCachedResultMock).toHaveBeenCalledTimes(2);
-		expect(getCachedResultMock).toHaveBeenNthCalledWith(1, sentKeys[0]);
-		expect(getCachedResultMock).toHaveBeenNthCalledWith(2, sentKeys[0]);
+		expect(sentKeys).toHaveLength(3);
+		expect(new Set(sentKeys).size).toBe(3);
+		expect(getCachedResultMock).not.toHaveBeenCalled();
 		expect(postSendResults).toEqual([{ ok: true }]);
 	});
 });

@@ -46,15 +46,10 @@ export const buildNovelController = (
 									return new Error(String(err));
 								if ("cause" in err) {
 									const c = err.cause;
-									if (
-										typeof c === "object" &&
-										c !== null &&
-										"message" in c
-									)
+									if (typeof c === "object" && c !== null && "message" in c)
 										return new Error(String(c.message));
 								}
-								if ("message" in err)
-									return new Error(String(err.message));
+								if ("message" in err) return new Error(String(err.message));
 								return new Error(String(err));
 							})(),
 						}).pipe(Effect.andThen(() => Effect.succeed<RequestEvent[]>([])));
@@ -66,7 +61,7 @@ export const buildNovelController = (
 				}
 			});
 
-	const handleUserEvent = (event: NovelUserEvent): Effect.Effect<void> =>
+		const handleUserEvent = (event: NovelUserEvent): Effect.Effect<void> =>
 			Effect.gen(function* () {
 				if (!running) return Effect.succeed(undefined);
 				console.log("handleUserEvent", event.eventType, new Date().toISOString());

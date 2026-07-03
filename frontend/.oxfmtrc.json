@@ -3,7 +3,5 @@
 	"useTabs": true,
 	"tabWidth": 4,
 	"printWidth": 100,
-	"ignorePatterns": [
-		"src/api/**"
-	]
+	"ignorePatterns": ["src/api/**"]
 }

@@ -55,10 +55,12 @@ export const buildChapterDataManager = (
 	},
 ): Effect.Effect<ChapterDataManager, UnknownException> =>
 	Effect.gen(function* () {
-		const chapterContentId = idRepo.newIdAndBindId(
-			"chapterContent",
-			CCServId(editChapterData.chapterContent.chapterContentId),
-		);
+		const chapterContentId = yield* idRepo
+			.newIdAndBindId(
+				"chapterContent",
+				CCServId(editChapterData.chapterContent.chapterContentId),
+			)
+			.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
 		let text = editChapterData.chapterContent.chapterContentText;
 
 		const labelDataIndex = yield* buildLabelDataIndex().pipe(
@@ -89,13 +91,12 @@ export const buildChapterDataManager = (
 			}
 
 			for (const entry of editChapterData.eagerLabelData) {
-				const provLdId = idRepo.newIdAndBindId(
-					"labelData",
-					LDServId(entry.labelData.labelDataId),
-				);
+				const provLdId = yield* idRepo
+					.newIdAndBindId("labelData", LDServId(entry.labelData.labelDataId))
+					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
 				const provLabels: ProvLabel[] = entry.labels
 					.map((l) => {
-						const provLabelId = idRepo.newIdAndBindExists("label");
+						const provLabelId = Effect.runSync(idRepo.newIdAndBindExists("label"));
 						return Prov({
 							...l,
 							labelId: provLabelId,
@@ -130,10 +131,9 @@ export const buildChapterDataManager = (
 			}
 
 			for (const entry of editChapterData.lazyLabelData) {
-				const provLdId = idRepo.newIdAndBindId(
-					"labelData",
-					LDServId(entry.labelData.labelDataId),
-				);
+				const provLdId = yield* idRepo
+					.newIdAndBindId("labelData", LDServId(entry.labelData.labelDataId))
+					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
 				const servId = LGServId(entry.labelGroup.labelGroupId);
 				const lgProvId = lgStoP.get(servId);
 				if (!lgProvId) {
@@ -1146,7 +1146,9 @@ export const buildChapterDataManager = (
 								.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
 							const provLabels: ProvLabel[] = entry.labels
 								.map((l) => {
-									const provLabelId = idRepo.newIdAndBindExists("label");
+									const provLabelId = Effect.runSync(
+										idRepo.newIdAndBindExists("label"),
+									);
 									return Prov({
 										...l,
 										labelId: provLabelId,

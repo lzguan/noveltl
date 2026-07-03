@@ -1,6 +1,10 @@
 import { Brand, Effect } from "effect";
 import type { Prov } from "./helperTypes";
-import type { DuplicateIdException, NotFoundException, NotReserveableException } from "./errors";
+import type {
+	DuplicateServIdException,
+	NotFoundException,
+	NotReserveableException,
+} from "./errors";
 import type { Chapter, ChapterContent, Label, LabelData, LabelGroup } from "@/api/models";
 
 /**
@@ -175,6 +179,16 @@ export function exitStatus(status: InFlightIdStatus): GroundIdStatus {
 }
 
 /**
+ * Certain ground id statuses are considered "terminal" in the sense that they cannot transition to any other ground status. These terminal statuses are as follows:
+ * - deleted: the resource corresponding to this id has been deleted on the backend.
+ * - detached: the frontend has stopped tracking this id, but it has not been deleted on the backend.
+ * - killed: the resource corresponding to this id has not been created on the backend yet, and the frontend has stopped tracking this id.
+ */
+export function isTerminal(status: IdStatus): boolean {
+	return status === "deleted" || status === "detached" || status === "killed";
+}
+
+/**
  * Type guard for checking if an id status is an in-flight status.
  */
 export function isInFlight(status: IdStatus): status is InFlightIdStatus {
@@ -244,14 +258,26 @@ export interface IDRepository {
 	/**
 	 * Create a new id, bind it to the given server id, and manage it in the repository.
 	 */
-	newIdAndBindId(kind: "chapter", serverId: CServId): ProvTypes["chapter"];
-	newIdAndBindId(kind: "chapterContent", serverId: CCServId): ProvTypes["chapterContent"];
-	newIdAndBindId(kind: "labelGroup", serverId: LGServId): ProvTypes["labelGroup"];
-	newIdAndBindId(kind: "labelData", serverId: LDServId): ProvTypes["labelData"];
+	newIdAndBindId(
+		kind: "chapter",
+		serverId: CServId,
+	): Effect.Effect<ProvTypes["chapter"], DuplicateServIdException>;
+	newIdAndBindId(
+		kind: "chapterContent",
+		serverId: CCServId,
+	): Effect.Effect<ProvTypes["chapterContent"], DuplicateServIdException>;
+	newIdAndBindId(
+		kind: "labelGroup",
+		serverId: LGServId,
+	): Effect.Effect<ProvTypes["labelGroup"], DuplicateServIdException>;
+	newIdAndBindId(
+		kind: "labelData",
+		serverId: LDServId,
+	): Effect.Effect<ProvTypes["labelData"], DuplicateServIdException>;
 	/**
 	 * Create a new id and bind it to the given server existence flag, and manage it in the repository.
 	 */
-	newIdAndBindExists(kind: "label"): ProvTypes["label"];
+	newIdAndBindExists(kind: "label"): Effect.Effect<ProvTypes["label"]>;
 
 	/**
 	 * Get the server id corresponding to a provisional id. If server id has not been bound yet, return null.
@@ -287,22 +313,22 @@ export interface IDRepository {
 		kind: "chapter",
 		provisionalId: ProvTypes["chapter"],
 		serverId: CServId,
-	): Effect.Effect<void, NotFoundException | DuplicateIdException>;
+	): Effect.Effect<void, NotFoundException | DuplicateServIdException>;
 	bindServerId(
 		kind: "chapterContent",
 		provisionalId: ProvTypes["chapterContent"],
 		serverId: CCServId,
-	): Effect.Effect<void, NotFoundException | DuplicateIdException>;
+	): Effect.Effect<void, NotFoundException | DuplicateServIdException>;
 	bindServerId(
 		kind: "labelGroup",
 		provisionalId: ProvTypes["labelGroup"],
 		serverId: LGServId,
-	): Effect.Effect<void, NotFoundException | DuplicateIdException>;
+	): Effect.Effect<void, NotFoundException | DuplicateServIdException>;
 	bindServerId(
 		kind: "labelData",
 		provisionalId: ProvTypes["labelData"],
 		serverId: LDServId,
-	): Effect.Effect<void, NotFoundException | DuplicateIdException>;
+	): Effect.Effect<void, NotFoundException | DuplicateServIdException>;
 	/**
 	 * Bind a provisional id to a server existence flag, so that the controller can update the corresponding entry with the new server existence flag when it receives the signal from the request event.
 	 */
@@ -428,6 +454,23 @@ export interface IDRepository {
 		kind: "label",
 		id: ProvTypes["label"],
 	): Effect.Effect<ActionHappened, NotFoundException>;
+
+	queryProvId(
+		kind: "labelGroup",
+		servId: ServTypes["labelGroup"],
+	): Effect.Effect<ProvTypes["labelGroup"] | null>;
+	queryProvId(
+		kind: "labelData",
+		servId: ServTypes["labelData"],
+	): Effect.Effect<ProvTypes["labelData"] | null>;
+	queryProvId(
+		kind: "chapterContent",
+		servId: ServTypes["chapterContent"],
+	): Effect.Effect<ProvTypes["chapterContent"] | null>;
+	queryProvId(
+		kind: "chapter",
+		servId: ServTypes["chapter"],
+	): Effect.Effect<ProvTypes["chapter"] | null>;
 
 	gc(): void;
 }

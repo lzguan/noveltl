@@ -59,17 +59,30 @@ export const buildNovelDataManager = (
 
 		const chaptersIndex: ChapterIndex = yield* buildChapterIndex(
 			novelData.chapters.map<[CProvId, { chapter: ProvChapter }]>((val) => {
-				const newId = idRepo.newIdAndBindId("chapter", CServId(val.chapterId));
+				const newIdExit = Effect.runSyncExit(
+					idRepo.newIdAndBindId("chapter", CServId(val.chapterId)),
+				);
+				if (newIdExit._tag === "Failure") {
+					throw new FatalException({
+						orig: newIdExit.cause,
+					});
+				}
+				const newId = newIdExit.value;
 				return [newId, { chapter: Prov({ ...val, chapterId: newId }) }];
 			}),
 		);
 		const labelGroupsIndex: LabelGroupIndex = yield* buildLabelGroupIndex(
 			novelData.labelGroups.map<[LGProvId, { labelGroup: ProvLabelGroup; role: LabelRole }]>(
 				(val) => {
-					const newId = idRepo.newIdAndBindId(
-						"labelGroup",
-						LGServId(val.labelGroup.labelGroupId),
+					const newIdExit = Effect.runSyncExit(
+						idRepo.newIdAndBindId("labelGroup", LGServId(val.labelGroup.labelGroupId)),
 					);
+					if (newIdExit._tag === "Failure") {
+						throw new FatalException({
+							orig: newIdExit.cause,
+						});
+					}
+					const newId = newIdExit.value;
 					return [
 						newId,
 						{

@@ -26,11 +26,16 @@ import {
 	LDServId,
 	LServEx,
 	ServTypes,
+	isTerminal,
 } from "./types/idTypes";
-import { DuplicateIdException, NotFoundException, NotReserveableException } from "./types/errors";
+import {
+	DuplicateServIdException,
+	NotFoundException,
+	NotReserveableException,
+} from "./types/errors";
 import { Effect } from "effect";
 
-// TODO: figure out how to remove boilerplate
+// TODO: figure out how to remove boilerplate (we probably can't remove type hacking)
 
 const logger = createLogger("IdRepository");
 
@@ -49,6 +54,9 @@ type ServExistsStatus<K extends ExistableKind> = {
 type IdentifiableKindMap = {
 	[K in IdentifiableKind]: Map<ProvTypes[K], ServIdStatus<K>>;
 };
+type RevMap = {
+	[K in IdentifiableKind]: Map<ServTypes[K], ProvTypes[K]>;
+};
 type ExistableKindMap = {
 	[K in ExistableKind]: Map<ProvTypes[K], ServExistsStatus<K>>;
 };
@@ -64,6 +72,13 @@ export function buildIdRepository(): IDRepository {
 
 	const existableKindMap: ExistableKindMap = {
 		label: new Map<ProvTypes["label"], ServExistsStatus<"label">>(),
+	};
+
+	const revMap: RevMap = {
+		labelGroup: new Map<ServTypes["labelGroup"], ProvTypes["labelGroup"]>(),
+		labelData: new Map<ServTypes["labelData"], ProvTypes["labelData"]>(),
+		chapterContent: new Map<ServTypes["chapterContent"], ProvTypes["chapterContent"]>(),
+		chapter: new Map<ServTypes["chapter"], ProvTypes["chapter"]>(),
 	};
 
 	function newId(kind: "chapter"): ProvTypes["chapter"];
@@ -118,60 +133,88 @@ export function buildIdRepository(): IDRepository {
 		}
 	}
 
-	function newIdAndBindId(kind: "chapter", serverId: CServId): ProvTypes["chapter"];
+	function newIdAndBindId(
+		kind: "chapter",
+		serverId: CServId,
+	): Effect.Effect<ProvTypes["chapter"], DuplicateServIdException>;
 	function newIdAndBindId(
 		kind: "chapterContent",
 		serverId: CCServId,
-	): ProvTypes["chapterContent"];
-	function newIdAndBindId(kind: "labelGroup", serverId: LGServId): ProvTypes["labelGroup"];
-	function newIdAndBindId(kind: "labelData", serverId: LDServId): ProvTypes["labelData"];
+	): Effect.Effect<ProvTypes["chapterContent"], DuplicateServIdException>;
+	function newIdAndBindId(
+		kind: "labelGroup",
+		serverId: LGServId,
+	): Effect.Effect<ProvTypes["labelGroup"], DuplicateServIdException>;
+	function newIdAndBindId(
+		kind: "labelData",
+		serverId: LDServId,
+	): Effect.Effect<ProvTypes["labelData"], DuplicateServIdException>;
 
-	function newIdAndBindId(kind: IdentifiableKind, serverId: ServId): ProvId {
+	function newIdAndBindId(
+		kind: IdentifiableKind,
+		serverId: ServId,
+	): Effect.Effect<ProvTypes[IdentifiableKind], DuplicateServIdException> {
 		const provId = ProvId(`provisional-${counterRef++}`);
 		switch (kind) {
 			case "chapter":
 				const id = ProvTypes["chapter"](provId);
+				if (revMap[kind].has(serverId as CServId)) {
+					return Effect.fail(new DuplicateServIdException({ id: serverId }));
+				}
 				identifiableKindMap[kind].set(id, {
 					serverId: serverId as CServId,
 					status: "clean",
 					lockCount: 0,
 				});
-				return id;
+				revMap[kind].set(serverId as CServId, id);
+				return Effect.succeed(id);
 			case "chapterContent":
 				const id2 = ProvTypes["chapterContent"](provId);
+				if (revMap[kind].has(serverId as CCServId)) {
+					return Effect.fail(new DuplicateServIdException({ id: serverId }));
+				}
 				identifiableKindMap[kind].set(id2, {
 					serverId: serverId as CCServId,
 					status: "clean",
 					lockCount: 0,
 				});
-				return id2;
+				revMap[kind].set(serverId as CCServId, id2);
+				return Effect.succeed(id2);
 			case "labelGroup":
 				const id3 = ProvTypes["labelGroup"](provId);
+				if (revMap[kind].has(serverId as LGServId)) {
+					return Effect.fail(new DuplicateServIdException({ id: serverId }));
+				}
 				identifiableKindMap[kind].set(id3, {
 					serverId: serverId as LGServId,
 					status: "clean",
 					lockCount: 0,
 				});
-				return id3;
+				revMap[kind].set(serverId as LGServId, id3);
+				return Effect.succeed(id3);
 			case "labelData":
 				const id4 = ProvTypes["labelData"](provId);
+				if (revMap[kind].has(serverId as LDServId)) {
+					return Effect.fail(new DuplicateServIdException({ id: serverId }));
+				}
 				identifiableKindMap[kind].set(id4, {
 					serverId: serverId as LDServId,
 					status: "clean",
 					lockCount: 0,
 				});
-				return id4;
+				revMap[kind].set(serverId as LDServId, id4);
+				return Effect.succeed(id4);
 		}
 	}
 
-	function newIdAndBindExists(kind: "label"): ProvTypes["label"] {
+	function newIdAndBindExists(kind: "label"): Effect.Effect<ProvTypes["label"]> {
 		const id = ProvTypes["label"](ProvId(`provisional-${counterRef++}`));
 		existableKindMap[kind].set(id, {
 			serverExists: LServEx(true),
 			status: "clean",
 			lockCount: 0,
 		});
-		return id;
+		return Effect.succeed(id);
 	}
 
 	function getServerId(
@@ -219,22 +262,22 @@ export function buildIdRepository(): IDRepository {
 		kind: "chapter",
 		provisionalId: ProvTypes["chapter"],
 		serverId: CServId,
-	): Effect.Effect<void, NotFoundException | DuplicateIdException>;
+	): Effect.Effect<void, NotFoundException | DuplicateServIdException>;
 	function bindServerId(
 		kind: "chapterContent",
 		provisionalId: ProvTypes["chapterContent"],
 		serverId: CCServId,
-	): Effect.Effect<void, NotFoundException | DuplicateIdException>;
+	): Effect.Effect<void, NotFoundException | DuplicateServIdException>;
 	function bindServerId(
 		kind: "labelGroup",
 		provisionalId: ProvTypes["labelGroup"],
 		serverId: LGServId,
-	): Effect.Effect<void, NotFoundException | DuplicateIdException>;
+	): Effect.Effect<void, NotFoundException | DuplicateServIdException>;
 	function bindServerId(
 		kind: "labelData",
 		provisionalId: ProvTypes["labelData"],
 		serverId: LDServId,
-	): Effect.Effect<void, NotFoundException | DuplicateIdException>;
+	): Effect.Effect<void, NotFoundException | DuplicateServIdException>;
 
 	function bindServerId(
 		kind: IdentifiableKind,
@@ -244,51 +287,76 @@ export function buildIdRepository(): IDRepository {
 		switch (kind) {
 			case "chapter": {
 				const entry = identifiableKindMap[kind].get(provisionalId as ProvTypes["chapter"]);
+				if (revMap[kind].has(serverId as CServId)) {
+					return Effect.fail(new DuplicateServIdException({ id: serverId }));
+				}
 				if (!entry) {
 					logger.error(
 						`Provisional id ${provisionalId} not found for kind ${kind} in bindServerId`,
 					);
 					return Effect.fail(new NotFoundException());
 				}
-				return Effect.sync(() => (entry.serverId = serverId as ServTypes["chapter"]));
+				revMap[kind].delete(entry.serverId as CServId);
+				revMap[kind].set(serverId as CServId, provisionalId as ProvTypes["chapter"]);
+				entry.serverId = serverId as ServTypes["chapter"];
+				return Effect.succeed(void 0);
 			}
 			case "chapterContent": {
 				const entry = identifiableKindMap[kind].get(
 					provisionalId as ProvTypes["chapterContent"],
 				);
+				if (revMap[kind].has(serverId as CCServId)) {
+					return Effect.fail(new DuplicateServIdException({ id: serverId }));
+				}
 				if (!entry) {
 					logger.error(
 						`Provisional id ${provisionalId} not found for kind ${kind} in bindServerId`,
 					);
 					return Effect.fail(new NotFoundException());
 				}
-				return Effect.sync(
-					() => (entry.serverId = serverId as ServTypes["chapterContent"]),
+				revMap[kind].delete(entry.serverId as CCServId);
+				revMap[kind].set(
+					serverId as CCServId,
+					provisionalId as ProvTypes["chapterContent"],
 				);
+				entry.serverId = serverId as ServTypes["chapterContent"];
+				return Effect.succeed(void 0);
 			}
 			case "labelGroup": {
 				const entry = identifiableKindMap[kind].get(
 					provisionalId as ProvTypes["labelGroup"],
 				);
+				if (revMap[kind].has(serverId as LGServId)) {
+					return Effect.fail(new DuplicateServIdException({ id: serverId }));
+				}
 				if (!entry) {
 					logger.error(
 						`Provisional id ${provisionalId} not found for kind ${kind} in bindServerId`,
 					);
 					return Effect.fail(new NotFoundException());
 				}
-				return Effect.sync(() => (entry.serverId = serverId as ServTypes["labelGroup"]));
+				revMap[kind].delete(entry.serverId as LGServId);
+				revMap[kind].set(serverId as LGServId, provisionalId as ProvTypes["labelGroup"]);
+				entry.serverId = serverId as ServTypes["labelGroup"];
+				return Effect.succeed(void 0);
 			}
 			case "labelData": {
 				const entry = identifiableKindMap[kind].get(
 					provisionalId as ProvTypes["labelData"],
 				);
+				if (revMap[kind].has(serverId as LDServId)) {
+					return Effect.fail(new DuplicateServIdException({ id: serverId }));
+				}
 				if (!entry) {
 					logger.error(
 						`Provisional id ${provisionalId} not found for kind ${kind} in bindServerId`,
 					);
 					return Effect.fail(new NotFoundException());
 				}
-				return Effect.sync(() => (entry.serverId = serverId as ServTypes["labelData"]));
+				revMap[kind].delete(entry.serverId as LDServId);
+				revMap[kind].set(serverId as LDServId, provisionalId as ProvTypes["labelData"]);
+				entry.serverId = serverId as ServTypes["labelData"];
+				return Effect.succeed(void 0);
 			}
 		}
 	}
@@ -301,7 +369,8 @@ export function buildIdRepository(): IDRepository {
 			);
 			return Effect.fail(new NotFoundException());
 		}
-		return Effect.sync(() => (entry.serverExists = LServEx(true)));
+		entry.serverExists = LServEx(true);
+		return Effect.succeed(void 0);
 	}
 
 	function idObjState(
@@ -450,18 +519,7 @@ export function buildIdRepository(): IDRepository {
 	const releaseIdObjState =
 		(post: (status: InFlightIdStatus) => GroundIdStatus) =>
 		(kind: Kind, id: ProvTypes[Kind]) => {
-			let entry:
-				| {
-						serverExists: ServEx | null;
-						status: IdStatus;
-						lockCount: number;
-				  }
-				| {
-						serverId: ServId | null;
-						status: IdStatus;
-						lockCount: number;
-				  }
-				| undefined;
+			let entry: ServExistsStatus<ExistableKind> | ServIdStatus<IdentifiableKind> | undefined;
 
 			switch (kind) {
 				case "chapter":
@@ -494,6 +552,30 @@ export function buildIdRepository(): IDRepository {
 				}
 			}
 			entry.status = post(entry.status);
+			if (
+				["chapter", "chapterContent", "labelGroup", "labelData"].includes(kind) &&
+				isTerminal(entry.status) &&
+				"serverId" in entry
+			) {
+				switch (kind) {
+					case "chapter":
+						revMap["chapter"].delete(entry.serverId as CServId);
+						identifiableKindMap["chapter"].delete(id as CProvId);
+						break;
+					case "chapterContent":
+						revMap["chapterContent"].delete(entry.serverId as CCServId);
+						identifiableKindMap["chapterContent"].delete(id as CCProvId);
+						break;
+					case "labelGroup":
+						revMap["labelGroup"].delete(entry.serverId as LGServId);
+						identifiableKindMap["labelGroup"].delete(id as LGProvId);
+						break;
+					case "labelData":
+						revMap["labelData"].delete(entry.serverId as LDServId);
+						identifiableKindMap["labelData"].delete(id as LDProvId);
+						break;
+				}
+			}
 			return Effect.succeed(ActionHappened(true));
 		};
 
@@ -502,51 +584,64 @@ export function buildIdRepository(): IDRepository {
 
 	const gc = () => {
 		identifiableKindMap.labelGroup.forEach((value, key) => {
-			if (
-				value.status === "deleted" ||
-				value.status === "killed" ||
-				value.status === "detached"
-			) {
+			if (isTerminal(value.status)) {
 				identifiableKindMap.labelGroup.delete(key);
 			}
 		});
 		identifiableKindMap.labelData.forEach((value, key) => {
-			if (
-				value.status === "deleted" ||
-				value.status === "killed" ||
-				value.status === "detached"
-			) {
+			if (isTerminal(value.status)) {
 				identifiableKindMap.labelData.delete(key);
 			}
 		});
 		identifiableKindMap.chapterContent.forEach((value, key) => {
-			if (
-				value.status === "deleted" ||
-				value.status === "killed" ||
-				value.status === "detached"
-			) {
+			if (isTerminal(value.status)) {
 				identifiableKindMap.chapterContent.delete(key);
 			}
 		});
 		identifiableKindMap.chapter.forEach((value, key) => {
-			if (
-				value.status === "deleted" ||
-				value.status === "killed" ||
-				value.status === "detached"
-			) {
+			if (isTerminal(value.status)) {
 				identifiableKindMap.chapter.delete(key);
 			}
 		});
 		existableKindMap.label.forEach((value, key) => {
-			if (
-				value.status === "deleted" ||
-				value.status === "killed" ||
-				value.status === "detached"
-			) {
+			if (isTerminal(value.status)) {
 				existableKindMap.label.delete(key);
 			}
 		});
 	};
+
+	function queryProvId(
+		kind: "chapter",
+		serverId: CServId,
+	): Effect.Effect<ProvTypes["chapter"] | null>;
+	function queryProvId(
+		kind: "chapterContent",
+		serverId: CCServId,
+	): Effect.Effect<ProvTypes["chapterContent"] | null>;
+	function queryProvId(
+		kind: "labelGroup",
+		serverId: LGServId,
+	): Effect.Effect<ProvTypes["labelGroup"] | null>;
+	function queryProvId(
+		kind: "labelData",
+		serverId: LDServId,
+	): Effect.Effect<ProvTypes["labelData"] | null>;
+
+	function queryProvId(
+		kind: IdentifiableKind,
+		serverId: ServTypes[IdentifiableKind],
+	): Effect.Effect<ProvTypes[IdentifiableKind] | null> {
+		switch (kind) {
+			case "chapter":
+				return Effect.succeed(revMap[kind].get(serverId as CServId) ?? null);
+			case "chapterContent":
+				return Effect.succeed(revMap[kind].get(serverId as CCServId) ?? null);
+			case "labelGroup":
+				return Effect.succeed(revMap[kind].get(serverId as LGServId) ?? null);
+			case "labelData":
+				return Effect.succeed(revMap[kind].get(serverId as LDServId) ?? null);
+		}
+	}
 
 	return {
 		newId,
@@ -561,6 +656,7 @@ export function buildIdRepository(): IDRepository {
 		reserveIdObjState,
 		releaseIdObjStateOnSuccess,
 		releaseIdObjStateOnFailure,
+		queryProvId,
 		gc,
 	};
 }

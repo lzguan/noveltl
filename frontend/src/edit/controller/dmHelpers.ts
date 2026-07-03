@@ -5,7 +5,7 @@ import {
 	FatalException,
 	NotFoundException,
 	DuplicateChapterNumException,
-	DuplicateIdException,
+	DuplicateProvIdException,
 } from "./types/errors";
 import type {
 	CProvId,
@@ -177,7 +177,7 @@ export const buildIndexInternals = <IDT extends ProvId, Meta, Data, IndexErrorT>
 			},
 			new: (id: IDT, meta: Meta) => {
 				if (index.has(id)) {
-					return Effect.fail(new DuplicateIdException({ id }));
+					return Effect.fail(new DuplicateProvIdException({ id }));
 				}
 				index.set(id, { meta, inFlight: 0, status: "idle" });
 				return Effect.succeed(void 0);

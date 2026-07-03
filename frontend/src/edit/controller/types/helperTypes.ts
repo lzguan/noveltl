@@ -7,7 +7,7 @@ import {
 	type ProvLabelGroup,
 } from "./idTypes";
 import { Brand, Effect } from "effect";
-import type { DuplicateIdException, NotFoundException } from "./errors";
+import type { DuplicateProvIdException, NotFoundException } from "./errors";
 import type { ReservationRequest, ReserveList } from "./requestTypes";
 import type { LabelRole } from "@/api/models";
 import type { ChapterDataManager } from "./dataTypes";
@@ -164,7 +164,7 @@ export interface SlotIndex<IDT extends ProvId, Meta, Data, IndexErrorT> {
 	/**
 	 * Create a new slot with given id and metadata.
 	 */
-	new: (id: IDT, meta: Meta) => Effect.Effect<void, DuplicateIdException | IndexErrorT>;
+	new: (id: IDT, meta: Meta) => Effect.Effect<void, DuplicateProvIdException | IndexErrorT>;
 }
 
 // -----------------------------------------

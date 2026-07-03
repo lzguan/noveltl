@@ -47,8 +47,10 @@ function buildTestChapterDM() {
 				triggerEvents.push(event);
 			});
 
-		const chapterId = idRepo.newIdAndBindId("chapter", CServId(UUID1));
-		const labelGroupProvId = idRepo.newIdAndBindId("labelGroup", LGServId(UUID3));
+		const chapterId = Effect.runSync(idRepo.newIdAndBindId("chapter", CServId(UUID1)));
+		const labelGroupProvId = Effect.runSync(
+			idRepo.newIdAndBindId("labelGroup", LGServId(UUID3)),
+		);
 
 		const labelGroupsIndex = yield* buildLabelGroupIndex([
 			[

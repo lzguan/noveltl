@@ -1,7 +1,7 @@
 import { Data } from "effect";
 import type { RequestKey } from "./requestTypes";
 import type { TimeoutException } from "effect/Cause";
-import type { CProvId, LGProvId, ProvId } from "./idTypes";
+import type { CProvId, LGProvId, ProvId, ServId } from "./idTypes";
 
 /**
  * Represents a cache conflict on the backend.
@@ -53,8 +53,12 @@ export class DuplicateChapterNumException extends Data.TaggedError(
 	"DuplicateChapterNumException",
 )<{}> {}
 
-export class DuplicateIdException extends Data.TaggedError("DuplicateIdException")<{
+export class DuplicateProvIdException extends Data.TaggedError("DuplicateProvIdException")<{
 	id: ProvId;
+}> {}
+
+export class DuplicateServIdException extends Data.TaggedError("DuplicateServIdException")<{
+	id: ServId;
 }> {}
 
 export class AlreadyOpenException extends Data.TaggedError("AlreadyOpenException")<{

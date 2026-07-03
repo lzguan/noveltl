@@ -195,10 +195,7 @@ export const buildRequestManager = (
 
 		const send = () =>
 			Effect.gen(function* () {
-				const qLen =
-					requestQueue.length +
-					statusQueries.length +
-					retryRequests.length;
+				const qLen = requestQueue.length + statusQueries.length + retryRequests.length;
 				if (qLen > 0) {
 					console.log("send() starting, queue=%d", requestQueue.length);
 				}
@@ -310,7 +307,11 @@ export const buildRequestManager = (
 				const fromQueueEffect = Effect.partition(
 					fromQueueRequests,
 					(requestEvent) => {
-						console.log("firing request", requestEvent.variant, requestEvent.requestKey);
+						console.log(
+							"firing request",
+							requestEvent.variant,
+							requestEvent.requestKey,
+						);
 						return sem
 							.withPermits(1)(requestEvent.send(requestEvent.requestKey))
 							.pipe(Effect.timeout("10 seconds"))
@@ -487,10 +488,7 @@ export const buildRequestManager = (
 		const sendLoop = () =>
 			Effect.forever(
 				Effect.gen(function* () {
-					const total =
-						requestQueue.length +
-						statusQueries.length +
-						retryRequests.length;
+					const total = requestQueue.length + statusQueries.length + retryRequests.length;
 					if (total > 0) {
 						console.log(
 							"sendLoop: queue=%d status=%d retry=%d",
@@ -529,12 +527,9 @@ export const buildRequestManager = (
 		const waitFlush = (): Effect.Effect<void, UnknownException> =>
 			Effect.gen(function* () {
 				shuttingDown = true;
-				yield* Effect.repeat(
-					sendMut.withPermits(1)(send()),
-					{ until: () => isQueueEmpty() },
-				).pipe(
-					Effect.mapError((err) => new UnknownException(String(err))),
-				);
+				yield* Effect.repeat(sendMut.withPermits(1)(send()), {
+					until: () => isQueueEmpty(),
+				}).pipe(Effect.mapError((err) => new UnknownException(String(err))));
 			});
 
 		return {

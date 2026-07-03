@@ -4,13 +4,15 @@ from datetime import timedelta
 import pytest
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
 
 from src.auth.models import User
 from src.auth.utils import create_access_token
 from src.novels.models import Novel
 from src.requests.cache import CacheEntry, redis_cache
-from src.requests.decorators import attl_cache, ttl_cache
+from src.requests.decorators import attl_cache, serialize_response_model, ttl_cache
+from tests.fixtures.bundles import ScenarioBundle
 
 
 def _auth_headers(user: User) -> dict[str, str]:
@@ -19,6 +21,12 @@ def _auth_headers(user: User) -> dict[str, str]:
 
 class SampleResponse(BaseModel):
     value: int
+
+
+class AliasedResponse(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    snake_case_value: int
 
 
 class SpyCache:
@@ -96,7 +104,7 @@ class TestRequestsRouter:
         assert cached_response.status_code == status.HTTP_200_OK
         assert cached_response.json()["status"] == "success"
         assert cached_response.json()["status_code"] == status.HTTP_200_OK
-        assert cached_response.json()["response"]["label_group_name"] == "Request Cache Group"
+        assert cached_response.json()["response"]["labelGroupName"] == "Request Cache Group"
         assert cached_response.json()["error"] is None
 
     def test_create_label_group_route_records_failure(
@@ -128,8 +136,124 @@ class TestRequestsRouter:
             "cacheConflict": False,
         }
 
+    def test_update_chapter_content_route_records_result(
+        self,
+        client: TestClient,
+        versioned_chapter_scenario: ScenarioBundle,
+    ) -> None:
+        request_key = uuid.uuid4()
+        actor = versioned_chapter_scenario.users.by_name["to_user"]
+        chapter = versioned_chapter_scenario.chapters[0].chapter
+        chapter_content = versioned_chapter_scenario.chapters[0].latest_content
+
+        response = client.patch(
+            f"/chapters/{chapter.chapter_id}/content",
+            params={"requestKey": str(request_key)},
+            json={
+                "chapterContentId": str(chapter_content.chapter_content_id),
+                "textOps": [{"op": "insert", "start": 0, "text": "Dear "}],
+            },
+            headers=_auth_headers(actor),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        response_body = response.json()
+        assert response_body["chapterContentVersion"] == 2
+        assert response_body["chapterContentId"] != str(chapter_content.chapter_content_id)
+        assert len(response_body["labelDataIdMap"]) == 2
+
+        cached_response = client.get(f"/cached/{request_key}")
+        assert cached_response.status_code == status.HTTP_200_OK
+        cached_body = cached_response.json()
+        assert cached_body["status"] == "success"
+        assert cached_body["status_code"] == status.HTTP_200_OK
+        assert cached_body["error"] is None
+        assert cached_body["response"] == {
+            "chapterContentId": response_body["chapterContentId"],
+            "chapterContentVersion": response_body["chapterContentVersion"],
+            "labelDataIdMap": {old_id: new_id for old_id, new_id in response_body["labelDataIdMap"].items()},
+        }
+
+    def test_update_chapter_content_route_rejects_duplicate_request_key(
+        self,
+        client: TestClient,
+        versioned_chapter_scenario: ScenarioBundle,
+    ) -> None:
+        request_key = uuid.uuid4()
+        actor = versioned_chapter_scenario.users.by_name["to_user"]
+        chapter = versioned_chapter_scenario.chapters[0].chapter
+        chapter_content = versioned_chapter_scenario.chapters[0].latest_content
+        payload = {
+            "chapterContentId": str(chapter_content.chapter_content_id),
+            "textOps": [{"op": "insert", "start": 0, "text": "Dear "}],
+        }
+
+        first_response = client.patch(
+            f"/chapters/{chapter.chapter_id}/content",
+            params={"requestKey": str(request_key)},
+            json=payload,
+            headers=_auth_headers(actor),
+        )
+        duplicate_response = client.patch(
+            f"/chapters/{chapter.chapter_id}/content",
+            params={"requestKey": str(request_key)},
+            json=payload,
+            headers=_auth_headers(actor),
+        )
+
+        assert first_response.status_code == status.HTTP_200_OK
+        assert duplicate_response.status_code == status.HTTP_409_CONFLICT
+        assert duplicate_response.json()["detail"]["cacheConflict"] is True
+
+    def test_update_chapter_content_route_records_stale_content_failure(
+        self,
+        client: TestClient,
+        versioned_chapter_scenario: ScenarioBundle,
+    ) -> None:
+        first_request_key = uuid.uuid4()
+        stale_request_key = uuid.uuid4()
+        actor = versioned_chapter_scenario.users.by_name["to_user"]
+        chapter = versioned_chapter_scenario.chapters[0].chapter
+        chapter_content = versioned_chapter_scenario.chapters[0].latest_content
+        payload = {
+            "chapterContentId": str(chapter_content.chapter_content_id),
+            "textOps": [{"op": "insert", "start": 0, "text": "Dear "}],
+        }
+
+        first_response = client.patch(
+            f"/chapters/{chapter.chapter_id}/content",
+            params={"requestKey": str(first_request_key)},
+            json=payload,
+            headers=_auth_headers(actor),
+        )
+        stale_response = client.patch(
+            f"/chapters/{chapter.chapter_id}/content",
+            params={"requestKey": str(stale_request_key)},
+            json=payload,
+            headers=_auth_headers(actor),
+        )
+
+        assert first_response.status_code == status.HTTP_200_OK
+        assert stale_response.status_code == status.HTTP_409_CONFLICT
+        assert stale_response.json()["detail"]["cacheConflict"] is False
+
+        cached_response = client.get(f"/cached/{stale_request_key}")
+        assert cached_response.status_code == status.HTTP_200_OK
+        assert cached_response.json()["status"] == "failure"
+        assert cached_response.json()["status_code"] == status.HTTP_409_CONFLICT
+        assert cached_response.json()["response"] is None
+        assert cached_response.json()["error"] == {
+            "detail": "Chapter content is outdated. Please refresh and try again.",
+            "cacheConflict": False,
+        }
+
 
 class TestRequestDecorators:
+    def test_serialize_response_model_uses_response_aliases(self) -> None:
+        serializer = serialize_response_model(AliasedResponse)
+
+        assert serializer(AliasedResponse(snake_case_value=5)) == {"snakeCaseValue": 5}
+
     def test_ttl_cache_records_success(self) -> None:
         cache = SpyCache()
         request_key = uuid.uuid4()

@@ -10,7 +10,7 @@ from ..database import get_db
 from ..exceptions import DataTooLongException, NotFoundException
 from ..novels.exceptions import ChapterContentNotFoundException, NovelNotFoundException
 from ..requests.cache import redis_cache
-from ..requests.decorators import svp, ttl_cache
+from ..requests.decorators import serialize_response_model, ttl_cache
 from ..schemas import DetailHTTPErrorResponse, RequestConflictErrorResponse
 from . import schemas
 from .exceptions import (
@@ -163,7 +163,7 @@ def read_label_contributors(
         },
     },
 )
-@ttl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=svp(schemas.LabelGroup))
+@ttl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=serialize_response_model(schemas.LabelGroup))
 def create_label_group(
     request: schemas.CreateLabelGroup,
     db: Annotated[Session, Depends(get_db)],
@@ -224,7 +224,7 @@ def update_label_group(
         },
     },
 )
-@ttl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=svp(schemas.LabelData))
+@ttl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=serialize_response_model(schemas.LabelData))
 def create_label_data(
     label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
     request: schemas.CreateLabelData,

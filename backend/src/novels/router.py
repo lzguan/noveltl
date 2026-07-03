@@ -14,7 +14,7 @@ from ..database import get_db
 from ..exceptions import DataTooLongException, InsufficientPermissionsException
 from ..languages.exceptions import LanguageNotFoundException
 from ..requests.cache import redis_cache
-from ..requests.decorators import attl_cache, svp
+from ..requests.decorators import attl_cache, serialize_response_model
 from ..schemas import DetailHTTPErrorResponse, OperationStatus, RequestConflictErrorResponse
 from . import schemas
 from .exceptions import (
@@ -542,7 +542,12 @@ async def read_chapter_content_status(
         },
     },
 )
-@attl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=svp(schemas.ModifyChapterContentResponse))
+@attl_cache(
+    ttl=60,
+    cache=redis_cache,
+    success_code=200,
+    serialize_ret=serialize_response_model(schemas.ModifyChapterContentResponse),
+)
 async def update_chapter_content(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
     request: schemas.UpdateChapterContent,

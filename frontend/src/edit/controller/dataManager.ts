@@ -9,6 +9,7 @@ import {
 } from "./dmHelpers";
 import {
 	AlreadyOpenException,
+	CacheConflictException,
 	ConnectionException,
 	DuplicateChapterNumException,
 	FatalException,
@@ -813,7 +814,7 @@ export const buildChapterDataManager = (
 						return reservations;
 					};
 					const event: RequestEvent = {
-						cached: false,
+						cached: true,
 						variant: "textOp",
 						active: true,
 						retries: 3,
@@ -828,7 +829,7 @@ export const buildChapterDataManager = (
 						onFailure: () => Effect.succeed(void 0),
 						onFatalError: () => Effect.succeed(void 0),
 						preSend: () => Effect.succeed(void 0),
-						send: () =>
+						send: (requestKey) =>
 							Effect.gen(function* () {
 								const servContentId = yield* idRepo
 									.getServerId("chapterContent", chapterContentId)
@@ -858,12 +859,18 @@ export const buildChapterDataManager = (
 											chapterContentId: servContentId,
 											textOps: queuedOps,
 										},
+										{ requestKey },
 									),
 								).pipe(
 									Effect.mapError(
 										(err) => new ConnectionException({ orig: err }),
 									),
 								);
+								if (resp.status === 409 && resp.data.detail.cacheConflict) {
+									return yield* Effect.fail(
+										new CacheConflictException({ requestKey }),
+									);
+								}
 								if (resp.status !== 200) {
 									return yield* Effect.fail(
 										new FatalException({

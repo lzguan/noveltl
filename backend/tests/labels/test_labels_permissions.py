@@ -6,15 +6,17 @@ Note: These tests are AI generated and may not cover all edge cases or be fully 
 
 import pytest
 from sqlalchemy import delete, select, update
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from src.auth.models import User
 from src.labels import models as label_models
+from src.labels.constants import LabelRole
 from src.labels.permissions import (
     label_data_mod_access_select,
     label_group_mod_access_select,
     label_group_mod_access_update,
     label_mod_access_delete,
+    label_mod_access_update,
 )
 from tests.fixtures.bundles import LabelFixtureBundle, ScenarioBundle
 from tests.gate_logging import log_gate
@@ -350,6 +352,53 @@ class TestLabelDataSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
+    @pytest.mark.dependency(name="labels::permissions::owner_can_select_aliased_label_data", scope="session")
+    def test_owner_can_select_aliased_label_data(
+        self,
+        test_db: Session,
+        label_access_scenario: ScenarioBundle,
+    ):
+        actor = _label_access_user(label_access_scenario, "lp_alice")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
+        label_data_alias = aliased(label_models.LabelData)
+        q = (
+            select(label_data_alias)
+            .join(
+                label_models.LabelGroup,
+                label_models.LabelGroup.label_group_id == label_data_alias.label_group_id,
+            )
+            .where(label_data_alias.label_data_id == label_group.label_data.label_data_id)
+        )
+        q = label_data_mod_access_select(q, actor, label_data_alias)
+
+        result = test_db.execute(q).scalar_one_or_none()
+
+        assert result is not None
+        assert result.label_data_id == label_group.label_data.label_data_id
+
+    @pytest.mark.dependency(name="labels::permissions::non_contributor_cannot_select_aliased_label_data", scope="session")
+    def test_non_contributor_cannot_select_aliased_label_data(
+        self,
+        test_db: Session,
+        label_access_scenario: ScenarioBundle,
+    ):
+        actor = _label_access_user(label_access_scenario, "lp_charlie")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
+        label_data_alias = aliased(label_models.LabelData)
+        q = (
+            select(label_data_alias)
+            .join(
+                label_models.LabelGroup,
+                label_models.LabelGroup.label_group_id == label_data_alias.label_group_id,
+            )
+            .where(label_data_alias.label_data_id == label_group.label_data.label_data_id)
+        )
+        q = label_data_mod_access_select(q, actor, label_data_alias)
+
+        result = test_db.execute(q).scalar_one_or_none()
+
+        assert result is None
+
     @pytest.mark.dependency(
         name="gate::labels::permissions::label_data_select",
         depends=[
@@ -358,6 +407,136 @@ class TestLabelDataSelect:
             "labels::permissions::viewer_can_select_label_data",
             "labels::permissions::non_contributor_cannot_select_label_data",
             "labels::permissions::cannot_select_label_data_on_private_novel",
+            "labels::permissions::owner_can_select_aliased_label_data",
+            "labels::permissions::non_contributor_cannot_select_aliased_label_data",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self):
+        pass
+
+
+class TestLabelUpdate:
+    """Tests for label_mod_access_update."""
+
+    @pytest.mark.dependency(name="labels::permissions::owner_can_update_labels", scope="session")
+    def test_owner_can_update_labels(
+        self,
+        test_db: Session,
+        label_access_scenario: ScenarioBundle,
+    ):
+        actor = _label_access_user(label_access_scenario, "lp_alice")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
+        label_ids = [label.label_id for label in label_group.labels]
+        stmt = (
+            update(label_models.Label)
+            .where(label_models.Label.label_id.in_(label_ids))
+            .values(label_dirty=True)
+            .returning(label_models.Label)
+        )
+        stmt = label_mod_access_update(stmt, actor)
+
+        results = test_db.execute(stmt).scalars().all()
+        test_db.commit()
+
+        assert {label.label_id for label in results} == set(label_ids)
+
+    @pytest.mark.dependency(name="labels::permissions::viewer_cannot_update_labels", scope="session")
+    def test_viewer_cannot_update_labels(
+        self,
+        test_db: Session,
+        label_access_scenario: ScenarioBundle,
+    ):
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        label_group = _label_access_group(label_access_scenario, "With Viewer Group")
+        label_ids = [label.label_id for label in label_group.labels]
+        stmt = (
+            update(label_models.Label)
+            .where(label_models.Label.label_id.in_(label_ids))
+            .values(label_dirty=True)
+            .returning(label_models.Label)
+        )
+        stmt = label_mod_access_update(stmt, actor)
+
+        results = test_db.execute(stmt).scalars().all()
+        test_db.commit()
+
+        assert results == []
+
+    @pytest.mark.dependency(name="labels::permissions::owner_can_update_aliased_labels", scope="session")
+    def test_owner_can_update_aliased_labels(
+        self,
+        test_db: Session,
+        label_access_scenario: ScenarioBundle,
+    ):
+        actor = _label_access_user(label_access_scenario, "lp_alice")
+        label_group = _label_access_group(label_access_scenario, "Owner Only Group")
+        label_ids = [label.label_id for label in label_group.labels]
+        label_alias = aliased(label_models.Label)
+        stmt = (
+            update(label_alias)
+            .where(label_alias.label_id.in_(label_ids))
+            .values(label_dirty=True)
+            .returning(label_alias.label_id)
+        )
+        stmt = label_mod_access_update(stmt, actor, label_alias)
+
+        result_ids = set(test_db.execute(stmt).scalars().all())
+        test_db.commit()
+
+        assert result_ids == set(label_ids)
+
+    @pytest.mark.dependency(name="labels::permissions::label_editor_without_chapter_access_cannot_update", scope="session")
+    def test_label_editor_without_chapter_access_cannot_update(
+        self,
+        test_db: Session,
+        label_access_scenario: ScenarioBundle,
+    ):
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        private_group = _label_access_group(label_access_scenario, "Private Novel Group")
+        private_label = label_models.Label(
+            label_data_id=private_group.label_data.label_data_id,
+            label_word="private",
+            label_start=21,
+            label_end=28,
+            label_entity_group="MISC",
+            label_score=0.95,
+            label_dirty=False,
+        )
+        test_db.add_all(
+            [
+                label_models.LabelContributor(
+                    label_group_id=private_group.label_group.label_group_id,
+                    user_id=actor.user_id,
+                    label_contributor_role=LabelRole.EDITOR,
+                ),
+                private_label,
+            ]
+        )
+        test_db.commit()
+        test_db.refresh(private_label)
+        stmt = (
+            update(label_models.Label)
+            .where(label_models.Label.label_id == private_label.label_id)
+            .values(label_dirty=True)
+            .returning(label_models.Label)
+        )
+        stmt = label_mod_access_update(stmt, actor)
+
+        results = test_db.execute(stmt).scalars().all()
+        test_db.commit()
+        test_db.refresh(private_label)
+
+        assert results == []
+        assert private_label.label_dirty is False
+
+    @pytest.mark.dependency(
+        name="gate::labels::permissions::label_update",
+        depends=[
+            "labels::permissions::owner_can_update_labels",
+            "labels::permissions::viewer_cannot_update_labels",
+            "labels::permissions::owner_can_update_aliased_labels",
+            "labels::permissions::label_editor_without_chapter_access_cannot_update",
         ],
         scope="session",
     )
@@ -476,6 +655,46 @@ class TestLabelDelete:
         )
         assert len(remaining) == 0
 
+    @pytest.mark.dependency(name="labels::permissions::label_editor_without_chapter_access_cannot_delete", scope="session")
+    def test_label_editor_without_chapter_access_cannot_delete(
+        self,
+        test_db: Session,
+        label_access_scenario: ScenarioBundle,
+    ):
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        private_group = _label_access_group(label_access_scenario, "Private Novel Group")
+        private_label = label_models.Label(
+            label_data_id=private_group.label_data.label_data_id,
+            label_word="private",
+            label_start=21,
+            label_end=28,
+            label_entity_group="MISC",
+            label_score=0.95,
+            label_dirty=False,
+        )
+        test_db.add_all(
+            [
+                label_models.LabelContributor(
+                    label_group_id=private_group.label_group.label_group_id,
+                    user_id=actor.user_id,
+                    label_contributor_role=LabelRole.EDITOR,
+                ),
+                private_label,
+            ]
+        )
+        test_db.commit()
+        test_db.refresh(private_label)
+        stmt = delete(label_models.Label).where(label_models.Label.label_id == private_label.label_id)
+        stmt = label_mod_access_delete(stmt, actor)
+
+        test_db.execute(stmt)
+        test_db.commit()
+
+        remaining = test_db.execute(
+            select(label_models.Label).where(label_models.Label.label_id == private_label.label_id)
+        ).scalar_one_or_none()
+        assert remaining is not None
+
     @pytest.mark.dependency(
         name="gate::labels::permissions::label_delete",
         depends=[
@@ -484,6 +703,7 @@ class TestLabelDelete:
             "labels::permissions::viewer_cannot_delete_labels",
             "labels::permissions::non_contributor_cannot_delete_labels",
             "labels::permissions::admin_can_delete_any_labels",
+            "labels::permissions::label_editor_without_chapter_access_cannot_delete",
         ],
         scope="session",
     )
@@ -498,6 +718,7 @@ class TestLabelDelete:
         "gate::labels::permissions::label_group_select",
         "gate::labels::permissions::label_group_update",
         "gate::labels::permissions::label_data_select",
+        "gate::labels::permissions::label_update",
         "gate::labels::permissions::label_delete",
     ],
     scope="session",

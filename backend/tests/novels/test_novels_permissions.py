@@ -7,7 +7,7 @@ statements and verifying which rows are returned/affected for each user role.
 
 import pytest
 from sqlalchemy import select, update
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from src.auth.models import User
 from src.novels.models import Chapter, ChapterContent, Novel
@@ -253,6 +253,24 @@ class TestNovelModAccessUpdate:
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::owner_can_update_aliased_novel", scope="session")
+    def test_owner_can_update_aliased_novel(
+        self,
+        test_db: Session,
+        p1_user_1: User,
+        p1_novel_public_tyrone: Novel,
+    ):
+        novel_alias = aliased(Novel)
+        stmt = (
+            update(novel_alias)
+            .where(novel_alias.novel_id == p1_novel_public_tyrone.novel_id)
+            .values(novel_description="aliased update")
+            .returning(novel_alias.novel_id)
+        )
+        stmt = novel_mod_access_update(stmt, p1_user_1, novel_alias)
+        result = test_db.execute(stmt).scalar_one_or_none()
+        assert result == p1_novel_public_tyrone.novel_id
+
     @pytest.mark.dependency(
         name="gate::novels::permissions::novel_mod_access_update",
         depends=[
@@ -261,6 +279,7 @@ class TestNovelModAccessUpdate:
             "novels::permissions::viewer_cannot_update",
             "novels::permissions::non_contributor_cannot_update",
             "novels::permissions::admin_can_update_any",
+            "novels::permissions::owner_can_update_aliased_novel",
         ],
         scope="session",
     )
@@ -533,6 +552,24 @@ class TestChapterModAccessUpdate:
         result = test_db.execute(stmt).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::owner_can_update_aliased_chapter", scope="session")
+    def test_owner_can_update_aliased_chapter(
+        self,
+        test_db: Session,
+        p1_user_1: User,
+        p1_chapter_restricted: Chapter,
+    ):
+        chapter_alias = aliased(Chapter)
+        stmt = (
+            update(chapter_alias)
+            .where(chapter_alias.chapter_id == p1_chapter_restricted.chapter_id)
+            .values(chapter_title="Aliased Chapter")
+            .returning(chapter_alias.chapter_id)
+        )
+        stmt = chapter_mod_access_update(stmt, p1_user_1, chapter_alias)
+        result = test_db.execute(stmt).scalar_one_or_none()
+        assert result == p1_chapter_restricted.chapter_id
+
     @pytest.mark.dependency(
         name="gate::novels::permissions::chapter_mod_access_update",
         depends=[
@@ -541,6 +578,7 @@ class TestChapterModAccessUpdate:
             "novels::permissions::viewer_cannot_update_chapter",
             "novels::permissions::non_contributor_cannot_update_chapter",
             "novels::permissions::admin_can_update_any_chapter",
+            "novels::permissions::owner_can_update_aliased_chapter",
         ],
         scope="session",
     )
@@ -686,6 +724,32 @@ class TestChapterContentModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    @pytest.mark.dependency(name="novels::permissions::contributor_sees_aliased_content", scope="session")
+    def test_contributor_sees_aliased_content(
+        self,
+        test_db: Session,
+        p1_user_1: User,
+        p1_chapter_content_private: ChapterContent,
+    ):
+        content_alias = aliased(ChapterContent)
+        q = select(content_alias).where(content_alias.chapter_content_id == p1_chapter_content_private.chapter_content_id)
+        q = chapter_content_mod_access_select(q, p1_user_1, content_alias)
+        result = test_db.execute(q).scalar_one_or_none()
+        assert result is not None
+
+    @pytest.mark.dependency(name="novels::permissions::non_contributor_cannot_see_aliased_content", scope="session")
+    def test_non_contributor_cannot_see_aliased_content(
+        self,
+        test_db: Session,
+        p1_user_2: User,
+        p1_chapter_content_private: ChapterContent,
+    ):
+        content_alias = aliased(ChapterContent)
+        q = select(content_alias).where(content_alias.chapter_content_id == p1_chapter_content_private.chapter_content_id)
+        q = chapter_content_mod_access_select(q, p1_user_2, content_alias)
+        result = test_db.execute(q).scalar_one_or_none()
+        assert result is None
+
     @pytest.mark.dependency(
         name="gate::novels::permissions::chapter_content_mod_access_select",
         depends=[
@@ -698,6 +762,8 @@ class TestChapterContentModAccessSelect:
             "novels::permissions::admin_sees_all_content",
             "novels::permissions::editor_sees_content_on_shared_novel",
             "novels::permissions::viewer_sees_content_on_shared_novel",
+            "novels::permissions::contributor_sees_aliased_content",
+            "novels::permissions::non_contributor_cannot_see_aliased_content",
         ],
         scope="session",
     )

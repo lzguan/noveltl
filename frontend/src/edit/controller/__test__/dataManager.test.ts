@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Effect } from "effect";
 import { buildChapterDataManager } from "../dataManager";
 import { buildIdRepository } from "../idRepository";
@@ -8,6 +8,16 @@ import { Prov } from "../types/helperTypes";
 import { buildLabelGroupIndex } from "../dmHelpers";
 import { Visibility, type Novel } from "@/api/models";
 import type { Role } from "@/api/models/role";
+import { RequestKey } from "../types/requestTypes";
+import { updateChapterContentChaptersChapterIdContentPatch } from "@/api/endpoints/default/default";
+
+vi.mock("@/api/endpoints/default/default", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@/api/endpoints/default/default")>();
+	return {
+		...actual,
+		updateChapterContentChaptersChapterIdContentPatch: vi.fn(),
+	};
+});
 
 const UUID1 = "00000000-0000-0000-0000-000000000001";
 const UUID2 = "00000000-0000-0000-0000-000000000002";
@@ -225,6 +235,42 @@ describe("buildChapterDataManager", () => {
 
 			const events = Effect.runSync(chapterDM.flush());
 			expect(events).toEqual([]);
+		});
+
+		it("creates cached text-op requests that pass request keys", async () => {
+			const updateChapterContentMock = vi.mocked(
+				updateChapterContentChaptersChapterIdContentPatch,
+			);
+			updateChapterContentMock.mockResolvedValue({
+				status: 200,
+				data: {
+					chapterContentId: "00000000-0000-0000-0000-000000000007",
+					chapterContentVersion: 2,
+					labelDataIdMap: {
+						[UUID4]: "00000000-0000-0000-0000-000000000008",
+					},
+				},
+				headers: new Headers(),
+			});
+			const { chapterDM } = Effect.runSync(buildTestChapterDM());
+			const requestKey = RequestKey("00000000-0000-0000-0000-000000000009");
+
+			Effect.runSync(chapterDM.insertTextAt(26, "!"));
+			const events = Effect.runSync(chapterDM.flush());
+
+			expect(events).toHaveLength(1);
+			expect(events[0]).toMatchObject({ variant: "textOp", cached: true });
+
+			await Effect.runPromise(events[0].send(requestKey));
+
+			expect(updateChapterContentMock).toHaveBeenCalledWith(
+				UUID1,
+				{
+					chapterContentId: UUID2,
+					textOps: [{ op: "insert", start: 26, text: "!" }],
+				},
+				{ requestKey },
+			);
 		});
 
 		it("resets op queue after flush", () => {

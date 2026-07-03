@@ -32,6 +32,97 @@ def _contributors_url(label_group_id: object) -> str:
     return f"/label-groups/{label_group_id}/contributors"
 
 
+def _label_groups_with_role_url(novel_id: object) -> str:
+    return f"/label-groups-with-role?novelId={novel_id}"
+
+
+class TestReadLabelGroupsWithRole:
+    @pytest.mark.dependency(name="labels::router::owner_can_read_label_groups_with_role", scope="session")
+    def test_owner_can_read_label_groups_with_role(
+        self,
+        client: TestClient,
+        label_access_scenario: ScenarioBundle,
+    ) -> None:
+        actor = _label_access_user(label_access_scenario, "lp_alice")
+        novel = label_access_scenario.novels_by_title["LP Public Novel"].novel
+
+        response = client.get(_label_groups_with_role_url(novel.novel_id), headers=_auth_headers(actor))
+
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert {
+            (entry["labelGroup"]["labelGroupName"], entry["role"])
+            for entry in payload
+        } == {
+            ("Owner Only Group", "owner"),
+            ("With Editor Group", "owner"),
+            ("With Viewer Group", "owner"),
+        }
+
+    @pytest.mark.dependency(name="labels::router::editor_and_viewer_can_read_label_groups_with_role", scope="session")
+    def test_editor_and_viewer_can_read_label_groups_with_role(
+        self,
+        client: TestClient,
+        label_access_scenario: ScenarioBundle,
+    ) -> None:
+        actor = _label_access_user(label_access_scenario, "lp_bob")
+        novel = label_access_scenario.novels_by_title["LP Public Novel"].novel
+
+        response = client.get(_label_groups_with_role_url(novel.novel_id), headers=_auth_headers(actor))
+
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert {
+            (entry["labelGroup"]["labelGroupName"], entry["role"])
+            for entry in payload
+        } == {
+            ("With Editor Group", "editor"),
+            ("With Viewer Group", "viewer"),
+        }
+
+    @pytest.mark.dependency(name="labels::router::non_contributor_reads_no_label_groups_with_role", scope="session")
+    def test_non_contributor_reads_no_label_groups_with_role(
+        self,
+        client: TestClient,
+        label_access_scenario: ScenarioBundle,
+    ) -> None:
+        actor = _label_access_user(label_access_scenario, "lp_charlie")
+        novel = label_access_scenario.novels_by_title["LP Public Novel"].novel
+
+        response = client.get(_label_groups_with_role_url(novel.novel_id), headers=_auth_headers(actor))
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == []
+
+    @pytest.mark.dependency(name="labels::router::admin_can_read_label_groups_with_role", scope="session")
+    def test_admin_can_read_label_groups_with_role(
+        self,
+        client: TestClient,
+        label_access_scenario: ScenarioBundle,
+    ) -> None:
+        actor = _label_access_user(label_access_scenario, "lp_admin")
+        novel = label_access_scenario.novels_by_title["LP Public Novel"].novel
+
+        response = client.get(_label_groups_with_role_url(novel.novel_id), headers=_auth_headers(actor))
+
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload == []
+
+    @pytest.mark.dependency(
+        name="gate::labels::router::label_groups_with_role",
+        depends=[
+            "labels::router::owner_can_read_label_groups_with_role",
+            "labels::router::editor_and_viewer_can_read_label_groups_with_role",
+            "labels::router::non_contributor_reads_no_label_groups_with_role",
+            "labels::router::admin_can_read_label_groups_with_role",
+        ],
+        scope="session",
+    )
+    def test_class_gate(self) -> None:
+        pass
+
+
 class TestReadLabelContributors:
     @pytest.mark.dependency(name="labels::router::owner_can_read_contributors", scope="session")
     def test_owner_can_read_contributors(
@@ -129,6 +220,7 @@ class TestReadLabelContributors:
 @pytest.mark.dependency(
     name="gate::labels::router",
     depends=[
+        "gate::labels::router::label_groups_with_role",
         "gate::labels::router::contributors",
     ],
     scope="session",

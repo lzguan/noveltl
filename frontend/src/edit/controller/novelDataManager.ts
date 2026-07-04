@@ -180,6 +180,8 @@ export const buildNovelDataManager = (
 								},
 							],
 							label: [],
+							autoLabel: [],
+							autoLabelRun: [],
 							chapter: [],
 							chapterContent: [],
 							labelData: [],
@@ -284,6 +286,8 @@ export const buildNovelDataManager = (
 						reservationRequest: makeReservationRequest(idRepo, {
 							labelGroup: [],
 							label: [],
+							autoLabel: [],
+							autoLabelRun: [],
 							chapter: [
 								{
 									id: newId,
@@ -372,6 +376,8 @@ export const buildNovelDataManager = (
 						reservationRequest: makeReservationRequest(idRepo, {
 							labelGroup: [],
 							label: [],
+							autoLabel: [],
+							autoLabelRun: [],
 							chapter: [
 								{
 									id: chapterId,

@@ -20,11 +20,15 @@ import {
 	LGProvId,
 	LDProvId,
 	LProvId,
+	AProvId,
+	ALRProvId,
 	CServId,
 	CCServId,
 	LGServId,
 	LDServId,
 	LServEx,
+	AServId,
+	ALRServId,
 	ServTypes,
 	isTerminal,
 } from "./types/idTypes";
@@ -68,6 +72,8 @@ export function buildIdRepository(): IDRepository {
 		labelData: new Map<ProvTypes["labelData"], ServIdStatus<"labelData">>(),
 		chapterContent: new Map<ProvTypes["chapterContent"], ServIdStatus<"chapterContent">>(),
 		chapter: new Map<ProvTypes["chapter"], ServIdStatus<"chapter">>(),
+		autoLabel: new Map<ProvTypes["autoLabel"], ServIdStatus<"autoLabel">>(),
+		autoLabelRun: new Map<ProvTypes["autoLabelRun"], ServIdStatus<"autoLabelRun">>(),
 	};
 
 	const existableKindMap: ExistableKindMap = {
@@ -79,6 +85,8 @@ export function buildIdRepository(): IDRepository {
 		labelData: new Map<ServTypes["labelData"], ProvTypes["labelData"]>(),
 		chapterContent: new Map<ServTypes["chapterContent"], ProvTypes["chapterContent"]>(),
 		chapter: new Map<ServTypes["chapter"], ProvTypes["chapter"]>(),
+		autoLabel: new Map<ServTypes["autoLabel"], ProvTypes["autoLabel"]>(),
+		autoLabelRun: new Map<ServTypes["autoLabelRun"], ProvTypes["autoLabelRun"]>(),
 	};
 
 	function newId(kind: "chapter"): ProvTypes["chapter"];
@@ -86,6 +94,8 @@ export function buildIdRepository(): IDRepository {
 	function newId(kind: "labelGroup"): ProvTypes["labelGroup"];
 	function newId(kind: "labelData"): ProvTypes["labelData"];
 	function newId(kind: "label"): ProvTypes["label"];
+	function newId(kind: "autoLabel"): ProvTypes["autoLabel"];
+	function newId(kind: "autoLabelRun"): ProvTypes["autoLabelRun"];
 
 	function newId(kind: Kind): ProvTypes[Kind] {
 		const provId = ProvId(`provisional-${counterRef++}`);
@@ -130,6 +140,22 @@ export function buildIdRepository(): IDRepository {
 					lockCount: 0,
 				});
 				return id5;
+			case "autoLabel":
+				const id6 = ProvTypes["autoLabel"](provId);
+				identifiableKindMap[kind].set(id6, {
+					serverId: null,
+					status: "pending",
+					lockCount: 0,
+				});
+				return id6;
+			case "autoLabelRun":
+				const id7 = ProvTypes["autoLabelRun"](provId);
+				identifiableKindMap[kind].set(id7, {
+					serverId: null,
+					status: "pending",
+					lockCount: 0,
+				});
+				return id7;
 		}
 	}
 
@@ -149,6 +175,14 @@ export function buildIdRepository(): IDRepository {
 		kind: "labelData",
 		serverId: LDServId,
 	): Effect.Effect<ProvTypes["labelData"], DuplicateServIdException>;
+	function newIdAndBindId(
+		kind: "autoLabel",
+		serverId: AServId,
+	): Effect.Effect<ProvTypes["autoLabel"], DuplicateServIdException>;
+	function newIdAndBindId(
+		kind: "autoLabelRun",
+		serverId: ALRServId,
+	): Effect.Effect<ProvTypes["autoLabelRun"], DuplicateServIdException>;
 
 	function newIdAndBindId(
 		kind: IdentifiableKind,
@@ -204,6 +238,30 @@ export function buildIdRepository(): IDRepository {
 				});
 				revMap[kind].set(serverId as LDServId, id4);
 				return Effect.succeed(id4);
+			case "autoLabel":
+				const id5 = ProvTypes["autoLabel"](provId);
+				if (revMap[kind].has(serverId as AServId)) {
+					return Effect.fail(new DuplicateServIdException({ id: serverId }));
+				}
+				identifiableKindMap[kind].set(id5, {
+					serverId: serverId as AServId,
+					status: "clean",
+					lockCount: 0,
+				});
+				revMap[kind].set(serverId as AServId, id5);
+				return Effect.succeed(id5);
+			case "autoLabelRun":
+				const id6 = ProvTypes["autoLabelRun"](provId);
+				if (revMap[kind].has(serverId as ALRServId)) {
+					return Effect.fail(new DuplicateServIdException({ id: serverId }));
+				}
+				identifiableKindMap[kind].set(id6, {
+					serverId: serverId as ALRServId,
+					status: "clean",
+					lockCount: 0,
+				});
+				revMap[kind].set(serverId as ALRServId, id6);
+				return Effect.succeed(id6);
 		}
 	}
 
@@ -233,6 +291,14 @@ export function buildIdRepository(): IDRepository {
 		kind: "labelData",
 		provisionalId: ProvTypes["labelData"],
 	): Effect.Effect<LDServId | null, NotFoundException>;
+	function getServerId(
+		kind: "autoLabel",
+		provisionalId: ProvTypes["autoLabel"],
+	): Effect.Effect<AServId | null, NotFoundException>;
+	function getServerId(
+		kind: "autoLabelRun",
+		provisionalId: ProvTypes["autoLabelRun"],
+	): Effect.Effect<ALRServId | null, NotFoundException>;
 
 	function getServerId<K extends IdentifiableKind>(
 		kind: K,
@@ -277,6 +343,16 @@ export function buildIdRepository(): IDRepository {
 		kind: "labelData",
 		provisionalId: ProvTypes["labelData"],
 		serverId: LDServId,
+	): Effect.Effect<void, NotFoundException | DuplicateServIdException>;
+	function bindServerId(
+		kind: "autoLabel",
+		provisionalId: ProvTypes["autoLabel"],
+		serverId: AServId,
+	): Effect.Effect<void, NotFoundException | DuplicateServIdException>;
+	function bindServerId(
+		kind: "autoLabelRun",
+		provisionalId: ProvTypes["autoLabelRun"],
+		serverId: ALRServId,
 	): Effect.Effect<void, NotFoundException | DuplicateServIdException>;
 
 	function bindServerId(
@@ -358,6 +434,42 @@ export function buildIdRepository(): IDRepository {
 				entry.serverId = serverId as ServTypes["labelData"];
 				return Effect.succeed(void 0);
 			}
+			case "autoLabel": {
+				const entry = identifiableKindMap[kind].get(
+					provisionalId as ProvTypes["autoLabel"],
+				);
+				if (revMap[kind].has(serverId as AServId)) {
+					return Effect.fail(new DuplicateServIdException({ id: serverId }));
+				}
+				if (!entry) {
+					logger.error(
+						`Provisional id ${provisionalId} not found for kind ${kind} in bindServerId`,
+					);
+					return Effect.fail(new NotFoundException());
+				}
+				revMap[kind].delete(entry.serverId as AServId);
+				revMap[kind].set(serverId as AServId, provisionalId as ProvTypes["autoLabel"]);
+				entry.serverId = serverId as ServTypes["autoLabel"];
+				return Effect.succeed(void 0);
+			}
+			case "autoLabelRun": {
+				const entry = identifiableKindMap[kind].get(
+					provisionalId as ProvTypes["autoLabelRun"],
+				);
+				if (revMap[kind].has(serverId as ALRServId)) {
+					return Effect.fail(new DuplicateServIdException({ id: serverId }));
+				}
+				if (!entry) {
+					logger.error(
+						`Provisional id ${provisionalId} not found for kind ${kind} in bindServerId`,
+					);
+					return Effect.fail(new NotFoundException());
+				}
+				revMap[kind].delete(entry.serverId as ALRServId);
+				revMap[kind].set(serverId as ALRServId, provisionalId as ProvTypes["autoLabelRun"]);
+				entry.serverId = serverId as ServTypes["autoLabelRun"];
+				return Effect.succeed(void 0);
+			}
 		}
 	}
 
@@ -413,6 +525,20 @@ export function buildIdRepository(): IDRepository {
 					return Effect.fail(new NotFoundException());
 				}
 				return Effect.succeed(entry5.status);
+			case "autoLabel":
+				const entry6 = identifiableKindMap["autoLabel"].get(id as AProvId);
+				if (!entry6) {
+					logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
+					return Effect.fail(new NotFoundException());
+				}
+				return Effect.succeed(entry6.status);
+			case "autoLabelRun":
+				const entry7 = identifiableKindMap["autoLabelRun"].get(id as ALRProvId);
+				if (!entry7) {
+					logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
+					return Effect.fail(new NotFoundException());
+				}
+				return Effect.succeed(entry7.status);
 		}
 	}
 
@@ -446,6 +572,16 @@ export function buildIdRepository(): IDRepository {
 					currentState = yield* idObjState("label", id as LProvId);
 					serverState =
 						existableKindMap["label"].get(id as LProvId)?.serverExists ?? null;
+					break;
+				case "autoLabel":
+					currentState = yield* idObjState("autoLabel", id as AProvId);
+					serverState =
+						identifiableKindMap["autoLabel"].get(id as AProvId)?.serverId ?? null;
+					break;
+				case "autoLabelRun":
+					currentState = yield* idObjState("autoLabelRun", id as ALRProvId);
+					serverState =
+						identifiableKindMap["autoLabelRun"].get(id as ALRProvId)?.serverId ?? null;
 					break;
 				default:
 					return false;
@@ -505,6 +641,12 @@ export function buildIdRepository(): IDRepository {
 				case "label":
 					entry = existableKindMap["label"].get(id as LProvId);
 					break;
+				case "autoLabel":
+					entry = identifiableKindMap["autoLabel"].get(id as AProvId);
+					break;
+				case "autoLabelRun":
+					entry = identifiableKindMap["autoLabelRun"].get(id as ALRProvId);
+					break;
 			}
 			if (!entry) {
 				return yield* Effect.fail(new NotFoundException());
@@ -537,6 +679,12 @@ export function buildIdRepository(): IDRepository {
 				case "label":
 					entry = existableKindMap["label"].get(id as LProvId);
 					break;
+				case "autoLabel":
+					entry = identifiableKindMap["autoLabel"].get(id as AProvId);
+					break;
+				case "autoLabelRun":
+					entry = identifiableKindMap["autoLabelRun"].get(id as ALRProvId);
+					break;
 			}
 
 			if (!entry) {
@@ -553,7 +701,7 @@ export function buildIdRepository(): IDRepository {
 			}
 			entry.status = post(entry.status);
 			if (
-				["chapter", "chapterContent", "labelGroup", "labelData"].includes(kind) &&
+				["chapter", "chapterContent", "labelGroup", "labelData", "autoLabel", "autoLabelRun"].includes(kind) &&
 				isTerminal(entry.status) &&
 				"serverId" in entry
 			) {
@@ -573,6 +721,14 @@ export function buildIdRepository(): IDRepository {
 					case "labelData":
 						revMap["labelData"].delete(entry.serverId as LDServId);
 						identifiableKindMap["labelData"].delete(id as LDProvId);
+						break;
+					case "autoLabel":
+						revMap["autoLabel"].delete(entry.serverId as AServId);
+						identifiableKindMap["autoLabel"].delete(id as AProvId);
+						break;
+					case "autoLabelRun":
+						revMap["autoLabelRun"].delete(entry.serverId as ALRServId);
+						identifiableKindMap["autoLabelRun"].delete(id as ALRProvId);
 						break;
 				}
 			}
@@ -603,6 +759,16 @@ export function buildIdRepository(): IDRepository {
 				identifiableKindMap.chapter.delete(key);
 			}
 		});
+		identifiableKindMap.autoLabel.forEach((value, key) => {
+			if (isTerminal(value.status)) {
+				identifiableKindMap.autoLabel.delete(key);
+			}
+		});
+		identifiableKindMap.autoLabelRun.forEach((value, key) => {
+			if (isTerminal(value.status)) {
+				identifiableKindMap.autoLabelRun.delete(key);
+			}
+		});
 		existableKindMap.label.forEach((value, key) => {
 			if (isTerminal(value.status)) {
 				existableKindMap.label.delete(key);
@@ -614,6 +780,14 @@ export function buildIdRepository(): IDRepository {
 		kind: "chapter",
 		serverId: CServId,
 	): Effect.Effect<ProvTypes["chapter"] | null>;
+	function queryProvId(
+		kind: "autoLabel",
+		serverId: AServId,
+	): Effect.Effect<ProvTypes["autoLabel"] | null>;
+	function queryProvId(
+		kind: "autoLabelRun",
+		serverId: ALRServId,
+	): Effect.Effect<ProvTypes["autoLabelRun"] | null>;
 	function queryProvId(
 		kind: "chapterContent",
 		serverId: CCServId,
@@ -640,6 +814,10 @@ export function buildIdRepository(): IDRepository {
 				return Effect.succeed(revMap[kind].get(serverId as LGServId) ?? null);
 			case "labelData":
 				return Effect.succeed(revMap[kind].get(serverId as LDServId) ?? null);
+			case "autoLabel":
+				return Effect.succeed(revMap[kind].get(serverId as AServId) ?? null);
+			case "autoLabelRun":
+				return Effect.succeed(revMap[kind].get(serverId as ALRServId) ?? null);
 		}
 	}
 

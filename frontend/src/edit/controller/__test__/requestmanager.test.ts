@@ -17,6 +17,8 @@ vi.mock("@/api/endpoints/default/default", async (importOriginal) => {
 });
 
 const emptyReserveList: ReserveList = {
+	autoLabel: [],
+	autoLabelRun: [],
 	chapter: [],
 	chapterContent: [],
 	label: [],

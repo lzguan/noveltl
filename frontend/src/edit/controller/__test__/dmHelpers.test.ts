@@ -101,6 +101,8 @@ describe("isAllReserveable", () => {
 		);
 
 		const list: ReserveList = {
+			autoLabel: [],
+			autoLabelRun: [],
 			chapter: [{ id: chapterId, kind: "chapter", desiredState: "locked" }],
 			chapterContent: [],
 			label: [],
@@ -124,6 +126,8 @@ describe("isAllReserveable", () => {
 		);
 
 		const list: ReserveList = {
+			autoLabel: [],
+			autoLabelRun: [],
 			chapter: [{ id: chapterId, kind: "chapter", desiredState: "locked" }],
 			chapterContent: [],
 			label: [],
@@ -139,6 +143,8 @@ describe("isAllReserveable", () => {
 		const idRepo = makeMockIdRepo(new Map());
 
 		const list: ReserveList = {
+			autoLabel: [],
+			autoLabelRun: [],
 			chapter: [],
 			chapterContent: [],
 			label: [],
@@ -168,6 +174,8 @@ describe("isAllReserveable", () => {
 		} as unknown as IDRepository;
 
 		const list: ReserveList = {
+			autoLabel: [],
+			autoLabelRun: [],
 			chapter: [],
 			chapterContent: [],
 			label: [

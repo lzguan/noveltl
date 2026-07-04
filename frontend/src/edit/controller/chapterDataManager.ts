@@ -69,7 +69,6 @@ export const buildChapterDataManager = (
 		// scoped for initialization
 		{
 			const labelGroupProvIds = yield* getters.labelGroupIds();
-			const lgStoP = new Map<LGServId, LGProvId>();
 			for (const lgProvId of labelGroupProvIds) {
 				const lgSlot = yield* getters
 					.labelGroup(lgProvId)
@@ -87,7 +86,6 @@ export const buildChapterDataManager = (
 						}),
 					);
 				}
-				lgStoP.set(lgServId, lgProvId);
 			}
 
 			for (const entry of editChapterData.eagerLabelData) {
@@ -105,7 +103,7 @@ export const buildChapterDataManager = (
 					})
 					.sort((a, b) => a.labelStart - b.labelStart);
 				const servId = LGServId(entry.labelGroup.labelGroupId);
-				const lgProvId = lgStoP.get(servId);
+				const lgProvId = yield* idRepo.queryProvId("labelGroup", servId);
 				if (!lgProvId) {
 					return yield* Effect.fail(
 						new UnknownException({
@@ -135,7 +133,7 @@ export const buildChapterDataManager = (
 					.newIdAndBindId("labelData", LDServId(entry.labelData.labelDataId))
 					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
 				const servId = LGServId(entry.labelGroup.labelGroupId);
-				const lgProvId = lgStoP.get(servId);
+				const lgProvId = yield* idRepo.queryProvId("labelGroup", servId);
 				if (!lgProvId) {
 					return yield* Effect.fail(
 						new UnknownException({
@@ -225,6 +223,8 @@ export const buildChapterDataManager = (
 								},
 							],
 							label: buildLabelReservations(opsSnapshot),
+							autoLabel: [],
+							autoLabelRun: [],
 							chapter: [],
 							labelGroup: [],
 						};
@@ -304,6 +304,8 @@ export const buildChapterDataManager = (
 									desiredState: "updating",
 								},
 							],
+							autoLabel: [],
+							autoLabelRun: [],
 							chapter: [],
 							labelGroup: [],
 							label: [],
@@ -1022,6 +1024,8 @@ export const buildChapterDataManager = (
 					);
 					if (curLabelDataState._tag === "Failure") {
 						return {
+							autoLabel: [],
+							autoLabelRun: [],
 							chapter: [],
 							chapterContent: [],
 							labelGroup: [
@@ -1049,6 +1053,8 @@ export const buildChapterDataManager = (
 						desiredState = "detaching";
 					}
 					return {
+						autoLabel: [],
+						autoLabelRun: [],
 						chapter: [],
 						chapterContent: [],
 						labelGroup: [

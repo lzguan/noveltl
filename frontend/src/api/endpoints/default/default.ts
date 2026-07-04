@@ -190,6 +190,16 @@ export type createAutolabelsAutoLabelsPostResponse200 = {
   status: 200
 }
 
+export type createAutolabelsAutoLabelsPostResponse400 = {
+  data: DetailHTTPErrorResponse
+  status: 400
+}
+
+export type createAutolabelsAutoLabelsPostResponse409 = {
+  data: RequestConflictErrorResponse
+  status: 409
+}
+
 export type createAutolabelsAutoLabelsPostResponse422 = {
   data: HTTPValidationError
   status: 422
@@ -198,7 +208,7 @@ export type createAutolabelsAutoLabelsPostResponse422 = {
 export type createAutolabelsAutoLabelsPostResponseSuccess = (createAutolabelsAutoLabelsPostResponse200) & {
   headers: Headers;
 };
-export type createAutolabelsAutoLabelsPostResponseError = (createAutolabelsAutoLabelsPostResponse422) & {
+export type createAutolabelsAutoLabelsPostResponseError = (createAutolabelsAutoLabelsPostResponse400 | createAutolabelsAutoLabelsPostResponse409 | createAutolabelsAutoLabelsPostResponse422) & {
   headers: Headers;
 };
 
@@ -1785,6 +1795,16 @@ export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLab
   status: 200
 }
 
+export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse409 = {
+  data: RequestConflictErrorResponse
+  status: 409
+}
+
 export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse422 = {
   data: HTTPValidationError
   status: 422
@@ -1793,7 +1813,7 @@ export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLab
 export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseSuccess = (createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse200) & {
   headers: Headers;
 };
-export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseError = (createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse422) & {
+export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseError = (createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse404 | createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse409 | createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse422) & {
   headers: Headers;
 };
 

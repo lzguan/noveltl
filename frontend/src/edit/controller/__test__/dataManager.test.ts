@@ -9,13 +9,17 @@ import { buildLabelGroupIndex } from "../dmHelpers";
 import { Visibility, type Novel } from "@/api/models";
 import type { Role } from "@/api/models/role";
 import { RequestKey } from "../types/requestTypes";
-import { updateChapterContentChaptersChapterIdContentPatch } from "@/api/endpoints/default/default";
+import {
+	updateChapterContentChaptersChapterIdContentPatch,
+	readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
+} from "@/api/endpoints/default/default";
 
 vi.mock("@/api/endpoints/default/default", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@/api/endpoints/default/default")>();
 	return {
 		...actual,
 		updateChapterContentChaptersChapterIdContentPatch: vi.fn(),
+		readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost: vi.fn(),
 	};
 });
 
@@ -121,7 +125,7 @@ function buildTestChapterDM() {
 			},
 		);
 
-		return { chapterDM, triggerEvents, labelGroupId: labelGroupProvId, chapterId };
+		return { chapterDM, triggerEvents, labelGroupId: labelGroupProvId, chapterId, idRepo };
 	});
 }
 
@@ -364,6 +368,187 @@ describe("buildChapterDataManager", () => {
 				chapterDM.addLabel(labelGroupId, 6, 9, "met").pipe(Effect.either),
 			);
 			expect(result._tag).toBe("Left");
+		});
+	});
+
+	describe("multiple text edits", () => {
+		it("shifts labels and sends updated chapter content ID across two edits", async () => {
+			const V2 = "00000000-0000-0000-0000-000000000007";
+			const V3 = "00000000-0000-0000-0000-00000000000c";
+
+			const updateChapterContentMock = vi.mocked(
+				updateChapterContentChaptersChapterIdContentPatch,
+			);
+			updateChapterContentMock.mockClear();
+
+			updateChapterContentMock.mockResolvedValue({
+				status: 200,
+				data: {
+					chapterContentId: V2,
+					chapterContentVersion: 2,
+					labelDataIdMap: { [UUID4]: "00000000-0000-0000-0000-000000000008" },
+				},
+				headers: new Headers(),
+			});
+
+			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
+
+			Effect.runSync(chapterDM.insertTextAt(5, " first"));
+			const events1 = Effect.runSync(chapterDM.flush());
+			expect(events1).toHaveLength(1);
+
+			await Effect.runPromise(events1[0].send(RequestKey("key-1")));
+			console.log(
+				"After first send, updateChapterContentMock calls:",
+				updateChapterContentMock.mock.calls,
+			);
+			await Effect.runPromise(
+				events1[0]
+					.postSend({
+						chapterContentId: V2,
+						chapterContentVersion: 2,
+						labelDataIdMap: {
+							[UUID4]: "00000000-0000-0000-0000-000000000008",
+						},
+					})
+					.pipe(Effect.tapError((err) => Effect.logError(`postSend failed: ${err}`))),
+			);
+
+			console.log(
+				"After first postSend, updateChapterContentMock calls:",
+				updateChapterContentMock.mock.calls,
+			);
+
+			const afterFirstText = Effect.runSync(chapterDM.getters.text());
+			expect(afterFirstText).toBe("Alice first met Bob at the park.");
+
+			const afterFirstSlot = Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId));
+			expect(afterFirstSlot.status).toBe("ready");
+			if (afterFirstSlot.status === "ready") {
+				expect(
+					afterFirstSlot.data.labels.map((l) => [l.labelStart, l.labelEnd, l.labelWord]),
+				).toEqual([
+					[0, 5, "Alice"],
+					[16, 19, "Bob"],
+				]);
+			}
+
+			updateChapterContentMock.mockClear();
+
+			updateChapterContentMock.mockResolvedValue({
+				status: 200,
+				data: {
+					chapterContentId: V3,
+					chapterContentVersion: 3,
+					labelDataIdMap: { [UUID4]: "00000000-0000-0000-0000-00000000000d" },
+				},
+				headers: new Headers(),
+			});
+
+			Effect.runSync(chapterDM.insertTextAt(10, " second"));
+			const events2 = Effect.runSync(chapterDM.flush());
+			expect(events2).toHaveLength(1);
+
+			const afterSecondText = Effect.runSync(chapterDM.getters.text());
+			expect(afterSecondText).toBe("Alice firs secondt met Bob at the park.");
+
+			const afterSecondSlot = Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId));
+			expect(afterSecondSlot.status).toBe("ready");
+			if (afterSecondSlot.status === "ready") {
+				expect(
+					afterSecondSlot.data.labels.map((l) => [l.labelStart, l.labelEnd, l.labelWord]),
+				).toEqual([
+					[0, 5, "Alice"],
+					[23, 26, "Bob"],
+				]);
+			}
+
+			await Effect.runPromise(events2[0].send(RequestKey("key-2")));
+
+			expect(updateChapterContentMock).toHaveBeenCalledTimes(1);
+			expect(updateChapterContentMock).toHaveBeenCalledWith(
+				UUID1,
+				expect.objectContaining({
+					chapterContentId: V2,
+				}),
+				{ requestKey: "key-2" },
+			);
+		});
+	});
+
+	describe("reload then text edit", () => {
+		it("blocks text op reservation when reload returns same labelDataId", async () => {
+			const reloadMock = vi.mocked(
+				readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
+			);
+			reloadMock.mockClear();
+
+			reloadMock.mockResolvedValue({
+				status: 200,
+				data: [
+					{
+						labelData: {
+							labelDataId: UUID4,
+							chapterContentId: UUID2,
+							labelGroupId: UUID3,
+						},
+						labelGroup: {
+							labelGroupId: UUID3,
+							labelGroupName: "Characters",
+							novelId: NOVEL_ID,
+						},
+						labels: [
+							{
+								labelId: "00000000-0000-0000-0000-0000000000e0",
+								labelDataId: UUID4,
+								labelStart: 0,
+								labelEnd: 5,
+								labelWord: "Alice",
+								labelEntityGroup: "character",
+								labelScore: 1,
+								labelDirty: false,
+							},
+							{
+								labelId: "00000000-0000-0000-0000-0000000000e1",
+								labelDataId: UUID4,
+								labelStart: 10,
+								labelEnd: 13,
+								labelWord: "Bob",
+								labelEntityGroup: "character",
+								labelScore: 1,
+								labelDirty: false,
+							},
+						],
+					},
+				],
+				headers: new Headers(),
+			});
+
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
+
+			const reloadEvents = Effect.runSync(chapterDM.reloadGroup(labelGroupId, true));
+			expect(reloadEvents[0].variant).toBe("reloadGroup");
+
+			const responseData = await Effect.runPromise(
+				reloadEvents[0].send(RequestKey("reload-key")),
+			);
+			await Effect.runPromise(reloadEvents[0].postSend(responseData));
+
+			const slot = Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId));
+			expect(slot.status).toBe("ready");
+			const labelDataProvId = slot.meta.labelData.labelDataId;
+
+			const isReserveableResult = Effect.runSync(
+				idRepo.isReserveable("labelData", labelDataProvId, "idUpdating"),
+			);
+			expect(isReserveableResult).toBe(true);
+
+			Effect.runSync(chapterDM.insertTextAt(5, " first"));
+			const textEvents = Effect.runSync(chapterDM.flush());
+			expect(textEvents).toHaveLength(1);
+
+			const waitResult = Effect.runSync(textEvents[0].reservationRequest.wait());
+			expect(waitResult).toBe(false);
 		});
 	});
 });

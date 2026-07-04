@@ -52,8 +52,6 @@ export const buildAutolabelDataManager = (
 		chapterFilter: ChapterFilter,
 	): Effect.Effect<RequestEvent[], UnknownException | FatalException> =>
 		Effect.sync(() => {
-			const runProvId = idRepo.newId("autoLabelRun");
-
 			return [
 				{
 					cached: true,
@@ -61,9 +59,7 @@ export const buildAutolabelDataManager = (
 					active: true,
 					retries: 3,
 					reservationRequest: makeReservationRequest(idRepo, {
-						autoLabelRun: [
-							{ id: runProvId, kind: "autoLabelRun", desiredState: "creating" },
-						],
+						autoLabelRun: [],
 						autoLabel: [],
 						label: [],
 						chapter: [],
@@ -91,21 +87,17 @@ export const buildAutolabelDataManager = (
 							).pipe(
 								Effect.mapError((err) => new ConnectionException({ orig: err })),
 							);
-							if ((resp as Record<string, unknown>).status === 409) {
-								const detail = (resp as Record<string, unknown>).data as Record<
-									string,
-									unknown
-								> | null;
-								if (detail?.cacheConflict) {
-									return yield* Effect.fail(
-										new CacheConflictException({ requestKey }),
-									);
-								}
+							if (resp.status === 409 && resp.data.detail.cacheConflict) {
+								return yield* Effect.fail(
+									new CacheConflictException({ requestKey }),
+								);
 							}
 							if (resp.status !== 200) {
 								return yield* Effect.fail(
 									new FatalException({
-										orig: new Error(`Create autolabel run failed: ${resp.status}`),
+										orig: new Error(
+											`Create autolabel run failed: ${resp.status}`,
+										),
 									}),
 								);
 							}
@@ -118,9 +110,9 @@ export const buildAutolabelDataManager = (
 							)(data).pipe(
 								Effect.mapError((err) => new FatalException({ orig: err })),
 							);
-							yield* idRepo
-								.bindServerId("autoLabelRun", runProvId, ALRServId(validated.run.runId))
-								.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+							const runProvId = yield* idRepo
+								.newIdAndBindId("autoLabelRun", ALRServId(validated.run.runId))
+								.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
 
 							const provRun: ProvAutoLabelRun = Prov({
 								...validated.run,
@@ -132,23 +124,13 @@ export const buildAutolabelDataManager = (
 								const alProvId = yield* idRepo
 									.newIdAndBindId("autoLabel", AServId(al.autoLabelId))
 									.pipe(
-										Effect.mapError(
-											(err) => new FatalException({ orig: err }),
-										),
+										Effect.mapError((err) => new FatalException({ orig: err })),
 									);
 								const ccProvId = yield* idRepo
-									.queryProvId("chapterContent", CCServId(al.chapterContentId))
-									.pipe(Effect.catchAll(() => Effect.succeed(null)));
-								if (!ccProvId) {
-									yield* raiseTriggerEvent({
-										eventType: "errorOccured",
-										from: "dataManager",
-										error: new Error(
-											`Chapter content ${al.chapterContentId} not found in ID repo during autolabel creation. Consider reloading.`,
-										),
-									});
-									continue;
-								}
+									.newIdAndBindId("chapterContent", CCServId(al.chapterContentId))
+									.pipe(
+										Effect.mapError((err) => new FatalException({ orig: err })),
+									);
 								autoLabels.push(
 									Prov({
 										autoLabelId: alProvId,
@@ -184,9 +166,7 @@ export const buildAutolabelDataManager = (
 					active: true,
 					retries: 3,
 					reservationRequest: makeReservationRequest(idRepo, {
-						autoLabelRun: [
-							{ id: runId, kind: "autoLabelRun", desiredState: "locked" },
-						],
+						autoLabelRun: [{ id: runId, kind: "autoLabelRun", desiredState: "locked" }],
 						labelGroup: [
 							{ id: labelGroupId, kind: "labelGroup", desiredState: "locked" },
 						],
@@ -228,21 +208,17 @@ export const buildAutolabelDataManager = (
 							).pipe(
 								Effect.mapError((err) => new ConnectionException({ orig: err })),
 							);
-							if ((resp as Record<string, unknown>).status === 409) {
-								const detail = (resp as Record<string, unknown>).data as Record<
-									string,
-									unknown
-								> | null;
-								if (detail?.cacheConflict) {
-									return yield* Effect.fail(
-										new CacheConflictException({ requestKey }),
-									);
-								}
+							if (resp.status === 409 && resp.data.detail.cacheConflict) {
+								return yield* Effect.fail(
+									new CacheConflictException({ requestKey }),
+								);
 							}
 							if (resp.status !== 200) {
 								return yield* Effect.fail(
 									new FatalException({
-										orig: new Error(`Promote autolabels failed: ${resp.status}`),
+										orig: new Error(
+											`Promote autolabels failed: ${resp.status}`,
+										),
 									}),
 								);
 							}
@@ -262,36 +238,54 @@ export const buildAutolabelDataManager = (
 							}[] = [];
 							for (const [servChapterId, servContentId] of validated.success) {
 								const chProvId = yield* idRepo
-									.queryProvId("chapter", CServId(servChapterId))
-									.pipe(Effect.catchAll(() => Effect.succeed(null)));
+									.newIdAndBindId("chapter", CServId(servChapterId))
+									.pipe(
+										Effect.mapError((err) => new FatalException({ orig: err })),
+									);
+
 								const ccProvId = yield* idRepo
-									.queryProvId("chapterContent", CCServId(servContentId))
-									.pipe(Effect.catchAll(() => Effect.succeed(null)));
-								if (!chProvId || !ccProvId) {
-									yield* raiseTriggerEvent({
-										eventType: "errorOccured",
-										from: "dataManager",
-										error: new Error(
-											`Chapter ${servChapterId} or chapter content ${servContentId} not found in ID repo during promotion. Consider reloading.`,
-										),
-									});
-									continue;
-								}
+									.newIdAndBindId("chapterContent", CCServId(servContentId))
+									.pipe(
+										Effect.mapError((err) => new FatalException({ orig: err })),
+									);
 								successEntries.push({
 									chapterId: chProvId,
 									chapterContentId: ccProvId,
 								});
 							}
 
-							const errorEntries = validated.errors.map(
-								([servChapterId, servContentId, error]) => ({
-									chapterId: CProvId(servChapterId as unknown as CProvId),
-									chapterContentId: CCProvId(
-										servContentId as unknown as CCProvId,
-									),
+							const errorEntries: {
+								chapterId: CProvId;
+								chapterContentId: CCProvId;
+								error: string;
+							}[] = [];
+							for (const [servChapterId, servContentId, error] of validated.errors) {
+								const chProvId = yield* idRepo
+									.newIdAndBindId("chapter", CServId(servChapterId))
+									.pipe(
+										Effect.mapError((err) => new FatalException({ orig: err })),
+									);
+								const ccProvId = yield* idRepo
+									.newIdAndBindId("chapterContent", CCServId(servContentId))
+									.pipe(
+										Effect.mapError((err) => new FatalException({ orig: err })),
+									);
+								if (!chProvId || !ccProvId) {
+									yield* raiseTriggerEvent({
+										eventType: "errorOccured",
+										from: "dataManager",
+										error: new Error(
+											`Failed to bind chapter ${servChapterId} or chapter content ${servContentId} in ID repo during promotion error handling.`,
+										),
+									});
+									continue;
+								}
+								errorEntries.push({
+									chapterId: chProvId,
+									chapterContentId: ccProvId,
 									error,
-								}),
-							);
+								});
+							}
 
 							yield* raiseTriggerEvent({
 								eventType: "autoLabelRunPromoted",

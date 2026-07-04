@@ -165,6 +165,17 @@ export const CreateAutolabelsAutoLabelsPost200Response = S.Struct({
 }).annotations({ description: 'Pydantic schema for an autolabel run (batch).\n\nA run groups autolabels created together in a single request.\n\nAttributes:\n    run_id: UUID identifier for this run.\n    triggered_by: UUID of user who triggered the run, or None.\n    model_name: Name of the NER model used.\n    model_params: Parameters for the NER model.\n    created_at: When the run was created.' })
 }).annotations({ description: 'Pydantic schema for the response after creating autolabels.\n\nAttributes:\n    run: The autolabel run that was created.\n    autolabels: The list of autolabel entries created in this run.' })
 
+export const CreateAutolabelsAutoLabelsPost400Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const CreateAutolabelsAutoLabelsPost409Response = S.Struct({
+  "detail": S.Struct({
+  "cacheConflict": S.Boolean,
+  "detail": S.String
+}).annotations({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
+}).annotations({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
+
 export const CreateAutolabelsAutoLabelsPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "loc": S.Array(S.Union(S.String, S.Number)),
@@ -1315,6 +1326,17 @@ export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLa
   "errors": S.Array(S.Tuple(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.String)),
   "success": S.Array(S.Tuple(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
 }).annotations({ description: 'Return message for CreateLabelDataByAutoLabel.\n\nAttributes:\n    success: List of tuples of (chapter_id, chapter_content_id) for successful inserts.\n    errors: List of tuples of (chapter_id, chapter_content_id, error message) for failed inserts.' })
+
+export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost404Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost409Response = S.Struct({
+  "detail": S.Struct({
+  "cacheConflict": S.Boolean,
+  "detail": S.String
+}).annotations({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
+}).annotations({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
 
 export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({

@@ -1743,6 +1743,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/CreateAutoLabelsResponse'
           description: Successful Response
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Invalid request data.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestConflictErrorResponse'
+          description: Request key conflict.
         '422':
           content:
             application/json:
@@ -2941,6 +2953,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/CreateLabelDataByAutoLabelStatus'
           description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Label group not found.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestConflictErrorResponse'
+          description: Request key conflict.
         '422':
           content:
             application/json:

@@ -295,7 +295,7 @@ export interface IDRepository {
 	newId(kind: "autoLabelRun"): ProvTypes["autoLabelRun"];
 
 	/**
-	 * Create a new id, bind it to the given server id, and manage it in the repository.
+	 * Create a new id, bind it to the given server id, and manage it in the repository. If duplicate server id is detected that is clean or locked, return that id. If duplicate is found that is not clean or locked, throw ResourceConflictException.
 	 */
 	newIdAndBindId(
 		kind: "chapter",
@@ -362,7 +362,7 @@ export interface IDRepository {
 	): Effect.Effect<LServEx | null, NotFoundException>;
 
 	/**
-	 * Bind a provisional id to a server id, so that the controller can update the corresponding entry with the new server id when it receives the signal from the request event. Raises DuplicateIdException if the server id is already bound to another provisional id.
+	 * Bind a provisional id to a server id, so that the controller can update the corresponding entry with the new server id when it receives the signal from the request event. Raises ResourceConflictException if the server id is already bound to another provisional id or if the provisional id is already bound to a server id. Raises NotFoundException if the provisional id is not found in the repository.
 	 */
 	bindServerId(
 		kind: "chapter",

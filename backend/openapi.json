@@ -2187,6 +2187,26 @@
               }
             }
           },
+          "404": {
+            "description": "Label group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request key conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestConflictErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -2434,6 +2454,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CreateAutoLabelsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request key conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestConflictErrorResponse"
                 }
               }
             }

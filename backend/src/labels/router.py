@@ -320,9 +320,17 @@ def update_label_data_stream(
 
 
 @router.post(
-    "/label-groups/{labelGroupId}/label-datas/auto-labels", response_model=schemas.CreateLabelDataByAutoLabelStatus
+    "/label-groups/{labelGroupId}/label-datas/auto-labels",
+    response_model=schemas.CreateLabelDataByAutoLabelStatus,
+    responses={
+        404: {"model": DetailHTTPErrorResponse, "description": "Label group not found."},
+        409: {
+            "model": RequestConflictErrorResponse,
+            "description": "Request key conflict.",
+        },
+    },
 )
-@ttl_cache(ttl=60, cache=redis_cache)
+@ttl_cache(ttl=60, cache=redis_cache, serialize_ret=serialize_response_model(schemas.CreateLabelDataByAutoLabelStatus))
 def create_label_datas_by_auto_labels(
     label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
     request: schemas.CreateLabelDataByAutoLabel,

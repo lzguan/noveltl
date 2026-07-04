@@ -55,7 +55,7 @@ export const buildChapterDataManager = (
 	},
 ): Effect.Effect<ChapterDataManager, UnknownException> =>
 	Effect.gen(function* () {
-		const chapterContentId = yield* idRepo
+		let chapterContentId = yield* idRepo
 			.newIdAndBindId(
 				"chapterContent",
 				CCServId(editChapterData.chapterContent.chapterContentId),
@@ -404,13 +404,14 @@ export const buildChapterDataManager = (
 								)(data).pipe(
 									Effect.mapError((err) => new FatalException({ orig: err })),
 								);
-								yield* idRepo
-									.bindServerId(
+								chapterContentId = yield* idRepo
+									.newIdAndBindId(
 										"chapterContent",
-										chapterContentId,
 										CCServId(validated.chapterContentId),
 									)
-									.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+									.pipe(
+										Effect.mapError((err) => new FatalException({ orig: err })),
+									);
 								for (const lgId of yield* labelDataIndex.getIds()) {
 									const slot = yield* labelDataIndex.get(lgId);
 									const ldId = slot.meta.labelData.labelDataId;
@@ -418,13 +419,23 @@ export const buildChapterDataManager = (
 										.getServerId("labelData", ldId)
 										.pipe(Effect.catchAll(() => Effect.succeed(null)));
 									if (oldServId && validated.labelDataIdMap[oldServId]) {
-										yield* idRepo
-											.bindServerId(
+										const newId = yield* idRepo
+											.newIdAndBindId(
 												"labelData",
-												ldId,
 												LDServId(validated.labelDataIdMap[oldServId]),
 											)
-											.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+											.pipe(
+												Effect.mapError(
+													(err) => new FatalException({ orig: err }),
+												),
+											);
+										yield* labelDataIndex.setMeta(lgId, {
+											labelData: Prov({
+												labelDataId: newId,
+												labelGroupId: lgId,
+												chapterContentId: chapterContentId,
+											}),
+										});
 									}
 								}
 							}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
@@ -455,12 +466,11 @@ export const buildChapterDataManager = (
 		> =>
 			Effect.gen(function* () {
 				const labelGroupSlot = yield* getters.labelGroup(labelGroupId).pipe(
-					Effect.catchAll(() =>
-						Effect.fail(
+					Effect.mapError(
+						(err) =>
 							new UnknownException({
-								message: `Label group ${labelGroupId} not found in getters`,
+								message: `Label group ${labelGroupId} not found in getters, error: ${err}`,
 							}),
-						),
 					),
 				);
 				const slot = yield* labelDataIndex
@@ -829,9 +839,7 @@ export const buildChapterDataManager = (
 				if (insertedText.length === 0) return flushedEvents;
 
 				const delta = insertedText.length;
-				const insertIds = yield* labelDataIndex
-					.getIds()
-					.pipe(Effect.catchAll(() => Effect.succeed([] as LGProvId[])));
+				const insertIds = yield* labelDataIndex.getIds();
 				for (const ldId of insertIds) {
 					const slot = yield* labelDataIndex
 						.get(ldId)
@@ -852,7 +860,14 @@ export const buildChapterDataManager = (
 						.sort((a, b) => a.labelStart - b.labelStart);
 					yield* labelDataIndex
 						.setData(ldId, { status: "ready", data: { labels: newLabels } })
-						.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+						.pipe(
+							Effect.mapError(
+								(err) =>
+									new UnknownException({
+										message: `Failed to update label data, error: ${String(err)}`,
+									}),
+							),
+						);
 				}
 
 				text = text.slice(0, pos) + insertedText + text.slice(pos);
@@ -899,9 +914,7 @@ export const buildChapterDataManager = (
 				if (deletedText.length === 0) return flushedEvents;
 
 				const delta = deletedText.length;
-				const deleteIds = yield* labelDataIndex
-					.getIds()
-					.pipe(Effect.catchAll(() => Effect.succeed([] as LGProvId[])));
+				const deleteIds = yield* labelDataIndex.getIds();
 				for (const ldId of deleteIds) {
 					const slot = yield* labelDataIndex
 						.get(ldId)
@@ -922,7 +935,15 @@ export const buildChapterDataManager = (
 						.sort((a, b) => a.labelStart - b.labelStart);
 					yield* labelDataIndex
 						.setData(ldId, { status: "ready", data: { labels: newLabels } })
-						.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+						.pipe(
+							Effect.mapError(
+								(err) =>
+									new UnknownException({
+										message: `Failed to update label data, error: ${String(err)}`,
+										orig: err,
+									}),
+							),
+						);
 				}
 
 				text = text.slice(0, startPos) + text.slice(endPos);
@@ -994,31 +1015,75 @@ export const buildChapterDataManager = (
 					chapterId,
 					labelGroupId,
 				});
-				yield* labelDataIndex
-					.setData(labelGroupId, { status: "loading" })
-					.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
-				yield* labelDataIndex
-					.increment(labelGroupId)
-					.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+				yield* labelDataIndex.setData(labelGroupId, { status: "loading" }).pipe(
+					Effect.mapError(
+						(err) =>
+							new UnknownException({
+								message: `Failed to set label data index to loading for group ${labelGroupId}`,
+								orig: err,
+							}),
+					),
+				);
+				yield* labelDataIndex.increment(labelGroupId).pipe(
+					Effect.mapError(
+						(err) =>
+							new UnknownException({
+								message: `Failed to increment label data index for group ${labelGroupId}`,
+								orig: err,
+							}),
+					),
+				);
 
 				const oldLabelDataProvId = slot.meta.labelData.labelDataId;
 				const oldLabelIds: LProvId[] =
 					slot.status === "ready" && slot.data
 						? slot.data.labels.map((l) => l.labelId)
 						: [];
-				const newLabelDataProvId = idRepo.newId("labelData");
+				let skip = false;
+				let wait = true;
 
 				const onError = () =>
 					Effect.gen(function* () {
-						yield* labelDataIndex
-							.setData(labelGroupId, { status: "error" })
-							.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
-						yield* labelDataIndex
-							.decrement(labelGroupId)
-							.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+						yield* labelDataIndex.setData(labelGroupId, { status: "error" }).pipe(
+							Effect.catchAll((err) => {
+								Effect.logError(
+									`Failed to set label data index to error for group ${labelGroupId}, error: ${err}`,
+								);
+								return Effect.succeed(void 0);
+							}),
+						);
+						yield* labelDataIndex.decrement(labelGroupId).pipe(
+							Effect.catchAll((err) => {
+								Effect.logError(
+									`Failed to decrement label data index for group ${labelGroupId}, error: ${err}`,
+								);
+								return Effect.succeed(void 0);
+							}),
+						);
+						wait = false;
 					});
 
 				const reloadReserveList: () => ReserveList = () => {
+					return {
+						autoLabel: [],
+						autoLabelRun: [],
+						chapter: [],
+						chapterContent: [],
+						labelGroup: [
+							{ id: labelGroupId, kind: "labelGroup", desiredState: "locked" },
+						],
+						labelData: [
+							{ id: oldLabelDataProvId, kind: "labelData", desiredState: "locked" },
+						],
+						label: oldLabelIds.map((id) => ({
+							id,
+							kind: "label" as const,
+							desiredState: "detaching" as const,
+						})),
+					};
+				};
+
+				const detachReserveList: () => ReserveList = () => {
 					const curLabelDataState = Effect.runSyncExit(
 						idRepo.idObjState("labelData", oldLabelDataProvId),
 					);
@@ -1031,13 +1096,7 @@ export const buildChapterDataManager = (
 							labelGroup: [
 								{ id: labelGroupId, kind: "labelGroup", desiredState: "locked" },
 							],
-							labelData: [
-								{
-									id: newLabelDataProvId,
-									kind: "labelData",
-									desiredState: "loading",
-								},
-							],
+							labelData: [],
 							label: oldLabelIds.map((id) => ({
 								id,
 								kind: "label" as const,
@@ -1064,19 +1123,10 @@ export const buildChapterDataManager = (
 							{
 								id: oldLabelDataProvId,
 								kind: "labelData",
-								desiredState: desiredState,
-							},
-							{
-								id: newLabelDataProvId,
-								kind: "labelData",
-								desiredState: "loading",
+								desiredState,
 							},
 						],
-						label: oldLabelIds.map((id) => ({
-							id,
-							kind: "label" as const,
-							desiredState: "detaching" as const,
-						})),
+						label: [],
 					};
 				};
 
@@ -1087,7 +1137,7 @@ export const buildChapterDataManager = (
 					retries: 3,
 					reservationRequest: {
 						reserveList: IdempotentCallable(reloadReserveList),
-						skip: () => false,
+						skip: () => skip,
 						wait: () =>
 							isAllReserveable(idRepo, reloadReserveList()).pipe(
 								Effect.map((ready) => !ready),
@@ -1143,13 +1193,12 @@ export const buildChapterDataManager = (
 									}),
 								);
 							}
-							yield* idRepo
-								.bindServerId(
-									"labelData",
-									newLabelDataProvId,
-									LDServId(entry.labelData.labelDataId),
-								)
-								.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+							const newLabelDataProvId = yield* idRepo
+								.newIdAndBindId("labelData", LDServId(entry.labelData.labelDataId))
+								.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
+							if (newLabelDataProvId === oldLabelDataProvId) {
+								skip = true;
+							}
 							const provLabels: ProvLabel[] = entry.labels
 								.map((l) => {
 									const provLabelId = Effect.runSync(
@@ -1170,26 +1219,53 @@ export const buildChapterDataManager = (
 										labelGroupId,
 									}),
 								})
-								.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+								.pipe(
+									Effect.mapError(
+										(err) =>
+											new FatalException({
+												orig: err,
+											}),
+									),
+								);
 							yield* labelDataIndex
 								.setData(labelGroupId, {
 									status: "ready",
 									data: { labels: provLabels },
 								})
-								.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+								.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
 							yield* labelDataIndex
 								.decrement(labelGroupId)
-								.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+								.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
 							yield* raiseTriggerEvent({
 								eventType: "labelDataLoaded",
 								labelGroupId,
 								chapterId,
 								wasDeleted: false,
 							});
-						}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
+							wait = false;
+						}),
 				};
 				const flushedOps = yield* autoFlushIfTagMismatch("neither");
-				return [...flushedOps, event];
+				return [
+					...flushedOps,
+					event,
+					{
+						cached: false,
+						variant: "reloadGroup",
+						active: false,
+						retries: 1,
+						reservationRequest: {
+							skip: () => skip,
+							wait: () => Effect.succeed(wait),
+							reserveList: IdempotentCallable(detachReserveList),
+						},
+						onFailure: () => Effect.succeed(void 0),
+						onFatalError: () => Effect.succeed(void 0),
+						preSend: () => Effect.succeed(void 0),
+						send: () => Effect.succeed(void 0),
+						postSend: () => Effect.succeed(void 0),
+					},
+				];
 			});
 
 		const addLabel = decorate(_addLabel);

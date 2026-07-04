@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from src.requests.cache import redis_cache
 from src.requests.decorators import attl_cache
+from src.schemas import DetailHTTPErrorResponse, RequestConflictErrorResponse
 
 from ..auth.dependencies import get_current_user
 from ..auth.models import User
@@ -85,7 +86,14 @@ async def read_autolabel_by_id(
     return autolabel
 
 
-@router.post("/auto-labels", response_model=schemas.CreateAutoLabelsResponse)
+@router.post(
+    "/auto-labels",
+    response_model=schemas.CreateAutoLabelsResponse,
+    responses={
+        400: {"model": DetailHTTPErrorResponse, "description": "Invalid request data."},
+        409: {"model": RequestConflictErrorResponse, "description": "Request key conflict."},
+    },
+)
 @attl_cache(cache=redis_cache, ttl=60)
 async def create_autolabels(
     request: schemas.CreateAutoLabels,

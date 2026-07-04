@@ -61,6 +61,7 @@ type IdentifiableKindMap = {
 type RevMap = {
 	[K in IdentifiableKind]: Map<ServTypes[K], ProvTypes[K]>;
 };
+
 type ExistableKindMap = {
 	[K in ExistableKind]: Map<ProvTypes[K], ServExistsStatus<K>>;
 };
@@ -195,7 +196,7 @@ export function buildIdRepository(): IDRepository {
 				const existing = revMap[kind].get(serverId as CServId);
 				if (existing) {
 					const entry = identifiableKindMap[kind].get(existing);
-					if (entry && entry.status === "clean") {
+					if (entry && (entry.status === "clean" || entry.status === "locked")) {
 						return Effect.succeed(existing);
 					}
 					return Effect.fail(new ResourceConflictException({ id: serverId }));
@@ -213,7 +214,7 @@ export function buildIdRepository(): IDRepository {
 				const existing = revMap[kind].get(serverId as CCServId);
 				if (existing) {
 					const entry = identifiableKindMap[kind].get(existing);
-					if (entry && entry.status === "clean") {
+					if (entry && (entry.status === "clean" || entry.status === "locked")) {
 						return Effect.succeed(existing);
 					}
 					return Effect.fail(new ResourceConflictException({ id: serverId }));
@@ -231,7 +232,7 @@ export function buildIdRepository(): IDRepository {
 				const existing = revMap[kind].get(serverId as LGServId);
 				if (existing) {
 					const entry = identifiableKindMap[kind].get(existing);
-					if (entry && entry.status === "clean") {
+					if (entry && (entry.status === "clean" || entry.status === "locked")) {
 						return Effect.succeed(existing);
 					}
 					return Effect.fail(new ResourceConflictException({ id: serverId }));
@@ -249,7 +250,7 @@ export function buildIdRepository(): IDRepository {
 				const existing = revMap[kind].get(serverId as LDServId);
 				if (existing) {
 					const entry = identifiableKindMap[kind].get(existing);
-					if (entry && entry.status === "clean") {
+					if (entry && (entry.status === "clean" || entry.status === "locked")) {
 						return Effect.succeed(existing);
 					}
 					return Effect.fail(new ResourceConflictException({ id: serverId }));
@@ -267,7 +268,7 @@ export function buildIdRepository(): IDRepository {
 				const existing = revMap[kind].get(serverId as AServId);
 				if (existing) {
 					const entry = identifiableKindMap[kind].get(existing);
-					if (entry && entry.status === "clean") {
+					if (entry && (entry.status === "clean" || entry.status === "locked")) {
 						return Effect.succeed(existing);
 					}
 					return Effect.fail(new ResourceConflictException({ id: serverId }));
@@ -285,7 +286,7 @@ export function buildIdRepository(): IDRepository {
 				const existing = revMap[kind].get(serverId as ALRServId);
 				if (existing) {
 					const entry = identifiableKindMap[kind].get(existing);
-					if (entry && entry.status === "clean") {
+					if (entry && (entry.status === "clean" || entry.status === "locked")) {
 						return Effect.succeed(existing);
 					}
 					return Effect.fail(new ResourceConflictException({ id: serverId }));
@@ -408,7 +409,9 @@ export function buildIdRepository(): IDRepository {
 					);
 					return Effect.fail(new NotFoundException());
 				}
-				revMap[kind].delete(entry.serverId as CServId);
+				if (entry.serverId !== null) {
+					return Effect.fail(new ResourceConflictException({ id: serverId }));
+				}
 				revMap[kind].set(serverId as CServId, provisionalId as ProvTypes["chapter"]);
 				entry.serverId = serverId as ServTypes["chapter"];
 				return Effect.succeed(void 0);
@@ -426,7 +429,9 @@ export function buildIdRepository(): IDRepository {
 					);
 					return Effect.fail(new NotFoundException());
 				}
-				revMap[kind].delete(entry.serverId as CCServId);
+				if (entry.serverId !== null) {
+					return Effect.fail(new ResourceConflictException({ id: serverId }));
+				}
 				revMap[kind].set(
 					serverId as CCServId,
 					provisionalId as ProvTypes["chapterContent"],
@@ -447,7 +452,9 @@ export function buildIdRepository(): IDRepository {
 					);
 					return Effect.fail(new NotFoundException());
 				}
-				revMap[kind].delete(entry.serverId as LGServId);
+				if (entry.serverId !== null) {
+					return Effect.fail(new ResourceConflictException({ id: serverId }));
+				}
 				revMap[kind].set(serverId as LGServId, provisionalId as ProvTypes["labelGroup"]);
 				entry.serverId = serverId as ServTypes["labelGroup"];
 				return Effect.succeed(void 0);
@@ -465,7 +472,9 @@ export function buildIdRepository(): IDRepository {
 					);
 					return Effect.fail(new NotFoundException());
 				}
-				revMap[kind].delete(entry.serverId as LDServId);
+				if (entry.serverId !== null) {
+					return Effect.fail(new ResourceConflictException({ id: serverId }));
+				}
 				revMap[kind].set(serverId as LDServId, provisionalId as ProvTypes["labelData"]);
 				entry.serverId = serverId as ServTypes["labelData"];
 				return Effect.succeed(void 0);
@@ -483,7 +492,9 @@ export function buildIdRepository(): IDRepository {
 					);
 					return Effect.fail(new NotFoundException());
 				}
-				revMap[kind].delete(entry.serverId as AServId);
+				if (entry.serverId !== null) {
+					return Effect.fail(new ResourceConflictException({ id: serverId }));
+				}
 				revMap[kind].set(serverId as AServId, provisionalId as ProvTypes["autoLabel"]);
 				entry.serverId = serverId as ServTypes["autoLabel"];
 				return Effect.succeed(void 0);
@@ -501,7 +512,9 @@ export function buildIdRepository(): IDRepository {
 					);
 					return Effect.fail(new NotFoundException());
 				}
-				revMap[kind].delete(entry.serverId as ALRServId);
+				if (entry.serverId !== null) {
+					return Effect.fail(new ResourceConflictException({ id: serverId }));
+				}
 				revMap[kind].set(serverId as ALRServId, provisionalId as ProvTypes["autoLabelRun"]);
 				entry.serverId = serverId as ServTypes["autoLabelRun"];
 				return Effect.succeed(void 0);

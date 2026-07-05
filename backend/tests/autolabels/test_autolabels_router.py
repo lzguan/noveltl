@@ -125,8 +125,8 @@ class TestAutoLabelsByRunRouter:
         payload = response.json()
         assert len(payload) == expected_count
         for entry in payload:
-            assert entry["runId"] == str(run.run_id)
-            assert entry["autoLabelStatus"] in ("done",)
+            assert entry["autoLabelMeta"]["runId"] == str(run.run_id)
+            assert entry["autoLabelMeta"]["autoLabelStatus"] in ("done",)
 
     @pytest.mark.dependency(name="autolabels::router::autolabels_by_run_with_range", scope="session")
     def test_get_autolabels_by_run_with_range(
@@ -185,8 +185,8 @@ class TestCreateAutoLabelsRouter:
         assert "autolabels" in payload
         assert len(payload["autolabels"]) == len(chapter_ids)
         for al in payload["autolabels"]:
-            assert al["autoLabelStatus"] == "pending"
-            assert al["runId"] == run["runId"]
+            assert al["autoLabelMeta"]["autoLabelStatus"] == "pending"
+            assert al["autoLabelMeta"]["runId"] == run["runId"]
 
         cached_response = client.get(f"/cached/{request_key}")
         assert cached_response.status_code == status.HTTP_200_OK

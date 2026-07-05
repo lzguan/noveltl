@@ -8,6 +8,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.orm import Session
 
+from src.novels.service import query_novel_and_users_by_id
+
 from ..auth.dependencies import get_current_user, get_optional_user
 from ..auth.models import User
 from ..database import get_db
@@ -211,6 +213,25 @@ async def read_novel(
     except NovelNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Novel with id {novel_id} not found.") from e
     return novel
+
+
+@router.get("/novels/{novelId}/with-contributors", response_model=schemas.NovelAndUsers)
+async def read_novel_with_contributors(
+    novel_id: Annotated[uuid.UUID, Path(alias="novelId")],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """
+    Endpoint for retrieving a novel and its associated users.
+
+    Raises:
+        404: Novel not found (or insufficient permissions).
+    """
+    try:
+        novel_and_users = query_novel_and_users_by_id(db, current_user, novel_id)
+    except NovelNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Novel with id {novel_id} not found.") from e
+    return novel_and_users
 
 
 @router.post("/novels", response_model=schemas.Novel)

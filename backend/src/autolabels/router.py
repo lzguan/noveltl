@@ -44,7 +44,7 @@ async def read_auto_label_runs(
 
 @router.get(
     "/auto-label-runs/{runId}/auto-labels",
-    response_model=list[schemas.AutoLabelMeta],
+    response_model=list[schemas.AutoLabelMetaWithCid],
 )
 async def read_auto_labels_by_run(
     run_id: Annotated[uuid.UUID, Path(alias="runId")],

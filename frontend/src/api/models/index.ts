@@ -8,6 +8,8 @@
 export * from './addLabelOp';
 export * from './autoLabel';
 export * from './autoLabelMeta';
+export * from './autoLabelMetaWithCidInput';
+export * from './autoLabelMetaWithCidOutput';
 export * from './autoLabelProgress';
 export * from './autoLabelRunInput';
 export * from './autoLabelRunOutput';
@@ -60,6 +62,8 @@ export * from './lazyEntry';
 export * from './modifyChapterContentResponse';
 export * from './modifyChapterContentResponseLabelDataIdMap';
 export * from './novel';
+export * from './novelAndUsers';
+export * from './novelContributor';
 export * from './novelType';
 export * from './operationStatus';
 export * from './operationStatusStatus';

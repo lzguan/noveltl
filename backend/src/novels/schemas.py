@@ -80,6 +80,35 @@ class Novel(Model):
     source_work_id: uuid.UUID
 
 
+class NovelContributor(Model):
+    """
+    Pydantic schema for a novel contributor.
+
+    Attributes:
+        user_id: UUID of the user.
+        novel_id: UUID of the novel.
+        contributor_role: Role of the user in the novel.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+    user_id: uuid.UUID
+    novel_id: uuid.UUID
+    contributor_role: str
+
+
+class NovelAndUsers(Model):
+    """
+    Pydantic schema for novel and its associated users.
+
+    Attributes:
+        novel: The novel metadata.
+        users: A list of users associated with this novel.
+    """
+
+    novel: Novel
+    users: list[NovelContributor]
+
+
 class CreateNovel(Model):
     """
     Pydantic schema to validate forms for creating a novel.

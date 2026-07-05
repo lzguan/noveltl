@@ -54,9 +54,7 @@ class TestAutolabelEndToEnd:
         run_id = ret.run.run_id
 
         assert len(ret.autolabels) == len(novel_bundle.chapters)
-        assert all(
-            a.auto_label_status == AutoLabelProgress.PENDING for a in ret.autolabels
-        )
+        assert all(a.auto_label_meta.auto_label_status == AutoLabelProgress.PENDING for a in ret.autolabels)
 
         # 2. Run the worker to process all autolabels.
         await worker_mock.main()
@@ -67,9 +65,7 @@ class TestAutolabelEndToEnd:
         for row in autolabel_rows:
             assert row.auto_label_status == AutoLabelProgress.DONE
             assert row.auto_label_data is not None
-            assert len(row.auto_label_data) > 0, (
-                f"Expected non-empty auto_label_data for autolabel {row.auto_label_id}"
-            )
+            assert len(row.auto_label_data) > 0, f"Expected non-empty auto_label_data for autolabel {row.auto_label_id}"
 
         # 3. Promote autolabels to label data.
         promote_request = CreateLabelDataByAutoLabel(run_id=run_id)
@@ -80,9 +76,7 @@ class TestAutolabelEndToEnd:
             promote_request,
         )
 
-        assert len(promote_result.errors) == 0, (
-            f"Expected 0 promotion errors, got: {promote_result.errors}"
-        )
+        assert len(promote_result.errors) == 0, f"Expected 0 promotion errors, got: {promote_result.errors}"
         assert len(promote_result.success) == len(novel_bundle.chapters)
 
         # 4. Verify label datas and labels are in the DB.
@@ -98,11 +92,7 @@ class TestAutolabelEndToEnd:
         assert len(label_datas) == len(novel_bundle.chapters)
 
         # Build a map of autolabel data by chapter_content_id for verification.
-        expected_data = {
-            row.chapter_content_id: row.auto_label_data
-            for row in autolabel_rows
-            if row.auto_label_data
-        }
+        expected_data = {row.chapter_content_id: row.auto_label_data for row in autolabel_rows if row.auto_label_data}
 
         for label_data in label_datas:
             assert label_data.chapter_content_id in expected_data

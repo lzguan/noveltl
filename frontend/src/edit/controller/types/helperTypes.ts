@@ -1,8 +1,12 @@
 import {
+	AProvId,
 	kinds,
 	ProvId,
 	type IDRepository,
 	type Kind,
+	type ProvAutoLabel,
+	type ProvAutoLabelMetaWithCid,
+	type ProvAutoLabelRun,
 	type ProvChapter,
 	type ProvLabel,
 	type ProvLabelData,
@@ -193,3 +197,17 @@ export type LabelGroupSlot = Slot<{ labelGroup: ProvLabelGroup; role: LabelRole 
 export type ChapterSlot = Slot<{ chapter: ProvChapter }, { chapterData: ChapterDataManager }>;
 
 export type ChapterGetterSlot = Slot<{ chapter: ProvChapter }, { chapterGetters: ChapterGetters }>;
+
+export type AutoLabelSlot = Slot<
+	{ autoLabel: ProvAutoLabelMetaWithCid },
+	{ autoLabelData: ProvAutoLabel["autoLabelData"] }
+>;
+
+export type AutoLabelIndex = SlotIndex<
+	AProvId,
+	{ autoLabel: ProvAutoLabelMetaWithCid },
+	{ autoLabelData: ProvAutoLabel["autoLabelData"] },
+	never
+>;
+
+export type AutoLabelRunSlot = Slot<{ run: ProvAutoLabelRun }, { index: AutoLabelIndex }>;

@@ -26,7 +26,7 @@ import {
 	type ProvLabelGroup,
 } from "./types/idTypes";
 import { makeReservationRequest, Prov } from "./types/helperTypes";
-import type { Chapter, LabelGroup, LabelRole, Novel } from "@/api/models";
+import type { AutoLabelRunOutput, Chapter, LabelGroup, LabelRole, Novel } from "@/api/models";
 import type { RequestEvent } from "./types/requestTypes";
 import {
 	CreateChapterNovelsNovelIdChaptersPost200Response,
@@ -48,6 +48,7 @@ export type NovelData = {
 	chapters: Chapter[];
 	labelGroups: { labelGroup: LabelGroup; role: LabelRole }[];
 	novelRole: Role;
+	autoLabelRuns: AutoLabelRunOutput[];
 };
 
 export const buildNovelDataManager = (
@@ -529,44 +530,33 @@ export const buildNovelDataManager = (
 			return slot.data.chapterData;
 		};
 
-		const autolabelDM = buildAutolabelDataManager(
+		const autolabelDM = yield* buildAutolabelDataManager(
 			novelData.novel.novelId,
 			(event) => raiseTriggerEvent(getters, event),
 			idRepo,
 			{
-				chapterIds: () =>
-					chaptersIndex
-						.getIds()
-						.pipe(
-							Effect.mapError(() => new UnknownException({ message: "unreachable" })),
+				chapterIds: () => chaptersIndex.getIds(),
+				chapter: (chId) =>
+					chaptersIndex.get(chId).pipe(
+						Effect.andThen((slot) =>
+							Effect.gen(function* () {
+								return {
+									chapterNum: slot.meta.chapter.chapterNum,
+									chapterIsPublic: slot.meta.chapter.chapterIsPublic,
+									cc:
+										slot.status === "ready"
+											? {
+													status: "ready" as const,
+													chapterContentId:
+														yield* slot.data.chapterData.getters.chapterContentId(),
+												}
+											: { status: slot.status },
+								};
+							}),
 						),
-				chapterNum: (chId) =>
-					chaptersIndex.get(chId).pipe(
-						Effect.map((slot) => slot.meta.chapter.chapterNum),
-						Effect.mapError((err) => new UnknownException({ orig: err })),
 					),
-				chapterIsPublic: (chId) =>
-					chaptersIndex.get(chId).pipe(
-						Effect.map((slot) => slot.meta.chapter.chapterIsPublic),
-						Effect.mapError((err) => new UnknownException({ orig: err })),
-					),
-				chapterContentId: (chId) =>
-					Effect.gen(function* () {
-						const slot = yield* chaptersIndex
-							.get(chId)
-							.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
-						if (slot.status !== "ready" || !slot.data) {
-							return yield* Effect.fail(
-								new UnknownException({
-									message: `Chapter ${chId} is not open`,
-								}),
-							);
-						}
-						return yield* slot.data.chapterData.getters
-							.chapterContentId()
-							.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
-					}),
 			},
+			novelData.autoLabelRuns,
 		);
 
 		return {

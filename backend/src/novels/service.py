@@ -279,6 +279,31 @@ def query_novel_by_id(db: Session, current_user: User | None, novel_id: uuid.UUI
     return result_scalar
 
 
+def query_novel_and_users_by_id(db: Session, current_user: User, novel_id: uuid.UUID) -> schemas.NovelAndUsers:
+    """
+    Queries a novel and its contributors by id. Will return a novel if the user has permission to view it and throws an exception otherwise.
+
+    Args:
+        db: Database from which we are querying.
+        current_user: User that is querying. Can be None for guest access.
+        novel_id: id of novel in database.
+    """
+    q = (
+        select(models.Novel, models.User)
+        .where(models.Novel.novel_id == novel_id)
+        .join(models.NovelContributor, models.NovelContributor.novel_id == models.Novel.novel_id)
+        .join(models.User, models.User.user_id == models.NovelContributor.user_id)
+    )
+    q = novel_mod_access_select(q, current_user)
+    result = db.execute(q)
+    rows = result.all()
+    if len(rows) == 0:
+        raise NovelNotFoundException
+    novel = rows[0][0]
+    users = [row[1] for row in rows]
+    return schemas.NovelAndUsers(novel=novel, users=users)
+
+
 def query_chapters_by_novel(
     db: Session, current_user: User | None, novel_id: uuid.UUID, start: int | None, end: int | None
 ) -> Sequence[models.Chapter]:

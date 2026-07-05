@@ -15,13 +15,86 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session, defer
 
 from ..auth.models import User
-from ..novels import models as novel_models
-from ..novels.permissions import novel_mod_access_select
+from ..novels import models as nm
+from ..novels.permissions import chapter_mod_access_select, novel_mod_access_select
 from . import models, schemas
 from .constants import AutoLabelProgress
 from .exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
 from .permissions import auto_label_mod_access_insert, auto_label_mod_access_select
 from .utils import AutoLabelDispatcher
+
+
+def query_auto_label_runs(
+    db: Session,
+    current_user: User,
+    novel_id: uuid.UUID,
+    mine: bool = False,
+) -> list[schemas.AutoLabelRun]:
+    """
+    Query autolabel runs for a novel.
+
+    Args:
+        db: Database session.
+        current_user: User requesting the data.
+        novel_id: ID of the novel to filter by.
+        mine: If True, only return runs triggered by the current user.
+    """
+    q = select(models.AutoLabelRun).where(models.AutoLabelRun.novel_id == novel_id)
+    if mine:
+        q = q.where(models.AutoLabelRun.triggered_by == current_user.user_id)
+    # Verify the user has access to the novel.
+    subq = select(1).select_from(nm.Novel).where(nm.Novel.novel_id == novel_id)
+    subq = novel_mod_access_select(subq, current_user)
+    q = q.where(exists(subq))
+    result = db.execute(q)
+    rows = result.scalars().all()
+    return [schemas.AutoLabelRun.model_validate(row) for row in rows]
+
+
+def query_auto_labels_by_run(
+    db: Session,
+    current_user: User,
+    run_id: uuid.UUID,
+    start: int | None = None,
+    end: int | None = None,
+) -> list[schemas.AutoLabelMetaWithCid]:
+    """
+    Query autolabels belonging to a specific run.
+
+    Args:
+        db: Database session.
+        current_user: User requesting the data.
+        run_id: ID of the run to query autolabels for.
+        start: Optional start chapter number (inclusive).
+        end: Optional end chapter number (exclusive).
+    """
+    q = (
+        (
+            select(models.AutoLabel, nm.Chapter.chapter_id)
+            .options(defer(models.AutoLabel.auto_label_data))
+            .where(models.AutoLabel.run_id == run_id)
+        )
+        .join(
+            nm.ChapterContent,
+            nm.ChapterContent.chapter_content_id == models.AutoLabel.chapter_content_id,
+        )
+        .join(nm.Chapter, nm.Chapter.chapter_id == nm.ChapterContent.chapter_id)
+    )
+    if start is not None or end is not None:
+        if start is not None:
+            q = q.where(nm.Chapter.chapter_num >= start)
+        if end is not None:
+            q = q.where(nm.Chapter.chapter_num < end)
+    q = auto_label_mod_access_select(q, current_user)
+    result = db.execute(q)
+    rows = result.all()
+
+    ret = []
+    for alm, cid in rows:
+        auto_label_meta = schemas.AutoLabelMeta.model_validate(alm)
+        chapter_id: uuid.UUID = cid
+        ret.append(schemas.AutoLabelMetaWithCid(auto_label_meta=auto_label_meta, chapter_id=chapter_id))
+    return ret
 
 
 def query_auto_label_by_id(db: Session, current_user: User, auto_label_id: uuid.UUID) -> models.AutoLabel:
@@ -44,70 +117,6 @@ def query_auto_label_by_id(db: Session, current_user: User, auto_label_id: uuid.
     except NoResultFound as e:
         raise AutoLabelNotFoundException from e
     return autolabel
-
-
-def query_auto_label_runs(
-    db: Session,
-    current_user: User,
-    novel_id: uuid.UUID,
-    mine: bool = False,
-) -> list[schemas.AutoLabelRun]:
-    """
-    Query autolabel runs for a novel.
-
-    Args:
-        db: Database session.
-        current_user: User requesting the data.
-        novel_id: ID of the novel to filter by.
-        mine: If True, only return runs triggered by the current user.
-    """
-    q = select(models.AutoLabelRun).where(models.AutoLabelRun.novel_id == novel_id)
-    if mine:
-        q = q.where(models.AutoLabelRun.triggered_by == current_user.user_id)
-    # Verify the user has access to the novel.
-    subq = select(1).select_from(novel_models.Novel).where(novel_models.Novel.novel_id == novel_id)
-    subq = novel_mod_access_select(subq, current_user)
-    q = q.where(exists(subq))
-    result = db.execute(q)
-    rows = result.scalars().all()
-    return [schemas.AutoLabelRun.model_validate(row) for row in rows]
-
-
-def query_auto_labels_by_run(
-    db: Session,
-    current_user: User,
-    run_id: uuid.UUID,
-    start: int | None = None,
-    end: int | None = None,
-) -> list[schemas.AutoLabelMeta]:
-    """
-    Query autolabels belonging to a specific run.
-
-    Args:
-        db: Database session.
-        current_user: User requesting the data.
-        run_id: ID of the run to query autolabels for.
-        start: Optional start chapter number (inclusive).
-        end: Optional end chapter number (exclusive).
-    """
-    q = (
-        select(models.AutoLabel)
-        .options(defer(models.AutoLabel.auto_label_data))
-        .where(models.AutoLabel.run_id == run_id)
-    )
-    if start is not None or end is not None:
-        q = q.join(
-            novel_models.ChapterContent,
-            novel_models.ChapterContent.chapter_content_id == models.AutoLabel.chapter_content_id,
-        ).join(novel_models.Chapter, novel_models.Chapter.chapter_id == novel_models.ChapterContent.chapter_id)
-        if start is not None:
-            q = q.where(novel_models.Chapter.chapter_num >= start)
-        if end is not None:
-            q = q.where(novel_models.Chapter.chapter_num < end)
-    q = auto_label_mod_access_select(q, current_user)
-    result = db.execute(q)
-    rows = result.scalars().all()
-    return [schemas.AutoLabelMeta.model_validate(row) for row in rows]
 
 
 async def insert_auto_labels(
@@ -157,28 +166,28 @@ async def insert_auto_labels(
         select(
             literal(AutoLabelProgress.PENDING),
             literal("Waiting to be queued."),
-            novel_models.ChapterContent.chapter_content_id,
+            nm.ChapterContent.chapter_content_id,
             literal(run.run_id),
         )
-        .select_from(novel_models.ChapterContent)
-        .join(novel_models.Chapter, novel_models.Chapter.chapter_id == novel_models.ChapterContent.chapter_id)
-        .join(novel_models.Novel, novel_models.Novel.novel_id == novel_models.Chapter.novel_id)
+        .select_from(nm.ChapterContent)
+        .join(nm.Chapter, nm.Chapter.chapter_id == nm.ChapterContent.chapter_id)
+        .join(nm.Novel, nm.Novel.novel_id == nm.Chapter.novel_id)
         .where(
-            novel_models.ChapterContent.chapter_content_version
-            == select(func.max(novel_models.ChapterContent.chapter_content_version))
-            .where(novel_models.ChapterContent.chapter_id == novel_models.Chapter.chapter_id)
-            .correlate(novel_models.Chapter)
+            nm.ChapterContent.chapter_content_version
+            == select(func.max(nm.ChapterContent.chapter_content_version))
+            .where(nm.ChapterContent.chapter_id == nm.Chapter.chapter_id)
+            .correlate(nm.Chapter)
             .scalar_subquery()
         )
     )
     if request.chapter_ids:
-        q = q.where(novel_models.Chapter.chapter_id.in_(request.chapter_ids))
+        q = q.where(nm.Chapter.chapter_id.in_(request.chapter_ids))
     if request.start is not None:
-        q = q.where(novel_models.Chapter.chapter_num >= request.start)
+        q = q.where(nm.Chapter.chapter_num >= request.start)
     if request.end is not None:
-        q = q.where(novel_models.Chapter.chapter_num < request.end)
+        q = q.where(nm.Chapter.chapter_num < request.end)
     if request.is_public is not None:
-        q = q.where(novel_models.Chapter.chapter_is_public == request.is_public)
+        q = q.where(nm.Chapter.chapter_is_public == request.is_public)
     q = auto_label_mod_access_insert(q, current_user)
     stmt = insert(models.AutoLabel).from_select(columns, q).returning(models.AutoLabel)
     try:
@@ -224,8 +233,29 @@ async def insert_auto_labels(
         raise
 
     # 4. Build response.
+    q = (
+        select(models.AutoLabel.auto_label_id, nm.Chapter.chapter_id)
+        .select_from(models.AutoLabel)
+        .where(models.AutoLabel.run_id == run.run_id)
+        .join(nm.ChapterContent, nm.ChapterContent.chapter_content_id == models.AutoLabel.chapter_content_id)
+        .join(nm.Chapter, nm.Chapter.chapter_id == nm.ChapterContent.chapter_id)
+    )
+    q = auto_label_mod_access_select(q, current_user)
+    q = chapter_mod_access_select(q, current_user)
+    try:
+        new_result = db.execute(q)
+        new_result_rows = new_result.all()
+    except Exception:
+        raise
+    alcid_map: dict[uuid.UUID, uuid.UUID] = {row[0]: row[1] for row in new_result_rows}
+
     run_schema = schemas.AutoLabelRun.model_validate(run)
-    autolabel_schemas = [schemas.AutoLabelMeta.model_validate(al) for al in result_rows]
+    autolabel_schemas = [
+        schemas.AutoLabelMetaWithCid(
+            auto_label_meta=schemas.AutoLabelMeta.model_validate(al), chapter_id=alcid_map[al.auto_label_id]
+        )
+        for al in result_rows
+    ]
     return schemas.CreateAutoLabelsResponse(run=run_schema, autolabels=autolabel_schemas)
 
 

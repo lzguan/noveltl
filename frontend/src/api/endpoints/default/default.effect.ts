@@ -77,13 +77,16 @@ export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetQueryParams = S.S
 })
 
 export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet200ResponseItem = S.Struct({
+  "autoLabelMeta": S.Struct({
   "autoLabelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "autoLabelLastJobId": S.optional(S.Union(S.String, S.Null)),
   "autoLabelMessage": S.optional(S.Union(S.String, S.Null)),
   "autoLabelStatus": S.Literal('failed', 'pending', 'processing', 'done').annotations({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "runId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for auto-label metadata (no label data payload).\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to.' })
+}).annotations({ description: 'Pydantic schema for auto-label metadata (no label data payload).\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to.' }),
+  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
 export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet200Response = S.Array(ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet200ResponseItem)
 
 export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet422Response = S.Struct({
@@ -141,13 +144,16 @@ export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsTwoModelName
 
 export const CreateAutolabelsAutoLabelsPost200Response = S.Struct({
   "autolabels": S.Array(S.Struct({
+  "autoLabelMeta": S.Struct({
   "autoLabelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "autoLabelLastJobId": S.optional(S.Union(S.String, S.Null)),
   "autoLabelMessage": S.optional(S.Union(S.String, S.Null)),
   "autoLabelStatus": S.Literal('failed', 'pending', 'processing', 'done').annotations({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "runId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for auto-label metadata (no label data payload).\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to.' })),
+}).annotations({ description: 'Pydantic schema for auto-label metadata (no label data payload).\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to.' }),
+  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})),
   "run": S.Struct({
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "modelName": S.String,
@@ -1588,6 +1594,43 @@ export const CreateChapterNovelsNovelIdChaptersPost200Response = S.Struct({
 }).annotations({ description: 'Pydantic schema for aggregating a ChapterContent and a Chapter together.\n\nAttributes:\n    metadata: The metadata of the chapter, such as title and whether it\'s primary.\n    content: The text content of the chapter.' })
 
 export const CreateChapterNovelsNovelIdChaptersPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * Endpoint for retrieving a novel and its associated users.
+ *
+ * Raises:
+ *     404: Novel not found (or insufficient permissions).
+ * @summary Read Novel With Contributors
+ */
+export const ReadNovelWithContributorsNovelsNovelIdWithContributorsGetParams = S.Struct({
+  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const ReadNovelWithContributorsNovelsNovelIdWithContributorsGet200Response = S.Struct({
+  "novel": S.Struct({
+  "languageCode": S.String,
+  "novelAuthor": S.optional(S.Union(S.String, S.Null)),
+  "novelDescription": S.optional(S.Union(S.String, S.Null)),
+  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "novelTitle": S.String,
+  "novelType": S.Literal('original', 'translation', 'other'),
+  "novelVisibility": S.Union(S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)),
+  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotations({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' }),
+  "users": S.Array(S.Struct({
+  "contributorRole": S.String,
+  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "userId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotations({ description: 'Pydantic schema for a novel contributor.\n\nAttributes:\n    user_id: UUID of the user.\n    novel_id: UUID of the novel.\n    contributor_role: Role of the user in the novel.' }))
+}).annotations({ description: 'Pydantic schema for novel and its associated users.\n\nAttributes:\n    novel: The novel metadata.\n    users: A list of users associated with this novel.' })
+
+export const ReadNovelWithContributorsNovelsNovelIdWithContributorsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "loc": S.Array(S.Union(S.String, S.Number)),
   "msg": S.String,

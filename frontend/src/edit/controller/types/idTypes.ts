@@ -7,6 +7,7 @@ import type {
 } from "./errors";
 import type {
 	AutoLabel,
+	AutoLabelMeta,
 	AutoLabelRunOutput,
 	Chapter,
 	ChapterContent,
@@ -125,6 +126,14 @@ export type ProvAutoLabel = ProvDataT<
 	AutoLabel,
 	{ chapterContentId: CCProvId; autoLabelId: AProvId; runId: ALRProvId }
 >;
+export type ProvAutoLabelMeta = ProvDataT<
+	AutoLabelMeta,
+	{ chapterContentId: CCProvId; autoLabelId: AProvId; runId: ALRProvId }
+>;
+export type ProvAutoLabelMetaWithCid = {
+	autoLabelMeta: ProvAutoLabelMeta;
+	chapterId: CProvId;
+};
 export type ProvAutoLabelRun = ProvDataT<AutoLabelRunOutput, { runId: ALRProvId }>;
 
 /**
@@ -267,6 +276,8 @@ export type ProvServKind<K extends Kind> = {
 
 export type AnyProvServKind<T extends Kind> = T extends Kind ? ProvServKind<T> : never;
 
+export type DistributiveOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never;
+
 /**
  * As the current data model stands, most objects have an underlying ID. In order to synchronize the IDs that appear on the frontend and backend without sacrificing client responsiveness, we need a way to bridge the gap between client-side IDs and server-side IDs. This repository serves as a central place to manage this mapping and the state of these IDs.
  *
@@ -366,14 +377,14 @@ export interface IDRepository {
 	 * Bind a provisional id to a server existence flag, so that the controller can update the corresponding entry with the new server existence flag when it receives the signal from the request event.
 	 */
 	bindServerExists(
-		params: Omit<AnyProvServKind<ExistableKind>, "servId">,
+		params: DistributiveOmit<AnyProvServKind<ExistableKind>, "servId">,
 	): Effect.Effect<void, NotFoundException>;
 
 	/**
 	 * Get the current id status of a provisional id.
 	 */
 	idObjState(
-		params: Omit<AnyReservation<Kind>, "desiredState">,
+		params: DistributiveOmit<AnyReservation<Kind>, "desiredState">,
 	): Effect.Effect<IdStatus, NotFoundException>;
 
 	/**
@@ -386,11 +397,11 @@ export interface IDRepository {
 	): Effect.Effect<void, NotFoundException | NotReserveableException>;
 
 	releaseIdObjStateOnSuccess(
-		params: Omit<AnyReservation<Kind>, "desiredState">,
+		params: DistributiveOmit<AnyReservation<Kind>, "desiredState">,
 	): Effect.Effect<ActionHappened, NotFoundException>;
 
 	releaseIdObjStateOnFailure(
-		params: Omit<AnyReservation<Kind>, "desiredState">,
+		params: DistributiveOmit<AnyReservation<Kind>, "desiredState">,
 	): Effect.Effect<ActionHappened, NotFoundException>;
 
 	queryProvId(

@@ -6,7 +6,7 @@
  */
 import type {
   AutoLabel,
-  AutoLabelMeta,
+  AutoLabelMetaWithCidOutput,
   AutoLabelRunOutput,
   BodyLoginForAccessTokenTokenPost,
   CacheEntry,
@@ -43,6 +43,7 @@ import type {
   Language,
   ModifyChapterContentResponse,
   Novel,
+  NovelAndUsers,
   OperationStatus,
   ReadAutoLabelRunsAutoLabelRunsGetParams,
   ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetParams,
@@ -129,7 +130,7 @@ export const readAutoLabelRunsAutoLabelRunsGet = async (params: ReadAutoLabelRun
 
 
 export type readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetResponse200 = {
-  data: AutoLabelMeta[]
+  data: AutoLabelMetaWithCidOutput[]
   status: 200
 }
 
@@ -2226,6 +2227,52 @@ export const createChapterNovelsNovelIdChaptersPost = async (novelId: string,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(createChapter)
+  }
+);}
+
+
+export type readNovelWithContributorsNovelsNovelIdWithContributorsGetResponse200 = {
+  data: NovelAndUsers
+  status: 200
+}
+
+export type readNovelWithContributorsNovelsNovelIdWithContributorsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readNovelWithContributorsNovelsNovelIdWithContributorsGetResponseSuccess = (readNovelWithContributorsNovelsNovelIdWithContributorsGetResponse200) & {
+  headers: Headers;
+};
+export type readNovelWithContributorsNovelsNovelIdWithContributorsGetResponseError = (readNovelWithContributorsNovelsNovelIdWithContributorsGetResponse422) & {
+  headers: Headers;
+};
+
+export type readNovelWithContributorsNovelsNovelIdWithContributorsGetResponse = (readNovelWithContributorsNovelsNovelIdWithContributorsGetResponseSuccess | readNovelWithContributorsNovelsNovelIdWithContributorsGetResponseError)
+
+export const getReadNovelWithContributorsNovelsNovelIdWithContributorsGetUrl = (novelId: string,) => {
+
+
+
+
+  return `/api/novels/${novelId}/with-contributors`
+}
+
+/**
+ * Endpoint for retrieving a novel and its associated users.
+ *
+ * Raises:
+ *     404: Novel not found (or insufficient permissions).
+ * @summary Read Novel With Contributors
+ */
+export const readNovelWithContributorsNovelsNovelIdWithContributorsGet = async (novelId: string, options?: RequestInit): Promise<readNovelWithContributorsNovelsNovelIdWithContributorsGetResponse> => {
+
+  return customFetch<readNovelWithContributorsNovelsNovelIdWithContributorsGetResponse>(getReadNovelWithContributorsNovelsNovelIdWithContributorsGetUrl(novelId),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 

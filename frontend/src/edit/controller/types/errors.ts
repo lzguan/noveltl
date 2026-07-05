@@ -57,9 +57,7 @@ export class DuplicateProvIdException extends Data.TaggedError("DuplicateProvIdE
 	id: ProvId;
 }> {}
 
-export class ResourceConflictException extends Data.TaggedError(
-	"ResourceConflictException",
-)<{
+export class ResourceConflictException extends Data.TaggedError("ResourceConflictException")<{
 	id: ServId;
 }> {}
 

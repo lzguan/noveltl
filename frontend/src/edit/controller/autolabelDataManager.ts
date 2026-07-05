@@ -8,17 +8,17 @@ import {
 	ALRProvId,
 	ALRServId,
 	AServId,
-	CProvId,
 	CCProvId,
 	CCServId,
+	CProvId,
 	CServId,
 	type IDRepository,
 	LGProvId,
 	type ProvAutoLabel,
 	type ProvAutoLabelRun,
 } from "./types/idTypes";
-import { Prov, makeReservationRequest } from "./types/helperTypes";
-import type { RequestEvent } from "./types/requestTypes";
+import { Prov, IdempotentCallable, isAllReserveable } from "./types/helperTypes";
+import type { RequestEvent, ReserveList } from "./types/requestTypes";
 import {
 	CreateAutolabelsAutoLabelsPost200Response,
 	CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost200Response,
@@ -44,29 +44,70 @@ export const buildAutolabelDataManager = (
 	novelId: string,
 	raiseTriggerEvent: (event: TriggerEvent) => Effect.Effect<void>,
 	idRepo: IDRepository,
+	getters: {
+		chapterIds: () => Effect.Effect<readonly CProvId[], UnknownException>;
+		chapterNum: (id: CProvId) => Effect.Effect<number, UnknownException>;
+		chapterIsPublic: (id: CProvId) => Effect.Effect<boolean, UnknownException>;
+		chapterContentId: (id: CProvId) => Effect.Effect<CCProvId, UnknownException>;
+	},
 ): AutolabelDataManager => {
 	const { decorate } = buildRequestQueueDispatcher<RequestEvent>();
+
+	const resolveChapterContentIds = (filter: ChapterFilter): CCProvId[] =>
+		Effect.runSync(
+			Effect.gen(function* () {
+				const ids = yield* getters.chapterIds();
+				const result: CCProvId[] = [];
+				for (const chId of ids) {
+					const num = yield* getters.chapterNum(chId);
+					if (filter.start != null && num < filter.start) continue;
+					if (filter.end != null && num >= filter.end) continue;
+					if (filter.isPublic != null) {
+						const isPub = yield* getters.chapterIsPublic(chId);
+						if (isPub !== filter.isPublic) continue;
+					}
+					const ccId = yield* getters
+						.chapterContentId(chId)
+						.pipe(Effect.catchAll(() => Effect.succeed(null)));
+					if (ccId !== null) result.push(ccId);
+				}
+				return result;
+			}),
+		);
 
 	const _createAutoLabelRun = (
 		params: CluenerParams | DoNothingParams,
 		chapterFilter: ChapterFilter,
 	): Effect.Effect<RequestEvent[], UnknownException | FatalException> =>
 		Effect.sync(() => {
+			const reserveList = (): ReserveList => ({
+				autoLabelRun: [],
+				autoLabel: [],
+				label: [],
+				chapter: [],
+				chapterContent: resolveChapterContentIds(chapterFilter).map((id) => ({
+					id,
+					kind: "chapterContent" as const,
+					desiredState: "locked" as const,
+				})),
+				labelData: [],
+				labelGroup: [],
+			});
+
 			return [
 				{
 					cached: true,
 					variant: "createAutoLabelRun" as const,
 					active: true,
 					retries: 3,
-					reservationRequest: makeReservationRequest(idRepo, {
-						autoLabelRun: [],
-						autoLabel: [],
-						label: [],
-						chapter: [],
-						chapterContent: [],
-						labelData: [],
-						labelGroup: [],
-					}),
+					reservationRequest: {
+						reserveList: IdempotentCallable(reserveList),
+						skip: () => false,
+						wait: () =>
+							isAllReserveable(idRepo, reserveList()).pipe(
+								Effect.map((ready) => !ready),
+							),
+					},
 					onFailure: () => Effect.succeed(void 0),
 					onFatalError: () => Effect.succeed(void 0),
 					preSend: () => Effect.succeed(void 0),
@@ -111,7 +152,10 @@ export const buildAutolabelDataManager = (
 								Effect.mapError((err) => new FatalException({ orig: err })),
 							);
 							const runProvId = yield* idRepo
-								.newIdAndBindId("autoLabelRun", ALRServId(validated.run.runId))
+								.newIdAndBindId({
+									kind: "autoLabelRun",
+									servId: ALRServId(validated.run.runId),
+								})
 								.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
 
 							const provRun: ProvAutoLabelRun = Prov({
@@ -122,12 +166,18 @@ export const buildAutolabelDataManager = (
 							const autoLabels: Omit<ProvAutoLabel, "autoLabelData">[] = [];
 							for (const al of validated.autolabels) {
 								const alProvId = yield* idRepo
-									.newIdAndBindId("autoLabel", AServId(al.autoLabelId))
+									.newIdAndBindId({
+										kind: "autoLabel",
+										servId: AServId(al.autoLabelId),
+									})
 									.pipe(
 										Effect.mapError((err) => new FatalException({ orig: err })),
 									);
 								const ccProvId = yield* idRepo
-									.newIdAndBindId("chapterContent", CCServId(al.chapterContentId))
+									.newIdAndBindId({
+										kind: "chapterContent",
+										servId: CCServId(al.chapterContentId),
+									})
 									.pipe(
 										Effect.mapError((err) => new FatalException({ orig: err })),
 									);
@@ -159,33 +209,44 @@ export const buildAutolabelDataManager = (
 		chapterFilter: ChapterFilter,
 	): Effect.Effect<RequestEvent[], UnknownException | FatalException> =>
 		Effect.sync(() => {
+			const reserveList = (): ReserveList => ({
+				autoLabelRun: [{ id: runId, kind: "autoLabelRun", desiredState: "locked" }],
+				labelGroup: [{ id: labelGroupId, kind: "labelGroup", desiredState: "locked" }],
+				autoLabel: [],
+				label: [],
+				chapter: [],
+				chapterContent: resolveChapterContentIds(chapterFilter).map((id) => ({
+					id,
+					kind: "chapterContent" as const,
+					desiredState: "locked" as const,
+				})),
+				labelData: [],
+			});
+
 			return [
 				{
 					cached: true,
 					variant: "promoteAutoLabelRun" as const,
 					active: true,
 					retries: 3,
-					reservationRequest: makeReservationRequest(idRepo, {
-						autoLabelRun: [{ id: runId, kind: "autoLabelRun", desiredState: "locked" }],
-						labelGroup: [
-							{ id: labelGroupId, kind: "labelGroup", desiredState: "locked" },
-						],
-						autoLabel: [],
-						label: [],
-						chapter: [],
-						chapterContent: [],
-						labelData: [],
-					}),
+					reservationRequest: {
+						reserveList: IdempotentCallable(reserveList),
+						skip: () => false,
+						wait: () =>
+							isAllReserveable(idRepo, reserveList()).pipe(
+								Effect.map((ready) => !ready),
+							),
+					},
 					onFailure: () => Effect.succeed(void 0),
 					onFatalError: () => Effect.succeed(void 0),
 					preSend: () => Effect.succeed(void 0),
 					send: (requestKey) =>
 						Effect.gen(function* () {
 							const servRunId = yield* idRepo
-								.getServerId("autoLabelRun", runId)
+								.getServerId({ kind: "autoLabelRun", provId: runId })
 								.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
 							const servLabelGroupId = yield* idRepo
-								.getServerId("labelGroup", labelGroupId)
+								.getServerId({ kind: "labelGroup", provId: labelGroupId })
 								.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
 							if (!servRunId || !servLabelGroupId) {
 								return yield* Effect.fail(
@@ -238,13 +299,18 @@ export const buildAutolabelDataManager = (
 							}[] = [];
 							for (const [servChapterId, servContentId] of validated.success) {
 								const chProvId = yield* idRepo
-									.newIdAndBindId("chapter", CServId(servChapterId))
+									.newIdAndBindId({
+										kind: "chapter",
+										servId: CServId(servChapterId),
+									})
 									.pipe(
 										Effect.mapError((err) => new FatalException({ orig: err })),
 									);
-
 								const ccProvId = yield* idRepo
-									.newIdAndBindId("chapterContent", CCServId(servContentId))
+									.newIdAndBindId({
+										kind: "chapterContent",
+										servId: CCServId(servContentId),
+									})
 									.pipe(
 										Effect.mapError((err) => new FatalException({ orig: err })),
 									);
@@ -261,12 +327,18 @@ export const buildAutolabelDataManager = (
 							}[] = [];
 							for (const [servChapterId, servContentId, error] of validated.errors) {
 								const chProvId = yield* idRepo
-									.newIdAndBindId("chapter", CServId(servChapterId))
+									.newIdAndBindId({
+										kind: "chapter",
+										servId: CServId(servChapterId),
+									})
 									.pipe(
 										Effect.mapError((err) => new FatalException({ orig: err })),
 									);
 								const ccProvId = yield* idRepo
-									.newIdAndBindId("chapterContent", CCServId(servContentId))
+									.newIdAndBindId({
+										kind: "chapterContent",
+										servId: CCServId(servContentId),
+									})
 									.pipe(
 										Effect.mapError((err) => new FatalException({ orig: err })),
 									);

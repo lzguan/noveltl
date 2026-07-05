@@ -1,14 +1,20 @@
 import {
+	kinds,
 	ProvId,
 	type IDRepository,
+	type Kind,
 	type ProvChapter,
 	type ProvLabel,
 	type ProvLabelData,
 	type ProvLabelGroup,
 } from "./idTypes";
 import { Brand, Effect } from "effect";
-import type { DuplicateProvIdException, NotFoundException } from "./errors";
-import type { ReservationRequest, ReserveList } from "./requestTypes";
+import {
+	NotReserveableException,
+	type DuplicateProvIdException,
+	type NotFoundException,
+} from "./errors";
+import type { AnyReservation, ReservationRequest, ReserveList } from "./requestTypes";
 import type { LabelRole } from "@/api/models";
 import type { ChapterDataManager } from "./dataTypes";
 import type { ChapterGetters } from "./controllerTypes";
@@ -46,6 +52,17 @@ export function Prov<T>(value: Brand.Brand.Unbranded<Prov<T>>): Prov<T> {
 	return Brand.nominal<Prov<T>>()(value);
 }
 
+export const forEachKind = <E, V, I extends Iterable<V>, K extends Kind, T extends { [U in K]: I }>(
+	hasKinds: T,
+	f: (value: V) => Effect.Effect<void, E>,
+	kindsList: readonly K[],
+): Effect.Effect<void, E> =>
+	Effect.gen(function* () {
+		for (const kind of kindsList) {
+			yield* Effect.forEach(hasKinds[kind], (value) => f(value));
+		}
+	});
+
 /**
  * Checks whether all entries in a ReserveList are reserveable for their desired states.
  * Short-circuits on first false.
@@ -59,27 +76,26 @@ export const isAllReserveable = (
 	list: ReserveList,
 ): Effect.Effect<boolean, NotFoundException> =>
 	Effect.gen(function* () {
-		for (const { kind, id, desiredState } of list.chapter) {
-			const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
-			if (!reserveable) return false;
-		}
-		for (const { kind, id, desiredState } of list.chapterContent) {
-			const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
-			if (!reserveable) return false;
-		}
-		for (const { kind, id, desiredState } of list.label) {
-			const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
-			if (!reserveable) return false;
-		}
-		for (const { kind, id, desiredState } of list.labelData) {
-			const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
-			if (!reserveable) return false;
-		}
-		for (const { kind, id, desiredState } of list.labelGroup) {
-			const reserveable = yield* idRepo.isReserveable(kind, id, desiredState);
-			if (!reserveable) return false;
-		}
-		return true;
+		let out = true;
+		yield* forEachKind(
+			list,
+			(reservation: AnyReservation<Kind>) =>
+				Effect.gen(function* () {
+					const reserveable = yield* idRepo.isReserveable(reservation);
+					if (!reserveable) return yield* Effect.fail(new NotReserveableException());
+					return true;
+				}).pipe(
+					Effect.catch("_tag", {
+						failure: "NotReserveableException",
+						onFailure: () => {
+							out = false;
+							return Effect.succeed(void 0);
+						},
+					}),
+				),
+			kinds,
+		);
+		return out;
 	});
 
 /**

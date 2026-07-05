@@ -4,12 +4,13 @@ import {
 	consumeRetry,
 	regenerateKey,
 	RequestKey,
+	type AnyReservation,
 	type CachedKeyedRequestEvent,
 	type KeyedRequestEvent,
 	type RequestEvent,
 	type RequestManager,
 } from "./types/requestTypes";
-import type { IDRepository } from "./types/idTypes";
+import { kinds, type IDRepository, type Kind } from "./types/idTypes";
 import type { TriggerEvent } from "./types/controllerTypes";
 import { Effect, Either } from "effect";
 import { getCachedResultCachedCachedIdGet } from "@/api/endpoints/default/default";
@@ -24,6 +25,7 @@ import {
 } from "./types/errors";
 import { UnknownException } from "effect/Cause";
 import type { DurationInput } from "effect/Duration";
+import { forEachKind, isAllReserveable } from "./types/helperTypes";
 
 const logger = createLogger("RequestManager");
 
@@ -147,50 +149,9 @@ export const buildRequestManager = (
 					return yield* Effect.succeed("wait" as "wait");
 				}
 				const reserveList = request.reservationRequest.reserveList();
-				const results = Effect.all([
-					Effect.forEach(reserveList.chapter, (reservation) =>
-						idRepo.isReserveable(
-							reservation.kind,
-							reservation.id,
-							reservation.desiredState,
-						),
-					),
-					Effect.forEach(reserveList.label, (reservation) =>
-						idRepo.isReserveable(
-							reservation.kind,
-							reservation.id,
-							reservation.desiredState,
-						),
-					),
-					Effect.forEach(reserveList.labelData, (reservation) =>
-						idRepo.isReserveable(
-							reservation.kind,
-							reservation.id,
-							reservation.desiredState,
-						),
-					),
-					Effect.forEach(reserveList.labelGroup, (reservation) =>
-						idRepo.isReserveable(
-							reservation.kind,
-							reservation.id,
-							reservation.desiredState,
-						),
-					),
-					Effect.forEach(reserveList.chapterContent, (reservation) =>
-						idRepo.isReserveable(
-							reservation.kind,
-							reservation.id,
-							reservation.desiredState,
-						),
-					),
-				]);
-
-				const allResults = yield* results;
-				return yield* allResults
-					.flatMap((val) => val)
-					.every((isReserveable) => isReserveable)
-					? Effect.succeed("reserve" as "reserve")
-					: Effect.succeed("wait" as "wait");
+				return yield* isAllReserveable(idRepo, reserveList).pipe(
+					Effect.map((a) => (a ? ("reserve" as "reserve") : ("wait" as "wait"))),
+				);
 			});
 
 		const send = () =>
@@ -207,20 +168,11 @@ export const buildRequestManager = (
 				for (const request of [...statusQueries, ...retryRequests]) {
 					if (request.retries < 0) {
 						const reserveList = request.reservationRequest.reserveList();
-						yield* Effect.forEach(reserveList.chapter, (reservation) =>
-							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
-						);
-						yield* Effect.forEach(reserveList.label, (reservation) =>
-							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
-						);
-						yield* Effect.forEach(reserveList.labelData, (reservation) =>
-							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
-						);
-						yield* Effect.forEach(reserveList.labelGroup, (reservation) =>
-							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
-						);
-						yield* Effect.forEach(reserveList.chapterContent, (reservation) =>
-							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
+						yield* forEachKind(
+							reserveList,
+							(reservation: AnyReservation<Kind>) =>
+								idRepo.releaseIdObjStateOnFailure(reservation),
+							kinds,
 						);
 						yield* request.onFailure();
 						logger.error(
@@ -255,40 +207,11 @@ export const buildRequestManager = (
 					}
 					const reservationRequest = request.reservationRequest;
 					const reserveList = reservationRequest.reserveList();
-					yield* Effect.forEach(reserveList.chapter, (reservation) =>
-						idRepo.reserveIdObjState(
-							reservation.kind,
-							reservation.id,
-							reservation.desiredState,
-						),
-					);
-					yield* Effect.forEach(reserveList.label, (reservation) =>
-						idRepo.reserveIdObjState(
-							reservation.kind,
-							reservation.id,
-							reservation.desiredState,
-						),
-					);
-					yield* Effect.forEach(reserveList.labelData, (reservation) =>
-						idRepo.reserveIdObjState(
-							reservation.kind,
-							reservation.id,
-							reservation.desiredState,
-						),
-					);
-					yield* Effect.forEach(reserveList.labelGroup, (reservation) =>
-						idRepo.reserveIdObjState(
-							reservation.kind,
-							reservation.id,
-							reservation.desiredState,
-						),
-					);
-					yield* Effect.forEach(reserveList.chapterContent, (reservation) =>
-						idRepo.reserveIdObjState(
-							reservation.kind,
-							reservation.id,
-							reservation.desiredState,
-						),
+					yield* forEachKind(
+						reserveList,
+						(reservation: AnyReservation<Kind>) =>
+							idRepo.reserveIdObjState(reservation),
+						kinds,
 					);
 					yield* request.preSend();
 					fromQueueRequests.push(request);
@@ -429,20 +352,11 @@ export const buildRequestManager = (
 					} else {
 						const request = result.right;
 						const reserveList = request.reservationRequest.reserveList();
-						yield* Effect.forEach(reserveList.chapter, (reservation) =>
-							idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id),
-						);
-						yield* Effect.forEach(reserveList.label, (reservation) =>
-							idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id),
-						);
-						yield* Effect.forEach(reserveList.labelData, (reservation) =>
-							idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id),
-						);
-						yield* Effect.forEach(reserveList.labelGroup, (reservation) =>
-							idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id),
-						);
-						yield* Effect.forEach(reserveList.chapterContent, (reservation) =>
-							idRepo.releaseIdObjStateOnSuccess(reservation.kind, reservation.id),
+						yield* forEachKind(
+							reserveList,
+							(reservation: AnyReservation<Kind>) =>
+								idRepo.releaseIdObjStateOnSuccess(reservation),
+							kinds,
 						);
 					}
 				}
@@ -450,20 +364,11 @@ export const buildRequestManager = (
 					for (const { request, error } of fatalFailedRequests) {
 						yield* request.onFatalError(error);
 						const reserveList = request.reservationRequest.reserveList();
-						yield* Effect.forEach(reserveList.chapter, (reservation) =>
-							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
-						);
-						yield* Effect.forEach(reserveList.label, (reservation) =>
-							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
-						);
-						yield* Effect.forEach(reserveList.labelData, (reservation) =>
-							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
-						);
-						yield* Effect.forEach(reserveList.labelGroup, (reservation) =>
-							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
-						);
-						yield* Effect.forEach(reserveList.chapterContent, (reservation) =>
-							idRepo.releaseIdObjStateOnFailure(reservation.kind, reservation.id),
+						yield* forEachKind(
+							reserveList,
+							(reservation: AnyReservation<Kind>) =>
+								idRepo.releaseIdObjStateOnFailure(reservation),
+							kinds,
 						);
 					}
 					yield* raiseTriggerEvent({

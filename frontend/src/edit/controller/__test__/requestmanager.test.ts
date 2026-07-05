@@ -6,6 +6,7 @@ import { IdempotentCallable } from "../types/helperTypes";
 import { CacheConflictException, FatalException } from "../types/errors";
 import type { TriggerEvent } from "../types/controllerTypes";
 import type { RequestEvent, RequestKey, ReserveList } from "../types/requestTypes";
+import { CCServId } from "../types/idTypes";
 import { getCachedResultCachedCachedIdGet } from "@/api/endpoints/default/default";
 
 vi.mock("@/api/endpoints/default/default", async (importOriginal) => {
@@ -129,5 +130,51 @@ describe("buildRequestManager", () => {
 		expect(new Set(sentKeys).size).toBe(3);
 		expect(getCachedResultMock).not.toHaveBeenCalled();
 		expect(postSendResults).toEqual([{ ok: true }]);
+	});
+
+	it("releases reserved entries after a successful request", async () => {
+		const idRepo = buildIdRepository();
+		const ccId = Effect.runSync(
+			idRepo.newIdAndBindId({
+				kind: "chapterContent",
+				servId: CCServId("00000000-0000-0000-0000-000000000007"),
+			}),
+		);
+		const reserveList: ReserveList = {
+			autoLabel: [],
+			autoLabelRun: [],
+			chapter: [],
+			chapterContent: [{ id: ccId, kind: "chapterContent", desiredState: "locked" }],
+			label: [],
+			labelData: [],
+			labelGroup: [],
+		};
+
+		const requestManager = Effect.runSync(
+			buildRequestManager(idRepo, () => Effect.succeed(void 0)),
+		);
+		const request: RequestEvent = {
+			cached: true,
+			variant: "textOp",
+			active: true,
+			retries: 3,
+			reservationRequest: {
+				reserveList: IdempotentCallable(() => reserveList),
+				skip: () => false,
+				wait: () => Effect.succeed(false),
+			},
+			onFailure: () => Effect.succeed(void 0),
+			onFatalError: () => Effect.succeed(void 0),
+			preSend: () => Effect.succeed(void 0),
+			send: () => Effect.succeed({ ok: true }),
+			postSend: () => Effect.succeed(void 0),
+		};
+
+		requestManager.enqueueRequest(request);
+		await Effect.runPromise(requestManager.waitFlush());
+
+		expect(Effect.runSync(idRepo.idObjState({ kind: "chapterContent", id: ccId }))).toBe(
+			"clean",
+		);
 	});
 });

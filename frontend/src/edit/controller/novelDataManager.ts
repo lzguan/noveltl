@@ -61,7 +61,10 @@ export const buildNovelDataManager = (
 		const chaptersIndex: ChapterIndex = yield* buildChapterIndex(
 			novelData.chapters.map<[CProvId, { chapter: ProvChapter }]>((val) => {
 				const newIdExit = Effect.runSyncExit(
-					idRepo.newIdAndBindId("chapter", CServId(val.chapterId)),
+					idRepo.newIdAndBindId({
+						kind: "chapter",
+						servId: CServId(val.chapterId),
+					}),
 				);
 				if (newIdExit._tag === "Failure") {
 					throw new FatalException({
@@ -76,7 +79,10 @@ export const buildNovelDataManager = (
 			novelData.labelGroups.map<[LGProvId, { labelGroup: ProvLabelGroup; role: LabelRole }]>(
 				(val) => {
 					const newIdExit = Effect.runSyncExit(
-						idRepo.newIdAndBindId("labelGroup", LGServId(val.labelGroup.labelGroupId)),
+						idRepo.newIdAndBindId({
+							kind: "labelGroup",
+							servId: LGServId(val.labelGroup.labelGroupId),
+						}),
 					);
 					if (newIdExit._tag === "Failure") {
 						throw new FatalException({
@@ -227,11 +233,11 @@ export const buildNovelDataManager = (
 								const validated = yield* Schema.validate(
 									CreateLabelGroupLabelGroupsPost200Response,
 								)(data);
-								yield* idRepo.bindServerId(
-									"labelGroup",
-									newId,
-									LGServId(validated.labelGroupId),
-								);
+								yield* idRepo.bindServerId({
+									kind: "labelGroup",
+									provId: newId,
+									servId: LGServId(validated.labelGroupId),
+								});
 								yield* labelGroupsIndex.decrement(newId);
 							}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
 					},
@@ -341,11 +347,11 @@ export const buildNovelDataManager = (
 								const validated = yield* Schema.validate(
 									CreateChapterNovelsNovelIdChaptersPost200Response,
 								)(data);
-								yield* idRepo.bindServerId(
-									"chapter",
-									newId,
-									CServId(validated.metadata.chapterId),
-								);
+								yield* idRepo.bindServerId({
+									kind: "chapter",
+									provId: newId,
+									servId: CServId(validated.metadata.chapterId),
+								});
 								yield* chaptersIndex.decrement(newId);
 							}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
 					},
@@ -403,12 +409,14 @@ export const buildNovelDataManager = (
 						send: () =>
 							Effect.gen(function* () {
 								const chapterServId = yield* idRepo
-									.getServerId("chapter", chapterId)
+									.getServerId({ kind: "chapter", provId: chapterId })
 									.pipe(
 										Effect.mapError((err) => new FatalException({ orig: err })),
 									);
 								const esi = yield* Effect.all(
-									eager.map((id) => idRepo.getServerId("labelGroup", id)),
+									eager.map((id) =>
+										idRepo.getServerId({ kind: "labelGroup", provId: id }),
+									),
 								).pipe(Effect.mapError((err) => new FatalException({ orig: err })));
 								const eagerServIds = esi.filter((id) => id !== null);
 								if (chapterServId === null) {
@@ -525,6 +533,40 @@ export const buildNovelDataManager = (
 			novelData.novel.novelId,
 			(event) => raiseTriggerEvent(getters, event),
 			idRepo,
+			{
+				chapterIds: () =>
+					chaptersIndex
+						.getIds()
+						.pipe(
+							Effect.mapError(() => new UnknownException({ message: "unreachable" })),
+						),
+				chapterNum: (chId) =>
+					chaptersIndex.get(chId).pipe(
+						Effect.map((slot) => slot.meta.chapter.chapterNum),
+						Effect.mapError((err) => new UnknownException({ orig: err })),
+					),
+				chapterIsPublic: (chId) =>
+					chaptersIndex.get(chId).pipe(
+						Effect.map((slot) => slot.meta.chapter.chapterIsPublic),
+						Effect.mapError((err) => new UnknownException({ orig: err })),
+					),
+				chapterContentId: (chId) =>
+					Effect.gen(function* () {
+						const slot = yield* chaptersIndex
+							.get(chId)
+							.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+						if (slot.status !== "ready" || !slot.data) {
+							return yield* Effect.fail(
+								new UnknownException({
+									message: `Chapter ${chId} is not open`,
+								}),
+							);
+						}
+						return yield* slot.data.chapterData.getters
+							.chapterContentId()
+							.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+					}),
+			},
 		);
 
 		return {

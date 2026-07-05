@@ -45,6 +45,7 @@ export interface BaseController<GettersT, UserEventT, TriggerEventT> {
  */
 export interface ChapterGetters {
 	text: () => Effect.Effect<string>;
+	chapterContentId: () => Effect.Effect<CCProvId>;
 	labelDataSlot: (labelGroupId: LGProvId) => Effect.Effect<LabelDataSlot, NotFoundException>;
 }
 

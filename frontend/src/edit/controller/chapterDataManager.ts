@@ -56,10 +56,10 @@ export const buildChapterDataManager = (
 ): Effect.Effect<ChapterDataManager, UnknownException> =>
 	Effect.gen(function* () {
 		let chapterContentId = yield* idRepo
-			.newIdAndBindId(
-				"chapterContent",
-				CCServId(editChapterData.chapterContent.chapterContentId),
-			)
+			.newIdAndBindId({
+				kind: "chapterContent",
+				servId: CCServId(editChapterData.chapterContent.chapterContentId),
+			})
 			.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
 		let text = editChapterData.chapterContent.chapterContentText;
 
@@ -77,7 +77,10 @@ export const buildChapterDataManager = (
 					continue;
 				}
 				const lgServId = yield* idRepo
-					.getServerId("labelGroup", lgSlot.meta.labelGroup.labelGroupId)
+					.getServerId({
+						kind: "labelGroup",
+						provId: lgSlot.meta.labelGroup.labelGroupId,
+					})
 					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
 				if (lgServId === null) {
 					return yield* Effect.fail(
@@ -90,11 +93,16 @@ export const buildChapterDataManager = (
 
 			for (const entry of editChapterData.eagerLabelData) {
 				const provLdId = yield* idRepo
-					.newIdAndBindId("labelData", LDServId(entry.labelData.labelDataId))
+					.newIdAndBindId({
+						kind: "labelData",
+						servId: LDServId(entry.labelData.labelDataId),
+					})
 					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
 				const provLabels: ProvLabel[] = entry.labels
 					.map((l) => {
-						const provLabelId = Effect.runSync(idRepo.newIdAndBindExists("label"));
+						const provLabelId = Effect.runSync(
+							idRepo.newIdAndBindExists({ kind: "label" }),
+						);
 						return Prov({
 							...l,
 							labelId: provLabelId,
@@ -103,7 +111,7 @@ export const buildChapterDataManager = (
 					})
 					.sort((a, b) => a.labelStart - b.labelStart);
 				const servId = LGServId(entry.labelGroup.labelGroupId);
-				const lgProvId = yield* idRepo.queryProvId("labelGroup", servId);
+				const lgProvId = yield* idRepo.queryProvId({ kind: "labelGroup", servId });
 				if (!lgProvId) {
 					return yield* Effect.fail(
 						new UnknownException({
@@ -130,10 +138,13 @@ export const buildChapterDataManager = (
 
 			for (const entry of editChapterData.lazyLabelData) {
 				const provLdId = yield* idRepo
-					.newIdAndBindId("labelData", LDServId(entry.labelData.labelDataId))
+					.newIdAndBindId({
+						kind: "labelData",
+						servId: LDServId(entry.labelData.labelDataId),
+					})
 					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
 				const servId = LGServId(entry.labelGroup.labelGroupId);
-				const lgProvId = yield* idRepo.queryProvId("labelGroup", servId);
+				const lgProvId = yield* idRepo.queryProvId({ kind: "labelGroup", servId });
 				if (!lgProvId) {
 					return yield* Effect.fail(
 						new UnknownException({
@@ -247,7 +258,7 @@ export const buildChapterDataManager = (
 							send: () =>
 								Effect.gen(function* () {
 									const servLdId = yield* idRepo
-										.getServerId("labelData", labelDataProvId)
+										.getServerId({ kind: "labelData", provId: labelDataProvId })
 										.pipe(
 											Effect.mapError(
 												(err) => new FatalException({ orig: err }),
@@ -282,7 +293,10 @@ export const buildChapterDataManager = (
 								Effect.gen(function* () {
 									for (const { labelId, op } of opsSnapshot) {
 										if (op.op === "add") {
-											yield* idRepo.bindServerExists("label", labelId);
+											yield* idRepo.bindServerExists({
+												kind: "label",
+												provId: labelId,
+											});
 										}
 									}
 								}).pipe(
@@ -349,14 +363,20 @@ export const buildChapterDataManager = (
 						send: (requestKey) =>
 							Effect.gen(function* () {
 								const servContentId = yield* idRepo
-									.getServerId("chapterContent", chapterContentId)
+									.getServerId({
+										kind: "chapterContent",
+										provId: chapterContentId,
+									})
 									.pipe(
 										Effect.mapError(
 											(err) => new ConnectionException({ orig: err }),
 										),
 									);
 								const servChapterId = yield* idRepo
-									.getServerId("chapter", chapterId)
+									.getServerId({
+										kind: "chapter",
+										provId: chapterId,
+									})
 									.pipe(
 										Effect.mapError(
 											(err) => new ConnectionException({ orig: err }),
@@ -405,10 +425,10 @@ export const buildChapterDataManager = (
 									Effect.mapError((err) => new FatalException({ orig: err })),
 								);
 								chapterContentId = yield* idRepo
-									.newIdAndBindId(
-										"chapterContent",
-										CCServId(validated.chapterContentId),
-									)
+									.newIdAndBindId({
+										kind: "chapterContent",
+										servId: CCServId(validated.chapterContentId),
+									})
 									.pipe(
 										Effect.mapError((err) => new FatalException({ orig: err })),
 									);
@@ -416,14 +436,19 @@ export const buildChapterDataManager = (
 									const slot = yield* labelDataIndex.get(lgId);
 									const ldId = slot.meta.labelData.labelDataId;
 									const oldServId = yield* idRepo
-										.getServerId("labelData", ldId)
+										.getServerId({
+											kind: "labelData",
+											provId: ldId,
+										})
 										.pipe(Effect.catchAll(() => Effect.succeed(null)));
 									if (oldServId && validated.labelDataIdMap[oldServId]) {
 										const newId = yield* idRepo
-											.newIdAndBindId(
-												"labelData",
-												LDServId(validated.labelDataIdMap[oldServId]),
-											)
+											.newIdAndBindId({
+												kind: "labelData",
+												servId: LDServId(
+													validated.labelDataIdMap[oldServId],
+												),
+											})
 											.pipe(
 												Effect.mapError(
 													(err) => new FatalException({ orig: err }),
@@ -1085,7 +1110,7 @@ export const buildChapterDataManager = (
 
 				const detachReserveList: () => ReserveList = () => {
 					const curLabelDataState = Effect.runSyncExit(
-						idRepo.idObjState("labelData", oldLabelDataProvId),
+						idRepo.idObjState({ kind: "labelData", id: oldLabelDataProvId }),
 					);
 					if (curLabelDataState._tag === "Failure") {
 						return {
@@ -1149,10 +1174,10 @@ export const buildChapterDataManager = (
 					send: () =>
 						Effect.gen(function* () {
 							const servChapterId = yield* idRepo
-								.getServerId("chapter", chapterId)
+								.getServerId({ kind: "chapter", provId: chapterId })
 								.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
 							const servLabelGroupId = yield* idRepo
-								.getServerId("labelGroup", labelGroupId)
+								.getServerId({ kind: "labelGroup", provId: labelGroupId })
 								.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
 							if (!servChapterId || !servLabelGroupId) {
 								return yield* Effect.fail(
@@ -1194,7 +1219,10 @@ export const buildChapterDataManager = (
 								);
 							}
 							const newLabelDataProvId = yield* idRepo
-								.newIdAndBindId("labelData", LDServId(entry.labelData.labelDataId))
+								.newIdAndBindId({
+									kind: "labelData",
+									servId: LDServId(entry.labelData.labelDataId),
+								})
 								.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
 							if (newLabelDataProvId === oldLabelDataProvId) {
 								skip = true;
@@ -1202,7 +1230,7 @@ export const buildChapterDataManager = (
 							const provLabels: ProvLabel[] = entry.labels
 								.map((l) => {
 									const provLabelId = Effect.runSync(
-										idRepo.newIdAndBindExists("label"),
+										idRepo.newIdAndBindExists({ kind: "label" }),
 									);
 									return Prov({
 										...l,
@@ -1300,6 +1328,7 @@ export const buildChapterDataManager = (
 			getters: {
 				labelDataSlot: (labelGroupId: LGProvId) => labelDataIndex.get(labelGroupId),
 				text: () => Effect.succeed(text),
+				chapterContentId: () => Effect.succeed(chapterContentId),
 			},
 		};
 	});

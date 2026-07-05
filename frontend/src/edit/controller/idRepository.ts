@@ -15,13 +15,7 @@ import {
 	type GroundIdStatus,
 	entryStatus,
 	ProvTypes,
-	CProvId,
-	CCProvId,
-	LGProvId,
-	LDProvId,
 	LProvId,
-	AProvId,
-	ALRProvId,
 	CServId,
 	CCServId,
 	LGServId,
@@ -31,6 +25,11 @@ import {
 	ALRServId,
 	ServTypes,
 	isTerminal,
+	identifiableKinds,
+	type ProvServKind,
+	type AnyProvServKind,
+	kinds,
+	existableKinds,
 } from "./types/idTypes";
 import {
 	ResourceConflictException,
@@ -38,8 +37,8 @@ import {
 	NotReserveableException,
 } from "./types/errors";
 import { Effect } from "effect";
-
-// TODO: figure out how to remove boilerplate (we probably can't remove type hacking)
+import type { AnyReservation } from "./types/requestTypes";
+import { forEachKind } from "./types/helperTypes";
 
 const logger = createLogger("IdRepository");
 
@@ -100,212 +99,83 @@ export function buildIdRepository(): IDRepository {
 
 	function newId(kind: Kind): ProvTypes[Kind] {
 		const provId = ProvId(`provisional-${counterRef++}`);
-		switch (kind) {
-			case "chapter":
-				const id = ProvTypes["chapter"](provId);
-				identifiableKindMap[kind].set(id, {
-					serverId: null,
-					status: "pending",
-					lockCount: 0,
-				});
-				return id;
-			case "chapterContent":
-				const id2 = ProvTypes["chapterContent"](provId);
-				identifiableKindMap[kind].set(id2, {
-					serverId: null,
-					status: "pending",
-					lockCount: 0,
-				});
-				return id2;
-			case "labelGroup":
-				const id3 = ProvTypes["labelGroup"](provId);
-				identifiableKindMap[kind].set(id3, {
-					serverId: null,
-					status: "pending",
-					lockCount: 0,
-				});
-				return id3;
-			case "labelData":
-				const id4 = ProvTypes["labelData"](provId);
-				identifiableKindMap[kind].set(id4, {
-					serverId: null,
-					status: "pending",
-					lockCount: 0,
-				});
-				return id4;
-			case "label":
-				const id5 = ProvTypes["label"](provId);
-				existableKindMap[kind].set(id5, {
-					serverExists: null,
-					status: "pending",
-					lockCount: 0,
-				});
-				return id5;
-			case "autoLabel":
-				const id6 = ProvTypes["autoLabel"](provId);
-				identifiableKindMap[kind].set(id6, {
-					serverId: null,
-					status: "pending",
-					lockCount: 0,
-				});
-				return id6;
-			case "autoLabelRun":
-				const id7 = ProvTypes["autoLabelRun"](provId);
-				identifiableKindMap[kind].set(id7, {
-					serverId: null,
-					status: "pending",
-					lockCount: 0,
-				});
-				return id7;
+		const id = ProvTypes[kind](provId);
+		// @ts-expect-error
+		if (identifiableKinds.includes(kind)) {
+			// @ts-expect-error
+			identifiableKindMap[kind as keyof IdentifiableKindMap].set(id, {
+				serverId: null,
+				status: "pending",
+				lockCount: 0,
+			});
+		} else {
+			// @ts-expect-error
+			existableKindMap[kind as keyof ExistableKindMap].set(id, {
+				serverExists: null,
+				status: "pending",
+				lockCount: 0,
+			});
 		}
+		return id;
 	}
 
 	function newIdAndBindId(
-		kind: "chapter",
-		serverId: CServId,
+		params: Omit<ProvServKind<"chapter">, "provId">,
 	): Effect.Effect<ProvTypes["chapter"], ResourceConflictException>;
 	function newIdAndBindId(
-		kind: "chapterContent",
-		serverId: CCServId,
+		params: Omit<ProvServKind<"chapterContent">, "provId">,
 	): Effect.Effect<ProvTypes["chapterContent"], ResourceConflictException>;
 	function newIdAndBindId(
-		kind: "labelGroup",
-		serverId: LGServId,
+		params: Omit<ProvServKind<"labelGroup">, "provId">,
 	): Effect.Effect<ProvTypes["labelGroup"], ResourceConflictException>;
 	function newIdAndBindId(
-		kind: "labelData",
-		serverId: LDServId,
+		params: Omit<ProvServKind<"labelData">, "provId">,
 	): Effect.Effect<ProvTypes["labelData"], ResourceConflictException>;
 	function newIdAndBindId(
-		kind: "autoLabel",
-		serverId: AServId,
+		params: Omit<ProvServKind<"autoLabel">, "provId">,
 	): Effect.Effect<ProvTypes["autoLabel"], ResourceConflictException>;
 	function newIdAndBindId(
-		kind: "autoLabelRun",
-		serverId: ALRServId,
+		params: Omit<ProvServKind<"autoLabelRun">, "provId">,
 	): Effect.Effect<ProvTypes["autoLabelRun"], ResourceConflictException>;
 
-	function newIdAndBindId(
-		kind: IdentifiableKind,
-		serverId: ServId,
-	): Effect.Effect<ProvTypes[IdentifiableKind], ResourceConflictException> {
+	function newIdAndBindId({
+		kind,
+		servId,
+	}: {
+		kind: IdentifiableKind;
+		servId: ServId;
+	}): Effect.Effect<ProvTypes[IdentifiableKind], ResourceConflictException> {
 		const provId = ProvId(`provisional-${counterRef++}`);
-		switch (kind) {
-			case "chapter": {
-				const id = ProvTypes["chapter"](provId);
-				const existing = revMap[kind].get(serverId as CServId);
-				if (existing) {
-					const entry = identifiableKindMap[kind].get(existing);
-					if (entry && (entry.status === "clean" || entry.status === "locked")) {
-						return Effect.succeed(existing);
-					}
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				identifiableKindMap[kind].set(id, {
-					serverId: serverId as CServId,
-					status: "clean",
-					lockCount: 0,
-				});
-				revMap[kind].set(serverId as CServId, id);
-				return Effect.succeed(id);
+		const id = ProvTypes[kind](provId);
+		// @ts-expect-error
+		const existing = revMap[kind].get(servId);
+		if (existing) {
+			// @ts-expect-error
+			const entry = identifiableKindMap[kind].get(existing);
+			if (entry && (entry.status === "clean" || entry.status === "locked")) {
+				return Effect.succeed(existing);
 			}
-			case "chapterContent": {
-				const id2 = ProvTypes["chapterContent"](provId);
-				const existing = revMap[kind].get(serverId as CCServId);
-				if (existing) {
-					const entry = identifiableKindMap[kind].get(existing);
-					if (entry && (entry.status === "clean" || entry.status === "locked")) {
-						return Effect.succeed(existing);
-					}
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				identifiableKindMap[kind].set(id2, {
-					serverId: serverId as CCServId,
-					status: "clean",
-					lockCount: 0,
-				});
-				revMap[kind].set(serverId as CCServId, id2);
-				return Effect.succeed(id2);
-			}
-			case "labelGroup": {
-				const id3 = ProvTypes["labelGroup"](provId);
-				const existing = revMap[kind].get(serverId as LGServId);
-				if (existing) {
-					const entry = identifiableKindMap[kind].get(existing);
-					if (entry && (entry.status === "clean" || entry.status === "locked")) {
-						return Effect.succeed(existing);
-					}
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				identifiableKindMap[kind].set(id3, {
-					serverId: serverId as LGServId,
-					status: "clean",
-					lockCount: 0,
-				});
-				revMap[kind].set(serverId as LGServId, id3);
-				return Effect.succeed(id3);
-			}
-			case "labelData": {
-				const id4 = ProvTypes["labelData"](provId);
-				const existing = revMap[kind].get(serverId as LDServId);
-				if (existing) {
-					const entry = identifiableKindMap[kind].get(existing);
-					if (entry && (entry.status === "clean" || entry.status === "locked")) {
-						return Effect.succeed(existing);
-					}
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				identifiableKindMap[kind].set(id4, {
-					serverId: serverId as LDServId,
-					status: "clean",
-					lockCount: 0,
-				});
-				revMap[kind].set(serverId as LDServId, id4);
-				return Effect.succeed(id4);
-			}
-			case "autoLabel": {
-				const id5 = ProvTypes["autoLabel"](provId);
-				const existing = revMap[kind].get(serverId as AServId);
-				if (existing) {
-					const entry = identifiableKindMap[kind].get(existing);
-					if (entry && (entry.status === "clean" || entry.status === "locked")) {
-						return Effect.succeed(existing);
-					}
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				identifiableKindMap[kind].set(id5, {
-					serverId: serverId as AServId,
-					status: "clean",
-					lockCount: 0,
-				});
-				revMap[kind].set(serverId as AServId, id5);
-				return Effect.succeed(id5);
-			}
-			case "autoLabelRun": {
-				const id6 = ProvTypes["autoLabelRun"](provId);
-				const existing = revMap[kind].get(serverId as ALRServId);
-				if (existing) {
-					const entry = identifiableKindMap[kind].get(existing);
-					if (entry && (entry.status === "clean" || entry.status === "locked")) {
-						return Effect.succeed(existing);
-					}
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				identifiableKindMap[kind].set(id6, {
-					serverId: serverId as ALRServId,
-					status: "clean",
-					lockCount: 0,
-				});
-				revMap[kind].set(serverId as ALRServId, id6);
-				return Effect.succeed(id6);
-			}
+			return Effect.fail(new ResourceConflictException({ id: servId }));
 		}
+		// @ts-expect-error
+		identifiableKindMap[kind].set(id, {
+			serverId: servId,
+			status: "clean",
+			lockCount: 0,
+		});
+		// @ts-expect-error
+		revMap[kind].set(servId, id);
+		return Effect.succeed(id);
 	}
 
-	function newIdAndBindExists(kind: "label"): Effect.Effect<ProvTypes["label"]> {
-		const id = ProvTypes["label"](ProvId(`provisional-${counterRef++}`));
+	function newIdAndBindExists(
+		params: Omit<ProvServKind<"label">, "provId" | "servId">,
+	): Effect.Effect<ProvTypes["label"]>;
+
+	function newIdAndBindExists({ kind }: { kind: "label" }): Effect.Effect<ProvTypes["label"]> {
+		const id = ProvTypes[kind](ProvId(`provisional-${counterRef++}`));
 		existableKindMap[kind].set(id, {
-			serverExists: LServEx(true),
+			serverExists: ServTypes[kind](ServEx(true)),
 			status: "clean",
 			lockCount: 0,
 		});
@@ -313,35 +183,32 @@ export function buildIdRepository(): IDRepository {
 	}
 
 	function getServerId(
-		kind: "chapter",
-		provisionalId: ProvTypes["chapter"],
+		params: Omit<ProvServKind<"chapter">, "servId">,
 	): Effect.Effect<CServId | null, NotFoundException>;
 	function getServerId(
-		kind: "chapterContent",
-		provisionalId: ProvTypes["chapterContent"],
+		params: Omit<ProvServKind<"chapterContent">, "servId">,
 	): Effect.Effect<CCServId | null, NotFoundException>;
 	function getServerId(
-		kind: "labelGroup",
-		provisionalId: ProvTypes["labelGroup"],
+		params: Omit<ProvServKind<"labelGroup">, "servId">,
 	): Effect.Effect<LGServId | null, NotFoundException>;
 	function getServerId(
-		kind: "labelData",
-		provisionalId: ProvTypes["labelData"],
+		params: Omit<ProvServKind<"labelData">, "servId">,
 	): Effect.Effect<LDServId | null, NotFoundException>;
 	function getServerId(
-		kind: "autoLabel",
-		provisionalId: ProvTypes["autoLabel"],
+		params: Omit<ProvServKind<"autoLabel">, "servId">,
 	): Effect.Effect<AServId | null, NotFoundException>;
 	function getServerId(
-		kind: "autoLabelRun",
-		provisionalId: ProvTypes["autoLabelRun"],
+		params: Omit<ProvServKind<"autoLabelRun">, "servId">,
 	): Effect.Effect<ALRServId | null, NotFoundException>;
 
-	function getServerId<K extends IdentifiableKind>(
-		kind: K,
-		provisionalId: ProvTypes[K],
-	): Effect.Effect<ServId | null, NotFoundException> {
-		const entry = identifiableKindMap[kind].get(provisionalId);
+	function getServerId<K extends IdentifiableKind>({
+		kind,
+		provId,
+	}: {
+		kind: K;
+		provId: ProvTypes[K];
+	}): Effect.Effect<ServId | null, NotFoundException> {
+		const entry = identifiableKindMap[kind].get(provId);
 		if (!entry) {
 			return Effect.fail(new NotFoundException());
 		}
@@ -349,12 +216,17 @@ export function buildIdRepository(): IDRepository {
 	}
 
 	function getServerExists(
-		kind: "label",
-		provisionalId: ProvTypes["label"],
+		params: ProvServKind<"label">,
 	): Effect.Effect<LServEx | null, NotFoundException>;
 
-	function getServerExists<K extends ExistableKind>(kind: K, provisionalId: ProvTypes[K]) {
-		const entry = existableKindMap[kind].get(provisionalId);
+	function getServerExists<K extends ExistableKind>({
+		kind,
+		provId,
+	}: {
+		kind: K;
+		provId: ProvTypes[K];
+	}): Effect.Effect<ServEx | null, NotFoundException> {
+		const entry = existableKindMap[kind].get(provId);
 		if (!entry) {
 			return Effect.fail(new NotFoundException());
 		}
@@ -362,172 +234,43 @@ export function buildIdRepository(): IDRepository {
 	}
 
 	function bindServerId(
-		kind: "chapter",
-		provisionalId: ProvTypes["chapter"],
-		serverId: CServId,
-	): Effect.Effect<void, NotFoundException | ResourceConflictException>;
-	function bindServerId(
-		kind: "chapterContent",
-		provisionalId: ProvTypes["chapterContent"],
-		serverId: CCServId,
-	): Effect.Effect<void, NotFoundException | ResourceConflictException>;
-	function bindServerId(
-		kind: "labelGroup",
-		provisionalId: ProvTypes["labelGroup"],
-		serverId: LGServId,
-	): Effect.Effect<void, NotFoundException | ResourceConflictException>;
-	function bindServerId(
-		kind: "labelData",
-		provisionalId: ProvTypes["labelData"],
-		serverId: LDServId,
-	): Effect.Effect<void, NotFoundException | ResourceConflictException>;
-	function bindServerId(
-		kind: "autoLabel",
-		provisionalId: ProvTypes["autoLabel"],
-		serverId: AServId,
-	): Effect.Effect<void, NotFoundException | ResourceConflictException>;
-	function bindServerId(
-		kind: "autoLabelRun",
-		provisionalId: ProvTypes["autoLabelRun"],
-		serverId: ALRServId,
+		params: AnyProvServKind<IdentifiableKind>,
 	): Effect.Effect<void, NotFoundException | ResourceConflictException>;
 
-	function bindServerId(
-		kind: IdentifiableKind,
-		provisionalId: ProvTypes[IdentifiableKind],
-		serverId: ServId,
-	) {
-		switch (kind) {
-			case "chapter": {
-				const entry = identifiableKindMap[kind].get(provisionalId as ProvTypes["chapter"]);
-				if (revMap[kind].has(serverId as CServId)) {
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				if (!entry) {
-					logger.error(
-						`Provisional id ${provisionalId} not found for kind ${kind} in bindServerId`,
-					);
-					return Effect.fail(new NotFoundException());
-				}
-				if (entry.serverId !== null) {
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				revMap[kind].set(serverId as CServId, provisionalId as ProvTypes["chapter"]);
-				entry.serverId = serverId as ServTypes["chapter"];
-				return Effect.succeed(void 0);
-			}
-			case "chapterContent": {
-				const entry = identifiableKindMap[kind].get(
-					provisionalId as ProvTypes["chapterContent"],
-				);
-				if (revMap[kind].has(serverId as CCServId)) {
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				if (!entry) {
-					logger.error(
-						`Provisional id ${provisionalId} not found for kind ${kind} in bindServerId`,
-					);
-					return Effect.fail(new NotFoundException());
-				}
-				if (entry.serverId !== null) {
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				revMap[kind].set(
-					serverId as CCServId,
-					provisionalId as ProvTypes["chapterContent"],
-				);
-				entry.serverId = serverId as ServTypes["chapterContent"];
-				return Effect.succeed(void 0);
-			}
-			case "labelGroup": {
-				const entry = identifiableKindMap[kind].get(
-					provisionalId as ProvTypes["labelGroup"],
-				);
-				if (revMap[kind].has(serverId as LGServId)) {
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				if (!entry) {
-					logger.error(
-						`Provisional id ${provisionalId} not found for kind ${kind} in bindServerId`,
-					);
-					return Effect.fail(new NotFoundException());
-				}
-				if (entry.serverId !== null) {
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				revMap[kind].set(serverId as LGServId, provisionalId as ProvTypes["labelGroup"]);
-				entry.serverId = serverId as ServTypes["labelGroup"];
-				return Effect.succeed(void 0);
-			}
-			case "labelData": {
-				const entry = identifiableKindMap[kind].get(
-					provisionalId as ProvTypes["labelData"],
-				);
-				if (revMap[kind].has(serverId as LDServId)) {
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				if (!entry) {
-					logger.error(
-						`Provisional id ${provisionalId} not found for kind ${kind} in bindServerId`,
-					);
-					return Effect.fail(new NotFoundException());
-				}
-				if (entry.serverId !== null) {
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				revMap[kind].set(serverId as LDServId, provisionalId as ProvTypes["labelData"]);
-				entry.serverId = serverId as ServTypes["labelData"];
-				return Effect.succeed(void 0);
-			}
-			case "autoLabel": {
-				const entry = identifiableKindMap[kind].get(
-					provisionalId as ProvTypes["autoLabel"],
-				);
-				if (revMap[kind].has(serverId as AServId)) {
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				if (!entry) {
-					logger.error(
-						`Provisional id ${provisionalId} not found for kind ${kind} in bindServerId`,
-					);
-					return Effect.fail(new NotFoundException());
-				}
-				if (entry.serverId !== null) {
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				revMap[kind].set(serverId as AServId, provisionalId as ProvTypes["autoLabel"]);
-				entry.serverId = serverId as ServTypes["autoLabel"];
-				return Effect.succeed(void 0);
-			}
-			case "autoLabelRun": {
-				const entry = identifiableKindMap[kind].get(
-					provisionalId as ProvTypes["autoLabelRun"],
-				);
-				if (revMap[kind].has(serverId as ALRServId)) {
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				if (!entry) {
-					logger.error(
-						`Provisional id ${provisionalId} not found for kind ${kind} in bindServerId`,
-					);
-					return Effect.fail(new NotFoundException());
-				}
-				if (entry.serverId !== null) {
-					return Effect.fail(new ResourceConflictException({ id: serverId }));
-				}
-				revMap[kind].set(serverId as ALRServId, provisionalId as ProvTypes["autoLabelRun"]);
-				entry.serverId = serverId as ServTypes["autoLabelRun"];
-				return Effect.succeed(void 0);
-			}
+	function bindServerId({ kind, provId, servId }: AnyProvServKind<IdentifiableKind>) {
+		// @ts-expect-error
+		const entry = identifiableKindMap[kind].get(provId);
+		// @ts-expect-error
+		if (revMap[kind].has(servId)) {
+			return Effect.fail(new ResourceConflictException({ id: servId }));
 		}
+		if (!entry) {
+			logger.error(`Provisional id ${provId} not found for kind ${kind} in bindServerId`);
+			return Effect.fail(new NotFoundException());
+		}
+		if (entry.serverId !== null) {
+			return Effect.fail(new ResourceConflictException({ id: servId }));
+		}
+		// @ts-expect-error
+		revMap[kind].set(servId, provId);
+		entry.serverId = servId;
+		return Effect.succeed(void 0);
 	}
 
-	function bindServerExists<K extends ExistableKind>(kind: K, provisionalId: ProvTypes[K]) {
-		const entry = existableKindMap[kind].get(provisionalId);
+	function bindServerExists(
+		params: AnyProvServKind<ExistableKind>,
+	): Effect.Effect<void, NotFoundException>;
+
+	function bindServerExists<K extends ExistableKind>({
+		kind,
+		provId,
+	}: {
+		kind: K;
+		provId: ProvTypes[K];
+	}) {
+		const entry = existableKindMap[kind].get(provId);
 		if (!entry) {
-			logger.error(
-				`Provisional id ${provisionalId} not found for kind ${kind} in bindServerExists`,
-			);
+			logger.error(`Provisional id ${provId} not found for kind ${kind} in bindServerExists`);
 			return Effect.fail(new NotFoundException());
 		}
 		entry.serverExists = LServEx(true);
@@ -535,105 +278,53 @@ export function buildIdRepository(): IDRepository {
 	}
 
 	function idObjState(
-		kind: Kind,
-		id: ProvTypes[Kind],
-	): Effect.Effect<IdStatus, NotFoundException> {
-		switch (kind) {
-			case "chapter":
-				const entry = identifiableKindMap["chapter"].get(id as CProvId);
-				if (!entry) {
-					logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
-					return Effect.fail(new NotFoundException());
-				}
-				return Effect.succeed(entry.status);
-			case "chapterContent":
-				const entry2 = identifiableKindMap["chapterContent"].get(id as CCProvId);
-				if (!entry2) {
-					logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
-					return Effect.fail(new NotFoundException());
-				}
-				return Effect.succeed(entry2.status);
-			case "labelGroup":
-				const entry3 = identifiableKindMap["labelGroup"].get(id as LGProvId);
-				if (!entry3) {
-					logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
-					return Effect.fail(new NotFoundException());
-				}
-				return Effect.succeed(entry3.status);
-			case "labelData":
-				const entry4 = identifiableKindMap["labelData"].get(id as LDProvId);
-				if (!entry4) {
-					logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
-					return Effect.fail(new NotFoundException());
-				}
-				return Effect.succeed(entry4.status);
-			case "label":
-				const entry5 = existableKindMap["label"].get(id as LProvId);
-				if (!entry5) {
-					logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
-					return Effect.fail(new NotFoundException());
-				}
-				return Effect.succeed(entry5.status);
-			case "autoLabel":
-				const entry6 = identifiableKindMap["autoLabel"].get(id as AProvId);
-				if (!entry6) {
-					logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
-					return Effect.fail(new NotFoundException());
-				}
-				return Effect.succeed(entry6.status);
-			case "autoLabelRun":
-				const entry7 = identifiableKindMap["autoLabelRun"].get(id as ALRProvId);
-				if (!entry7) {
-					logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
-					return Effect.fail(new NotFoundException());
-				}
-				return Effect.succeed(entry7.status);
+		params: Omit<AnyReservation<Kind>, "desiredState">,
+	): Effect.Effect<IdStatus, NotFoundException>;
+
+	function idObjState({
+		kind,
+		id,
+	}: {
+		kind: Kind;
+		id: ProvTypes[Kind];
+	}): Effect.Effect<IdStatus, NotFoundException> {
+		// @ts-expect-error
+		if (identifiableKinds.includes(kind)) {
+			// @ts-expect-error
+			const entry = identifiableKindMap[kind].get(id);
+			if (!entry) {
+				logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
+				return Effect.fail(new NotFoundException());
+			}
+			return Effect.succeed(entry.status);
+		} else {
+			// @ts-expect-error
+			const entry = existableKindMap[kind].get(id);
+			if (!entry) {
+				logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
+				return Effect.fail(new NotFoundException());
+			}
+			return Effect.succeed(entry.status);
 		}
 	}
-
-	const isReserveable = (kind: Kind, id: ProvTypes[Kind], desiredState: InFlightIdStatus) =>
-		Effect.gen(function* () {
+	function isReserveable(params: AnyReservation<Kind>): Effect.Effect<boolean, NotFoundException>;
+	function isReserveable({
+		kind,
+		id,
+		desiredState,
+	}: AnyReservation<Kind>): Effect.Effect<boolean, NotFoundException> {
+		return Effect.gen(function* () {
 			let currentState: IdStatus;
 			let serverState: ServId | ServEx | null;
-
-			switch (kind) {
-				case "chapter":
-					currentState = yield* idObjState("chapter", id as CProvId);
-					serverState =
-						identifiableKindMap["chapter"].get(id as CProvId)?.serverId ?? null;
-					break;
-				case "chapterContent":
-					currentState = yield* idObjState("chapterContent", id as CCProvId);
-					serverState =
-						identifiableKindMap["chapterContent"].get(id as CCProvId)?.serverId ?? null;
-					break;
-				case "labelGroup":
-					currentState = yield* idObjState("labelGroup", id as LGProvId);
-					serverState =
-						identifiableKindMap["labelGroup"].get(id as LGProvId)?.serverId ?? null;
-					break;
-				case "labelData":
-					currentState = yield* idObjState("labelData", id as LDProvId);
-					serverState =
-						identifiableKindMap["labelData"].get(id as LDProvId)?.serverId ?? null;
-					break;
-				case "label":
-					currentState = yield* idObjState("label", id as LProvId);
-					serverState =
-						existableKindMap["label"].get(id as LProvId)?.serverExists ?? null;
-					break;
-				case "autoLabel":
-					currentState = yield* idObjState("autoLabel", id as AProvId);
-					serverState =
-						identifiableKindMap["autoLabel"].get(id as AProvId)?.serverId ?? null;
-					break;
-				case "autoLabelRun":
-					currentState = yield* idObjState("autoLabelRun", id as ALRProvId);
-					serverState =
-						identifiableKindMap["autoLabelRun"].get(id as ALRProvId)?.serverId ?? null;
-					break;
-				default:
-					return false;
+			// @ts-expect-error
+			if (identifiableKinds.includes(kind)) {
+				currentState = yield* idObjState({ kind, id });
+				// @ts-expect-error
+				serverState = identifiableKindMap[kind].get(id)?.serverId ?? null;
+			} else {
+				currentState = yield* idObjState({ kind: "label", id: id as LProvId });
+				// @ts-expect-error
+				serverState = existableKindMap[kind].get(id as LProvId)?.serverExists ?? null;
 			}
 			if (desiredState === "creating") {
 				return currentState === "pending" && serverState === null;
@@ -655,47 +346,32 @@ export function buildIdRepository(): IDRepository {
 				return false;
 			}
 		});
+	}
 
-	const reserveIdObjState = (kind: Kind, id: ProvTypes[Kind], desiredState: InFlightIdStatus) =>
-		Effect.gen(function* () {
-			const reserveable = yield* isReserveable(kind, id, desiredState);
+	function reserveIdObjState(
+		params: AnyReservation<Kind>,
+	): Effect.Effect<void, NotFoundException | NotReserveableException>;
+
+	function reserveIdObjState(reservation: AnyReservation<Kind>) {
+		return Effect.gen(function* () {
+			const { kind, id, desiredState } = reservation;
+			const reserveable = yield* isReserveable(reservation);
 			if (!reserveable) {
 				return yield* Effect.fail(new NotReserveableException());
 			}
 			let entry:
 				| {
-						serverId: ServId | null;
-						status: IdStatus;
-						lockCount: number;
-				  }
-				| {
-						serverExists: ServEx | null;
 						status: IdStatus;
 						lockCount: number;
 				  }
 				| undefined;
-			switch (kind) {
-				case "chapter":
-					entry = identifiableKindMap["chapter"].get(id as CProvId);
-					break;
-				case "chapterContent":
-					entry = identifiableKindMap["chapterContent"].get(id as CCProvId);
-					break;
-				case "labelGroup":
-					entry = identifiableKindMap["labelGroup"].get(id as LGProvId);
-					break;
-				case "labelData":
-					entry = identifiableKindMap["labelData"].get(id as LDProvId);
-					break;
-				case "label":
-					entry = existableKindMap["label"].get(id as LProvId);
-					break;
-				case "autoLabel":
-					entry = identifiableKindMap["autoLabel"].get(id as AProvId);
-					break;
-				case "autoLabelRun":
-					entry = identifiableKindMap["autoLabelRun"].get(id as ALRProvId);
-					break;
+			// @ts-expect-error
+			if (identifiableKinds.includes(kind)) {
+				// @ts-expect-error
+				entry = identifiableKindMap[kind].get(id);
+			} else {
+				// @ts-expect-error
+				entry = existableKindMap[kind].get(id);
 			}
 			if (!entry) {
 				return yield* Effect.fail(new NotFoundException());
@@ -706,36 +382,19 @@ export function buildIdRepository(): IDRepository {
 			}
 			return;
 		});
+	}
 
-	const releaseIdObjState =
-		(post: (status: InFlightIdStatus) => GroundIdStatus) =>
-		(kind: Kind, id: ProvTypes[Kind]) => {
+	function releaseIdObjState(post: (status: InFlightIdStatus) => GroundIdStatus) {
+		return ({ kind, id }: Omit<AnyReservation<Kind>, "desiredState">) => {
 			let entry: ServExistsStatus<ExistableKind> | ServIdStatus<IdentifiableKind> | undefined;
-
-			switch (kind) {
-				case "chapter":
-					entry = identifiableKindMap["chapter"].get(id as CProvId);
-					break;
-				case "chapterContent":
-					entry = identifiableKindMap["chapterContent"].get(id as CCProvId);
-					break;
-				case "labelGroup":
-					entry = identifiableKindMap["labelGroup"].get(id as LGProvId);
-					break;
-				case "labelData":
-					entry = identifiableKindMap["labelData"].get(id as LDProvId);
-					break;
-				case "label":
-					entry = existableKindMap["label"].get(id as LProvId);
-					break;
-				case "autoLabel":
-					entry = identifiableKindMap["autoLabel"].get(id as AProvId);
-					break;
-				case "autoLabelRun":
-					entry = identifiableKindMap["autoLabelRun"].get(id as ALRProvId);
-					break;
+			// @ts-expect-error
+			if (identifiableKinds.includes(kind)) {
+				// @ts-expect-error
+				entry = identifiableKindMap[kind].get(id);
+			} else {
+				// @ts-expect-error
+				entry = existableKindMap[kind].get(id);
 			}
-
 			if (!entry) {
 				return Effect.fail(new NotFoundException());
 			}
@@ -750,131 +409,98 @@ export function buildIdRepository(): IDRepository {
 			}
 			entry.status = post(entry.status);
 			if (
-				[
-					"chapter",
-					"chapterContent",
-					"labelGroup",
-					"labelData",
-					"autoLabel",
-					"autoLabelRun",
-				].includes(kind) &&
+				// @ts-expect-error
+				identifiableKinds.includes(kind) &&
 				isTerminal(entry.status) &&
 				"serverId" in entry
 			) {
-				switch (kind) {
-					case "chapter":
-						revMap["chapter"].delete(entry.serverId as CServId);
-						identifiableKindMap["chapter"].delete(id as CProvId);
-						break;
-					case "chapterContent":
-						revMap["chapterContent"].delete(entry.serverId as CCServId);
-						identifiableKindMap["chapterContent"].delete(id as CCProvId);
-						break;
-					case "labelGroup":
-						revMap["labelGroup"].delete(entry.serverId as LGServId);
-						identifiableKindMap["labelGroup"].delete(id as LGProvId);
-						break;
-					case "labelData":
-						revMap["labelData"].delete(entry.serverId as LDServId);
-						identifiableKindMap["labelData"].delete(id as LDProvId);
-						break;
-					case "autoLabel":
-						revMap["autoLabel"].delete(entry.serverId as AServId);
-						identifiableKindMap["autoLabel"].delete(id as AProvId);
-						break;
-					case "autoLabelRun":
-						revMap["autoLabelRun"].delete(entry.serverId as ALRServId);
-						identifiableKindMap["autoLabelRun"].delete(id as ALRProvId);
-						break;
-				}
+				// @ts-expect-error
+				revMap[kind].delete(entry.serverId as ServTypes[IdentifiableKind]);
+				// @ts-expect-error
+				identifiableKindMap[kind].delete(id as ProvTypes[IdentifiableKind]);
 			}
 			return Effect.succeed(ActionHappened(true));
 		};
+	}
 
-	const releaseIdObjStateOnSuccess = releaseIdObjState(exitStatus);
+	function releaseIdObjStateOnSuccess(
+		params: Omit<AnyReservation<Kind>, "desiredState">,
+	): Effect.Effect<ActionHappened, NotFoundException>;
+
+	function releaseIdObjStateOnSuccess(params: Omit<AnyReservation<Kind>, "desiredState">) {
+		return releaseIdObjState(exitStatus)(params);
+	}
 	const releaseIdObjStateOnFailure = releaseIdObjState(entryStatus);
 
 	const gc = () => {
-		identifiableKindMap.labelGroup.forEach((value, key) => {
-			if (isTerminal(value.status)) {
-				identifiableKindMap.labelGroup.delete(key);
+		const keys: Record<Kind, [ProvId, Kind][]> = kinds.reduce(
+			(acc, kind) => {
+				acc[kind] = [];
+				return acc;
+			},
+			{} as Record<Kind, [ProvId, Kind][]>,
+		);
+		for (const kind of identifiableKinds) {
+			for (const [provId, entry] of identifiableKindMap[kind]) {
+				if (isTerminal(entry.status)) {
+					keys[kind].push([provId, kind]);
+				}
 			}
-		});
-		identifiableKindMap.labelData.forEach((value, key) => {
-			if (isTerminal(value.status)) {
-				identifiableKindMap.labelData.delete(key);
+		}
+		for (const kind of existableKinds) {
+			for (const [provId, entry] of existableKindMap[kind]) {
+				if (isTerminal(entry.status)) {
+					keys[kind].push([provId, kind]);
+				}
 			}
-		});
-		identifiableKindMap.chapterContent.forEach((value, key) => {
-			if (isTerminal(value.status)) {
-				identifiableKindMap.chapterContent.delete(key);
-			}
-		});
-		identifiableKindMap.chapter.forEach((value, key) => {
-			if (isTerminal(value.status)) {
-				identifiableKindMap.chapter.delete(key);
-			}
-		});
-		identifiableKindMap.autoLabel.forEach((value, key) => {
-			if (isTerminal(value.status)) {
-				identifiableKindMap.autoLabel.delete(key);
-			}
-		});
-		identifiableKindMap.autoLabelRun.forEach((value, key) => {
-			if (isTerminal(value.status)) {
-				identifiableKindMap.autoLabelRun.delete(key);
-			}
-		});
-		existableKindMap.label.forEach((value, key) => {
-			if (isTerminal(value.status)) {
-				existableKindMap.label.delete(key);
-			}
-		});
+		}
+		Effect.runSync(
+			forEachKind(
+				keys,
+				([provId, kind]: [ProvId, Kind]) =>
+					Effect.sync(() => {
+						// @ts-expect-error
+						if (identifiableKinds.includes(kind)) {
+							// @ts-expect-error
+							identifiableKindMap[kind].delete(provId);
+						} else {
+							// @ts-expect-error
+							existableKindMap[kind].delete(provId);
+						}
+					}),
+				kinds,
+			),
+		);
 	};
 
 	function queryProvId(
-		kind: "chapter",
-		serverId: CServId,
-	): Effect.Effect<ProvTypes["chapter"] | null>;
-	function queryProvId(
-		kind: "autoLabel",
-		serverId: AServId,
-	): Effect.Effect<ProvTypes["autoLabel"] | null>;
-	function queryProvId(
-		kind: "autoLabelRun",
-		serverId: ALRServId,
-	): Effect.Effect<ProvTypes["autoLabelRun"] | null>;
-	function queryProvId(
-		kind: "chapterContent",
-		serverId: CCServId,
-	): Effect.Effect<ProvTypes["chapterContent"] | null>;
-	function queryProvId(
-		kind: "labelGroup",
-		serverId: LGServId,
+		params: Omit<ProvServKind<"labelGroup">, "provId">,
 	): Effect.Effect<ProvTypes["labelGroup"] | null>;
 	function queryProvId(
-		kind: "labelData",
-		serverId: LDServId,
+		params: Omit<ProvServKind<"labelData">, "provId">,
 	): Effect.Effect<ProvTypes["labelData"] | null>;
-
 	function queryProvId(
-		kind: IdentifiableKind,
-		serverId: ServTypes[IdentifiableKind],
-	): Effect.Effect<ProvTypes[IdentifiableKind] | null> {
-		switch (kind) {
-			case "chapter":
-				return Effect.succeed(revMap[kind].get(serverId as CServId) ?? null);
-			case "chapterContent":
-				return Effect.succeed(revMap[kind].get(serverId as CCServId) ?? null);
-			case "labelGroup":
-				return Effect.succeed(revMap[kind].get(serverId as LGServId) ?? null);
-			case "labelData":
-				return Effect.succeed(revMap[kind].get(serverId as LDServId) ?? null);
-			case "autoLabel":
-				return Effect.succeed(revMap[kind].get(serverId as AServId) ?? null);
-			case "autoLabelRun":
-				return Effect.succeed(revMap[kind].get(serverId as ALRServId) ?? null);
-		}
+		params: Omit<ProvServKind<"chapterContent">, "provId">,
+	): Effect.Effect<ProvTypes["chapterContent"] | null>;
+	function queryProvId(
+		params: Omit<ProvServKind<"chapter">, "provId">,
+	): Effect.Effect<ProvTypes["chapter"] | null>;
+	function queryProvId(
+		params: Omit<ProvServKind<"autoLabel">, "provId">,
+	): Effect.Effect<ProvTypes["autoLabel"] | null>;
+	function queryProvId(
+		params: Omit<ProvServKind<"autoLabelRun">, "provId">,
+	): Effect.Effect<ProvTypes["autoLabelRun"] | null>;
+
+	function queryProvId({
+		kind,
+		servId,
+	}: {
+		kind: IdentifiableKind;
+		servId: ServTypes[IdentifiableKind];
+	}): Effect.Effect<ProvTypes[IdentifiableKind] | null> {
+		// @ts-expect-error
+		return Effect.succeed(revMap[kind].get(servId) ?? null);
 	}
 
 	return {

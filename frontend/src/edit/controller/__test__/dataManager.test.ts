@@ -51,9 +51,11 @@ function buildTestChapterDM() {
 				triggerEvents.push(event);
 			});
 
-		const chapterId = Effect.runSync(idRepo.newIdAndBindId("chapter", CServId(UUID1)));
+		const chapterId = Effect.runSync(
+			idRepo.newIdAndBindId({ kind: "chapter", servId: CServId(UUID1) }),
+		);
 		const labelGroupProvId = Effect.runSync(
-			idRepo.newIdAndBindId("labelGroup", LGServId(UUID3)),
+			idRepo.newIdAndBindId({ kind: "labelGroup", servId: LGServId(UUID3) }),
 		);
 
 		const labelGroupsIndex = yield* buildLabelGroupIndex([
@@ -539,7 +541,11 @@ describe("buildChapterDataManager", () => {
 			const labelDataProvId = slot.meta.labelData.labelDataId;
 
 			const isReserveableResult = Effect.runSync(
-				idRepo.isReserveable("labelData", labelDataProvId, "idUpdating"),
+				idRepo.isReserveable({
+					kind: "labelData",
+					id: labelDataProvId,
+					desiredState: "idUpdating",
+				}),
 			);
 			expect(isReserveableResult).toBe(true);
 

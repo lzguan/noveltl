@@ -289,10 +289,9 @@ def query_novel_and_users_by_id(db: Session, current_user: User, novel_id: uuid.
         novel_id: id of novel in database.
     """
     q = (
-        select(models.Novel, models.User)
+        select(models.Novel, models.NovelContributor)
         .where(models.Novel.novel_id == novel_id)
         .join(models.NovelContributor, models.NovelContributor.novel_id == models.Novel.novel_id)
-        .join(models.User, models.User.user_id == models.NovelContributor.user_id)
     )
     q = novel_mod_access_select(q, current_user)
     result = db.execute(q)

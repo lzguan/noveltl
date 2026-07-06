@@ -202,6 +202,20 @@ export const buildNovelController = (
 						);
 						break;
 					}
+					case "refreshAutoLabelRuns": {
+						yield* dispatch(novelDM.refreshAutoLabelRuns());
+						break;
+					}
+					case "reloadAutoLabelRun": {
+						yield* dispatch(novelDM.reloadAutoLabelRun(event.runId));
+						break;
+					}
+					case "loadAutoLabelData": {
+						yield* dispatch(
+							novelDM.loadAutoLabelData(event.autoLabelId),
+						);
+						break;
+					}
 				}
 
 				yield* requestManager.debounce();

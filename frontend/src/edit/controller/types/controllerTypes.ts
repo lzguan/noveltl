@@ -1,6 +1,7 @@
 import type { IDLabelOp, LabelOp } from "./dataTypes";
 import type {
 	ALRProvId,
+	AProvId,
 	CCProvId,
 	CProvId,
 	LGProvId,
@@ -106,6 +107,9 @@ export type NovelUserEvent =
 			params: CluenerParams | DoNothingParams;
 			chapterFilter: ChapterFilter;
 	  }
+	| { eventType: "refreshAutoLabelRuns" }
+	| { eventType: "reloadAutoLabelRun"; runId: ALRProvId }
+	| { eventType: "loadAutoLabelData"; autoLabelId: AProvId }
 	| {
 			eventType: "promoteAutoLabelRun";
 			runId: ALRProvId;
@@ -167,7 +171,10 @@ export type TriggerEvent =
 				chapterContentId: CCProvId;
 				error: string;
 			}[];
-	  };
+	  }
+	| { eventType: "autoLabelRunsRefreshed" }
+	| { eventType: "autoLabelRunReloaded"; runId: ALRProvId }
+	| { eventType: "autoLabelDataLoaded"; autoLabelId: AProvId };
 
 /**
  * Novel-level controller. Events are ignored until start() is called.

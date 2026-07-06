@@ -1,4 +1,4 @@
-import type { CProvId, LGProvId, LProvId, ALRProvId } from "./idTypes";
+import type { CProvId, LGProvId, LProvId, ALRProvId, AProvId } from "./idTypes";
 import type { RequestEvent } from "./requestTypes";
 import type { AddLabelOp, DeleteLabelOp, UpdateLabelOp } from "@/api/models";
 import type { Effect } from "effect";
@@ -95,6 +95,25 @@ export type NovelDataManager = DataManager<
 			runId: ALRProvId,
 			labelGroupId: LGProvId,
 			chapterFilter: ChapterFilter,
+		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		/**
+		 * Reloads the autolabel run list from the server and replaces the local index.
+		 */
+		refreshAutoLabelRuns: () => Effect.Effect<
+			RequestEvent[],
+			UnknownException | FatalException
+		>;
+		/**
+		 * Reloads autolabel metadata for a single run from the server.
+		 */
+		reloadAutoLabelRun: (
+			runId: ALRProvId,
+		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		/**
+		 * Loads autolabel data (the label payload) for a single autolabel.
+		 */
+		loadAutoLabelData: (
+			autoLabelId: AProvId,
 		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
 	},
 	NovelGetters

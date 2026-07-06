@@ -21,6 +21,9 @@ export type RequestVariant =
 	| "reloadGroup"
 	| "openChapter"
 	| "createAutoLabelRun"
+	| "refreshAutoLabelRuns"
+	| "reloadAutoLabelRun"
+	| "loadAutoLabelData"
 	| "promoteAutoLabelRun";
 
 /**

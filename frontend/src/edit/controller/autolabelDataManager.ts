@@ -27,15 +27,21 @@ import {
 	type ProvAutoLabel,
 	type ProvAutoLabelRun,
 } from "./types/idTypes";
-import { Prov, IdempotentCallable, isAllReserveable } from "./types/helperTypes";
+import { Prov, IdempotentCallable, isAllReserveable, makeReservationRequest } from "./types/helperTypes";
 import type { RequestEvent, ReserveList } from "./types/requestTypes";
 import {
 	CreateAutolabelsAutoLabelsPost200Response,
 	CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost200Response,
+	ReadAutoLabelRunsAutoLabelRunsGet200Response,
+	ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet200Response,
+	ReadAutolabelByIdAutoLabelsAutoLabelIdGet200Response,
 } from "@/api/endpoints/default/default.effect";
 import {
 	createAutolabelsAutoLabelsPost,
 	createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost,
+	readAutoLabelRunsAutoLabelRunsGet,
+	readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet,
+	readAutolabelByIdAutoLabelsAutoLabelIdGet,
 } from "@/api/endpoints/default/default";
 
 export type AutolabelDataManager = {
@@ -47,6 +53,13 @@ export type AutolabelDataManager = {
 		runId: ALRProvId,
 		labelGroupId: LGProvId,
 		chapterFilter: ChapterFilter,
+	) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+	refreshAutoLabelRuns: () => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+	reloadAutoLabelRun: (
+		runId: ALRProvId,
+	) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+	loadAutoLabelData: (
+		autoLabelId: AProvId,
 	) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
 };
 
@@ -240,7 +253,7 @@ export const buildAutolabelDataManager = (
 								yield* autoLabelRunIndex.new(runProvId, {
 									run: Prov({ ...validated.run, runId: runProvId }),
 								});
-								autoLabelRunIndex.setData(runProvId, {
+								yield* autoLabelRunIndex.setData(runProvId, {
 									status: "ready",
 									data: { index: yield* buildAutoLabelIndex() },
 								});
@@ -287,7 +300,7 @@ export const buildAutolabelDataManager = (
 										kind: "chapter",
 										servId: CServId(al.chapterId),
 									});
-									alIndexSlot.data.index.new(alProvId, {
+									yield* alIndexSlot.data.index.new(alProvId, {
 										autoLabel: {
 											autoLabelMeta: Prov({
 												...al.autoLabelMeta,
@@ -511,8 +524,447 @@ export const buildAutolabelDataManager = (
 				];
 			});
 
+		const _refreshAutoLabelRuns = (): Effect.Effect<
+			RequestEvent[],
+			UnknownException | FatalException
+		> =>
+			Effect.gen(function* () {
+				const currentRunIds = yield* autoLabelRunIndex.getIds();
+				const reserveList = (): ReserveList => ({
+					autoLabelRun: currentRunIds.map((id) => ({
+						id,
+						kind: "autoLabelRun" as const,
+						desiredState: "locked" as const,
+					})),
+					autoLabel: [],
+					label: [],
+					chapter: [],
+					chapterContent: [],
+					labelData: [],
+					labelGroup: [],
+				});
+
+				return [
+					{
+						cached: false,
+						variant: "refreshAutoLabelRuns" as const,
+						active: false,
+						retries: 3,
+						reservationRequest: {
+							reserveList: IdempotentCallable(reserveList),
+							skip: () => false,
+							wait: () =>
+								isAllReserveable(idRepo, reserveList()).pipe(
+									Effect.map((ready) => !ready),
+								),
+						},
+						onFailure: () => Effect.succeed(void 0),
+						onFatalError: () => Effect.succeed(void 0),
+						preSend: () => Effect.succeed(void 0),
+						send: () =>
+							Effect.gen(function* () {
+								const resp = yield* Effect.tryPromise(() =>
+									readAutoLabelRunsAutoLabelRunsGet({ novelId }),
+								).pipe(
+									Effect.mapError(
+										(err) => new ConnectionException({ orig: err }),
+									),
+								);
+								if (resp.status !== 200) {
+									return yield* Effect.fail(
+										new FatalException({
+											orig: new Error(
+												`Read autolabel runs failed: ${resp.status}`,
+											),
+										}),
+									);
+								}
+								return resp.data;
+							}),
+						postSend: (data) =>
+							Effect.gen(function* () {
+								const validated = yield* Schema.decodeUnknown(
+									ReadAutoLabelRunsAutoLabelRunsGet200Response,
+								)(data).pipe(
+									Effect.mapError((err) => new FatalException({ orig: err })),
+								);
+
+								const existingIds = yield* autoLabelRunIndex.getIds();
+								for (const id of existingIds) {
+									yield* autoLabelRunIndex
+										.delete(id)
+										.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+								}
+
+								for (const run of validated) {
+									const runProvId = yield* idRepo
+										.newIdAndBindId({
+											kind: "autoLabelRun",
+											servId: ALRServId(run.runId),
+										})
+										.pipe(
+											Effect.mapError(
+												(err) => new FatalException({ orig: err }),
+											),
+										);
+									yield* autoLabelRunIndex.new(runProvId, {
+										run: Prov({ ...run, runId: runProvId }),
+									});
+								}
+
+								yield* raiseTriggerEvent({
+									eventType: "autoLabelRunsRefreshed",
+								});
+							}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
+					},
+				];
+			});
+
+		const _reloadAutoLabelRun = (
+			runId: ALRProvId,
+		): Effect.Effect<RequestEvent[], UnknownException | FatalException> =>
+			Effect.gen(function* () {
+				const slot = yield* autoLabelRunIndex
+					.get(runId)
+					.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
+				if (slot.status === "loading") return [];
+
+				yield* autoLabelRunIndex
+					.increment(runId)
+					.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+				yield* autoLabelRunIndex
+					.setData(runId, { status: "loading" })
+					.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+
+				let skipPhaseTwo = true;
+				let oldAutoLabelIds: AProvId[] = [];
+
+				if (slot.status === "ready" && slot.data) {
+					const oldIndex = slot.data.index;
+					oldAutoLabelIds = Effect.runSync(oldIndex.getIds());
+					if (oldAutoLabelIds.length > 0) {
+						skipPhaseTwo = false;
+					}
+				}
+
+				const onError = (): Effect.Effect<void> =>
+					Effect.gen(function* () {
+						yield* autoLabelRunIndex
+							.setData(runId, { status: "error" })
+							.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+						yield* autoLabelRunIndex
+							.decrement(runId)
+							.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+					});
+
+				const phaseOneReserveList = (): ReserveList => ({
+					autoLabelRun: [{ id: runId, kind: "autoLabelRun", desiredState: "locked" }],
+					autoLabel: [],
+					label: [],
+					chapter: [],
+					chapterContent: [],
+					labelData: [],
+					labelGroup: [],
+				});
+
+				const phaseTwoReserveList = (): ReserveList => ({
+					autoLabelRun: [],
+					autoLabel: oldAutoLabelIds.map((id) => {
+						const state = Effect.runSyncExit(
+							idRepo.idObjState({ kind: "autoLabel", id }),
+						);
+						const desiredState =
+							state._tag === "Success" && state.value === "pending"
+								? ("killing" as const)
+								: ("detaching" as const);
+						return {
+							id,
+							kind: "autoLabel" as const,
+							desiredState,
+						};
+					}),
+					label: [],
+					chapter: [],
+					chapterContent: [],
+					labelData: [],
+					labelGroup: [],
+				});
+
+				return [
+					{
+						cached: false,
+						variant: "reloadAutoLabelRun" as const,
+						active: false,
+						retries: 3,
+						reservationRequest: {
+							reserveList: IdempotentCallable(phaseOneReserveList),
+							skip: () => false,
+							wait: () =>
+								isAllReserveable(idRepo, phaseOneReserveList()).pipe(
+									Effect.map((ready) => !ready),
+								),
+						},
+						onFailure: onError,
+						onFatalError: onError,
+						preSend: () => Effect.succeed(void 0),
+						send: () =>
+							Effect.gen(function* () {
+								const servRunId = yield* idRepo
+									.getServerId({ kind: "autoLabelRun", provId: runId })
+									.pipe(
+										Effect.mapError((err) => new FatalException({ orig: err })),
+									);
+								if (!servRunId) {
+									return yield* Effect.fail(
+										new FatalException({
+											orig: new Error("Missing server ID for autolabel run"),
+										}),
+									);
+								}
+								const resp = yield* Effect.tryPromise(() =>
+									readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet(servRunId),
+								).pipe(
+									Effect.mapError(
+										(err) => new ConnectionException({ orig: err }),
+									),
+								);
+								if (resp.status !== 200) {
+									return yield* Effect.fail(
+										new FatalException({
+											orig: new Error(
+												`Read autolabels by run failed: ${resp.status}`,
+											),
+										}),
+									);
+								}
+								return resp.data;
+							}),
+						postSend: (data) =>
+							Effect.gen(function* () {
+								const validated = yield* Schema.decodeUnknown(
+									ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet200Response,
+								)(data).pipe(
+									Effect.mapError((err) => new FatalException({ orig: err })),
+								);
+
+								const newIndex = yield* buildAutoLabelIndex();
+								for (const al of validated) {
+									const alProvId = yield* idRepo
+										.newIdAndBindId({
+											kind: "autoLabel",
+											servId: AServId(al.autoLabelMeta.autoLabelId),
+										})
+										.pipe(
+											Effect.mapError(
+												(err) => new FatalException({ orig: err }),
+											),
+										);
+									const ccProvId = yield* idRepo
+										.newIdAndBindId({
+											kind: "chapterContent",
+											servId: CCServId(al.autoLabelMeta.chapterContentId),
+										})
+										.pipe(
+											Effect.mapError(
+												(err) => new FatalException({ orig: err }),
+											),
+										);
+									const cId = yield* idRepo.newIdAndBindId({
+										kind: "chapter",
+										servId: CServId(al.chapterId),
+									});
+									yield* newIndex
+										.new(alProvId, {
+											autoLabel: {
+												autoLabelMeta: Prov({
+													...al.autoLabelMeta,
+													autoLabelId: alProvId,
+													chapterContentId: ccProvId,
+													runId,
+												}),
+												chapterId: cId,
+											},
+										})
+										.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+								}
+
+								yield* autoLabelRunIndex.setData(runId, {
+									status: "ready",
+									data: { index: newIndex },
+								});
+								yield* autoLabelRunIndex
+									.decrement(runId)
+									.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+
+								yield* raiseTriggerEvent({
+									eventType: "autoLabelRunReloaded",
+									runId,
+								});
+							}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
+					},
+					{
+						cached: false,
+						variant: "reloadAutoLabelRun" as const,
+						active: false,
+						retries: 1,
+						reservationRequest: {
+							skip: () => skipPhaseTwo,
+							wait: () => Effect.succeed(false),
+							reserveList: IdempotentCallable(phaseTwoReserveList),
+						},
+						onFailure: () => Effect.succeed(void 0),
+						onFatalError: () => Effect.succeed(void 0),
+						preSend: () => Effect.succeed(void 0),
+						send: () => Effect.succeed(void 0),
+						postSend: () => Effect.succeed(void 0),
+					},
+				];
+			});
+
+	const _loadAutoLabelData = (
+			autoLabelId: AProvId,
+		): Effect.Effect<RequestEvent[], UnknownException | FatalException> =>
+			Effect.gen(function* () {
+				let parentRunId: ALRProvId | null = null;
+				const runIds = yield* autoLabelRunIndex.getIds();
+				for (const rid of runIds) {
+					const runSlot = yield* autoLabelRunIndex
+						.get(rid)
+						.pipe(
+							Effect.mapError(
+								(err) => new FatalException({ orig: err }),
+							),
+						);
+					if (runSlot.status !== "ready" || !runSlot.data) continue;
+					const ids = yield* runSlot.data.index.getIds();
+					if (ids.includes(autoLabelId)) {
+						parentRunId = rid;
+						break;
+					}
+				}
+				if (!parentRunId) {
+					return yield* Effect.fail(
+						new FatalException({
+							orig: new Error(
+								`AutoLabel ${autoLabelId} not found in any run index`,
+							),
+						}),
+					);
+				}
+
+				const reserveList: ReserveList = {
+					autoLabelRun: [
+						{
+							id: parentRunId,
+							kind: "autoLabelRun",
+							desiredState: "locked",
+						},
+					],
+					autoLabel: [
+						{
+							id: autoLabelId,
+							kind: "autoLabel",
+							desiredState: "locked",
+						},
+					],
+					label: [],
+					chapter: [],
+					chapterContent: [],
+					labelData: [],
+					labelGroup: [],
+				};
+
+				return [
+					{
+						cached: false,
+						variant: "loadAutoLabelData" as const,
+						active: false,
+						retries: 3,
+						reservationRequest: makeReservationRequest(idRepo, reserveList),
+						onFailure: () => Effect.succeed(void 0),
+						onFatalError: () => Effect.succeed(void 0),
+						preSend: () => Effect.succeed(void 0),
+						send: () =>
+							Effect.gen(function* () {
+								const servAlId = yield* idRepo
+									.getServerId({ kind: "autoLabel", provId: autoLabelId })
+									.pipe(
+										Effect.mapError(
+											(err) => new FatalException({ orig: err }),
+										),
+									);
+								if (!servAlId) {
+									return yield* Effect.fail(
+										new FatalException({
+											orig: new Error("Missing server ID for autolabel"),
+										}),
+									);
+								}
+								const resp = yield* Effect.tryPromise(() =>
+									readAutolabelByIdAutoLabelsAutoLabelIdGet(servAlId),
+								).pipe(
+									Effect.mapError(
+										(err) => new ConnectionException({ orig: err }),
+									),
+								);
+								if (resp.status !== 200) {
+									return yield* Effect.fail(
+										new FatalException({
+											orig: new Error(
+												`Read autolabel failed: ${resp.status}`,
+											),
+										}),
+									);
+								}
+								return resp.data;
+							}),
+						postSend: (data) =>
+							Effect.gen(function* () {
+								const validated = yield* Schema.decodeUnknown(
+									ReadAutolabelByIdAutoLabelsAutoLabelIdGet200Response,
+								)(data).pipe(
+									Effect.mapError((err) => new FatalException({ orig: err })),
+								);
+
+								const runSlot = yield* autoLabelRunIndex
+									.get(parentRunId)
+									.pipe(
+										Effect.mapError(
+											(err) => new FatalException({ orig: err }),
+										),
+									);
+								if (runSlot.status !== "ready" || !runSlot.data) {
+									return yield* Effect.fail(
+										new FatalException({
+											orig: new Error(
+												"Parent run not ready for autolabel data",
+											),
+										}),
+									);
+								}
+								yield* runSlot.data.index.setData(autoLabelId, {
+									status: "ready",
+									data: {
+										autoLabelData: validated.autoLabelData
+											? [...validated.autoLabelData]
+											: null,
+									},
+								});
+
+								yield* raiseTriggerEvent({
+									eventType: "autoLabelDataLoaded",
+									autoLabelId,
+								});
+							}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
+					},
+				];
+			});
+
 		return {
 			createAutoLabelRun: decorate(_createAutoLabelRun),
 			promoteAutoLabelRun: decorate(_promoteAutoLabelRun),
+			refreshAutoLabelRuns: _refreshAutoLabelRuns,
+			reloadAutoLabelRun: _reloadAutoLabelRun,
+			loadAutoLabelData: _loadAutoLabelData,
 		};
 	});

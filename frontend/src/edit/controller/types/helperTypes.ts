@@ -211,3 +211,13 @@ export type AutoLabelIndex = SlotIndex<
 >;
 
 export type AutoLabelRunSlot = Slot<{ run: ProvAutoLabelRun }, { index: AutoLabelIndex }>;
+
+export type AutoLabelGetterSlot = Slot<
+	{ autoLabel: ProvAutoLabelMetaWithCid },
+	{ autoLabelData: ProvAutoLabel["autoLabelData"] }
+>;
+
+export type AutoLabelRunGetterSlot = Slot<
+	{ run: ProvAutoLabelRun },
+	{ autolabels: readonly AutoLabelGetterSlot[] }
+>;

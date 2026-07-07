@@ -1,7 +1,8 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type {
 	ALRProvId,
 	CProvId,
+	CCProvId,
 	ProvAutoLabel,
 	ProvAutoLabelRun,
 } from "../controller/types/idTypes";
@@ -12,25 +13,27 @@ export type AutoLabelView = Omit<ProvAutoLabel, "autoLabelData"> & {
 
 export type AutoLabelRunView = {
 	readonly run: ProvAutoLabelRun;
-	readonly overallStatus: ProvAutoLabel["autoLabelStatus"];
-	readonly autolabels: readonly AutoLabelView[];
-};
+} & (
+	| { readonly status: "idle" | "loading" | "error" }
+	| {
+			readonly status: "ready";
+			readonly overallStatus: ProvAutoLabel["autoLabelStatus"];
+			readonly autolabels: readonly AutoLabelView[];
+	  }
+);
 
-export type PromotionChapterFilter = {
-	readonly start?: number;
-	readonly end?: number;
-};
+export type ChapterMatchStatus = "match" | "outdated";
 
-export function useAutoLabelState() {
+export function useAutoLabelState(chapterContentIds: Map<CProvId, CCProvId>) {
 	const [runs, setRuns] = useState<AutoLabelRunView[]>([]);
 	const [selectedRunId, setSelectedRunId] = useState<ALRProvId | null>(null);
-	const [promotionChapterFilter, setPromotionChapterFilter] = useState<PromotionChapterFilter>(
-		{},
-	);
+	const [refreshing, setRefreshingState] = useState(false);
+	const [promoting, setPromotingState] = useState(false);
 
 	const runsRef = useRef<AutoLabelRunView[]>([]);
 	const selectedRunIdRef = useRef<ALRProvId | null>(null);
-	const promotionChapterFilterRef = useRef<PromotionChapterFilter>({});
+	const refreshingRef = useRef(false);
+	const promotingRef = useRef(false);
 
 	const addRun = useCallback((run: AutoLabelRunView) => {
 		runsRef.current = [...runsRef.current, run];
@@ -39,13 +42,15 @@ export function useAutoLabelState() {
 
 	const setRun = useCallback((runProvId: ALRProvId, run: AutoLabelRunView) => {
 		const idx = runsRef.current.findIndex((r) => r.run.runId === runProvId);
-		if (idx === -1) {
-			return;
-		} else {
-			const next = [...runsRef.current];
-			next[idx] = run;
-			runsRef.current = next;
-		}
+		if (idx === -1) return;
+		const next = [...runsRef.current];
+		next[idx] = run;
+		runsRef.current = next;
+		setRuns([...runsRef.current]);
+	}, []);
+
+	const setRunsList = useCallback((nextRuns: AutoLabelRunView[]) => {
+		runsRef.current = nextRuns;
 		setRuns([...runsRef.current]);
 	}, []);
 
@@ -64,22 +69,54 @@ export function useAutoLabelState() {
 		setSelectedRunId(runProvId);
 	}, []);
 
-	const setPromoFilter = useCallback((filter: PromotionChapterFilter) => {
-		promotionChapterFilterRef.current = filter;
-		setPromotionChapterFilter(filter);
+	const setRefreshing = useCallback((value: boolean) => {
+		refreshingRef.current = value;
+		setRefreshingState(value);
 	}, []);
+
+	const setPromoting = useCallback((value: boolean) => {
+		promotingRef.current = value;
+		setPromotingState(value);
+	}, []);
+
+	const chapterMatchMap = useMemo(
+		() =>
+			new Map(
+				runs.map((run) => {
+					if (run.status !== "ready") {
+						return [run.run.runId, new Map<CProvId, ChapterMatchStatus>()] as const;
+					}
+					const runMap = new Map<CProvId, ChapterMatchStatus>();
+					for (const al of run.autolabels) {
+						const currentCC = chapterContentIds.get(al.chapterId);
+						if (currentCC === undefined) continue;
+						runMap.set(
+							al.chapterId,
+							currentCC === al.chapterContentId ? "match" : "outdated",
+						);
+					}
+					return [run.run.runId, runMap] as const;
+				}),
+			),
+		[runs, chapterContentIds],
+	);
 
 	return {
 		runs,
 		selectedRunId,
-		promotionChapterFilter,
+		refreshing,
+		promoting,
+		chapterMatchMap,
 		runsRef,
 		selectedRunIdRef,
-		promotionChapterFilterRef,
+		refreshingRef,
+		promotingRef,
 		addRun,
 		setRun,
+		setRunsList,
 		removeRun,
 		setSelected,
-		setPromoFilter,
+		setRefreshing,
+		setPromoting,
 	};
 }

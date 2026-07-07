@@ -1,6 +1,6 @@
 # Autolabels
 
-**Last updated:** 2026-07-04
+**Last updated:** 2026-07-06
 
 This document describes the autolabel service: the backend NER inference pipeline, the frontend UI for creating and managing autolabel runs, and how the frontend integrates with the controller ecosystem.
 
@@ -76,40 +76,49 @@ The autolabel frontend lives within the editor's layered architecture (Controlle
 
 ### Controller integration
 
-Autolabels need two operations through the controller's request lifecycle (idempotency keys, retries, reservation management):
+Autolabels need several operations through the controller's request lifecycle (idempotency keys, retries, reservation management):
 
 **User events:**
 
 | Event | Payload | What happens |
 |-------|---------|-------------|
-| `createAutoLabelRun` | `{ params, chapterFilter, isPublic? }` | Creates a new run on the backend and dispatches workers. The controller publishes `autoLabelRunCreated` with the new run data when the response arrives. |
-| `promoteAutoLabels` | `{ runProvId, labelGroupProvId, chapterFilter }` | Promotes autolabel results into a label group. Creates `LabelData` + `Label` entries server-side. The controller publishes `autoLabelsPromoted` so the label group manager reloads and the autolabel manager updates UI. |
+| `createAutoLabelRun` | `{ params, chapterFilter }` | Creates a new run on the backend and dispatches workers. The controller publishes `autoLabelRunCreated` with the new run data when the response arrives. |
+| `refreshAutoLabelRuns` | `{}` | Reloads the full run list from the server, replacing the local index. The controller publishes `autoLabelRunsRefreshed`. |
+| `reloadAutoLabelRun` | `{ runId }` | Reloads autolabel metadata for a single run (per-chapter statuses, chapter IDs, error messages). The controller publishes `autoLabelRunReloaded`. |
+| `loadAutoLabelData` | `{ autoLabelId }` | Fetches a single autolabel's full label data payload from the server. The controller publishes `autoLabelDataLoaded`. |
+| `promoteAutoLabelRun` | `{ runId, labelGroupId, chapterFilter }` | Promotes autolabel results into a label group. Creates `LabelData` + `Label` entries server-side. The controller publishes `autoLabelRunPromoted` so the label group manager reloads and the autolabel manager updates UI. |
 
 **Trigger events:**
 
 | Trigger | Payload | Consumers |
 |---------|---------|-----------|
-| `autoLabelRunCreated` | `{ runProvId, run }` | `autolabelManager` → updates hook with new run |
-| `autoLabelsPromoted` | `{ runProvId, labelGroupProvId, successCount, errorCount }` | `labelGroupManager` → reloads label data for the promoted group; `autolabelManager` → updates UI |
+| `autoLabelRunCreated` | `{ run, autoLabels }` | `autolabelManager` → updates hook with new run |
+| `autoLabelRunsRefreshed` | `{}` | `autolabelManager` → replaces the run list in hook state |
+| `autoLabelRunReloaded` | `{ runId }` | `autolabelManager` → reads updated autolabel metadata from DM getters, re-evaluates match/preview state |
+| `autoLabelDataLoaded` | `{ autoLabelId }` | `autolabelManager` → reads label data from DM getters, populates `autolabelPreviews` |
+| `autoLabelRunPromoted` | `{ runId, labelGroupId, chapterFilter, success: [...], errors: [...] }` | `labelGroupManager` → reloads label data for the promoted group; `autolabelManager` → clears promotion state, restores editor mode |
 
 **Trigger events consumed by `autolabelManager`:**
 
-In addition to its own triggers, `autolabelManager.handleControllerEvent` also listens for `textChanged` from the controller. On a text change: the manager recalculates per-run match/outdated statuses for the current chapter (since the chapter content ID has changed), clears the autolabel preview layer if the selected run no longer matches, and updates the green/outdated dot indicators in the chapter list.
+`handleControllerEvent` reacts to: `autoLabelRunCreated`, `autoLabelRunsRefreshed`, `autoLabelRunReloaded`, `autoLabelDataLoaded`, `autoLabelRunPromoted`, `textChanged`, `chapterOpened`, and `errorOccured`.
 
-**Backend API changes needed:**
+On `textChanged` and `chapterOpened`: the manager re-evaluates whether the current chapter still matches the selected run's autolabel. If the selected run no longer matches (different `chapterContentId`), the preview layer is cleared. If it now matches, the manager fires `loadAutoLabelData` for the matching autolabel.
 
-The `GET /auto-label-runs/{runId}/auto-labels` endpoint currently returns `AutoLabelMeta` which includes `chapterContentId` but not `chapterId`. To distinguish a **match** (same chapter content version) from **outdated** (same chapter, different content version after text edits), the endpoint must also return the chapter ID for each autolabel. This requires joining through `chapter_contents` → `chapters` on the backend.
+On `errorOccured`: the manager resets any in-flight loading/promotion state and restores editor mode.
 
 **ID repository:**
 
-Autolabel runs use the `autoLabelRun` kind (an `IdentifiableKind`). Individual autolabels use the `autoLabel` kind but are not individually tracked by the data manager — their metadata is stored as raw data on the run entry.
+Autolabel runs use the `autoLabelRun` kind (an `IdentifiableKind`). Individual autolabels use the `autoLabel` kind and are individually tracked in the data manager via `AutoLabelIndex`, keyed by `AProvId`. Autolabel metadata is stored in run-level `Slot` data; label data payloads are stored in the per-autolabel slot's data field and loaded on demand.
 
 **Reservations:**
 
 | Operation | Reservations | Notes |
 |-----------|-------------|-------|
-| `createAutoLabelRun` | `[autoLabelRun, "creating"]` | Pure creation, no existing resources touched |
-| `promoteAutoLabels` | `[labelGroup, "locked"]`, `[autoLabelRun, "locked"]` | Prevents concurrent label edits during promotion. Pending label ops for the group are flushed before the request. |
+| `createAutoLabelRun` | `[chapterContent, "locked"]` (for each matching chapter) | Locks chapter content to prevent concurrent text edits while the run is being created. The run ID itself is allocated inside `postSend`. On failure, autolabel IDs are detached and the run index entry is removed. |
+| `refreshAutoLabelRuns` | `[autoLabelRun, "locked"]` (all currently-indexed runs) | Prevents concurrent promote/reload during snapshot refresh. |
+| `reloadAutoLabelRun` | Phase 1: `[autoLabelRun, "locked"]`. Phase 2: `[autoLabel, "detaching"/"killing"]` (old autolabels, if any). | Two-phase: load new metadata, then detach old IDs. Follows the `reloadGroup` pattern. |
+| `loadAutoLabelData` | `[autoLabelRun, "locked"]`, `[autoLabel, "locked"]` | Locks both the parent run and the autolabel while fetching label data. |
+| `promoteAutoLabelRun` | `[labelGroup, "updating"]`, `[autoLabelRun, "locked"]`, `[chapterContent, "locked"]` (each in chapter filter) | Prevents concurrent label edits and text edits during promotion. Pending label ops for the group are flushed before the request. |
 
 ### State management
 
@@ -117,11 +126,12 @@ Autolabel runs use the `autoLabelRun` kind (an `IdentifiableKind`). Individual a
 
 | Field | Purpose |
 |-------|---------|
-| `runs` | List of `AutoLabelRunView` objects. Each run includes: run metadata (ID, model, creation time), an overall status derived from individual autolabels (see below), and the full list of individual autolabels (per-chapter status, chapter content ID, chapter ID, error messages). |
+| `runs` | List of `AutoLabelRunView` objects. Each run includes: run metadata (ID, model, creation time), an overall status derived from individual autolabels (see below), the full list of individual autolabels (per-chapter status, chapter content ID, chapter ID, error messages), and a `loading` flag. |
 | `selectedRunId` | Currently selected run from the accordion (`ALRProvId \| null`) |
-| `autolabelPreviews` | Per-chapter-content-ID map of `LabelBase[]` for rendering in CodeMirror. Only populated for the current chapter when it matches the selected run. |
-| `chapterMatchMap` | Per-run map of chapter number → match status: `"match"` (content ID matches), `"outdated"` (same chapter, older content version), or absent (no autolabel). Drives the green/outdated dots in the chapter list. |
-| `promotionChapterFilter` | Chapter range filter for the promote form |
+| `autolabelPreviews` | Per-chapter-content-ID map of `LabelBase[]` for rendering in CodeMirror. Only populated for the current chapter when it matches the selected run. Deferred to later implementation. |
+| `refreshing` / `promoting` | Loading booleans for the global refresh and promote operations. Rendered by the panel as disabled/shimmer states. |
+
+Match/outdated status for chapter list dots is computed via `useMemo` from the selected run's autolabel data and the current chapter's content ID. No separate `chapterMatchMap` state is stored. A helper hook (`useAutoLabels`) takes the current chapter ID and a chapter-to-content-ID mapping and derives the match status per chapter number.
 
 **Run overall status** (derived from individual autolabel statuses):
 
@@ -138,12 +148,12 @@ Autolabel runs use the `autoLabelRun` kind (an `IdentifiableKind`). Individual a
 | Method | Direction | Purpose |
 |--------|-----------|---------|
 | `createRun(params, filter)` | → controller | Sends `createAutoLabelRun` user event |
-| `selectRun(runId)` | → hook | Sets `selectedRunId`, fetches autolabel data for current chapter, populates `autolabelPreviews` and `chapterMatchMap` |
-| `deselectRun()` | → hook | Clears `selectedRunId`, `autolabelPreviews`, `chapterMatchMap` |
-| `promote(runId, labelGroupId, filter)` | → controller | Sends `promoteAutoLabels` user event |
-| `refreshAllRuns()` | → hook | Fetches full run list and statuses from API (manual + 30s polling) |
-| `reloadRun(runId)` | → hook | Fetches individual autolabel statuses for a single run on demand |
-| `handleControllerEvent(event)` | ← controller | Reacts to `autoLabelRunCreated`, `autoLabelsPromoted`, and `textChanged` |
+| `selectRun(runId)` | → controller, then → hook | Sets `selectedRunId`, fires `reloadAutoLabelRun` user event. On `autoLabelRunReloaded` trigger: if the current chapter is open and a matching autolabel exists whose label data is not yet loaded, fires `loadAutoLabelData`. On `autoLabelDataLoaded`: populates `autolabelPreviews`. |
+| `deselectRun()` | → hook | Clears `selectedRunId` and `autolabelPreviews`. Match dot state updates on next render via `useMemo`. |
+| `promote(runId, labelGroupId, filter)` | → controller | Sets editor to view mode, sends `promoteAutoLabelRun` user event. On response, restores previous mode. |
+| `refreshAllRuns()` | → controller | Fires `refreshAutoLabelRuns` user event. Also called on a 30s polling interval. |
+| `reloadRun(runId)` | → controller | Fires `reloadAutoLabelRun` user event (used by per-run [↻] button). |
+| `handleControllerEvent(event)` | ← controller | Reacts to `autoLabelRunCreated`, `autoLabelRunsRefreshed`, `autoLabelRunReloaded`, `autoLabelDataLoaded`, `autoLabelRunPromoted`, `textChanged`, `chapterOpened`, and `errorOccured`. |
 
 ### Editor integration
 
@@ -156,7 +166,7 @@ When a run is selected and the current chapter has a matching autolabel (same `c
 
 **Chapter list match indicators:**
 
-When a run is selected, the chapter list in the LeftPanel shows per-chapter indicators driven by `chapterMatchMap`:
+When a run is selected, the chapter list in the LeftPanel shows per-chapter indicators computed from the selected run's autolabel data and the current chapter content IDs. The match status is derived via `useMemo` rather than stored in a separate hook field:
 
 | Indicator | Meaning |
 |-----------|---------|
@@ -164,7 +174,7 @@ When a run is selected, the chapter list in the LeftPanel shows per-chapter indi
 | Yellow dot (○) / `(outdated)` | An autolabel exists for this chapter but references an older content version (text was edited since the run) |
 | None | No autolabel exists for this chapter in the selected run |
 
-This mapping requires the backend to include the `chapterId` alongside `chapterContentId` in autolabel metadata (see backend API changes above).
+The autolabel metadata includes `chapterId` alongside `chapterContentId`, returned by the `GET /auto-label-runs/{runId}/auto-labels` endpoint as `AutoLabelMetaWithCid` (a wrapper containing `autoLabelMeta: AutoLabelMeta` and `chapterId: UUID`).
 
 **Promotion mode lock:**
 
@@ -289,7 +299,9 @@ When **expanded**, the run shows a chapter status list. Each row: chapter number
 - **Arrow (→)** — visual direction indicator: "from run → into label group."
 - **Label group dropdown** — target group to promote into. Defaults to the currently active label group (read from `useTrackedLabelGroups`). Changing it calls `labelGroupManager.setActive`, so the editor immediately switches to show that group's labels. After promotion, the newly imported labels appear in the active group.
 - **Chapter range** — filters which chapters from the run to promote.
-- **Promote button** — sets editor mode to view (blocking edits and labeling), sends `promoteAutoLabels` user event. On response: `autoLabelsPromoted` trigger fires, `labelGroupManager` reloads the promoted group, previous mode is restored.
+- **Promote button** — sets editor mode to view (blocking edits and labeling), sends `promoteAutoLabelRun` user event. On response: `autoLabelRunPromoted` trigger fires, `labelGroupManager` reloads the promoted group, previous mode is restored.
+
+The chapter range inputs in the Promote section are owned by the panel as local React state, not stored in the hook.
 
 ### Schema-driven params form
 

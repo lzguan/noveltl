@@ -14,7 +14,7 @@ import type { CluenerParams, DoNothingParams, Novel, TextOp } from "@/api/models
 import { Effect } from "effect";
 import type { KeyedRequestEvent } from "./requestTypes";
 import type { NotFoundException } from "./errors";
-import type { ChapterGetterSlot, LabelDataSlot, LabelGroupSlot } from "./helperTypes";
+import type { ChapterGetterSlot, LabelDataSlot, LabelGroupSlot, AutoLabelRunGetterSlot } from "./helperTypes";
 import type { Role } from "@/api/models/role";
 import type { UnknownException } from "effect/Cause";
 
@@ -60,6 +60,8 @@ export interface NovelGetters {
 	chapterIds: () => Effect.Effect<readonly CProvId[]>;
 	chapterGetterSlot: (chapterId: CProvId) => Effect.Effect<ChapterGetterSlot, NotFoundException>;
 	labelGroupSlot: (labelGroupId: LGProvId) => Effect.Effect<LabelGroupSlot, NotFoundException>;
+	autoLabelRunIds: () => Effect.Effect<readonly ALRProvId[]>;
+	autoLabelRunSlot: (runId: ALRProvId) => Effect.Effect<AutoLabelRunGetterSlot, NotFoundException>;
 }
 
 export type ChapterFilter = {

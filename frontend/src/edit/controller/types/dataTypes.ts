@@ -12,6 +12,7 @@ import type {
 } from "./errors";
 import type { ChapterGetters, ChapterFilter } from "./controllerTypes";
 import type { NovelGetters } from "./controllerTypes";
+import type { AutoLabelRunGetterSlot } from "./helperTypes";
 import type { CluenerParams, DoNothingParams } from "@/api/models";
 
 export type LabelOp = AddLabelOp | DeleteLabelOp | UpdateLabelOp;
@@ -117,6 +118,42 @@ export type NovelDataManager = DataManager<
 		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
 	},
 	NovelGetters
+>;
+
+/**
+ * Getters exposed by the autolabel data manager.
+ */
+export interface AutolabelGetters {
+	autoLabelRunIds: () => Effect.Effect<readonly ALRProvId[]>;
+	autoLabelRunSlot: (runId: ALRProvId) => Effect.Effect<AutoLabelRunGetterSlot, NotFoundException>;
+}
+
+/**
+ * Manages autolabel runs and their child autolabels.
+ */
+export type AutolabelDataManager = DataManager<
+	{
+		createAutoLabelRun: (
+			params: CluenerParams | DoNothingParams,
+			chapterFilter: ChapterFilter,
+		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		promoteAutoLabelRun: (
+			runId: ALRProvId,
+			labelGroupId: LGProvId,
+			chapterFilter: ChapterFilter,
+		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		refreshAutoLabelRuns: () => Effect.Effect<
+			RequestEvent[],
+			UnknownException | FatalException
+		>;
+		reloadAutoLabelRun: (
+			runId: ALRProvId,
+		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		loadAutoLabelData: (
+			autoLabelId: AProvId,
+		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+	},
+	AutolabelGetters
 >;
 
 /**

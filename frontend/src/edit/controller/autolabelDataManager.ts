@@ -29,6 +29,8 @@ import {
 } from "./types/idTypes";
 import { Prov, IdempotentCallable, isAllReserveable, makeReservationRequest } from "./types/helperTypes";
 import type { RequestEvent, ReserveList } from "./types/requestTypes";
+import type { AutolabelDataManager } from "./types/dataTypes";
+import { type AutoLabelGetterSlot, type AutoLabelRunGetterSlot, type AutoLabelRunSlot } from "./types/helperTypes";
 import {
 	CreateAutolabelsAutoLabelsPost200Response,
 	CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost200Response,
@@ -44,24 +46,30 @@ import {
 	readAutolabelByIdAutoLabelsAutoLabelIdGet,
 } from "@/api/endpoints/default/default";
 
-export type AutolabelDataManager = {
-	createAutoLabelRun: (
-		params: CluenerParams | DoNothingParams,
-		chapterFilter: ChapterFilter,
-	) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
-	promoteAutoLabelRun: (
-		runId: ALRProvId,
-		labelGroupId: LGProvId,
-		chapterFilter: ChapterFilter,
-	) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
-	refreshAutoLabelRuns: () => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
-	reloadAutoLabelRun: (
-		runId: ALRProvId,
-	) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
-	loadAutoLabelData: (
-		autoLabelId: AProvId,
-	) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
-};
+function projectRunSlot(
+	slot: AutoLabelRunSlot,
+): Effect.Effect<AutoLabelRunGetterSlot, NotFoundException> {
+	if (slot.status !== "ready" || !slot.data) {
+		return Effect.succeed({
+			meta: slot.meta,
+			status: slot.status as "idle" | "loading" | "error",
+			inFlight: slot.inFlight,
+		});
+	}
+	return Effect.gen(function* () {
+		const autolabels: AutoLabelGetterSlot[] = [];
+		const alIds = yield* slot.data.index.getIds();
+		for (const alId of alIds) {
+			autolabels.push(yield* slot.data.index.get(alId));
+		}
+		return {
+			meta: slot.meta,
+			status: "ready" as const,
+			data: { autolabels },
+			inFlight: slot.inFlight,
+		};
+	});
+}
 
 export const buildAutolabelDataManager = (
 	novelId: string,
@@ -966,5 +974,12 @@ export const buildAutolabelDataManager = (
 			refreshAutoLabelRuns: _refreshAutoLabelRuns,
 			reloadAutoLabelRun: _reloadAutoLabelRun,
 			loadAutoLabelData: _loadAutoLabelData,
+			getters: {
+				autoLabelRunIds: () => autoLabelRunIndex.getIds(),
+				autoLabelRunSlot: (runId: ALRProvId) =>
+					autoLabelRunIndex.get(runId).pipe(
+						Effect.flatMap((slot) => projectRunSlot(slot)),
+					),
+			},
 		};
 	});

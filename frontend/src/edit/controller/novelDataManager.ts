@@ -17,6 +17,7 @@ import {
 import { TimeoutException, UnknownException } from "effect/Cause";
 import type { NovelGetters, TriggerEvent } from "./types/controllerTypes";
 import {
+	ALRProvId,
 	CProvId,
 	CServId,
 	type IDRepository,
@@ -136,6 +137,8 @@ export const buildNovelDataManager = (
 					}),
 				),
 			labelGroupSlot: (labelGroupId: LGProvId) => labelGroupsIndex.get(labelGroupId),
+			autoLabelRunIds: () => autolabelDM.getters.autoLabelRunIds(),
+			autoLabelRunSlot: (runId: ALRProvId) => autolabelDM.getters.autoLabelRunSlot(runId),
 		};
 
 		const _addLabelGroup = (

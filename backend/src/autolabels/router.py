@@ -118,5 +118,5 @@ async def create_autolabels(
     except Exception as e:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unknown error occured: {str(e)}",
+            detail="An unknown error occured.",
         ) from e

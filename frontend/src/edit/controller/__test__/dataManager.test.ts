@@ -2,23 +2,33 @@ import { describe, expect, it, vi } from "vitest";
 import { Effect } from "effect";
 import { buildChapterDataManager } from "../chapterDataManager";
 import { buildIdRepository } from "../idRepository";
-import { CServId, LGServId } from "../types/idTypes";
+import { buildRequestManager } from "../requestmanager";
+import { buildNovelDataManager, type NovelData } from "../novelDataManager";
+import { CServId, LGServId, type IDRepository } from "../types/idTypes";
 import type { TriggerEvent } from "../types/controllerTypes";
 import { Prov } from "../types/helperTypes";
 import { buildLabelGroupIndex } from "../dmHelpers";
 import { Visibility, type Novel } from "@/api/models";
 import type { Role } from "@/api/models/role";
-import { RequestKey } from "../types/requestTypes";
+import { RequestKey, type ReserveList } from "../types/requestTypes";
 import {
+	createLabelGroupLabelGroupsPost,
+	readEditChapterDataEditChapterDataChapterIdPost,
+	type readEditChapterDataEditChapterDataChapterIdPostResponse,
 	updateChapterContentChaptersChapterIdContentPatch,
+	updateLabelDataStreamLabelDatasLabelDataIdPatch,
 	readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
+	type readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse,
 } from "@/api/endpoints/default/default";
 
 vi.mock("@/api/endpoints/default/default", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@/api/endpoints/default/default")>();
 	return {
 		...actual,
+		createLabelGroupLabelGroupsPost: vi.fn(),
+		readEditChapterDataEditChapterDataChapterIdPost: vi.fn(),
 		updateChapterContentChaptersChapterIdContentPatch: vi.fn(),
+		updateLabelDataStreamLabelDatasLabelDataIdPatch: vi.fn(),
 		readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost: vi.fn(),
 	};
 });
@@ -29,6 +39,7 @@ const UUID3 = "00000000-0000-0000-0000-000000000003";
 const UUID4 = "00000000-0000-0000-0000-000000000004";
 const UUID5 = "00000000-0000-0000-0000-000000000005";
 const UUID6 = "00000000-0000-0000-0000-000000000006";
+const UUID7 = "00000000-0000-0000-0000-000000000007";
 const NOVEL_ID = "00000000-0000-0000-0000-00000000000a";
 const SOURCE_WORK_ID = "00000000-0000-0000-0000-00000000000b";
 
@@ -129,6 +140,195 @@ function buildTestChapterDM() {
 
 		return { chapterDM, triggerEvents, labelGroupId: labelGroupProvId, chapterId, idRepo };
 	});
+}
+
+function makeNovelDataWithoutLabelGroups(): NovelData {
+	return {
+		novel: mockNovel,
+		chapters: [
+			{
+				chapterId: UUID1,
+				chapterNum: 1,
+				chapterTitle: "Chapter 1",
+				chapterIsPublic: false,
+				novelId: NOVEL_ID,
+			},
+		],
+		labelGroups: [],
+		novelRole: mockRole,
+		autoLabelRuns: [],
+	};
+}
+
+function makeOpenChapterResponse(): readEditChapterDataEditChapterDataChapterIdPostResponse {
+	return {
+		status: 200,
+		data: {
+			chapterContent: {
+				chapterContentId: UUID2,
+				chapterContentText: "Alice met Bob at the park.",
+				chapterContentVersion: 1,
+			},
+			eagerLabelData: [],
+			lazyLabelData: [],
+			noLabelData: [],
+		},
+		headers: new Headers(),
+	};
+}
+
+function makeReloadResponse(
+	labelDataId: string,
+): readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse {
+	return {
+		status: 200,
+		data: [
+			{
+				labelData: {
+					labelDataId,
+					chapterContentId: UUID2,
+					labelGroupId: UUID3,
+				},
+				labelGroup: {
+					labelGroupId: UUID3,
+					labelGroupName: "Characters",
+					novelId: NOVEL_ID,
+				},
+				labels: [
+					{
+						labelId: "00000000-0000-0000-0000-0000000000e0",
+						labelDataId,
+						labelStart: 0,
+						labelEnd: 5,
+						labelWord: "Alice",
+						labelEntityGroup: "character",
+						labelScore: 1,
+						labelDirty: false,
+					},
+					{
+						labelId: "00000000-0000-0000-0000-0000000000e1",
+						labelDataId,
+						labelStart: 10,
+						labelEnd: 13,
+						labelWord: "Bob",
+						labelEntityGroup: "character",
+						labelScore: 1,
+						labelDirty: false,
+					},
+				],
+			},
+		],
+		headers: new Headers(),
+	};
+}
+
+const reserveAll = (idRepo: IDRepository, reserveList: ReserveList) =>
+	Effect.gen(function* () {
+		for (const reservation of reserveList.autoLabel) {
+			yield* idRepo.reserveIdObjState(reservation);
+		}
+		for (const reservation of reserveList.autoLabelRun) {
+			yield* idRepo.reserveIdObjState(reservation);
+		}
+		for (const reservation of reserveList.chapter) {
+			yield* idRepo.reserveIdObjState(reservation);
+		}
+		for (const reservation of reserveList.chapterContent) {
+			yield* idRepo.reserveIdObjState(reservation);
+		}
+		for (const reservation of reserveList.label) {
+			yield* idRepo.reserveIdObjState(reservation);
+		}
+		for (const reservation of reserveList.labelData) {
+			yield* idRepo.reserveIdObjState(reservation);
+		}
+		for (const reservation of reserveList.labelGroup) {
+			yield* idRepo.reserveIdObjState(reservation);
+		}
+	});
+
+const releaseAllOnSuccess = (idRepo: IDRepository, reserveList: ReserveList) =>
+	Effect.gen(function* () {
+		for (const reservation of reserveList.autoLabel) {
+			yield* idRepo.releaseIdObjStateOnSuccess(reservation);
+		}
+		for (const reservation of reserveList.autoLabelRun) {
+			yield* idRepo.releaseIdObjStateOnSuccess(reservation);
+		}
+		for (const reservation of reserveList.chapter) {
+			yield* idRepo.releaseIdObjStateOnSuccess(reservation);
+		}
+		for (const reservation of reserveList.chapterContent) {
+			yield* idRepo.releaseIdObjStateOnSuccess(reservation);
+		}
+		for (const reservation of reserveList.label) {
+			yield* idRepo.releaseIdObjStateOnSuccess(reservation);
+		}
+		for (const reservation of reserveList.labelData) {
+			yield* idRepo.releaseIdObjStateOnSuccess(reservation);
+		}
+		for (const reservation of reserveList.labelGroup) {
+			yield* idRepo.releaseIdObjStateOnSuccess(reservation);
+		}
+	});
+
+async function buildOpenedNovelWithAddedLabelGroup() {
+	const openChapterMock = vi.mocked(readEditChapterDataEditChapterDataChapterIdPost);
+	const createLabelGroupMock = vi.mocked(createLabelGroupLabelGroupsPost);
+	openChapterMock.mockClear();
+	createLabelGroupMock.mockClear();
+	openChapterMock.mockResolvedValue(makeOpenChapterResponse());
+	createLabelGroupMock.mockResolvedValue({
+		status: 200,
+		data: {
+			labelGroupId: UUID3,
+			labelGroupName: "Characters",
+			novelId: NOVEL_ID,
+		},
+		headers: new Headers(),
+	});
+
+	const idRepo = buildIdRepository();
+	const novelDM = Effect.runSync(
+		buildNovelDataManager(
+			() => Effect.succeed(makeNovelDataWithoutLabelGroups()),
+			() => Effect.succeed(void 0),
+			idRepo,
+		),
+	);
+	const chapterId = Effect.runSync(novelDM.getters.chapterIds())[0];
+	expect(chapterId).toBeDefined();
+
+	const openEvents = Effect.runSync(
+		novelDM.openChapter(chapterId, [], {
+			now: true,
+			forEditor: true,
+			fromCached: false,
+		}),
+	);
+	expect(openEvents).toHaveLength(1);
+	const openResponse = await Effect.runPromise(openEvents[0].send(RequestKey("open-key")));
+	await Effect.runPromise(openEvents[0].postSend(openResponse));
+
+	const addGroupEvents = Effect.runSync(novelDM.addLabelGroup("Characters"));
+	expect(addGroupEvents).toHaveLength(1);
+	const labelGroupId = Effect.runSync(novelDM.getters.labelGroupIds())[0];
+	expect(labelGroupId).toBeDefined();
+
+	const addGroupReserveList = addGroupEvents[0].reservationRequest.reserveList();
+	Effect.runSync(reserveAll(idRepo, addGroupReserveList));
+	const addGroupResponse = await Effect.runPromise(
+		addGroupEvents[0].send(RequestKey("add-group-key")),
+	);
+	await Effect.runPromise(addGroupEvents[0].postSend(addGroupResponse));
+	Effect.runSync(releaseAllOnSuccess(idRepo, addGroupReserveList));
+
+	const chapterDM = novelDM.getChapterDM(chapterId);
+	if (chapterDM === null) {
+		throw new Error("Chapter data manager was not opened");
+	}
+
+	return { chapterDM, idRepo, labelGroupId };
 }
 
 describe("buildChapterDataManager", () => {
@@ -479,52 +679,47 @@ describe("buildChapterDataManager", () => {
 	});
 
 	describe("reload then text edit", () => {
+		it("does not leave reloadGroup waiting after openChapter then addLabelGroup", async () => {
+			const { chapterDM, labelGroupId } = await buildOpenedNovelWithAddedLabelGroup();
+
+			const reloadEvents = Effect.runSync(chapterDM.reloadGroup(labelGroupId, true));
+			expect(reloadEvents).toHaveLength(2);
+
+			const waitResult = Effect.runSync(reloadEvents[0].reservationRequest.wait());
+			expect(waitResult).toBe(false);
+		});
+
+		it("omits pending labelData from reloadGroup primary request for a newly added group", async () => {
+			const { chapterDM, idRepo, labelGroupId } =
+				await buildOpenedNovelWithAddedLabelGroup();
+
+			const reloadEvents = Effect.runSync(chapterDM.reloadGroup(labelGroupId, true));
+			expect(reloadEvents).toHaveLength(2);
+
+			const reserveList = reloadEvents[0].reservationRequest.reserveList();
+			const labelGroupReady = Effect.runSync(
+				idRepo.isReserveable(reserveList.labelGroup[0]),
+			);
+			const cleanupReserveList = reloadEvents[1].reservationRequest.reserveList();
+
+			expect(labelGroupReady).toBe(true);
+			expect(reserveList.labelData).toEqual([]);
+			expect(cleanupReserveList.labelData).toEqual([
+				{
+					id: cleanupReserveList.labelData[0].id,
+					kind: "labelData",
+					desiredState: "killing",
+				},
+			]);
+		});
+
 		it("blocks text op reservation when reload returns same labelDataId", async () => {
 			const reloadMock = vi.mocked(
 				readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
 			);
 			reloadMock.mockClear();
 
-			reloadMock.mockResolvedValue({
-				status: 200,
-				data: [
-					{
-						labelData: {
-							labelDataId: UUID4,
-							chapterContentId: UUID2,
-							labelGroupId: UUID3,
-						},
-						labelGroup: {
-							labelGroupId: UUID3,
-							labelGroupName: "Characters",
-							novelId: NOVEL_ID,
-						},
-						labels: [
-							{
-								labelId: "00000000-0000-0000-0000-0000000000e0",
-								labelDataId: UUID4,
-								labelStart: 0,
-								labelEnd: 5,
-								labelWord: "Alice",
-								labelEntityGroup: "character",
-								labelScore: 1,
-								labelDirty: false,
-							},
-							{
-								labelId: "00000000-0000-0000-0000-0000000000e1",
-								labelDataId: UUID4,
-								labelStart: 10,
-								labelEnd: 13,
-								labelWord: "Bob",
-								labelEntityGroup: "character",
-								labelScore: 1,
-								labelDirty: false,
-							},
-						],
-					},
-				],
-				headers: new Headers(),
-			});
+			reloadMock.mockResolvedValue(makeReloadResponse(UUID4));
 
 			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
 
@@ -555,6 +750,100 @@ describe("buildChapterDataManager", () => {
 
 			const waitResult = Effect.runSync(textEvents[0].reservationRequest.wait());
 			expect(waitResult).toBe(false);
+		});
+
+		it("drains reload cleanup after the primary reload request releases its locks", async () => {
+			const reloadMock = vi.mocked(
+				readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
+			);
+			reloadMock.mockClear();
+			reloadMock.mockResolvedValue(makeReloadResponse(UUID7));
+
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
+			const requestManager = Effect.runSync(
+				buildRequestManager(idRepo, () => Effect.succeed(void 0)),
+			);
+
+			const reloadEvents = Effect.runSync(chapterDM.reloadGroup(labelGroupId, true));
+			expect(reloadEvents).toHaveLength(2);
+			for (const event of reloadEvents) {
+				requestManager.enqueueRequest(event);
+			}
+
+			const flushResult = await Effect.runPromise(
+				Effect.either(requestManager.waitFlush().pipe(Effect.timeout("500 millis"))),
+			);
+
+			expect(flushResult._tag).toBe("Right");
+			expect(requestManager.isQueueEmpty()).toBe(true);
+		});
+
+		it("allows the reload cleanup request to reserve after primary reload success", async () => {
+			const reloadMock = vi.mocked(
+				readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
+			);
+			reloadMock.mockClear();
+			reloadMock.mockResolvedValue(makeReloadResponse(UUID7));
+
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
+
+			const reloadEvents = Effect.runSync(chapterDM.reloadGroup(labelGroupId, true));
+			expect(reloadEvents).toHaveLength(2);
+
+			const primaryReload = reloadEvents[0];
+			const cleanupReload = reloadEvents[1];
+			const primaryReserveList = primaryReload.reservationRequest.reserveList();
+
+			Effect.runSync(reserveAll(idRepo, primaryReserveList));
+			const responseData = await Effect.runPromise(
+				primaryReload.send(RequestKey("reload-key")),
+			);
+			await Effect.runPromise(primaryReload.postSend(responseData));
+			Effect.runSync(releaseAllOnSuccess(idRepo, primaryReserveList));
+
+			const cleanupWaitResult = Effect.runSync(cleanupReload.reservationRequest.wait());
+			expect(cleanupWaitResult).toBe(false);
+		});
+
+		it("drains a pending label op followed by reload and cleanup", async () => {
+			const labelOpMock = vi.mocked(updateLabelDataStreamLabelDatasLabelDataIdPatch);
+			const reloadMock = vi.mocked(
+				readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
+			);
+			labelOpMock.mockClear();
+			reloadMock.mockClear();
+			labelOpMock.mockResolvedValue({
+				status: 204,
+				data: undefined,
+				headers: new Headers(),
+			});
+			reloadMock.mockResolvedValue(makeReloadResponse(UUID7));
+
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
+			const requestManager = Effect.runSync(
+				buildRequestManager(idRepo, () => Effect.succeed(void 0)),
+			);
+
+			Effect.runSync(chapterDM.addLabel(labelGroupId, 6, 9, "met"));
+			const reloadEvents = Effect.runSync(chapterDM.reloadGroup(labelGroupId, true));
+			expect(reloadEvents.map((event) => event.variant)).toEqual([
+				"labelOp",
+				"reloadGroup",
+				"reloadGroup",
+			]);
+
+			for (const event of reloadEvents) {
+				requestManager.enqueueRequest(event);
+			}
+
+			const flushResult = await Effect.runPromise(
+				Effect.either(requestManager.waitFlush().pipe(Effect.timeout("500 millis"))),
+			);
+
+			expect(flushResult._tag).toBe("Right");
+			expect(requestManager.isQueueEmpty()).toBe(true);
+			expect(labelOpMock).toHaveBeenCalledTimes(1);
+			expect(reloadMock).toHaveBeenCalledTimes(1);
 		});
 	});
 });

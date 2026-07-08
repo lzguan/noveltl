@@ -815,6 +815,11 @@ export const buildAutolabelDataManager = (
 										})
 										.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
 								}
+								const refreshedAutoLabelIds = new Set(yield* newIndex.getIds());
+								oldAutoLabelIds = oldAutoLabelIds.filter(
+									(id) => !refreshedAutoLabelIds.has(id),
+								);
+								skipPhaseTwo = oldAutoLabelIds.length === 0;
 
 								yield* autoLabelRunIndex.setData(runId, {
 									status: "ready",

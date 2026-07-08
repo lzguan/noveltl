@@ -1089,6 +1089,9 @@ export const buildChapterDataManager = (
 					});
 
 				const reloadReserveList: () => ReserveList = () => {
+					const oldLabelDataServId = Effect.runSyncExit(
+						idRepo.getServerId({ kind: "labelData", provId: oldLabelDataProvId }),
+					);
 					return {
 						autoLabel: [],
 						autoLabelRun: [],
@@ -1097,9 +1100,17 @@ export const buildChapterDataManager = (
 						labelGroup: [
 							{ id: labelGroupId, kind: "labelGroup", desiredState: "locked" },
 						],
-						labelData: [
-							{ id: oldLabelDataProvId, kind: "labelData", desiredState: "locked" },
-						],
+						labelData:
+							oldLabelDataServId._tag === "Success" &&
+							oldLabelDataServId.value !== null
+								? [
+										{
+											id: oldLabelDataProvId,
+											kind: "labelData",
+											desiredState: "locked",
+										},
+									]
+								: [],
 						label: oldLabelIds.map((id) => ({
 							id,
 							kind: "label" as const,

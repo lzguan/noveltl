@@ -176,6 +176,12 @@ export function EditNovelPage() {
 		ctrl.subscribe(autoLabelMgr.handleControllerEvent);
 		ctrl.subscribe(errorMgr.handleTriggerEvent);
 
+		Effect.runSync(
+			autoLabelMgr.handleControllerEvent(ctrl.getters, {
+				eventType: "autoLabelRunsRefreshed",
+			}),
+		);
+
 		// Seed chapters from controller
 		Effect.runSync(
 			Effect.gen(function* () {

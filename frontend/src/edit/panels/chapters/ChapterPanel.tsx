@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
-import type { CProvId, ProvChapter } from "../controller/types/idTypes";
+import type { CProvId, ProvChapter } from "../../controller/types/idTypes";
 
 export function ChapterPanel({
 	chapters,

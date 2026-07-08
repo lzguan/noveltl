@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
-import type { LGProvId } from "../controller/types/idTypes";
-import type { LabelGroupView } from "../hooks/useTrackedLabelGroups";
+import type { LGProvId } from "../../controller/types/idTypes";
+import type { LabelGroupView } from "../../hooks/useTrackedLabelGroups";
 
 function LabelGroupRow({
 	id,

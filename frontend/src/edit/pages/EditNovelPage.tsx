@@ -23,7 +23,7 @@ import { createErrorManager } from "../managers/errorManager";
 import { createAutoLabelManager } from "../managers/autolabelManager";
 import { makeActiveGroupLabelSource } from "../labeling/activeGroupLabelSource";
 import type { LabelEditing, LabelSink } from "../labeling/types";
-import { AutoLabelPanel } from "../panels/AutoLabelPanel";
+import { AutoLabelPanel } from "../panels/autoLabels/AutoLabelPanel";
 import { EditorPanel } from "../panels/EditorPanel";
 import { LeftPanel } from "../panels/LeftPanel";
 import { RightPanel } from "../panels/RightPanel";

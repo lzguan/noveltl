@@ -10,11 +10,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import type { ChapterFilter } from "../controller/types/controllerTypes";
-import type { LGProvId } from "../controller/types/idTypes";
-import type { AutoLabelManager } from "../managers/autolabelManager";
-import type { LabelGroupView } from "../hooks/useTrackedLabelGroups";
-import type { useAutoLabelState } from "../hooks/useAutoLabelState";
+import type { ChapterFilter } from "../../controller/types/controllerTypes";
+import type { LGProvId } from "../../controller/types/idTypes";
+import type { AutoLabelManager } from "../../managers/autolabelManager";
+import type { LabelGroupView } from "../../hooks/useTrackedLabelGroups";
+import type { useAutoLabelState } from "../../hooks/useAutoLabelState";
 
 function parseChapterNum(value: string): number | undefined {
 	const trimmed = value.trim();

@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { ChapterFilter } from "../controller/types/controllerTypes";
-import type { AutoLabelManager } from "../managers/autolabelManager";
+import type { ChapterFilter } from "../../controller/types/controllerTypes";
+import type { AutoLabelManager } from "../../managers/autolabelManager";
 import { AutoLabelParamsForm, type AutoLabelParamsValue } from "./AutoLabelParamsForm";
 
 function parseChapterNum(value: string): number | undefined {

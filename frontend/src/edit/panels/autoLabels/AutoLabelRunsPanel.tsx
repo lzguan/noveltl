@@ -8,14 +8,14 @@ import {
 import { cn } from "@/lib/utils";
 import { ChevronRight, RefreshCw } from "lucide-react";
 import { useMemo } from "react";
-import type { CProvId, ProvChapter } from "../controller/types/idTypes";
-import type { AutoLabelManager } from "../managers/autolabelManager";
+import type { CProvId, ProvChapter } from "../../controller/types/idTypes";
+import type { AutoLabelManager } from "../../managers/autolabelManager";
 import type {
 	AutoLabelRunView,
 	AutoLabelView,
 	ChapterMatchStatus,
 	useAutoLabelState,
-} from "../hooks/useAutoLabelState";
+} from "../../hooks/useAutoLabelState";
 
 function statusVariant(status: AutoLabelView["autoLabelStatus"]) {
 	if (status === "failed") return "destructive";

@@ -7,10 +7,10 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
-import type { CProvId, ProvChapter, LGProvId } from "../controller/types/idTypes";
-import type { useAutoLabelState } from "../hooks/useAutoLabelState";
-import type { LabelGroupView } from "../hooks/useTrackedLabelGroups";
-import type { AutoLabelManager } from "../managers/autolabelManager";
+import type { CProvId, ProvChapter, LGProvId } from "../../controller/types/idTypes";
+import type { useAutoLabelState } from "../../hooks/useAutoLabelState";
+import type { LabelGroupView } from "../../hooks/useTrackedLabelGroups";
+import type { AutoLabelManager } from "../../managers/autolabelManager";
 import { AutoLabelRunsPanel } from "./AutoLabelRunsPanel";
 import { CreateAutoLabelPanel } from "./CreateAutoLabelPanel";
 import { PromoteAutoLabelPanel } from "./PromoteAutoLabelPanel";

@@ -35,7 +35,6 @@ export type AutoLabelUserEventHandlers = {
 
 export type AutoLabelManager = AutoLabelUserEventHandlers & {
 	handleControllerEvent(getters: NovelGetters, event: TriggerEvent): Effect.Effect<void>;
-	stopPolling(): void;
 };
 
 function deriveOverallStatus(
@@ -88,7 +87,6 @@ export function createAutoLabelManager({
 	setMode(mode: EditorMode): void;
 }): AutoLabelManager {
 	let modeBeforePromotion: EditorMode | null = null;
-	let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 	function currentChapterId(): CProvId | null {
 		const data = dataRef.current;
@@ -122,20 +120,6 @@ export function createAutoLabelManager({
 			}
 			return result;
 		}).pipe(Effect.catchAll(() => Effect.succeed(new Map())));
-	}
-
-	function stopPolling(): void {
-		if (pollTimer !== null) {
-			clearInterval(pollTimer);
-			pollTimer = null;
-		}
-	}
-
-	function startPolling(): void {
-		if (pollTimer !== null) return;
-		pollTimer = setInterval(() => {
-			controllerUserEvent({ eventType: "refreshAutoLabelRuns" });
-		}, 30_000);
 	}
 
 	function handleControllerEvent(
@@ -181,10 +165,16 @@ export function createAutoLabelManager({
 						.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
 					const view = makeView(runSlot);
 					autoLabels.setRun(event.runId, view);
+					const matchMap = yield* rebuildChapterMatchMap(
+						autoLabels.runsRef.current,
+						getters,
+					);
+					autoLabels.setChapterMatchMap(matchMap);
 
 					if (autoLabels.selectedRunIdRef.current !== event.runId) break;
 					const chId = currentChapterId();
 					if (!chId || view.status !== "ready") break;
+					if (matchMap.get(event.runId)?.get(chId) !== "match") break;
 					const matching = view.autolabels.find(
 						(al) => al.chapterId === chId && al.autoLabelStatus === "done",
 					);
@@ -193,9 +183,6 @@ export function createAutoLabelManager({
 						eventType: "loadAutoLabelData",
 						autoLabelId: matching.autoLabelId,
 					});
-					autoLabels.setChapterMatchMap(
-						yield* rebuildChapterMatchMap(autoLabels.runsRef.current, getters),
-					);
 					break;
 				}
 
@@ -211,16 +198,32 @@ export function createAutoLabelManager({
 				case "textChanged":
 				case "chapterOpened": {
 					const selectedRunId = autoLabels.selectedRunIdRef.current;
-					if (selectedRunId === null) break;
-					const runSlot = yield* controllerGetters
-						.autoLabelRunSlot(selectedRunId)
-						.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
-					const view = makeView(runSlot);
-					autoLabels.setRun(selectedRunId, view);
+					let selectedView: AutoLabelRunView | null = null;
+					if (selectedRunId !== null) {
+						const runSlot = yield* controllerGetters
+							.autoLabelRunSlot(selectedRunId)
+							.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+						selectedView = makeView(runSlot);
+						autoLabels.setRun(selectedRunId, selectedView);
+					}
+
+					const matchMap = yield* rebuildChapterMatchMap(
+						autoLabels.runsRef.current,
+						getters,
+					);
+					autoLabels.setChapterMatchMap(matchMap);
 
 					const chId = currentChapterId();
-					if (!chId || view.status !== "ready") break;
-					const matching = view.autolabels.find(
+					if (
+						selectedRunId === null ||
+						!chId ||
+						selectedView === null ||
+						selectedView.status !== "ready"
+					) {
+						break;
+					}
+					if (matchMap.get(selectedRunId)?.get(chId) !== "match") break;
+					const matching = selectedView.autolabels.find(
 						(al) => al.chapterId === chId && al.autoLabelStatus === "done",
 					);
 					if (!matching) break;
@@ -228,9 +231,6 @@ export function createAutoLabelManager({
 						eventType: "loadAutoLabelData",
 						autoLabelId: matching.autoLabelId,
 					});
-					autoLabels.setChapterMatchMap(
-						yield* rebuildChapterMatchMap(autoLabels.runsRef.current, getters),
-					);
 					break;
 				}
 
@@ -290,13 +290,11 @@ export function createAutoLabelManager({
 		},
 		refreshAllRuns() {
 			autoLabels.setRefreshing(true);
-			startPolling();
 			controllerUserEvent({ eventType: "refreshAutoLabelRuns" });
 		},
 		reloadRun(runId) {
 			controllerUserEvent({ eventType: "reloadAutoLabelRun", runId });
 		},
 		handleControllerEvent,
-		stopPolling,
 	};
 }

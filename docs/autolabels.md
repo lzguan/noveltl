@@ -152,7 +152,7 @@ Match/outdated status is displayed in the right-panel run UI, not in the left ch
 | `selectRun(runId)` | → controller, then → hook | Sets `selectedRunId`, fires `reloadAutoLabelRun` user event. On `autoLabelRunReloaded` trigger: if the current chapter is open and a matching autolabel exists whose label data is not yet loaded, fires `loadAutoLabelData`. On `autoLabelDataLoaded`: populates `autolabelPreviews`. |
 | `deselectRun()` | → hook | Clears `selectedRunId` and `autolabelPreviews`. Match indicators remain available in the run list but no run is active. |
 | `promote(runId, labelGroupId, filter)` | → controller | Sets editor to view mode, sends `promoteAutoLabelRun` user event. On response, restores previous mode. |
-| `refreshAllRuns()` | → controller | Fires `refreshAutoLabelRuns` user event. Also called on a 30s polling interval. |
+| `refreshAllRuns()` | → controller | Fires `refreshAutoLabelRuns` user event for a one-shot manual refresh. |
 | `reloadRun(runId)` | → controller | Fires `reloadAutoLabelRun` user event (used by per-run [↻] button). |
 | `handleControllerEvent(event)` | ← controller | Reacts to `autoLabelRunCreated`, `autoLabelRunsRefreshed`, `autoLabelRunReloaded`, `autoLabelDataLoaded`, `autoLabelRunPromoted`, `textChanged`, `chapterOpened`, and `errorOccured`. |
 

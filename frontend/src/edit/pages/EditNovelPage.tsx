@@ -15,12 +15,15 @@ import { generateRandomColor } from "@/edit/lib/text-model/builtin/colors";
 import { useEditorState } from "../hooks/useEditorState";
 import { useChapterList } from "../hooks/useChapterList";
 import { useTrackedLabelGroups } from "../hooks/useTrackedLabelGroups";
+import { useAutoLabelState } from "../hooks/useAutoLabelState";
 import { createChapterManager } from "../managers/chapterManager";
 import { createLabelGroupManager } from "../managers/labelGroupManager";
 import { createEditorManager } from "../managers/editorManager";
 import { createErrorManager } from "../managers/errorManager";
+import { createAutoLabelManager } from "../managers/autolabelManager";
 import { makeActiveGroupLabelSource } from "../labeling/activeGroupLabelSource";
 import type { LabelEditing, LabelSink } from "../labeling/types";
+import { AutoLabelPanel } from "../panels/AutoLabelPanel";
 import { EditorPanel } from "../panels/EditorPanel";
 import { LeftPanel } from "../panels/LeftPanel";
 import { RightPanel } from "../panels/RightPanel";
@@ -48,11 +51,13 @@ export function EditNovelPage() {
 	const editorState = useEditorState();
 	const chapterList = useChapterList();
 	const trackedLabelGroups = useTrackedLabelGroups();
+	const autoLabels = useAutoLabelState();
 
 	const [managers, setManagers] = useState<{
 		chapterMgr: ReturnType<typeof createChapterManager>;
 		labelGroupMgr: ReturnType<typeof createLabelGroupManager>;
 		editorMgr: ReturnType<typeof createEditorManager>;
+		autoLabelMgr: ReturnType<typeof createAutoLabelManager>;
 	} | null>(null);
 
 	const labeling = useMemo<LabelEditing>(() => {
@@ -155,11 +160,20 @@ export function EditNovelPage() {
 			setLoading: editorState.setLoading,
 			labelGroupsRef: trackedLabelGroups.labelGroupsRef,
 		});
+		const autoLabelMgr = createAutoLabelManager({
+			controllerUserEvent,
+			controllerGetters: ctrl.getters,
+			autoLabels,
+			dataRef: editorState.dataRef,
+			modeRef: editorState.modeRef,
+			setMode: editorState.setMode,
+		});
 		const errorMgr = createErrorManager();
 
 		ctrl.subscribe(chapterMgr.handleControllerEvent);
 		ctrl.subscribe(labelGroupMgr.handleControllerEvent);
 		ctrl.subscribe(editorMgr.handleControllerEvent, 0);
+		ctrl.subscribe(autoLabelMgr.handleControllerEvent);
 		ctrl.subscribe(errorMgr.handleTriggerEvent);
 
 		// Seed chapters from controller
@@ -196,7 +210,7 @@ export function EditNovelPage() {
 
 		Effect.runFork(ctrl.start());
 
-		setManagers({ chapterMgr, labelGroupMgr, editorMgr });
+		setManagers({ chapterMgr, labelGroupMgr, editorMgr, autoLabelMgr });
 		// oxlint-disable-next-line react-hooks/exhaustive-deps
 	}, [novel, chapters, labelGroups, autoLabelRuns]);
 
@@ -264,8 +278,17 @@ export function EditNovelPage() {
 						onTextOp={managers.editorMgr.textOp}
 						labeling={labeling}
 					/>
-					<div className="w-64 border-l shrink-0 flex flex-col min-h-0">
-						<RightPanel />
+					<div className="w-80 border-l shrink-0 flex flex-col min-h-0">
+						<RightPanel>
+							<AutoLabelPanel
+								autoLabels={autoLabels}
+								autoLabelManager={managers.autoLabelMgr}
+								chapters={chapterList.chapterList}
+								currentChapterId={currentChapterId}
+								labelGroups={trackedLabelGroups.labelGroups}
+								onSetActiveLabelGroup={managers.labelGroupMgr.setActive}
+							/>
+						</RightPanel>
 					</div>
 				</div>
 			</div>

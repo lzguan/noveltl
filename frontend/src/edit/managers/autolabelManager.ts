@@ -141,6 +141,7 @@ export function createAutoLabelManager({
 					controllerUserEvent({
 						eventType: "reloadAutoLabelRun",
 						runId: event.run.runId,
+						flags: { now: true },
 					});
 					break;
 				}
@@ -185,6 +186,7 @@ export function createAutoLabelManager({
 					controllerUserEvent({
 						eventType: "loadAutoLabelData",
 						autoLabelId: matching.autoLabelId,
+						flags: { now: true },
 					});
 					break;
 				}
@@ -233,6 +235,7 @@ export function createAutoLabelManager({
 					controllerUserEvent({
 						eventType: "loadAutoLabelData",
 						autoLabelId: matching.autoLabelId,
+						flags: { now: true },
 					});
 					break;
 				}
@@ -275,6 +278,14 @@ export function createAutoLabelManager({
 		},
 		selectRun(runId) {
 			autoLabels.setSelected(runId);
+			const runSlot = Effect.runSyncExit(controllerGetters.autoLabelRunSlot(runId));
+			if (runSlot._tag === "Failure") {
+				console.error("Failed to get run slot for selected run:", runSlot.cause);
+				return;
+			}
+			if (runSlot.value.status === "loading" || runSlot.value.status === "ready") {
+				return;
+			}
 			controllerUserEvent({ eventType: "reloadAutoLabelRun", runId });
 		},
 		deselectRun() {
@@ -293,10 +304,10 @@ export function createAutoLabelManager({
 		},
 		refreshAllRuns() {
 			autoLabels.setRefreshing(true);
-			controllerUserEvent({ eventType: "refreshAutoLabelRuns" });
+			controllerUserEvent({ eventType: "refreshAutoLabelRuns", flags: { now: true } });
 		},
 		reloadRun(runId) {
-			controllerUserEvent({ eventType: "reloadAutoLabelRun", runId });
+			controllerUserEvent({ eventType: "reloadAutoLabelRun", runId, flags: { now: true } });
 		},
 		handleControllerEvent,
 	};

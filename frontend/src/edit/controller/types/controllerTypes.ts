@@ -116,9 +116,9 @@ export type NovelUserEvent =
 			params: CluenerParams | DoNothingParams;
 			chapterFilter: ChapterFilter;
 	  }
-	| { eventType: "refreshAutoLabelRuns" }
-	| { eventType: "reloadAutoLabelRun"; runId: ALRProvId }
-	| { eventType: "loadAutoLabelData"; autoLabelId: AProvId }
+	| { eventType: "refreshAutoLabelRuns"; flags?: { now: boolean } }
+	| { eventType: "reloadAutoLabelRun"; runId: ALRProvId; flags?: { now: boolean } }
+	| { eventType: "loadAutoLabelData"; autoLabelId: AProvId; flags?: { now: boolean } }
 	| {
 			eventType: "promoteAutoLabelRun";
 			runId: ALRProvId;

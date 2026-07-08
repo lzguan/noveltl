@@ -3,6 +3,7 @@ Service functions for auto labeling.
 """
 
 import asyncio
+import logging
 import uuid
 from collections.abc import Coroutine
 from typing import Any
@@ -22,6 +23,8 @@ from .constants import AutoLabelProgress
 from .exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
 from .permissions import auto_label_mod_access_insert, auto_label_mod_access_select
 from .utils import AutoLabelDispatcher
+
+logger = logging.getLogger(__name__)
 
 
 def query_auto_label_runs(
@@ -143,6 +146,16 @@ async def insert_auto_labels(
     """
     model_name = request.params.model_name
     model_params_dump = request.params.model_dump(mode="json")
+    logger.info(
+        "Creating autolabel run novel_id=%s user_id=%s model_name=%s start=%s end=%s is_public=%s chapter_ids=%s",
+        request.novel_id,
+        current_user.user_id,
+        model_name,
+        request.start,
+        request.end,
+        request.is_public,
+        len(request.chapter_ids) if request.chapter_ids else 0,
+    )
 
     # 1. Create the run.
     run = models.AutoLabelRun(
@@ -154,6 +167,12 @@ async def insert_auto_labels(
     db.add(run)
     # Flush to get the server-generated run_id before we insert autolabels.
     db.flush()
+    logger.info(
+        "Autolabel run created run_id=%s novel_id=%s model_name=%s",
+        run.run_id,
+        request.novel_id,
+        model_name,
+    )
 
     # 2. Insert autolabels for matching chapter contents.
     columns = [
@@ -194,8 +213,20 @@ async def insert_auto_labels(
         result = db.execute(stmt)
         result_rows = result.scalars().all()
         db.commit()
+        logger.info(
+            "Autolabel rows inserted run_id=%s count=%s",
+            run.run_id,
+            len(result_rows),
+        )
+        if len(result_rows) == 0:
+            logger.warning(
+                "Autolabel run has no matching chapter contents run_id=%s novel_id=%s",
+                run.run_id,
+                request.novel_id,
+            )
     except IntegrityError as e:
         db.rollback()
+        logger.exception("Autolabel insert integrity error run_id=%s novel_id=%s", run.run_id, request.novel_id)
         if isinstance(e.orig, PgError):
             pgcode = e.orig.pgcode
             if pgcode == errorcodes.UNIQUE_VIOLATION:
@@ -203,6 +234,7 @@ async def insert_auto_labels(
         raise
     except Exception:
         db.rollback()
+        logger.exception("Autolabel insert failed run_id=%s novel_id=%s", run.run_id, request.novel_id)
         raise
 
     # 3. Dispatch worker tasks.
@@ -210,26 +242,57 @@ async def insert_auto_labels(
     for autolabel in result_rows:
         job_id = str(uuid4())
         autolabel.auto_label_last_job_id = job_id
+        logger.info(
+            "Autolabel job assigned run_id=%s auto_label_id=%s job_id=%s",
+            run.run_id,
+            autolabel.auto_label_id,
+            job_id,
+        )
         tasks.append(dispatcher.enqueue(job_id, autolabel.auto_label_id))
     try:
         db.commit()
     except Exception:
         db.rollback()
+        logger.exception("Autolabel job id commit failed run_id=%s", run.run_id)
         raise
 
     ret = await asyncio.gather(*tasks, return_exceptions=True)
 
+    queued_count = 0
+    failed_count = 0
     for i, result in enumerate(ret):
         autolabel = result_rows[i]
         if result is None:
             autolabel.auto_label_message = "Job queued."
+            queued_count += 1
+            logger.info(
+                "Autolabel job queued run_id=%s auto_label_id=%s job_id=%s",
+                run.run_id,
+                autolabel.auto_label_id,
+                autolabel.auto_label_last_job_id,
+            )
         else:
             autolabel.auto_label_message = "Job failed to queue."
             autolabel.auto_label_status = AutoLabelProgress.FAILED
+            failed_count += 1
+            logger.error(
+                "Autolabel job failed to queue run_id=%s auto_label_id=%s job_id=%s error=%s",
+                run.run_id,
+                autolabel.auto_label_id,
+                autolabel.auto_label_last_job_id,
+                result,
+            )
     try:
         db.commit()
+        logger.info(
+            "Autolabel queue dispatch completed run_id=%s queued=%s failed=%s",
+            run.run_id,
+            queued_count,
+            failed_count,
+        )
     except Exception:
         db.rollback()
+        logger.exception("Autolabel queue status commit failed run_id=%s", run.run_id)
         raise
 
     # 4. Build response.

@@ -155,7 +155,9 @@ export function buildIdRepository(): IDRepository {
 			if (entry && (entry.status === "clean" || entry.status === "locked")) {
 				return Effect.succeed(existing);
 			}
-			return Effect.fail(new ResourceConflictException({ id: servId }));
+			return Effect.fail(
+				new ResourceConflictException({ id: servId, status: entry?.status ?? "unknown" }),
+			);
 		}
 		// @ts-expect-error
 		identifiableKindMap[kind].set(id, {
@@ -242,14 +244,18 @@ export function buildIdRepository(): IDRepository {
 		const entry = identifiableKindMap[kind].get(provId);
 		// @ts-expect-error
 		if (revMap[kind].has(servId)) {
-			return Effect.fail(new ResourceConflictException({ id: servId }));
+			return Effect.fail(
+				new ResourceConflictException({ id: servId, status: entry?.status ?? "unknown" }),
+			);
 		}
 		if (!entry) {
 			logger.error(`Provisional id ${provId} not found for kind ${kind} in bindServerId`);
 			return Effect.fail(new NotFoundException());
 		}
 		if (entry.serverId !== null) {
-			return Effect.fail(new ResourceConflictException({ id: servId }));
+			return Effect.fail(
+				new ResourceConflictException({ id: servId, status: entry.status ?? "unknown" }),
+			);
 		}
 		// @ts-expect-error
 		revMap[kind].set(servId, provId);

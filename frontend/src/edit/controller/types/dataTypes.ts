@@ -100,21 +100,26 @@ export type NovelDataManager = DataManager<
 		/**
 		 * Reloads the autolabel run list from the server and replaces the local index.
 		 */
-		refreshAutoLabelRuns: () => Effect.Effect<
-			RequestEvent[],
-			UnknownException | FatalException
-		>;
+		refreshAutoLabelRuns: (flags?: {
+			now: boolean;
+		}) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
 		/**
 		 * Reloads autolabel metadata for a single run from the server.
 		 */
 		reloadAutoLabelRun: (
 			runId: ALRProvId,
+			flags?: {
+				now: boolean;
+			},
 		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
 		/**
 		 * Loads autolabel data (the label payload) for a single autolabel.
 		 */
 		loadAutoLabelData: (
 			autoLabelId: AProvId,
+			flags?: {
+				now: boolean;
+			},
 		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
 	},
 	NovelGetters
@@ -144,15 +149,20 @@ export type AutolabelDataManager = DataManager<
 			labelGroupId: LGProvId,
 			chapterFilter: ChapterFilter,
 		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
-		refreshAutoLabelRuns: () => Effect.Effect<
-			RequestEvent[],
-			UnknownException | FatalException
-		>;
+		refreshAutoLabelRuns: (flags?: {
+			now: boolean;
+		}) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
 		reloadAutoLabelRun: (
 			runId: ALRProvId,
+			flags?: {
+				now: boolean;
+			},
 		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
 		loadAutoLabelData: (
 			autoLabelId: AProvId,
+			flags?: {
+				now: boolean;
+			},
 		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
 	},
 	AutolabelGetters

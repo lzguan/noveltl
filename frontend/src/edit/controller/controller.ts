@@ -203,15 +203,15 @@ export const buildNovelController = (
 						break;
 					}
 					case "refreshAutoLabelRuns": {
-						yield* dispatch(novelDM.refreshAutoLabelRuns());
+						yield* dispatch(novelDM.refreshAutoLabelRuns(event.flags));
 						break;
 					}
 					case "reloadAutoLabelRun": {
-						yield* dispatch(novelDM.reloadAutoLabelRun(event.runId));
+						yield* dispatch(novelDM.reloadAutoLabelRun(event.runId, event.flags));
 						break;
 					}
 					case "loadAutoLabelData": {
-						yield* dispatch(novelDM.loadAutoLabelData(event.autoLabelId));
+						yield* dispatch(novelDM.loadAutoLabelData(event.autoLabelId, event.flags));
 						break;
 					}
 				}

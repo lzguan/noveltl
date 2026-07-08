@@ -211,9 +211,7 @@ export const buildNovelController = (
 						break;
 					}
 					case "loadAutoLabelData": {
-						yield* dispatch(
-							novelDM.loadAutoLabelData(event.autoLabelId),
-						);
+						yield* dispatch(novelDM.loadAutoLabelData(event.autoLabelId));
 						break;
 					}
 				}

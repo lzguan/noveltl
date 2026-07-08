@@ -27,10 +27,19 @@ import {
 	type ProvAutoLabel,
 	type ProvAutoLabelRun,
 } from "./types/idTypes";
-import { Prov, IdempotentCallable, isAllReserveable, makeReservationRequest } from "./types/helperTypes";
+import {
+	Prov,
+	IdempotentCallable,
+	isAllReserveable,
+	makeReservationRequest,
+} from "./types/helperTypes";
 import type { RequestEvent, ReserveList } from "./types/requestTypes";
 import type { AutolabelDataManager } from "./types/dataTypes";
-import { type AutoLabelGetterSlot, type AutoLabelRunGetterSlot, type AutoLabelRunSlot } from "./types/helperTypes";
+import {
+	type AutoLabelGetterSlot,
+	type AutoLabelRunGetterSlot,
+	type AutoLabelRunSlot,
+} from "./types/helperTypes";
 import {
 	CreateAutolabelsAutoLabelsPost200Response,
 	CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost200Response,
@@ -829,7 +838,7 @@ export const buildAutolabelDataManager = (
 				];
 			});
 
-	const _loadAutoLabelData = (
+		const _loadAutoLabelData = (
 			autoLabelId: AProvId,
 		): Effect.Effect<RequestEvent[], UnknownException | FatalException> =>
 			Effect.gen(function* () {
@@ -838,11 +847,7 @@ export const buildAutolabelDataManager = (
 				for (const rid of runIds) {
 					const runSlot = yield* autoLabelRunIndex
 						.get(rid)
-						.pipe(
-							Effect.mapError(
-								(err) => new FatalException({ orig: err }),
-							),
-						);
+						.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
 					if (runSlot.status !== "ready" || !runSlot.data) continue;
 					const ids = yield* runSlot.data.index.getIds();
 					if (ids.includes(autoLabelId)) {
@@ -853,9 +858,7 @@ export const buildAutolabelDataManager = (
 				if (!parentRunId) {
 					return yield* Effect.fail(
 						new FatalException({
-							orig: new Error(
-								`AutoLabel ${autoLabelId} not found in any run index`,
-							),
+							orig: new Error(`AutoLabel ${autoLabelId} not found in any run index`),
 						}),
 					);
 				}
@@ -897,9 +900,7 @@ export const buildAutolabelDataManager = (
 								const servAlId = yield* idRepo
 									.getServerId({ kind: "autoLabel", provId: autoLabelId })
 									.pipe(
-										Effect.mapError(
-											(err) => new FatalException({ orig: err }),
-										),
+										Effect.mapError((err) => new FatalException({ orig: err })),
 									);
 								if (!servAlId) {
 									return yield* Effect.fail(
@@ -937,9 +938,7 @@ export const buildAutolabelDataManager = (
 								const runSlot = yield* autoLabelRunIndex
 									.get(parentRunId)
 									.pipe(
-										Effect.mapError(
-											(err) => new FatalException({ orig: err }),
-										),
+										Effect.mapError((err) => new FatalException({ orig: err })),
 									);
 								if (runSlot.status !== "ready" || !runSlot.data) {
 									return yield* Effect.fail(
@@ -977,9 +976,9 @@ export const buildAutolabelDataManager = (
 			getters: {
 				autoLabelRunIds: () => autoLabelRunIndex.getIds(),
 				autoLabelRunSlot: (runId: ALRProvId) =>
-					autoLabelRunIndex.get(runId).pipe(
-						Effect.flatMap((slot) => projectRunSlot(slot)),
-					),
+					autoLabelRunIndex
+						.get(runId)
+						.pipe(Effect.flatMap((slot) => projectRunSlot(slot))),
 			},
 		};
 	});

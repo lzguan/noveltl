@@ -1,10 +1,10 @@
 import { Profiler, useEffect, useMemo, useState } from "react";
 import { Effect } from "effect";
 import {
-    readAutoLabelRunsAutoLabelRunsGet,
+	readAutoLabelRunsAutoLabelRunsGet,
 	readChaptersByNovelChaptersGet,
 	readLabelGroupsWithRoleLabelGroupsWithRoleGet,
-    readNovelWithContributorsNovelsNovelIdWithContributorsGet,
+	readNovelWithContributorsNovelsNovelIdWithContributorsGet,
 } from "@/api/endpoints/default/default";
 import type { Chapter, LabelGroupWithRole, Novel } from "@/api/models";
 import { buildNovelController } from "../controller/controller";
@@ -18,7 +18,7 @@ import { useTrackedLabelGroups } from "../hooks/useTrackedLabelGroups";
 import { createChapterManager } from "../managers/chapterManager";
 import { createLabelGroupManager } from "../managers/labelGroupManager";
 import { createEditorManager } from "../managers/editorManager";
-import { buildErrorManager } from "../managers/errorManager";
+import { createErrorManager } from "../managers/errorManager";
 import { makeActiveGroupLabelSource } from "../labeling/activeGroupLabelSource";
 import type { LabelEditing, LabelSink } from "../labeling/types";
 import { EditorPanel } from "../panels/EditorPanel";
@@ -38,11 +38,11 @@ function makeProvChapter(chapter: Chapter, chapterId: ProvChapter["chapterId"]):
 }
 
 export function EditNovelPage() {
-	const [novel, setNovel] = useState<{novel: Novel, role: Role} | null>(null);
+	const [novel, setNovel] = useState<{ novel: Novel; role: Role } | null>(null);
 	const [novelId, setNovelId] = useState<string | null>(null);
-	const [chapters, setChapters] = useState<Chapter[]>([]);
+	const [chapters, setChapters] = useState<Chapter[] | null>(null);
 	const [labelGroups, setLabelGroups] = useState<LabelGroupWithRole[] | null>(null);
-	const [autoLabelRuns, setAutoLabelRuns] = useState<NovelData["autoLabelRuns"]>([]);
+	const [autoLabelRuns, setAutoLabelRuns] = useState<NovelData["autoLabelRuns"] | null>(null);
 	const [error, setError] = useState<unknown>(null);
 
 	const editorState = useEditorState();
@@ -94,7 +94,7 @@ export function EditNovelPage() {
 		readNovelWithContributorsNovelsNovelIdWithContributorsGet(novelId)
 			.then((resp) => {
 				if (resp.status !== 200) throw new Error(`Failed to load novel: ${resp.status}`);
-				setNovel({novel: resp.data.novel, role: "owner"}); // temporarily owner, will change to role of user with id equal to current logged in user once user state in global store
+				setNovel({ novel: resp.data.novel, role: "owner" }); // temporarily owner, will change to role of user with id equal to current logged in user once user state in global store
 				setError(null);
 			})
 			.then(() => readChaptersByNovelChaptersGet({ novelId }))
@@ -108,18 +108,20 @@ export function EditNovelPage() {
 					throw new Error(`Failed to load label groups: ${resp.status}`);
 				setLabelGroups(resp.data);
 			})
-			.catch(setError).then(() => readAutoLabelRunsAutoLabelRunsGet({ novelId})).then((resp) => {
+			.then(() => readAutoLabelRunsAutoLabelRunsGet({ novelId }))
+			.then((resp) => {
 				if (resp.status !== 200)
 					throw new Error(`Failed to load auto label runs: ${resp.status}`);
 				setAutoLabelRuns(resp.data);
-			}).catch(setError);
+			})
+			.catch(setError);
 	}, [novelId]);
 
 	// Build controller + managers + seed hooks
 	useEffect(() => {
-		if (!novel || chapters.length === 0 || !labelGroups) return;
+		if (novel === null || chapters === null || labelGroups === null || autoLabelRuns === null) return;
 
-		const novelData : NovelData = {
+		const novelData: NovelData = {
 			novel: novel.novel,
 			novelRole: novel.role,
 			labelGroups: labelGroups,
@@ -153,7 +155,7 @@ export function EditNovelPage() {
 			setLoading: editorState.setLoading,
 			labelGroupsRef: trackedLabelGroups.labelGroupsRef,
 		});
-		const errorMgr = buildErrorManager();
+		const errorMgr = createErrorManager();
 
 		ctrl.subscribe(chapterMgr.handleControllerEvent);
 		ctrl.subscribe(labelGroupMgr.handleControllerEvent);
@@ -196,7 +198,7 @@ export function EditNovelPage() {
 
 		setManagers({ chapterMgr, labelGroupMgr, editorMgr });
 		// oxlint-disable-next-line react-hooks/exhaustive-deps
-	}, [novel, chapters, labelGroups]);
+	}, [novel, chapters, labelGroups, autoLabelRuns]);
 
 	// Extract novelId from URL
 	useEffect(() => {

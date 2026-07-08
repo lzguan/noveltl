@@ -130,8 +130,9 @@ Autolabel runs use the `autoLabelRun` kind (an `IdentifiableKind`). Individual a
 | `selectedRunId` | Currently selected run from the accordion (`ALRProvId \| null`) |
 | `autolabelPreviews` | Per-chapter-content-ID map of `LabelBase[]` for rendering in CodeMirror. Only populated for the current chapter when it matches the selected run. Deferred to later implementation. |
 | `refreshing` / `promoting` | Loading booleans for the global refresh and promote operations. Rendered by the panel as disabled/shimmer states. |
+| `chapterMatchMap` | Per-run map of chapter ID to `"match"` / `"outdated"` status, used by the right-panel run list. |
 
-Match/outdated status for chapter list dots is computed via `useMemo` from the selected run's autolabel data and the current chapter's content ID. No separate `chapterMatchMap` state is stored. A helper hook (`useAutoLabels`) takes the current chapter ID and a chapter-to-content-ID mapping and derives the match status per chapter number.
+Match/outdated status is displayed in the right-panel run UI, not in the left chapter list. `autolabelManager` rebuilds `chapterMatchMap` from run autolabel metadata and the currently loaded chapter content IDs when run metadata changes, chapters open, or text changes.
 
 **Run overall status** (derived from individual autolabel statuses):
 
@@ -149,7 +150,7 @@ Match/outdated status for chapter list dots is computed via `useMemo` from the s
 |--------|-----------|---------|
 | `createRun(params, filter)` | → controller | Sends `createAutoLabelRun` user event |
 | `selectRun(runId)` | → controller, then → hook | Sets `selectedRunId`, fires `reloadAutoLabelRun` user event. On `autoLabelRunReloaded` trigger: if the current chapter is open and a matching autolabel exists whose label data is not yet loaded, fires `loadAutoLabelData`. On `autoLabelDataLoaded`: populates `autolabelPreviews`. |
-| `deselectRun()` | → hook | Clears `selectedRunId` and `autolabelPreviews`. Match dot state updates on next render via `useMemo`. |
+| `deselectRun()` | → hook | Clears `selectedRunId` and `autolabelPreviews`. Match indicators remain available in the run list but no run is active. |
 | `promote(runId, labelGroupId, filter)` | → controller | Sets editor to view mode, sends `promoteAutoLabelRun` user event. On response, restores previous mode. |
 | `refreshAllRuns()` | → controller | Fires `refreshAutoLabelRuns` user event. Also called on a 30s polling interval. |
 | `reloadRun(runId)` | → controller | Fires `reloadAutoLabelRun` user event (used by per-run [↻] button). |
@@ -164,15 +165,15 @@ When a run is selected and the current chapter has a matching autolabel (same `c
 - A different run is selected
 - A `textChanged` trigger fires and the current chapter content ID no longer matches the autolabel's
 
-**Chapter list match indicators:**
+**Run list match indicators:**
 
-When a run is selected, the chapter list in the LeftPanel shows per-chapter indicators computed from the selected run's autolabel data and the current chapter content IDs. The match status is derived via `useMemo` rather than stored in a separate hook field:
+The right-panel run list shows match/outdated indicators computed from each run's autolabel metadata and the current chapter content IDs:
 
 | Indicator | Meaning |
 |-----------|---------|
 | Green dot (•) | An autolabel exists for the current chapter content version (IDs match exactly) |
 | Yellow dot (○) / `(outdated)` | An autolabel exists for this chapter but references an older content version (text was edited since the run) |
-| None | No autolabel exists for this chapter in the selected run |
+| None | No autolabel exists for this chapter in the run |
 
 The autolabel metadata includes `chapterId` alongside `chapterContentId`, returned by the `GET /auto-label-runs/{runId}/auto-labels` endpoint as `AutoLabelMetaWithCid` (a wrapper containing `autoLabelMeta: AutoLabelMeta` and `chapterId: UUID`).
 

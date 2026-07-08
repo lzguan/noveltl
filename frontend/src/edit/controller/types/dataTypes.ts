@@ -125,7 +125,9 @@ export type NovelDataManager = DataManager<
  */
 export interface AutolabelGetters {
 	autoLabelRunIds: () => Effect.Effect<readonly ALRProvId[]>;
-	autoLabelRunSlot: (runId: ALRProvId) => Effect.Effect<AutoLabelRunGetterSlot, NotFoundException>;
+	autoLabelRunSlot: (
+		runId: ALRProvId,
+	) => Effect.Effect<AutoLabelRunGetterSlot, NotFoundException>;
 }
 
 /**

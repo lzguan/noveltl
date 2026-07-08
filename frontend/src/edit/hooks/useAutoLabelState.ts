@@ -1,8 +1,7 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type {
 	ALRProvId,
 	CProvId,
-	CCProvId,
 	ProvAutoLabel,
 	ProvAutoLabelRun,
 } from "../controller/types/idTypes";
@@ -24,7 +23,7 @@ export type AutoLabelRunView = {
 
 export type ChapterMatchStatus = "match" | "outdated";
 
-export function useAutoLabelState(chapterContentIds: Map<CProvId, CCProvId>) {
+export function useAutoLabelState() {
 	const [runs, setRuns] = useState<AutoLabelRunView[]>([]);
 	const [selectedRunId, setSelectedRunId] = useState<ALRProvId | null>(null);
 	const [refreshing, setRefreshingState] = useState(false);
@@ -79,27 +78,9 @@ export function useAutoLabelState(chapterContentIds: Map<CProvId, CCProvId>) {
 		setPromotingState(value);
 	}, []);
 
-	const chapterMatchMap = useMemo(
-		() =>
-			new Map(
-				runs.map((run) => {
-					if (run.status !== "ready") {
-						return [run.run.runId, new Map<CProvId, ChapterMatchStatus>()] as const;
-					}
-					const runMap = new Map<CProvId, ChapterMatchStatus>();
-					for (const al of run.autolabels) {
-						const currentCC = chapterContentIds.get(al.chapterId);
-						if (currentCC === undefined) continue;
-						runMap.set(
-							al.chapterId,
-							currentCC === al.chapterContentId ? "match" : "outdated",
-						);
-					}
-					return [run.run.runId, runMap] as const;
-				}),
-			),
-		[runs, chapterContentIds],
-	);
+	const [chapterMatchMap, setChapterMatchMap] = useState<
+		Map<ALRProvId, Map<CProvId, ChapterMatchStatus>>
+	>(new Map());
 
 	return {
 		runs,
@@ -118,5 +99,6 @@ export function useAutoLabelState(chapterContentIds: Map<CProvId, CCProvId>) {
 		setSelected,
 		setRefreshing,
 		setPromoting,
+		setChapterMatchMap,
 	};
 }

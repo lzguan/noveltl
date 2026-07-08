@@ -57,12 +57,19 @@ import {
 
 function projectRunSlot(
 	slot: AutoLabelRunSlot,
+	idRepo: IDRepository,
 ): Effect.Effect<AutoLabelRunGetterSlot, NotFoundException> {
-	if (slot.status !== "ready" || !slot.data) {
-		return Effect.succeed({
-			meta: slot.meta,
-			status: slot.status as "idle" | "loading" | "error",
-			inFlight: slot.inFlight,
+	if (slot.status !== "ready") {
+		return Effect.gen(function* () {
+			const servId = yield* idRepo.getServerId({
+				kind: "autoLabelRun",
+				provId: slot.meta.run.runId,
+			});
+			return {
+				meta: { ...slot.meta, servId },
+				status: slot.status,
+				inFlight: slot.inFlight,
+			};
 		});
 	}
 	return Effect.gen(function* () {
@@ -71,8 +78,12 @@ function projectRunSlot(
 		for (const alId of alIds) {
 			autolabels.push(yield* slot.data.index.get(alId));
 		}
+		const servId = yield* idRepo.getServerId({
+			kind: "autoLabelRun",
+			provId: slot.meta.run.runId,
+		});
 		return {
-			meta: slot.meta,
+			meta: { ...slot.meta, servId },
 			status: "ready" as const,
 			data: { autolabels },
 			inFlight: slot.inFlight,
@@ -978,7 +989,7 @@ export const buildAutolabelDataManager = (
 				autoLabelRunSlot: (runId: ALRProvId) =>
 					autoLabelRunIndex
 						.get(runId)
-						.pipe(Effect.flatMap((slot) => projectRunSlot(slot))),
+						.pipe(Effect.flatMap((slot) => projectRunSlot(slot, idRepo))),
 			},
 		};
 	});

@@ -144,13 +144,13 @@ export const buildRequestManager = (
 		): Effect.Effect<"wait" | "skip" | "reserve", NotFoundException> =>
 			Effect.gen(function* () {
 				if (request.reservationRequest.skip()) {
-					return yield* Effect.succeed("skip" as "skip");
+					return yield* Effect.succeed("skip" as const);
 				} else if (yield* request.reservationRequest.wait()) {
-					return yield* Effect.succeed("wait" as "wait");
+					return yield* Effect.succeed("wait" as const);
 				}
 				const reserveList = request.reservationRequest.reserveList();
 				return yield* isAllReserveable(idRepo, reserveList).pipe(
-					Effect.map((a) => (a ? ("reserve" as "reserve") : ("wait" as "wait"))),
+					Effect.map((a) => (a ? ("reserve" as const) : ("wait" as const))),
 				);
 			});
 

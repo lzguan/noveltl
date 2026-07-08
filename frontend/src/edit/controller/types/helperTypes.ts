@@ -1,4 +1,5 @@
 import {
+	ALRServId,
 	AProvId,
 	kinds,
 	ProvId,
@@ -218,6 +219,6 @@ export type AutoLabelGetterSlot = Slot<
 >;
 
 export type AutoLabelRunGetterSlot = Slot<
-	{ run: ProvAutoLabelRun },
+	{ run: ProvAutoLabelRun; servId: ALRServId | null },
 	{ autolabels: readonly AutoLabelGetterSlot[] }
 >;

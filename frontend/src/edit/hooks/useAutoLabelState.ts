@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import type {
 	ALRProvId,
+	ALRServId,
 	CProvId,
 	ProvAutoLabel,
 	ProvAutoLabelRun,
@@ -11,7 +12,7 @@ export type AutoLabelView = Omit<ProvAutoLabel, "autoLabelData"> & {
 };
 
 export type AutoLabelRunView = {
-	readonly run: ProvAutoLabelRun;
+	readonly run: ProvAutoLabelRun & { readonly servId: ALRServId | null };
 } & (
 	| { readonly status: "idle" | "loading" | "error" }
 	| {

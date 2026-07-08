@@ -15,6 +15,7 @@ import type { LGProvId } from "../../controller/types/idTypes";
 import type { AutoLabelManager } from "../../managers/autolabelManager";
 import type { LabelGroupView } from "../../hooks/useTrackedLabelGroups";
 import type { useAutoLabelState } from "../../hooks/useAutoLabelState";
+import { formatRunLabel } from "./runLabels";
 
 function parseChapterNum(value: string): number | undefined {
 	const trimmed = value.trim();
@@ -77,7 +78,7 @@ export function PromoteAutoLabelPanel({
 						<SelectGroup>
 							{autoLabels.runs.map((run) => (
 								<SelectItem key={run.run.runId} value={run.run.runId}>
-									{run.run.modelName}
+									{formatRunLabel(run)}
 								</SelectItem>
 							))}
 						</SelectGroup>

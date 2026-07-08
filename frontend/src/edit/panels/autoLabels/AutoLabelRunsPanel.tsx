@@ -16,6 +16,7 @@ import type {
 	ChapterMatchStatus,
 	useAutoLabelState,
 } from "../../hooks/useAutoLabelState";
+import { formatRunLabel } from "./runLabels";
 
 function statusVariant(status: AutoLabelView["autoLabelStatus"]) {
 	if (status === "failed") return "destructive";
@@ -177,7 +178,7 @@ export function AutoLabelRunsPanel({
 													className={cn("transition-transform", selected && "rotate-90")}
 												/>
 												<MatchDot status={currentStatus} />
-												<span className="min-w-0 flex-1 truncate">{run.run.modelName}</span>
+												<span className="min-w-0 flex-1 truncate">{formatRunLabel(run)}</span>
 												<Badge variant={run.status === "ready" ? statusVariant(run.overallStatus) : "outline"}>
 													{run.status === "ready" ? run.overallStatus : run.status}
 												</Badge>
@@ -197,7 +198,8 @@ export function AutoLabelRunsPanel({
 										</Button>
 									</div>
 									<div className="px-7 pb-1 text-xs text-muted-foreground">
-										{countDone(run)} done · {formatCreatedAt(run.run.createdAt)}
+										{run.run.modelName} · {countDone(run)} done ·{" "}
+										{formatCreatedAt(run.run.createdAt)}
 									</div>
 									<CollapsibleContent>
 										<RunRows

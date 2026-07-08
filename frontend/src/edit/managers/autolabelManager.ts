@@ -49,8 +49,11 @@ function deriveOverallStatus(
 }
 
 function makeView(runSlot: AutoLabelRunGetterSlot): AutoLabelRunView {
-	if (runSlot.status !== "ready" || !runSlot.data) {
-		return { run: runSlot.meta.run, status: runSlot.status } as AutoLabelRunView;
+	if (runSlot.status !== "ready") {
+		return {
+			run: { ...runSlot.meta.run, servId: runSlot.meta.servId },
+			status: runSlot.status,
+		};
 	}
 	const autolabels: AutoLabelView[] = runSlot.data.autolabels.map((alSlot) =>
 		Prov({
@@ -64,7 +67,7 @@ function makeView(runSlot: AutoLabelRunGetterSlot): AutoLabelRunView {
 		}),
 	);
 	return {
-		run: runSlot.meta.run,
+		run: { ...runSlot.meta.run, servId: runSlot.meta.servId },
 		status: "ready" as const,
 		overallStatus: deriveOverallStatus(autolabels),
 		autolabels,

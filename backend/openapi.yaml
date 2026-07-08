@@ -134,6 +134,32 @@ components:
       - runId
       title: AutoLabelMeta
       type: object
+    AutoLabelMetaWithCid-Input:
+      properties:
+        autoLabelMeta:
+          $ref: '#/components/schemas/AutoLabelMeta'
+        chapterId:
+          format: uuid
+          title: Chapterid
+          type: string
+      required:
+      - autoLabelMeta
+      - chapterId
+      title: AutoLabelMetaWithCid
+      type: object
+    AutoLabelMetaWithCid-Output:
+      properties:
+        autoLabelMeta:
+          $ref: '#/components/schemas/AutoLabelMeta'
+        chapterId:
+          format: uuid
+          title: Chapterid
+          type: string
+      required:
+      - autoLabelMeta
+      - chapterId
+      title: AutoLabelMetaWithCid
+      type: object
     AutoLabelProgress:
       description: Status for an autolabel in database. One of 'failed', 'pending',
         'processing', 'done'
@@ -498,7 +524,7 @@ components:
       properties:
         autolabels:
           items:
-            $ref: '#/components/schemas/AutoLabelMeta'
+            $ref: '#/components/schemas/AutoLabelMetaWithCid-Output'
           title: Autolabels
           type: array
         run:
@@ -1160,6 +1186,45 @@ components:
       - sourceWorkId
       title: Novel
       type: object
+    NovelAndUsers:
+      description: "Pydantic schema for novel and its associated users.\n\nAttributes:\n\
+        \    novel: The novel metadata.\n    users: A list of users associated with\
+        \ this novel."
+      properties:
+        novel:
+          $ref: '#/components/schemas/Novel'
+        users:
+          items:
+            $ref: '#/components/schemas/NovelContributor'
+          title: Users
+          type: array
+      required:
+      - novel
+      - users
+      title: NovelAndUsers
+      type: object
+    NovelContributor:
+      description: "Pydantic schema for a novel contributor.\n\nAttributes:\n    user_id:\
+        \ UUID of the user.\n    novel_id: UUID of the novel.\n    contributor_role:\
+        \ Role of the user in the novel."
+      properties:
+        contributorRole:
+          title: Contributorrole
+          type: string
+        novelId:
+          format: uuid
+          title: Novelid
+          type: string
+        userId:
+          format: uuid
+          title: Userid
+          type: string
+      required:
+      - userId
+      - novelId
+      - contributorRole
+      title: NovelContributor
+      type: object
     NovelType:
       enum:
       - original
@@ -1697,7 +1762,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/AutoLabelMeta'
+                  $ref: '#/components/schemas/AutoLabelMetaWithCid-Output'
                 title: Response Read Auto Labels By Run Auto Label Runs  Runid  Auto
                   Labels Get
                 type: array
@@ -1720,6 +1785,16 @@ paths:
 
         matching chapter. Worker tasks are dispatched for each autolabel.'
       operationId: create_autolabels_auto_labels_post
+      parameters:
+      - in: query
+        name: requestKey
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Requestkey
       requestBody:
         content:
           application/json:
@@ -1733,6 +1808,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/CreateAutoLabelsResponse'
           description: Successful Response
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Invalid request data.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestConflictErrorResponse'
+          description: Request key conflict.
         '422':
           content:
             application/json:
@@ -2931,6 +3018,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/CreateLabelDataByAutoLabelStatus'
           description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Label group not found.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestConflictErrorResponse'
+          description: Request key conflict.
         '422':
           content:
             application/json:
@@ -3181,6 +3280,35 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Create Chapter
+  /novels/{novelId}/with-contributors:
+    get:
+      description: "Endpoint for retrieving a novel and its associated users.\n\n\
+        Raises:\n    404: Novel not found (or insufficient permissions)."
+      operationId: read_novel_with_contributors_novels__novelId__with_contributors_get
+      parameters:
+      - in: path
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NovelAndUsers'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Novel With Contributors
   /register:
     post:
       description: "Endpoint for registering a new user. Client with registration\

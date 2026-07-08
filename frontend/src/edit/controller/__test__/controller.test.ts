@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Effect } from "effect";
 import { buildNovelController } from "../controller";
-import type { NovelData } from "../dataManager";
+import type { NovelData } from "../novelDataManager";
 import { CProvId } from "../types/idTypes";
 import type { NovelGetters, TriggerEvent } from "../types/controllerTypes";
 
@@ -31,6 +31,7 @@ function makeNovelData(): NovelData {
 		],
 		labelGroups: [],
 		novelRole: "owner",
+		autoLabelRuns: [],
 	};
 }
 
@@ -81,12 +82,10 @@ describe("buildNovelController", () => {
 	it("subscribe returns working unsubscribe function", async () => {
 		const controller = Effect.runSync(buildNovelController(makeNovelData()));
 		const events: TriggerEvent[] = [];
-		const unsubscribe = controller.subscribe(
-			(_getters: NovelGetters, event: TriggerEvent) => {
-				events.push(event);
-				return Effect.succeed(void 0);
-			},
-		);
+		const unsubscribe = controller.subscribe((_getters: NovelGetters, event: TriggerEvent) => {
+			events.push(event);
+			return Effect.succeed(void 0);
+		});
 		controller.start(); // sets running = true synchronously
 
 		const fakeChapterId = CProvId("00000000-0000-0000-0000-ffffffffffff");

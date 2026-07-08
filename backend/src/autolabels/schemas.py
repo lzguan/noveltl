@@ -83,6 +83,11 @@ class AutoLabelMeta(Model):
     run_id: uuid.UUID
 
 
+class AutoLabelMetaWithCid(Model):
+    auto_label_meta: AutoLabelMeta
+    chapter_id: uuid.UUID
+
+
 class CreateAutoLabels(Model):
     """
     Pydantic schema for creating a new autolabel run.
@@ -114,4 +119,4 @@ class CreateAutoLabelsResponse(Model):
     """
 
     run: AutoLabelRun
-    autolabels: list[AutoLabelMeta]
+    autolabels: list[AutoLabelMetaWithCid]

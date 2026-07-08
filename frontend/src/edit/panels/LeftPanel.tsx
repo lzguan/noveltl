@@ -1,8 +1,8 @@
 import type { CProvId, LGProvId, ProvChapter } from "../controller/types/idTypes";
 import type { LabelGroupView } from "../hooks/useTrackedLabelGroups";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChapterPanel } from "./ChapterPanel";
-import { LabelGroupPanel } from "./LabelGroupPanel";
+import { ChapterPanel } from "./chapters/ChapterPanel";
+import { LabelGroupPanel } from "./labelGroups/LabelGroupPanel";
 
 export function LeftPanel({
 	chapters,

@@ -29,9 +29,7 @@ export function AddLabelForm({
 	onSubmit: (target: LGProvId, meta: LabelMeta) => void;
 	onCancel: () => void;
 }) {
-	const [targetId, setTargetId] = useState<LGProvId | null>(
-		targets[0]?.labelGroupId ?? null,
-	);
+	const [targetId, setTargetId] = useState<LGProvId | null>(targets[0]?.labelGroupId ?? null);
 	const [entityGroup, setEntityGroup] = useState("");
 	const [score, setScore] = useState("");
 	const [dirty, setDirty] = useState(true);
@@ -42,9 +40,7 @@ export function AddLabelForm({
 		onSubmit(targetId, {
 			entityGroup: entityGroup.trim() === "" ? undefined : entityGroup.trim(),
 			score:
-				parsedScore !== undefined && Number.isFinite(parsedScore)
-					? parsedScore
-					: undefined,
+				parsedScore !== undefined && Number.isFinite(parsedScore) ? parsedScore : undefined,
 			dirty,
 		});
 	};

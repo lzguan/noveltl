@@ -50,11 +50,11 @@ class TestInsertAutoLabels:
         assert len(novel_bundle.chapters) > 0
         assert len(ret.autolabels) == len(novel_bundle.chapters)
         logger.info("ret.inserts: %s", ret)
-        assert all(a.auto_label_status == AutoLabelProgress.PENDING for a in ret.autolabels)
+        assert all(a.auto_label_meta.auto_label_status == AutoLabelProgress.PENDING for a in ret.autolabels)
 
         await worker_mock.main()
         q = select(AutoLabel).where(
-            AutoLabel.auto_label_id.in_([a.auto_label_id for a in ret.autolabels])
+            AutoLabel.auto_label_id.in_([a.auto_label_meta.auto_label_id for a in ret.autolabels])
         )
         rows = test_db.execute(q).scalars().all()
         for row in rows:
@@ -99,7 +99,7 @@ class TestInsertAutoLabels:
             ),
         )
         assert len(ret.autolabels) == len(novel_bundle.chapters)
-        assert all(a.auto_label_status == AutoLabelProgress.PENDING for a in ret.autolabels)
+        assert all(a.auto_label_meta.auto_label_status == AutoLabelProgress.PENDING for a in ret.autolabels)
 
         # Second insert with the same params creates a new run — not
         # idempotent in the old sense, but each run is independent and

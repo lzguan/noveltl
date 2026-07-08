@@ -20,7 +20,7 @@ export interface ErrorManager {
 	getters: ErrorManagerGetters;
 }
 
-export function buildErrorManager(): ErrorManager {
+export function createErrorManager(): ErrorManager {
 	const subscribers = new Set<SubscriberFn<ErrorManagerGetters, ErrorTriggerEvent>>();
 
 	const getters: ErrorManagerGetters = {};

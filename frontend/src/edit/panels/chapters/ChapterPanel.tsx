@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
-import type { CProvId, ProvChapter } from "../controller/types/idTypes";
+import type { CProvId, ProvChapter } from "../../controller/types/idTypes";
 
 export function ChapterPanel({
 	chapters,
@@ -31,9 +31,7 @@ export function ChapterPanel({
 	return (
 		<div className="flex flex-col gap-1 p-2">
 			<div className="flex items-center gap-2 px-1.5 py-1">
-				<span className="text-xs font-medium text-muted-foreground flex-1">
-					Chapters
-				</span>
+				<span className="text-xs font-medium text-muted-foreground flex-1">Chapters</span>
 				<Button
 					variant="ghost"
 					size="icon-sm"
@@ -86,9 +84,7 @@ export function ChapterPanel({
 				</div>
 			))}
 			{chapters.length === 0 && (
-				<div className="px-1.5 py-1 text-xs text-muted-foreground">
-					No chapters yet.
-				</div>
+				<div className="px-1.5 py-1 text-xs text-muted-foreground">No chapters yet.</div>
 			)}
 		</div>
 	);

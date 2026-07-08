@@ -6,7 +6,7 @@
  */
 import type {
   AutoLabel,
-  AutoLabelMeta,
+  AutoLabelMetaWithCidOutput,
   AutoLabelRunOutput,
   BodyLoginForAccessTokenTokenPost,
   CacheEntry,
@@ -16,6 +16,7 @@ import type {
   ChapterData,
   CreateAutoLabels,
   CreateAutoLabelsResponse,
+  CreateAutolabelsAutoLabelsPostParams,
   CreateChapter,
   CreateLabelData,
   CreateLabelDataByAutoLabel,
@@ -42,6 +43,7 @@ import type {
   Language,
   ModifyChapterContentResponse,
   Novel,
+  NovelAndUsers,
   OperationStatus,
   ReadAutoLabelRunsAutoLabelRunsGetParams,
   ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetParams,
@@ -128,7 +130,7 @@ export const readAutoLabelRunsAutoLabelRunsGet = async (params: ReadAutoLabelRun
 
 
 export type readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetResponse200 = {
-  data: AutoLabelMeta[]
+  data: AutoLabelMetaWithCidOutput[]
   status: 200
 }
 
@@ -189,6 +191,16 @@ export type createAutolabelsAutoLabelsPostResponse200 = {
   status: 200
 }
 
+export type createAutolabelsAutoLabelsPostResponse400 = {
+  data: DetailHTTPErrorResponse
+  status: 400
+}
+
+export type createAutolabelsAutoLabelsPostResponse409 = {
+  data: RequestConflictErrorResponse
+  status: 409
+}
+
 export type createAutolabelsAutoLabelsPostResponse422 = {
   data: HTTPValidationError
   status: 422
@@ -197,18 +209,25 @@ export type createAutolabelsAutoLabelsPostResponse422 = {
 export type createAutolabelsAutoLabelsPostResponseSuccess = (createAutolabelsAutoLabelsPostResponse200) & {
   headers: Headers;
 };
-export type createAutolabelsAutoLabelsPostResponseError = (createAutolabelsAutoLabelsPostResponse422) & {
+export type createAutolabelsAutoLabelsPostResponseError = (createAutolabelsAutoLabelsPostResponse400 | createAutolabelsAutoLabelsPostResponse409 | createAutolabelsAutoLabelsPostResponse422) & {
   headers: Headers;
 };
 
 export type createAutolabelsAutoLabelsPostResponse = (createAutolabelsAutoLabelsPostResponseSuccess | createAutolabelsAutoLabelsPostResponseError)
 
-export const getCreateAutolabelsAutoLabelsPostUrl = () => {
+export const getCreateAutolabelsAutoLabelsPostUrl = (params?: CreateAutolabelsAutoLabelsPostParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/auto-labels`
+  return stringifiedParams.length > 0 ? `/api/auto-labels?${stringifiedParams}` : `/api/auto-labels`
 }
 
 /**
@@ -218,9 +237,10 @@ export const getCreateAutolabelsAutoLabelsPostUrl = () => {
  * matching chapter. Worker tasks are dispatched for each autolabel.
  * @summary Create Autolabels
  */
-export const createAutolabelsAutoLabelsPost = async (createAutoLabels: CreateAutoLabels, options?: RequestInit): Promise<createAutolabelsAutoLabelsPostResponse> => {
+export const createAutolabelsAutoLabelsPost = async (createAutoLabels: CreateAutoLabels,
+    params?: CreateAutolabelsAutoLabelsPostParams, options?: RequestInit): Promise<createAutolabelsAutoLabelsPostResponse> => {
 
-  return customFetch<createAutolabelsAutoLabelsPostResponse>(getCreateAutolabelsAutoLabelsPostUrl(),
+  return customFetch<createAutolabelsAutoLabelsPostResponse>(getCreateAutolabelsAutoLabelsPostUrl(params),
   {
     ...options,
     method: 'POST',
@@ -1776,6 +1796,16 @@ export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLab
   status: 200
 }
 
+export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse409 = {
+  data: RequestConflictErrorResponse
+  status: 409
+}
+
 export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse422 = {
   data: HTTPValidationError
   status: 422
@@ -1784,7 +1814,7 @@ export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLab
 export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseSuccess = (createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse200) & {
   headers: Headers;
 };
-export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseError = (createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse422) & {
+export type createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponseError = (createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse404 | createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse409 | createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse422) & {
   headers: Headers;
 };
 
@@ -2197,6 +2227,52 @@ export const createChapterNovelsNovelIdChaptersPost = async (novelId: string,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(createChapter)
+  }
+);}
+
+
+export type readNovelWithContributorsNovelsNovelIdWithContributorsGetResponse200 = {
+  data: NovelAndUsers
+  status: 200
+}
+
+export type readNovelWithContributorsNovelsNovelIdWithContributorsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readNovelWithContributorsNovelsNovelIdWithContributorsGetResponseSuccess = (readNovelWithContributorsNovelsNovelIdWithContributorsGetResponse200) & {
+  headers: Headers;
+};
+export type readNovelWithContributorsNovelsNovelIdWithContributorsGetResponseError = (readNovelWithContributorsNovelsNovelIdWithContributorsGetResponse422) & {
+  headers: Headers;
+};
+
+export type readNovelWithContributorsNovelsNovelIdWithContributorsGetResponse = (readNovelWithContributorsNovelsNovelIdWithContributorsGetResponseSuccess | readNovelWithContributorsNovelsNovelIdWithContributorsGetResponseError)
+
+export const getReadNovelWithContributorsNovelsNovelIdWithContributorsGetUrl = (novelId: string,) => {
+
+
+
+
+  return `/api/novels/${novelId}/with-contributors`
+}
+
+/**
+ * Endpoint for retrieving a novel and its associated users.
+ *
+ * Raises:
+ *     404: Novel not found (or insufficient permissions).
+ * @summary Read Novel With Contributors
+ */
+export const readNovelWithContributorsNovelsNovelIdWithContributorsGet = async (novelId: string, options?: RequestInit): Promise<readNovelWithContributorsNovelsNovelIdWithContributorsGetResponse> => {
+
+  return customFetch<readNovelWithContributorsNovelsNovelIdWithContributorsGetResponse>(getReadNovelWithContributorsNovelsNovelIdWithContributorsGetUrl(novelId),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 

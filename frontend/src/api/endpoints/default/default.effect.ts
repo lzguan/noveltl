@@ -30,7 +30,7 @@ export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneChunkSize
 
 export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneForceChunkDefault = false;
 export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneModelNameDefault = `cluener`;
-export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 };
+export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 } as const;
 export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsTwoModelNameDefault = `do_nothing`;
 
 export const ReadAutoLabelRunsAutoLabelRunsGet200ResponseItem = S.Struct({
@@ -77,13 +77,16 @@ export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetQueryParams = S.S
 })
 
 export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet200ResponseItem = S.Struct({
+  "autoLabelMeta": S.Struct({
   "autoLabelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "autoLabelLastJobId": S.optional(S.Union(S.String, S.Null)),
   "autoLabelMessage": S.optional(S.Union(S.String, S.Null)),
   "autoLabelStatus": S.Literal('failed', 'pending', 'processing', 'done').annotations({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "runId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for auto-label metadata (no label data payload).\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to.' })
+}).annotations({ description: 'Pydantic schema for auto-label metadata (no label data payload).\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to.' }),
+  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
 export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet200Response = S.Array(ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet200ResponseItem)
 
 export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet422Response = S.Struct({
@@ -101,13 +104,17 @@ export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet422Response = S.S
  * matching chapter. Worker tasks are dispatched for each autolabel.
  * @summary Create Autolabels
  */
+export const CreateAutolabelsAutoLabelsPostQueryParams = S.Struct({
+  "requestKey": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+})
+
 export const createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeDefault = 500;
 export const createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeExclusiveMin = 0;
 export const createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeMax = 512;
 
 export const createAutolabelsAutoLabelsPostBodyParamsOneForceChunkDefault = false;
 export const createAutolabelsAutoLabelsPostBodyParamsOneModelNameDefault = `cluener`;
-export const createAutolabelsAutoLabelsPostBodyParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 };
+export const createAutolabelsAutoLabelsPostBodyParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 } as const;
 export const createAutolabelsAutoLabelsPostBodyParamsTwoModelNameDefault = `do_nothing`;
 
 export const CreateAutolabelsAutoLabelsPostBody = S.Struct({
@@ -132,18 +139,21 @@ export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneChunkSize
 
 export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneForceChunkDefault = false;
 export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneModelNameDefault = `cluener`;
-export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 };
+export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 } as const;
 export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsTwoModelNameDefault = `do_nothing`;
 
 export const CreateAutolabelsAutoLabelsPost200Response = S.Struct({
   "autolabels": S.Array(S.Struct({
+  "autoLabelMeta": S.Struct({
   "autoLabelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "autoLabelLastJobId": S.optional(S.Union(S.String, S.Null)),
   "autoLabelMessage": S.optional(S.Union(S.String, S.Null)),
   "autoLabelStatus": S.Literal('failed', 'pending', 'processing', 'done').annotations({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "runId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for auto-label metadata (no label data payload).\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to.' })),
+}).annotations({ description: 'Pydantic schema for auto-label metadata (no label data payload).\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to.' }),
+  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})),
   "run": S.Struct({
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "modelName": S.String,
@@ -160,6 +170,17 @@ export const CreateAutolabelsAutoLabelsPost200Response = S.Struct({
   "triggeredBy": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 }).annotations({ description: 'Pydantic schema for an autolabel run (batch).\n\nA run groups autolabels created together in a single request.\n\nAttributes:\n    run_id: UUID identifier for this run.\n    triggered_by: UUID of user who triggered the run, or None.\n    model_name: Name of the NER model used.\n    model_params: Parameters for the NER model.\n    created_at: When the run was created.' })
 }).annotations({ description: 'Pydantic schema for the response after creating autolabels.\n\nAttributes:\n    run: The autolabel run that was created.\n    autolabels: The list of autolabel entries created in this run.' })
+
+export const CreateAutolabelsAutoLabelsPost400Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const CreateAutolabelsAutoLabelsPost409Response = S.Struct({
+  "detail": S.Struct({
+  "cacheConflict": S.Boolean,
+  "detail": S.String
+}).annotations({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
+}).annotations({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
 
 export const CreateAutolabelsAutoLabelsPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
@@ -1312,6 +1333,17 @@ export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLa
   "success": S.Array(S.Tuple(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
 }).annotations({ description: 'Return message for CreateLabelDataByAutoLabel.\n\nAttributes:\n    success: List of tuples of (chapter_id, chapter_content_id) for successful inserts.\n    errors: List of tuples of (chapter_id, chapter_content_id, error message) for failed inserts.' })
 
+export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost404Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost409Response = S.Struct({
+  "detail": S.Struct({
+  "cacheConflict": S.Boolean,
+  "detail": S.String
+}).annotations({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
+}).annotations({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
+
 export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "loc": S.Array(S.Union(S.String, S.Number)),
@@ -1562,6 +1594,43 @@ export const CreateChapterNovelsNovelIdChaptersPost200Response = S.Struct({
 }).annotations({ description: 'Pydantic schema for aggregating a ChapterContent and a Chapter together.\n\nAttributes:\n    metadata: The metadata of the chapter, such as title and whether it\'s primary.\n    content: The text content of the chapter.' })
 
 export const CreateChapterNovelsNovelIdChaptersPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * Endpoint for retrieving a novel and its associated users.
+ *
+ * Raises:
+ *     404: Novel not found (or insufficient permissions).
+ * @summary Read Novel With Contributors
+ */
+export const ReadNovelWithContributorsNovelsNovelIdWithContributorsGetParams = S.Struct({
+  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const ReadNovelWithContributorsNovelsNovelIdWithContributorsGet200Response = S.Struct({
+  "novel": S.Struct({
+  "languageCode": S.String,
+  "novelAuthor": S.optional(S.Union(S.String, S.Null)),
+  "novelDescription": S.optional(S.Union(S.String, S.Null)),
+  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "novelTitle": S.String,
+  "novelType": S.Literal('original', 'translation', 'other'),
+  "novelVisibility": S.Union(S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)),
+  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotations({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' }),
+  "users": S.Array(S.Struct({
+  "contributorRole": S.String,
+  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "userId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotations({ description: 'Pydantic schema for a novel contributor.\n\nAttributes:\n    user_id: UUID of the user.\n    novel_id: UUID of the novel.\n    contributor_role: Role of the user in the novel.' }))
+}).annotations({ description: 'Pydantic schema for novel and its associated users.\n\nAttributes:\n    novel: The novel metadata.\n    users: A list of users associated with this novel.' })
+
+export const ReadNovelWithContributorsNovelsNovelIdWithContributorsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "loc": S.Array(S.Union(S.String, S.Number)),
   "msg": S.String,

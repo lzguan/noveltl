@@ -1,4 +1,4 @@
-import type { InFlightIdStatus, Kind, ProvTypes } from "./idTypes";
+import { type InFlightIdStatus, type Kind, ProvTypes } from "./idTypes";
 import { type IdempotentCallable } from "./helperTypes";
 import { Brand, type Effect } from "effect";
 import type {
@@ -19,7 +19,12 @@ export type RequestVariant =
 	| "labelOp"
 	| "addLabelData"
 	| "reloadGroup"
-	| "openChapter";
+	| "openChapter"
+	| "createAutoLabelRun"
+	| "refreshAutoLabelRuns"
+	| "reloadAutoLabelRun"
+	| "loadAutoLabelData"
+	| "promoteAutoLabelRun";
 
 /**
  * Type representing a desired reservation of a state transition for a given id and kind.
@@ -29,6 +34,8 @@ export type Reservation<K extends Kind> = {
 	id: ProvTypes[K];
 	desiredState: InFlightIdStatus;
 };
+
+export type AnyReservation<T extends Kind> = T extends Kind ? Reservation<T> : never;
 
 /**
  * Branded type for request keys, which are unique identifiers for requests that can be used to track and manage requests in the request manager. Branded for type safety and clarity. Should be generated using the {@link regenerateKey} function to ensure uniqueness.

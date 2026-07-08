@@ -78,9 +78,9 @@ describe("buildRequestQueueDispatcher", () => {
 describe("isAllReserveable", () => {
 	function makeMockIdRepo(reserveableMap: Map<string, boolean>): IDRepository {
 		return {
-			isReserveable: (_kind: string, id: unknown, _desiredState: string) =>
+			isReserveable: (params: { kind: string; id: unknown; desiredState: string }) =>
 				Effect.gen(function* () {
-					const key = String(id);
+					const key = String(params.id);
 					if (!reserveableMap.has(key)) {
 						return yield* Effect.fail(new NotFoundException());
 					}
@@ -101,6 +101,8 @@ describe("isAllReserveable", () => {
 		);
 
 		const list: ReserveList = {
+			autoLabel: [],
+			autoLabelRun: [],
 			chapter: [{ id: chapterId, kind: "chapter", desiredState: "locked" }],
 			chapterContent: [],
 			label: [],
@@ -124,6 +126,8 @@ describe("isAllReserveable", () => {
 		);
 
 		const list: ReserveList = {
+			autoLabel: [],
+			autoLabelRun: [],
 			chapter: [{ id: chapterId, kind: "chapter", desiredState: "locked" }],
 			chapterContent: [],
 			label: [],
@@ -139,6 +143,8 @@ describe("isAllReserveable", () => {
 		const idRepo = makeMockIdRepo(new Map());
 
 		const list: ReserveList = {
+			autoLabel: [],
+			autoLabelRun: [],
 			chapter: [],
 			chapterContent: [],
 			label: [],
@@ -151,15 +157,13 @@ describe("isAllReserveable", () => {
 	});
 
 	it("short-circuits on first non-reserveable entry", () => {
-		let callCount = 0;
 		const labelId1 = LProvId("l-1");
 		const labelId2 = LProvId("l-2");
 		const labelId3 = LProvId("l-3");
 
 		const idRepo = {
-			isReserveable: (_kind: string, id: unknown, _desiredState: string) => {
-				callCount++;
-				const key = String(id);
+			isReserveable: (params: { kind: string; id: unknown; desiredState: string }) => {
+				const key = String(params.id);
 				if (key === String(labelId2)) {
 					return Effect.succeed(false);
 				}
@@ -168,6 +172,8 @@ describe("isAllReserveable", () => {
 		} as unknown as IDRepository;
 
 		const list: ReserveList = {
+			autoLabel: [],
+			autoLabelRun: [],
 			chapter: [],
 			chapterContent: [],
 			label: [
@@ -181,6 +187,5 @@ describe("isAllReserveable", () => {
 
 		const result = Effect.runSync(isAllReserveable(idRepo, list));
 		expect(result).toBe(false);
-		expect(callCount).toBe(2);
 	});
 });

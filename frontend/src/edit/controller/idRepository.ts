@@ -15,47 +15,78 @@ import {
 	type GroundIdStatus,
 	entryStatus,
 	ProvTypes,
-	CProvId,
-	CCProvId,
-	LGProvId,
-	LDProvId,
 	LProvId,
+	CServId,
+	CCServId,
+	LGServId,
+	LDServId,
+	LServEx,
+	AServId,
+	ALRServId,
+	ServTypes,
+	isTerminal,
+	identifiableKinds,
+	type ProvServKind,
+	type AnyProvServKind,
+	kinds,
+	existableKinds,
 } from "./types/idTypes";
-import { NotFoundException, NotReserveableException } from "./types/errors";
+import {
+	ResourceConflictException,
+	NotFoundException,
+	NotReserveableException,
+} from "./types/errors";
 import { Effect } from "effect";
-
-// TODO: figure out how to remove boilerplate
+import type { AnyReservation } from "./types/requestTypes";
+import { forEachKind } from "./types/helperTypes";
 
 const logger = createLogger("IdRepository");
 
-// Convenience types
-type IdentifiableKindMap = {
-	[K in IdentifiableKind]: Map<
-		ProvTypes[K],
-		{ serverId: ServId | null; status: IdStatus; lockCount: number }
-	>;
+type ServIdStatus<K extends IdentifiableKind> = {
+	serverId: ServTypes[K] | null;
+	status: IdStatus;
+	lockCount: number;
 };
-type ExistableKindMap = {
-	[K in ExistableKind]: Map<
-		ProvTypes[K],
-		{ serverExists: ServEx | null; status: IdStatus; lockCount: number }
-	>;
+type ServExistsStatus<K extends ExistableKind> = {
+	serverExists: ServTypes[K] | null;
+	status: IdStatus;
+	lockCount: number;
 };
 
-type ServIdStatus = { serverId: ServId | null; status: IdStatus; lockCount: number };
-type ServExistsStatus = { serverExists: ServEx | null; status: IdStatus; lockCount: number };
+// Convenience types
+type IdentifiableKindMap = {
+	[K in IdentifiableKind]: Map<ProvTypes[K], ServIdStatus<K>>;
+};
+type RevMap = {
+	[K in IdentifiableKind]: Map<ServTypes[K], ProvTypes[K]>;
+};
+
+type ExistableKindMap = {
+	[K in ExistableKind]: Map<ProvTypes[K], ServExistsStatus<K>>;
+};
 
 export function buildIdRepository(): IDRepository {
 	let counterRef = 0;
 	const identifiableKindMap: IdentifiableKindMap = {
-		labelGroup: new Map<ProvTypes["labelGroup"], ServIdStatus>(),
-		labelData: new Map<ProvTypes["labelData"], ServIdStatus>(),
-		chapterContent: new Map<ProvTypes["chapterContent"], ServIdStatus>(),
-		chapter: new Map<ProvTypes["chapter"], ServIdStatus>(),
+		labelGroup: new Map<ProvTypes["labelGroup"], ServIdStatus<"labelGroup">>(),
+		labelData: new Map<ProvTypes["labelData"], ServIdStatus<"labelData">>(),
+		chapterContent: new Map<ProvTypes["chapterContent"], ServIdStatus<"chapterContent">>(),
+		chapter: new Map<ProvTypes["chapter"], ServIdStatus<"chapter">>(),
+		autoLabel: new Map<ProvTypes["autoLabel"], ServIdStatus<"autoLabel">>(),
+		autoLabelRun: new Map<ProvTypes["autoLabelRun"], ServIdStatus<"autoLabelRun">>(),
 	};
 
 	const existableKindMap: ExistableKindMap = {
-		label: new Map<ProvTypes["label"], ServExistsStatus>(),
+		label: new Map<ProvTypes["label"], ServExistsStatus<"label">>(),
+	};
+
+	const revMap: RevMap = {
+		labelGroup: new Map<ServTypes["labelGroup"], ProvTypes["labelGroup"]>(),
+		labelData: new Map<ServTypes["labelData"], ProvTypes["labelData"]>(),
+		chapterContent: new Map<ServTypes["chapterContent"], ProvTypes["chapterContent"]>(),
+		chapter: new Map<ServTypes["chapter"], ProvTypes["chapter"]>(),
+		autoLabel: new Map<ServTypes["autoLabel"], ProvTypes["autoLabel"]>(),
+		autoLabelRun: new Map<ServTypes["autoLabelRun"], ProvTypes["autoLabelRun"]>(),
 	};
 
 	function newId(kind: "chapter"): ProvTypes["chapter"];
@@ -63,224 +94,243 @@ export function buildIdRepository(): IDRepository {
 	function newId(kind: "labelGroup"): ProvTypes["labelGroup"];
 	function newId(kind: "labelData"): ProvTypes["labelData"];
 	function newId(kind: "label"): ProvTypes["label"];
+	function newId(kind: "autoLabel"): ProvTypes["autoLabel"];
+	function newId(kind: "autoLabelRun"): ProvTypes["autoLabelRun"];
 
 	function newId(kind: Kind): ProvTypes[Kind] {
 		const provId = ProvId(`provisional-${counterRef++}`);
-		switch (kind) {
-			case "chapter":
-				const id = ProvTypes["chapter"](provId);
-				identifiableKindMap[kind].set(id, {
-					serverId: null,
-					status: "pending",
-					lockCount: 0,
-				});
-				return id;
-			case "chapterContent":
-				const id2 = ProvTypes["chapterContent"](provId);
-				identifiableKindMap[kind].set(id2, {
-					serverId: null,
-					status: "pending",
-					lockCount: 0,
-				});
-				return id2;
-			case "labelGroup":
-				const id3 = ProvTypes["labelGroup"](provId);
-				identifiableKindMap[kind].set(id3, {
-					serverId: null,
-					status: "pending",
-					lockCount: 0,
-				});
-				return id3;
-			case "labelData":
-				const id4 = ProvTypes["labelData"](provId);
-				identifiableKindMap[kind].set(id4, {
-					serverId: null,
-					status: "pending",
-					lockCount: 0,
-				});
-				return id4;
-			case "label":
-				const id5 = ProvTypes["label"](provId);
-				existableKindMap[kind].set(id5, {
-					serverExists: null,
-					status: "pending",
-					lockCount: 0,
-				});
-				return id5;
+		const id = ProvTypes[kind](provId);
+		// @ts-expect-error
+		if (identifiableKinds.includes(kind)) {
+			// @ts-expect-error
+			identifiableKindMap[kind as keyof IdentifiableKindMap].set(id, {
+				serverId: null,
+				status: "pending",
+				lockCount: 0,
+			});
+		} else {
+			// @ts-expect-error
+			existableKindMap[kind as keyof ExistableKindMap].set(id, {
+				serverExists: null,
+				status: "pending",
+				lockCount: 0,
+			});
 		}
-	}
-
-	function newIdAndBindId(kind: "chapter", serverId: ServId): ProvTypes["chapter"];
-	function newIdAndBindId(kind: "chapterContent", serverId: ServId): ProvTypes["chapterContent"];
-	function newIdAndBindId(kind: "labelGroup", serverId: ServId): ProvTypes["labelGroup"];
-	function newIdAndBindId(kind: "labelData", serverId: ServId): ProvTypes["labelData"];
-
-	function newIdAndBindId(kind: IdentifiableKind, serverId: ServId): ProvId {
-		const provId = ProvId(`provisional-${counterRef++}`);
-		switch (kind) {
-			case "chapter":
-				const id = ProvTypes["chapter"](provId);
-				identifiableKindMap[kind].set(id, {
-					serverId,
-					status: "clean",
-					lockCount: 0,
-				});
-				return id;
-			case "chapterContent":
-				const id2 = ProvTypes["chapterContent"](provId);
-				identifiableKindMap[kind].set(id2, {
-					serverId,
-					status: "clean",
-					lockCount: 0,
-				});
-				return id2;
-			case "labelGroup":
-				const id3 = ProvTypes["labelGroup"](provId);
-				identifiableKindMap[kind].set(id3, {
-					serverId,
-					status: "clean",
-					lockCount: 0,
-				});
-				return id3;
-			case "labelData":
-				const id4 = ProvTypes["labelData"](provId);
-				identifiableKindMap[kind].set(id4, {
-					serverId,
-					status: "clean",
-					lockCount: 0,
-				});
-				return id4;
-		}
-	}
-
-	function newIdAndBindExists(kind: "label"): ProvTypes["label"] {
-		const id = ProvTypes["label"](ProvId(`provisional-${counterRef++}`));
-		existableKindMap[kind].set(id, {
-			serverExists: ServEx(true),
-			status: "clean",
-			lockCount: 0,
-		});
 		return id;
 	}
 
-	const getServerId = <K extends IdentifiableKind>(kind: K, provisionalId: ProvTypes[K]) => {
-		const entry = identifiableKindMap[kind].get(provisionalId);
+	function newIdAndBindId(
+		params: Omit<ProvServKind<"chapter">, "provId">,
+	): Effect.Effect<ProvTypes["chapter"], ResourceConflictException>;
+	function newIdAndBindId(
+		params: Omit<ProvServKind<"chapterContent">, "provId">,
+	): Effect.Effect<ProvTypes["chapterContent"], ResourceConflictException>;
+	function newIdAndBindId(
+		params: Omit<ProvServKind<"labelGroup">, "provId">,
+	): Effect.Effect<ProvTypes["labelGroup"], ResourceConflictException>;
+	function newIdAndBindId(
+		params: Omit<ProvServKind<"labelData">, "provId">,
+	): Effect.Effect<ProvTypes["labelData"], ResourceConflictException>;
+	function newIdAndBindId(
+		params: Omit<ProvServKind<"autoLabel">, "provId">,
+	): Effect.Effect<ProvTypes["autoLabel"], ResourceConflictException>;
+	function newIdAndBindId(
+		params: Omit<ProvServKind<"autoLabelRun">, "provId">,
+	): Effect.Effect<ProvTypes["autoLabelRun"], ResourceConflictException>;
+
+	function newIdAndBindId({
+		kind,
+		servId,
+	}: {
+		kind: IdentifiableKind;
+		servId: ServId;
+	}): Effect.Effect<ProvTypes[IdentifiableKind], ResourceConflictException> {
+		const provId = ProvId(`provisional-${counterRef++}`);
+		const id = ProvTypes[kind](provId);
+		// @ts-expect-error
+		const existing = revMap[kind].get(servId);
+		if (existing) {
+			// @ts-expect-error
+			const entry = identifiableKindMap[kind].get(existing);
+			if (entry && (entry.status === "clean" || entry.status === "locked")) {
+				return Effect.succeed(existing);
+			}
+			return Effect.fail(
+				new ResourceConflictException({ id: servId, status: entry?.status ?? "unknown" }),
+			);
+		}
+		// @ts-expect-error
+		identifiableKindMap[kind].set(id, {
+			serverId: servId,
+			status: "clean",
+			lockCount: 0,
+		});
+		// @ts-expect-error
+		revMap[kind].set(servId, id);
+		return Effect.succeed(id);
+	}
+
+	function newIdAndBindExists(
+		params: Omit<ProvServKind<"label">, "provId" | "servId">,
+	): Effect.Effect<ProvTypes["label"]>;
+
+	function newIdAndBindExists({ kind }: { kind: "label" }): Effect.Effect<ProvTypes["label"]> {
+		const id = ProvTypes[kind](ProvId(`provisional-${counterRef++}`));
+		existableKindMap[kind].set(id, {
+			serverExists: ServTypes[kind](ServEx(true)),
+			status: "clean",
+			lockCount: 0,
+		});
+		return Effect.succeed(id);
+	}
+
+	function getServerId(
+		params: Omit<ProvServKind<"chapter">, "servId">,
+	): Effect.Effect<CServId | null, NotFoundException>;
+	function getServerId(
+		params: Omit<ProvServKind<"chapterContent">, "servId">,
+	): Effect.Effect<CCServId | null, NotFoundException>;
+	function getServerId(
+		params: Omit<ProvServKind<"labelGroup">, "servId">,
+	): Effect.Effect<LGServId | null, NotFoundException>;
+	function getServerId(
+		params: Omit<ProvServKind<"labelData">, "servId">,
+	): Effect.Effect<LDServId | null, NotFoundException>;
+	function getServerId(
+		params: Omit<ProvServKind<"autoLabel">, "servId">,
+	): Effect.Effect<AServId | null, NotFoundException>;
+	function getServerId(
+		params: Omit<ProvServKind<"autoLabelRun">, "servId">,
+	): Effect.Effect<ALRServId | null, NotFoundException>;
+
+	function getServerId<K extends IdentifiableKind>({
+		kind,
+		provId,
+	}: {
+		kind: K;
+		provId: ProvTypes[K];
+	}): Effect.Effect<ServId | null, NotFoundException> {
+		const entry = identifiableKindMap[kind].get(provId);
 		if (!entry) {
 			return Effect.fail(new NotFoundException());
 		}
 		return Effect.succeed(entry.serverId);
-	};
+	}
 
-	const getServerExists = <K extends ExistableKind>(kind: K, provisionalId: ProvTypes[K]) => {
-		const entry = existableKindMap[kind].get(provisionalId);
+	function getServerExists(
+		params: ProvServKind<"label">,
+	): Effect.Effect<LServEx | null, NotFoundException>;
+
+	function getServerExists<K extends ExistableKind>({
+		kind,
+		provId,
+	}: {
+		kind: K;
+		provId: ProvTypes[K];
+	}): Effect.Effect<ServEx | null, NotFoundException> {
+		const entry = existableKindMap[kind].get(provId);
 		if (!entry) {
 			return Effect.fail(new NotFoundException());
 		}
 		return Effect.succeed(entry.serverExists);
-	};
-
-	const bindServerId = <K extends IdentifiableKind>(
-		kind: K,
-		provisionalId: ProvTypes[K],
-		serverId: ServId,
-	) => {
-		const entry = identifiableKindMap[kind].get(provisionalId);
-		if (!entry) {
-			logger.error(
-				`Provisional id ${provisionalId} not found for kind ${kind} in bindServerId`,
-			);
-			return Effect.fail(new NotFoundException());
-		}
-		return Effect.sync(() => (entry.serverId = serverId));
-	};
-
-	const bindServerExists = <K extends ExistableKind>(kind: K, provisionalId: ProvTypes[K]) => {
-		const entry = existableKindMap[kind].get(provisionalId);
-		if (!entry) {
-			logger.error(
-				`Provisional id ${provisionalId} not found for kind ${kind} in bindServerExists`,
-			);
-			return Effect.fail(new NotFoundException());
-		}
-		return Effect.sync(() => (entry.serverExists = ServEx(true)));
-	};
-
-	function idObjState(
-		kind: Kind,
-		id: ProvTypes[Kind],
-	): Effect.Effect<IdStatus, NotFoundException> {
-		switch (kind) {
-			case "chapter":
-				const entry = identifiableKindMap["chapter"].get(id as CProvId);
-				if (!entry) {
-					logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
-					return Effect.fail(new NotFoundException());
-				}
-				return Effect.succeed(entry.status);
-			case "chapterContent":
-				const entry2 = identifiableKindMap["chapterContent"].get(id as CCProvId);
-				if (!entry2) {
-					logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
-					return Effect.fail(new NotFoundException());
-				}
-				return Effect.succeed(entry2.status);
-			case "labelGroup":
-				const entry3 = identifiableKindMap["labelGroup"].get(id as LGProvId);
-				if (!entry3) {
-					logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
-					return Effect.fail(new NotFoundException());
-				}
-				return Effect.succeed(entry3.status);
-			case "labelData":
-				const entry4 = identifiableKindMap["labelData"].get(id as LDProvId);
-				if (!entry4) {
-					logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
-					return Effect.fail(new NotFoundException());
-				}
-				return Effect.succeed(entry4.status);
-			case "label":
-				const entry5 = existableKindMap["label"].get(id as LProvId);
-				if (!entry5) {
-					logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
-					return Effect.fail(new NotFoundException());
-				}
-				return Effect.succeed(entry5.status);
-		}
 	}
 
-	const isReserveable = (kind: Kind, id: ProvTypes[Kind], desiredState: InFlightIdStatus) =>
-		Effect.gen(function* () {
+	function bindServerId(
+		params: AnyProvServKind<IdentifiableKind>,
+	): Effect.Effect<void, NotFoundException | ResourceConflictException>;
+
+	function bindServerId({ kind, provId, servId }: AnyProvServKind<IdentifiableKind>) {
+		// @ts-expect-error
+		const entry = identifiableKindMap[kind].get(provId);
+		// @ts-expect-error
+		if (revMap[kind].has(servId)) {
+			return Effect.fail(
+				new ResourceConflictException({ id: servId, status: entry?.status ?? "unknown" }),
+			);
+		}
+		if (!entry) {
+			logger.error(`Provisional id ${provId} not found for kind ${kind} in bindServerId`);
+			return Effect.fail(new NotFoundException());
+		}
+		if (entry.serverId !== null) {
+			return Effect.fail(
+				new ResourceConflictException({ id: servId, status: entry.status ?? "unknown" }),
+			);
+		}
+		// @ts-expect-error
+		revMap[kind].set(servId, provId);
+		entry.serverId = servId;
+		return Effect.succeed(void 0);
+	}
+
+	function bindServerExists(
+		params: AnyProvServKind<ExistableKind>,
+	): Effect.Effect<void, NotFoundException>;
+
+	function bindServerExists<K extends ExistableKind>({
+		kind,
+		provId,
+	}: {
+		kind: K;
+		provId: ProvTypes[K];
+	}) {
+		const entry = existableKindMap[kind].get(provId);
+		if (!entry) {
+			logger.error(`Provisional id ${provId} not found for kind ${kind} in bindServerExists`);
+			return Effect.fail(new NotFoundException());
+		}
+		entry.serverExists = LServEx(true);
+		return Effect.succeed(void 0);
+	}
+
+	function idObjState(
+		params: Omit<AnyReservation<Kind>, "desiredState">,
+	): Effect.Effect<IdStatus, NotFoundException>;
+
+	function idObjState({
+		kind,
+		id,
+	}: {
+		kind: Kind;
+		id: ProvTypes[Kind];
+	}): Effect.Effect<IdStatus, NotFoundException> {
+		// @ts-expect-error
+		if (identifiableKinds.includes(kind)) {
+			// @ts-expect-error
+			const entry = identifiableKindMap[kind].get(id);
+			if (!entry) {
+				logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
+				return Effect.fail(new NotFoundException());
+			}
+			return Effect.succeed(entry.status);
+		} else {
+			// @ts-expect-error
+			const entry = existableKindMap[kind].get(id);
+			if (!entry) {
+				logger.error(`Provisional id ${id} not found for kind ${kind} in idObjState`);
+				return Effect.fail(new NotFoundException());
+			}
+			return Effect.succeed(entry.status);
+		}
+	}
+	function isReserveable(params: AnyReservation<Kind>): Effect.Effect<boolean, NotFoundException>;
+	function isReserveable({
+		kind,
+		id,
+		desiredState,
+	}: AnyReservation<Kind>): Effect.Effect<boolean, NotFoundException> {
+		return Effect.gen(function* () {
 			let currentState: IdStatus;
 			let serverState: ServId | ServEx | null;
-
-			switch (kind) {
-				case "chapter":
-					currentState = yield* idObjState("chapter", id as CProvId);
-					serverState =
-						identifiableKindMap["chapter"].get(id as CProvId)?.serverId ?? null;
-					break;
-				case "chapterContent":
-					currentState = yield* idObjState("chapterContent", id as CCProvId);
-					serverState =
-						identifiableKindMap["chapterContent"].get(id as CCProvId)?.serverId ?? null;
-					break;
-				case "labelGroup":
-					currentState = yield* idObjState("labelGroup", id as LGProvId);
-					serverState =
-						identifiableKindMap["labelGroup"].get(id as LGProvId)?.serverId ?? null;
-					break;
-				case "labelData":
-					currentState = yield* idObjState("labelData", id as LDProvId);
-					serverState =
-						identifiableKindMap["labelData"].get(id as LDProvId)?.serverId ?? null;
-					break;
-				case "label":
-					currentState = yield* idObjState("label", id as LProvId);
-					serverState =
-						existableKindMap["label"].get(id as LProvId)?.serverExists ?? null;
-					break;
-				default:
-					return false;
+			// @ts-expect-error
+			if (identifiableKinds.includes(kind)) {
+				currentState = yield* idObjState({ kind, id });
+				// @ts-expect-error
+				serverState = identifiableKindMap[kind].get(id)?.serverId ?? null;
+			} else {
+				currentState = yield* idObjState({ kind: "label", id: id as LProvId });
+				// @ts-expect-error
+				serverState = existableKindMap[kind].get(id as LProvId)?.serverExists ?? null;
 			}
 			if (desiredState === "creating") {
 				return currentState === "pending" && serverState === null;
@@ -302,41 +352,32 @@ export function buildIdRepository(): IDRepository {
 				return false;
 			}
 		});
+	}
 
-	const reserveIdObjState = (kind: Kind, id: ProvTypes[Kind], desiredState: InFlightIdStatus) =>
-		Effect.gen(function* () {
-			const reserveable = yield* isReserveable(kind, id, desiredState);
+	function reserveIdObjState(
+		params: AnyReservation<Kind>,
+	): Effect.Effect<void, NotFoundException | NotReserveableException>;
+
+	function reserveIdObjState(reservation: AnyReservation<Kind>) {
+		return Effect.gen(function* () {
+			const { kind, id, desiredState } = reservation;
+			const reserveable = yield* isReserveable(reservation);
 			if (!reserveable) {
 				return yield* Effect.fail(new NotReserveableException());
 			}
 			let entry:
 				| {
-						serverId: ServId | null;
-						status: IdStatus;
-						lockCount: number;
-				  }
-				| {
-						serverExists: ServEx | null;
 						status: IdStatus;
 						lockCount: number;
 				  }
 				| undefined;
-			switch (kind) {
-				case "chapter":
-					entry = identifiableKindMap["chapter"].get(id as CProvId);
-					break;
-				case "chapterContent":
-					entry = identifiableKindMap["chapterContent"].get(id as CCProvId);
-					break;
-				case "labelGroup":
-					entry = identifiableKindMap["labelGroup"].get(id as LGProvId);
-					break;
-				case "labelData":
-					entry = identifiableKindMap["labelData"].get(id as LDProvId);
-					break;
-				case "label":
-					entry = existableKindMap["label"].get(id as LProvId);
-					break;
+			// @ts-expect-error
+			if (identifiableKinds.includes(kind)) {
+				// @ts-expect-error
+				entry = identifiableKindMap[kind].get(id);
+			} else {
+				// @ts-expect-error
+				entry = existableKindMap[kind].get(id);
 			}
 			if (!entry) {
 				return yield* Effect.fail(new NotFoundException());
@@ -347,41 +388,19 @@ export function buildIdRepository(): IDRepository {
 			}
 			return;
 		});
+	}
 
-	const releaseIdObjState =
-		(post: (status: InFlightIdStatus) => GroundIdStatus) =>
-		(kind: Kind, id: ProvTypes[Kind]) => {
-			let entry:
-				| {
-						serverExists: ServEx | null;
-						status: IdStatus;
-						lockCount: number;
-				  }
-				| {
-						serverId: ServId | null;
-						status: IdStatus;
-						lockCount: number;
-				  }
-				| undefined;
-
-			switch (kind) {
-				case "chapter":
-					entry = identifiableKindMap["chapter"].get(id as CProvId);
-					break;
-				case "chapterContent":
-					entry = identifiableKindMap["chapterContent"].get(id as CCProvId);
-					break;
-				case "labelGroup":
-					entry = identifiableKindMap["labelGroup"].get(id as LGProvId);
-					break;
-				case "labelData":
-					entry = identifiableKindMap["labelData"].get(id as LDProvId);
-					break;
-				case "label":
-					entry = existableKindMap["label"].get(id as LProvId);
-					break;
+	function releaseIdObjState(post: (status: InFlightIdStatus) => GroundIdStatus) {
+		return ({ kind, id }: Omit<AnyReservation<Kind>, "desiredState">) => {
+			let entry: ServExistsStatus<ExistableKind> | ServIdStatus<IdentifiableKind> | undefined;
+			// @ts-expect-error
+			if (identifiableKinds.includes(kind)) {
+				// @ts-expect-error
+				entry = identifiableKindMap[kind].get(id);
+			} else {
+				// @ts-expect-error
+				entry = existableKindMap[kind].get(id);
 			}
-
 			if (!entry) {
 				return Effect.fail(new NotFoundException());
 			}
@@ -395,59 +414,100 @@ export function buildIdRepository(): IDRepository {
 				}
 			}
 			entry.status = post(entry.status);
+			if (
+				// @ts-expect-error
+				identifiableKinds.includes(kind) &&
+				isTerminal(entry.status) &&
+				"serverId" in entry
+			) {
+				// @ts-expect-error
+				revMap[kind].delete(entry.serverId as ServTypes[IdentifiableKind]);
+				// @ts-expect-error
+				identifiableKindMap[kind].delete(id as ProvTypes[IdentifiableKind]);
+			}
 			return Effect.succeed(ActionHappened(true));
 		};
+	}
 
-	const releaseIdObjStateOnSuccess = releaseIdObjState(exitStatus);
+	function releaseIdObjStateOnSuccess(
+		params: Omit<AnyReservation<Kind>, "desiredState">,
+	): Effect.Effect<ActionHappened, NotFoundException>;
+
+	function releaseIdObjStateOnSuccess(params: Omit<AnyReservation<Kind>, "desiredState">) {
+		return releaseIdObjState(exitStatus)(params);
+	}
 	const releaseIdObjStateOnFailure = releaseIdObjState(entryStatus);
 
 	const gc = () => {
-		identifiableKindMap.labelGroup.forEach((value, key) => {
-			if (
-				value.status === "deleted" ||
-				value.status === "killed" ||
-				value.status === "detached"
-			) {
-				identifiableKindMap.labelGroup.delete(key);
+		const keys: Record<Kind, [ProvId, Kind][]> = kinds.reduce(
+			(acc, kind) => {
+				acc[kind] = [];
+				return acc;
+			},
+			{} as Record<Kind, [ProvId, Kind][]>,
+		);
+		for (const kind of identifiableKinds) {
+			for (const [provId, entry] of identifiableKindMap[kind]) {
+				if (isTerminal(entry.status)) {
+					keys[kind].push([provId, kind]);
+				}
 			}
-		});
-		identifiableKindMap.labelData.forEach((value, key) => {
-			if (
-				value.status === "deleted" ||
-				value.status === "killed" ||
-				value.status === "detached"
-			) {
-				identifiableKindMap.labelData.delete(key);
+		}
+		for (const kind of existableKinds) {
+			for (const [provId, entry] of existableKindMap[kind]) {
+				if (isTerminal(entry.status)) {
+					keys[kind].push([provId, kind]);
+				}
 			}
-		});
-		identifiableKindMap.chapterContent.forEach((value, key) => {
-			if (
-				value.status === "deleted" ||
-				value.status === "killed" ||
-				value.status === "detached"
-			) {
-				identifiableKindMap.chapterContent.delete(key);
-			}
-		});
-		identifiableKindMap.chapter.forEach((value, key) => {
-			if (
-				value.status === "deleted" ||
-				value.status === "killed" ||
-				value.status === "detached"
-			) {
-				identifiableKindMap.chapter.delete(key);
-			}
-		});
-		existableKindMap.label.forEach((value, key) => {
-			if (
-				value.status === "deleted" ||
-				value.status === "killed" ||
-				value.status === "detached"
-			) {
-				existableKindMap.label.delete(key);
-			}
-		});
+		}
+		Effect.runSync(
+			forEachKind(
+				keys,
+				([provId, kind]: [ProvId, Kind]) =>
+					Effect.sync(() => {
+						// @ts-expect-error
+						if (identifiableKinds.includes(kind)) {
+							// @ts-expect-error
+							identifiableKindMap[kind].delete(provId);
+						} else {
+							// @ts-expect-error
+							existableKindMap[kind].delete(provId);
+						}
+					}),
+				kinds,
+			),
+		);
 	};
+
+	function queryProvId(
+		params: Omit<ProvServKind<"labelGroup">, "provId">,
+	): Effect.Effect<ProvTypes["labelGroup"] | null>;
+	function queryProvId(
+		params: Omit<ProvServKind<"labelData">, "provId">,
+	): Effect.Effect<ProvTypes["labelData"] | null>;
+	function queryProvId(
+		params: Omit<ProvServKind<"chapterContent">, "provId">,
+	): Effect.Effect<ProvTypes["chapterContent"] | null>;
+	function queryProvId(
+		params: Omit<ProvServKind<"chapter">, "provId">,
+	): Effect.Effect<ProvTypes["chapter"] | null>;
+	function queryProvId(
+		params: Omit<ProvServKind<"autoLabel">, "provId">,
+	): Effect.Effect<ProvTypes["autoLabel"] | null>;
+	function queryProvId(
+		params: Omit<ProvServKind<"autoLabelRun">, "provId">,
+	): Effect.Effect<ProvTypes["autoLabelRun"] | null>;
+
+	function queryProvId({
+		kind,
+		servId,
+	}: {
+		kind: IdentifiableKind;
+		servId: ServTypes[IdentifiableKind];
+	}): Effect.Effect<ProvTypes[IdentifiableKind] | null> {
+		// @ts-expect-error
+		return Effect.succeed(revMap[kind].get(servId) ?? null);
+	}
 
 	return {
 		newId,
@@ -462,6 +522,7 @@ export function buildIdRepository(): IDRepository {
 		reserveIdObjState,
 		releaseIdObjStateOnSuccess,
 		releaseIdObjStateOnFailure,
+		queryProvId,
 		gc,
 	};
 }

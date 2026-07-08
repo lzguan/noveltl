@@ -44,6 +44,9 @@
             "git show *": "allow",
             "git rev-parse *": "allow",
 
+            "gh pr view *": "allow",
+            "gh pr diff *": "allow",
+
             "uv pip list *": "allow",
             "uv pip show *": "allow",
             "uv tree *": "allow",

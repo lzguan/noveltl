@@ -5,18 +5,23 @@ import {
 	FatalException,
 	NotFoundException,
 	DuplicateChapterNumException,
-	DuplicateIdException,
+	DuplicateProvIdException,
 } from "./types/errors";
 import type {
+	ALRProvId,
+	AProvId,
 	CProvId,
 	LGProvId,
+	ProvAutoLabel,
+	ProvAutoLabelMetaWithCid,
+	ProvAutoLabelRun,
 	ProvChapter,
 	ProvId,
 	ProvLabel,
 	ProvLabelData,
 	ProvLabelGroup,
 } from "./types/idTypes";
-import type { Slot, SlotIndex } from "./types/helperTypes";
+import type { AutoLabelIndex, Slot, SlotIndex } from "./types/helperTypes";
 
 interface HasActiveAttribute {
 	active: boolean;
@@ -177,7 +182,7 @@ export const buildIndexInternals = <IDT extends ProvId, Meta, Data, IndexErrorT>
 			},
 			new: (id: IDT, meta: Meta) => {
 				if (index.has(id)) {
-					return Effect.fail(new DuplicateIdException({ id }));
+					return Effect.fail(new DuplicateProvIdException({ id }));
 				}
 				index.set(id, { meta, inFlight: 0, status: "idle" });
 				return Effect.succeed(void 0);
@@ -266,3 +271,17 @@ export const buildLabelDataIndex = (): Effect.Effect<LabelDataIndex, FatalExcept
 		{ labels: readonly ProvLabel[] },
 		never
 	>([]);
+
+export const buildAutoLabelIndex = (): Effect.Effect<AutoLabelIndex, FatalException> =>
+	buildIndexInternals<
+		AProvId,
+		{ autoLabel: ProvAutoLabelMetaWithCid },
+		{ autoLabelData: ProvAutoLabel["autoLabelData"] },
+		never
+	>([]);
+
+export const buildAutoLabelRunIndex = (): Effect.Effect<
+	SlotIndex<ALRProvId, { run: ProvAutoLabelRun }, { index: AutoLabelIndex }, never>,
+	FatalException
+> =>
+	buildIndexInternals<ALRProvId, { run: ProvAutoLabelRun }, { index: AutoLabelIndex }, never>([]);

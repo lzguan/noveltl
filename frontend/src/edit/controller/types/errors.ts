@@ -1,7 +1,7 @@
 import { Data } from "effect";
 import type { RequestKey } from "./requestTypes";
 import type { TimeoutException } from "effect/Cause";
-import type { CProvId, LGProvId, ProvId } from "./idTypes";
+import type { CProvId, IdStatus, LGProvId, ProvId, ServId } from "./idTypes";
 
 /**
  * Represents a cache conflict on the backend.
@@ -29,6 +29,7 @@ export class ConnectionException extends Data.TaggedError("ConnectionException")
  */
 export class FatalException extends Data.TaggedError("FatalException")<{
 	orig?: unknown;
+	from?: string;
 }> {}
 
 /**
@@ -53,8 +54,13 @@ export class DuplicateChapterNumException extends Data.TaggedError(
 	"DuplicateChapterNumException",
 )<{}> {}
 
-export class DuplicateIdException extends Data.TaggedError("DuplicateIdException")<{
+export class DuplicateProvIdException extends Data.TaggedError("DuplicateProvIdException")<{
 	id: ProvId;
+}> {}
+
+export class ResourceConflictException extends Data.TaggedError("ResourceConflictException")<{
+	id: ServId;
+	status: IdStatus | "unknown";
 }> {}
 
 export class AlreadyOpenException extends Data.TaggedError("AlreadyOpenException")<{

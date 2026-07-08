@@ -1,4 +1,4 @@
-import { CodeMirrorEditor } from "./CodeMirrorEditor";
+import { CodeMirrorEditor } from "./editor/CodeMirrorEditor";
 import type { Caret } from "../hooks/useEditorState";
 import type { EditorMode } from "../managers/editorManager";
 import type { EditorData } from "../hooks/useEditorState";

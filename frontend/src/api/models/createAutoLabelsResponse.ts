@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { AutoLabelMeta } from './autoLabelMeta';
+import type { AutoLabelMetaWithCidOutput } from './autoLabelMetaWithCidOutput';
 import type { AutoLabelRunOutput } from './autoLabelRunOutput';
 
 /**
@@ -15,6 +15,6 @@ import type { AutoLabelRunOutput } from './autoLabelRunOutput';
  *     autolabels: The list of autolabel entries created in this run.
  */
 export interface CreateAutoLabelsResponse {
-  autolabels: AutoLabelMeta[];
+  autolabels: AutoLabelMetaWithCidOutput[];
   run: AutoLabelRunOutput;
 }

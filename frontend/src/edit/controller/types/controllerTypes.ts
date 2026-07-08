@@ -1,10 +1,25 @@
 import type { IDLabelOp, LabelOp } from "./dataTypes";
-import type { CProvId, LGProvId, ProvChapter, ProvLabelGroup } from "./idTypes";
-import type { Novel, TextOp } from "@/api/models";
+import type {
+	ALRProvId,
+	AProvId,
+	CCProvId,
+	CProvId,
+	LGProvId,
+	ProvAutoLabel,
+	ProvAutoLabelRun,
+	ProvChapter,
+	ProvLabelGroup,
+} from "./idTypes";
+import type { CluenerParams, DoNothingParams, Novel, TextOp } from "@/api/models";
 import { Effect } from "effect";
 import type { KeyedRequestEvent } from "./requestTypes";
 import type { NotFoundException } from "./errors";
-import type { ChapterGetterSlot, LabelDataSlot, LabelGroupSlot } from "./helperTypes";
+import type {
+	ChapterGetterSlot,
+	LabelDataSlot,
+	LabelGroupSlot,
+	AutoLabelRunGetterSlot,
+} from "./helperTypes";
 import type { Role } from "@/api/models/role";
 import type { UnknownException } from "effect/Cause";
 
@@ -36,6 +51,7 @@ export interface BaseController<GettersT, UserEventT, TriggerEventT> {
  */
 export interface ChapterGetters {
 	text: () => Effect.Effect<string>;
+	chapterContentId: () => Effect.Effect<CCProvId>;
 	labelDataSlot: (labelGroupId: LGProvId) => Effect.Effect<LabelDataSlot, NotFoundException>;
 }
 
@@ -49,7 +65,17 @@ export interface NovelGetters {
 	chapterIds: () => Effect.Effect<readonly CProvId[]>;
 	chapterGetterSlot: (chapterId: CProvId) => Effect.Effect<ChapterGetterSlot, NotFoundException>;
 	labelGroupSlot: (labelGroupId: LGProvId) => Effect.Effect<LabelGroupSlot, NotFoundException>;
+	autoLabelRunIds: () => Effect.Effect<readonly ALRProvId[]>;
+	autoLabelRunSlot: (
+		runId: ALRProvId,
+	) => Effect.Effect<AutoLabelRunGetterSlot, NotFoundException>;
 }
+
+export type ChapterFilter = {
+	readonly start?: number;
+	readonly end?: number;
+	readonly isPublic?: boolean;
+};
 
 /**
  * Type for any event triggered by the user which requires state updates. Will be updated.
@@ -84,6 +110,20 @@ export type NovelUserEvent =
 			chapterNum: number;
 			chapterTitle: string;
 			chapterIsPublic: boolean;
+	  }
+	| {
+			eventType: "createAutoLabelRun";
+			params: CluenerParams | DoNothingParams;
+			chapterFilter: ChapterFilter;
+	  }
+	| { eventType: "refreshAutoLabelRuns"; flags?: { now: boolean } }
+	| { eventType: "reloadAutoLabelRun"; runId: ALRProvId; flags?: { now: boolean } }
+	| { eventType: "loadAutoLabelData"; autoLabelId: AProvId; flags?: { now: boolean } }
+	| {
+			eventType: "promoteAutoLabelRun";
+			runId: ALRProvId;
+			chapterFilter: ChapterFilter;
+			labelGroupId: LGProvId;
 	  };
 
 /**
@@ -120,7 +160,30 @@ export type TriggerEvent =
 			chapterId: CProvId;
 			labelGroupId: LGProvId;
 			wasDeleted: boolean;
-	  };
+	  }
+	| {
+			eventType: "autoLabelRunCreated";
+			run: ProvAutoLabelRun;
+			autoLabels: Omit<ProvAutoLabel, "autoLabelData">[];
+	  }
+	| {
+			eventType: "autoLabelRunPromoted";
+			runId: ALRProvId;
+			labelGroupId: LGProvId;
+			chapterFilter: ChapterFilter;
+			success: readonly {
+				chapterId: CProvId;
+				chapterContentId: CCProvId;
+			}[];
+			errors: readonly {
+				chapterId: CProvId;
+				chapterContentId: CCProvId;
+				error: string;
+			}[];
+	  }
+	| { eventType: "autoLabelRunsRefreshed" }
+	| { eventType: "autoLabelRunReloaded"; runId: ALRProvId }
+	| { eventType: "autoLabelDataLoaded"; autoLabelId: AProvId };
 
 /**
  * Novel-level controller. Events are ignored until start() is called.

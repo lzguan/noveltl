@@ -1,24 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-	Compartment,
-	EditorState,
-	type Range,
-	StateEffect,
-	StateField,
-} from "@codemirror/state";
+import { Compartment, EditorState, type Range, StateEffect, StateField } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, keymap } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import type { SegmentManager } from "@/edit/lib/text-model/core/segmentManager";
 import type { StyledLabel } from "@/edit/lib/text-model/core/types";
 import { blue, green, red, toHex } from "@/edit/lib/text-model/builtin/colors";
-import type { Caret } from "../hooks/useEditorState";
-import type { EditorMode, LabelStyle } from "../managers/editorManager";
-import type { LProvId } from "../controller/types/idTypes";
+import type { Caret } from "../../hooks/useEditorState";
+import type { EditorMode, LabelStyle } from "../../managers/editorManager";
+import type { LProvId } from "../../controller/types/idTypes";
 import type { TextOp } from "@/api/models";
-import { LabelContextMenu } from "../labeling/LabelContextMenu";
-import { AddLabelForm } from "../labeling/AddLabelForm";
+import { LabelContextMenu } from "../../labeling/LabelContextMenu";
+import { AddLabelForm } from "../../labeling/AddLabelForm";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
-import type { AddTarget, EditorLabel, LabelEditing } from "../labeling/types";
+import type { AddTarget, EditorLabel, LabelEditing } from "../../labeling/types";
 
 type SM = SegmentManager<LabelStyle, StyledLabel<LabelStyle>, LProvId>;
 
@@ -148,7 +142,11 @@ export function CodeMirrorEditor({
 								}
 								const insertedText = inserted.toString();
 								if (insertedText.length > 0) {
-									onTextOpRef.current({ op: "insert", start, text: insertedText });
+									onTextOpRef.current({
+										op: "insert",
+										start,
+										text: insertedText,
+									});
 								}
 								shift += insertedText.length - removed.length;
 							});
@@ -305,11 +303,22 @@ export function CodeMirrorEditor({
 							word={form.word}
 							targets={form.targets}
 							onSubmit={(target, meta) => {
-									const op = { start: form.range.from, end: form.range.to, word: form.word };
-									console.log("[addLabel] target=%s range=[%d,%d) word=%s", target, op.start, op.end, op.word, meta);
-									labeling.sink.add(target, op, meta);
-									setForm(null);
-								}}
+								const op = {
+									start: form.range.from,
+									end: form.range.to,
+									word: form.word,
+								};
+								console.log(
+									"[addLabel] target=%s range=[%d,%d) word=%s",
+									target,
+									op.start,
+									op.end,
+									op.word,
+									meta,
+								);
+								labeling.sink.add(target, op, meta);
+								setForm(null);
+							}}
 							onCancel={() => setForm(null)}
 						/>
 					</PopoverContent>

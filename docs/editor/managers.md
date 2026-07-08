@@ -59,7 +59,7 @@ A manager is a stateless factory. It is constructed with the dependencies it nee
 1. **User-event handlers** that panels call (e.g. `textOp`, `addChapter`, `toggleVisibility`). These translate a UI action into a `NovelUserEvent` and forward it via `controllerUserEvent`, usually after a quick guard (e.g. "only emit a text op in edit mode").
 2. A **`handleControllerEvent(getters, event)`** subscriber that is plugged into `controller.subscribe`. It switches on the `TriggerEvent` type, reads whatever it needs from the controller getters, and writes the result into its hook(s) (and/or the segment manager).
 
-> As described in [README.md](./README.md), managers are intended to be stateless — all state lives in the hooks. The one small exception in the current code is `labelGroupManager`, which keeps a single local `activeLabelGroup` pointer; everything else it touches lives in a hook.
+> As described in [edit/README.md](../../frontend/src/edit/README.md), managers are intended to be stateless — all state lives in the hooks. The one small exception in the current code is `labelGroupManager`, which keeps a single local `activeLabelGroup` pointer; everything else it touches lives in a hook. This is an unintended side effect of AI coding and should be corrected at some point.
 
 As a worked example, `editorManager` ([editorManager.ts](../../frontend/src/edit/managers/editorManager.ts)) owns the editor's text and labels. On the way out, its `textOp`/`labelOp` handlers are mode-gated and forward the corresponding user events to the controller. On the way in, its `handleControllerEvent` subscriber applies the controller's `textChanged`/`labelChanged` triggers to the segment manager, and on `chapterOpened` builds a fresh segment manager for the chapter. Every manager follows this same shape — one concern, some user-event handlers, and one subscriber.
 
@@ -97,7 +97,7 @@ The `controllerUserEvent` sender is a thin fire-and-forget adapter: it schedules
 
 ## The ownership contract
 
-[README.md](./README.md) imposes a key restriction:
+[edit/README.md](./../../frontend/src/edit/README.md) imposes a key restriction:
 
 > For a given hook and a given controller trigger event, there can be at most one submanager that updates that hook upon receiving that controller event.
 

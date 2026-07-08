@@ -1,20 +1,27 @@
 {
-  "name": "e2e",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "playwright test",
-    "test:headed": "playwright test --headed",
-    "test:ui": "playwright test --ui"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@11.9.0",
-  "type": "module",
-  "devDependencies": {
-    "@playwright/test": "^1.61.1",
-    "@types/node": "^26.1.0"
-  }
+	"name": "e2e",
+	"version": "1.0.0",
+	"description": "",
+	"keywords": [],
+	"license": "ISC",
+	"author": "",
+	"type": "module",
+	"main": "index.js",
+	"scripts": {
+		"test": "playwright test",
+		"test:headed": "playwright test --headed",
+		"test:ui": "playwright test --ui",
+		"check": "pnpm exec tsgo -b --noEmit",
+		"lint": "pnpm exec oxlint",
+		"lint:fix": "pnpm exec oxlint --fix",
+		"format": "pnpm exec oxfmt"
+	},
+	"devDependencies": {
+		"@playwright/test": "^1.61.1",
+		"@types/node": "^26.1.0",
+		"@typescript/native-preview": "7.0.0-dev.20260702.3",
+		"oxfmt": "^0.57.0",
+		"oxlint": "^1.72.0"
+	},
+	"packageManager": "pnpm@11.10.0+sha512.0b7f8b98060031904c017e3a41eb187a16d40eeb829b95c4f8cb03681761fc4ab53dd219115b9b447f4dce1a05a214764461e7d3703392a9f32f9511ce8c86c8"
 }

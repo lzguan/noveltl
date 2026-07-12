@@ -1,4 +1,3 @@
-import json
 import os
 from collections.abc import Generator
 from pathlib import Path
@@ -18,6 +17,9 @@ from src.database import get_db
 from src.main import app
 from src.models import Base
 from src.redis_conn import get_redis_for_app
+from test_support.test_data import Catalog, NovelDataset, load_catalog, load_config, load_novel
+
+SYNTHETIC_DATA_ROOT = Path(__file__).parent / "test_data" / "datasets" / "synthetic-smoke"
 
 
 class FakeTTLCacheSyncRedis:
@@ -194,6 +196,21 @@ class DataLoader:
         return self._load(subdir, recursive)
 
 
+@pytest.fixture(scope="session")
+def synthetic_test_catalog() -> Catalog:
+    return load_catalog(SYNTHETIC_DATA_ROOT)
+
+
+@pytest.fixture(scope="session")
+def xianxia_test_dataset(synthetic_test_catalog: Catalog) -> NovelDataset:
+    return load_novel(synthetic_test_catalog, "xianxia-source")
+
+
+@pytest.fixture(scope="session")
+def scifi_test_dataset(synthetic_test_catalog: Catalog) -> NovelDataset:
+    return load_novel(synthetic_test_catalog, "xianxia-translation")
+
+
 @pytest.fixture
 def chapter_loader() -> DataLoader:
     """
@@ -215,39 +232,23 @@ def autolabel_loader() -> DataLoader:
 
 
 @pytest.fixture(scope="session")
-def cluener_testconfig_params():
+def cluener_testconfig_params(synthetic_test_catalog: Catalog):
     """
-    Load cluener model params from tests/test_data/testconfig.json.
+    Load CLUENER parameters from the committed synthetic dataset.
 
     Returns a ``CluenerParams`` instance, suitable for passing directly to
     model prediction or serialising in ``CreateLabelDataByAutoLabel``.
 
-    Raises a ``RuntimeError`` if ``testconfig.json`` differs from
-    ``testconfig.lock.json``, indicating that the autolabel test data was
-    generated with a different config and must be regenerated.
+    Dataset consistency is verified through ``catalog.lock.json``.
     """
     from src.autolabels.constants import SepPriority
     from src.autolabels.params import CluenerParams
 
-    config_path = Path(__file__).parent / "test_data" / "testconfig.json"
-    config = json.loads(config_path.read_text(encoding="utf-8"))
-
-    lock_path = config_path.parent / "testconfig.lock.json"
-    if lock_path.exists():
-        lock_config = json.loads(lock_path.read_text(encoding="utf-8"))
-        if json.dumps(config, sort_keys=True) != json.dumps(lock_config, sort_keys=True):
-            raise RuntimeError(
-                "testconfig.json differs from testconfig.lock.json.\n"
-                "Regenerate autolabel test data with:\n"
-                "  uv run -m scripts.populate_test_data"
-            )
-
-    model_config = config["models"]["cluener"]
-
+    config = load_config(synthetic_test_catalog, "cluener-default")
     sep_map = {"high": SepPriority.HIGH, "med": SepPriority.MED, "low": SepPriority.LOW}
     return CluenerParams(
-        model_name="cluener",
-        chunk_size=model_config["chunk_size"],
-        separators={k: sep_map[str(v).lower()] for k, v in model_config["separators"].items()},
-        force_chunk=model_config.get("force_chunk", False),
+        model_name=config.model_name,
+        chunk_size=config.parameters.chunk_size,
+        separators={key: sep_map[value] for key, value in config.parameters.separators.items()},
+        force_chunk=config.parameters.force_chunk,
     )

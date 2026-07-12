@@ -6,8 +6,6 @@ autolabel data, then compares in-memory apply_text_ops results against the
 service function's DB output.
 """
 
-import json
-
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -20,7 +18,7 @@ from src.novels.models import ChapterContent
 from src.novels.schemas import TextOp
 from src.novels.service import modify_chapter_content
 from src.novels.utils import apply_text_ops
-from tests.conftest import DataLoader
+from test_support.test_data import NovelDataset
 from tests.fixtures.bundles import ScenarioBundle
 from tests.gate_logging import log_gate
 
@@ -58,8 +56,8 @@ def dd_label_group(
 def dd_chapter_0_labels(
     test_db: Session,
     xianxia_scenario: ScenarioBundle,
+    xianxia_test_dataset: NovelDataset,
     dd_label_group: LabelGroup,
-    autolabel_loader: DataLoader,
 ) -> tuple[ChapterContent, list[LabelModel]]:
     """
     Load autolabel data for chapter 0 and insert as real Labels in the DB.
@@ -67,9 +65,8 @@ def dd_chapter_0_labels(
     """
     cc = xianxia_scenario.novels[0].chapters[0].latest_content
 
-    # Load autolabel JSON for chapter 0
-    autolabel_json = json.loads(next(autolabel_loader("chinese/chinese_xianxia/small_test/cluener")))
-    auto_labels = autolabel_json["auto_label_data"]
+    version = max(xianxia_test_dataset.chapters[0].versions, key=lambda item: item.number)
+    auto_labels = version.artifacts[0].labels
 
     # Create LabelData
     ld = LabelData(
@@ -84,12 +81,12 @@ def dd_chapter_0_labels(
     for al in auto_labels:
         label = LabelModel(
             label_data_id=ld.label_data_id,
-            label_entity_group=al["label_entity_group"],
-            label_word=al["label_word"],
-            label_start=al["label_start"],
-            label_end=al["label_end"],
-            label_score=al["label_score"],
-            label_dirty=al["label_dirty"],
+            label_entity_group=al.entity_group,
+            label_word=al.text,
+            label_start=al.start,
+            label_end=al.end,
+            label_score=al.score,
+            label_dirty=False,
         )
         labels.append(label)
     test_db.add_all(labels)
@@ -136,7 +133,7 @@ class TestDataDrivenModifyChapterContent:
         new_cc = test_db.execute(
             select(ChapterContent).where(
                 ChapterContent.chapter_id == chapter.chapter_id,
-                ChapterContent.chapter_content_version == 2,
+                ChapterContent.chapter_content_version == cc.chapter_content_version + 1,
             )
         ).scalar_one()
 
@@ -200,7 +197,7 @@ class TestDataDrivenModifyChapterContent:
         new_cc = test_db.execute(
             select(ChapterContent).where(
                 ChapterContent.chapter_id == chapter.chapter_id,
-                ChapterContent.chapter_content_version == 2,
+                ChapterContent.chapter_content_version == cc.chapter_content_version + 1,
             )
         ).scalar_one()
 
@@ -266,7 +263,7 @@ class TestDataDrivenModifyChapterContent:
         new_cc = test_db.execute(
             select(ChapterContent).where(
                 ChapterContent.chapter_id == chapter.chapter_id,
-                ChapterContent.chapter_content_version == 2,
+                ChapterContent.chapter_content_version == cc.chapter_content_version + 1,
             )
         ).scalar_one()
 

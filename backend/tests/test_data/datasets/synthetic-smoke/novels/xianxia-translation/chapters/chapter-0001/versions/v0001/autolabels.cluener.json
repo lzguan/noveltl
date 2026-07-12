@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../../../../../../schema/v1/json/autolabels.schema.json",
+  "schemaVersion": 1,
+  "kind": "autolabels",
+  "id": "xianxia-translation-chapter-0001-v0001-cluener-output",
+  "producer": {
+    "name": "cluener",
+    "config": "cluener-default"
+  },
+  "labels": [
+    {
+      "start": 9,
+      "end": 15,
+      "text": "Lin An",
+      "entityGroup": "person",
+      "score": 0.99
+    },
+    {
+      "start": 27,
+      "end": 41,
+      "text": "Bluestone City",
+      "entityGroup": "location",
+      "score": 0.98
+    }
+  ],
+  "errors": []
+}

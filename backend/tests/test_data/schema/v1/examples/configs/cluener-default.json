@@ -1,0 +1,21 @@
+{
+  "$schema": "../../json/model-config.schema.json",
+  "kind": "modelConfig",
+  "schemaVersion": 1,
+  "id": "cluener-default",
+  "configType": "ner",
+  "modelName": "cluener",
+  "parameters": {
+    "chunkSize": 300,
+    "forceChunk": false,
+    "separators": {
+      "\n": "high",
+      "。": "med",
+      "！": "med",
+      "？": "med",
+      "，": "low",
+      "；": "low",
+      "：": "low"
+    }
+  }
+}

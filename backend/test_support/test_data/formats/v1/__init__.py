@@ -1,0 +1,3 @@
+from .documents import DOCUMENT_MODELS, SCHEMA_MODELS
+
+__all__ = ["DOCUMENT_MODELS", "SCHEMA_MODELS"]

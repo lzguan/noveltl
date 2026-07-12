@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../../../json/chapter-manifest.schema.json",
+  "kind": "chapterManifest",
+  "schemaVersion": 1,
+  "id": "xianxia-source-chapter-0001",
+  "number": 1,
+  "title": "Arrival",
+  "isPublic": true,
+  "versions": [
+    {
+      "id": "xianxia-source-chapter-0001-v0001",
+      "path": "versions/v0001/manifest.json"
+    },
+    {
+      "id": "xianxia-source-chapter-0001-v0002",
+      "path": "versions/v0002/manifest.json"
+    }
+  ]
+}

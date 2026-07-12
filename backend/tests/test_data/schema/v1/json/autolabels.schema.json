@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "autolabels.schema.json",
+  "$defs": {
+    "AutoLabel": {
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "end": {
+          "minimum": 1,
+          "title": "End",
+          "type": "integer"
+        },
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "entityGroup": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Entitygroup"
+        },
+        "score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "text",
+        "entityGroup",
+        "score"
+      ],
+      "title": "AutoLabel",
+      "type": "object"
+    },
+    "Producer": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "config": {
+          "minLength": 1,
+          "title": "Config",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "config"
+      ],
+      "title": "Producer",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "title": "$Schema",
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1,
+      "title": "Schemaversion",
+      "type": "integer"
+    },
+    "kind": {
+      "const": "autolabels",
+      "title": "Kind",
+      "type": "string"
+    },
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "producer": {
+      "$ref": "#/$defs/Producer"
+    },
+    "labels": {
+      "items": {
+        "$ref": "#/$defs/AutoLabel"
+      },
+      "title": "Labels",
+      "type": "array"
+    },
+    "errors": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Errors",
+      "type": "array"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "id",
+    "producer",
+    "labels",
+    "errors"
+  ],
+  "title": "AutoLabelsDocument",
+  "type": "object"
+}

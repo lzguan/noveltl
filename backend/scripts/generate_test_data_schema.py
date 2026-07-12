@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from test_support.test_data.formats.v1 import SCHEMA_MODELS
+from test_support.test_data.formats.v1 import INPUT_SCHEMA_MODELS, SCHEMA_MODELS
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_ROOT = BACKEND_ROOT / "tests" / "test_data" / "schema"
@@ -28,7 +28,7 @@ def generate(version: int, check: bool) -> bool:
         raise ValueError(f"Unsupported test-data schema version: {version}")
     output_dir = SCHEMA_ROOT / f"v{version}" / "json"
     mismatches: list[Path] = []
-    for filename, model in sorted(SCHEMA_MODELS.items()):
+    for filename, model in sorted((SCHEMA_MODELS | INPUT_SCHEMA_MODELS).items()):
         path = output_dir / filename
         rendered = _render_schema(filename, model)
         current = path.read_text(encoding="utf-8") if path.exists() else None

@@ -49,6 +49,29 @@ class Provenance(BaseModel):
     license: str = Field(min_length=1)
 
 
+class ChapterInput(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
+
+    title: str | None = None
+    is_public: bool = True
+
+
+class NovelInputDocument(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
+
+    schema_uri: str = Field(alias="$schema")
+    schema_version: Literal[1]
+    id: str | None = Field(default=None, pattern=r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
+    title: str = Field(min_length=1)
+    description: str | None = None
+    author: str | None = None
+    language_code: str = Field(min_length=1)
+    novel_type: Literal["original", "translation", "other"]
+    visibility: Literal["private", "restricted", "unlisted", "public"]
+    provenance: Provenance
+    chapters: dict[int, ChapterInput] = Field(default_factory=dict)
+
+
 class ChapterReference(Reference):
     number: int
 
@@ -181,4 +204,8 @@ SCHEMA_MODELS: dict[str, type[Document]] = {
     "autolabels.schema.json": AutoLabelsDocument,
     "relation-bundle.schema.json": RelationBundleDocument,
     "catalog-lock.schema.json": CatalogLockDocument,
+}
+
+INPUT_SCHEMA_MODELS: dict[str, type[BaseModel]] = {
+    "novel-input.schema.json": NovelInputDocument,
 }

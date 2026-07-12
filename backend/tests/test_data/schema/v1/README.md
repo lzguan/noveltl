@@ -104,6 +104,33 @@ update/check selected catalog folders, with:
 .venv/bin/python -m scripts.lock_test_data tests/test_data/datasets/synthetic-smoke novels/xianxia-source
 ```
 
+## Authoring Data
+
+Create a novel from `novel.json` and root-level files named
+`chapter-NNNN.txt`:
+
+```console
+.venv/bin/python -m scripts.add_test_novel INPUT_DIR DATASET_DIR
+.venv/bin/python -m scripts.add_test_novel INPUT_DIR DATASET_DIR --no-id --dry-run
+```
+
+The input metadata links to `json/novel-input.schema.json`. Chapter numbers may
+be sparse. Titles default to `Chapter N`, visibility defaults to public, and
+the optional `chapters` mapping overrides those values by chapter number.
+Normally `id` is required; `--no-id` instead requires it to be absent and
+derives a stable ID from the title.
+
+Generate artifacts directly from cataloged text using an existing config:
+
+```console
+.venv/bin/python -m scripts.generate_test_autolabels DATASET_DIR NOVEL_ID \
+  --config cluener-default --chapters 1,3-5 --version latest
+```
+
+Generation defaults to every chapter's latest version, skips existing output,
+and supports `--force` and `--dry-run`. Successful authoring commands refresh
+the affected catalog lock entries.
+
 ## Version 1 Decisions
 
 - `catalog.json` is the only discovery root.

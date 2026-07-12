@@ -4,10 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from test_support.test_data import load_catalog, load_novel
+from test_support.test_data import authoring, load_catalog, load_novel
 from test_support.test_data.authoring import add_novel, generate_autolabels, parse_chapters
 from test_support.test_data.errors import TestDataError as InvalidTestDataError
-from test_support.test_data.formats.v1.documents import AutoLabel
+from test_support.test_data.formats.v1 import authoring as v1_authoring
+from test_support.test_data.formats.v1.documents import AutoLabel, ModelConfigDocument
 from test_support.test_data.lockfile import check_lock
 
 DATASET_ROOT = Path(__file__).parents[1] / "test_data" / "datasets" / "synthetic-smoke"
@@ -54,6 +55,43 @@ def test_add_novel_supports_sparse_chapters_and_overrides(dataset_copy: Path, tm
     assert novel.chapters[1].is_public is False
     assert novel.chapters[0].versions[0].number == 1
     check_lock(dataset_copy, ["novels/new-novel"])
+
+
+def test_add_novel_dispatches_through_catalog_schema_version(dataset_copy: Path, tmp_path: Path, monkeypatch) -> None:
+    class RecordingFormat:
+        called = False
+
+        def add_novel(
+            self,
+            input_dir: Path,
+            catalog_root: Path,
+            existing_novel_ids: set[str],
+            *,
+            no_id: bool,
+            dry_run: bool,
+        ) -> str:
+            self.called = True
+            assert catalog_root == dataset_copy.resolve()
+            assert "xianxia-source" in existing_novel_ids
+            return "dispatched"
+
+        def validate_config_id(self, config_id: str) -> None:
+            pass
+
+        def write_autolabels(
+            self,
+            catalog_root: Path,
+            novel_id: str,
+            config: ModelConfigDocument,
+            generated: list[v1_authoring.GeneratedArtifact],
+        ) -> None:
+            pass
+
+    recording_format = RecordingFormat()
+    monkeypatch.setitem(authoring.AUTHORING_FORMATS, 1, recording_format)
+
+    assert add_novel(tmp_path, dataset_copy, dry_run=True) == "dispatched"
+    assert recording_format.called
 
 
 def test_add_novel_dry_run_generates_stable_non_ascii_id(dataset_copy: Path, tmp_path: Path) -> None:

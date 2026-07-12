@@ -109,6 +109,40 @@ update/check selected catalog folders, with:
 Create a novel from `novel.json` and root-level files named
 `chapter-NNNN.txt`:
 
+```text
+input/
+├── novel.json
+├── chapter-0001.txt
+└── chapter-0003.txt
+```
+
+Example `novel.json`:
+
+```json
+{
+  "$schema": "../schema/v1/json/novel-input.schema.json",
+  "schemaVersion": 1,
+  "id": "example-novel",
+  "title": "Example Novel",
+  "description": null,
+  "author": null,
+  "languageCode": "zh",
+  "novelType": "original",
+  "visibility": "public",
+  "provenance": {
+    "kind": "synthetic",
+    "creator": "NovelTL contributors",
+    "license": "project-test-fixture"
+  },
+  "chapters": {
+    "3": {
+      "title": "A Later Chapter",
+      "isPublic": false
+    }
+  }
+}
+```
+
 ```console
 .venv/bin/python -m scripts.add_test_novel INPUT_DIR DATASET_DIR
 .venv/bin/python -m scripts.add_test_novel INPUT_DIR DATASET_DIR --no-id --dry-run
@@ -129,7 +163,14 @@ Generate artifacts directly from cataloged text using an existing config:
 
 Generation defaults to every chapter's latest version, skips existing output,
 and supports `--force` and `--dry-run`. Successful authoring commands refresh
-the affected catalog lock entries.
+the affected catalog lock entries. Chapter selectors accept comma-separated
+numbers and inclusive ranges, such as `1,3-5`. `--version latest` is the
+default; a positive integer selects that exact version in every chosen
+chapter.
+
+All maintenance commands expose their complete option list through `--help`.
+Authoring dispatches through the target catalog's `schemaVersion`; the V1
+implementation lives with the V1 format rather than in the shared CLI layer.
 
 ## Version 1 Decisions
 

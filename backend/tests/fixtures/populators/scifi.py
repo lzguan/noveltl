@@ -1,5 +1,3 @@
-import json
-from collections.abc import Generator
 from typing import Any, Protocol
 
 import pytest
@@ -7,23 +5,26 @@ from sqlalchemy.orm import Session
 
 from src.auth.constants import UserType
 from src.auth.models import User
-from src.autolabels.models import AutoLabel, AutoLabelRun
+from src.autolabels.models import AutoLabel
 from src.autolabels.params import CluenerParams
 from src.labels.constants import LabelRole
 from src.labels.models import LabelContributor, LabelGroup
 from src.languages.models import Language
-from src.novels.constants import NovelType, Role, Visibility
+from src.novels.constants import Role
 from src.novels.models import Chapter, ChapterContent, Novel, NovelContributor, SourceWork
+from test_support.test_data import Catalog, NovelDataset, load_config
+from test_support.test_data.materializer import (
+    MaterializedNovel,
+    make_novel,
+    materialize_latest_autolabels,
+    materialize_novel_contents,
+)
 
 
 class Hash(Protocol):
     def hash(self, password: str | bytes, *args: Any, **kwargs: Any) -> str: ...
 
     def verify(self, password: str | bytes, hash: str | bytes) -> bool: ...
-
-
-class Loader(Protocol):
-    def __call__(self, pathname: str, recursive: bool = False) -> Generator[str, None, None]: ...
 
 
 @pytest.fixture
@@ -43,16 +44,22 @@ def scifi_source_work(test_db: Session) -> SourceWork:
 
 
 @pytest.fixture
+def scifi_language(test_db: Session) -> Language:
+    language = Language(language_name="English", language_code="en")
+    test_db.add(language)
+    test_db.commit()
+    return language
+
+
+@pytest.fixture
 def scifi_novel(
-    xianxia_language: Language, scifi_source_work: SourceWork, test_db: Session
+    scifi_language: Language,
+    scifi_source_work: SourceWork,
+    scifi_test_dataset: NovelDataset,
+    test_db: Session,
 ) -> Novel:
-    test_novel = Novel(
-        novel_title="Sci-Fi Test",
-        language_code=xianxia_language.language_code,
-        novel_type=NovelType.TRANSLATION,
-        novel_visibility=Visibility.PUBLIC,
-        source_work_id=scifi_source_work.source_work_id,
-    )
+    assert scifi_language.language_code == scifi_test_dataset.language_code
+    test_novel = make_novel(scifi_test_dataset, scifi_source_work)
     test_db.add(test_novel)
     test_db.commit()
     return test_novel
@@ -97,68 +104,32 @@ def scifi_label_contributor(
 
 
 @pytest.fixture
-def scifi_chapters(
-    scifi_novel: Novel, chapter_loader: Loader, test_db: Session
-) -> list[tuple[Chapter, ChapterContent]]:
-    texts = list(chapter_loader("chinese/mixed_chinese_scifi/small_test"))
-    assert len(texts) > 0, (
-        "Test data directory 'chinese/mixed_chinese_scifi/small_test' is empty — "
-        "copy chapter .txt files into backend/tests/test_data/chapters/chinese/mixed_chinese_scifi/small_test/"
-    )
-    out: list[tuple[Chapter, ChapterContent]] = []
-    i = 0
-    for text in texts:
-        chapter = Chapter(
-            chapter_num=i,
-            chapter_title=f"chapter {i}",
-            chapter_is_public=True,
-            novel_id=scifi_novel.novel_id,
-        )
-        test_db.add(chapter)
-        test_db.commit()
-        cc = ChapterContent(chapter_id=chapter.chapter_id, chapter_content_text=text, chapter_content_version=1)
-        test_db.add(cc)
-        test_db.commit()
-        out.append((chapter, cc))
-        i = i + 1
-    return out
+def scifi_materialized_novel(
+    scifi_novel: Novel, scifi_test_dataset: NovelDataset, test_db: Session
+) -> MaterializedNovel:
+    return materialize_novel_contents(test_db, scifi_test_dataset, scifi_novel)
+
+
+@pytest.fixture
+def scifi_chapters(scifi_materialized_novel: MaterializedNovel) -> list[tuple[Chapter, ChapterContent]]:
+    return scifi_materialized_novel.chapters
 
 
 @pytest.fixture
 def scifi_autolabels_cluener(
     test_db: Session,
-    scifi_chapters: list[tuple[Chapter, ChapterContent]],
-    autolabel_loader: Loader,
+    synthetic_test_catalog: Catalog,
+    scifi_test_dataset: NovelDataset,
+    scifi_materialized_novel: MaterializedNovel,
     cluener_testconfig_params: CluenerParams,
     scifi_user: User,
 ) -> list[AutoLabel]:
-    autolabels_raw = list(autolabel_loader("chinese/mixed_chinese_scifi/small_test/cluener"))
-    assert len(autolabels_raw) > 0, (
-        "Test data directory 'chinese/mixed_chinese_scifi/small_test/cluener' is empty — "
-        "copy autolabel .json files into backend/tests/test_data/autolabels/chinese/mixed_chinese_scifi/small_test/cluener/"
+    config = load_config(synthetic_test_catalog, "cluener-default")
+    assert cluener_testconfig_params.model_name == config.model_name
+    return materialize_latest_autolabels(
+        test_db,
+        scifi_test_dataset,
+        scifi_materialized_novel,
+        config,
+        scifi_user,
     )
-    run = AutoLabelRun(
-        novel_id=scifi_chapters[0][0].novel_id,
-        triggered_by=scifi_user.user_id,
-        model_name="cluener",
-        model_params=cluener_testconfig_params.model_dump(mode="json"),
-    )
-    test_db.add(run)
-    test_db.commit()
-    out: list[AutoLabel] = []
-    i = 0
-    for lab in autolabels_raw:
-        autolabel = json.loads(lab)
-        a = AutoLabel(
-            auto_label_data=autolabel["auto_label_data"],
-            auto_label_status=autolabel.get("auto_label_status", "done"),
-            auto_label_message=autolabel.get("auto_label_message"),
-            auto_label_last_job_id=autolabel.get("auto_label_last_job_id"),
-            chapter_content_id=scifi_chapters[i][1].chapter_content_id,
-            run_id=run.run_id,
-        )
-        test_db.add(a)
-        test_db.commit()
-        i = i + 1
-        out.append(a)
-    return out

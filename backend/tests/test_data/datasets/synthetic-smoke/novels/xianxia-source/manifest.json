@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../../schema/v1/json/novel-manifest.schema.json",
+  "kind": "novelManifest",
+  "schemaVersion": 1,
+  "id": "xianxia-source",
+  "title": "Synthetic Xianxia Source",
+  "description": "Small synthetic Chinese corpus for schema development.",
+  "author": null,
+  "languageCode": "zh",
+  "novelType": "original",
+  "visibility": "public",
+  "provenance": {
+    "kind": "synthetic",
+    "creator": "NovelTL contributors",
+    "license": "project-test-fixture"
+  },
+  "chapters": [
+    {
+      "id": "xianxia-source-chapter-0001",
+      "number": 1,
+      "path": "chapters/chapter-0001/manifest.json"
+    }
+  ]
+}

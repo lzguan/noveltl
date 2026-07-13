@@ -1,0 +1,146 @@
+{
+  "$schema": "../../../../../../../../schema/v1/json/autolabels.schema.json",
+  "schemaVersion": 1,
+  "kind": "autolabels",
+  "id": "starfall-chapter-0002-v0001-autolabels-cluener-default",
+  "producer": {
+    "name": "cluener",
+    "config": "cluener-default"
+  },
+  "labels": [
+    {
+      "start": 0,
+      "end": 3,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.9967253804206848
+    },
+    {
+      "start": 10,
+      "end": 11,
+      "text": "军",
+      "entityGroup": "government",
+      "score": 0.5771651268005371
+    },
+    {
+      "start": 28,
+      "end": 30,
+      "text": "军方",
+      "entityGroup": "government",
+      "score": 0.5227970480918884
+    },
+    {
+      "start": 64,
+      "end": 67,
+      "text": "陈天海",
+      "entityGroup": "name",
+      "score": 0.9969717860221863
+    },
+    {
+      "start": 96,
+      "end": 105,
+      "text": "联邦生物伦理委员会",
+      "entityGroup": "government",
+      "score": 0.9655899405479431
+    },
+    {
+      "start": 110,
+      "end": 114,
+      "text": "蓝海科技",
+      "entityGroup": "company",
+      "score": 0.8826424479484558
+    },
+    {
+      "start": 132,
+      "end": 135,
+      "text": "副主席",
+      "entityGroup": "position",
+      "score": 0.965648889541626
+    },
+    {
+      "start": 135,
+      "end": 137,
+      "text": "韩雪",
+      "entityGroup": "name",
+      "score": 0.9831315875053406
+    },
+    {
+      "start": 177,
+      "end": 180,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.9965947270393372
+    },
+    {
+      "start": 196,
+      "end": 198,
+      "text": "博士",
+      "entityGroup": "position",
+      "score": 0.7241138219833374
+    },
+    {
+      "start": 201,
+      "end": 203,
+      "text": "联邦",
+      "entityGroup": "government",
+      "score": 0.5357469320297241
+    },
+    {
+      "start": 236,
+      "end": 238,
+      "text": "韩雪",
+      "entityGroup": "name",
+      "score": 0.9287811517715454
+    },
+    {
+      "start": 258,
+      "end": 261,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.996679961681366
+    },
+    {
+      "start": 278,
+      "end": 285,
+      "text": "联邦科技委员会",
+      "entityGroup": "government",
+      "score": 0.8784459233283997
+    },
+    {
+      "start": 286,
+      "end": 290,
+      "text": "长安大学",
+      "entityGroup": "organization",
+      "score": 0.9501432776451111
+    },
+    {
+      "start": 312,
+      "end": 314,
+      "text": "韩雪",
+      "entityGroup": "name",
+      "score": 0.9895484447479248
+    },
+    {
+      "start": 332,
+      "end": 336,
+      "text": "长安大学",
+      "entityGroup": "organization",
+      "score": 0.9326395988464355
+    },
+    {
+      "start": 337,
+      "end": 340,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.9962742924690247
+    },
+    {
+      "start": 372,
+      "end": 376,
+      "text": "蜀山遗址",
+      "entityGroup": "address",
+      "score": 0.4504607915878296
+    }
+  ],
+  "errors": []
+}

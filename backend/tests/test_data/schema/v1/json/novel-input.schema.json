@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novel-input.schema.json",
+  "$defs": {
+    "ChapterInput": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "isPublic": {
+          "default": true,
+          "title": "Ispublic",
+          "type": "boolean"
+        }
+      },
+      "title": "ChapterInput",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "creator": {
+          "minLength": 1,
+          "title": "Creator",
+          "type": "string"
+        },
+        "license": {
+          "minLength": 1,
+          "title": "License",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "creator",
+        "license"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "title": "$Schema",
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1,
+      "title": "Schemaversion",
+      "type": "integer"
+    },
+    "id": {
+      "anyOf": [
+        {
+          "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Id"
+    },
+    "title": {
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "author": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Author"
+    },
+    "languageCode": {
+      "minLength": 1,
+      "title": "Languagecode",
+      "type": "string"
+    },
+    "novelType": {
+      "enum": [
+        "original",
+        "translation",
+        "other"
+      ],
+      "title": "Noveltype",
+      "type": "string"
+    },
+    "visibility": {
+      "enum": [
+        "private",
+        "restricted",
+        "unlisted",
+        "public"
+      ],
+      "title": "Visibility",
+      "type": "string"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    },
+    "chapters": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ChapterInput"
+      },
+      "title": "Chapters",
+      "type": "object"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "title",
+    "languageCode",
+    "novelType",
+    "visibility",
+    "provenance"
+  ],
+  "title": "NovelInputDocument",
+  "type": "object"
+}

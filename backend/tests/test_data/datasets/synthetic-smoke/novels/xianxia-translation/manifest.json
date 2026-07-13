@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../../schema/v1/json/novel-manifest.schema.json",
+  "kind": "novelManifest",
+  "schemaVersion": 1,
+  "id": "xianxia-translation",
+  "title": "Synthetic Xianxia Translation",
+  "description": "English translation paired with the synthetic source corpus.",
+  "author": null,
+  "languageCode": "en",
+  "novelType": "translation",
+  "visibility": "public",
+  "provenance": {
+    "kind": "synthetic",
+    "creator": "NovelTL contributors",
+    "license": "project-test-fixture"
+  },
+  "chapters": [
+    {
+      "id": "xianxia-translation-chapter-0001",
+      "number": 1,
+      "path": "chapters/chapter-0001/manifest.json"
+    }
+  ]
+}

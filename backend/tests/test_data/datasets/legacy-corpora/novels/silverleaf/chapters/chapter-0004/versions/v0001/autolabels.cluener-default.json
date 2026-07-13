@@ -1,0 +1,377 @@
+{
+  "$schema": "../../../../../../../../schema/v1/json/autolabels.schema.json",
+  "schemaVersion": 1,
+  "kind": "autolabels",
+  "id": "silverleaf-chapter-0004-v0001-autolabels-cluener-default",
+  "producer": {
+    "name": "cluener",
+    "config": "cluener-default"
+  },
+  "labels": [
+    {
+      "start": 1,
+      "end": 4,
+      "text": "翡翠村",
+      "entityGroup": "address",
+      "score": 0.9284477829933167
+    },
+    {
+      "start": 10,
+      "end": 14,
+      "text": "玛格丽特",
+      "entityGroup": "name",
+      "score": 0.8264434933662415
+    },
+    {
+      "start": 131,
+      "end": 134,
+      "text": "烬山脉",
+      "entityGroup": "address",
+      "score": 0.4081590175628662
+    },
+    {
+      "start": 231,
+      "end": 235,
+      "text": "玛格丽特",
+      "entityGroup": "name",
+      "score": 0.9421279430389404
+    },
+    {
+      "start": 328,
+      "end": 332,
+      "text": "莫德雷德",
+      "entityGroup": "name",
+      "score": 0.8396217226982117
+    },
+    {
+      "start": 406,
+      "end": 408,
+      "text": "士兵",
+      "entityGroup": "position",
+      "score": 0.6506249308586121
+    },
+    {
+      "start": 419,
+      "end": 423,
+      "text": "莫德雷德",
+      "entityGroup": "name",
+      "score": 0.812572717666626
+    },
+    {
+      "start": 442,
+      "end": 446,
+      "text": "玛格丽特",
+      "entityGroup": "name",
+      "score": 0.9191926717758179
+    },
+    {
+      "start": 447,
+      "end": 449,
+      "text": "蕾娜",
+      "entityGroup": "name",
+      "score": 0.9175310134887695
+    },
+    {
+      "start": 478,
+      "end": 483,
+      "text": "魔法师协会",
+      "entityGroup": "organization",
+      "score": 0.9403018951416016
+    },
+    {
+      "start": 499,
+      "end": 501,
+      "text": "将军",
+      "entityGroup": "position",
+      "score": 0.696295976638794
+    },
+    {
+      "start": 501,
+      "end": 505,
+      "text": "阿尔萨斯",
+      "entityGroup": "name",
+      "score": 0.9888562560081482
+    },
+    {
+      "start": 515,
+      "end": 519,
+      "text": "莫德雷德",
+      "entityGroup": "name",
+      "score": 0.9858067631721497
+    },
+    {
+      "start": 520,
+      "end": 524,
+      "text": "阿尔萨斯",
+      "entityGroup": "name",
+      "score": 0.9839508533477783
+    },
+    {
+      "start": 528,
+      "end": 532,
+      "text": "光明教廷",
+      "entityGroup": "organization",
+      "score": 0.8435693979263306
+    },
+    {
+      "start": 533,
+      "end": 536,
+      "text": "圣骑士",
+      "entityGroup": "position",
+      "score": 0.8723576664924622
+    },
+    {
+      "start": 538,
+      "end": 542,
+      "text": "莫德雷德",
+      "entityGroup": "name",
+      "score": 0.9879158735275269
+    },
+    {
+      "start": 550,
+      "end": 554,
+      "text": "莫德雷德",
+      "entityGroup": "name",
+      "score": 0.9609414339065552
+    },
+    {
+      "start": 559,
+      "end": 563,
+      "text": "阿尔萨斯",
+      "entityGroup": "name",
+      "score": 0.954883873462677
+    },
+    {
+      "start": 596,
+      "end": 600,
+      "text": "阿尔萨斯",
+      "entityGroup": "name",
+      "score": 0.9660553932189941
+    },
+    {
+      "start": 601,
+      "end": 605,
+      "text": "莫德雷德",
+      "entityGroup": "name",
+      "score": 0.9835422039031982
+    },
+    {
+      "start": 640,
+      "end": 644,
+      "text": "阿尔萨斯",
+      "entityGroup": "name",
+      "score": 0.9114295244216919
+    },
+    {
+      "start": 707,
+      "end": 709,
+      "text": "蕾娜",
+      "entityGroup": "name",
+      "score": 0.959522008895874
+    },
+    {
+      "start": 728,
+      "end": 732,
+      "text": "阿尔萨斯",
+      "entityGroup": "name",
+      "score": 0.9165533781051636
+    },
+    {
+      "start": 750,
+      "end": 754,
+      "text": "玛格丽特",
+      "entityGroup": "name",
+      "score": 0.9844455122947693
+    },
+    {
+      "start": 786,
+      "end": 790,
+      "text": "阿尔萨斯",
+      "entityGroup": "name",
+      "score": 0.9450831413269043
+    },
+    {
+      "start": 793,
+      "end": 797,
+      "text": "莫德雷德",
+      "entityGroup": "name",
+      "score": 0.9866299629211426
+    },
+    {
+      "start": 852,
+      "end": 856,
+      "text": "莫德雷德",
+      "entityGroup": "name",
+      "score": 0.987586259841919
+    },
+    {
+      "start": 859,
+      "end": 861,
+      "text": "使者",
+      "entityGroup": "position",
+      "score": 0.7096933126449585
+    },
+    {
+      "start": 862,
+      "end": 865,
+      "text": "银叶城",
+      "entityGroup": "address",
+      "score": 0.7950693964958191
+    },
+    {
+      "start": 871,
+      "end": 875,
+      "text": "阿尔萨斯",
+      "entityGroup": "name",
+      "score": 0.9537883400917053
+    },
+    {
+      "start": 878,
+      "end": 880,
+      "text": "使者",
+      "entityGroup": "position",
+      "score": 0.7153874635696411
+    },
+    {
+      "start": 881,
+      "end": 883,
+      "text": "护卫",
+      "entityGroup": "position",
+      "score": 0.6241717338562012
+    },
+    {
+      "start": 885,
+      "end": 888,
+      "text": "艾尔隆",
+      "entityGroup": "name",
+      "score": 0.9744868278503418
+    },
+    {
+      "start": 889,
+      "end": 890,
+      "text": "王",
+      "entityGroup": "position",
+      "score": 0.41890275478363037
+    },
+    {
+      "start": 917,
+      "end": 921,
+      "text": "阿尔萨斯",
+      "entityGroup": "name",
+      "score": 0.8246710896492004
+    },
+    {
+      "start": 930,
+      "end": 933,
+      "text": "洛瑟琳",
+      "entityGroup": "name",
+      "score": 0.9862622618675232
+    },
+    {
+      "start": 1011,
+      "end": 1015,
+      "text": "玛格丽特",
+      "entityGroup": "name",
+      "score": 0.9735456109046936
+    },
+    {
+      "start": 1046,
+      "end": 1047,
+      "text": "师",
+      "entityGroup": "position",
+      "score": 0.7137459516525269
+    },
+    {
+      "start": 1155,
+      "end": 1157,
+      "text": "蕾娜",
+      "entityGroup": "name",
+      "score": 0.9150258302688599
+    },
+    {
+      "start": 1251,
+      "end": 1255,
+      "text": "莫德雷德",
+      "entityGroup": "name",
+      "score": 0.99186772108078
+    },
+    {
+      "start": 1262,
+      "end": 1264,
+      "text": "虚空",
+      "entityGroup": "organization",
+      "score": 0.3787345588207245
+    },
+    {
+      "start": 1264,
+      "end": 1266,
+      "text": "议会",
+      "entityGroup": "government",
+      "score": 0.5041553974151611
+    },
+    {
+      "start": 1283,
+      "end": 1285,
+      "text": "蕾娜",
+      "entityGroup": "name",
+      "score": 0.849193811416626
+    },
+    {
+      "start": 1286,
+      "end": 1289,
+      "text": "洛瑟琳",
+      "entityGroup": "name",
+      "score": 0.9801363348960876
+    },
+    {
+      "start": 1292,
+      "end": 1295,
+      "text": "翡翠村",
+      "entityGroup": "address",
+      "score": 0.9208016991615295
+    },
+    {
+      "start": 1296,
+      "end": 1300,
+      "text": "玛格丽特",
+      "entityGroup": "name",
+      "score": 0.8771525621414185
+    },
+    {
+      "start": 1378,
+      "end": 1380,
+      "text": "蕾娜",
+      "entityGroup": "name",
+      "score": 0.7119507789611816
+    },
+    {
+      "start": 1396,
+      "end": 1399,
+      "text": "洛瑟琳",
+      "entityGroup": "name",
+      "score": 0.9359744191169739
+    },
+    {
+      "start": 1436,
+      "end": 1438,
+      "text": "灰烬",
+      "entityGroup": "scene",
+      "score": 0.42751744389533997
+    },
+    {
+      "start": 1463,
+      "end": 1467,
+      "text": "阿尔萨斯",
+      "entityGroup": "address",
+      "score": 0.7208011150360107
+    },
+    {
+      "start": 1546,
+      "end": 1548,
+      "text": "蕾娜",
+      "entityGroup": "name",
+      "score": 0.9196043014526367
+    }
+  ],
+  "errors": []
+}

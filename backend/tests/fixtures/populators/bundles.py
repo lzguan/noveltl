@@ -411,7 +411,7 @@ def xianxia_scenario(
     xianxia_chapters: list[tuple[Chapter, ChapterContent]],
     cluener_testconfig_params: CluenerParams,
 ) -> ScenarioBundle:
-    """Scenario bundle for the loader-backed chinese_xianxia_small_test dataset."""
+    """Scenario bundle for the catalog-backed synthetic xianxia dataset."""
     scenario = _build_scenario_bundle(
         name="xianxia_scenario",
         users=[xianxia_user],
@@ -509,7 +509,7 @@ def scifi_scenario(
     scifi_label_contributor: LabelContributor,
     scifi_chapters: list[tuple[Chapter, ChapterContent]],
 ) -> ScenarioBundle:
-    """Scenario bundle for the loader-backed mixed_chinese_scifi small_test dataset."""
+    """Scenario bundle for the catalog-backed synthetic translation dataset."""
     scenario = _build_scenario_bundle(
         name="scifi_scenario",
         users=[scifi_user],

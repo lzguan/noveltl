@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../../../../../schema/v1/json/content-version-manifest.schema.json",
+  "schemaVersion": 1,
+  "kind": "contentVersionManifest",
+  "id": "starfall-chapter-0003-v0001",
+  "number": 1,
+  "text": "text.txt",
+  "artifacts": [
+    {
+      "id": "starfall-chapter-0003-v0001-autolabels-cluener-default",
+      "path": "autolabels.cluener-default.json",
+      "kind": "autolabels"
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "$schema": "../../../../../../../../schema/v1/json/autolabels.schema.json",
+  "schemaVersion": 1,
+  "kind": "autolabels",
+  "id": "quantum-path-chapter-0002-v0001-autolabels-cluener-default",
+  "producer": {
+    "name": "cluener",
+    "config": "cluener-default"
+  },
+  "labels": [
+    {
+      "start": 0,
+      "end": 2,
+      "text": "王野",
+      "entityGroup": "name",
+      "score": 0.9519163370132446
+    },
+    {
+      "start": 126,
+      "end": 128,
+      "text": "王野",
+      "entityGroup": "name",
+      "score": 0.9326558113098145
+    },
+    {
+      "start": 165,
+      "end": 167,
+      "text": "阁主",
+      "entityGroup": "position",
+      "score": 0.637028694152832
+    },
+    {
+      "start": 198,
+      "end": 200,
+      "text": "王野",
+      "entityGroup": "name",
+      "score": 0.9472458362579346
+    },
+    {
+      "start": 248,
+      "end": 250,
+      "text": "王野",
+      "entityGroup": "name",
+      "score": 0.9879269599914551
+    },
+    {
+      "start": 266,
+      "end": 278,
+      "text": "中科院修真科技联合实验室",
+      "entityGroup": "organization",
+      "score": 0.5710578560829163
+    },
+    {
+      "start": 328,
+      "end": 331,
+      "text": "科学家",
+      "entityGroup": "position",
+      "score": 0.9740431904792786
+    },
+    {
+      "start": 407,
+      "end": 410,
+      "text": "钱学森",
+      "entityGroup": "name",
+      "score": 0.980271577835083
+    },
+    {
+      "start": 426,
+      "end": 428,
+      "text": "王野",
+      "entityGroup": "name",
+      "score": 0.9882169365882874
+    },
+    {
+      "start": 441,
+      "end": 444,
+      "text": "钱学森",
+      "entityGroup": "name",
+      "score": 0.9906752705574036
+    }
+  ],
+  "errors": []
+}

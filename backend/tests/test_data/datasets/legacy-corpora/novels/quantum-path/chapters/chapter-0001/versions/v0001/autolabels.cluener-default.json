@@ -1,0 +1,97 @@
+{
+  "$schema": "../../../../../../../../schema/v1/json/autolabels.schema.json",
+  "schemaVersion": 1,
+  "kind": "autolabels",
+  "id": "quantum-path-chapter-0001-v0001-autolabels-cluener-default",
+  "producer": {
+    "name": "cluener",
+    "config": "cluener-default"
+  },
+  "labels": [
+    {
+      "start": 13,
+      "end": 15,
+      "text": "王野",
+      "entityGroup": "name",
+      "score": 0.9723469018936157
+    },
+    {
+      "start": 45,
+      "end": 50,
+      "text": "《星辰变》",
+      "entityGroup": "game",
+      "score": 0.9668961763381958
+    },
+    {
+      "start": 109,
+      "end": 110,
+      "text": "中",
+      "entityGroup": "government",
+      "score": 0.48095807433128357
+    },
+    {
+      "start": 110,
+      "end": 121,
+      "text": "科院修真科技联合实验室",
+      "entityGroup": "organization",
+      "score": 0.602383553981781
+    },
+    {
+      "start": 123,
+      "end": 125,
+      "text": "王野",
+      "entityGroup": "name",
+      "score": 0.9467901587486267
+    },
+    {
+      "start": 160,
+      "end": 164,
+      "text": "青云大陆",
+      "entityGroup": "address",
+      "score": 0.7985057830810547
+    },
+    {
+      "start": 165,
+      "end": 167,
+      "text": "东荒",
+      "entityGroup": "address",
+      "score": 0.7553156018257141
+    },
+    {
+      "start": 168,
+      "end": 171,
+      "text": "落星城",
+      "entityGroup": "address",
+      "score": 0.6673436164855957
+    },
+    {
+      "start": 248,
+      "end": 250,
+      "text": "王野",
+      "entityGroup": "name",
+      "score": 0.926453709602356
+    },
+    {
+      "start": 337,
+      "end": 339,
+      "text": "王野",
+      "entityGroup": "name",
+      "score": 0.8961321711540222
+    },
+    {
+      "start": 379,
+      "end": 381,
+      "text": "王野",
+      "entityGroup": "name",
+      "score": 0.9201757907867432
+    },
+    {
+      "start": 425,
+      "end": 427,
+      "text": "王野",
+      "entityGroup": "name",
+      "score": 0.8454533815383911
+    }
+  ],
+  "errors": []
+}

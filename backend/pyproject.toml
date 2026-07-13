@@ -51,6 +51,7 @@ default-groups = [
     "worker",
     "dev",
 ]
+required-version = ">=0.10.0"
 
 [[tool.uv.index]]
 name = "torch-cpu"
@@ -106,7 +107,7 @@ branch = true
 source = ["src"]
 
 [tool.pyrefly]
-project-includes = ["src", "tests", "scripts"]
+project-includes = ["src", "tests", "scripts", "test_support"]
 project-excludes = [
     "**/node_modules",
     "**/__pycache__",

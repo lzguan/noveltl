@@ -1,0 +1,30 @@
+{
+  "$schema": "../../schema/v1/json/test-data-catalog.schema.json",
+  "schemaVersion": 1,
+  "kind": "testDataCatalog",
+  "configs": [
+    {
+      "id": "cluener-default",
+      "path": "configs/cluener-default.json"
+    }
+  ],
+  "novels": [
+    {
+      "id": "qingyun",
+      "path": "novels/qingyun/manifest.json"
+    },
+    {
+      "id": "quantum-path",
+      "path": "novels/quantum-path/manifest.json"
+    },
+    {
+      "id": "silverleaf",
+      "path": "novels/silverleaf/manifest.json"
+    },
+    {
+      "id": "starfall",
+      "path": "novels/starfall/manifest.json"
+    }
+  ],
+  "relations": []
+}

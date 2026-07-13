@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../../schema/v1/json/novel-manifest.schema.json",
+  "kind": "novelManifest",
+  "schemaVersion": 1,
+  "id": "qingyun",
+  "title": "Qingyun",
+  "description": "Synthetic cultivation fixture chapters.",
+  "author": null,
+  "languageCode": "zh",
+  "novelType": "original",
+  "visibility": "public",
+  "provenance": {
+    "kind": "synthetic",
+    "creator": "NovelTL contributors",
+    "license": "project-test-fixture"
+  },
+  "chapters": [
+    {
+      "id": "qingyun-chapter-0001",
+      "number": 1,
+      "path": "chapters/chapter-0001/manifest.json"
+    },
+    {
+      "id": "qingyun-chapter-0002",
+      "number": 2,
+      "path": "chapters/chapter-0002/manifest.json"
+    }
+  ]
+}

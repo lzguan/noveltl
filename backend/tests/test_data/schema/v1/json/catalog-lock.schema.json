@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "catalog-lock.schema.json",
+  "$defs": {
+    "LockFileEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "size": {
+          "minimum": 0,
+          "title": "Size",
+          "type": "integer"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        },
+        "inputs": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LockInputs"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "kind",
+        "size",
+        "sha256"
+      ],
+      "title": "LockFileEntry",
+      "type": "object"
+    },
+    "LockInputs": {
+      "additionalProperties": false,
+      "properties": {
+        "textSha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Textsha256"
+        },
+        "configSha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Configsha256"
+        }
+      },
+      "title": "LockInputs",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "title": "$Schema",
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1,
+      "title": "Schemaversion",
+      "type": "integer"
+    },
+    "kind": {
+      "const": "testDataLock",
+      "title": "Kind",
+      "type": "string"
+    },
+    "datasetSchemaVersion": {
+      "const": 1,
+      "title": "Datasetschemaversion",
+      "type": "integer"
+    },
+    "files": {
+      "additionalProperties": {
+        "$ref": "#/$defs/LockFileEntry"
+      },
+      "title": "Files",
+      "type": "object"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "datasetSchemaVersion",
+    "files"
+  ],
+  "title": "CatalogLockDocument",
+  "type": "object"
+}

@@ -1,0 +1,280 @@
+{
+  "$schema": "../../../../../../../../schema/v1/json/autolabels.schema.json",
+  "schemaVersion": 1,
+  "kind": "autolabels",
+  "id": "starfall-chapter-0001-v0001-autolabels-cluener-default",
+  "producer": {
+    "name": "cluener",
+    "config": "cluener-default"
+  },
+  "labels": [
+    {
+      "start": 8,
+      "end": 22,
+      "text": "新上海联邦的生物科技大厦顶楼",
+      "entityGroup": "address",
+      "score": 0.9120880365371704
+    },
+    {
+      "start": 23,
+      "end": 26,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.9969080090522766
+    },
+    {
+      "start": 186,
+      "end": 191,
+      "text": "联邦科学院",
+      "entityGroup": "organization",
+      "score": 0.8347386121749878
+    },
+    {
+      "start": 247,
+      "end": 250,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.9974920153617859
+    },
+    {
+      "start": 322,
+      "end": 324,
+      "text": "导师",
+      "entityGroup": "position",
+      "score": 0.8812431693077087
+    },
+    {
+      "start": 344,
+      "end": 347,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.997473418712616
+    },
+    {
+      "start": 362,
+      "end": 364,
+      "text": "博士",
+      "entityGroup": "position",
+      "score": 0.8536660671234131
+    },
+    {
+      "start": 365,
+      "end": 369,
+      "text": "蓝海科技",
+      "entityGroup": "company",
+      "score": 0.9688777923583984
+    },
+    {
+      "start": 376,
+      "end": 378,
+      "text": "助手",
+      "entityGroup": "position",
+      "score": 0.8816143870353699
+    },
+    {
+      "start": 403,
+      "end": 406,
+      "text": "陈天海",
+      "entityGroup": "name",
+      "score": 0.9756410717964172
+    },
+    {
+      "start": 407,
+      "end": 411,
+      "text": "蓝海科技",
+      "entityGroup": "company",
+      "score": 0.9537475109100342
+    },
+    {
+      "start": 412,
+      "end": 415,
+      "text": "创始人",
+      "entityGroup": "position",
+      "score": 0.939702033996582
+    },
+    {
+      "start": 418,
+      "end": 421,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.5966435670852661
+    },
+    {
+      "start": 424,
+      "end": 427,
+      "text": "投资人",
+      "entityGroup": "position",
+      "score": 0.8869328498840332
+    },
+    {
+      "start": 457,
+      "end": 459,
+      "text": "学生",
+      "entityGroup": "position",
+      "score": 0.7746070623397827
+    },
+    {
+      "start": 475,
+      "end": 479,
+      "text": "基因科技",
+      "entityGroup": "company",
+      "score": 0.7575091123580933
+    },
+    {
+      "start": 486,
+      "end": 490,
+      "text": "蓝海科技",
+      "entityGroup": "company",
+      "score": 0.945362389087677
+    },
+    {
+      "start": 502,
+      "end": 506,
+      "text": "联邦军方",
+      "entityGroup": "government",
+      "score": 0.8697530031204224
+    },
+    {
+      "start": 527,
+      "end": 530,
+      "text": "联络官",
+      "entityGroup": "position",
+      "score": 0.6684172749519348
+    },
+    {
+      "start": 532,
+      "end": 534,
+      "text": "蓝海",
+      "entityGroup": "company",
+      "score": 0.28721511363983154
+    },
+    {
+      "start": 553,
+      "end": 554,
+      "text": "洲",
+      "entityGroup": "address",
+      "score": 0.5654714107513428
+    },
+    {
+      "start": 590,
+      "end": 593,
+      "text": "陈天海",
+      "entityGroup": "name",
+      "score": 0.9969473481178284
+    },
+    {
+      "start": 600,
+      "end": 602,
+      "text": "博士",
+      "entityGroup": "position",
+      "score": 0.7301657199859619
+    },
+    {
+      "start": 603,
+      "end": 605,
+      "text": "军方",
+      "entityGroup": "government",
+      "score": 0.5353977680206299
+    },
+    {
+      "start": 633,
+      "end": 636,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.9939354062080383
+    },
+    {
+      "start": 681,
+      "end": 685,
+      "text": "联邦军方",
+      "entityGroup": "government",
+      "score": 0.9509914517402649
+    },
+    {
+      "start": 686,
+      "end": 690,
+      "text": "昆仑山脉",
+      "entityGroup": "address",
+      "score": 0.8904224038124084
+    },
+    {
+      "start": 738,
+      "end": 739,
+      "text": "战",
+      "entityGroup": "game",
+      "score": 0.6028837561607361
+    },
+    {
+      "start": 744,
+      "end": 746,
+      "text": "军方",
+      "entityGroup": "government",
+      "score": 0.7111480236053467
+    },
+    {
+      "start": 747,
+      "end": 750,
+      "text": "昆仑山",
+      "entityGroup": "address",
+      "score": 0.7543541789054871
+    },
+    {
+      "start": 789,
+      "end": 792,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.7887886166572571
+    },
+    {
+      "start": 811,
+      "end": 816,
+      "text": "新上海联邦",
+      "entityGroup": "address",
+      "score": 0.7991949319839478
+    },
+    {
+      "start": 828,
+      "end": 833,
+      "text": "东方明珠塔",
+      "entityGroup": "scene",
+      "score": 0.8924576640129089
+    },
+    {
+      "start": 843,
+      "end": 846,
+      "text": "长安街",
+      "entityGroup": "address",
+      "score": 0.8788443207740784
+    },
+    {
+      "start": 874,
+      "end": 879,
+      "text": "新上海联邦",
+      "entityGroup": "address",
+      "score": 0.7140440940856934
+    },
+    {
+      "start": 895,
+      "end": 897,
+      "text": "军方",
+      "entityGroup": "government",
+      "score": 0.7199479937553406
+    },
+    {
+      "start": 898,
+      "end": 901,
+      "text": "昆仑山",
+      "entityGroup": "address",
+      "score": 0.7385095953941345
+    }
+  ],
+  "errors": [
+    {
+      "word": "jameskessler",
+      "score": 0.9044897556304932,
+      "start": 513,
+      "end": 526,
+      "entity_group": "name"
+    }
+  ]
+}

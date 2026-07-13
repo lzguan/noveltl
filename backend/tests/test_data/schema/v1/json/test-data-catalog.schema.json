@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "test-data-catalog.schema.json",
+  "$defs": {
+    "Reference": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "path"
+      ],
+      "title": "Reference",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "title": "$Schema",
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1,
+      "title": "Schemaversion",
+      "type": "integer"
+    },
+    "kind": {
+      "const": "testDataCatalog",
+      "title": "Kind",
+      "type": "string"
+    },
+    "configs": {
+      "items": {
+        "$ref": "#/$defs/Reference"
+      },
+      "title": "Configs",
+      "type": "array"
+    },
+    "novels": {
+      "items": {
+        "$ref": "#/$defs/Reference"
+      },
+      "title": "Novels",
+      "type": "array"
+    },
+    "relations": {
+      "items": {
+        "$ref": "#/$defs/Reference"
+      },
+      "title": "Relations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "configs",
+    "novels",
+    "relations"
+  ],
+  "title": "CatalogDocument",
+  "type": "object"
+}

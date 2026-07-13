@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../../../../../schema/v1/json/content-version-manifest.schema.json",
+  "schemaVersion": 1,
+  "kind": "contentVersionManifest",
+  "id": "quantum-path-chapter-0002-v0001",
+  "number": 1,
+  "text": "text.txt",
+  "artifacts": [
+    {
+      "id": "quantum-path-chapter-0002-v0001-autolabels-cluener-default",
+      "path": "autolabels.cluener-default.json",
+      "kind": "autolabels"
+    }
+  ]
+}

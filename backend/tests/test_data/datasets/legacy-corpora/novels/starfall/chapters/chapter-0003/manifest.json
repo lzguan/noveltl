@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../../../schema/v1/json/chapter-manifest.schema.json",
+  "kind": "chapterManifest",
+  "schemaVersion": 1,
+  "id": "starfall-chapter-0003",
+  "number": 3,
+  "title": "Chapter 3",
+  "isPublic": true,
+  "versions": [
+    {
+      "id": "starfall-chapter-0003-v0001",
+      "path": "versions/v0001/manifest.json"
+    }
+  ]
+}

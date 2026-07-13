@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../../schema/v1/json/novel-manifest.schema.json",
+  "kind": "novelManifest",
+  "schemaVersion": 1,
+  "id": "silverleaf",
+  "title": "Silverleaf",
+  "description": "Synthetic fantasy fixture chapters.",
+  "author": null,
+  "languageCode": "zh",
+  "novelType": "original",
+  "visibility": "public",
+  "provenance": {
+    "kind": "synthetic",
+    "creator": "NovelTL contributors",
+    "license": "project-test-fixture"
+  },
+  "chapters": [
+    {
+      "id": "silverleaf-chapter-0001",
+      "number": 1,
+      "path": "chapters/chapter-0001/manifest.json"
+    },
+    {
+      "id": "silverleaf-chapter-0002",
+      "number": 2,
+      "path": "chapters/chapter-0002/manifest.json"
+    },
+    {
+      "id": "silverleaf-chapter-0003",
+      "number": 3,
+      "path": "chapters/chapter-0003/manifest.json"
+    },
+    {
+      "id": "silverleaf-chapter-0004",
+      "number": 4,
+      "path": "chapters/chapter-0004/manifest.json"
+    }
+  ]
+}

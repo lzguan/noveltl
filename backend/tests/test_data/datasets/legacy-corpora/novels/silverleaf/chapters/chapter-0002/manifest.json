@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../../../schema/v1/json/chapter-manifest.schema.json",
+  "kind": "chapterManifest",
+  "schemaVersion": 1,
+  "id": "silverleaf-chapter-0002",
+  "number": 2,
+  "title": "Chapter 2",
+  "isPublic": true,
+  "versions": [
+    {
+      "id": "silverleaf-chapter-0002-v0001",
+      "path": "versions/v0001/manifest.json"
+    }
+  ]
+}

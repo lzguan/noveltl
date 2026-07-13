@@ -1,0 +1,293 @@
+{
+  "$schema": "../../../../../../../../schema/v1/json/autolabels.schema.json",
+  "schemaVersion": 1,
+  "kind": "autolabels",
+  "id": "silverleaf-chapter-0002-v0001-autolabels-cluener-default",
+  "producer": {
+    "name": "cluener",
+    "config": "cluener-default"
+  },
+  "labels": [
+    {
+      "start": 0,
+      "end": 3,
+      "text": "洛瑟琳",
+      "entityGroup": "name",
+      "score": 0.9583460688591003
+    },
+    {
+      "start": 5,
+      "end": 7,
+      "text": "蕾娜",
+      "entityGroup": "name",
+      "score": 0.7896310687065125
+    },
+    {
+      "start": 10,
+      "end": 13,
+      "text": "灰烬山",
+      "entityGroup": "scene",
+      "score": 0.576707661151886
+    },
+    {
+      "start": 28,
+      "end": 30,
+      "text": "王都",
+      "entityGroup": "address",
+      "score": 0.531609833240509
+    },
+    {
+      "start": 30,
+      "end": 33,
+      "text": "银叶城",
+      "entityGroup": "address",
+      "score": 0.7206236720085144
+    },
+    {
+      "start": 124,
+      "end": 125,
+      "text": "叶",
+      "entityGroup": "address",
+      "score": 0.40354788303375244
+    },
+    {
+      "start": 187,
+      "end": 191,
+      "text": "猎魔骑士",
+      "entityGroup": "game",
+      "score": 0.5834413766860962
+    },
+    {
+      "start": 197,
+      "end": 200,
+      "text": "银叶城",
+      "entityGroup": "address",
+      "score": 0.9112470149993896
+    },
+    {
+      "start": 217,
+      "end": 220,
+      "text": "洛瑟琳",
+      "entityGroup": "name",
+      "score": 0.9878261685371399
+    },
+    {
+      "start": 263,
+      "end": 265,
+      "text": "教皇",
+      "entityGroup": "position",
+      "score": 0.9166567325592041
+    },
+    {
+      "start": 265,
+      "end": 268,
+      "text": "维克托",
+      "entityGroup": "name",
+      "score": 0.9631040096282959
+    },
+    {
+      "start": 292,
+      "end": 293,
+      "text": "议",
+      "entityGroup": "organization",
+      "score": 0.42033877968788147
+    },
+    {
+      "start": 367,
+      "end": 369,
+      "text": "蕾娜",
+      "entityGroup": "name",
+      "score": 0.8671467304229736
+    },
+    {
+      "start": 417,
+      "end": 419,
+      "text": "蕾娜",
+      "entityGroup": "name",
+      "score": 0.8776569366455078
+    },
+    {
+      "start": 471,
+      "end": 473,
+      "text": "梅林",
+      "entityGroup": "name",
+      "score": 0.9492442607879639
+    },
+    {
+      "start": 488,
+      "end": 491,
+      "text": "洛瑟琳",
+      "entityGroup": "name",
+      "score": 0.9653695225715637
+    },
+    {
+      "start": 504,
+      "end": 508,
+      "text": "符文大师",
+      "entityGroup": "position",
+      "score": 0.8970513343811035
+    },
+    {
+      "start": 508,
+      "end": 510,
+      "text": "巴林",
+      "entityGroup": "name",
+      "score": 0.9222711324691772
+    },
+    {
+      "start": 692,
+      "end": 696,
+      "text": "莫德雷德",
+      "entityGroup": "name",
+      "score": 0.9722011685371399
+    },
+    {
+      "start": 700,
+      "end": 704,
+      "text": "莫德雷德",
+      "entityGroup": "name",
+      "score": 0.9794291257858276
+    },
+    {
+      "start": 712,
+      "end": 715,
+      "text": "圣骑士",
+      "entityGroup": "position",
+      "score": 0.6705369353294373
+    },
+    {
+      "start": 730,
+      "end": 733,
+      "text": "明教廷",
+      "entityGroup": "organization",
+      "score": 0.4108189344406128
+    },
+    {
+      "start": 787,
+      "end": 789,
+      "text": "将军",
+      "entityGroup": "position",
+      "score": 0.6011030673980713
+    },
+    {
+      "start": 805,
+      "end": 809,
+      "text": "阿尔萨斯",
+      "entityGroup": "address",
+      "score": 0.663032054901123
+    },
+    {
+      "start": 813,
+      "end": 818,
+      "text": "玛尔甘尼斯",
+      "entityGroup": "address",
+      "score": 0.49067431688308716
+    },
+    {
+      "start": 834,
+      "end": 838,
+      "text": "德拉苟萨",
+      "entityGroup": "address",
+      "score": 0.5876278281211853
+    },
+    {
+      "start": 856,
+      "end": 857,
+      "text": "瑟",
+      "entityGroup": "name",
+      "score": 0.2870676517486572
+    },
+    {
+      "start": 857,
+      "end": 858,
+      "text": "琳",
+      "entityGroup": "scene",
+      "score": 0.4382238984107971
+    },
+    {
+      "start": 861,
+      "end": 865,
+      "text": "灰烬山脉",
+      "entityGroup": "address",
+      "score": 0.6636514067649841
+    },
+    {
+      "start": 880,
+      "end": 882,
+      "text": "翠村",
+      "entityGroup": "address",
+      "score": 0.6591563820838928
+    },
+    {
+      "start": 997,
+      "end": 999,
+      "text": "村长",
+      "entityGroup": "position",
+      "score": 0.9466366767883301
+    },
+    {
+      "start": 1003,
+      "end": 1007,
+      "text": "玛格丽特",
+      "entityGroup": "name",
+      "score": 0.8680657744407654
+    },
+    {
+      "start": 1027,
+      "end": 1030,
+      "text": "银叶城",
+      "entityGroup": "address",
+      "score": 0.8634656071662903
+    },
+    {
+      "start": 1031,
+      "end": 1035,
+      "text": "宫廷法师",
+      "entityGroup": "position",
+      "score": 0.9416925311088562
+    },
+    {
+      "start": 1037,
+      "end": 1040,
+      "text": "银叶城",
+      "entityGroup": "address",
+      "score": 0.8055229187011719
+    },
+    {
+      "start": 1042,
+      "end": 1044,
+      "text": "法师",
+      "entityGroup": "position",
+      "score": 0.5781378746032715
+    },
+    {
+      "start": 1052,
+      "end": 1055,
+      "text": "大法师",
+      "entityGroup": "position",
+      "score": 0.7940147519111633
+    },
+    {
+      "start": 1055,
+      "end": 1058,
+      "text": "艾尔隆",
+      "entityGroup": "name",
+      "score": 0.9739656448364258
+    },
+    {
+      "start": 1105,
+      "end": 1107,
+      "text": "蕾娜",
+      "entityGroup": "name",
+      "score": 0.8046305179595947
+    },
+    {
+      "start": 1128,
+      "end": 1131,
+      "text": "伊瑟拉",
+      "entityGroup": "name",
+      "score": 0.7314551472663879
+    }
+  ],
+  "errors": []
+}

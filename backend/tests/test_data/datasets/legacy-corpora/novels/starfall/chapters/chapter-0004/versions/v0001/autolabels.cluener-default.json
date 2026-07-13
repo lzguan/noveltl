@@ -1,0 +1,146 @@
+{
+  "$schema": "../../../../../../../../schema/v1/json/autolabels.schema.json",
+  "schemaVersion": 1,
+  "kind": "autolabels",
+  "id": "starfall-chapter-0004-v0001-autolabels-cluener-default",
+  "producer": {
+    "name": "cluener",
+    "config": "cluener-default"
+  },
+  "labels": [
+    {
+      "start": 20,
+      "end": 27,
+      "text": "长安基因研究院",
+      "entityGroup": "organization",
+      "score": 0.9260296821594238
+    },
+    {
+      "start": 35,
+      "end": 42,
+      "text": "联邦科技委员会",
+      "entityGroup": "government",
+      "score": 0.9634661674499512
+    },
+    {
+      "start": 51,
+      "end": 54,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.9962155818939209
+    },
+    {
+      "start": 108,
+      "end": 111,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.995337724685669
+    },
+    {
+      "start": 135,
+      "end": 137,
+      "text": "导师",
+      "entityGroup": "position",
+      "score": 0.968019962310791
+    },
+    {
+      "start": 138,
+      "end": 142,
+      "text": "长安大学",
+      "entityGroup": "organization",
+      "score": 0.9477800130844116
+    },
+    {
+      "start": 143,
+      "end": 146,
+      "text": "齐慕白",
+      "entityGroup": "name",
+      "score": 0.9946430325508118
+    },
+    {
+      "start": 146,
+      "end": 148,
+      "text": "教授",
+      "entityGroup": "position",
+      "score": 0.9717105627059937
+    },
+    {
+      "start": 150,
+      "end": 152,
+      "text": "教授",
+      "entityGroup": "position",
+      "score": 0.9763960838317871
+    },
+    {
+      "start": 199,
+      "end": 202,
+      "text": "科学家",
+      "entityGroup": "position",
+      "score": 0.9831920266151428
+    },
+    {
+      "start": 209,
+      "end": 210,
+      "text": "辰",
+      "entityGroup": "name",
+      "score": 0.8241859078407288
+    },
+    {
+      "start": 227,
+      "end": 230,
+      "text": "齐慕白",
+      "entityGroup": "name",
+      "score": 0.9833210110664368
+    },
+    {
+      "start": 256,
+      "end": 259,
+      "text": "昆仑山",
+      "entityGroup": "scene",
+      "score": 0.608555018901825
+    },
+    {
+      "start": 290,
+      "end": 293,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.997081995010376
+    },
+    {
+      "start": 321,
+      "end": 324,
+      "text": "齐慕白",
+      "entityGroup": "name",
+      "score": 0.9906290173530579
+    },
+    {
+      "start": 335,
+      "end": 338,
+      "text": "昆仑山",
+      "entityGroup": "scene",
+      "score": 0.4656606912612915
+    },
+    {
+      "start": 394,
+      "end": 396,
+      "text": "昆仑",
+      "entityGroup": "address",
+      "score": 0.48990243673324585
+    },
+    {
+      "start": 449,
+      "end": 452,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.9970102906227112
+    },
+    {
+      "start": 464,
+      "end": 465,
+      "text": "军",
+      "entityGroup": "government",
+      "score": 0.5630385279655457
+    }
+  ],
+  "errors": []
+}

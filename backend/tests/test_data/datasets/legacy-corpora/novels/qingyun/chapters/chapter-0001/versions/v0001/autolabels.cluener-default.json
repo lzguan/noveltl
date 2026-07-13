@@ -1,0 +1,90 @@
+{
+  "$schema": "../../../../../../../../schema/v1/json/autolabels.schema.json",
+  "schemaVersion": 1,
+  "kind": "autolabels",
+  "id": "qingyun-chapter-0001-v0001-autolabels-cluener-default",
+  "producer": {
+    "name": "cluener",
+    "config": "cluener-default"
+  },
+  "labels": [
+    {
+      "start": 0,
+      "end": 3,
+      "text": "青云山",
+      "entityGroup": "scene",
+      "score": 0.8155879378318787
+    },
+    {
+      "start": 11,
+      "end": 13,
+      "text": "凌云",
+      "entityGroup": "name",
+      "score": 0.8228429555892944
+    },
+    {
+      "start": 54,
+      "end": 56,
+      "text": "掌门",
+      "entityGroup": "position",
+      "score": 0.9258365631103516
+    },
+    {
+      "start": 56,
+      "end": 59,
+      "text": "张道玄",
+      "entityGroup": "name",
+      "score": 0.9945712685585022
+    },
+    {
+      "start": 69,
+      "end": 71,
+      "text": "凌云",
+      "entityGroup": "name",
+      "score": 0.6996109485626221
+    },
+    {
+      "start": 90,
+      "end": 92,
+      "text": "凌云",
+      "entityGroup": "name",
+      "score": 0.7685603499412537
+    },
+    {
+      "start": 173,
+      "end": 175,
+      "text": "长老",
+      "entityGroup": "position",
+      "score": 0.7956202030181885
+    },
+    {
+      "start": 175,
+      "end": 178,
+      "text": "王铁柱",
+      "entityGroup": "name",
+      "score": 0.9889938235282898
+    },
+    {
+      "start": 202,
+      "end": 203,
+      "text": "凌",
+      "entityGroup": "name",
+      "score": 0.5964837670326233
+    },
+    {
+      "start": 246,
+      "end": 249,
+      "text": "龙虎山",
+      "entityGroup": "scene",
+      "score": 0.8365755081176758
+    },
+    {
+      "start": 257,
+      "end": 261,
+      "text": "天元大陆",
+      "entityGroup": "address",
+      "score": 0.6702269315719604
+    }
+  ],
+  "errors": []
+}

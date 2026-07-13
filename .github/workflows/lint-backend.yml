@@ -1,0 +1,31 @@
+name: Type check and lint backend
+on:
+  pull_request:
+    branches: 
+      - master
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          uv-version: 0.10.9
+          python-version-file: backend/pyproject.toml
+      - run: uv --directory backend sync
+      - run: uv --directory backend run ruff check
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          uv-version: 0.10.9
+          python-version-file: backend/pyproject.toml
+      - run: uv --directory backend sync
+      - run: uv --directory backend run pyrefly check

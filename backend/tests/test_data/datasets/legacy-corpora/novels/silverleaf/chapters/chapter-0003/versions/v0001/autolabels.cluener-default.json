@@ -1,0 +1,160 @@
+{
+  "$schema": "../../../../../../../../schema/v1/json/autolabels.schema.json",
+  "schemaVersion": 1,
+  "kind": "autolabels",
+  "id": "silverleaf-chapter-0003-v0001-autolabels-cluener-default",
+  "producer": {
+    "name": "cluener",
+    "config": "cluener-default"
+  },
+  "labels": [
+    {
+      "start": 63,
+      "end": 65,
+      "text": "教皇",
+      "entityGroup": "position",
+      "score": 0.9514559507369995
+    },
+    {
+      "start": 65,
+      "end": 68,
+      "text": "维克托",
+      "entityGroup": "name",
+      "score": 0.9704525470733643
+    },
+    {
+      "start": 95,
+      "end": 98,
+      "text": "维克托",
+      "entityGroup": "name",
+      "score": 0.6869006156921387
+    },
+    {
+      "start": 160,
+      "end": 163,
+      "text": "维克托",
+      "entityGroup": "name",
+      "score": 0.9841650128364563
+    },
+    {
+      "start": 183,
+      "end": 187,
+      "text": "猎魔骑士",
+      "entityGroup": "game",
+      "score": 0.4651951789855957
+    },
+    {
+      "start": 188,
+      "end": 190,
+      "text": "团长",
+      "entityGroup": "position",
+      "score": 0.9681099653244019
+    },
+    {
+      "start": 190,
+      "end": 195,
+      "text": "塞巴斯蒂安",
+      "entityGroup": "name",
+      "score": 0.99286949634552
+    },
+    {
+      "start": 198,
+      "end": 200,
+      "text": "教廷",
+      "entityGroup": "organization",
+      "score": 0.5079201459884644
+    },
+    {
+      "start": 200,
+      "end": 202,
+      "text": "首席",
+      "entityGroup": "position",
+      "score": 0.8701793551445007
+    },
+    {
+      "start": 202,
+      "end": 205,
+      "text": "审判官",
+      "entityGroup": "position",
+      "score": 0.9319556355476379
+    },
+    {
+      "start": 205,
+      "end": 209,
+      "text": "伊莎贝拉",
+      "entityGroup": "name",
+      "score": 0.991684079170227
+    },
+    {
+      "start": 210,
+      "end": 215,
+      "text": "塞巴斯蒂安",
+      "entityGroup": "name",
+      "score": 0.9667900800704956
+    },
+    {
+      "start": 259,
+      "end": 262,
+      "text": "天使长",
+      "entityGroup": "position",
+      "score": 0.9632236361503601
+    },
+    {
+      "start": 275,
+      "end": 278,
+      "text": "维克托",
+      "entityGroup": "name",
+      "score": 0.9789806008338928
+    },
+    {
+      "start": 299,
+      "end": 303,
+      "text": "灰烬山脉",
+      "entityGroup": "address",
+      "score": 0.7169097065925598
+    },
+    {
+      "start": 328,
+      "end": 331,
+      "text": "翡翠村",
+      "entityGroup": "address",
+      "score": 0.9412662982940674
+    },
+    {
+      "start": 381,
+      "end": 384,
+      "text": "洛瑟琳",
+      "entityGroup": "name",
+      "score": 0.9226801991462708
+    },
+    {
+      "start": 468,
+      "end": 469,
+      "text": "克",
+      "entityGroup": "name",
+      "score": 0.6150258183479309
+    },
+    {
+      "start": 491,
+      "end": 492,
+      "text": "议",
+      "entityGroup": "organization",
+      "score": 0.3234109580516815
+    },
+    {
+      "start": 498,
+      "end": 499,
+      "text": "教",
+      "entityGroup": "position",
+      "score": 0.5665768980979919
+    },
+    {
+      "start": 520,
+      "end": 523,
+      "text": "维克托",
+      "entityGroup": "name",
+      "score": 0.9839426875114441
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "../../json/relation-bundle.schema.json",
+  "kind": "relationBundle",
+  "schemaVersion": 1,
+  "id": "translation-pair",
+  "sourceWorks": [
+    {
+      "id": "synthetic-xianxia-work",
+      "title": "Synthetic Xianxia Work",
+      "description": null,
+      "novels": [
+        "xianxia-source",
+        "xianxia-translation"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "$schema": "../../../../../../../../schema/v1/json/autolabels.schema.json",
+  "schemaVersion": 1,
+  "kind": "autolabels",
+  "id": "qingyun-chapter-0002-v0001-autolabels-cluener-default",
+  "producer": {
+    "name": "cluener",
+    "config": "cluener-default"
+  },
+  "labels": [
+    {
+      "start": 12,
+      "end": 14,
+      "text": "凌云",
+      "entityGroup": "name",
+      "score": 0.7335674166679382
+    },
+    {
+      "start": 89,
+      "end": 90,
+      "text": "外",
+      "entityGroup": "position",
+      "score": 0.5171665549278259
+    },
+    {
+      "start": 91,
+      "end": 93,
+      "text": "执事",
+      "entityGroup": "position",
+      "score": 0.5632296204566956
+    },
+    {
+      "start": 93,
+      "end": 96,
+      "text": "赵无极",
+      "entityGroup": "name",
+      "score": 0.9912900328636169
+    },
+    {
+      "start": 99,
+      "end": 101,
+      "text": "凌云",
+      "entityGroup": "name",
+      "score": 0.7323423624038696
+    },
+    {
+      "start": 144,
+      "end": 147,
+      "text": "赵无极",
+      "entityGroup": "name",
+      "score": 0.9848311543464661
+    },
+    {
+      "start": 159,
+      "end": 160,
+      "text": "刑",
+      "entityGroup": "organization",
+      "score": 0.4366248548030853
+    },
+    {
+      "start": 168,
+      "end": 170,
+      "text": "堂主",
+      "entityGroup": "position",
+      "score": 0.7532341480255127
+    },
+    {
+      "start": 170,
+      "end": 173,
+      "text": "李青松",
+      "entityGroup": "name",
+      "score": 0.9933431148529053
+    },
+    {
+      "start": 216,
+      "end": 219,
+      "text": "李青松",
+      "entityGroup": "name",
+      "score": 0.9860307574272156
+    },
+    {
+      "start": 223,
+      "end": 225,
+      "text": "凌云",
+      "entityGroup": "name",
+      "score": 0.7889061570167542
+    },
+    {
+      "start": 256,
+      "end": 258,
+      "text": "掌门",
+      "entityGroup": "position",
+      "score": 0.8574882745742798
+    },
+    {
+      "start": 258,
+      "end": 261,
+      "text": "张道玄",
+      "entityGroup": "name",
+      "score": 0.9944248199462891
+    },
+    {
+      "start": 304,
+      "end": 306,
+      "text": "太上",
+      "entityGroup": "position",
+      "score": 0.6641796827316284
+    },
+    {
+      "start": 325,
+      "end": 328,
+      "text": "叶无道",
+      "entityGroup": "name",
+      "score": 0.9828327298164368
+    }
+  ],
+  "errors": []
+}

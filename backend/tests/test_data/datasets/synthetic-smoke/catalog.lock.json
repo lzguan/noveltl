@@ -1,0 +1,100 @@
+{
+  "$schema": "../../schema/v1/json/catalog-lock.schema.json",
+  "schemaVersion": 1,
+  "kind": "testDataLock",
+  "datasetSchemaVersion": 1,
+  "files": {
+    "catalog.json": {
+      "kind": "testDataCatalog",
+      "size": 561,
+      "sha256": "c60697c02c72bd802fedfad70bd738330056c501e7ee8eafb8a18538beabb701"
+    },
+    "configs/cluener-default.json": {
+      "kind": "modelConfig",
+      "size": 426,
+      "sha256": "3db3a7114c05e9f2c1121bf153e7e597e7c5c81301b098a796a3ed868ee1abe8"
+    },
+    "novels/xianxia-source/chapters/chapter-0001/manifest.json": {
+      "kind": "chapterManifest",
+      "size": 462,
+      "sha256": "28b036fe94388befec9533d8e16c2ed5c55e897134b6e07c4b545b7d1855ece6"
+    },
+    "novels/xianxia-source/chapters/chapter-0001/versions/v0001/autolabels.cluener.json": {
+      "kind": "autolabels",
+      "size": 546,
+      "sha256": "b7158ce67f6a5fbe379958a9c3a0a0c4aa2bfd68fd919257fedb6c3cd67baefd",
+      "inputs": {
+        "textSha256": "0836c53b66f2b0e3ef4d426927e5233d2ad7e88fedf7ca78904e5ddd46749591",
+        "configSha256": "3db3a7114c05e9f2c1121bf153e7e597e7c5c81301b098a796a3ed868ee1abe8"
+      }
+    },
+    "novels/xianxia-source/chapters/chapter-0001/versions/v0001/manifest.json": {
+      "kind": "contentVersionManifest",
+      "size": 401,
+      "sha256": "f9abca14ded3b4c0c018d89a0fb542cf7e4024dad50c4e27a973e3b3f5fee080"
+    },
+    "novels/xianxia-source/chapters/chapter-0001/versions/v0001/text.txt": {
+      "kind": "chapterText",
+      "size": 25,
+      "sha256": "0836c53b66f2b0e3ef4d426927e5233d2ad7e88fedf7ca78904e5ddd46749591"
+    },
+    "novels/xianxia-source/chapters/chapter-0001/versions/v0002/autolabels.cluener.json": {
+      "kind": "autolabels",
+      "size": 547,
+      "sha256": "8934017f8c0756b8031cfc92263af3f80df9fac043f039395a651ec474575718",
+      "inputs": {
+        "textSha256": "edd8a600e885081c315b765bfb7aab9a6a1e4cc4a3642f21dde108e93f1984f4",
+        "configSha256": "3db3a7114c05e9f2c1121bf153e7e597e7c5c81301b098a796a3ed868ee1abe8"
+      }
+    },
+    "novels/xianxia-source/chapters/chapter-0001/versions/v0002/manifest.json": {
+      "kind": "contentVersionManifest",
+      "size": 401,
+      "sha256": "7f5d4f6da899f456b2ebbc7031d638c7c6b29e5195301fc97d761eb04f3ac8f6"
+    },
+    "novels/xianxia-source/chapters/chapter-0001/versions/v0002/text.txt": {
+      "kind": "chapterText",
+      "size": 53,
+      "sha256": "edd8a600e885081c315b765bfb7aab9a6a1e4cc4a3642f21dde108e93f1984f4"
+    },
+    "novels/xianxia-source/manifest.json": {
+      "kind": "novelManifest",
+      "size": 629,
+      "sha256": "64d722238447219bbaf392163c7cb88ee0c23c7df38880c14f7dc7fd1ba4ecd1"
+    },
+    "novels/xianxia-translation/chapters/chapter-0001/manifest.json": {
+      "kind": "chapterManifest",
+      "size": 365,
+      "sha256": "98e0e306bce5cdff417dd859d74d24a3875f9a7e7f84be5ed8c3e483593e187f"
+    },
+    "novels/xianxia-translation/chapters/chapter-0001/versions/v0001/autolabels.cluener.json": {
+      "kind": "autolabels",
+      "size": 559,
+      "sha256": "45592ca07d479c84146c60bdb183e3d242b76ef66fdf8d2fe80477f69ab2bdbc",
+      "inputs": {
+        "textSha256": "2dc576b9e79fdc47cbffa86d418b0d34066c3c381ae7963b15442f9abb4f635f",
+        "configSha256": "3db3a7114c05e9f2c1121bf153e7e597e7c5c81301b098a796a3ed868ee1abe8"
+      }
+    },
+    "novels/xianxia-translation/chapters/chapter-0001/versions/v0001/manifest.json": {
+      "kind": "contentVersionManifest",
+      "size": 411,
+      "sha256": "7bd99acec70e7c3049be44c6adcc29254ac0a6a289c8d6cc964c02a723d8bd2d"
+    },
+    "novels/xianxia-translation/chapters/chapter-0001/versions/v0001/text.txt": {
+      "kind": "chapterText",
+      "size": 43,
+      "sha256": "2dc576b9e79fdc47cbffa86d418b0d34066c3c381ae7963b15442f9abb4f635f"
+    },
+    "novels/xianxia-translation/manifest.json": {
+      "kind": "novelManifest",
+      "size": 653,
+      "sha256": "2e3b925ccdcb08db1af74efb4e4a6d06c78d32f6a602f4aec387d290eb31879b"
+    },
+    "relations/translation-pair.json": {
+      "kind": "relationBundle",
+      "size": 373,
+      "sha256": "fa0c5314de471b8fba3c235be48f9597b81cab8f352b53b77b79dba58e537cd3"
+    }
+  }
+}

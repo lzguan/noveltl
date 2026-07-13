@@ -139,12 +139,12 @@ class TestAutoLabelsByRunRouter:
         run = novel_bundle.autolabel_runs_by_name["cluener"]
 
         response = client.get(
-            f"/auto-label-runs/{run.run_id}/auto-labels?start=0&end=1",
+            f"/auto-label-runs/{run.run_id}/auto-labels?start=1&end=2",
             headers=_auth_headers(user),
         )
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
-        # Chapter numbers are 0-indexed, so start=0, end=1 picks chapter 0 only.
+        # Chapter numbers are 1-indexed, so start=1, end=2 picks chapter 1 only.
         assert len(payload) == 1
 
 

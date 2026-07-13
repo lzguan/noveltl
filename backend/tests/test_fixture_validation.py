@@ -11,7 +11,8 @@ import logging
 
 import pytest
 
-from tests.conftest import DataLoader
+from test_support.test_data import Catalog, NovelDataset
+from test_support.test_data.lockfile import check_lock
 from tests.fixtures.bundles import LabelFixtureBundle, NovelFixtureBundle, ScenarioBundle
 from tests.gate_logging import log_gate
 
@@ -272,21 +273,19 @@ class TestAdditionalScenarioBundlesCreateData:
 # ---------------------------------------------------------------------------
 
 
-class TestChapterLoaderReturnsData:
-    @pytest.mark.dependency(name="fixture_validation::chapter_loader", scope="session")
-    def test_loads_chapters(self, chapter_loader: DataLoader) -> None:
-        subdir = "chinese"
-        chapters = list(chapter_loader(subdir, recursive=True))
-        logger.info("Loaded %s chapter text fixtures from '%s'", len(chapters), subdir)
-        assert len(chapters) > 0
-        for text in chapters:
-            assert isinstance(text, str)
-            assert len(text) > 0
+class TestCatalogLoaderReturnsData:
+    @pytest.mark.dependency(name="fixture_validation::catalog_loader", scope="session")
+    def test_loads_catalog(self, synthetic_test_catalog: Catalog, xianxia_test_dataset: NovelDataset) -> None:
+        assert synthetic_test_catalog.novels
+        assert xianxia_test_dataset.chapters
+        assert all(chapter.versions for chapter in xianxia_test_dataset.chapters)
+        assert all(version.text for chapter in xianxia_test_dataset.chapters for version in chapter.versions)
+        check_lock(synthetic_test_catalog.root)
 
     @pytest.mark.dependency(
-        name="gate::fixture_validation::chapter_loader_returns_data",
+        name="gate::fixture_validation::catalog_loader_returns_data",
         depends=[
-            "fixture_validation::chapter_loader",
+            "fixture_validation::catalog_loader",
         ],
         scope="session",
     )
@@ -294,21 +293,22 @@ class TestChapterLoaderReturnsData:
         pass
 
 
-class TestAutolabelLoaderReturnsData:
-    @pytest.mark.dependency(name="fixture_validation::autolabel_loader", scope="session")
-    def test_loads_autolabels(self, autolabel_loader: DataLoader) -> None:
-        subdir = "chinese"
-        autolabels = list(autolabel_loader(subdir, recursive=True))
-        logger.info("Loaded %s autolabel fixtures from '%s'", len(autolabels), subdir)
-        assert len(autolabels) > 0
-        for text in autolabels:
-            assert isinstance(text, str)
-            assert len(text) > 0
+class TestCatalogArtifactsReturnData:
+    @pytest.mark.dependency(name="fixture_validation::catalog_artifacts", scope="session")
+    def test_loads_autolabels(self, xianxia_test_dataset: NovelDataset) -> None:
+        artifacts = [
+            artifact
+            for chapter in xianxia_test_dataset.chapters
+            for version in chapter.versions
+            for artifact in version.artifacts
+        ]
+        assert artifacts
+        assert all(artifact.labels for artifact in artifacts)
 
     @pytest.mark.dependency(
-        name="gate::fixture_validation::autolabel_loader_returns_data",
+        name="gate::fixture_validation::catalog_artifacts_return_data",
         depends=[
-            "fixture_validation::autolabel_loader",
+            "fixture_validation::catalog_artifacts",
         ],
         scope="session",
     )
@@ -329,8 +329,8 @@ class TestAutolabelLoaderReturnsData:
         "gate::fixture_validation::additional_scenarios_create_data",
         "gate::fixture_validation::novel_bundle_creates_data",
         "gate::fixture_validation::label_bundle_creates_data",
-        "gate::fixture_validation::chapter_loader_returns_data",
-        "gate::fixture_validation::autolabel_loader_returns_data",
+        "gate::fixture_validation::catalog_loader_returns_data",
+        "gate::fixture_validation::catalog_artifacts_return_data",
     ],
     scope="session",
 )

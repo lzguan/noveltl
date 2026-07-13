@@ -1,0 +1,188 @@
+{
+  "$schema": "../../../../../../../../schema/v1/json/autolabels.schema.json",
+  "schemaVersion": 1,
+  "kind": "autolabels",
+  "id": "starfall-chapter-0003-v0001-autolabels-cluener-default",
+  "producer": {
+    "name": "cluener",
+    "config": "cluener-default"
+  },
+  "labels": [
+    {
+      "start": 0,
+      "end": 1,
+      "text": "熊",
+      "entityGroup": "company",
+      "score": 0.6994774341583252
+    },
+    {
+      "start": 26,
+      "end": 29,
+      "text": "程序员",
+      "entityGroup": "position",
+      "score": 0.9780299663543701
+    },
+    {
+      "start": 29,
+      "end": 32,
+      "text": "周子扬",
+      "entityGroup": "name",
+      "score": 0.988564670085907
+    },
+    {
+      "start": 113,
+      "end": 116,
+      "text": "周子扬",
+      "entityGroup": "name",
+      "score": 0.9894163012504578
+    },
+    {
+      "start": 168,
+      "end": 171,
+      "text": "周子扬",
+      "entityGroup": "name",
+      "score": 0.9836375117301941
+    },
+    {
+      "start": 182,
+      "end": 187,
+      "text": "华中科技大",
+      "entityGroup": "organization",
+      "score": 0.9701750874519348
+    },
+    {
+      "start": 197,
+      "end": 199,
+      "text": "熊猫",
+      "entityGroup": "company",
+      "score": 0.8346207737922668
+    },
+    {
+      "start": 200,
+      "end": 201,
+      "text": "播",
+      "entityGroup": "company",
+      "score": 0.5075392723083496
+    },
+    {
+      "start": 296,
+      "end": 298,
+      "text": "东京",
+      "entityGroup": "address",
+      "score": 0.9410238265991211
+    },
+    {
+      "start": 304,
+      "end": 306,
+      "text": "伦敦",
+      "entityGroup": "address",
+      "score": 0.9390634298324585
+    },
+    {
+      "start": 313,
+      "end": 316,
+      "text": "莫斯科",
+      "entityGroup": "address",
+      "score": 0.969672441482544
+    },
+    {
+      "start": 322,
+      "end": 325,
+      "text": "圣保罗",
+      "entityGroup": "address",
+      "score": 0.9543051719665527
+    },
+    {
+      "start": 431,
+      "end": 434,
+      "text": "孙明远",
+      "entityGroup": "name",
+      "score": 0.9938747882843018
+    },
+    {
+      "start": 495,
+      "end": 502,
+      "text": "京城的数据中心",
+      "entityGroup": "address",
+      "score": 0.8521230816841125
+    },
+    {
+      "start": 504,
+      "end": 512,
+      "text": "天盾网络安全公司",
+      "entityGroup": "company",
+      "score": 0.9874264001846313
+    },
+    {
+      "start": 674,
+      "end": 677,
+      "text": "周子扬",
+      "entityGroup": "name",
+      "score": 0.9839184284210205
+    },
+    {
+      "start": 761,
+      "end": 764,
+      "text": "管理员",
+      "entityGroup": "position",
+      "score": 0.8710953593254089
+    },
+    {
+      "start": 837,
+      "end": 840,
+      "text": "周子扬",
+      "entityGroup": "name",
+      "score": 0.9827957153320312
+    },
+    {
+      "start": 864,
+      "end": 865,
+      "text": "中",
+      "entityGroup": "government",
+      "score": 0.5870290994644165
+    },
+    {
+      "start": 865,
+      "end": 874,
+      "text": "科院计算技术研究所",
+      "entityGroup": "organization",
+      "score": 0.6015583276748657
+    },
+    {
+      "start": 944,
+      "end": 947,
+      "text": "周子扬",
+      "entityGroup": "name",
+      "score": 0.9827938079833984
+    },
+    {
+      "start": 987,
+      "end": 990,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.9972715377807617
+    },
+    {
+      "start": 995,
+      "end": 997,
+      "text": "熊猫",
+      "entityGroup": "company",
+      "score": 0.8180173635482788
+    },
+    {
+      "start": 1021,
+      "end": 1024,
+      "text": "林北辰",
+      "entityGroup": "name",
+      "score": 0.9963991045951843
+    },
+    {
+      "start": 1030,
+      "end": 1032,
+      "text": "熊猫",
+      "entityGroup": "company",
+      "score": 0.5950743556022644
+    }
+  ],
+  "errors": []
+}

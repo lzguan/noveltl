@@ -47,7 +47,8 @@
 				"meta.pyrefly",
 				"bradlc.vscode-tailwindcss",
 				"typescriptteam.native-preview",
-				"oxc.oxc-vscode"
+				"oxc.oxc-vscode",
+				"github.vscode-github-actions"
 			],
 			"settings": {
 				"python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
@@ -57,7 +58,6 @@
 				"files.associations": {
 					"*.css": "tailwindcss"
 				},
-				"js/ts.experimental.useTsgo": true,
 				"[python]": {
 					"editor.defaultFormatter": "charliermarsh.ruff",
 					"editor.formatOnSave": true,

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../../../../json/content-version-manifest.schema.json",
+  "kind": "contentVersionManifest",
+  "schemaVersion": 1,
+  "id": "xianxia-source-chapter-0001-v0002",
+  "number": 2,
+  "text": "text.txt",
+  "artifacts": [
+    {
+      "kind": "autolabels",
+      "id": "xianxia-source-chapter-0001-v0002-cluener-output",
+      "path": "autolabels.cluener.json"
+    }
+  ]
+}

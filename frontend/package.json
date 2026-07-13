@@ -9,11 +9,13 @@
 		"lint": "oxlint",
 		"lint:fix": "oxlint --fix",
 		"format": "oxfmt",
+		"format:check": "oxfmt --check",
 		"check:node": "tsgo -p tsconfig.node.json --noEmit",
 		"check:app": "tsgo -p tsconfig.app.json --noEmit",
 		"check": "pnpm check:node && pnpm check:app",
 		"preview": "vite preview",
-		"test": "vitest --config vitest.config.ts"
+		"test": "vitest",
+		"test:ci": "vitest run"
 	},
 	"dependencies": {
 		"@codemirror/commands": "^6.10.4",

@@ -51,6 +51,7 @@ default-groups = [
     "worker",
     "dev",
 ]
+required-version = ">=0.10.0"
 
 [[tool.uv.index]]
 name = "torch-cpu"

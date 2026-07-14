@@ -18,6 +18,11 @@ import type {
 	useAutoLabelState,
 } from "../hooks/useAutoLabelState";
 import type { EditorData } from "../hooks/useEditorState";
+import type {
+	AcquireWorkspaceLock,
+	ReleaseWorkspaceLock,
+	WorkspaceLockToken,
+} from "../hooks/useWorkspaceLock";
 import type { EditorMode } from "./editorManager";
 
 /**
@@ -81,6 +86,8 @@ export function createAutoLabelManager({
 	dataRef,
 	modeRef,
 	setMode,
+	acquireLock,
+	releaseLock,
 }: {
 	controllerUserEvent(event: NovelUserEvent): void;
 	controllerGetters: NovelGetters;
@@ -88,8 +95,18 @@ export function createAutoLabelManager({
 	dataRef: RefObject<EditorData>;
 	modeRef: RefObject<EditorMode>;
 	setMode(mode: EditorMode): void;
+	acquireLock: AcquireWorkspaceLock;
+	releaseLock: ReleaseWorkspaceLock;
 }): AutoLabelManager {
 	let modeBeforePromotion: EditorMode | null = null;
+	let promotionLockToken: WorkspaceLockToken | null = null;
+
+	function releasePromotionLock(): void {
+		if (promotionLockToken === null) return;
+		const token = promotionLockToken;
+		promotionLockToken = null;
+		releaseLock(token);
+	}
 
 	function currentChapterId(): CProvId | null {
 		const data = dataRef.current;
@@ -193,6 +210,7 @@ export function createAutoLabelManager({
 
 				case "autoLabelRunPromoted": {
 					autoLabels.setPromoting(false);
+					releasePromotionLock();
 					if (modeBeforePromotion !== null) {
 						setMode(modeBeforePromotion);
 						modeBeforePromotion = null;
@@ -243,6 +261,7 @@ export function createAutoLabelManager({
 				case "errorOccured": {
 					if (autoLabels.promotingRef.current) {
 						autoLabels.setPromoting(false);
+						releasePromotionLock();
 						if (modeBeforePromotion !== null) {
 							setMode(modeBeforePromotion);
 							modeBeforePromotion = null;
@@ -258,6 +277,7 @@ export function createAutoLabelManager({
 			Effect.catchAll((err) => {
 				if (autoLabels.promotingRef.current) {
 					autoLabels.setPromoting(false);
+					releasePromotionLock();
 					if (modeBeforePromotion !== null) {
 						setMode(modeBeforePromotion);
 						modeBeforePromotion = null;
@@ -292,15 +312,27 @@ export function createAutoLabelManager({
 			autoLabels.setSelected(null);
 		},
 		promote(runId, labelGroupId, filter) {
+			const token = acquireLock("Promoting auto labels...");
+			if (token === null) return;
+			promotionLockToken = token;
 			modeBeforePromotion = modeRef.current;
-			autoLabels.setPromoting(true);
-			setMode("view");
-			controllerUserEvent({
-				eventType: "promoteAutoLabelRun",
-				runId,
-				labelGroupId,
-				chapterFilter: filter,
-			});
+
+			try {
+				autoLabels.setPromoting(true);
+				setMode("view");
+				controllerUserEvent({
+					eventType: "promoteAutoLabelRun",
+					runId,
+					labelGroupId,
+					chapterFilter: filter,
+				});
+			} catch (error) {
+				autoLabels.setPromoting(false);
+				releasePromotionLock();
+				if (modeBeforePromotion !== null) setMode(modeBeforePromotion);
+				modeBeforePromotion = null;
+				throw error;
+			}
 		},
 		refreshAllRuns() {
 			autoLabels.setRefreshing(true);

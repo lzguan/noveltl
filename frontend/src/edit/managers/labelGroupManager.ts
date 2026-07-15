@@ -391,8 +391,6 @@ export function createLabelGroupManager({
 					if (!event.flags.forEditor) break;
 					yield* updateAllLabelGroupsStatus();
 					break;
-				case "autoLabelRunPromotionFinished":
-					break;
 			}
 		});
 	}

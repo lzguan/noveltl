@@ -104,7 +104,7 @@ Autolabels need several operations through the controller's request lifecycle (i
 
 On `chapterOpened`, the manager re-evaluates whether the current chapter matches the selected run and synchronizes the preview when preview display is enabled. On `textChanged`, it clears the preview immediately and marks the current content version invalid until the queued text change produces a new `chapterContentId`; this prevents cached labels from being drawn over optimistically edited text.
 
-On `errorOccured`, the manager clears only the loading state associated with the failed refresh or preview request. Generic errors do not finish a promotion; only the matching `autoLabelRunPromotionFinished` event can release promotion-owned UI state.
+On `errorOccured`, the manager clears an active refresh indicator and clears preview loading when the failed request is a preview load. Generic errors do not finish a promotion; only the matching `autoLabelRunPromotionFinished` event can release promotion-owned UI state.
 
 **ID repository:**
 

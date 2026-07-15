@@ -35,7 +35,7 @@ function makeNovelData(): NovelData {
 	};
 }
 
-function renderManager() {
+function renderManager(onUserEvent?: (event: NovelUserEvent) => void) {
 	const controller = Effect.runSync(buildNovelController(makeNovelData()));
 	const userEvents: NovelUserEvent[] = [];
 	const hooks = renderHook(() => ({
@@ -50,6 +50,7 @@ function renderManager() {
 	const manager = createAutoLabelManager({
 		controllerUserEvent(event) {
 			userEvents.push(event);
+			onUserEvent?.(event);
 		},
 		controllerGetters: controller.getters,
 		autoLabels: hooks.result.current.autoLabels,
@@ -203,5 +204,20 @@ describe("createAutoLabelManager promotion lifecycle", () => {
 		expect(hooks.result.current.autoLabels.promoting).toBe(true);
 		expect(hooks.result.current.editor.mode).toBe("view");
 		expect(hooks.result.current.workspace.workspaceLock).not.toBeNull();
+	});
+
+	it("restores promotion state when dispatch throws synchronously", () => {
+		const error = new Error("Dispatch failed");
+		const { hooks, manager } = renderManager(() => {
+			throw error;
+		});
+
+		expect(() => {
+			act(() => manager.promote(RUN_ID, LABEL_GROUP_ID, {}));
+		}).toThrow(error);
+
+		expect(hooks.result.current.autoLabels.promoting).toBe(false);
+		expect(hooks.result.current.editor.mode).toBe("label");
+		expect(hooks.result.current.workspace.workspaceLock).toBeNull();
 	});
 });

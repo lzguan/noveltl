@@ -6,10 +6,17 @@ import type { Novel } from "@/api/models";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import {
+	Empty,
+	EmptyContent,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyTitle,
+} from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { routeTo } from "@/routes";
-import { ArrowRightIcon, BookOpenIcon, LibraryIcon, PencilLineIcon } from "lucide-react";
+import { ArrowRightIcon, BookOpenIcon, LibraryIcon, PencilLineIcon, PlusIcon } from "lucide-react";
+import { CreateNovelDialog } from "../components/CreateNovelDialog";
 
 function formatLabel(value: string) {
 	return value
@@ -18,7 +25,7 @@ function formatLabel(value: string) {
 		.join(" ");
 }
 
-function NovelEditCard({ novel }: { novel: Novel }) {
+function NovelEditCard({ novel, isNew = false }: { novel: Novel; isNew?: boolean }) {
 	return (
 		<Link
 			to={routeTo.edit.novel(novel.novelId)}
@@ -29,7 +36,10 @@ function NovelEditCard({ novel }: { novel: Novel }) {
 					<BookOpenIcon className="size-4" />
 				</div>
 				<div className="min-w-0">
-					<div className="truncate font-medium">{novel.novelTitle}</div>
+					<div className="flex items-center gap-2">
+						<div className="truncate font-medium">{novel.novelTitle}</div>
+						{isNew && <Badge>New</Badge>}
+					</div>
 					<div className="mt-1 flex flex-wrap items-center gap-1.5">
 						<Badge variant="secondary" className="text-[10px]">
 							{formatLabel(novel.novelType)}
@@ -65,6 +75,8 @@ function EditDashboardPage() {
 	const [novels, setNovels] = useState<Novel[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<unknown>(null);
+	const [createDialogOpen, setCreateDialogOpen] = useState(false);
+	const [newNovelId, setNewNovelId] = useState<string | null>(null);
 
 	useEffect(() => {
 		let ignore = false;
@@ -93,11 +105,17 @@ function EditDashboardPage() {
 	return (
 		<main>
 			<section className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10">
-				<header className="space-y-2">
-					<h1 className="text-4xl font-semibold tracking-tight">Edit workspace</h1>
-					<p className="max-w-3xl text-base text-muted-foreground">
-						Select a novel to start editing chapter content and managing labels.
-					</p>
+				<header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+					<div className="flex flex-col gap-2">
+						<h1 className="text-4xl font-semibold tracking-tight">Edit workspace</h1>
+						<p className="max-w-3xl text-base text-muted-foreground">
+							Select a novel to start editing chapter content and managing labels.
+						</p>
+					</div>
+					<Button disabled={loading} onClick={() => setCreateDialogOpen(true)}>
+						<PlusIcon data-icon="inline-start" />
+						Create novel
+					</Button>
 				</header>
 
 				<Card>
@@ -131,13 +149,23 @@ function EditDashboardPage() {
 										works to find novels, or create a new one.
 									</EmptyDescription>
 								</EmptyHeader>
+								<EmptyContent>
+									<Button onClick={() => setCreateDialogOpen(true)}>
+										<PlusIcon data-icon="inline-start" />
+										Create novel
+									</Button>
+								</EmptyContent>
 							</Empty>
 						)}
 
 						{!loading && !error && novels.length > 0 && (
 							<div className="space-y-2">
 								{novels.map((novel) => (
-									<NovelEditCard key={novel.novelId} novel={novel} />
+									<NovelEditCard
+										key={novel.novelId}
+										isNew={novel.novelId === newNovelId}
+										novel={novel}
+									/>
 								))}
 							</div>
 						)}
@@ -151,6 +179,18 @@ function EditDashboardPage() {
 						<ArrowRightIcon data-icon="inline-end" />
 					</Link>
 				</Button>
+
+				<CreateNovelDialog
+					onCreated={(novel) => {
+						setNovels((current) => [
+							novel,
+							...current.filter((item) => item.novelId !== novel.novelId),
+						]);
+						setNewNovelId(novel.novelId);
+					}}
+					onOpenChange={setCreateDialogOpen}
+					open={createDialogOpen}
+				/>
 			</section>
 		</main>
 	);

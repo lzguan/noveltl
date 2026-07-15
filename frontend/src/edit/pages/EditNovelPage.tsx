@@ -16,6 +16,8 @@ import { useEditorState } from "../hooks/useEditorState";
 import { useChapterList } from "../hooks/useChapterList";
 import { useTrackedLabelGroups } from "../hooks/useTrackedLabelGroups";
 import { useAutoLabelState } from "../hooks/useAutoLabelState";
+import { useAutoLabelPreview } from "../hooks/useAutoLabelPreview";
+import { useWorkspaceLock } from "../hooks/useWorkspaceLock";
 import { createChapterManager } from "../managers/chapterManager";
 import { createLabelGroupManager } from "../managers/labelGroupManager";
 import { createEditorManager } from "../managers/editorManager";
@@ -29,6 +31,7 @@ import { LeftPanel } from "../panels/LeftPanel";
 import { RightPanel } from "../panels/RightPanel";
 import { ToolbarPanel } from "../panels/ToolbarPanel";
 import type { Role } from "@/api/models/role";
+import { LoaderCircle } from "lucide-react";
 
 function makeProvChapter(chapter: Chapter, chapterId: ProvChapter["chapterId"]): ProvChapter {
 	return Prov({
@@ -52,6 +55,8 @@ export function EditNovelPage() {
 	const chapterList = useChapterList();
 	const trackedLabelGroups = useTrackedLabelGroups();
 	const autoLabels = useAutoLabelState();
+	const autoLabelPreview = useAutoLabelPreview();
+	const { workspaceLock, acquireLock, releaseLock } = useWorkspaceLock();
 
 	const [managers, setManagers] = useState<{
 		chapterMgr: ReturnType<typeof createChapterManager>;
@@ -165,9 +170,12 @@ export function EditNovelPage() {
 			controllerUserEvent,
 			controllerGetters: ctrl.getters,
 			autoLabels,
+			autoLabelPreview,
 			dataRef: editorState.dataRef,
 			modeRef: editorState.modeRef,
 			setMode: editorState.setMode,
+			acquireLock,
+			releaseLock,
 		});
 		const errorMgr = createErrorManager();
 
@@ -257,47 +265,77 @@ export function EditNovelPage() {
 			id="EditNovelPage"
 			onRender={(_id, phase, duration) => console.log(`${phase}: ${duration}ms`)}
 		>
-			<div className="flex flex-col h-full min-h-0">
-				<ToolbarPanel
-					mode={editorState.mode}
-					loading={!editorState.data.empty && editorState.data.loading}
-					onSetMode={editorState.setMode}
-				/>
-				<div className="flex flex-1 min-h-0 overflow-hidden">
-					<div className="w-56 border-r shrink-0 flex flex-col min-h-0">
-						<LeftPanel
-							chapters={chapterList.chapterList}
-							currentChapterId={currentChapterId}
-							onSwitchChapter={managers.chapterMgr.switchChapter}
-							onAddChapter={managers.chapterMgr.addChapter}
-							labelGroups={trackedLabelGroups.labelGroups}
-							chapterOpen={!editorState.data.empty && !editorState.data.loading}
-							onToggleVisibility={managers.labelGroupMgr.toggleVisibility}
-							onSetActive={managers.labelGroupMgr.setActive}
-							onAddLabelGroup={managers.labelGroupMgr.addLabelGroup}
-							onReloadLabelData={managers.labelGroupMgr.reloadLabelData}
-						/>
-					</div>
-					<EditorPanel
-						data={editorState.data}
+			<div className="relative h-full min-h-0">
+				<div className="flex h-full min-h-0 flex-col" inert={workspaceLock !== null}>
+					<ToolbarPanel
 						mode={editorState.mode}
-						onSetCaret={editorState.setCaret}
-						onTextOp={managers.editorMgr.textOp}
-						labeling={labeling}
+						loading={!editorState.data.empty && editorState.data.loading}
+						onSetMode={editorState.setMode}
 					/>
-					<div className="w-80 border-l shrink-0 flex flex-col min-h-0">
-						<RightPanel>
-							<AutoLabelPanel
-								autoLabels={autoLabels}
-								autoLabelManager={managers.autoLabelMgr}
+					<div className="flex flex-1 min-h-0 overflow-hidden">
+						<div className="w-56 border-r shrink-0 flex flex-col min-h-0">
+							<LeftPanel
 								chapters={chapterList.chapterList}
 								currentChapterId={currentChapterId}
+								onSwitchChapter={managers.chapterMgr.switchChapter}
+								onAddChapter={managers.chapterMgr.addChapter}
 								labelGroups={trackedLabelGroups.labelGroups}
-								onSetActiveLabelGroup={managers.labelGroupMgr.setActive}
+								chapterOpen={!editorState.data.empty && !editorState.data.loading}
+								onToggleVisibility={managers.labelGroupMgr.toggleVisibility}
+								onSetActive={managers.labelGroupMgr.setActive}
+								onAddLabelGroup={managers.labelGroupMgr.addLabelGroup}
+								onReloadLabelData={managers.labelGroupMgr.reloadLabelData}
 							/>
-						</RightPanel>
+						</div>
+						<EditorPanel
+							data={editorState.data}
+							mode={editorState.mode}
+							onSetCaret={editorState.setCaret}
+							onTextOp={managers.editorMgr.textOp}
+							labeling={labeling}
+							preview={autoLabelPreview.preview}
+						/>
+						<div className="w-80 border-l shrink-0 flex flex-col min-h-0">
+							<RightPanel
+								tabs={[
+									{
+										value: "auto-labels",
+										label: "Auto Labels",
+										content: (
+											<AutoLabelPanel
+												autoLabels={autoLabels}
+												autoLabelManager={managers.autoLabelMgr}
+												chapters={chapterList.chapterList}
+												currentChapterId={currentChapterId}
+												labelGroups={trackedLabelGroups.labelGroups}
+												onSetActiveLabelGroup={
+													managers.labelGroupMgr.setActive
+												}
+												previewEnabled={autoLabelPreview.enabled}
+												previewLoading={autoLabelPreview.loading}
+												onSetPreviewEnabled={
+													managers.autoLabelMgr.setPreviewEnabled
+												}
+											/>
+										),
+									},
+								]}
+							/>
+						</div>
 					</div>
 				</div>
+				{workspaceLock !== null && (
+					<div className="absolute inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-[1px]">
+						<div
+							role="status"
+							aria-live="polite"
+							className="flex items-center gap-2 rounded-md border bg-background px-4 py-3 text-sm shadow-lg"
+						>
+							<LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+							<span>{workspaceLock.message}</span>
+						</div>
+					</div>
+				)}
 			</div>
 		</Profiler>
 	);

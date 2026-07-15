@@ -119,6 +119,7 @@ export type NovelDataManager = DataManager<
 			autoLabelId: AProvId,
 			flags?: {
 				now: boolean;
+				forPreview: boolean;
 			},
 		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
 	},
@@ -162,6 +163,7 @@ export type AutolabelDataManager = DataManager<
 			autoLabelId: AProvId,
 			flags?: {
 				now: boolean;
+				forPreview: boolean;
 			},
 		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
 	},

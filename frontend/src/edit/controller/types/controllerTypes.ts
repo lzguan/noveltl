@@ -118,7 +118,11 @@ export type NovelUserEvent =
 	  }
 	| { eventType: "refreshAutoLabelRuns"; flags?: { now: boolean } }
 	| { eventType: "reloadAutoLabelRun"; runId: ALRProvId; flags?: { now: boolean } }
-	| { eventType: "loadAutoLabelData"; autoLabelId: AProvId; flags?: { now: boolean } }
+	| {
+			eventType: "loadAutoLabelData";
+			autoLabelId: AProvId;
+			flags?: { now: boolean; forPreview: boolean };
+	  }
 	| {
 			eventType: "promoteAutoLabelRun";
 			runId: ALRProvId;
@@ -167,8 +171,9 @@ export type TriggerEvent =
 			autoLabels: Omit<ProvAutoLabel, "autoLabelData">[];
 	  }
 	| {
-			eventType: "autoLabelRunPromoted";
+			eventType: "autoLabelRunPromotionFinished";
 			runId: ALRProvId;
+			outcome: "success";
 			labelGroupId: LGProvId;
 			chapterFilter: ChapterFilter;
 			success: readonly {
@@ -181,9 +186,19 @@ export type TriggerEvent =
 				error: string;
 			}[];
 	  }
+	| {
+			eventType: "autoLabelRunPromotionFinished";
+			runId: ALRProvId;
+			outcome: "failure";
+			error: Error;
+	  }
 	| { eventType: "autoLabelRunsRefreshed" }
 	| { eventType: "autoLabelRunReloaded"; runId: ALRProvId }
-	| { eventType: "autoLabelDataLoaded"; autoLabelId: AProvId };
+	| {
+			eventType: "autoLabelDataLoaded";
+			autoLabelId: AProvId;
+			flags: { forPreview: boolean };
+	  };
 
 /**
  * Novel-level controller. Events are ignored until start() is called.

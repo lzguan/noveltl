@@ -1,18 +1,37 @@
+import type { ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export function RightPanel({ children }: { children?: React.ReactNode }) {
+export type RightPanelTab = Readonly<{
+	value: string;
+	label: ReactNode;
+	content: ReactNode;
+}>;
+
+export function RightPanel({
+	tabs,
+	defaultValue = tabs[0].value,
+}: {
+	tabs: readonly [RightPanelTab, ...RightPanelTab[]];
+	defaultValue?: string;
+}) {
 	return (
-		<Tabs defaultValue="auto-labels" className="h-full flex flex-col">
+		<Tabs defaultValue={defaultValue} className="h-full flex flex-col">
 			<TabsList variant="line" className="w-full px-1 pt-1">
-				<TabsTrigger value="auto-labels">Auto Labels</TabsTrigger>
+				{tabs.map((tab) => (
+					<TabsTrigger key={tab.value} value={tab.value}>
+						{tab.label}
+					</TabsTrigger>
+				))}
 			</TabsList>
-			<TabsContent value="auto-labels" className="min-h-0 flex-1 overflow-hidden p-0">
-				{children ?? (
-					<div className="text-xs text-muted-foreground">
-						Auto-labeling not yet available.
-					</div>
-				)}
-			</TabsContent>
+			{tabs.map((tab) => (
+				<TabsContent
+					key={tab.value}
+					value={tab.value}
+					className="min-h-0 flex-1 overflow-hidden p-0"
+				>
+					{tab.content}
+				</TabsContent>
+			))}
 		</Tabs>
 	);
 }

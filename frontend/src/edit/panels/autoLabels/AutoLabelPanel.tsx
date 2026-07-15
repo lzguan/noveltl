@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
@@ -52,6 +54,9 @@ export function AutoLabelPanel({
 	currentChapterId,
 	labelGroups,
 	onSetActiveLabelGroup,
+	previewEnabled,
+	previewLoading,
+	onSetPreviewEnabled,
 }: {
 	autoLabels: ReturnType<typeof useAutoLabelState>;
 	autoLabelManager: AutoLabelManager;
@@ -59,9 +64,30 @@ export function AutoLabelPanel({
 	currentChapterId: CProvId | null;
 	labelGroups: [LGProvId, LabelGroupView][];
 	onSetActiveLabelGroup: (id: LGProvId | null) => void;
+	previewEnabled: boolean;
+	previewLoading: boolean;
+	onSetPreviewEnabled: AutoLabelManager["setPreviewEnabled"];
 }) {
 	return (
 		<div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto p-2">
+			<div className="flex items-center justify-between gap-2 rounded-md border border-border px-2 py-1.5">
+				<Label className="text-xs" htmlFor="autolabel-preview-enabled">
+					Show selected run preview
+				</Label>
+				<div className="flex items-center gap-2">
+					{previewLoading && (
+						<span role="status" className="text-xs text-muted-foreground">
+							Loading preview...
+						</span>
+					)}
+					<Switch
+						id="autolabel-preview-enabled"
+						size="sm"
+						checked={previewEnabled}
+						onCheckedChange={onSetPreviewEnabled}
+					/>
+				</div>
+			</div>
 			<AutoLabelSection title="Create Auto Labels">
 				<CreateAutoLabelPanel
 					onCreateRun={autoLabelManager.createRun}

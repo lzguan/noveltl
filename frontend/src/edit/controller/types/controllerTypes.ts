@@ -118,7 +118,11 @@ export type NovelUserEvent =
 	  }
 	| { eventType: "refreshAutoLabelRuns"; flags?: { now: boolean } }
 	| { eventType: "reloadAutoLabelRun"; runId: ALRProvId; flags?: { now: boolean } }
-	| { eventType: "loadAutoLabelData"; autoLabelId: AProvId; flags?: { now: boolean } }
+	| {
+			eventType: "loadAutoLabelData";
+			autoLabelId: AProvId;
+			flags?: { now: boolean; forPreview: boolean };
+	  }
 	| {
 			eventType: "promoteAutoLabelRun";
 			runId: ALRProvId;
@@ -183,7 +187,11 @@ export type TriggerEvent =
 	  }
 	| { eventType: "autoLabelRunsRefreshed" }
 	| { eventType: "autoLabelRunReloaded"; runId: ALRProvId }
-	| { eventType: "autoLabelDataLoaded"; autoLabelId: AProvId };
+	| {
+			eventType: "autoLabelDataLoaded";
+			autoLabelId: AProvId;
+			flags: { forPreview: boolean };
+	  };
 
 /**
  * Novel-level controller. Events are ignored until start() is called.

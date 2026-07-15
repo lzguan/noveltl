@@ -13,6 +13,7 @@ import { LabelContextMenu } from "../../labeling/LabelContextMenu";
 import { AddLabelForm } from "../../labeling/AddLabelForm";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import type { AddTarget, EditorLabel, LabelEditing } from "../../labeling/types";
+import type { AutoLabelPreview } from "../../hooks/useAutoLabelPreview";
 
 type SM = SegmentManager<LabelStyle, StyledLabel<LabelStyle>, LProvId>;
 
@@ -21,6 +22,7 @@ type SM = SegmentManager<LabelStyle, StyledLabel<LabelStyle>, LProvId>;
  * SegmentManager notifies that labels changed.
  */
 const setDecorations = StateEffect.define<DecorationSet>();
+const setPreviewDecorations = StateEffect.define<DecorationSet>();
 
 function labelMark(color: number): Decoration {
 	return Decoration.mark({
@@ -49,6 +51,24 @@ function buildDecorations(sm: SM): DecorationSet {
 	return Decoration.set(ranges, true);
 }
 
+function previewMark(): Decoration {
+	return Decoration.mark({ class: "cm-autolabel-preview" });
+}
+
+function buildPreviewDecorations(
+	preview: AutoLabelPreview | null,
+	docLength: number,
+): DecorationSet {
+	if (preview === null) return Decoration.none;
+	const ranges: Range<Decoration>[] = [];
+	for (const label of preview) {
+		if (label.labelStart < 0 || label.labelEnd <= label.labelStart) continue;
+		if (label.labelEnd > docLength) continue;
+		ranges.push(previewMark().range(label.labelStart, label.labelEnd));
+	}
+	return Decoration.set(ranges, true);
+}
+
 const editorTheme = EditorView.theme({
 	"&": {
 		height: "100%",
@@ -58,6 +78,10 @@ const editorTheme = EditorView.theme({
 	".cm-content": { lineHeight: "1.75", padding: "1rem" },
 	".cm-scroller": { overflow: "auto" },
 	"&.cm-focused": { outline: "none" },
+	".cm-autolabel-preview": {
+		backgroundColor: "color-mix(in oklab, var(--primary) 10%, transparent)",
+		borderBottom: "1px dashed var(--primary)",
+	},
 });
 
 type MenuCtx = {
@@ -84,12 +108,14 @@ export function CodeMirrorEditor({
 	onSetCaret,
 	onTextOp,
 	labeling,
+	preview,
 }: {
 	sm: SM;
 	mode: EditorMode;
 	onSetCaret: (c: Caret | null) => void;
 	onTextOp: (op: TextOp) => void;
 	labeling: LabelEditing;
+	preview: AutoLabelPreview | null;
 }) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const viewRef = useRef<EditorView | null>(null);
@@ -119,6 +145,17 @@ export function CodeMirrorEditor({
 			},
 			provide: (field) => EditorView.decorations.from(field),
 		});
+		const previewDecorationsField = StateField.define<DecorationSet>({
+			create: (state) => buildPreviewDecorations(preview, state.doc.length),
+			update(deco, tr) {
+				let next = tr.docChanged ? Decoration.none : deco;
+				for (const effect of tr.effects) {
+					if (effect.is(setPreviewDecorations)) next = effect.value;
+				}
+				return next;
+			},
+			provide: (field) => EditorView.decorations.from(field),
+		});
 
 		const view = new EditorView({
 			parent,
@@ -129,6 +166,7 @@ export function CodeMirrorEditor({
 					keymap.of([...defaultKeymap, ...historyKeymap]),
 					EditorView.lineWrapping,
 					decorationsField,
+					previewDecorationsField,
 					readOnlyCompartment.of(EditorState.readOnly.of(mode !== "edit")),
 					editorTheme,
 					EditorView.updateListener.of((update) => {
@@ -184,6 +222,16 @@ export function CodeMirrorEditor({
 			effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(mode !== "edit")),
 		});
 	}, [mode, readOnlyCompartment]);
+
+	useEffect(() => {
+		const view = viewRef.current;
+		if (!view) return;
+		view.dispatch({
+			effects: setPreviewDecorations.of(
+				buildPreviewDecorations(preview, view.state.doc.length),
+			),
+		});
+	}, [preview]);
 
 	useEffect(() => {
 		if (!form) return;

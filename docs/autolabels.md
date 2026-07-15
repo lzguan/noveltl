@@ -1,6 +1,6 @@
 # Autolabels
 
-**Last updated:** 2026-07-06
+**Last updated:** 2026-07-15
 
 This document describes the autolabel service: the backend NER inference pipeline, the frontend UI for creating and managing autolabel runs, and how the frontend integrates with the controller ecosystem.
 
@@ -62,13 +62,13 @@ sequenceDiagram
 
 ### API endpoints
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| `GET` | `/auto-label-runs?novelId=&mine=` | List runs for a novel |
-| `GET` | `/auto-label-runs/{runId}/auto-labels?start=&end=` | List autolabel metadata for a run |
-| `GET` | `/auto-labels/{autoLabelId}` | Get single autolabel with full label data |
-| `POST` | `/auto-labels` | Create a run and dispatch workers |
-| `POST` | `/label-groups/{labelGroupId}/label-datas/auto-labels` | Promote autolabels to labels |
+| Method | Path                                                   | Purpose                                   |
+| ------ | ------------------------------------------------------ | ----------------------------------------- |
+| `GET`  | `/auto-label-runs?novelId=&mine=`                      | List runs for a novel                     |
+| `GET`  | `/auto-label-runs/{runId}/auto-labels?start=&end=`     | List autolabel metadata for a run         |
+| `GET`  | `/auto-labels/{autoLabelId}`                           | Get single autolabel with full label data |
+| `POST` | `/auto-labels`                                         | Create a run and dispatch workers         |
+| `POST` | `/label-groups/{labelGroupId}/label-datas/auto-labels` | Promote autolabels to labels              |
 
 ## Frontend architecture
 
@@ -80,29 +80,29 @@ Autolabels need several operations through the controller's request lifecycle (i
 
 **User events:**
 
-| Event | Payload | What happens |
-|-------|---------|-------------|
-| `createAutoLabelRun` | `{ params, chapterFilter }` | Creates a new run on the backend and dispatches workers. The controller publishes `autoLabelRunCreated` with the new run data when the response arrives. |
-| `refreshAutoLabelRuns` | `{}` | Reloads the full run list from the server, replacing the local index. The controller publishes `autoLabelRunsRefreshed`. |
-| `reloadAutoLabelRun` | `{ runId }` | Reloads autolabel metadata for a single run (per-chapter statuses, chapter IDs, error messages). The controller publishes `autoLabelRunReloaded`. |
-| `loadAutoLabelData` | `{ autoLabelId }` | Fetches a single autolabel's full label data payload from the server. The controller publishes `autoLabelDataLoaded`. |
-| `promoteAutoLabelRun` | `{ runId, labelGroupId, chapterFilter }` | Promotes autolabel results into a label group. Creates `LabelData` + `Label` entries server-side. The controller publishes `autoLabelRunPromoted` so the label group manager reloads and the autolabel manager updates UI. |
+| Event                  | Payload                                        | What happens                                                                                                                                                                                                               |
+| ---------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createAutoLabelRun`   | `{ params, chapterFilter }`                    | Creates a new run on the backend and dispatches workers. The controller publishes `autoLabelRunCreated` with the new run data when the response arrives.                                                                   |
+| `refreshAutoLabelRuns` | `{}`                                           | Reloads the full run list from the server, replacing the local index. The controller publishes `autoLabelRunsRefreshed`.                                                                                                   |
+| `reloadAutoLabelRun`   | `{ runId }`                                    | Reloads autolabel metadata for a single run (per-chapter statuses, chapter IDs, error messages). The controller publishes `autoLabelRunReloaded`.                                                                          |
+| `loadAutoLabelData`    | `{ autoLabelId, flags?: { now, forPreview } }` | Fetches a single autolabel's full label data payload from the server. The controller publishes `autoLabelDataLoaded` with the same `forPreview` intent.                                                                    |
+| `promoteAutoLabelRun`  | `{ runId, labelGroupId, chapterFilter }`       | Promotes autolabel results into a label group. Creates `LabelData` + `Label` entries server-side. The controller publishes `autoLabelRunPromoted` so the label group manager reloads and the autolabel manager updates UI. |
 
 **Trigger events:**
 
-| Trigger | Payload | Consumers |
-|---------|---------|-----------|
-| `autoLabelRunCreated` | `{ run, autoLabels }` | `autolabelManager` → updates hook with new run |
-| `autoLabelRunsRefreshed` | `{}` | `autolabelManager` → replaces the run list in hook state |
-| `autoLabelRunReloaded` | `{ runId }` | `autolabelManager` → reads updated autolabel metadata from DM getters, re-evaluates match/preview state |
-| `autoLabelDataLoaded` | `{ autoLabelId }` | `autolabelManager` → reads label data from DM getters, populates `autolabelPreviews` |
-| `autoLabelRunPromoted` | `{ runId, labelGroupId, chapterFilter, success: [...], errors: [...] }` | `labelGroupManager` → reloads label data for the promoted group; `autolabelManager` → clears promotion state, restores editor mode |
+| Trigger                  | Payload                                                                 | Consumers                                                                                                                          |
+| ------------------------ | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `autoLabelRunCreated`    | `{ run, autoLabels }`                                                   | `autolabelManager` → updates hook with new run                                                                                     |
+| `autoLabelRunsRefreshed` | `{}`                                                                    | `autolabelManager` → replaces the run list in hook state                                                                           |
+| `autoLabelRunReloaded`   | `{ runId }`                                                             | `autolabelManager` → reads updated autolabel metadata from DM getters, re-evaluates match/preview state                            |
+| `autoLabelDataLoaded`    | `{ autoLabelId, flags: { forPreview } }`                                | `autolabelManager` → reconciles the current preview when the load was requested for preview rendering                              |
+| `autoLabelRunPromoted`   | `{ runId, labelGroupId, chapterFilter, success: [...], errors: [...] }` | `labelGroupManager` → reloads label data for the promoted group; `autolabelManager` → clears promotion state, restores editor mode |
 
 **Trigger events consumed by `autolabelManager`:**
 
 `handleControllerEvent` reacts to: `autoLabelRunCreated`, `autoLabelRunsRefreshed`, `autoLabelRunReloaded`, `autoLabelDataLoaded`, `autoLabelRunPromoted`, `textChanged`, `chapterOpened`, and `errorOccured`.
 
-On `textChanged` and `chapterOpened`: the manager re-evaluates whether the current chapter still matches the selected run's autolabel. If the selected run no longer matches (different `chapterContentId`), the preview layer is cleared. If it now matches, the manager fires `loadAutoLabelData` for the matching autolabel.
+On `chapterOpened`, the manager re-evaluates whether the current chapter matches the selected run and synchronizes the preview when preview display is enabled. On `textChanged`, it clears the preview immediately and marks the current content version invalid until the queued text change produces a new `chapterContentId`; this prevents cached labels from being drawn over optimistically edited text.
 
 On `errorOccured`: the manager resets any in-flight loading/promotion state and restores editor mode.
 
@@ -112,68 +112,82 @@ Autolabel runs use the `autoLabelRun` kind (an `IdentifiableKind`). Individual a
 
 **Reservations:**
 
-| Operation | Reservations | Notes |
-|-----------|-------------|-------|
-| `createAutoLabelRun` | `[chapterContent, "locked"]` (for each matching chapter) | Locks chapter content to prevent concurrent text edits while the run is being created. The run ID itself is allocated inside `postSend`. On failure, autolabel IDs are detached and the run index entry is removed. |
-| `refreshAutoLabelRuns` | `[autoLabelRun, "locked"]` (all currently-indexed runs) | Prevents concurrent promote/reload during snapshot refresh. |
-| `reloadAutoLabelRun` | Phase 1: `[autoLabelRun, "locked"]`. Phase 2: `[autoLabel, "detaching"/"killing"]` (old autolabels, if any). | Two-phase: load new metadata, then detach old IDs. Follows the `reloadGroup` pattern. |
-| `loadAutoLabelData` | `[autoLabelRun, "locked"]`, `[autoLabel, "locked"]` | Locks both the parent run and the autolabel while fetching label data. |
-| `promoteAutoLabelRun` | `[labelGroup, "updating"]`, `[autoLabelRun, "locked"]`, `[chapterContent, "locked"]` (each in chapter filter) | Prevents concurrent label edits and text edits during promotion. Pending label ops for the group are flushed before the request. |
+| Operation              | Reservations                                                                                                  | Notes                                                                                                                                                                                                               |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createAutoLabelRun`   | `[chapterContent, "locked"]` (for each matching chapter)                                                      | Locks chapter content to prevent concurrent text edits while the run is being created. The run ID itself is allocated inside `postSend`. On failure, autolabel IDs are detached and the run index entry is removed. |
+| `refreshAutoLabelRuns` | `[autoLabelRun, "locked"]` (all currently-indexed runs)                                                       | Prevents concurrent promote/reload during snapshot refresh.                                                                                                                                                         |
+| `reloadAutoLabelRun`   | Phase 1: `[autoLabelRun, "locked"]`. Phase 2: `[autoLabel, "detaching"/"killing"]` (old autolabels, if any).  | Two-phase: load new metadata, then detach old IDs. Follows the `reloadGroup` pattern.                                                                                                                               |
+| `loadAutoLabelData`    | `[autoLabelRun, "locked"]`, `[autoLabel, "locked"]`                                                           | Locks both the parent run and the autolabel while fetching label data.                                                                                                                                              |
+| `promoteAutoLabelRun`  | `[labelGroup, "updating"]`, `[autoLabelRun, "locked"]`, `[chapterContent, "locked"]` (each in chapter filter) | Prevents concurrent label edits and text edits during promotion. Pending label ops for the group are flushed before the request.                                                                                    |
 
 ### State management
 
 **`useAutoLabelState` hook** (pure state — no API calls):
 
-| Field | Purpose |
-|-------|---------|
-| `runs` | List of `AutoLabelRunView` objects. Each run includes: run metadata (ID, model, creation time), an overall status derived from individual autolabels (see below), the full list of individual autolabels (per-chapter status, chapter content ID, chapter ID, error messages), and a `loading` flag. |
-| `selectedRunId` | Currently selected run from the accordion (`ALRProvId \| null`) |
-| `autolabelPreviews` | Per-chapter-content-ID map of `LabelBase[]` for rendering in CodeMirror. Only populated for the current chapter when it matches the selected run. Deferred to later implementation. |
-| `refreshing` / `promoting` | Loading booleans for the global refresh and promote operations. Rendered by the panel as disabled/shimmer states. |
-| `chapterMatchMap` | Per-run map of chapter ID to `"match"` / `"outdated"` status, used by the right-panel run list. |
+| Field                      | Purpose                                                                                                                                                                                                                                                                                              |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `runs`                     | List of `AutoLabelRunView` objects. Each run includes: run metadata (ID, model, creation time), an overall status derived from individual autolabels (see below), the full list of individual autolabels (per-chapter status, chapter content ID, chapter ID, error messages), and a `loading` flag. |
+| `selectedRunId`            | Currently selected run from the accordion (`ALRProvId \| null`)                                                                                                                                                                                                                                      |
+| `refreshing` / `promoting` | Loading booleans for the global refresh and promote operations. Rendered by the panel as disabled/shimmer states.                                                                                                                                                                                    |
+| `chapterMatchMap`          | Per-run map of chapter ID to `"match"` / `"outdated"` status, used by the right-panel run list.                                                                                                                                                                                                      |
 
 Match/outdated status is displayed in the right-panel run UI, not in the left chapter list. `autolabelManager` rebuilds `chapterMatchMap` from run autolabel metadata and the currently loaded chapter content IDs when run metadata changes, chapters open, or text changes.
 
+**`useAutoLabelPreview` hook** (transient preview UI state):
+
+| Field                    | Purpose                                                                                                         |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `enabled` / `enabledRef` | Whether the user has opted into showing the selected run's preview.                                             |
+| `preview` / `previewRef` | The current matching `LabelBase[]`, or `null` when nothing should be drawn.                                     |
+| `loading`                | True while the manager is fetching a known matching autolabel payload. Entering loading clears the old preview. |
+
+Disabling preview clears both the current labels and loading state. The hook does not own chapter, run, or content context; `autolabelManager` reads those from `useAutoLabelState`, editor state, and controller getters when it reconciles.
+
 **Run overall status** (derived from individual autolabel statuses):
 
-| Condition | Overall status |
-|-----------|---------------|
-| At least one autolabel is PROCESSING | `PROCESSING` |
-| No PROCESSING, at least one PENDING | `PENDING` |
-| All DONE | `DONE` |
-| All FAILED | `FAILED` |
-| Mix of DONE and FAILED, rest DONE | `DONE` (run completed, partial success) |
+| Condition                            | Overall status                          |
+| ------------------------------------ | --------------------------------------- |
+| At least one autolabel is PROCESSING | `PROCESSING`                            |
+| No PROCESSING, at least one PENDING  | `PENDING`                               |
+| All DONE                             | `DONE`                                  |
+| All FAILED                           | `FAILED`                                |
+| Mix of DONE and FAILED, rest DONE    | `DONE` (run completed, partial success) |
 
-**`autolabelManager`** (stateless adapter):
+**`autolabelManager`** (coordination layer):
 
-| Method | Direction | Purpose |
-|--------|-----------|---------|
-| `createRun(params, filter)` | → controller | Sends `createAutoLabelRun` user event |
-| `selectRun(runId)` | → controller, then → hook | Sets `selectedRunId`, fires `reloadAutoLabelRun` user event. On `autoLabelRunReloaded` trigger: if the current chapter is open and a matching autolabel exists whose label data is not yet loaded, fires `loadAutoLabelData`. On `autoLabelDataLoaded`: populates `autolabelPreviews`. |
-| `deselectRun()` | → hook | Clears `selectedRunId` and `autolabelPreviews`. Match indicators remain available in the run list but no run is active. |
-| `promote(runId, labelGroupId, filter)` | → controller | Sets editor to view mode, sends `promoteAutoLabelRun` user event. On response, restores previous mode. |
-| `refreshAllRuns()` | → controller | Fires `refreshAutoLabelRuns` user event for a one-shot manual refresh. |
-| `reloadRun(runId)` | → controller | Fires `reloadAutoLabelRun` user event (used by per-run [↻] button). |
-| `handleControllerEvent(event)` | ← controller | Reacts to `autoLabelRunCreated`, `autoLabelRunsRefreshed`, `autoLabelRunReloaded`, `autoLabelDataLoaded`, `autoLabelRunPromoted`, `textChanged`, `chapterOpened`, and `errorOccured`. |
+| Method                                 | Direction                       | Purpose                                                                                                                                                                                 |
+| -------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createRun(params, filter)`            | → controller                    | Sends `createAutoLabelRun` user event                                                                                                                                                   |
+| `selectRun(runId)`                     | → hook, optionally → controller | Sets `selectedRunId` and reconciles the preview from cached run metadata. A known matching label payload is loaded on demand; run metadata is only refreshed through explicit controls. |
+| `deselectRun()`                        | → hook                          | Clears `selectedRunId` and the current preview. Match indicators remain available in the run list but no run is active.                                                                 |
+| `setPreviewEnabled(enabled)`           | → hook, optionally → controller | Updates the user's preview preference. Enabling immediately reconciles the selected run; disabling clears preview and loading state.                                                    |
+| `promote(runId, labelGroupId, filter)` | → controller                    | Sets editor to view mode, sends `promoteAutoLabelRun` user event. On response, restores previous mode.                                                                                  |
+| `refreshAllRuns()`                     | → controller                    | Fires `refreshAutoLabelRuns` user event for a one-shot manual refresh.                                                                                                                  |
+| `reloadRun(runId)`                     | → controller                    | Fires `reloadAutoLabelRun` user event (used by per-run [↻] button).                                                                                                                     |
+| `handleControllerEvent(event)`         | ← controller                    | Reacts to `autoLabelRunCreated`, `autoLabelRunsRefreshed`, `autoLabelRunReloaded`, `autoLabelDataLoaded`, `autoLabelRunPromoted`, `textChanged`, `chapterOpened`, and `errorOccured`.   |
 
 ### Editor integration
 
 **Inline autolabel rendering:**
 
-When a run is selected and the current chapter has a matching autolabel (same `chapterContentId`), the detected labels are rendered as a second decoration layer in CodeMirror with lighter styling, distinct from the colored-background regular labels. The autolabel preview data is maintained in `useAutoLabelState.autolabelPreviews` and passed to `CodeMirrorEditor` as a separate prop — it does not go through the SegmentManager. The preview clears when:
+When preview display is enabled, a run is selected, and the current chapter has a completed matching autolabel (same `chapterContentId`), the detected labels are rendered as a second decoration layer in CodeMirror with a faint background and dashed underline. Preview labels are maintained by `useAutoLabelPreview` and passed to `CodeMirrorEditor` as a separate prop; they do not go through the SegmentManager. The preview decoration field clears synchronously on any CodeMirror document change, before the controller round trip completes. The manager also clears the preview when:
+
+- Preview display is disabled
 - The run is deselected
 - A different run is selected
-- A `textChanged` trigger fires and the current chapter content ID no longer matches the autolabel's
+- The chapter changes or no matching completed result exists
+- A `textChanged` trigger fires
+- A preview-related load or reconciliation fails
 
 **Run list match indicators:**
 
 The right-panel run list shows match/outdated indicators computed from each run's autolabel metadata and the current chapter content IDs:
 
-| Indicator | Meaning |
-|-----------|---------|
-| Green dot (•) | An autolabel exists for the current chapter content version (IDs match exactly) |
+| Indicator                     | Meaning                                                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Green dot (•)                 | An autolabel exists for the current chapter content version (IDs match exactly)                              |
 | Yellow dot (○) / `(outdated)` | An autolabel exists for this chapter but references an older content version (text was edited since the run) |
-| None | No autolabel exists for this chapter in the run |
+| None                          | No autolabel exists for this chapter in the run                                                              |
 
 The autolabel metadata includes `chapterId` alongside `chapterContentId`, returned by the `GET /auto-label-runs/{runId}/auto-labels` endpoint as `AutoLabelMetaWithCid` (a wrapper containing `autoLabelMeta: AutoLabelMeta` and `chapterId: UUID`).
 
@@ -183,7 +197,7 @@ During promotion, the editor is forced into view mode (editing and labeling disa
 
 ## UI specification
 
-The autolabel UI lives in the editor's RightPanel, replacing the existing placeholder. It has three sections from top to bottom.
+The autolabel UI lives in the editor's RightPanel. A **Show selected run preview** switch appears first, followed by the create, run-list, and promotion sections. The switch is off by default. While a matching payload is being resolved, the switch row shows `Loading preview...`; the previous overlay is not retained during loading.
 
 ### Create Auto Labels section (top, inline)
 
@@ -258,6 +272,7 @@ The autolabel UI lives in the editor's RightPanel, replacing the existing placeh
 A `[Reload All]` button at the top refreshes the entire run list and all per-run autolabel data. Each run also has a per-run `[↻]` reload button that fetches that run's autolabel statuses individually.
 
 Each run header shows:
+
 - **Model name**, **progress badge** (color-coded by overall status using the derivation rules above), **progress count** (DONE / total), **creation time**
 - **Green dot (•)** — the currently open chapter's content version has a matching autolabel in this run
 - **Yellow dot (○)** — an autolabel exists for the current chapter but for an older content version (text was edited since the run)
@@ -265,6 +280,7 @@ Each run header shows:
 When **expanded**, the run shows a chapter status list. Each row: chapter number, status badge, and error message if failed. The DONE checkmark (✓) indicates chapters whose labels can be previewed.
 
 **Selection behavior:**
+
 - Clicking a run selects it: expands the accordion and renders autolabel labels inline in CodeMirror with lighter styling (a second decoration layer). At most one run is active.
 - Clicking the already-selected run deselects it — the accordion collapses and the inline overlay clears.
 - Editing text fires `textChanged` → `autolabelManager` recalculates match/outdated status. If the selected run no longer matches, the preview layer is cleared and the dot changes from green to yellow.

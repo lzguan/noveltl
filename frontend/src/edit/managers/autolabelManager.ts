@@ -1,7 +1,7 @@
 import type { RefObject } from "react";
 import { Effect } from "effect";
 import { UnknownException } from "effect/Cause";
-import type { ALRProvId, CProvId, LGProvId } from "../controller/types/idTypes";
+import type { ALRProvId, CCProvId, CProvId, LGProvId } from "../controller/types/idTypes";
 import type { AutoLabelRunGetterSlot } from "../controller/types/helperTypes";
 import { Prov } from "../controller/types/helperTypes";
 import type {
@@ -18,6 +18,7 @@ import type {
 	useAutoLabelState,
 } from "../hooks/useAutoLabelState";
 import type { EditorData } from "../hooks/useEditorState";
+import type { useAutoLabelPreview } from "../hooks/useAutoLabelPreview";
 import type {
 	AcquireWorkspaceLock,
 	ReleaseWorkspaceLock,
@@ -25,14 +26,12 @@ import type {
 } from "../hooks/useWorkspaceLock";
 import type { EditorMode } from "./editorManager";
 
-/**
- * Select a run: set selectedRunId, fire reloadAutoLabelRun.
- * On autoLabelRunReloaded: if chapter open ∧ matching autolabel ∧ data not loaded → fire loadAutoLabelData.
- */
+/** Coordinates autolabel run state, preview reconciliation, and promotion. */
 export type AutoLabelUserEventHandlers = {
 	createRun(params: CluenerParams | DoNothingParams, filter: ChapterFilter): void;
 	selectRun(runId: ALRProvId): void;
 	deselectRun(): void;
+	setPreviewEnabled(enabled: boolean): void;
 	promote(runId: ALRProvId, labelGroupId: LGProvId, filter: ChapterFilter): void;
 	refreshAllRuns(): void;
 	reloadRun(runId: ALRProvId): void;
@@ -83,6 +82,7 @@ export function createAutoLabelManager({
 	controllerUserEvent,
 	controllerGetters,
 	autoLabels,
+	autoLabelPreview,
 	dataRef,
 	modeRef,
 	setMode,
@@ -92,6 +92,7 @@ export function createAutoLabelManager({
 	controllerUserEvent(event: NovelUserEvent): void;
 	controllerGetters: NovelGetters;
 	autoLabels: ReturnType<typeof useAutoLabelState>;
+	autoLabelPreview: ReturnType<typeof useAutoLabelPreview>;
 	dataRef: RefObject<EditorData>;
 	modeRef: RefObject<EditorMode>;
 	setMode(mode: EditorMode): void;
@@ -100,6 +101,7 @@ export function createAutoLabelManager({
 }): AutoLabelManager {
 	let modeBeforePromotion: EditorMode | null = null;
 	let promotionLockToken: WorkspaceLockToken | null = null;
+	const invalidatedContentIds = new Map<CProvId, CCProvId>();
 
 	function releasePromotionLock(): void {
 		if (promotionLockToken === null) return;
@@ -112,6 +114,83 @@ export function createAutoLabelManager({
 		const data = dataRef.current;
 		if (data.empty || data.loading) return null;
 		return data.chapterId;
+	}
+
+	function syncPreview(): Effect.Effect<void> {
+		return Effect.gen(function* () {
+			if (!autoLabelPreview.enabledRef.current) return;
+
+			const runId = autoLabels.selectedRunIdRef.current;
+			const chapterId = currentChapterId();
+			if (runId === null || chapterId === null) {
+				autoLabelPreview.setPreview(null);
+				return;
+			}
+
+			const chapterSlot = yield* controllerGetters
+				.chapterGetterSlot(chapterId)
+				.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+			if (chapterSlot.status !== "ready") {
+				autoLabelPreview.setPreview(null);
+				return;
+			}
+			const chapterContentId = yield* chapterSlot.data.chapterGetters
+				.chapterContentId()
+				.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+
+			const invalidatedContentId = invalidatedContentIds.get(chapterId);
+			if (invalidatedContentId === chapterContentId) {
+				autoLabelPreview.setPreview(null);
+				return;
+			}
+			if (invalidatedContentId !== undefined) invalidatedContentIds.delete(chapterId);
+
+			const runSlot = yield* controllerGetters
+				.autoLabelRunSlot(runId)
+				.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+			if (runSlot.status !== "ready") {
+				autoLabelPreview.setPreview(null);
+				return;
+			}
+
+			const matching = runSlot.data.autolabels.find(
+				(slot) =>
+					slot.meta.autoLabel.chapterId === chapterId &&
+					slot.meta.autoLabel.autoLabelMeta.chapterContentId === chapterContentId &&
+					slot.meta.autoLabel.autoLabelMeta.autoLabelStatus === "done",
+			);
+			if (!matching) {
+				autoLabelPreview.setPreview(null);
+				return;
+			}
+
+			const autoLabelId = matching.meta.autoLabel.autoLabelMeta.autoLabelId;
+			if (matching.status === "ready") {
+				autoLabelPreview.setPreview(matching.data.autoLabelData ?? []);
+				return;
+			}
+
+			autoLabelPreview.setLoading(true);
+			if (matching.status === "loading") return;
+
+			controllerUserEvent({
+				eventType: "loadAutoLabelData",
+				autoLabelId,
+				flags: { now: true, forPreview: true },
+			});
+		}).pipe(
+			Effect.catchAll((err) => {
+				autoLabelPreview.setPreview(null);
+				console.error("Failed to synchronize autolabel preview:", err);
+				return Effect.succeed(void 0);
+			}),
+		);
+	}
+
+	function syncPreviewNow(): void {
+		void Effect.runPromise(syncPreview()).catch((err) => {
+			console.error("Failed to run autolabel preview synchronization:", err);
+		});
 	}
 
 	function rebuildChapterMatchMap(
@@ -142,6 +221,23 @@ export function createAutoLabelManager({
 		}).pipe(Effect.catchAll(() => Effect.succeed(new Map())));
 	}
 
+	function refreshSelectedRunAndMatches(
+		getters: NovelGetters,
+	): Effect.Effect<void, UnknownException> {
+		return Effect.gen(function* () {
+			const selectedRunId = autoLabels.selectedRunIdRef.current;
+			if (selectedRunId !== null) {
+				const runSlot = yield* controllerGetters
+					.autoLabelRunSlot(selectedRunId)
+					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+				autoLabels.setRun(selectedRunId, makeView(runSlot));
+			}
+			autoLabels.setChapterMatchMap(
+				yield* rebuildChapterMatchMap(autoLabels.runsRef.current, getters),
+			);
+		});
+	}
+
 	function handleControllerEvent(
 		getters: NovelGetters,
 		event: TriggerEvent,
@@ -160,6 +256,7 @@ export function createAutoLabelManager({
 						runId: event.run.runId,
 						flags: { now: true },
 					});
+					yield* syncPreview();
 					break;
 				}
 
@@ -177,6 +274,7 @@ export function createAutoLabelManager({
 					autoLabels.setRunsList(views);
 					autoLabels.setRefreshing(false);
 					autoLabels.setChapterMatchMap(yield* rebuildChapterMatchMap(views, getters));
+					yield* syncPreview();
 					break;
 				}
 
@@ -191,20 +289,7 @@ export function createAutoLabelManager({
 						getters,
 					);
 					autoLabels.setChapterMatchMap(matchMap);
-
-					if (autoLabels.selectedRunIdRef.current !== event.runId) break;
-					const chId = currentChapterId();
-					if (!chId || view.status !== "ready") break;
-					if (matchMap.get(event.runId)?.get(chId) !== "match") break;
-					const matching = view.autolabels.find(
-						(al) => al.chapterId === chId && al.autoLabelStatus === "done",
-					);
-					if (!matching) break;
-					controllerUserEvent({
-						eventType: "loadAutoLabelData",
-						autoLabelId: matching.autoLabelId,
-						flags: { now: true },
-					});
+					yield* syncPreview();
 					break;
 				}
 
@@ -218,43 +303,30 @@ export function createAutoLabelManager({
 					break;
 				}
 
-				case "textChanged":
 				case "chapterOpened": {
-					const selectedRunId = autoLabels.selectedRunIdRef.current;
-					let selectedView: AutoLabelRunView | null = null;
-					if (selectedRunId !== null) {
-						const runSlot = yield* controllerGetters
-							.autoLabelRunSlot(selectedRunId)
-							.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
-						selectedView = makeView(runSlot);
-						autoLabels.setRun(selectedRunId, selectedView);
-					}
+					if (!event.flags.forEditor) break;
+					yield* refreshSelectedRunAndMatches(getters);
+					yield* syncPreview();
+					break;
+				}
 
-					const matchMap = yield* rebuildChapterMatchMap(
-						autoLabels.runsRef.current,
-						getters,
+				case "textChanged": {
+					yield* refreshSelectedRunAndMatches(getters);
+					if (event.chapterId !== currentChapterId()) break;
+					autoLabelPreview.setPreview(null);
+					const chapterSlot = yield* controllerGetters
+						.chapterGetterSlot(event.chapterId)
+						.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+					if (chapterSlot.status !== "ready") break;
+					invalidatedContentIds.set(
+						event.chapterId,
+						yield* chapterSlot.data.chapterGetters.chapterContentId(),
 					);
-					autoLabels.setChapterMatchMap(matchMap);
+					break;
+				}
 
-					const chId = currentChapterId();
-					if (
-						selectedRunId === null ||
-						!chId ||
-						selectedView === null ||
-						selectedView.status !== "ready"
-					) {
-						break;
-					}
-					if (matchMap.get(selectedRunId)?.get(chId) !== "match") break;
-					const matching = selectedView.autolabels.find(
-						(al) => al.chapterId === chId && al.autoLabelStatus === "done",
-					);
-					if (!matching) break;
-					controllerUserEvent({
-						eventType: "loadAutoLabelData",
-						autoLabelId: matching.autoLabelId,
-						flags: { now: true },
-					});
+				case "autoLabelDataLoaded": {
+					if (event.flags.forPreview) yield* syncPreview();
 					break;
 				}
 
@@ -269,6 +341,15 @@ export function createAutoLabelManager({
 					}
 					if (autoLabels.refreshingRef.current) {
 						autoLabels.setRefreshing(false);
+					}
+					const previewLoadFailed =
+						event.from === "requestManager"
+							? event.data.some(
+									({ request }) => request.variant === "loadAutoLabelData",
+								)
+							: autoLabelPreview.loadingRef.current;
+					if (previewLoadFailed) {
+						autoLabelPreview.setPreview(null);
 					}
 					break;
 				}
@@ -286,6 +367,7 @@ export function createAutoLabelManager({
 				if (autoLabels.refreshingRef.current) {
 					autoLabels.setRefreshing(false);
 				}
+				autoLabelPreview.setPreview(null);
 				console.error("Error in autolabel manager:", err);
 				return Effect.succeed(void 0);
 			}),
@@ -298,18 +380,15 @@ export function createAutoLabelManager({
 		},
 		selectRun(runId) {
 			autoLabels.setSelected(runId);
-			const runSlot = Effect.runSyncExit(controllerGetters.autoLabelRunSlot(runId));
-			if (runSlot._tag === "Failure") {
-				console.error("Failed to get run slot for selected run:", runSlot.cause);
-				return;
-			}
-			if (runSlot.value.status === "loading" || runSlot.value.status === "ready") {
-				return;
-			}
-			controllerUserEvent({ eventType: "reloadAutoLabelRun", runId });
+			syncPreviewNow();
 		},
 		deselectRun() {
 			autoLabels.setSelected(null);
+			autoLabelPreview.setPreview(null);
+		},
+		setPreviewEnabled(enabled) {
+			autoLabelPreview.setEnabled(enabled);
+			if (enabled) syncPreviewNow();
 		},
 		promote(runId, labelGroupId, filter) {
 			const token = acquireLock("Promoting auto labels...");
@@ -336,9 +415,16 @@ export function createAutoLabelManager({
 		},
 		refreshAllRuns() {
 			autoLabels.setRefreshing(true);
+			if (autoLabelPreview.enabledRef.current) autoLabelPreview.setLoading(true);
 			controllerUserEvent({ eventType: "refreshAutoLabelRuns", flags: { now: true } });
 		},
 		reloadRun(runId) {
+			if (
+				autoLabelPreview.enabledRef.current &&
+				autoLabels.selectedRunIdRef.current === runId
+			) {
+				autoLabelPreview.setLoading(true);
+			}
 			controllerUserEvent({ eventType: "reloadAutoLabelRun", runId, flags: { now: true } });
 		},
 		handleControllerEvent,

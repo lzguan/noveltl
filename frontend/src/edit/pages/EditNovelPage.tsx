@@ -16,6 +16,7 @@ import { useEditorState } from "../hooks/useEditorState";
 import { useChapterList } from "../hooks/useChapterList";
 import { useTrackedLabelGroups } from "../hooks/useTrackedLabelGroups";
 import { useAutoLabelState } from "../hooks/useAutoLabelState";
+import { useAutoLabelPreview } from "../hooks/useAutoLabelPreview";
 import { useWorkspaceLock } from "../hooks/useWorkspaceLock";
 import { createChapterManager } from "../managers/chapterManager";
 import { createLabelGroupManager } from "../managers/labelGroupManager";
@@ -54,6 +55,7 @@ export function EditNovelPage() {
 	const chapterList = useChapterList();
 	const trackedLabelGroups = useTrackedLabelGroups();
 	const autoLabels = useAutoLabelState();
+	const autoLabelPreview = useAutoLabelPreview();
 	const { workspaceLock, acquireLock, releaseLock } = useWorkspaceLock();
 
 	const [managers, setManagers] = useState<{
@@ -168,6 +170,7 @@ export function EditNovelPage() {
 			controllerUserEvent,
 			controllerGetters: ctrl.getters,
 			autoLabels,
+			autoLabelPreview,
 			dataRef: editorState.dataRef,
 			modeRef: editorState.modeRef,
 			setMode: editorState.setMode,
@@ -290,6 +293,7 @@ export function EditNovelPage() {
 							onSetCaret={editorState.setCaret}
 							onTextOp={managers.editorMgr.textOp}
 							labeling={labeling}
+							preview={autoLabelPreview.preview}
 						/>
 						<div className="w-80 border-l shrink-0 flex flex-col min-h-0">
 							<RightPanel
@@ -306,6 +310,11 @@ export function EditNovelPage() {
 												labelGroups={trackedLabelGroups.labelGroups}
 												onSetActiveLabelGroup={
 													managers.labelGroupMgr.setActive
+												}
+												previewEnabled={autoLabelPreview.enabled}
+												previewLoading={autoLabelPreview.loading}
+												onSetPreviewEnabled={
+													managers.autoLabelMgr.setPreviewEnabled
 												}
 											/>
 										),

@@ -870,6 +870,7 @@ export const buildAutolabelDataManager = (
 
 		const _loadAutoLabelData = (
 			autoLabelId: AProvId,
+			flags?: { now: boolean; forPreview: boolean },
 		): Effect.Effect<RequestEvent[], UnknownException | FatalException> =>
 			Effect.gen(function* () {
 				let parentRunId: ALRProvId | null = null;
@@ -898,6 +899,40 @@ export const buildAutolabelDataManager = (
 						}),
 					);
 				}
+				const runSlot = yield* autoLabelRunIndex
+					.get(parentRunId)
+					.pipe(
+						Effect.mapError(
+							(err) => new FatalException({ orig: err, from: "_loadAutoLabelData" }),
+						),
+					);
+				if (runSlot.status !== "ready") {
+					return yield* Effect.fail(
+						new FatalException({
+							orig: new Error(
+								`AutoLabelRun ${parentRunId} not ready for autolabel data`,
+							),
+							from: "_loadAutoLabelData",
+						}),
+					);
+				}
+				const autoLabelSlot = yield* runSlot.data.index
+					.get(autoLabelId)
+					.pipe(
+						Effect.mapError(
+							(err) => new FatalException({ orig: err, from: "_loadAutoLabelData" }),
+						),
+					);
+
+				if (autoLabelSlot.status === "loading") return [];
+
+				yield* runSlot.data.index
+					.setData(autoLabelId, { status: "loading" })
+					.pipe(
+						Effect.mapError(
+							(err) => new FatalException({ orig: err, from: "_loadAutoLabelData" }),
+						),
+					);
 
 				const reserveList: ReserveList = {
 					autoLabelRun: [
@@ -921,6 +956,11 @@ export const buildAutolabelDataManager = (
 					labelGroup: [],
 				};
 
+				const onError = (): Effect.Effect<void> =>
+					Effect.gen(function* () {
+						yield* runSlot.data.index.setData(autoLabelId, { status: "error" });
+					}).pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+
 				return [
 					{
 						cached: false,
@@ -928,8 +968,8 @@ export const buildAutolabelDataManager = (
 						active: false,
 						retries: 3,
 						reservationRequest: makeReservationRequest(idRepo, reserveList),
-						onFailure: () => Effect.succeed(void 0),
-						onFatalError: () => Effect.succeed(void 0),
+						onFailure: onError,
+						onFatalError: onError,
 						preSend: () => Effect.succeed(void 0),
 						send: () =>
 							Effect.gen(function* () {
@@ -1016,6 +1056,7 @@ export const buildAutolabelDataManager = (
 								yield* raiseTriggerEvent({
 									eventType: "autoLabelDataLoaded",
 									autoLabelId,
+									flags: { forPreview: flags?.forPreview ?? false },
 								});
 							}).pipe(
 								Effect.mapError(
@@ -1042,7 +1083,7 @@ export const buildAutolabelDataManager = (
 					if (!last) {
 						return ret;
 					}
-					if (last?.now) {
+					if (last.now) {
 						return ret.concat(yield* flush());
 					}
 					return ret;
@@ -1053,7 +1094,9 @@ export const buildAutolabelDataManager = (
 
 		const refreshAutoLabelRuns = supportsNow<[]>(_refreshAutoLabelRuns);
 		const reloadAutoLabelRun = supportsNow<[ALRProvId]>(_reloadAutoLabelRun);
-		const loadAutoLabelData = supportsNow<[AProvId]>(_loadAutoLabelData);
+		const loadAutoLabelData = supportsNow<[AProvId], { now: boolean; forPreview: boolean }>(
+			_loadAutoLabelData,
+		);
 
 		return {
 			createAutoLabelRun: decorate(_createAutoLabelRun),

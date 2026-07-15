@@ -13,8 +13,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
         with:
-          uv-version: 0.10.9
-          python-version-file: backend/pyproject.toml
+          version-file: backend/pyproject.toml
       - run: uv --directory backend sync
       - run: uv --directory backend run ruff check
   check:
@@ -25,7 +24,6 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
         with:
-          uv-version: 0.10.9
-          python-version-file: backend/pyproject.toml
+          version-file: backend/pyproject.toml
       - run: uv --directory backend sync
       - run: uv --directory backend run pyrefly check

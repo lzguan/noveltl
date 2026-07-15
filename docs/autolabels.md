@@ -80,31 +80,31 @@ Autolabels need several operations through the controller's request lifecycle (i
 
 **User events:**
 
-| Event                  | Payload                                        | What happens                                                                                                                                                                                                               |
-| ---------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createAutoLabelRun`   | `{ params, chapterFilter }`                    | Creates a new run on the backend and dispatches workers. The controller publishes `autoLabelRunCreated` with the new run data when the response arrives.                                                                   |
-| `refreshAutoLabelRuns` | `{}`                                           | Reloads the full run list from the server, replacing the local index. The controller publishes `autoLabelRunsRefreshed`.                                                                                                   |
-| `reloadAutoLabelRun`   | `{ runId }`                                    | Reloads autolabel metadata for a single run (per-chapter statuses, chapter IDs, error messages). The controller publishes `autoLabelRunReloaded`.                                                                          |
-| `loadAutoLabelData`    | `{ autoLabelId, flags?: { now, forPreview } }` | Fetches a single autolabel's full label data payload from the server. The controller publishes `autoLabelDataLoaded` with the same `forPreview` intent.                                                                    |
-| `promoteAutoLabelRun`  | `{ runId, labelGroupId, chapterFilter }`       | Promotes autolabel results into a label group. Creates `LabelData` + `Label` entries server-side. The controller publishes `autoLabelRunPromoted` so the label group manager reloads and the autolabel manager updates UI. |
+| Event                  | Payload                                        | What happens                                                                                                                                                                                                                 |
+| ---------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createAutoLabelRun`   | `{ params, chapterFilter }`                    | Creates a new run on the backend and dispatches workers. The controller publishes `autoLabelRunCreated` with the new run data when the response arrives.                                                                     |
+| `refreshAutoLabelRuns` | `{}`                                           | Reloads the full run list from the server, replacing the local index. The controller publishes `autoLabelRunsRefreshed`.                                                                                                     |
+| `reloadAutoLabelRun`   | `{ runId }`                                    | Reloads autolabel metadata for a single run (per-chapter statuses, chapter IDs, error messages). The controller publishes `autoLabelRunReloaded`.                                                                            |
+| `loadAutoLabelData`    | `{ autoLabelId, flags?: { now, forPreview } }` | Fetches a single autolabel's full label data payload from the server. The controller publishes `autoLabelDataLoaded` with the same `forPreview` intent.                                                                      |
+| `promoteAutoLabelRun`  | `{ runId, labelGroupId, chapterFilter }`       | Promotes autolabel results into a label group. Creates `LabelData` + `Label` entries server-side. Every terminal path publishes `autoLabelRunPromotionFinished` so promotion-owned UI state is released only by its request. |
 
 **Trigger events:**
 
-| Trigger                  | Payload                                                                 | Consumers                                                                                                                          |
-| ------------------------ | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `autoLabelRunCreated`    | `{ run, autoLabels }`                                                   | `autolabelManager` → updates hook with new run                                                                                     |
-| `autoLabelRunsRefreshed` | `{}`                                                                    | `autolabelManager` → replaces the run list in hook state                                                                           |
-| `autoLabelRunReloaded`   | `{ runId }`                                                             | `autolabelManager` → reads updated autolabel metadata from DM getters, re-evaluates match/preview state                            |
-| `autoLabelDataLoaded`    | `{ autoLabelId, flags: { forPreview } }`                                | `autolabelManager` → reconciles the current preview when the load was requested for preview rendering                              |
-| `autoLabelRunPromoted`   | `{ runId, labelGroupId, chapterFilter, success: [...], errors: [...] }` | `labelGroupManager` → reloads label data for the promoted group; `autolabelManager` → clears promotion state, restores editor mode |
+| Trigger                         | Payload                                                                                                                                 | Consumers                                                                                                                |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `autoLabelRunCreated`           | `{ run, autoLabels }`                                                                                                                   | `autolabelManager` → updates hook with new run                                                                           |
+| `autoLabelRunsRefreshed`        | `{}`                                                                                                                                    | `autolabelManager` → replaces the run list in hook state                                                                 |
+| `autoLabelRunReloaded`          | `{ runId }`                                                                                                                             | `autolabelManager` → reads updated autolabel metadata from DM getters, re-evaluates match/preview state                  |
+| `autoLabelDataLoaded`           | `{ autoLabelId, flags: { forPreview } }`                                                                                                | `autolabelManager` → reconciles the current preview when the load was requested for preview rendering                    |
+| `autoLabelRunPromotionFinished` | Success: `{ runId, outcome: "success", labelGroupId, chapterFilter, success, errors }`; failure: `{ runId, outcome: "failure", error }` | `autolabelManager` → for the matching run, clears promotion state, releases the workspace lock, and restores editor mode |
 
 **Trigger events consumed by `autolabelManager`:**
 
-`handleControllerEvent` reacts to: `autoLabelRunCreated`, `autoLabelRunsRefreshed`, `autoLabelRunReloaded`, `autoLabelDataLoaded`, `autoLabelRunPromoted`, `textChanged`, `chapterOpened`, and `errorOccured`.
+`handleControllerEvent` reacts to: `autoLabelRunCreated`, `autoLabelRunsRefreshed`, `autoLabelRunReloaded`, `autoLabelDataLoaded`, `autoLabelRunPromotionFinished`, `textChanged`, `chapterOpened`, and `errorOccured`.
 
 On `chapterOpened`, the manager re-evaluates whether the current chapter matches the selected run and synchronizes the preview when preview display is enabled. On `textChanged`, it clears the preview immediately and marks the current content version invalid until the queued text change produces a new `chapterContentId`; this prevents cached labels from being drawn over optimistically edited text.
 
-On `errorOccured`: the manager resets any in-flight loading/promotion state and restores editor mode.
+On `errorOccured`, the manager clears only the loading state associated with the failed refresh or preview request. Generic errors do not finish a promotion; only the matching `autoLabelRunPromotionFinished` event can release promotion-owned UI state.
 
 **ID repository:**
 
@@ -155,16 +155,16 @@ Disabling preview clears both the current labels and loading state. The hook doe
 
 **`autolabelManager`** (coordination layer):
 
-| Method                                 | Direction                       | Purpose                                                                                                                                                                                 |
-| -------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createRun(params, filter)`            | → controller                    | Sends `createAutoLabelRun` user event                                                                                                                                                   |
-| `selectRun(runId)`                     | → hook, optionally → controller | Sets `selectedRunId` and reconciles the preview from cached run metadata. A known matching label payload is loaded on demand; run metadata is only refreshed through explicit controls. |
-| `deselectRun()`                        | → hook                          | Clears `selectedRunId` and the current preview. Match indicators remain available in the run list but no run is active.                                                                 |
-| `setPreviewEnabled(enabled)`           | → hook, optionally → controller | Updates the user's preview preference. Enabling immediately reconciles the selected run; disabling clears preview and loading state.                                                    |
-| `promote(runId, labelGroupId, filter)` | → controller                    | Sets editor to view mode, sends `promoteAutoLabelRun` user event. On response, restores previous mode.                                                                                  |
-| `refreshAllRuns()`                     | → controller                    | Fires `refreshAutoLabelRuns` user event for a one-shot manual refresh.                                                                                                                  |
-| `reloadRun(runId)`                     | → controller                    | Fires `reloadAutoLabelRun` user event (used by per-run [↻] button).                                                                                                                     |
-| `handleControllerEvent(event)`         | ← controller                    | Reacts to `autoLabelRunCreated`, `autoLabelRunsRefreshed`, `autoLabelRunReloaded`, `autoLabelDataLoaded`, `autoLabelRunPromoted`, `textChanged`, `chapterOpened`, and `errorOccured`.   |
+| Method                                 | Direction                       | Purpose                                                                                                                                                                                        |
+| -------------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createRun(params, filter)`            | → controller                    | Sends `createAutoLabelRun` user event                                                                                                                                                          |
+| `selectRun(runId)`                     | → hook, optionally → controller | Sets `selectedRunId`, reloads run metadata when its slot is neither loading nor ready, and reconciles the preview. A known matching label payload is loaded on demand.                         |
+| `deselectRun()`                        | → hook                          | Clears `selectedRunId` and the current preview. Match indicators remain available in the run list but no run is active.                                                                        |
+| `setPreviewEnabled(enabled)`           | → hook, optionally → controller | Updates the user's preview preference. Enabling immediately reconciles the selected run; disabling clears preview and loading state.                                                           |
+| `promote(runId, labelGroupId, filter)` | → controller                    | Sets editor to view mode, sends `promoteAutoLabelRun` user event. On response, restores previous mode.                                                                                         |
+| `refreshAllRuns()`                     | → controller                    | Fires `refreshAutoLabelRuns` user event for a one-shot manual refresh.                                                                                                                         |
+| `reloadRun(runId)`                     | → controller                    | Fires `reloadAutoLabelRun` user event (used by per-run [↻] button).                                                                                                                            |
+| `handleControllerEvent(event)`         | ← controller                    | Reacts to `autoLabelRunCreated`, `autoLabelRunsRefreshed`, `autoLabelRunReloaded`, `autoLabelDataLoaded`, `autoLabelRunPromotionFinished`, `textChanged`, `chapterOpened`, and `errorOccured`. |
 
 ### Editor integration
 
@@ -316,7 +316,7 @@ When **expanded**, the run shows a chapter status list. Each row: chapter number
 - **Arrow (→)** — visual direction indicator: "from run → into label group."
 - **Label group dropdown** — target group to promote into. Defaults to the currently active label group (read from `useTrackedLabelGroups`). Changing it calls `labelGroupManager.setActive`, so the editor immediately switches to show that group's labels. After promotion, the newly imported labels appear in the active group.
 - **Chapter range** — filters which chapters from the run to promote.
-- **Promote button** — sets editor mode to view (blocking edits and labeling), sends `promoteAutoLabelRun` user event. On response: `autoLabelRunPromoted` trigger fires, `labelGroupManager` reloads the promoted group, previous mode is restored.
+- **Promote button** — sets editor mode to view (blocking edits and labeling) and sends `promoteAutoLabelRun`. On success or request-level failure, `autoLabelRunPromotionFinished` releases the workspace lock and restores the previous mode; unrelated errors leave the promotion locked.
 
 The chapter range inputs in the Promote section are owned by the panel as local React state, not stored in the hook.
 

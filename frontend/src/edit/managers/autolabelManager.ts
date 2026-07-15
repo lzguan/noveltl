@@ -101,6 +101,7 @@ export function createAutoLabelManager({
 }): AutoLabelManager {
 	let modeBeforePromotion: EditorMode | null = null;
 	let promotionLockToken: WorkspaceLockToken | null = null;
+	let promotingRunId: ALRProvId | null = null;
 	const invalidatedContentIds = new Map<CProvId, CCProvId>();
 
 	function releasePromotionLock(): void {
@@ -108,6 +109,17 @@ export function createAutoLabelManager({
 		const token = promotionLockToken;
 		promotionLockToken = null;
 		releaseLock(token);
+	}
+
+	function finishPromotion(runId: ALRProvId): void {
+		if (promotingRunId !== runId) return;
+		promotingRunId = null;
+		autoLabels.setPromoting(false);
+		releasePromotionLock();
+		if (modeBeforePromotion !== null) {
+			setMode(modeBeforePromotion);
+			modeBeforePromotion = null;
+		}
 	}
 
 	function currentChapterId(): CProvId | null {
@@ -293,13 +305,8 @@ export function createAutoLabelManager({
 					break;
 				}
 
-				case "autoLabelRunPromoted": {
-					autoLabels.setPromoting(false);
-					releasePromotionLock();
-					if (modeBeforePromotion !== null) {
-						setMode(modeBeforePromotion);
-						modeBeforePromotion = null;
-					}
+				case "autoLabelRunPromotionFinished": {
+					finishPromotion(event.runId);
 					break;
 				}
 
@@ -331,14 +338,6 @@ export function createAutoLabelManager({
 				}
 
 				case "errorOccured": {
-					if (autoLabels.promotingRef.current) {
-						autoLabels.setPromoting(false);
-						releasePromotionLock();
-						if (modeBeforePromotion !== null) {
-							setMode(modeBeforePromotion);
-							modeBeforePromotion = null;
-						}
-					}
 					if (autoLabels.refreshingRef.current) {
 						autoLabels.setRefreshing(false);
 					}
@@ -356,14 +355,6 @@ export function createAutoLabelManager({
 			}
 		}).pipe(
 			Effect.catchAll((err) => {
-				if (autoLabels.promotingRef.current) {
-					autoLabels.setPromoting(false);
-					releasePromotionLock();
-					if (modeBeforePromotion !== null) {
-						setMode(modeBeforePromotion);
-						modeBeforePromotion = null;
-					}
-				}
 				if (autoLabels.refreshingRef.current) {
 					autoLabels.setRefreshing(false);
 				}
@@ -380,6 +371,19 @@ export function createAutoLabelManager({
 		},
 		selectRun(runId) {
 			autoLabels.setSelected(runId);
+			const runSlot = Effect.runSyncExit(controllerGetters.autoLabelRunSlot(runId));
+			if (runSlot._tag === "Failure") {
+				console.error("Failed to get run slot for selected run:", runSlot.cause);
+				syncPreviewNow();
+				return;
+			}
+			if (runSlot.value.status !== "loading" && runSlot.value.status !== "ready") {
+				controllerUserEvent({
+					eventType: "reloadAutoLabelRun",
+					runId,
+					flags: { now: true },
+				});
+			}
 			syncPreviewNow();
 		},
 		deselectRun() {
@@ -394,6 +398,7 @@ export function createAutoLabelManager({
 			const token = acquireLock("Promoting auto labels...");
 			if (token === null) return;
 			promotionLockToken = token;
+			promotingRunId = runId;
 			modeBeforePromotion = modeRef.current;
 
 			try {
@@ -406,6 +411,7 @@ export function createAutoLabelManager({
 					chapterFilter: filter,
 				});
 			} catch (error) {
+				promotingRunId = null;
 				autoLabels.setPromoting(false);
 				releasePromotionLock();
 				if (modeBeforePromotion !== null) setMode(modeBeforePromotion);

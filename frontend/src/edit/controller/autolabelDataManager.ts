@@ -365,8 +365,15 @@ export const buildAutolabelDataManager = (
 			runId: ALRProvId,
 			labelGroupId: LGProvId,
 			chapterFilter: ChapterFilter,
-		): Effect.Effect<RequestEvent[], UnknownException | FatalException> =>
-			Effect.sync(() => {
+		): Effect.Effect<RequestEvent[], UnknownException | FatalException> => {
+			const promotionFailed = (error: Error): Effect.Effect<void> =>
+				raiseTriggerEvent({
+					eventType: "autoLabelRunPromotionFinished",
+					runId,
+					outcome: "failure",
+					error,
+				});
+			const buildRequests = (): RequestEvent[] => {
 				const reserveList = (): ReserveList => ({
 					autoLabelRun: [{ id: runId, kind: "autoLabelRun", desiredState: "locked" }],
 					labelGroup: [
@@ -399,8 +406,11 @@ export const buildAutolabelDataManager = (
 									Effect.map((ready) => !ready),
 								),
 						},
-						onFailure: () => Effect.succeed(void 0),
-						onFatalError: () => Effect.succeed(void 0),
+						onFailure: () =>
+							promotionFailed(
+								new Error("Promotion failed after exhausting request retries."),
+							),
+						onFatalError: promotionFailed,
 						preSend: () => Effect.succeed(void 0),
 						send: (requestKey) =>
 							Effect.gen(function* () {
@@ -540,8 +550,9 @@ export const buildAutolabelDataManager = (
 								}
 
 								yield* raiseTriggerEvent({
-									eventType: "autoLabelRunPromoted",
+									eventType: "autoLabelRunPromotionFinished",
 									runId,
+									outcome: "success",
 									labelGroupId,
 									chapterFilter,
 									success: successEntries,
@@ -550,7 +561,13 @@ export const buildAutolabelDataManager = (
 							}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
 					},
 				];
-			});
+			};
+
+			return Effect.try({
+				try: buildRequests,
+				catch: (error) => new UnknownException({ orig: error }),
+			}).pipe(Effect.tapError(promotionFailed));
+		};
 
 		const _refreshAutoLabelRuns = (): Effect.Effect<
 			RequestEvent[],

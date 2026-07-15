@@ -171,8 +171,9 @@ export type TriggerEvent =
 			autoLabels: Omit<ProvAutoLabel, "autoLabelData">[];
 	  }
 	| {
-			eventType: "autoLabelRunPromoted";
+			eventType: "autoLabelRunPromotionFinished";
 			runId: ALRProvId;
+			outcome: "success";
 			labelGroupId: LGProvId;
 			chapterFilter: ChapterFilter;
 			success: readonly {
@@ -184,6 +185,12 @@ export type TriggerEvent =
 				chapterContentId: CCProvId;
 				error: string;
 			}[];
+	  }
+	| {
+			eventType: "autoLabelRunPromotionFinished";
+			runId: ALRProvId;
+			outcome: "failure";
+			error: Error;
 	  }
 	| { eventType: "autoLabelRunsRefreshed" }
 	| { eventType: "autoLabelRunReloaded"; runId: ALRProvId }

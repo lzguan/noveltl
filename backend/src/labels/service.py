@@ -431,6 +431,7 @@ def insert_label_datas_by_autolabels(
         .where(autolabel_models.AutoLabel.run_id == request.run_id)
         .where(autolabel_models.AutoLabel.auto_label_status == AutoLabelProgress.DONE)
         .where(autolabel_models.AutoLabelRun.novel_id == models.LabelGroup.novel_id)
+        .where(novel_models.Chapter.novel_id == autolabel_models.AutoLabelRun.novel_id)
         .where(
             novel_models.ChapterContent.chapter_content_version
             == select(func.max(novel_models.ChapterContent.chapter_content_version))

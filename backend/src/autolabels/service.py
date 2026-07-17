@@ -191,6 +191,7 @@ async def insert_auto_labels(
         .select_from(nm.ChapterContent)
         .join(nm.Chapter, nm.Chapter.chapter_id == nm.ChapterContent.chapter_id)
         .join(nm.Novel, nm.Novel.novel_id == nm.Chapter.novel_id)
+        .where(nm.Chapter.novel_id == request.novel_id)
         .where(
             nm.ChapterContent.chapter_content_version
             == select(func.max(nm.ChapterContent.chapter_content_version))

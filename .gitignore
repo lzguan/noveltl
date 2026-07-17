@@ -18,3 +18,4 @@ backend/logs/
 playwright-mcp-output
 .playwright-mcp
 tsconfig.tsbuildinfo
+tmp

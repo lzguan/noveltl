@@ -428,6 +428,9 @@ def _insert_label_datas_by_autolabels(
     divided until the failing chapters can be reported individually. Each attempt
     uses a savepoint so a failed chapter never leaves behind an empty label data row.
     """
+    if not autolabel_pairs:
+        return
+
     q = (
         select(autolabel_models.AutoLabel, novel_models.ChapterContent)
         .select_from(autolabel_models.AutoLabel)
@@ -540,6 +543,7 @@ def _insert_label_datas_by_autolabels(
             if len(batch) == 1:
                 append_database_error(*batch[0], error)
                 return
+            # TODO: Consider a higher split factor to reduce repeated work when isolating rare database failures.
             midpoint = len(batch) // 2
             insert_candidate_batch(batch[:midpoint])
             insert_candidate_batch(batch[midpoint:])

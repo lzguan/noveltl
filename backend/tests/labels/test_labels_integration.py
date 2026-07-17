@@ -33,6 +33,17 @@ class TestInsertLabelDatasByAutolabels:
         request = CreateLabelDataByAutoLabel(
             run_id=novel_bundle.autolabel_runs_by_name["cluener"].run_id,
         )
+        # Opening a new group in the editor lazily creates an empty LabelData for
+        # the active chapter before promotion begins.
+        first_autolabel = novel_bundle.autolabels_by_name["cluener"][0]
+        preexisting_label_data = label_models.LabelData(
+            label_group_id=label_bundle.label_group.label_group_id,
+            chapter_content_id=first_autolabel.chapter_content_id,
+        )
+        test_db.add(preexisting_label_data)
+        test_db.commit()
+        test_db.refresh(preexisting_label_data)
+
         res = insert_label_datas_by_autolabels(
             test_db,
             novel_bundle.user,
@@ -60,6 +71,7 @@ class TestInsertLabelDatasByAutolabels:
             .all()
         )
         assert len(label_datas_in_db) == expected_count
+        assert any(label_data.label_data_id == preexisting_label_data.label_data_id for label_data in label_datas_in_db)
 
         source_data_map = {
             al.chapter_content_id: al.auto_label_data for al in novel_bundle.autolabels_by_name["cluener"]

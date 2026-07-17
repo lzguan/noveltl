@@ -517,12 +517,19 @@ def _insert_label_datas_by_autolabels(
                         ]
                     )
                     .on_conflict_do_nothing(constraint="one_label_group_per_chapter")
-                    .returning(models.LabelData.label_data_id, models.LabelData.chapter_content_id)
                 )
-                inserted_label_datas = {
+                db.execute(label_data_stmt)
+                chapter_content_ids = [autolabel.chapter_content_id for autolabel, _ in batch]
+                label_datas = {
                     chapter_content_id: label_data_id
-                    for label_data_id, chapter_content_id in db.execute(label_data_stmt).all()
+                    for label_data_id, chapter_content_id in db.execute(
+                        select(models.LabelData.label_data_id, models.LabelData.chapter_content_id)
+                        .where(models.LabelData.label_group_id == label_group_id)
+                        .where(models.LabelData.chapter_content_id.in_(chapter_content_ids))
+                    ).all()
                 }
+                if len(label_datas) != len(batch):
+                    raise RuntimeError("Label datas changed during autolabel promotion")
                 label_values = (
                     {
                         "label_entity_group": label.get("label_entity_group", "MISC"),
@@ -531,10 +538,9 @@ def _insert_label_datas_by_autolabels(
                         "label_start": label["label_start"],
                         "label_end": label["label_end"],
                         "label_dirty": label.get("label_dirty", True),
-                        "label_data_id": inserted_label_datas[autolabel.chapter_content_id],
+                        "label_data_id": label_datas[autolabel.chapter_content_id],
                     }
                     for autolabel, _ in batch
-                    if autolabel.chapter_content_id in inserted_label_datas
                     for label in autolabel.auto_label_data or []
                 )
                 for label_batch in batched(label_values, PROMOTION_LABEL_BATCH_SIZE):
@@ -550,16 +556,7 @@ def _insert_label_datas_by_autolabels(
             return
 
         for autolabel, chapter_content in batch:
-            if autolabel.chapter_content_id in inserted_label_datas:
-                success.append((chapter_content.chapter_id, autolabel.chapter_content_id))
-            else:
-                errors.append(
-                    (
-                        chapter_content.chapter_id,
-                        autolabel.chapter_content_id,
-                        f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to label data for label group already existing.",
-                    )
-                )
+            success.append((chapter_content.chapter_id, autolabel.chapter_content_id))
 
     if valid_candidates:
         insert_candidate_batch(valid_candidates)

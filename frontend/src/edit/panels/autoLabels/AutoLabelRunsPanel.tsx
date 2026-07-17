@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { ChevronRight, RefreshCw } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { CProvId, ProvChapter } from "../../controller/types/idTypes";
 import type { AutoLabelManager } from "../../managers/autolabelManager";
 import type {
@@ -101,6 +101,95 @@ function RunRows({
 	);
 }
 
+function AutoLabelRunItem({
+	run,
+	selected,
+	matchMap,
+	currentStatus,
+	chapterNumById,
+	onSelectRun,
+	onDeselectRun,
+	onReloadRun,
+}: {
+	run: AutoLabelRunView;
+	selected: boolean;
+	matchMap: Map<CProvId, ChapterMatchStatus> | undefined;
+	currentStatus: ChapterMatchStatus | undefined;
+	chapterNumById: Map<CProvId, number>;
+	onSelectRun: AutoLabelManager["selectRun"];
+	onDeselectRun: AutoLabelManager["deselectRun"];
+	onReloadRun: AutoLabelManager["reloadRun"];
+}) {
+	const [expanded, setExpanded] = useState(false);
+	const runLabel = formatRunLabel(run);
+
+	return (
+		<Collapsible open={expanded} onOpenChange={setExpanded}>
+			<div
+				className={cn(
+					"rounded-md border border-transparent",
+					selected && "border-border bg-muted/40",
+				)}
+			>
+				<div className="flex items-center gap-1">
+					<CollapsibleTrigger asChild>
+						<Button
+							type="button"
+							size="icon-xs"
+							variant="ghost"
+							aria-label={`${expanded ? "Collapse" : "Expand"} ${runLabel}`}
+						>
+							<ChevronRight
+								className={cn("transition-transform", expanded && "rotate-90")}
+							/>
+						</Button>
+					</CollapsibleTrigger>
+					<button
+						type="button"
+						aria-pressed={selected}
+						className="flex min-w-0 flex-1 items-center gap-1 rounded-md px-1.5 py-1 text-left text-xs hover:bg-muted"
+						onClick={() => {
+							if (selected) {
+								onDeselectRun();
+							} else {
+								onSelectRun(run.run.runId);
+							}
+						}}
+					>
+						<MatchDot status={currentStatus} />
+						<span className="min-w-0 flex-1 truncate">{runLabel}</span>
+						<Badge
+							variant={
+								run.status === "ready"
+									? statusVariant(run.overallStatus)
+									: "outline"
+							}
+						>
+							{run.status === "ready" ? run.overallStatus : run.status}
+						</Badge>
+					</button>
+					<Button
+						type="button"
+						size="icon-xs"
+						variant="ghost"
+						onClick={() => onReloadRun(run.run.runId)}
+						aria-label={`Reload ${runLabel}`}
+					>
+						<RefreshCw />
+					</Button>
+				</div>
+				<div className="px-7 pb-1 text-xs text-muted-foreground">
+					{run.run.modelName} · {countDone(run)} done ·{" "}
+					{formatCreatedAt(run.run.createdAt)}
+				</div>
+				<CollapsibleContent>
+					<RunRows run={run} matchMap={matchMap} chapterNumById={chapterNumById} />
+				</CollapsibleContent>
+			</div>
+		</Collapsible>
+	);
+}
+
 export function AutoLabelRunsPanel({
 	autoLabels,
 	chapters,
@@ -155,76 +244,17 @@ export function AutoLabelRunsPanel({
 							? matchMap?.get(currentChapterId)
 							: undefined;
 						return (
-							<Collapsible key={run.run.runId} open={selected}>
-								<div
-									className={cn(
-										"rounded-md border border-transparent",
-										selected && "border-border bg-muted/40",
-									)}
-								>
-									<div className="flex items-center gap-1">
-										<CollapsibleTrigger asChild>
-											<button
-												type="button"
-												className="flex min-w-0 flex-1 items-center gap-1 rounded-md px-1.5 py-1 text-left text-xs hover:bg-muted"
-												onClick={() => {
-													if (selected) {
-														onDeselectRun();
-													} else {
-														onSelectRun(run.run.runId);
-													}
-												}}
-											>
-												<ChevronRight
-													data-icon="inline-start"
-													className={cn(
-														"transition-transform",
-														selected && "rotate-90",
-													)}
-												/>
-												<MatchDot status={currentStatus} />
-												<span className="min-w-0 flex-1 truncate">
-													{formatRunLabel(run)}
-												</span>
-												<Badge
-													variant={
-														run.status === "ready"
-															? statusVariant(run.overallStatus)
-															: "outline"
-													}
-												>
-													{run.status === "ready"
-														? run.overallStatus
-														: run.status}
-												</Badge>
-											</button>
-										</CollapsibleTrigger>
-										<Button
-											type="button"
-											size="icon-xs"
-											variant="ghost"
-											onClick={(event) => {
-												event.stopPropagation();
-												onReloadRun(run.run.runId);
-											}}
-											aria-label="Reload autolabel run"
-										>
-											<RefreshCw />
-										</Button>
-									</div>
-									<div className="px-7 pb-1 text-xs text-muted-foreground">
-										{run.run.modelName} · {countDone(run)} done ·{" "}
-										{formatCreatedAt(run.run.createdAt)}
-									</div>
-									<CollapsibleContent>
-										<RunRows
-											run={run}
-											matchMap={matchMap}
-											chapterNumById={chapterNumById}
-										/>
-									</CollapsibleContent>
-								</div>
-							</Collapsible>
+							<AutoLabelRunItem
+								key={run.run.runId}
+								run={run}
+								selected={selected}
+								matchMap={matchMap}
+								currentStatus={currentStatus}
+								chapterNumById={chapterNumById}
+								onSelectRun={onSelectRun}
+								onDeselectRun={onDeselectRun}
+								onReloadRun={onReloadRun}
+							/>
 						);
 					})
 				)}

@@ -168,6 +168,7 @@ export const buildRequestManager = (
 
 		const send = () =>
 			Effect.gen(function* () {
+				let madeProgress = false;
 				const qLen = requestQueue.length + statusQueries.length + retryRequests.length;
 				if (qLen > 0) {
 					console.log("send() starting, queue=%d", requestQueue.length);
@@ -233,6 +234,7 @@ export const buildRequestManager = (
 						break;
 					}
 					const request = requestQueue.shift()!;
+					madeProgress = true;
 					if (action === "skip") {
 						continue;
 					}
@@ -254,6 +256,7 @@ export const buildRequestManager = (
 					if (statusQueries[index].nextPollAt > now) continue;
 					dueStatusQueries.push(statusQueries[index]);
 					statusQueries.splice(index, 1);
+					madeProgress = true;
 				}
 				const pendingPollsByRequestKey = new Map(
 					dueStatusQueries.map(({ request, pendingPolls }) => [
@@ -306,6 +309,9 @@ export const buildRequestManager = (
 							.pipe(handleReturn(requestEvent)),
 					{ concurrency: "unbounded" },
 				);
+				if (retryRequests.length > 0) {
+					madeProgress = true;
+				}
 
 				const [
 					[fromQueueResultFail, fromQueueResultPass],
@@ -435,6 +441,7 @@ export const buildRequestManager = (
 				retryRequests.length = 0; // empty the array
 				retryRequests.push(...newRetryRequests);
 				statusQueries.push(...newStatusQueries);
+				return madeProgress;
 			});
 
 		const sendLoop = () =>
@@ -480,10 +487,10 @@ export const buildRequestManager = (
 			Effect.gen(function* () {
 				shuttingDown = true;
 				while (!isQueueEmpty()) {
-					yield* sendMut
+					const madeProgress = yield* sendMut
 						.withPermits(1)(send())
 						.pipe(Effect.mapError((err) => new UnknownException(String(err))));
-					if (!isQueueEmpty()) {
+					if (!isQueueEmpty() && !madeProgress) {
 						yield* Effect.sleep(REQUEST_LOOP_INTERVAL_MS);
 					}
 				}

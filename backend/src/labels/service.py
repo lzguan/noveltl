@@ -2,9 +2,11 @@
 Service functions for labels.
 """
 
+import logging
 import uuid
 from collections.abc import Sequence
 from itertools import batched
+from time import perf_counter
 
 from psycopg2 import Error as PgError
 from psycopg2 import errorcodes
@@ -37,6 +39,8 @@ from .permissions import (
     label_group_mod_access_update,
 )
 from .utils import apply_operation
+
+logger = logging.getLogger(__name__)
 
 PROMOTION_CANDIDATE_BATCH_SIZE = 1000
 PROMOTION_LABEL_BATCH_SIZE = 1000
@@ -531,7 +535,7 @@ def _insert_label_datas_by_autolabels(
                     for label in autolabel.auto_label_data or []
                 )
                 for label_batch in batched(label_values, PROMOTION_LABEL_BATCH_SIZE):
-                    db.execute(insert(models.Label).values(list(label_batch)))
+                    db.execute(insert(models.Label), list(label_batch))
         except (IntegrityError, DataError) as error:
             if len(batch) == 1:
                 append_database_error(*batch[0], error)
@@ -567,6 +571,8 @@ def insert_label_datas_by_autolabels(
     chapter text and autolabel JSON are then queried and inserted in batches of
     at most ``PROMOTION_CANDIDATE_BATCH_SIZE``.
     """
+    promotion_started = perf_counter()
+    log_context = f"run_id={request.run_id} label_group_id={label_group_id}"
     q = (
         select(
             autolabel_models.AutoLabel.chapter_content_id,
@@ -605,12 +611,18 @@ def insert_label_datas_by_autolabels(
         q = q.where(novel_models.Chapter.chapter_num >= request.start)
     if request.end is not None:
         q = q.where(novel_models.Chapter.chapter_num < request.end)
+
     candidate_identifiers = db.execute(q).all()
 
     success: list[tuple[uuid.UUID, uuid.UUID]] = []
     errors: list[tuple[uuid.UUID, uuid.UUID, str]] = []
 
     if not candidate_identifiers:
+        logger.info(
+            "Autolabel promotion ended %s success_count=0 error_count=0 elapsed_ms=%.2f",
+            log_context,
+            (perf_counter() - promotion_started) * 1000,
+        )
         return schemas.CreateLabelDataByAutoLabelStatus(success=success, errors=errors)
 
     permission_q = label_data_mod_access_insert(select(literal(1)), current_user, label_group_id)
@@ -625,6 +637,12 @@ def insert_label_datas_by_autolabels(
                     f"Failed insert for chapter content with id {chapter_content_id}, autolabel id {auto_label_id} due to insufficient permissions.",
                 )
             )
+        logger.info(
+            "Autolabel promotion ended %s success_count=0 error_count=%s elapsed_ms=%.2f",
+            log_context,
+            len(errors),
+            (perf_counter() - promotion_started) * 1000,
+        )
         return schemas.CreateLabelDataByAutoLabelStatus(success=success, errors=errors)
 
     autolabel_pairs = [(chapter_content_id, run_id) for chapter_content_id, run_id, _, _ in candidate_identifiers]
@@ -638,4 +656,11 @@ def insert_label_datas_by_autolabels(
         )
 
     db.commit()
+    logger.info(
+        "Autolabel promotion ended %s success_count=%s error_count=%s elapsed_ms=%.2f",
+        log_context,
+        len(success),
+        len(errors),
+        (perf_counter() - promotion_started) * 1000,
+    )
     return schemas.CreateLabelDataByAutoLabelStatus(success=success, errors=errors)

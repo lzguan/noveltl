@@ -112,7 +112,7 @@ function EditDashboardPage() {
 	}, []);
 
 	return (
-		<main>
+		<main className="h-full overflow-y-auto">
 			<section className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10">
 				<header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 					<div className="flex flex-col gap-2">

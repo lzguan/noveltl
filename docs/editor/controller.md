@@ -302,7 +302,10 @@ At a high level, `send()` forms one batch of non-conflicting work from these que
     - **Success**: run `postSend`, then release reservations via `releaseIdObjStateOnSuccess`.
     - **Failure**: classify the error and route the request to the status-query or retry queue, or treat it as fatal (publishing an `errorOccured` trigger).
 
-`send()` returns a delay before it should next run. (Backoff is currently a fixed delay; exponential backoff is a TODO.)
+The request loop wakes every 500 ms so newly queued editor work remains responsive. Status
+queries carry their own schedule: after each pending response they back off from 1 second to
+2 seconds, then 4 seconds, and finally poll every 5 seconds. A status query is only sent when
+its scheduled time is due.
 
 The error dispatch policy:
 
@@ -315,6 +318,9 @@ The error dispatch policy:
 | `FatalException` or anything else | **Fail.** Release reservations via `releaseIdObjStateOnFailure`, run `onFatalError`, and publish an `errorOccured` trigger. |
 
 Each request carries a `retries` counter that decrements on recoverable failures. A successful status query reporting `pending` does not decrement it. When the counter drops below zero, the request is removed from its queue, its reservations are released on failure, and `onFailure` fires exactly once.
+
+`waitFlush()` uses the same status-query schedule, so shutting down the controller cannot
+turn pending checks into a tight polling loop.
 
 #### Debouncing
 

@@ -851,16 +851,6 @@ components:
           type: string
       title: DoNothingParams
       type: object
-    EFail:
-      properties:
-        version:
-          const: efail
-          title: Version
-          type: string
-      required:
-      - version
-      title: EFail
-      type: object
     EagerEntry:
       properties:
         labelData:
@@ -2038,12 +2028,10 @@ paths:
             schema:
               discriminator:
                 mapping:
-                  efail: '#/components/schemas/EFail'
                   v1: '#/components/schemas/BulkChapterUploadV1'
                 propertyName: version
               oneOf:
               - $ref: '#/components/schemas/BulkChapterUploadV1'
-              - $ref: '#/components/schemas/EFail'
               title: Request
         required: true
       responses:

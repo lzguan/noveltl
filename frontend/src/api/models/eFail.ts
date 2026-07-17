@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CreateAutolabelsAutoLabelsPostParams = {
-requestKey?: string | null;
-};
+export const EFailValue = {
+  version: 'efail',
+} as const;
+export type EFail = typeof EFailValue;

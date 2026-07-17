@@ -1479,17 +1479,13 @@
                 "oneOf": [
                   {
                     "$ref": "#/components/schemas/BulkChapterUploadV1"
-                  },
-                  {
-                    "$ref": "#/components/schemas/EFail"
                   }
                 ],
                 "title": "Request",
                 "discriminator": {
                   "propertyName": "version",
                   "mapping": {
-                    "v1": "#/components/schemas/BulkChapterUploadV1",
-                    "efail": "#/components/schemas/EFail"
+                    "v1": "#/components/schemas/BulkChapterUploadV1"
                   }
                 }
               }
@@ -4294,20 +4290,6 @@
         "type": "object",
         "title": "DoNothingParams",
         "description": "Pydantic schema for a DoNothing model.\n\nAttributes:\n    model_name: Literal \"do_nothing\"."
-      },
-      "EFail": {
-        "properties": {
-          "version": {
-            "type": "string",
-            "const": "efail",
-            "title": "Version"
-          }
-        },
-        "type": "object",
-        "required": [
-          "version"
-        ],
-        "title": "EFail"
       },
       "EagerEntry": {
         "properties": {

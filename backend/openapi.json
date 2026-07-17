@@ -1467,6 +1467,109 @@
         }
       }
     },
+    "/chapters/upload": {
+      "post": {
+        "summary": "Create Chapters By Upload",
+        "description": "Create one or more chapters and their initial content versions atomically.\n\nRaises:\n    400: The upload request cannot be processed.\n    401: Authentication failed or the user cannot add chapters to the novel.\n    404: The authenticated user or requested novel was not found.\n    409: One or more chapter numbers already exist in the novel.\n    422: The upload document failed schema validation.",
+        "operationId": "create_chapters_by_upload_chapters_upload_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/BulkChapterUploadV1"
+                  },
+                  {
+                    "$ref": "#/components/schemas/EFail"
+                  }
+                ],
+                "title": "Request",
+                "discriminator": {
+                  "propertyName": "version",
+                  "mapping": {
+                    "v1": "#/components/schemas/BulkChapterUploadV1",
+                    "efail": "#/components/schemas/EFail"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Chapter"
+                  },
+                  "type": "array",
+                  "title": "Response Create Chapters By Upload Chapters Upload Post"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The upload request cannot be processed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed or the user cannot add chapters to this novel.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The authenticated user or requested novel was not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "One or more chapter numbers already exist in this novel.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/label-groups": {
       "get": {
         "summary": "Read Label Groups",
@@ -3444,6 +3547,36 @@
         ],
         "title": "Body_login_for_access_token_token_post"
       },
+      "BulkChapterUploadV1": {
+        "properties": {
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/ChapterUpload"
+            },
+            "type": "array",
+            "maxItems": 10000,
+            "minItems": 1,
+            "title": "Chapters"
+          },
+          "version": {
+            "type": "string",
+            "const": "v1",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "novelId",
+          "chapters",
+          "version"
+        ],
+        "title": "BulkChapterUploadV1"
+      },
       "CacheEntry": {
         "properties": {
           "status": {
@@ -3613,6 +3746,41 @@
         ],
         "title": "ChapterData",
         "description": "Pydantic schema for aggregating a ChapterContent and a Chapter together.\n\nAttributes:\n    metadata: The metadata of the chapter, such as title and whether it's primary.\n    content: The text content of the chapter."
+      },
+      "ChapterUpload": {
+        "properties": {
+          "chapterNum": {
+            "type": "integer",
+            "title": "Chapternum"
+          },
+          "chapterTitle": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chaptertitle"
+          },
+          "chapterContentText": {
+            "type": "string",
+            "title": "Chaptercontenttext"
+          },
+          "chapterIsPublic": {
+            "type": "boolean",
+            "title": "Chapterispublic",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterNum",
+          "chapterContentText"
+        ],
+        "title": "ChapterUpload"
       },
       "CluenerParams": {
         "properties": {
@@ -4126,6 +4294,20 @@
         "type": "object",
         "title": "DoNothingParams",
         "description": "Pydantic schema for a DoNothing model.\n\nAttributes:\n    model_name: Literal \"do_nothing\"."
+      },
+      "EFail": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "const": "efail",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "EFail"
       },
       "EagerEntry": {
         "properties": {

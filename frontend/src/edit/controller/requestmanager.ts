@@ -52,10 +52,11 @@ const logger = createLogger("RequestManager");
  * - any state -> success: when the request is sent and we receive a success response from the server
  * - any state -> failure: when the request is sent and we receive a fatal error response from the server
  * - any state -> unknown: when the request is sent and we receive a timeout error
+ * - unknown -> unknown: when a status query confirms that the request is still pending
  * - any state -> retry: when the request is sent and we receive a cache conflict error or a no cache entry error
  *
  * For each request event we keep track of a request key and a retry count. This applies to each of the states above. Each event is sent to the server along with its request key.
- * Each time a request is sent to the server, its retry count decreases. If the retry count hits <0, the request is considered failed and will transition to the failed state.
+ * Each recoverable request failure decreases its retry count. If the retry count hits <0, the request is considered failed and will transition to the failed state. A successful status query that reports the request is still pending does not consume a retry.
  * Whenever a request transitions to the retry state, its request key will be regenerated.
  *
  * Below is the general execution flow.
@@ -73,7 +74,7 @@ const logger = createLogger("RequestManager");
  * 4. Receive the responses/errors from all the events and do the following:
  *      - For each successful event (no matter which state), free the corresponding provisional ids corresponding to that request event.
  *      - For each failed event (no matter which state)
- *          - Decrement the corresponding retry count.
+ *          - Decrement the corresponding retry count, unless the status query successfully reported that the request is still pending.
  *          - If the error was a cache conflict, regenerate the request key.
  *          - Move the event to the corresponding state.
  *         - Continue holding the provisional ids for the event.
@@ -165,8 +166,11 @@ export const buildRequestManager = (
 				let delay: DurationInput = "1 second"; // todo: implement exponential backoff for retries instead of fixed delay
 
 				const limitExceeded: KeyedRequestEvent[] = [];
-				for (const request of [...statusQueries, ...retryRequests]) {
-					if (request.retries < 0) {
+				for (const requests of [statusQueries, retryRequests]) {
+					for (let index = requests.length - 1; index >= 0; index -= 1) {
+						const request = requests[index];
+						if (request.retries >= 0) continue;
+						requests.splice(index, 1);
 						const reserveList = request.reservationRequest.reserveList();
 						yield* forEachKind(
 							reserveList,
@@ -289,8 +293,6 @@ export const buildRequestManager = (
 				}
 
 				const fatalFailedRequests: { error: AnyError; request: KeyedRequestEvent }[] = [];
-				const otherFailedRequests: { error: AnyError; request: KeyedRequestEvent }[] = [];
-
 				const newStatusQueries: CachedKeyedRequestEvent[] = [];
 				const newRetryRequests: KeyedRequestEvent[] = [];
 
@@ -298,28 +300,21 @@ export const buildRequestManager = (
 					error: AnyError;
 					request: KeyedRequestEvent;
 				}) => {
-					if (
-						result.request.cached &&
-						(result.error._tag === "TimeoutException" ||
-							result.error._tag === "PendingException")
-					) {
+					if (result.request.cached && result.error._tag === "PendingException") {
+						newStatusQueries.push(result.request);
+					} else if (result.request.cached && result.error._tag === "TimeoutException") {
 						const newRequest = consumeRetry(result.request);
 						newStatusQueries.push(newRequest);
-						otherFailedRequests.push(result);
 					} else {
 						const newRequest = consumeRetry(result.request);
 						if (result.error._tag === "CacheConflictException") {
 							newRetryRequests.push(regenerateKey(newRequest));
-							otherFailedRequests.push(result);
 						} else if (result.error._tag === "ConnectionException") {
 							newRetryRequests.push(newRequest);
-							otherFailedRequests.push(result);
 						} else if (result.error._tag === "TimeoutException") {
 							newRetryRequests.push(regenerateKey(newRequest));
-							otherFailedRequests.push(result);
 						} else if (result.error._tag === "NoCacheEntryException") {
 							newRetryRequests.push(regenerateKey(newRequest));
-							otherFailedRequests.push(result);
 						} else {
 							fatalFailedRequests.push(result);
 						}

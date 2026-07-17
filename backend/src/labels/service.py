@@ -2,12 +2,16 @@
 Service functions for labels.
 """
 
+import logging
 import uuid
 from collections.abc import Sequence
+from itertools import batched
+from time import perf_counter
 
 from psycopg2 import Error as PgError
 from psycopg2 import errorcodes
-from sqlalchemy import func, insert, literal, select, update
+from sqlalchemy import func, insert, literal, select, tuple_, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
@@ -35,6 +39,11 @@ from .permissions import (
     label_group_mod_access_update,
 )
 from .utils import apply_operation
+
+logger = logging.getLogger(__name__)
+
+PROMOTION_CANDIDATE_BATCH_SIZE = 1000
+PROMOTION_LABEL_BATCH_SIZE = 1000
 
 
 def query_label_groups(db: Session, current_user: User, novel_id: uuid.UUID) -> Sequence[models.LabelGroup]:
@@ -398,25 +407,183 @@ def modify_label_data_by_stream(
         raise e
 
 
+def _insert_label_datas_by_autolabels(
+    db: Session,
+    label_group_id: uuid.UUID,
+    autolabel_pairs: list[tuple[uuid.UUID, uuid.UUID]],
+    success: list[tuple[uuid.UUID, uuid.UUID]],
+    errors: list[tuple[uuid.UUID, uuid.UUID, str]],
+) -> None:
+    """
+    Insert one bounded batch of autolabels into label datas and labels.
+
+    Args:
+        db: Database being used.
+        label_group_id: id of label group to attach new label_datas to.
+        autolabel_pairs: Pairs of (chapter_content_id, run_id) to process.
+        success: Mutable accumulator of successful (chapter_id, chapter_content_id) pairs.
+        errors: Mutable accumulator of (chapter_id, chapter_content_id, message) errors.
+
+    If the optimistic insert violates a database constraint, it is recursively
+    divided until the failing chapters can be reported individually. Each attempt
+    uses a savepoint so a failed chapter never leaves behind an empty label data row.
+    """
+    if not autolabel_pairs:
+        return
+
+    q = (
+        select(autolabel_models.AutoLabel, novel_models.ChapterContent)
+        .select_from(autolabel_models.AutoLabel)
+        .join(
+            novel_models.ChapterContent,
+            novel_models.ChapterContent.chapter_content_id == autolabel_models.AutoLabel.chapter_content_id,
+        )
+        .where(
+            tuple_(autolabel_models.AutoLabel.chapter_content_id, autolabel_models.AutoLabel.run_id).in_(
+                autolabel_pairs
+            )
+        )
+    )
+    candidates = db.execute(q).all()
+
+    if len(candidates) != len(autolabel_pairs):
+        raise RuntimeError("Autolabel promotion candidates changed during processing")
+
+    valid_candidates: list[tuple[autolabel_models.AutoLabel, novel_models.ChapterContent]] = []
+    for autolabel, chapter_content in candidates:
+        try:
+            if autolabel.auto_label_data and not all(
+                chapter_content.chapter_content_text[label["label_start"] : label["label_end"]] == label["label_word"]
+                for label in autolabel.auto_label_data
+            ):
+                raise LabelWordMismatchInvalidOperationException("Text mismatch between autolabel and chapter")
+            sorted_labels = sorted(autolabel.auto_label_data or [], key=lambda label: label["label_start"])
+            if any(
+                current["label_start"] < previous["label_end"]
+                for previous, current in zip(sorted_labels, sorted_labels[1:], strict=False)
+            ):
+                errors.append(
+                    (
+                        chapter_content.chapter_id,
+                        autolabel.chapter_content_id,
+                        f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to labels in autolabel data overlapping.",
+                    )
+                )
+                continue
+            valid_candidates.append((autolabel, chapter_content))
+        except Exception as e:
+            errors.append(
+                (
+                    chapter_content.chapter_id,
+                    autolabel.chapter_content_id,
+                    f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}",
+                )
+            )
+
+    def append_database_error(
+        autolabel: autolabel_models.AutoLabel,
+        chapter_content: novel_models.ChapterContent,
+        error: IntegrityError | DataError,
+    ) -> None:
+        if isinstance(error, IntegrityError) and isinstance(error.orig, PgError):
+            if error.orig.pgcode == errorcodes.EXCLUSION_VIOLATION:
+                reason = "labels in autolabel data overlapping"
+            else:
+                reason = f"unknown reason: {error.orig}"
+        else:
+            reason = f"unknown reason: {error}"
+        errors.append(
+            (
+                chapter_content.chapter_id,
+                autolabel.chapter_content_id,
+                f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to {reason}.",
+            )
+        )
+
+    def insert_candidate_batch(
+        batch: list[tuple[autolabel_models.AutoLabel, novel_models.ChapterContent]],
+    ) -> None:
+        try:
+            with db.begin_nested():
+                label_data_stmt = (
+                    pg_insert(models.LabelData)
+                    .values(
+                        [
+                            {
+                                "label_group_id": label_group_id,
+                                "chapter_content_id": autolabel.chapter_content_id,
+                            }
+                            for autolabel, _ in batch
+                        ]
+                    )
+                    .on_conflict_do_nothing(constraint="one_label_group_per_chapter")
+                    .returning(models.LabelData.label_data_id, models.LabelData.chapter_content_id)
+                )
+                inserted_label_datas = {
+                    chapter_content_id: label_data_id
+                    for label_data_id, chapter_content_id in db.execute(label_data_stmt).all()
+                }
+                label_values = (
+                    {
+                        "label_entity_group": label.get("label_entity_group", "MISC"),
+                        "label_score": label.get("label_score", 1.0),
+                        "label_word": label["label_word"],
+                        "label_start": label["label_start"],
+                        "label_end": label["label_end"],
+                        "label_dirty": label.get("label_dirty", True),
+                        "label_data_id": inserted_label_datas[autolabel.chapter_content_id],
+                    }
+                    for autolabel, _ in batch
+                    if autolabel.chapter_content_id in inserted_label_datas
+                    for label in autolabel.auto_label_data or []
+                )
+                for label_batch in batched(label_values, PROMOTION_LABEL_BATCH_SIZE):
+                    db.execute(insert(models.Label), list(label_batch))
+        except (IntegrityError, DataError) as error:
+            if len(batch) == 1:
+                append_database_error(*batch[0], error)
+                return
+            # TODO: Consider a higher split factor to reduce repeated work when isolating rare database failures.
+            midpoint = len(batch) // 2
+            insert_candidate_batch(batch[:midpoint])
+            insert_candidate_batch(batch[midpoint:])
+            return
+
+        for autolabel, chapter_content in batch:
+            if autolabel.chapter_content_id in inserted_label_datas:
+                success.append((chapter_content.chapter_id, autolabel.chapter_content_id))
+            else:
+                errors.append(
+                    (
+                        chapter_content.chapter_id,
+                        autolabel.chapter_content_id,
+                        f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to label data for label group already existing.",
+                    )
+                )
+
+    if valid_candidates:
+        insert_candidate_batch(valid_candidates)
+
+
 def insert_label_datas_by_autolabels(
     db: Session, current_user: User, label_group_id: uuid.UUID, request: schemas.CreateLabelDataByAutoLabel
 ) -> schemas.CreateLabelDataByAutoLabelStatus:
     """
-    Move autolabels from the autolabels table over to label_datas/labels. Will try to insert each new label_data and all labels associated with it. Best effort function - try to insert as many new label_datas as possible, and log the errors in the return value. Successful inserts are logged as (chapter_id, chapter_content_id), and errors are logged as (chapter_id, chapter_content_id, message).
+    Move matching autolabels into a label group in bounded batches.
 
-    Args:
-        db: Database being used.
-        current_user: User performing the operation.
-        label_group_id: id of label group to attach new label_datas to.
-        request: Parameters to specify which autolabels get processed.
-
-    Todo:
-        Right now, label inserts are being done chapter by chapter. This requires one message sent to database per chapter. We would ideally like to minimize the amount of communication being done between the database and the backend. To accomplish this, we will batch database communication into bundles of n chapters each and perform chapter-by-chapter message sending on a bundle only if that bundle fails on initial update.
-
-        Note this can probably be optimized further, but not sure if it's worth it.
+    Candidate selection loads only identifiers for the complete request. Full
+    chapter text and autolabel JSON are then queried and inserted in batches of
+    at most ``PROMOTION_CANDIDATE_BATCH_SIZE``.
     """
+    promotion_started = perf_counter()
+    log_context = f"run_id={request.run_id} label_group_id={label_group_id}"
     q = (
-        select(autolabel_models.AutoLabel, novel_models.ChapterContent)
+        select(
+            autolabel_models.AutoLabel.chapter_content_id,
+            autolabel_models.AutoLabel.run_id,
+            autolabel_models.AutoLabel.auto_label_id,
+            novel_models.Chapter.chapter_id,
+        )
         .select_from(autolabel_models.AutoLabel)
         .join(models.LabelGroup, models.LabelGroup.label_group_id == label_group_id)
         .join(
@@ -439,6 +606,7 @@ def insert_label_datas_by_autolabels(
             .correlate(novel_models.Chapter)
             .scalar_subquery()
         )
+        .order_by(novel_models.Chapter.chapter_num)
     )
     q = label_group_mod_access_select(q, current_user)
     if request.chapter_ids is not None and len(request.chapter_ids) > 0:
@@ -447,85 +615,56 @@ def insert_label_datas_by_autolabels(
         q = q.where(novel_models.Chapter.chapter_num >= request.start)
     if request.end is not None:
         q = q.where(novel_models.Chapter.chapter_num < request.end)
-    result = db.execute(q)
+
+    candidate_identifiers = db.execute(q).all()
 
     success: list[tuple[uuid.UUID, uuid.UUID]] = []
     errors: list[tuple[uuid.UUID, uuid.UUID, str]] = []
 
-    for a, r in result:
-        autolabel: autolabel_models.AutoLabel = a
-        chapter_content: novel_models.ChapterContent = r
-        try:
-            if autolabel.auto_label_data and not all(
-                chapter_content.chapter_content_text[label["label_start"] : label["label_end"]] == label["label_word"]
-                for label in autolabel.auto_label_data
-            ):
-                raise LabelWordMismatchInvalidOperationException("Text mismatch between autolabel and chapter")
-            with db.begin_nested():
-                vals = select(literal(label_group_id), literal(autolabel.chapter_content_id))
-                cols = [models.LabelData.label_group_id, models.LabelData.chapter_content_id]
-                vals = label_data_mod_access_insert(vals, current_user, label_group_id)
-                stmt = insert(models.LabelData).from_select(cols, vals).returning(models.LabelData.label_data_id)
-                label_data_id = db.execute(stmt).scalar_one()
-                if autolabel.auto_label_data:
-                    stmt = insert(models.Label).values(
-                        [{**label, "label_data_id": label_data_id} for label in autolabel.auto_label_data]
-                    )
-                    db.execute(stmt)
-                success.append((chapter_content.chapter_id, autolabel.chapter_content_id))
-        except IntegrityError as e:
-            if isinstance(e.orig, PgError):
-                pgcode = e.orig.pgcode
-                if pgcode == errorcodes.UNIQUE_VIOLATION:
-                    errors.append(
-                        (
-                            chapter_content.chapter_id,
-                            autolabel.chapter_content_id,
-                            f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to label data for label group already existing.",
-                        )
-                    )
-                elif pgcode == errorcodes.EXCLUSION_VIOLATION:
-                    errors.append(
-                        (
-                            chapter_content.chapter_id,
-                            autolabel.chapter_content_id,
-                            f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to labels in autolabel data overlapping.",
-                        )
-                    )
-                else:
-                    errors.append(
-                        (
-                            chapter_content.chapter_id,
-                            autolabel.chapter_content_id,
-                            f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e.orig)}",
-                        )
-                    )
-            else:
-                errors.append(
-                    (
-                        chapter_content.chapter_id,
-                        autolabel.chapter_content_id,
-                        f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}",
-                    )
-                )
-        except NoResultFound as e:
-            errors.append(
-                (
-                    chapter_content.chapter_id,
-                    autolabel.chapter_content_id,
-                    f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to insufficient permissions: {str(e)}",
-                )
-            )
-        except Exception as e:
-            errors.append(
-                (
-                    chapter_content.chapter_id,
-                    autolabel.chapter_content_id,
-                    f"Failed insert for chapter content with id {autolabel.chapter_content_id}, autolabel id {autolabel.auto_label_id} due to unknown reason: {str(e)}",
-                )
-            )
+    if not candidate_identifiers:
+        logger.info(
+            "Autolabel promotion ended %s success_count=0 error_count=0 elapsed_ms=%.2f",
+            log_context,
+            (perf_counter() - promotion_started) * 1000,
+        )
+        return schemas.CreateLabelDataByAutoLabelStatus(success=success, errors=errors)
+
+    permission_q = label_data_mod_access_insert(select(literal(1)), current_user, label_group_id)
     try:
-        db.commit()
-    except Exception:
-        raise
+        db.execute(permission_q).scalar_one()
+    except NoResultFound:
+        for chapter_content_id, _, auto_label_id, chapter_id in candidate_identifiers:
+            errors.append(
+                (
+                    chapter_id,
+                    chapter_content_id,
+                    f"Failed insert for chapter content with id {chapter_content_id}, autolabel id {auto_label_id} due to insufficient permissions.",
+                )
+            )
+        logger.info(
+            "Autolabel promotion ended %s success_count=0 error_count=%s elapsed_ms=%.2f",
+            log_context,
+            len(errors),
+            (perf_counter() - promotion_started) * 1000,
+        )
+        return schemas.CreateLabelDataByAutoLabelStatus(success=success, errors=errors)
+
+    autolabel_pairs = [(chapter_content_id, run_id) for chapter_content_id, run_id, _, _ in candidate_identifiers]
+    for autolabel_batch in batched(autolabel_pairs, PROMOTION_CANDIDATE_BATCH_SIZE):
+        _insert_label_datas_by_autolabels(
+            db,
+            label_group_id,
+            list(autolabel_batch),
+            success,
+            errors,
+        )
+
+    db.commit()
+    logger.info(
+        "Autolabel promotion ended %s success_count=%s error_count=%s elapsed_ms=%.2f",
+        log_context,
+        len(success),
+        len(errors),
+        (perf_counter() - promotion_started) * 1000,
+    )
     return schemas.CreateLabelDataByAutoLabelStatus(success=success, errors=errors)

@@ -24,10 +24,21 @@ import {
 	type AnyError,
 } from "./types/errors";
 import { UnknownException } from "effect/Cause";
-import type { DurationInput } from "effect/Duration";
 import { forEachKind, isAllReserveable } from "./types/helperTypes";
 
 const logger = createLogger("RequestManager");
+const REQUEST_LOOP_INTERVAL_MS = 500;
+const STATUS_POLL_DELAYS_MS: readonly number[] = [1_000, 2_000, 4_000];
+const MAX_STATUS_POLL_DELAY_MS = 5_000;
+
+type ScheduledStatusQuery = {
+	request: CachedKeyedRequestEvent;
+	pendingPolls: number;
+	nextPollAt: number;
+};
+
+const statusPollDelay = (pendingPolls: number): number =>
+	STATUS_POLL_DELAYS_MS[pendingPolls] ?? MAX_STATUS_POLL_DELAY_MS;
 
 /**
  * Below is a brief outline of the behaviour of the request manager.
@@ -52,10 +63,11 @@ const logger = createLogger("RequestManager");
  * - any state -> success: when the request is sent and we receive a success response from the server
  * - any state -> failure: when the request is sent and we receive a fatal error response from the server
  * - any state -> unknown: when the request is sent and we receive a timeout error
+ * - unknown -> unknown: when a status query confirms that the request is still pending
  * - any state -> retry: when the request is sent and we receive a cache conflict error or a no cache entry error
  *
  * For each request event we keep track of a request key and a retry count. This applies to each of the states above. Each event is sent to the server along with its request key.
- * Each time a request is sent to the server, its retry count decreases. If the retry count hits <0, the request is considered failed and will transition to the failed state.
+ * Each recoverable request failure decreases its retry count. If the retry count hits <0, the request is considered failed and will transition to the failed state. A successful status query that reports the request is still pending does not consume a retry.
  * Whenever a request transitions to the retry state, its request key will be regenerated.
  *
  * Below is the general execution flow.
@@ -73,7 +85,7 @@ const logger = createLogger("RequestManager");
  * 4. Receive the responses/errors from all the events and do the following:
  *      - For each successful event (no matter which state), free the corresponding provisional ids corresponding to that request event.
  *      - For each failed event (no matter which state)
- *          - Decrement the corresponding retry count.
+ *          - Decrement the corresponding retry count, unless the status query successfully reported that the request is still pending.
  *          - If the error was a cache conflict, regenerate the request key.
  *          - Move the event to the corresponding state.
  *         - Continue holding the provisional ids for the event.
@@ -89,7 +101,7 @@ export const buildRequestManager = (
 ): Effect.Effect<RequestManager> =>
 	Effect.gen(function* () {
 		const requestQueue: KeyedRequestEvent[] = [];
-		const statusQueries: CachedKeyedRequestEvent[] = []; // requests for which we have sent the main request and are now polling for their status
+		const statusQueries: ScheduledStatusQuery[] = []; // requests for which we have sent the main request and are now polling for their status
 		const retryRequests: KeyedRequestEvent[] = []; // requests that have failed due to cache conflicts/known recoverable errors and should be retried
 		const sendMut = yield* Effect.makeSemaphore(1);
 		const debounceLatch = yield* Effect.makeLatch(true);
@@ -156,33 +168,53 @@ export const buildRequestManager = (
 
 		const send = () =>
 			Effect.gen(function* () {
+				let madeProgress = false;
 				const qLen = requestQueue.length + statusQueries.length + retryRequests.length;
 				if (qLen > 0) {
 					console.log("send() starting, queue=%d", requestQueue.length);
 				}
 				const fromQueueRequests: KeyedRequestEvent[] = [];
 
-				let delay: DurationInput = "1 second"; // todo: implement exponential backoff for retries instead of fixed delay
-
 				const limitExceeded: KeyedRequestEvent[] = [];
-				for (const request of [...statusQueries, ...retryRequests]) {
-					if (request.retries < 0) {
-						const reserveList = request.reservationRequest.reserveList();
-						yield* forEachKind(
-							reserveList,
-							(reservation: AnyReservation<Kind>) =>
-								idRepo.releaseIdObjStateOnFailure(reservation),
-							kinds,
-						);
-						yield* request.onFailure();
-						logger.error(
-							`Request ${request.requestKey} has exceeded the maximum number of retries`,
-							{
-								request: request,
-							},
-						);
-						limitExceeded.push(request);
-					}
+				for (let index = statusQueries.length - 1; index >= 0; index -= 1) {
+					const request = statusQueries[index].request;
+					if (request.retries >= 0) continue;
+					statusQueries.splice(index, 1);
+					const reserveList = request.reservationRequest.reserveList();
+					yield* forEachKind(
+						reserveList,
+						(reservation: AnyReservation<Kind>) =>
+							idRepo.releaseIdObjStateOnFailure(reservation),
+						kinds,
+					);
+					yield* request.onFailure();
+					logger.error(
+						`Request ${request.requestKey} has exceeded the maximum number of retries`,
+						{
+							request: request,
+						},
+					);
+					limitExceeded.push(request);
+				}
+				for (let index = retryRequests.length - 1; index >= 0; index -= 1) {
+					const request = retryRequests[index];
+					if (request.retries >= 0) continue;
+					retryRequests.splice(index, 1);
+					const reserveList = request.reservationRequest.reserveList();
+					yield* forEachKind(
+						reserveList,
+						(reservation: AnyReservation<Kind>) =>
+							idRepo.releaseIdObjStateOnFailure(reservation),
+						kinds,
+					);
+					yield* request.onFailure();
+					logger.error(
+						`Request ${request.requestKey} has exceeded the maximum number of retries`,
+						{
+							request: request,
+						},
+					);
+					limitExceeded.push(request);
 				}
 				if (limitExceeded.length > 0) {
 					return yield* Effect.fail(
@@ -202,6 +234,7 @@ export const buildRequestManager = (
 						break;
 					}
 					const request = requestQueue.shift()!;
+					madeProgress = true;
 					if (action === "skip") {
 						continue;
 					}
@@ -216,6 +249,21 @@ export const buildRequestManager = (
 					yield* request.preSend();
 					fromQueueRequests.push(request);
 				}
+
+				const now = Date.now();
+				const dueStatusQueries: ScheduledStatusQuery[] = [];
+				for (let index = statusQueries.length - 1; index >= 0; index -= 1) {
+					if (statusQueries[index].nextPollAt > now) continue;
+					dueStatusQueries.push(statusQueries[index]);
+					statusQueries.splice(index, 1);
+					madeProgress = true;
+				}
+				const pendingPollsByRequestKey = new Map(
+					dueStatusQueries.map(({ request, pendingPolls }) => [
+						request.requestKey,
+						pendingPolls,
+					]),
+				);
 
 				const sem = yield* Effect.makeSemaphore(10);
 				const handleReturn = <T, E>(request: KeyedRequestEvent) =>
@@ -243,12 +291,12 @@ export const buildRequestManager = (
 					{ concurrency: "unbounded" },
 				);
 				const statusQueriesEffect = Effect.partition(
-					statusQueries,
-					(requestEvent) =>
+					dueStatusQueries,
+					({ request }) =>
 						sem
-							.withPermits(1)(requestStatusQuery(requestEvent))
+							.withPermits(1)(requestStatusQuery(request))
 							.pipe(Effect.timeout("10 seconds"))
-							.pipe(handleReturn(requestEvent)),
+							.pipe(handleReturn(request)),
 					{ concurrency: "unbounded" },
 				);
 
@@ -261,6 +309,9 @@ export const buildRequestManager = (
 							.pipe(handleReturn(requestEvent)),
 					{ concurrency: "unbounded" },
 				);
+				if (retryRequests.length > 0) {
+					madeProgress = true;
+				}
 
 				const [
 					[fromQueueResultFail, fromQueueResultPass],
@@ -289,37 +340,42 @@ export const buildRequestManager = (
 				}
 
 				const fatalFailedRequests: { error: AnyError; request: KeyedRequestEvent }[] = [];
-				const otherFailedRequests: { error: AnyError; request: KeyedRequestEvent }[] = [];
-
-				const newStatusQueries: CachedKeyedRequestEvent[] = [];
+				const newStatusQueries: ScheduledStatusQuery[] = [];
 				const newRetryRequests: KeyedRequestEvent[] = [];
+				const scheduleStatusQuery = (
+					request: CachedKeyedRequestEvent,
+					pendingPolls: number,
+				) => {
+					newStatusQueries.push({
+						request,
+						pendingPolls,
+						nextPollAt: Date.now() + statusPollDelay(pendingPolls),
+					});
+				};
 
 				const requeueRequest = (result: {
 					error: AnyError;
 					request: KeyedRequestEvent;
 				}) => {
-					if (
-						result.request.cached &&
-						(result.error._tag === "TimeoutException" ||
-							result.error._tag === "PendingException")
-					) {
+					if (result.request.cached && result.error._tag === "PendingException") {
+						const pendingPolls =
+							(pendingPollsByRequestKey.get(result.request.requestKey) ?? 0) + 1;
+						scheduleStatusQuery(result.request, pendingPolls);
+					} else if (result.request.cached && result.error._tag === "TimeoutException") {
 						const newRequest = consumeRetry(result.request);
-						newStatusQueries.push(newRequest);
-						otherFailedRequests.push(result);
+						const pendingPolls =
+							pendingPollsByRequestKey.get(result.request.requestKey) ?? 0;
+						scheduleStatusQuery(newRequest, pendingPolls);
 					} else {
 						const newRequest = consumeRetry(result.request);
 						if (result.error._tag === "CacheConflictException") {
 							newRetryRequests.push(regenerateKey(newRequest));
-							otherFailedRequests.push(result);
 						} else if (result.error._tag === "ConnectionException") {
 							newRetryRequests.push(newRequest);
-							otherFailedRequests.push(result);
 						} else if (result.error._tag === "TimeoutException") {
 							newRetryRequests.push(regenerateKey(newRequest));
-							otherFailedRequests.push(result);
 						} else if (result.error._tag === "NoCacheEntryException") {
 							newRetryRequests.push(regenerateKey(newRequest));
-							otherFailedRequests.push(result);
 						} else {
 							fatalFailedRequests.push(result);
 						}
@@ -383,11 +439,9 @@ export const buildRequestManager = (
 					);
 				}
 				retryRequests.length = 0; // empty the array
-				statusQueries.length = 0;
 				retryRequests.push(...newRetryRequests);
 				statusQueries.push(...newStatusQueries);
-
-				return delay;
+				return madeProgress;
 			});
 
 		const sendLoop = () =>
@@ -406,7 +460,7 @@ export const buildRequestManager = (
 						.withPermits(1)(send())
 						.pipe(
 							Effect.catchAll(() => Effect.sleep("1 second")),
-							Effect.andThen(() => Effect.sleep("0.5 seconds")),
+							Effect.andThen(() => Effect.sleep(REQUEST_LOOP_INTERVAL_MS)),
 						);
 				}),
 			);
@@ -432,9 +486,14 @@ export const buildRequestManager = (
 		const waitFlush = (): Effect.Effect<void, UnknownException> =>
 			Effect.gen(function* () {
 				shuttingDown = true;
-				yield* Effect.repeat(sendMut.withPermits(1)(send()), {
-					until: () => isQueueEmpty(),
-				}).pipe(Effect.mapError((err) => new UnknownException(String(err))));
+				while (!isQueueEmpty()) {
+					const madeProgress = yield* sendMut
+						.withPermits(1)(send())
+						.pipe(Effect.mapError((err) => new UnknownException(String(err))));
+					if (!isQueueEmpty() && !madeProgress) {
+						yield* Effect.sleep(REQUEST_LOOP_INTERVAL_MS);
+					}
+				}
 			});
 
 		return {

@@ -295,25 +295,32 @@ At a high level, `send()` forms one batch of non-conflicting work from these que
 
 `send()` processes one batch:
 
-1. If any status-query or retry request has already exhausted its retries, release its reservations on failure, run its `onFailure`, and fail the batch.
+1. Remove any exhausted status-query or retry request from its queue, release its reservations on failure, run its `onFailure`, and fail the batch.
 2. Walk the front of the request queue using the skip / wait / reserve decision described earlier, reserving and `preSend`-ing the requests that proceed.
 3. Fire the outgoing requests, the status-query polls (`GET /cached/{requestKey}`), and the retry re-sends concurrently, each capped at 10 seconds.
 4. For each result:
     - **Success**: run `postSend`, then release reservations via `releaseIdObjStateOnSuccess`.
     - **Failure**: classify the error and route the request to the status-query or retry queue, or treat it as fatal (publishing an `errorOccured` trigger).
 
-`send()` returns a delay before it should next run. (Backoff is currently a fixed delay; exponential backoff is a TODO.)
+The request loop wakes every 500 ms so newly queued editor work remains responsive. Status
+queries carry their own schedule: after each pending response they back off from 1 second to
+2 seconds, then 4 seconds, and finally poll every 5 seconds. A status query is only sent when
+its scheduled time is due.
 
 The error dispatch policy:
 
 | Error | Action |
 |---|---|
-| Cached request that timed out or is still pending | **Poll.** Re-enqueue as a status query. |
+| Cached request that timed out | **Poll.** Consume a retry and re-enqueue as a status query. |
+| Cached request that is still pending | **Poll.** Re-enqueue as a status query without consuming a retry. |
 | `ConnectionException` | **Retry** with the same `requestKey`. |
 | `TimeoutException`, `CacheConflictException`, or `NoCacheEntryException` | **Retry** with a freshly regenerated `requestKey`. |
 | `FatalException` or anything else | **Fail.** Release reservations via `releaseIdObjStateOnFailure`, run `onFatalError`, and publish an `errorOccured` trigger. |
 
-Each request carries a `retries` counter that decrements on every attempt. When it drops below zero the request is no longer retried — its reservations are released on failure and `onFailure` fires.
+Each request carries a `retries` counter that decrements on recoverable failures. A successful status query reporting `pending` does not decrement it. When the counter drops below zero, the request is removed from its queue, its reservations are released on failure, and `onFailure` fires exactly once.
+
+`waitFlush()` uses the same status-query schedule, so shutting down the controller cannot
+turn pending checks into a tight polling loop.
 
 #### Debouncing
 

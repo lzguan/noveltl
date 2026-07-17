@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Effect } from "effect";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Effect, Fiber } from "effect";
 import { buildRequestManager } from "../requestmanager";
 import { buildIdRepository } from "../idRepository";
 import { IdempotentCallable } from "../types/helperTypes";
@@ -30,6 +30,10 @@ const emptyReserveList: ReserveList = {
 describe("buildRequestManager", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
 	});
 
 	it("retries cached requests with a new key after a cache conflict", async () => {
@@ -176,5 +180,175 @@ describe("buildRequestManager", () => {
 		expect(Effect.runSync(idRepo.idObjState({ kind: "chapterContent", id: ccId }))).toBe(
 			"clean",
 		);
+	});
+
+	it("does not consume retries while a cached request is pending", async () => {
+		vi.useFakeTimers();
+		const getCachedResultMock = vi.mocked(getCachedResultCachedCachedIdGet);
+		const postSendResults: unknown[] = [];
+		const statusQueryTimes: number[] = [];
+		let statusQueries = 0;
+		getCachedResultMock.mockImplementation(async () => {
+			statusQueries += 1;
+			statusQueryTimes.push(Date.now());
+			return {
+				status: 200,
+				headers: new Headers(),
+				data:
+					statusQueries <= 6
+						? {
+								status: "pending",
+								status_code: null,
+								response: null,
+								error: null,
+							}
+						: {
+								status: "success",
+								status_code: 200,
+								response: { ok: true },
+								error: null,
+							},
+			};
+		});
+		const requestManager = Effect.runSync(
+			buildRequestManager(buildIdRepository(), () => Effect.succeed(void 0)),
+		);
+		const request: RequestEvent = {
+			cached: true,
+			variant: "textOp",
+			active: true,
+			retries: 3,
+			reservationRequest: {
+				reserveList: IdempotentCallable(() => emptyReserveList),
+				skip: () => false,
+				wait: () => Effect.succeed(false),
+			},
+			onFailure: () => Effect.succeed(void 0),
+			onFatalError: () => Effect.succeed(void 0),
+			preSend: () => Effect.succeed(void 0),
+			send: () => Effect.never,
+			postSend: (data) =>
+				Effect.sync(() => {
+					postSendResults.push(data);
+				}),
+		};
+
+		requestManager.enqueueRequest(request);
+		const startedAt = Date.now();
+		const flush = Effect.runPromise(requestManager.waitFlush());
+		await vi.advanceTimersByTimeAsync(37_001);
+		await flush;
+
+		expect(statusQueries).toBe(7);
+		expect(statusQueryTimes.map((time) => time - startedAt)).toEqual([
+			11_000, 13_000, 17_000, 22_000, 27_000, 32_000, 37_000,
+		]);
+		expect(postSendResults).toEqual([{ ok: true }]);
+		expect(requestManager.isQueueEmpty()).toBe(true);
+	});
+
+	it("continues sending queued work while a pending status query is backed off", async () => {
+		vi.useFakeTimers();
+		const getCachedResultMock = vi.mocked(getCachedResultCachedCachedIdGet);
+		getCachedResultMock.mockResolvedValue({
+			status: 200,
+			headers: new Headers(),
+			data: {
+				status: "pending",
+				status_code: null,
+				response: null,
+				error: null,
+			},
+		});
+		const requestManager = Effect.runSync(
+			buildRequestManager(buildIdRepository(), () => Effect.succeed(void 0)),
+		);
+		const pendingRequest: RequestEvent = {
+			cached: true,
+			variant: "textOp",
+			active: true,
+			retries: 3,
+			reservationRequest: {
+				reserveList: IdempotentCallable(() => emptyReserveList),
+				skip: () => false,
+				wait: () => Effect.succeed(false),
+			},
+			onFailure: () => Effect.succeed(void 0),
+			onFatalError: () => Effect.succeed(void 0),
+			preSend: () => Effect.succeed(void 0),
+			send: () => Effect.never,
+			postSend: () => Effect.succeed(void 0),
+		};
+		let queuedRequestSent = false;
+		const queuedRequest: RequestEvent = {
+			cached: false,
+			variant: "textOp",
+			active: true,
+			retries: 3,
+			reservationRequest: {
+				reserveList: IdempotentCallable(() => emptyReserveList),
+				skip: () => false,
+				wait: () => Effect.succeed(false),
+			},
+			onFailure: () => Effect.succeed(void 0),
+			onFatalError: () => Effect.succeed(void 0),
+			preSend: () => Effect.succeed(void 0),
+			send: () =>
+				Effect.sync(() => {
+					queuedRequestSent = true;
+				}),
+			postSend: () => Effect.succeed(void 0),
+		};
+
+		requestManager.enqueueRequest(pendingRequest);
+		const managerFiber = Effect.runFork(
+			Effect.gen(function* () {
+				yield* requestManager.start();
+				yield* Effect.never;
+			}),
+		);
+		await vi.advanceTimersByTimeAsync(11_001);
+		expect(getCachedResultMock).toHaveBeenCalledTimes(1);
+
+		requestManager.enqueueRequest(queuedRequest);
+		await vi.advanceTimersByTimeAsync(500);
+
+		expect(queuedRequestSent).toBe(true);
+		expect(getCachedResultMock).toHaveBeenCalledTimes(1);
+		await Effect.runPromise(Fiber.interrupt(managerFiber));
+	});
+
+	it("removes an exhausted request before running its failure handler", async () => {
+		let failureCalls = 0;
+		const requestManager = Effect.runSync(
+			buildRequestManager(buildIdRepository(), () => Effect.succeed(void 0)),
+		);
+		const request: RequestEvent = {
+			cached: true,
+			variant: "textOp",
+			active: true,
+			retries: 0,
+			reservationRequest: {
+				reserveList: IdempotentCallable(() => emptyReserveList),
+				skip: () => false,
+				wait: () => Effect.succeed(false),
+			},
+			onFailure: () =>
+				Effect.sync(() => {
+					failureCalls += 1;
+				}),
+			onFatalError: () => Effect.succeed(void 0),
+			preSend: () => Effect.succeed(void 0),
+			send: (requestKey) => Effect.fail(new CacheConflictException({ requestKey })),
+			postSend: () => Effect.succeed(void 0),
+		};
+
+		requestManager.enqueueRequest(request);
+		await expect(Effect.runPromise(requestManager.waitFlush())).rejects.toBeDefined();
+
+		expect(failureCalls).toBe(1);
+		expect(requestManager.isQueueEmpty()).toBe(true);
+		await Effect.runPromise(requestManager.waitFlush());
+		expect(failureCalls).toBe(1);
 	});
 });

@@ -47,11 +47,13 @@ sequenceDiagram
     Note over F,W: User reviews results (from DONE autolabels)
 
     F->>B: POST /label-groups/{id}/label-datas/auto-labels<br/>{run_id, chapter_ids, start, end}
-    B->>D: fetch DONE autolabels for run
-    loop per chapter
-        B->>D: INSERT label_data
-        B->>D: INSERT labels (from auto_label_data JSONB)
+    B->>D: fetch matching autolabel/content identifiers
+    loop per batch
+        B->>D: fetch text + autolabel JSON for up to 1,000 identifiers
+        B->>D: bulk INSERT label_data<br/>ON CONFLICT DO NOTHING RETURNING ids
+        B->>D: bulk INSERT labels (from auto_label_data JSONB)
     end
+    Note over B,D: Constraint failures roll back the batch<br/>and recursively isolate failing chapters
     B-->>F: {success: [(chapter_id, content_id), ...], errors: [...]}
 ```
 

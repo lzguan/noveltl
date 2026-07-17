@@ -330,7 +330,11 @@ def update_label_data_stream(
         },
     },
 )
-@ttl_cache(ttl=60, cache=redis_cache, serialize_ret=serialize_response_model(schemas.CreateLabelDataByAutoLabelStatus))
+@ttl_cache(
+    ttl=3600,
+    cache=redis_cache,
+    serialize_ret=serialize_response_model(schemas.CreateLabelDataByAutoLabelStatus),
+)
 def create_label_datas_by_auto_labels(
     label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
     request: schemas.CreateLabelDataByAutoLabel,

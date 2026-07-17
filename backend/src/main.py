@@ -36,7 +36,7 @@ if log_settings.LOG_OUTPUT in ["FILE", "BOTH"]:
     fh.setFormatter(formatter)
     logger.addHandler(fh)
 
-if log_settings.LOG_OUTPUT in ["CONSOLE", "BOTH"]:
+if log_settings.LOG_OUTPUT in ["STREAM", "BOTH"]:
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
     ch.setFormatter(formatter)

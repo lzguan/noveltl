@@ -213,4 +213,8 @@ A client can then poll the status of a request it previously sent by querying it
     - `status: "success"` — all is well, and the cached `response` can be used.
     - `404` (key does not exist) — either the TTL expired in Redis (this should not happen with proper frontend controls), or the request was lost on the way from frontend -> backend. In this case the frontend regenerates a request key and resends the request. (Resending with the *same* key would instead hit the duplicate-key `cacheConflict` 409 described above.)
 
+Long-running auto-label promotion requests use a one-hour cache TTL so their pending marker
+does not expire while the promotion is still running. Other cached endpoints retain their
+endpoint-specific TTLs.
+
 We will see in the subsequent chapters that this is almost exactly the workflow that the frontend adopts.

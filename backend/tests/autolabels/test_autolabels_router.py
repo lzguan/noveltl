@@ -4,12 +4,17 @@ from datetime import timedelta
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.auth.models import User
 from src.auth.utils import create_access_token
 from src.autolabels.constants import AutoLabelProgress
 from src.autolabels.models import AutoLabel
+from src.labels import models as label_models
+from src.labels import service as label_service
+from src.labels.constants import MAX_LABEL_WORD_LEN
+from src.novels.models import Chapter, ChapterContent
 from tests.fixtures.bundles import ScenarioBundle
 from tests.gate_logging import log_gate
 
@@ -253,9 +258,7 @@ class TestCreateAutoLabelsRouter:
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
         assert payload["run"]["novelId"] == str(target_novel.novel.novel_id)
-        assert [entry["chapterId"] for entry in payload["autolabels"]] == [
-            str(target_chapter.chapter.chapter_id)
-        ]
+        assert [entry["chapterId"] for entry in payload["autolabels"]] == [str(target_chapter.chapter.chapter_id)]
 
 
 class TestPromoteAutoLabelsRouter:
@@ -319,6 +322,99 @@ class TestPromoteAutoLabelsRouter:
         promoted_content_ids = {content_id for _, content_id in payload["success"]}
         assert str(foreign_content.chapter_content_id) not in promoted_content_ids
 
+    @pytest.mark.dependency(name="autolabels::router::promote_isolates_batch_failure", scope="session")
+    def test_promote_autolabels_isolates_failing_chapter_in_batch(
+        self,
+        client: TestClient,
+        test_db: Session,
+        xianxia_autolabels_scenario: ScenarioBundle,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(label_service, "PROMOTION_CANDIDATE_BATCH_SIZE", 2)
+        novel_bundle = xianxia_autolabels_scenario.novels[0]
+        label_bundle = novel_bundle.label_groups[0]
+        run_id = novel_bundle.autolabel_runs_by_name["cluener"].run_id
+        oversized_word = "x" * (MAX_LABEL_WORD_LEN + 1)
+        failing_chapter = Chapter(
+            chapter_num=999_999,
+            chapter_title="Promotion batch failure",
+            chapter_is_public=True,
+            novel_id=novel_bundle.novel.novel_id,
+        )
+        test_db.add(failing_chapter)
+        test_db.flush()
+        failing_content = ChapterContent(
+            chapter_content_text=oversized_word,
+            chapter_content_version=1,
+            chapter_id=failing_chapter.chapter_id,
+        )
+        test_db.add(failing_content)
+        test_db.flush()
+        test_db.add(
+            AutoLabel(
+                auto_label_data=[
+                    {
+                        "label_entity_group": "TEST",
+                        "label_score": 1.0,
+                        "label_word": oversized_word,
+                        "label_start": 0,
+                        "label_end": len(oversized_word),
+                        "label_dirty": False,
+                    }
+                ],
+                auto_label_status=AutoLabelProgress.DONE,
+                chapter_content_id=failing_content.chapter_content_id,
+                run_id=run_id,
+            )
+        )
+        succeeding_chapter = Chapter(
+            chapter_num=1_000_000,
+            chapter_title="Promotion second batch",
+            chapter_is_public=True,
+            novel_id=novel_bundle.novel.novel_id,
+        )
+        test_db.add(succeeding_chapter)
+        test_db.flush()
+        succeeding_content = ChapterContent(
+            chapter_content_text="valid",
+            chapter_content_version=1,
+            chapter_id=succeeding_chapter.chapter_id,
+        )
+        test_db.add(succeeding_content)
+        test_db.flush()
+        test_db.add(
+            AutoLabel(
+                auto_label_data=[],
+                auto_label_status=AutoLabelProgress.DONE,
+                chapter_content_id=succeeding_content.chapter_content_id,
+                run_id=run_id,
+            )
+        )
+        test_db.commit()
+
+        response = client.post(
+            f"/label-groups/{label_bundle.label_group.label_group_id}/label-datas/auto-labels",
+            json={"runId": str(run_id)},
+            headers=_auth_headers(novel_bundle.user),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        expected_success_ids = {
+            str(autolabel.chapter_content_id) for autolabel in novel_bundle.autolabels_by_name["cluener"]
+        }
+        expected_success_ids.add(str(succeeding_content.chapter_content_id))
+        assert {content_id for _, content_id in payload["success"]} == expected_success_ids
+        assert len(payload["errors"]) == 1
+        assert payload["errors"][0][1] == str(failing_content.chapter_content_id)
+        failing_label_data = test_db.execute(
+            select(label_models.LabelData).where(
+                label_models.LabelData.label_group_id == label_bundle.label_group.label_group_id,
+                label_models.LabelData.chapter_content_id == failing_content.chapter_content_id,
+            )
+        ).scalar_one_or_none()
+        assert failing_label_data is None
+
 
 @pytest.mark.dependency(
     name="gate::autolabels::router",
@@ -334,6 +430,7 @@ class TestPromoteAutoLabelsRouter:
         "autolabels::router::create_scoped_to_novel",
         "autolabels::router::promote",
         "autolabels::router::promote_scoped_to_novel",
+        "autolabels::router::promote_isolates_batch_failure",
     ],
     scope="session",
 )

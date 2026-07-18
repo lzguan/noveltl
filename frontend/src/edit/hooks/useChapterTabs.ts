@@ -1,5 +1,6 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import type { CProvId } from "../controller/types/idTypes";
+import { useSyncState } from "../utils/useSyncState";
 
 export type ChapterTab = {
 	chapterId: CProvId;
@@ -9,21 +10,25 @@ export type ChapterTab = {
 type Activation = "open" | "wait";
 
 export function useChapterTabs() {
-	const [tabs, setTabs] = useState<ChapterTab[]>([]);
-	const [activeChapterId, setActiveChapterId] = useState<CProvId | null>(null);
-	const tabsRef = useRef<ChapterTab[]>([]);
-	const activeChapterIdRef = useRef<CProvId | null>(null);
+	const [tabs, tabsRef, commitTabs] = useSyncState<ChapterTab[]>([]);
+	const [activeChapterId, activeChapterIdRef, commitActiveChapterId] =
+		useSyncState<CProvId | null>(null);
 	const closingRef = useRef(new Set<CProvId>());
 	const pendingReopenRef = useRef(new Set<CProvId>());
 
-	const updateTabs = useCallback((next: ChapterTab[]) => {
-		tabsRef.current = next;
-		setTabs(next);
-	}, []);
+	const updateTabs = useCallback(
+		(next: ChapterTab[]) => {
+			tabsRef.current = next;
+			commitTabs();
+		},
+		// oxlint-disable-next-line react-hooks/exhaustive-deps
+		[],
+	);
 
 	const updateActive = useCallback((chapterId: CProvId | null) => {
 		activeChapterIdRef.current = chapterId;
-		setActiveChapterId(chapterId);
+		commitActiveChapterId();
+		// oxlint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const activate = useCallback(
@@ -39,7 +44,7 @@ export function useChapterTabs() {
 			}
 			return existing?.status === "loading" ? "wait" : "open";
 		},
-		[updateActive, updateTabs],
+		[updateActive, updateTabs, tabsRef],
 	);
 
 	const markOpened = useCallback(
@@ -51,7 +56,7 @@ export function useChapterTabs() {
 				),
 			);
 		},
-		[updateTabs],
+		[updateTabs, tabsRef],
 	);
 
 	const close = useCallback(
@@ -75,16 +80,19 @@ export function useChapterTabs() {
 			closingRef.current.add(chapterId);
 			return { nextChapterId, requestClose: true };
 		},
-		[updateActive, updateTabs],
+		[updateActive, updateTabs, tabsRef, activeChapterIdRef],
 	);
 
-	const markClosed = useCallback((chapterId: CProvId): boolean => {
-		closingRef.current.delete(chapterId);
-		const shouldReopen =
-			pendingReopenRef.current.delete(chapterId) &&
-			tabsRef.current.some((tab) => tab.chapterId === chapterId);
-		return shouldReopen;
-	}, []);
+	const markClosed = useCallback(
+		(chapterId: CProvId): boolean => {
+			closingRef.current.delete(chapterId);
+			const shouldReopen =
+				pendingReopenRef.current.delete(chapterId) &&
+				tabsRef.current.some((tab) => tab.chapterId === chapterId);
+			return shouldReopen;
+		},
+		[tabsRef],
+	);
 
 	const markOpenFailed = useCallback(
 		(chapterId: CProvId): CProvId | null => {
@@ -99,7 +107,7 @@ export function useChapterTabs() {
 			if (wasActive) updateActive(nextChapterId);
 			return nextChapterId;
 		},
-		[updateActive, updateTabs],
+		[updateActive, updateTabs, tabsRef, activeChapterIdRef],
 	);
 
 	return {

@@ -9,6 +9,7 @@ import type { LabelGroupView } from "../../hooks/useTrackedLabelGroups";
 function LabelGroupRow({
 	id,
 	view,
+	activeId,
 	chapterOpen,
 	onSetActive,
 	onToggleVisibility,
@@ -16,6 +17,7 @@ function LabelGroupRow({
 }: {
 	id: LGProvId;
 	view: LabelGroupView;
+	activeId: LGProvId | null;
 	chapterOpen: boolean;
 	onSetActive: (id: LGProvId | null) => void;
 	onToggleVisibility: (id: LGProvId) => void;
@@ -40,7 +42,7 @@ function LabelGroupRow({
 		<div
 			className={cn(
 				"flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm",
-				view.active && "bg-accent",
+				activeId === id && "bg-accent",
 			)}
 			onClick={() => onSetActive(id)}
 		>
@@ -83,6 +85,7 @@ function LabelGroupRow({
 
 export function LabelGroupPanel({
 	labelGroups,
+	activeId,
 	chapterOpen,
 	onToggleVisibility,
 	onSetActive,
@@ -90,6 +93,7 @@ export function LabelGroupPanel({
 	onReloadLabelData,
 }: {
 	labelGroups: [LGProvId, LabelGroupView][];
+	activeId: LGProvId | null;
 	chapterOpen: boolean;
 	onToggleVisibility: (id: LGProvId) => void;
 	onSetActive: (id: LGProvId | null) => void;
@@ -147,6 +151,7 @@ export function LabelGroupPanel({
 					<LabelGroupRow
 						key={id}
 						id={id}
+						activeId={activeId}
 						view={view}
 						chapterOpen={chapterOpen}
 						onSetActive={onSetActive}

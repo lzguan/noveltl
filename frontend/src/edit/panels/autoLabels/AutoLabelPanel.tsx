@@ -53,7 +53,8 @@ export function AutoLabelPanel({
 	chapters,
 	currentChapterId,
 	labelGroups,
-	onSetActiveLabelGroup,
+	activeId,
+	setActive,
 	previewEnabled,
 	previewLoading,
 	onSetPreviewEnabled,
@@ -63,7 +64,8 @@ export function AutoLabelPanel({
 	chapters: ProvChapter[];
 	currentChapterId: CProvId | null;
 	labelGroups: [LGProvId, LabelGroupView][];
-	onSetActiveLabelGroup: (id: LGProvId | null) => void;
+	activeId: LGProvId | null;
+	setActive: (id: LGProvId | null) => void;
 	previewEnabled: boolean;
 	previewLoading: boolean;
 	onSetPreviewEnabled: AutoLabelManager["setPreviewEnabled"];
@@ -111,7 +113,8 @@ export function AutoLabelPanel({
 					labelGroups={labelGroups}
 					onSelectRun={autoLabelManager.selectRun}
 					onPromote={autoLabelManager.promote}
-					onSetActiveLabelGroup={onSetActiveLabelGroup}
+					setActive={setActive}
+					activeId={activeId}
 				/>
 			</AutoLabelSection>
 		</div>

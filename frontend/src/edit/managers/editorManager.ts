@@ -12,7 +12,7 @@ import type { CProvId } from "../controller/types/idTypes";
 import type { LabelOp } from "../controller/types/dataTypes";
 import { ChapterLoadingException } from "../controller/types/errors";
 import type { EditorData, LoadingPayload } from "../hooks/useEditorState";
-import { gatherLabelData, makeStyledLabel } from "./readers";
+import { gatherLabelData } from "./readers";
 import type { LabelGroupView } from "../hooks/useTrackedLabelGroups";
 
 export type LabelStyle = ProductStyle<
@@ -32,6 +32,7 @@ export function createEditorManager({
 	controllerUserEvent,
 	dataRef,
 	modeRef,
+	activeGroupIdRef,
 	setLoading,
 	labelGroupsRef,
 	activeChapterIdRef,
@@ -39,6 +40,7 @@ export function createEditorManager({
 	controllerUserEvent: (event: NovelUserEvent) => void;
 	dataRef: { current: EditorData };
 	modeRef: { current: EditorMode };
+	activeGroupIdRef: { current: LGProvId | null };
 	setLoading: (val: LoadingPayload) => void;
 	labelGroupsRef: { current: Map<LGProvId, LabelGroupView> };
 	activeChapterIdRef: { current: CProvId | null };
@@ -65,6 +67,7 @@ export function createEditorManager({
 							const result = yield* gatherLabelData(
 								chapterGetter,
 								labelGroupsRef.current,
+								activeGroupIdRef.current,
 							);
 							return {
 								text: yield* chapterGetter.data.chapterGetters.text(),
@@ -112,35 +115,31 @@ export function createEditorManager({
 					if (!groupStatus) break;
 					const sm = current.segmentManager;
 					if (event.op.op === "add") {
-						sm.addLabel(
-							event.op.labelId,
-							makeStyledLabel(
+						sm.addLabel(event.op.labelId, {
+							interval: { start: event.op.startPos, end: event.op.endPos },
+							style: [
+								{ color: groupStatus.color },
 								{
-									labelId: event.op.labelId,
-									labelStart: event.op.startPos,
-									labelEnd: event.op.endPos,
+									cursorStatus: "none" as const,
+									active: event.op.labelGroupId === activeGroupIdRef.current,
+									visible: groupStatus.visible,
 								},
-								groupStatus.color,
-								groupStatus.active,
-								groupStatus.visible,
-							),
-						);
+							],
+						});
 					} else if (event.op.op === "delete") {
 						sm.removeLabel(event.op.labelId);
 					} else if (event.op.op === "update") {
-						sm.updateLabel(
-							event.op.labelId,
-							makeStyledLabel(
+						sm.updateLabel(event.op.labelId, {
+							interval: { start: event.op.startPos, end: event.op.endPos },
+							style: [
+								{ color: groupStatus.color },
 								{
-									labelId: event.op.labelId,
-									labelStart: event.op.startPos,
-									labelEnd: event.op.endPos,
+									cursorStatus: "none" as const,
+									active: event.op.labelGroupId === activeGroupIdRef.current,
+									visible: groupStatus.visible,
 								},
-								groupStatus.color,
-								groupStatus.active,
-								groupStatus.visible,
-							),
-						);
+							],
+						});
 					}
 					break;
 				}

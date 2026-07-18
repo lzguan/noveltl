@@ -74,6 +74,7 @@ export function EditNovelPage() {
 				const data = editorState.dataRef.current;
 				return data.empty || data.loading ? null : data.segmentManager;
 			},
+			getActiveGroupId: () => trackedLabelGroups.activeLabelGroupIdRef.current,
 			getGroups: () => trackedLabelGroups.labelGroupsRef.current,
 		});
 		const sink: LabelSink = {
@@ -99,7 +100,7 @@ export function EditNovelPage() {
 			},
 		};
 		return { source, sink };
-	}, [managers, editorState.dataRef, trackedLabelGroups.labelGroupsRef]);
+	}, [managers, editorState.dataRef, trackedLabelGroups.labelGroupsRef, trackedLabelGroups.activeLabelGroupIdRef]);
 
 	// Fetch data
 	useEffect(() => {
@@ -170,6 +171,7 @@ export function EditNovelPage() {
 			setLoading: editorState.setLoading,
 			labelGroupsRef: trackedLabelGroups.labelGroupsRef,
 			activeChapterIdRef: chapterTabs.activeChapterIdRef,
+			activeGroupIdRef: trackedLabelGroups.activeLabelGroupIdRef,
 		});
 		const autoLabelMgr = createAutoLabelManager({
 			controllerUserEvent,
@@ -221,7 +223,6 @@ export function EditNovelPage() {
 						}),
 						color: generateRandomColor(),
 						visible: true,
-						active: false,
 						status: "idle",
 					});
 				}
@@ -282,6 +283,7 @@ export function EditNovelPage() {
 							onSetActive={managers.labelGroupMgr.setActive}
 							onAddLabelGroup={managers.labelGroupMgr.addLabelGroup}
 							onReloadLabelData={managers.labelGroupMgr.reloadLabelData}
+							activeId={trackedLabelGroups.activeLabelGroupId}
 						/>
 					</div>
 					<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -314,12 +316,13 @@ export function EditNovelPage() {
 											chapters={chapterList.chapterList}
 											currentChapterId={currentChapterId}
 											labelGroups={trackedLabelGroups.labelGroups}
-											onSetActiveLabelGroup={managers.labelGroupMgr.setActive}
+											setActive={managers.labelGroupMgr.setActive}
 											previewEnabled={autoLabelPreview.enabled}
 											previewLoading={autoLabelPreview.loading}
 											onSetPreviewEnabled={
 												managers.autoLabelMgr.setPreviewEnabled
 											}
+											activeId={trackedLabelGroups.activeLabelGroupId}
 										/>
 									),
 								},

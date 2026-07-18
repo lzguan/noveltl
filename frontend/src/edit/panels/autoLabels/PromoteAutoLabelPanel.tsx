@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,35 +31,28 @@ function makeChapterFilter(start: string, end: string): ChapterFilter {
 	};
 }
 
-function activeLabelGroupId(labelGroups: [LGProvId, LabelGroupView][]): LGProvId | null {
-	return labelGroups.find(([, view]) => view.active)?.[0] ?? null;
-}
 
 export function PromoteAutoLabelPanel({
 	autoLabels,
 	labelGroups,
+	activeId,
+	setActive,
 	onSelectRun,
 	onPromote,
-	onSetActiveLabelGroup,
 }: {
 	autoLabels: ReturnType<typeof useAutoLabelState>;
 	labelGroups: [LGProvId, LabelGroupView][];
+	activeId: LGProvId | null;
+	setActive: (id: LGProvId | null) => void;
 	onSelectRun: AutoLabelManager["selectRun"];
 	onPromote: AutoLabelManager["promote"];
-	onSetActiveLabelGroup: (id: LGProvId | null) => void;
 }) {
-	const [targetLabelGroupId, setTargetLabelGroupId] = useState<LGProvId | null>(null);
 	const [start, setStart] = useState("");
 	const [end, setEnd] = useState("");
 
-	useEffect(() => {
-		if (targetLabelGroupId !== null) return;
-		setTargetLabelGroupId(activeLabelGroupId(labelGroups));
-	}, [labelGroups, targetLabelGroupId]);
-
 	const selectedRunId = autoLabels.selectedRunId;
 	const canPromote =
-		selectedRunId !== null && targetLabelGroupId !== null && !autoLabels.promoting;
+		selectedRunId !== null && activeId !== null && !autoLabels.promoting;
 
 	return (
 		<section className="flex flex-col gap-2 p-2">
@@ -87,12 +80,11 @@ export function PromoteAutoLabelPanel({
 				</Select>
 				<span className="text-xs text-muted-foreground">to</span>
 				<Select
-					value={targetLabelGroupId ?? ""}
+					value={activeId ?? ""}
 					onValueChange={(labelGroupId) => {
 						const match = labelGroups.find(([id]) => id === labelGroupId);
 						if (!match) return;
-						setTargetLabelGroupId(match[0]);
-						onSetActiveLabelGroup(match[0]);
+						setActive(match[0]);
 					}}
 					disabled={autoLabels.promoting}
 				>
@@ -137,8 +129,8 @@ export function PromoteAutoLabelPanel({
 				size="sm"
 				disabled={!canPromote}
 				onClick={() => {
-					if (selectedRunId === null || targetLabelGroupId === null) return;
-					onPromote(selectedRunId, targetLabelGroupId, makeChapterFilter(start, end));
+					if (selectedRunId === null || activeId === null) return;
+					onPromote(selectedRunId, activeId, makeChapterFilter(start, end));
 				}}
 			>
 				{autoLabels.promoting ? "Promoting..." : "Promote"}

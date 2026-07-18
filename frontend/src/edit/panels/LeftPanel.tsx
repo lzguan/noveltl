@@ -12,6 +12,7 @@ export function LeftPanel({
 	labelGroups,
 	chapterOpen,
 	onToggleVisibility,
+	activeId,
 	onSetActive,
 	onAddLabelGroup,
 	onReloadLabelData,
@@ -23,6 +24,7 @@ export function LeftPanel({
 	labelGroups: [LGProvId, LabelGroupView][];
 	chapterOpen: boolean;
 	onToggleVisibility: (id: LGProvId) => void;
+	activeId: LGProvId | null;
 	onSetActive: (id: LGProvId | null) => void;
 	onAddLabelGroup: (name: string) => void;
 	onReloadLabelData: (id: LGProvId) => void;
@@ -45,6 +47,7 @@ export function LeftPanel({
 				<LabelGroupPanel
 					labelGroups={labelGroups}
 					chapterOpen={chapterOpen}
+					activeId={activeId}
 					onToggleVisibility={onToggleVisibility}
 					onSetActive={onSetActive}
 					onAddLabelGroup={onAddLabelGroup}

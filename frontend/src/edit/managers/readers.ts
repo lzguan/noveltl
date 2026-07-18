@@ -1,5 +1,4 @@
 import { Effect } from "effect";
-import type { Color } from "@/edit/lib/text-model/builtin/colors";
 import type { ManagedLabel } from "@/edit/lib/text-model/core/segmentManager";
 import type { StyledLabel } from "@/edit/lib/text-model/core/types";
 import type { LGProvId, LProvId, ProvLabel } from "../controller/types/idTypes";
@@ -9,29 +8,18 @@ import type { ChapterGetterSlot } from "../controller/types/helperTypes";
 
 type MyManagedLabel = ManagedLabel<LabelStyle, StyledLabel<LabelStyle>, LProvId>;
 
-export function makeStyledLabel(
-	label: { labelId: LProvId; labelStart: number; labelEnd: number },
-	color: Color,
-	active: boolean,
-	visible: boolean,
-): MyManagedLabel {
-	return {
-		interval: { start: label.labelStart, end: label.labelEnd },
-		style: [
-			{ color },
-			{
-				cursorStatus: "none" as const,
-				active,
-				visible,
-			},
-		],
-		id: label.labelId,
-	};
-}
-
+/**
+ * Returns a map of label group IDs to their corresponding labels, along with a list of label group IDs that could not be loaded.
+ *
+ * @param chapterGetter
+ * @param trackedLabelGroups
+ * @param activeLabelGroupId
+ * @returns
+ */
 export function gatherLabelData(
 	chapterGetter: ChapterGetterSlot,
 	trackedLabelGroups: Map<LGProvId, LabelGroupView>,
+	activeLabelGroupId: LGProvId | null,
 ): Effect.Effect<{
 	labelData: Map<LGProvId, readonly MyManagedLabel[]>;
 	couldNotLoad: LGProvId[];
@@ -53,14 +41,18 @@ export function gatherLabelData(
 			}
 			labelData.set(
 				labelGroupId,
-				slotResult.data.labels.map((label: ProvLabel) =>
-					makeStyledLabel(
-						label,
-						groupStatus.color,
-						groupStatus.active,
-						groupStatus.visible,
-					),
-				),
+				slotResult.data.labels.map((label: ProvLabel) => ({
+					interval: { start: label.labelStart, end: label.labelEnd },
+					style: [
+						{ color: groupStatus.color },
+						{
+							cursorStatus: "none" as const,
+							active: labelGroupId === activeLabelGroupId,
+							visible: groupStatus.visible,
+						},
+					],
+					id: label.labelId,
+				})),
 			);
 		}
 

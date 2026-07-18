@@ -8,57 +8,10 @@ import type {
 } from "../controller/types/controllerTypes";
 import { ActionHappened, CProvId, LGProvId, LProvId } from "../controller/types/idTypes";
 import { Prov } from "../controller/types/helperTypes";
-import type { useTrackedLabelGroups, LabelGroupView } from "../hooks/useTrackedLabelGroups";
+import type { useTrackedLabelGroups } from "../hooks/useTrackedLabelGroups";
 import type { EditorData } from "../hooks/useEditorState";
-import { makeStyledLabel } from "./readers";
 
 type LabelGroupTransition = "startLoading" | "finishLoading" | "trackOnly";
-
-function labelGroupView(
-	labelGroupName: string,
-	color: Color,
-	visible: boolean,
-	active: boolean,
-	status: LabelGroupView["status"],
-): LabelGroupView {
-	return {
-		labelGroup: Prov({ labelGroupName }),
-		color,
-		visible,
-		active,
-		status,
-	};
-}
-
-function withStatus(v: LabelGroupView, status: LabelGroupView["status"]): LabelGroupView {
-	return {
-		labelGroup: v.labelGroup,
-		color: v.color,
-		visible: v.visible,
-		active: v.active,
-		status,
-	};
-}
-
-function withActive(v: LabelGroupView, active: boolean): LabelGroupView {
-	return {
-		labelGroup: v.labelGroup,
-		color: v.color,
-		visible: v.visible,
-		active,
-		status: v.status,
-	};
-}
-
-function withVisible(v: LabelGroupView, visible: boolean): LabelGroupView {
-	return {
-		labelGroup: v.labelGroup,
-		color: v.color,
-		visible,
-		active: v.active,
-		status: v.status,
-	};
-}
 
 export function createLabelGroupManager({
 	controllerUserEvent,
@@ -71,8 +24,6 @@ export function createLabelGroupManager({
 	trackedLabelGroups: ReturnType<typeof useTrackedLabelGroups>;
 	dataRef: { current: EditorData };
 }) {
-	let activeLabelGroup: LGProvId | null = null;
-
 	function readChapterId(): CProvId | null {
 		const current = dataRef.current;
 		return current.empty || current.loading ? null : current.chapterId;
@@ -114,13 +65,14 @@ export function createLabelGroupManager({
 				const nameSlot = yield* controllerGetters
 					.labelGroupSlot(labelGroupId)
 					.pipe(Effect.catchAll(() => Effect.succeed(null)));
-				groupStatus = labelGroupView(
-					nameSlot?.meta?.labelGroup?.labelGroupName ?? "???",
-					generateRandomColor(),
-					true,
-					false,
-					"idle",
-				);
+				groupStatus = {
+					labelGroup: Prov({
+						labelGroupName: nameSlot?.meta?.labelGroup?.labelGroupName ?? "???",
+					}),
+					color: generateRandomColor(),
+					visible: true,
+					status: "idle",
+				};
 				trackedLabelGroups.setLabelGroup(labelGroupId, groupStatus);
 			}
 
@@ -150,7 +102,10 @@ export function createLabelGroupManager({
 						}
 					}
 				}
-				trackedLabelGroups.setLabelGroup(labelGroupId, withStatus(groupStatus, "loading"));
+				trackedLabelGroups.setLabelGroup(labelGroupId, {
+					...groupStatus,
+					status: "loading",
+				});
 			} else if (transition === "finishLoading") {
 				const sm = current.segmentManager;
 				const labelDataSlot = yield* chapterGetter.data.chapterGetters
@@ -158,10 +113,10 @@ export function createLabelGroupManager({
 					.pipe(Effect.catchAll(() => Effect.succeed(null)));
 
 				if (!labelDataSlot || labelDataSlot.status !== "ready") {
-					trackedLabelGroups.setLabelGroup(
-						labelGroupId,
-						withStatus(groupStatus, "error"),
-					);
+					trackedLabelGroups.setLabelGroup(labelGroupId, {
+						...groupStatus,
+						status: "error",
+					});
 					return;
 				}
 
@@ -172,12 +127,21 @@ export function createLabelGroupManager({
 				let batchFailed = false;
 				sm.batch(() => {
 					for (const label of labels) {
-						const styled = makeStyledLabel(
-							label,
-							currentGroup.color,
-							currentGroup.active,
-							currentGroup.visible,
-						);
+						const styled = {
+							interval: { start: label.labelStart, end: label.labelEnd },
+							style: [
+								{ color: currentGroup.color },
+								{
+									cursorStatus: "none" as const,
+									active:
+										labelGroupId ===
+										trackedLabelGroups.activeLabelGroupIdRef.current,
+									visible: currentGroup.visible,
+								},
+							],
+							id: label.labelId,
+						} as const;
+
 						try {
 							sm.addLabel(label.labelId, styled);
 							addedIds.push(label.labelId);
@@ -198,14 +162,17 @@ export function createLabelGroupManager({
 				});
 
 				if (batchFailed) {
-					trackedLabelGroups.setLabelGroup(
-						labelGroupId,
-						withStatus(groupStatus, "error"),
-					);
+					trackedLabelGroups.setLabelGroup(labelGroupId, {
+						...groupStatus,
+						status: "error",
+					});
 					return;
 				}
 
-				trackedLabelGroups.setLabelGroup(labelGroupId, withStatus(groupStatus, "ready"));
+				trackedLabelGroups.setLabelGroup(labelGroupId, {
+					...groupStatus,
+					status: "ready",
+				});
 			}
 		});
 
@@ -225,28 +192,37 @@ export function createLabelGroupManager({
 					.labelDataSlot(labelGroupId)
 					.pipe(Effect.catchAll(() => Effect.succeed(null)));
 				if (!labelDataSlot) {
-					trackedLabelGroups.setLabelGroup(labelGroupId, withStatus(groupView, "idle"));
+					trackedLabelGroups.setLabelGroup(labelGroupId, {
+						...groupView,
+						status: "idle",
+					});
 				} else {
-					trackedLabelGroups.setLabelGroup(
-						labelGroupId,
-						withStatus(groupView, labelDataSlot.status),
-					);
+					trackedLabelGroups.setLabelGroup(labelGroupId, {
+						...groupView,
+						status: labelDataSlot.status,
+					});
 				}
 			}
 			return ActionHappened(true);
 		});
 
+	/**
+	 * Updates a single label group's tracked status.
+	 *
+	 * @param labelGroupId
+	 * @param update
+	 * @returns
+	 */
 	const updateLabelGroupView = (
 		labelGroupId: LGProvId,
-		update: Partial<{ visible: boolean; active: boolean; color: Color }>,
+		update: Partial<{ visible: boolean; color: Color }>,
 	): Effect.Effect<void> =>
 		Effect.gen(function* () {
 			const entries = trackedLabelGroups.labelGroupsRef.current;
 			const group = entries.get(labelGroupId);
 			if (!group) return;
 			let updated = group;
-			if (update.active !== undefined) updated = withActive(updated, update.active);
-			if (update.visible !== undefined) updated = withVisible(updated, update.visible);
+			if (update.visible !== undefined) updated = { ...updated, visible: update.visible };
 			if (update.color !== undefined) updated = { ...updated, color: update.color };
 			trackedLabelGroups.setLabelGroup(labelGroupId, updated);
 
@@ -268,12 +244,20 @@ export function createLabelGroupManager({
 			const sm = current.segmentManager;
 			sm.batch(() => {
 				for (const label of labelDataSlot.data.labels) {
-					const styled = makeStyledLabel(
-						label,
-						updated.color,
-						updated.active,
-						updated.visible,
-					);
+					const styled = {
+						interval: { start: label.labelStart, end: label.labelEnd },
+						style: [
+							{ color: updated.color },
+							{
+								cursorStatus: "none" as const,
+								active:
+									labelGroupId ===
+									trackedLabelGroups.activeLabelGroupIdRef.current,
+								visible: updated.visible,
+							},
+						],
+						id: label.labelId,
+					} as const;
 					try {
 						sm.updateLabel(label.labelId, styled);
 					} catch {
@@ -293,23 +277,21 @@ export function createLabelGroupManager({
 					.labelGroupSlot(labelGroupId)
 					.pipe(Effect.catchAll(() => Effect.succeed(null))),
 			);
-			trackedLabelGroups.setLabelGroup(
-				labelGroupId,
-				labelGroupView(
-					nameSlot?.meta?.labelGroup?.labelGroupName ?? "???",
-					generateRandomColor(),
-					true,
-					false,
-					cid ? "loading" : "idle",
-				),
-			);
+			trackedLabelGroups.setLabelGroup(labelGroupId, {
+				labelGroup: Prov({
+					labelGroupName: nameSlot?.meta?.labelGroup?.labelGroupName ?? "???",
+				}),
+				color: generateRandomColor(),
+				visible: true,
+				status: cid ? "loading" : "idle",
+			});
 			if (cid) {
 				controllerUserEvent({ eventType: "loadLabelData", labelGroupId, chapterId: cid });
 			}
 			return;
 		}
 		if (!cid) {
-			trackedLabelGroups.setLabelGroup(labelGroupId, withVisible(group, !group.visible));
+			trackedLabelGroups.setLabelGroup(labelGroupId, { ...group, visible: !group.visible });
 			return;
 		}
 		Effect.runSync(
@@ -321,31 +303,20 @@ export function createLabelGroupManager({
 
 	function setActive(labelGroupId: LGProvId | null) {
 		const current = dataRef.current;
+		const curActive = trackedLabelGroups.activeLabelGroupIdRef.current;
 		if (current.empty || current.loading) {
-			if (activeLabelGroup) {
-				const prev = trackedLabelGroups.labelGroupsRef.current.get(activeLabelGroup);
-				if (prev) {
-					trackedLabelGroups.setLabelGroup(activeLabelGroup, withActive(prev, false));
-				}
-			}
-			activeLabelGroup = labelGroupId;
-			if (labelGroupId) {
-				const cur = trackedLabelGroups.labelGroupsRef.current.get(labelGroupId);
-				if (cur) {
-					trackedLabelGroups.setLabelGroup(labelGroupId, withActive(cur, true));
-				}
-			}
+			trackedLabelGroups.setActive(labelGroupId);
 			return;
 		}
+		trackedLabelGroups.setActive(labelGroupId);
 		Effect.runSync(
 			Effect.gen(function* () {
-				if (activeLabelGroup) {
-					yield* updateLabelGroupView(activeLabelGroup, { active: false });
+				if (curActive) {
+					yield* updateLabelGroupView(curActive, {});
 				}
 				if (labelGroupId) {
-					yield* updateLabelGroupView(labelGroupId, { active: true });
+					yield* updateLabelGroupView(labelGroupId, {});
 				}
-				activeLabelGroup = labelGroupId;
 			}),
 		);
 	}

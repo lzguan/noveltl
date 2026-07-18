@@ -50,4 +50,4 @@ If any scripts time out, it may be due to lacking hardware. Confirm with the use
 
 If an issue is caused by a typo, describe it as a typo when communicating with the user. Do not overstate the severity of minor wording or spelling mistakes.
 
-Don't cast variables without permission (i.e. don't use the `as` keyword on the frontend).
+Excluding `as const` casts, don't cast variables without permission (i.e. don't use the `as` keyword on the frontend).

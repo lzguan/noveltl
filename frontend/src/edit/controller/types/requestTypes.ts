@@ -20,6 +20,7 @@ export type RequestVariant =
 	| "addLabelData"
 	| "reloadGroup"
 	| "openChapter"
+	| "closeChapter"
 	| "createAutoLabelRun"
 	| "refreshAutoLabelRuns"
 	| "reloadAutoLabelRun"
@@ -83,11 +84,6 @@ export type BaseRequestEvent = {
 	 * Handler that will be called if the request encounters a fatal error. Will be called with the error that caused the fatal error, and before corresponding reservation is released.
 	 */
 	onFatalError: (err: Error) => Effect.Effect<void>;
-	/**
-	 * Optional lifecycle hook called exactly once after the request reaches a
-	 * terminal outcome, including when it is skipped.
-	 */
-	onSettled?: () => Effect.Effect<void>;
 	/**
 	 * The number of times the request can be retried.
 	 */
@@ -158,8 +154,7 @@ export const consumeRetry = <T extends BaseRequestEvent>(request: T) => {
 /**
  * Interface for a request manager. The request manager manages the queue of requests to be sent to the backend, and provides an interface for enqueuing requests, starting the request processing, and attaching triggers for request completion and errors. The request manager is responsible for ensuring the following invariants:
  * - If request A is enqueued before request B, there exists some resource R that both A and B depend on, and the corresponding reservations are incompatible, then A will be sent before B.
- * - For any non-skipped request event, exactly one of the following functions will complete successfully: onFailure, onFatalError, or the postSend function if the request is successful.
- * - If provided, onSettled is called once after the terminal handler, or when the request is skipped.
+ * - For any request event, exactly one of the following functions will complete successfully: onFailure, onFatalError, or the postSend function if the request is successful.
  */
 export type RequestManager = {
 	/**

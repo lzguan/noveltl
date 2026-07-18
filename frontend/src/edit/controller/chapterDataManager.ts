@@ -172,42 +172,34 @@ export const buildChapterDataManager = (
 			| { tag: "neither" } = { tag: "neither" };
 
 		let destroyed = false;
-		let outstandingRequests = 0;
-		let onDrained: (() => Effect.Effect<void>) | null = null;
 
 		const { decorate: decorateQueued, flush: flushQueued } =
 			buildRequestQueueDispatcher<RequestEvent>();
 
-		const finishCloseIfDrained = (): Effect.Effect<void> =>
-			outstandingRequests === 0 && onDrained !== null ? onDrained() : Effect.succeed(void 0);
-
-		const trackRequests = (events: RequestEvent[]): RequestEvent[] =>
-			events.map((event) => {
-				outstandingRequests += 1;
-				let settled = false;
-				return {
-					...event,
-					onSettled: () =>
-						Effect.gen(function* () {
-							if (settled) return;
-							settled = true;
-							yield* event.onSettled?.() ?? Effect.succeed(void 0);
-							outstandingRequests -= 1;
-							yield* finishCloseIfDrained();
-						}),
-				};
-			});
+		const lockChapter = (events: RequestEvent[]): RequestEvent[] => {
+			for (const event of events) {
+				const chapterReservations = event.reservationRequest.reserveList().chapter;
+				if (!chapterReservations.some((reservation) => reservation.id === chapterId)) {
+					chapterReservations.push({
+						id: chapterId,
+						kind: "chapter",
+						desiredState: "locked",
+					});
+				}
+			}
+			return events;
+		};
 
 		const decorate = <Params extends unknown[], E>(
 			f: (...params: Params) => Effect.Effect<RequestEvent[], E>,
 		) => {
 			const queued = decorateQueued<Params, E>(f);
 			return (...params: Params): Effect.Effect<RequestEvent[], E> =>
-				queued(...params).pipe(Effect.map(trackRequests));
+				queued(...params).pipe(Effect.map(lockChapter));
 		};
 
 		const dispatcherFlush = (): Effect.Effect<RequestEvent[]> =>
-			flushQueued().pipe(Effect.map(trackRequests));
+			flushQueued().pipe(Effect.map(lockChapter));
 
 		const buildLabelReservations = (
 			ops: { labelId: LProvId; op: LabelOp }[],
@@ -1356,16 +1348,12 @@ export const buildChapterDataManager = (
 				return requestEvents;
 			});
 
-		const close = (
-			onClosed: () => Effect.Effect<void>,
-		): Effect.Effect<RequestEvent[], UnknownException> =>
+		const destroy = (): Effect.Effect<RequestEvent[], UnknownException> =>
 			Effect.gen(function* () {
 				if (destroyed) return [];
 				destroyed = true;
-				onDrained = onClosed;
 				const events = yield* flush();
 				events.push(...(yield* dispatcherFlush()));
-				yield* finishCloseIfDrained();
 				return events;
 			});
 
@@ -1377,11 +1365,12 @@ export const buildChapterDataManager = (
 			deleteTextAt,
 			flush,
 			reloadGroup,
-			close,
+			destroy,
 			getters: {
 				labelDataSlot: (labelGroupId: LGProvId) => labelDataIndex.get(labelGroupId),
 				text: () => Effect.succeed(text),
 				chapterContentId: () => Effect.succeed(chapterContentId),
+				isDestroyed: () => destroyed,
 			},
 		};
 	});

@@ -74,8 +74,7 @@ export type NovelDataManager = DataManager<
 			NotFoundException | LoadingException | AlreadyOpenException | UnknownException
 		>;
 		/**
-		 * Flushes pending chapter work and evicts the chapter data after all of its
-		 * requests settle.
+		 * Flushes pending chapter work and queues chapter data eviction after it.
 		 */
 		closeChapter: (
 			chapterId: CProvId,
@@ -184,7 +183,7 @@ export type AutolabelDataManager = DataManager<
  * (e.g., calling insertTextAt after addLabel) auto-flushes the pending ops
  * from the previous type, returning them as RequestEvents.
  *
- * All actions fail after the chapter begins closing.
+ * All actions fail after the chapter is destroyed.
  * Getters are a placeholder — will be populated with chapter-level read accessors.
  */
 export type ChapterDataManager = DataManager<
@@ -272,12 +271,9 @@ export type ChapterDataManager = DataManager<
 			now: boolean,
 		): Effect.Effect<RequestEvent[], UnknownException>;
 		/**
-		 * Flushes buffered work, blocks new actions, and invokes onClosed after all
-		 * requests emitted by this manager have settled.
+		 * Blocks new actions and flushes buffered work into request events.
 		 */
-		close: (
-			onClosed: () => Effect.Effect<void>,
-		) => Effect.Effect<RequestEvent[], UnknownException>;
+		destroy: () => Effect.Effect<RequestEvent[], UnknownException>;
 	},
 	ChapterGetters
 >;

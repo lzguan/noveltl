@@ -53,6 +53,7 @@ export interface ChapterGetters {
 	text: () => Effect.Effect<string>;
 	chapterContentId: () => Effect.Effect<CCProvId>;
 	labelDataSlot: (labelGroupId: LGProvId) => Effect.Effect<LabelDataSlot, NotFoundException>;
+	isDestroyed: () => boolean;
 }
 
 /**

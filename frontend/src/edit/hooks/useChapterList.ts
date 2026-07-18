@@ -1,16 +1,9 @@
 import { useCallback } from "react";
 import type { CProvId, ProvChapter } from "../controller/types/idTypes";
-import { useSyncState } from "../utils/useSyncState";
-
-function copyList<T>(list: readonly T[]): T[] {
-	return [...list];
-}
+import { copy, useSyncState } from "../utils/useSyncState";
 
 export function useChapterList() {
-	const [chapterList, chapterListRef, commitChapterList] = useSyncState<ProvChapter[]>(
-		[],
-		copyList,
-	); // sorted by chapterNum
+	const [chapterList, chapterListRef, commitChapterList] = useSyncState<ProvChapter[]>([], copy); // sorted by chapterNum
 
 	const addChapter = useCallback(
 		(chapter: ProvChapter) => {

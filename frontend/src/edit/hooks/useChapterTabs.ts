@@ -1,6 +1,6 @@
 import { useCallback, useRef } from "react";
 import type { CProvId } from "../controller/types/idTypes";
-import { useSyncState } from "../utils/useSyncState";
+import { copy, useSyncState } from "../utils/useSyncState";
 
 export type ChapterTab = {
 	chapterId: CProvId;
@@ -10,7 +10,7 @@ export type ChapterTab = {
 type Activation = "open" | "wait";
 
 export function useChapterTabs() {
-	const [tabs, tabsRef, commitTabs] = useSyncState<ChapterTab[]>([]);
+	const [tabs, tabsRef, commitTabs] = useSyncState<ChapterTab[]>([], copy);
 	const [activeChapterId, activeChapterIdRef, commitActiveChapterId] =
 		useSyncState<CProvId | null>(null);
 	const closingRef = useRef(new Set<CProvId>());
@@ -21,20 +21,21 @@ export function useChapterTabs() {
 			tabsRef.current = next;
 			commitTabs();
 		},
-		// oxlint-disable-next-line react-hooks/exhaustive-deps
-		[],
+		[tabsRef, commitTabs],
 	);
 
-	const updateActive = useCallback((chapterId: CProvId | null) => {
-		activeChapterIdRef.current = chapterId;
-		commitActiveChapterId();
-		// oxlint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	const updateActive = useCallback(
+		(chapterId: CProvId | null) => {
+			activeChapterIdRef.current = chapterId;
+			commitActiveChapterId();
+		},
+		[activeChapterIdRef, commitActiveChapterId],
+	);
 
 	const activate = useCallback(
 		(chapterId: CProvId): Activation => {
 			const existing = tabsRef.current.find((tab) => tab.chapterId === chapterId);
-			if (existing === undefined) {
+			if (!existing) {
 				updateTabs([...tabsRef.current, { chapterId, status: "loading" }]);
 			}
 			updateActive(chapterId);

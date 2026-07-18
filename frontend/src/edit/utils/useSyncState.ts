@@ -1,7 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 
-function identity<T>(value: T): T {
+export function identity<T>(value: T): T {
 	return value;
+}
+
+export function copy<T>(value: T[]): T[] {
+	return [...value];
 }
 
 export function useSyncState<T>(initialValue: T, copy: (value: T) => T = identity) {

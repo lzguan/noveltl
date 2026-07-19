@@ -324,4 +324,4 @@ The chapter range inputs in the Promote section are owned by the panel as local 
 
 ### Schema-driven params form
 
-Model parameters are rendered from a schema. The effect schemas defined in the generated API client provide the parameter structure. The form dynamically renders fields based on the selected model's parameter type (discriminated union on `model_name`). Implementation approach to be determined — may use `@rjsf/core` + `@rjsf/shadcn` with JSON schemas extracted from the backend OpenAPI spec, or a custom renderer consuming effect schema metadata.
+Model parameters are rendered with `@rjsf/shadcn` from JSON Schema extracted from the generated Effect schema. Model choices and fields come from the branches of the `modelName` discriminated union, and decoding the selected model through the Effect schema supplies backend defaults. Exceptional fields use a registry of focused renderers; the separator map has one because its character keys need rename, uniqueness validation, escaped newline display, and named priority controls.

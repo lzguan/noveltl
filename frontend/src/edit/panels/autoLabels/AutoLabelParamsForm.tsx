@@ -1,166 +1,197 @@
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectGroup,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import type { CluenerParams, DoNothingParams } from "@/api/models";
-import { DoNothingParamsValue, SepPriority } from "@/api/models";
+import { useEffect, useMemo, useState } from "react";
+import type { IChangeEvent } from "@rjsf/core";
+import Form from "@rjsf/shadcn";
+import type { RJSFSchema, UiSchema } from "@rjsf/utils";
+import validator from "@rjsf/validator-ajv8";
+import { Either, JSONSchema, Schema } from "effect";
+import { CreateAutolabelsAutoLabelsPostBody } from "@/api/endpoints/default/default.effect";
+import type { CreateAutoLabels } from "@/api/models";
+import { autoLabelCustomParamFields } from "./autoLabelParamFields";
 
-export type AutoLabelParamsValue = CluenerParams | DoNothingParams | null;
+export type AutoLabelParams = CreateAutoLabels["params"];
+export type AutoLabelParamsValue = AutoLabelParams | null;
 
-const defaultSeparators = {
-	"\n": SepPriority.NUMBER_3,
-	"。": SepPriority.NUMBER_2,
-	"，": SepPriority.NUMBER_1,
-};
+export interface AutoLabelParamModel {
+	name: string;
+	schema: RJSFSchema;
+}
 
-function makeDefaultCluenerParams(): CluenerParams {
+const paramsEffectSchema = CreateAutolabelsAutoLabelsPostBody.fields.params;
+const paramsJsonSchema = JSONSchema.make(paramsEffectSchema);
+
+function readModelName(schema: unknown): string | null {
+	if (
+		typeof schema !== "object" ||
+		schema === null ||
+		!("type" in schema) ||
+		schema.type !== "object" ||
+		!("properties" in schema) ||
+		typeof schema.properties !== "object" ||
+		schema.properties === null ||
+		!("modelName" in schema.properties)
+	) {
+		return null;
+	}
+
+	const modelName = schema.properties.modelName;
+	if (
+		typeof modelName !== "object" ||
+		modelName === null ||
+		!("enum" in modelName) ||
+		!Array.isArray(modelName.enum) ||
+		modelName.enum.length !== 1 ||
+		typeof modelName.enum[0] !== "string"
+	) {
+		return null;
+	}
+	return modelName.enum[0];
+}
+
+function extractParamModels(): AutoLabelParamModel[] {
+	if (!("anyOf" in paramsJsonSchema)) {
+		throw new Error("The generated autolabel params schema must be a union");
+	}
+
+	return paramsJsonSchema.anyOf.map((schema) => {
+		const name = readModelName(schema);
+		if (!name) {
+			throw new Error("Every autolabel params branch must have one modelName literal");
+		}
+		return { name, schema };
+	});
+}
+
+export const autoLabelParamModels = extractParamModels();
+
+export function createAutoLabelParams(modelName: string): AutoLabelParams {
+	return Schema.decodeUnknownSync(paramsEffectSchema)({ modelName });
+}
+
+function titleFromPropertyName(name: string) {
+	const words = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
+	return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function objectEntries(value: object) {
+	return Object.entries(value);
+}
+
+function propertyValue(value: object, name: string): unknown {
+	return objectEntries(value).find(([property]) => property === name)?.[1];
+}
+
+function makeStandardSchema(schema: RJSFSchema): RJSFSchema {
+	const schemaWithoutModelDescription = { ...schema };
+	delete schemaWithoutModelDescription.description;
+	const properties = Object.fromEntries(
+		Object.entries(schema.properties ?? {}).filter(
+			([name]) => name !== "modelName" && !autoLabelCustomParamFields[name],
+		),
+	);
 	return {
-		modelName: "cluener",
-		chunkSize: 500,
-		forceChunk: false,
-		separators: defaultSeparators,
+		...schemaWithoutModelDescription,
+		properties,
+		required: schema.required?.filter((name) => name in properties),
 	};
 }
 
-function readModelName(value: AutoLabelParamsValue): "" | "cluener" | "do_nothing" {
-	if (!value) return "";
-	if (value.modelName === "cluener") return "cluener";
-	if (value.modelName === "do_nothing") return "do_nothing";
-	return "";
+function makeUiSchema(schema: RJSFSchema): UiSchema {
+	const fields = Object.fromEntries(
+		Object.keys(schema.properties ?? {}).map((name) => [
+			name,
+			{ "ui:title": titleFromPropertyName(name) },
+		]),
+	);
+	return {
+		...fields,
+		"ui:submitButtonOptions": {
+			norender: true,
+		},
+	};
 }
 
-function readPriority(value: string) {
-	if (value === "1") return SepPriority.NUMBER_1;
-	if (value === "3") return SepPriority.NUMBER_3;
-	return SepPriority.NUMBER_2;
+function makeStandardFormData(value: AutoLabelParams) {
+	return Object.fromEntries(
+		objectEntries(value).filter(
+			([name]) => name !== "modelName" && !autoLabelCustomParamFields[name],
+		),
+	);
+}
+
+function decodeParams(value: unknown): AutoLabelParams | null {
+	const decoded = Schema.decodeUnknownEither(paramsEffectSchema)(value);
+	return Either.isRight(decoded) ? decoded.right : null;
+}
+
+export function modelHasAdvancedSettings(model: AutoLabelParamModel) {
+	return Object.keys(model.schema.properties ?? {}).some((name) => name !== "modelName");
 }
 
 export function AutoLabelParamsForm({
+	model,
 	value,
 	onChange,
+	onValidityChange,
 	disabled,
 }: {
-	value: AutoLabelParamsValue;
-	onChange: (value: AutoLabelParamsValue) => void;
+	model: AutoLabelParamModel;
+	value: AutoLabelParams;
+	onChange: (value: AutoLabelParams) => void;
+	onValidityChange: (valid: boolean) => void;
 	disabled?: boolean;
 }) {
-	const modelName = readModelName(value);
-	const cluenerParams = value?.modelName === "cluener" ? value : null;
-	const separators = cluenerParams?.separators ?? defaultSeparators;
+	const standardSchema = useMemo(() => makeStandardSchema(model.schema), [model.schema]);
+	const uiSchema = useMemo(() => makeUiSchema(standardSchema), [standardSchema]);
+	const [schemaValid, setSchemaValid] = useState(true);
+	const [customValidity, setCustomValidity] = useState<Record<string, boolean>>({});
+	const customFields = Object.keys(model.schema.properties ?? {}).flatMap((name) => {
+		const FieldComponent = autoLabelCustomParamFields[name];
+		return FieldComponent ? [{ name, FieldComponent }] : [];
+	});
+	const paramsValid = schemaValid && Object.values(customValidity).every(Boolean);
+
+	useEffect(() => {
+		onValidityChange(paramsValid);
+	}, [onValidityChange, paramsValid]);
+
+	const updateParams = (updates: object) => {
+		const decoded = decodeParams({
+			...Object.fromEntries(objectEntries(value)),
+			...Object.fromEntries(objectEntries(updates)),
+		});
+		if (decoded) onChange(decoded);
+	};
 
 	return (
-		<div className="flex flex-col gap-2">
-			<div className="flex flex-col gap-1">
-				<Label className="text-xs" htmlFor="autolabel-model">
-					Model
-				</Label>
-				<Select
-					value={modelName}
+		<div className="flex flex-col gap-3 rounded-md border border-border p-2">
+			{Object.keys(standardSchema.properties ?? {}).length > 0 && (
+				<Form
+					schema={standardSchema}
+					uiSchema={uiSchema}
+					validator={validator}
+					formData={makeStandardFormData(value)}
 					disabled={disabled}
-					onValueChange={(next) => {
-						if (next === "cluener") {
-							onChange(makeDefaultCluenerParams());
-						} else if (next === "do_nothing") {
-							onChange(DoNothingParamsValue);
-						} else {
-							onChange(null);
-						}
+					liveValidate
+					noHtml5Validate
+					showErrorList={false}
+					tagName="div"
+					onChange={({ formData, errors }: IChangeEvent<object>) => {
+						setSchemaValid(errors.length === 0);
+						if (formData) updateParams(formData);
 					}}
-				>
-					<SelectTrigger id="autolabel-model" size="sm" className="w-full">
-						<SelectValue placeholder="Select a model..." />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectGroup>
-							<SelectItem value="cluener">cluener</SelectItem>
-							<SelectItem value="do_nothing">do_nothing</SelectItem>
-						</SelectGroup>
-					</SelectContent>
-				</Select>
-			</div>
-
-			{cluenerParams && (
-				<div className="flex flex-col gap-2 rounded-md border border-border p-2">
-					<div className="flex items-center gap-2">
-						<Label className="text-xs flex-1" htmlFor="autolabel-chunk-size">
-							Chunk Size
-						</Label>
-						<Input
-							id="autolabel-chunk-size"
-							className="h-7 w-20 text-xs"
-							type="number"
-							min={1}
-							max={512}
-							value={cluenerParams.chunkSize ?? ""}
-							disabled={disabled}
-							onChange={(event) => {
-								const next = Number.parseInt(event.target.value, 10);
-								onChange({
-									...cluenerParams,
-									chunkSize: Number.isNaN(next) ? undefined : next,
-								});
-							}}
-						/>
-					</div>
-					<label className="flex items-center gap-2 text-xs">
-						<Checkbox
-							checked={cluenerParams.forceChunk ?? false}
-							disabled={disabled}
-							onCheckedChange={(checked) => {
-								onChange({
-									...cluenerParams,
-									forceChunk: checked === true,
-								});
-							}}
-						/>
-						<span>Force Chunk</span>
-					</label>
-					<div className="flex flex-col gap-1">
-						<div className="text-xs text-muted-foreground">Separators</div>
-						{Object.entries(separators).map(([separator, priority]) => (
-							<div key={separator} className="flex items-center gap-1">
-								<Input
-									className="h-7 min-w-0 flex-1 text-xs"
-									value={separator}
-									disabled
-									aria-label="Separator"
-								/>
-								<Select
-									value={String(priority)}
-									disabled={disabled}
-									onValueChange={(next) => {
-										onChange({
-											...cluenerParams,
-											separators: {
-												...separators,
-												[separator]: readPriority(next),
-											},
-										});
-									}}
-								>
-									<SelectTrigger size="sm" className="h-7 w-20 text-xs">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectGroup>
-											<SelectItem value="3">HIGH</SelectItem>
-											<SelectItem value="2">MED</SelectItem>
-											<SelectItem value="1">LOW</SelectItem>
-										</SelectGroup>
-									</SelectContent>
-								</Select>
-							</div>
-						))}
-					</div>
-				</div>
+				/>
 			)}
+			{customFields.map(({ name, FieldComponent }) => (
+				<FieldComponent
+					key={name}
+					value={propertyValue(value, name)}
+					disabled={disabled}
+					onValidityChange={(valid) =>
+						setCustomValidity((current) => ({ ...current, [name]: valid }))
+					}
+					onChange={(nextValue) => updateParams({ [name]: nextValue })}
+				/>
+			))}
 		</div>
 	);
 }

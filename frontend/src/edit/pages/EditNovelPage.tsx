@@ -13,12 +13,11 @@ import { Prov } from "../controller/types/helperTypes";
 import type { ProvChapter } from "../controller/types/idTypes";
 import { generateRandomColor } from "@/edit/lib/text-model/builtin/colors";
 import { useEditorState } from "../hooks/useEditorState";
-import { useChapterList } from "../hooks/useChapterList";
+import { useChapters } from "../hooks/useChapters";
 import { useTrackedLabelGroups } from "../hooks/useTrackedLabelGroups";
 import { useAutoLabelState } from "../hooks/useAutoLabelState";
 import { useAutoLabelPreview } from "../hooks/useAutoLabelPreview";
 import { useWorkspaceLock } from "../hooks/useWorkspaceLock";
-import { useChapterTabs } from "../hooks/useChapterTabs";
 import { createChapterManager } from "../managers/chapterManager";
 import { createLabelGroupManager } from "../managers/labelGroupManager";
 import { createEditorManager } from "../managers/editorManager";
@@ -54,8 +53,7 @@ export function EditNovelPage() {
 	const [error, setError] = useState<unknown>(null);
 
 	const editorState = useEditorState();
-	const chapterList = useChapterList();
-	const chapterTabs = useChapterTabs();
+	const chapterState = useChapters();
 	const trackedLabelGroups = useTrackedLabelGroups();
 	const autoLabels = useAutoLabelState();
 	const autoLabelPreview = useAutoLabelPreview();
@@ -158,8 +156,7 @@ export function EditNovelPage() {
 
 		const chapterMgr = createChapterManager({
 			controllerUserEvent,
-			chapterList,
-			chapterTabs,
+			chapters: chapterState,
 			setLoading: editorState.setLoading,
 			labelGroupsRef: trackedLabelGroups.labelGroupsRef,
 		});
@@ -175,7 +172,7 @@ export function EditNovelPage() {
 			modeRef: editorState.modeRef,
 			setLoading: editorState.setLoading,
 			labelGroupsRef: trackedLabelGroups.labelGroupsRef,
-			activeChapterIdRef: chapterTabs.activeChapterIdRef,
+			activeChapterIdRef: chapterState.activeChapterIdRef,
 			activeGroupIdRef: trackedLabelGroups.activeLabelGroupIdRef,
 		});
 		const autoLabelMgr = createAutoLabelManager({
@@ -208,7 +205,7 @@ export function EditNovelPage() {
 			Effect.gen(function* () {
 				const ids = yield* ctrl.getters.chapterIds();
 				for (let i = 0; i < ids.length; i++) {
-					chapterList.addChapter(makeProvChapter(chapters[i], ids[i]));
+					chapterState.addChapter(makeProvChapter(chapters[i], ids[i]));
 				}
 			}),
 		);
@@ -265,7 +262,7 @@ export function EditNovelPage() {
 		);
 	}
 
-	const currentChapterId = chapterTabs.activeChapterId;
+	const currentChapterId = chapterState.activeChapterId;
 
 	return (
 		<div className="relative h-full min-h-0">
@@ -278,7 +275,7 @@ export function EditNovelPage() {
 				<div className="flex flex-1 min-h-0 overflow-hidden">
 					<div className="w-56 border-r shrink-0 flex flex-col min-h-0">
 						<LeftPanel
-							chapters={chapterList.chapterList}
+							chapters={chapterState.chapterList}
 							currentChapterId={currentChapterId}
 							onSwitchChapter={managers.chapterMgr.switchChapter}
 							onAddChapter={managers.chapterMgr.addChapter}
@@ -293,9 +290,9 @@ export function EditNovelPage() {
 					</div>
 					<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
 						<ChapterTabs
-							tabs={chapterTabs.tabs}
-							chapters={chapterList.chapterList}
-							activeChapterId={chapterTabs.activeChapterId}
+							tabs={chapterState.tabs}
+							chapters={chapterState.chapterList}
+							activeChapterId={chapterState.activeChapterId}
 							onActivate={managers.chapterMgr.switchChapter}
 							onClose={managers.chapterMgr.closeChapter}
 						/>
@@ -318,7 +315,7 @@ export function EditNovelPage() {
 										<AutoLabelPanel
 											autoLabels={autoLabels}
 											autoLabelManager={managers.autoLabelMgr}
-											chapters={chapterList.chapterList}
+											chapters={chapterState.chapterList}
 											currentChapterId={currentChapterId}
 											labelGroups={trackedLabelGroups.labelGroups}
 											setActive={managers.labelGroupMgr.setActive}

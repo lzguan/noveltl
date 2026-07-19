@@ -47,7 +47,7 @@ A hook is the data store for one slice of UI state. Each hook keeps two parallel
 Writes always go through the hook's setters, which update both the ref and the React state together. The hooks currently in use are:
 
 - **`useEditorState`** ([useEditorState.ts](../../frontend/src/edit/hooks/useEditorState.ts)) — the open chapter's `data` (either `{ loading: true }` or `{ segmentManager, chapterId, caret }`) plus the editor `mode` (`view` / `edit` / `label`). It exposes `setLoading`, `setCaret`, `setMode`, and the `dataRef`/`modeRef` getters. This is the hook that owns the `SegmentManager`.
-- **`useChapterList`** ([useChapterList.ts](../../frontend/src/edit/hooks/useChapterList.ts)) — the novel's chapter list, kept sorted by chapter number, with `addChapter`/`setChapter`/`removeChapter`.
+- **`useChapters`** ([useChapters.ts](../../frontend/src/edit/hooks/useChapters.ts)) — the novel's chapter list, open tabs, and active chapter. It exposes synchronized state/ref pairs and direct update functions; `chapterManager` owns tab lifecycle decisions.
 - **`useTrackedLabelGroups`** ([useTrackedLabelGroups.ts](../../frontend/src/edit/hooks/useTrackedLabelGroups.ts)) — per-label-group view state (`LabelGroupView`: display name, colour, `visible`, `active`, and a load `status`). Its setter skips writes that would not change anything, to avoid redundant re-renders.
 
 Hooks deliberately contain no business logic. They are dumb stores; all decisions about *what* to store live in the managers.
@@ -63,7 +63,7 @@ A manager is a stateless factory. It is constructed with the dependencies it nee
 
 As a worked example, `editorManager` ([editorManager.ts](../../frontend/src/edit/managers/editorManager.ts)) owns the editor's text and labels. On the way out, its `textOp`/`labelOp` handlers are mode-gated and forward the corresponding user events to the controller. On the way in, its `handleControllerEvent` subscriber applies the controller's `textChanged`/`labelChanged` triggers to the segment manager, and on `chapterOpened` builds a fresh segment manager for the chapter. Every manager follows this same shape — one concern, some user-event handlers, and one subscriber.
 
-The managers in the codebase today are `editorManager`, `labelGroupManager` ([labelGroupManager.ts](../../frontend/src/edit/managers/labelGroupManager.ts)), `chapterManager` ([chapterManager.ts](../../frontend/src/edit/managers/chapterManager.ts)), and `errorManager` ([errorManager.ts](../../frontend/src/edit/managers/errorManager.ts)) — covering the editor surface, label-group view state, the chapter list, and error handling respectively. New concerns are expected to arrive as new managers of the same shape, so treat this as a snapshot rather than a fixed set.
+The managers in the codebase today are `editorManager`, `labelGroupManager` ([labelGroupManager.ts](../../frontend/src/edit/managers/labelGroupManager.ts)), `chapterManager` ([chapterManager.ts](../../frontend/src/edit/managers/chapterManager.ts)), and `errorManager` ([errorManager.ts](../../frontend/src/edit/managers/errorManager.ts)) — covering the editor surface, label-group view state, chapter list/tab behavior, and error handling respectively. New concerns are expected to arrive as new managers of the same shape, so treat this as a snapshot rather than a fixed set.
 
 ### Translating controller data: `readers.ts`
 

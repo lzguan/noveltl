@@ -1,7 +1,7 @@
 import { LoaderCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ProvChapter } from "../../controller/types/idTypes";
-import type { ChapterTab } from "../../hooks/useChapterTabs";
+import type { ChapterTab } from "../../hooks/useChapters";
 
 export function ChapterTabs({
 	tabs,

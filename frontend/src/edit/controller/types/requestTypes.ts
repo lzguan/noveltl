@@ -39,10 +39,19 @@ export type Reservation<K extends Kind> = {
 export type AnyReservation<T extends Kind> = T extends Kind ? Reservation<T> : never;
 
 /**
- * Branded type for request keys, which are unique identifiers for requests that can be used to track and manage requests in the request manager. Branded for type safety and clarity. Should be generated using the {@link regenerateKey} function to ensure uniqueness.
+ * Branded type for request keys, which are unique identifiers for requests that can be used to track and manage requests in the request manager. Branded for type safety and clarity. Should be generated using {@link generateRequestKey} to ensure uniqueness.
  */
 export type RequestKey = string & Brand.Brand<"RequestKey">;
 export const RequestKey = Brand.nominal<RequestKey>();
+
+export const generateRequestKey = (): RequestKey => {
+	if (typeof globalThis.crypto?.randomUUID !== "function") {
+		throw new Error(
+			"Secure request key generation is unavailable. Open the editor over HTTPS or localhost.",
+		);
+	}
+	return RequestKey(globalThis.crypto.randomUUID());
+};
 
 export type ReserveList = { [K in Kind]: Reservation<K>[] };
 
@@ -141,7 +150,7 @@ export type KeyedRequestEvent = NoCachedKeyedRequestEvent | CachedKeyedRequestEv
  * Regenerates a unique request key for the given request.
  */
 export const regenerateKey = <T extends BaseRequestEvent>(request: T) => {
-	return { ...request, requestKey: crypto.randomUUID() };
+	return { ...request, requestKey: generateRequestKey() };
 };
 
 /**

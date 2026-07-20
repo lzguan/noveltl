@@ -2,8 +2,8 @@ import { createLogger } from "@/lib/logging";
 
 import {
 	consumeRetry,
+	generateRequestKey,
 	regenerateKey,
-	RequestKey,
 	type AnyReservation,
 	type CachedKeyedRequestEvent,
 	type KeyedRequestEvent,
@@ -114,7 +114,7 @@ export const buildRequestManager = (
 		const enqueueRequest = (request: RequestEvent) => {
 			if (shuttingDown) return;
 			console.log("enqueueRequest", request.variant);
-			requestQueue.push({ ...request, requestKey: RequestKey(crypto.randomUUID()) });
+			requestQueue.push({ ...request, requestKey: generateRequestKey() });
 		};
 
 		const requestStatusQuery = (request: CachedKeyedRequestEvent) =>

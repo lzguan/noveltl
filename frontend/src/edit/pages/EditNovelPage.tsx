@@ -147,10 +147,13 @@ export function EditNovelPage() {
 			autoLabelRuns: autoLabelRuns,
 		};
 		const ctrl = Effect.runSync(buildNovelController(novelData));
+		const errorMgr = createErrorManager();
 
 		const controllerUserEvent = (event: Parameters<typeof ctrl.handleUserEvent>[0]) => {
 			setTimeout(() => {
-				Effect.runPromise(ctrl.handleUserEvent(event)).catch(() => {});
+				Effect.runPromise(ctrl.handleUserEvent(event)).catch((err: unknown) => {
+					errorMgr.logError(err);
+				});
 			}, 0);
 		};
 
@@ -186,7 +189,6 @@ export function EditNovelPage() {
 			acquireLock,
 			releaseLock,
 		});
-		const errorMgr = createErrorManager();
 
 		ctrl.subscribe(chapterMgr.handleControllerEvent);
 		ctrl.subscribe(labelGroupMgr.handleControllerEvent);

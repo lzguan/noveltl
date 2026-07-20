@@ -40,6 +40,7 @@ services:
       retries: 10
 
   backend:
+    image: ghcr.io/lzguan/noveltl-backend:${IMAGE_TAG:-latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -55,6 +56,7 @@ services:
       SECRET_KEY: ${SECRET_KEY}
 
   worker:
+    image: ghcr.io/lzguan/noveltl-worker:${IMAGE_TAG:-latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -70,6 +72,7 @@ services:
       SECRET_KEY: ${SECRET_KEY}
 
   frontend:
+    image: ghcr.io/lzguan/noveltl-frontend:${IMAGE_TAG:-latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile

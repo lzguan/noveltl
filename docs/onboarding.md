@@ -104,3 +104,61 @@ Add `--volumes` only when intentionally deleting the local production database, 
 ```bash
 docker compose --env-file .env.prod.local -f compose.prod.yaml down --volumes
 ```
+
+## Production deployment
+
+Pushes to `master` publish the backend, worker, and frontend production images to GHCR. Each image is tagged with both `latest` and the full Git commit SHA:
+
+```text
+ghcr.io/lzguan/noveltl-backend
+ghcr.io/lzguan/noveltl-worker
+ghcr.io/lzguan/noveltl-frontend
+```
+
+The first publication of each package is private by default. Either change all three package visibilities to public in GitHub, or authenticate the server with a classic personal access token that has only the `read:packages` scope:
+
+```bash
+read -rsp "GHCR token: " CR_PAT
+echo
+printf '%s' "$CR_PAT" |
+  sudo docker login ghcr.io -u lzguan --password-stdin
+unset CR_PAT
+```
+
+Create the server environment file from [`.env.prod.example`](../.env.prod.example). Change `COMPOSE_PROJECT_NAME` to `noveltl_prod`, generate production values for `DB_PASSWORD` and `SECRET_KEY`, and set `SITE_ADDRESS` to the public domain once its DNS records point to the server.
+
+Keep `IMAGE_TAG=latest` to deploy the newest build after all three publishing jobs succeed. For reproducible deployments and rollbacks, set it to the full commit SHA shown by the successful publishing workflow instead.
+
+Pull the images and start PostgreSQL and Redis:
+
+```bash
+sudo docker compose \
+  --env-file .env.prod \
+  -f compose.prod.yaml \
+  pull
+
+sudo docker compose \
+  --env-file .env.prod \
+  -f compose.prod.yaml \
+  up -d db redis
+```
+
+Apply migrations with the newly pulled backend image:
+
+```bash
+sudo docker compose \
+  --env-file .env.prod \
+  -f compose.prod.yaml \
+  run --rm --no-deps backend uv run --no-sync alembic upgrade head
+```
+
+For a fresh database, seed the supported languages and create an administrator using the commands from [local production-stack testing](#local-production-stack-testing). Then start the complete stack without building on the server:
+
+```bash
+sudo docker compose \
+  --env-file .env.prod \
+  -f compose.prod.yaml \
+  up -d --no-build --remove-orphans
+```
+
+A server-side deployment script should perform the pull, migration, and final `up` commands above. Keep the script, repository checkout, Compose file, and environment file root-owned if an otherwise unprivileged deployment user is allowed to invoke that script through `sudo`.

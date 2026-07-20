@@ -23,5 +23,12 @@
 **/obj
 **/secrets.dev.yaml
 **/values.dev.yaml
+**/.pytest_cache
+**/.ruff_cache
+tests
+test_support
+scripts/*
+!scripts/seed_admin.py
+!scripts/seed_languages.py
 LICENSE
 README.md

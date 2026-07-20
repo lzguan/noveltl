@@ -67,7 +67,7 @@ services:
       - redis
     environment:
       <<: [*db-env, *redis-env]
-      
+      UV_COMPILE_BYTECODE: false
       SECRET_KEY: ${SECRET_KEY} # purely to not crash on startup
     volumes:
       - ./backend:/home/newuser/backend
@@ -86,7 +86,7 @@ services:
       - redis
     environment:
       <<: [*db-env, *redis-env]
-
+      PYTHONDONTWRITEBYTECODE: "1"
       SECRET_KEY: ${SECRET_KEY}
     volumes:
       - ./backend:/home/newuser/backend

@@ -30,6 +30,14 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=frontend-pnpm-store-v11,target=/home/${UNAME}/.pnpm-store,sharing=locked,uid=${UID},gid=${GID} \
     pnpm install --frozen-lockfile --store-dir=/home/${UNAME}/.pnpm-store
 
-COPY . .
+COPY --chown=${UNAME}:${GNAME} . .
 EXPOSE 5173
 CMD pnpm run dev
+
+FROM base AS build
+RUN pnpm build
+
+FROM caddy:2.11.4-alpine AS production
+
+COPY Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /home/newuser/frontend/dist /srv

@@ -86,6 +86,7 @@ class Cluener:
         self.pipeline = pipeline(
             "token-classification",
             model="uer/roberta-base-finetuned-cluener2020-chinese",
+            revision="cddd8fc233e373855a8c0a7f4b7eb83acb686a2b",
             aggregation_strategy="simple",
         )
         if self.pipeline.tokenizer is None:

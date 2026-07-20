@@ -20,6 +20,7 @@
 **/Dockerfile*
 **/node_modules
 **/.pnpm-store
+**/dist
 **/npm-debug.log
 **/obj
 **/secrets.dev.yaml

@@ -1,15 +1,21 @@
 import "./App.css";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppRoutes } from "./routes";
-import { LoginPage } from "./auth/pages/LoginPage";
 import { SourceWorksPage } from "./view/pages/SourceWorksPage";
 import { ViewShell, EditShell } from "./components/navigation/AppShell";
 import { DashboardPage } from "./dashboard/pages/DashboardPage";
-import { EditDashboardPage } from "./edit/pages/EditDashboardPage";
-import { EditNovelPage } from "./edit/pages/EditNovelPage";
+import { Suspense, lazy } from "react";
+import { LoginPage } from "./auth/pages/LoginPage";
 import { SourceWorkDetailsPage } from "./view/pages/SourceWorkDetailsPage";
-import { NovelDetailsPage } from "./view/pages/NovelDetailsPage";
 import { NovelsPage } from "./view/pages/NovelsPage";
+import { NovelDetailsPage } from "./view/pages/NovelDetailsPage";
+
+const EditNovelPage = lazy(() =>
+	import("./edit/pages/EditNovelPage").then((mod) => ({ default: mod.EditNovelPage })),
+);
+const EditDashboardPage = lazy(() =>
+	import("./edit/pages/EditDashboardPage").then((mod) => ({ default: mod.EditDashboardPage })),
+);
 
 function App() {
 	return (
@@ -27,8 +33,22 @@ function App() {
 				<Route path={AppRoutes.VIEW.NOVEL_DETAILS} element={<NovelDetailsPage />} />
 			</Route>
 			<Route element={<EditShell />}>
-				<Route path={AppRoutes.EDIT.DASHBOARD} element={<EditDashboardPage />} />
-				<Route path={AppRoutes.EDIT.NOVEL} element={<EditNovelPage />} />
+				<Route
+					path={AppRoutes.EDIT.DASHBOARD}
+					element={
+						<Suspense fallback={<div>Loading...</div>}>
+							<EditDashboardPage />
+						</Suspense>
+					}
+				/>
+				<Route
+					path={AppRoutes.EDIT.NOVEL}
+					element={
+						<Suspense fallback={<div>Loading...</div>}>
+							<EditNovelPage />
+						</Suspense>
+					}
+				/>
 			</Route>
 		</Routes>
 	);

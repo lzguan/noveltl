@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { IChangeEvent } from "@rjsf/core";
-import Form from "@rjsf/shadcn";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
+import { Form } from "@rjsf/shadcn";
 import validator from "@rjsf/validator-ajv8";
 import { Either, JSONSchema, Schema } from "effect";
 import { CreateAutolabelsAutoLabelsPostBody } from "@/api/endpoints/default/default.effect";

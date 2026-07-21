@@ -19,7 +19,6 @@ x-redis-env: &redis-env
 services:
   dev:
     image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-devcontainer:${DEV_IMAGE_TAG:-latest}
-    pull_policy: always
     environment:
       <<: [*db-env, *test-db-env, *redis-env]
       SECRET_KEY: ${SECRET_KEY}

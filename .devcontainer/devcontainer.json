@@ -33,7 +33,7 @@
 	// Uncomment the next line if you want to keep your containers running after VS Code shuts down.
 	// "shutdownAction": "none",
 
-	"postCreateCommand": "mkdir -p /home/node/.claude /home/node/.codex /home/node/.local/share/opencode && sudo chown -R node:node /home/node/.claude /home/node/.codex /home/node/.local/share/opencode",
+	"postCreateCommand": "mkdir -p /home/vscode/.claude /home/vscode/.codex /home/vscode/.local/share/opencode && sudo chown -R vscode:vscode /home/vscode/.claude /home/vscode/.codex /home/vscode/.local/share/opencode && chown -R vscode:vscode /home/vscode/.config/gh && uv --directory backend sync --all-groups && pnpm --dir frontend install --prefer-offline --frozen-lockfile && pnpm --dir e2e install --prefer-offline --frozen-lockfile",
 
 	// Configure tool-specific properties.
 	"customizations": {
@@ -81,5 +81,4 @@
 
 	// Uncomment to connect as an existing user other than the container default. More info: https://aka.ms/dev-containers-non-root.
 	// Use "remoteUser" so VS Code connects with the expected user
-	// "remoteUser": "node"
 }

@@ -1,49 +1,37 @@
-FROM mcr.microsoft.com/devcontainers/javascript-node:dev-22-trixie
+FROM mcr.microsoft.com/devcontainers/base:dev-trixie
 
-ENV PNPM_HOME=/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-ENV npm_config_store_dir=/pnpm/store
-
+ARG PNPM_VERSION=11.10.0
+ARG NODE_VERSION=22
 ARG PROJECT_ROOT=/workspaces/NovelTL_Dev
 
-# uv
-COPY --from=ghcr.io/astral-sh/uv:0.10.9 /uv /uvx /bin/
-RUN npm install --global corepack@latest --force
-RUN corepack enable pnpm
+ENV PNPM_HOME=/home/vscode/.local/share/pnpm
+ENV PATH="${PNPM_HOME}/bin:${PATH}"
 
+RUN apt-get update \
+    && apt-get install -y libatomic1 postgresql-common \
+    && yes | /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh \
+    && apt-get install -y postgresql-client-18 \
+    && rm -rf /var/lib/apt/lists/*
 
-
-RUN apt-get update && apt-get install -y postgresql-common && \
-    yes | /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh && \
-    apt-get install -y postgresql-client-18 && \
-    rm -rf /var/lib/apt/lists/*
+USER vscode
+COPY --from=ghcr.io/astral-sh/uv:0.10.9 --chown=vscode:vscode /uv /uvx /bin/
+RUN wget -qO- https://get.pnpm.io/install.sh | ENV="$HOME/.bashrc" SHELL="/bin/bash" bash -
+RUN pnpm runtime set node ${NODE_VERSION} -g
 
 WORKDIR ${PROJECT_ROOT}
-COPY backend/pyproject.toml backend/uv.lock* ./backend/
+COPY --chown=vscode:vscode backend/pyproject.toml backend/uv.lock* ./backend/
 
-RUN chown node:node ./backend -R
-COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./frontend/
-RUN chown node:node ./frontend -R
-COPY e2e/package.json e2e/pnpm-lock.yaml e2e/playwright.config.ts ./e2e/
-RUN chown node:node ./e2e -R
-RUN mkdir -p /home/node/.cache && chown node:node /home/node/.cache -R
-RUN mkdir -p /home/node/.pnpm-store && chown node:node /home/node/.pnpm-store
-RUN mkdir -p /pnpm && chown node:node /pnpm -R
-RUN mkdir -p /home/node/.config/gh && chown node:node /home/node/.config/gh -R
-RUN chown node:node ${PROJECT_ROOT} -R
-RUN mkdir -p /home/node/.local && chown node:node /home/node/.local -R
-RUN mkdir -p ${PROJECT_ROOT}/frontend/node_modules && chown node:node ${PROJECT_ROOT}/frontend/node_modules -R
-RUN mkdir -p ${PROJECT_ROOT}/e2e/node_modules && chown node:node ${PROJECT_ROOT}/e2e/node_modules -R
+COPY --chown=vscode:vscode frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./frontend/
+COPY --chown=vscode:vscode e2e/package.json e2e/pnpm-lock.yaml e2e/playwright.config.ts ./e2e/
 
-USER node
-
+# populate uv/pnpm caches to speed up development container installation
 WORKDIR ${PROJECT_ROOT}/backend
-RUN --mount=type=cache,target=/home/node/.cache/uv,uid=1000,gid=1000 uv sync --all-groups --no-install-project
-# pnpm
+RUN uv sync --all-groups --no-install-project && rm -rf .venv
 WORKDIR ${PROJECT_ROOT}/frontend
-RUN --mount=type=cache,id=pnpm,target=/home/node/.pnpm-store,uid=1000,gid=1000 pnpm install
+RUN pnpm fetch --frozen-lockfile
 WORKDIR ${PROJECT_ROOT}/e2e
-RUN --mount=type=cache,id=pnpm,target=/home/node/.pnpm-store,uid=1000,gid=1000 pnpm install
-RUN pnpm ls
-RUN --mount=type=cache,id=pnpm,target=/home/node/.pnpm-store,uid=1000,gid=1000 pnpm exec playwright install --with-deps
+RUN pnpm install --frozen-lockfile \
+    && pnpm exec playwright install --with-deps chromium \
+    && rm -rf node_modules \
+    && sudo rm -rf /var/lib/apt/lists/*
 WORKDIR ${PROJECT_ROOT}

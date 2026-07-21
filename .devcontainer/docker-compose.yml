@@ -13,10 +13,10 @@ services:
     volumes:
       # Update this to wherever you want VS Code to mount the folder of your project
       - ..:/workspaces:cached
-      - claude-code-config:/home/node/.claude
-      - gh-cli-config:/home/node/.config/gh
-      - opencode-cli-config:/home/node/.local/share/opencode
-      - codex-cli-config:/home/node/.codex
+      - claude-code-config:/home/vscode/.claude
+      - gh-cli-config:/home/vscode/.config/gh
+      - opencode-cli-config:/home/vscode/.local/share/opencode
+      - codex-cli-config:/home/vscode/.codex
 
 
     # Uncomment the next four lines if you will use a ptrace-based debugger like C++, Go, and Rust.

@@ -1,0 +1,89 @@
+name: Publish development images
+
+on:
+  push:
+    paths:
+      - ".github/workflows/publish-development-images.yml"
+      - ".devcontainer/**"
+      - "**/Dockerfile"
+      - "**/Dockerfile.*"
+      - "**/dockerfile"
+      - "**/dockerfile.*"
+      - "**/.dockerignore"
+      - "compose*.yaml"
+      - "compose*.yml"
+      - "**/docker-compose.yaml"
+      - "**/docker-compose.yml"
+      - "**/pyproject.toml"
+      - "**/uv.lock"
+      - "**/package.json"
+      - "**/pnpm-lock.yaml"
+      - "**/pnpm-workspace.yaml"
+  workflow_dispatch:
+
+concurrency:
+  group: publish-development-images-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  publish:
+    name: Publish ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - image: noveltl-devcontainer
+            context: .
+            file: ./.devcontainer/Dockerfile
+          - image: noveltl-frontend-dev
+            context: ./frontend
+            file: ./frontend/Dockerfile
+            target: base
+          - image: noveltl-backend-dev
+            context: ./backend
+            file: ./backend/Dockerfile
+            target: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image metadata
+        id: metadata
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
+          tags: |
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          target: ${{ matrix.target }}
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}

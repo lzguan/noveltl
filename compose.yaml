@@ -18,9 +18,8 @@ x-redis-env: &redis-env
 
 services:
   dev:
-    build:
-      context: .
-      dockerfile: .devcontainer/Dockerfile
+    image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-devcontainer:${DEV_IMAGE_TAG:-latest}
+    pull_policy: always
     environment:
       <<: [*db-env, *test-db-env, *redis-env]
       SECRET_KEY: ${SECRET_KEY}
@@ -58,10 +57,8 @@ services:
     image: redis
 
   worker:
-    build: 
-      context: ./backend
-      target: worker
-      dockerfile: Dockerfile
+    image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-worker:${IMAGE_TAG:-latest}
+    pull_policy: always
     depends_on:
       - db
       - redis
@@ -77,10 +74,8 @@ services:
       - manual
 
   backend:
-    build: 
-      context: ./backend
-      target: backend
-      dockerfile: Dockerfile
+    image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-backend-dev:${DEV_IMAGE_TAG:-latest}
+    pull_policy: always
     depends_on:
       - db
       - redis
@@ -96,10 +91,8 @@ services:
       - "${BACKEND_PORT}:8000"
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: base
+    image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-frontend-dev:${DEV_IMAGE_TAG:-latest}
+    pull_policy: always
     volumes:
       - ./frontend:/home/newuser/frontend
       - /home/newuser/frontend/node_modules

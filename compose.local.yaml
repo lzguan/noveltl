@@ -1,0 +1,23 @@
+services:
+  dev:
+    image: noveltl-devcontainer:local
+    pull_policy: build
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+
+  frontend:
+    image: noveltl-frontend-dev:local
+    pull_policy: build
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: base
+
+  backend:
+    image: noveltl-backend-dev:local
+    pull_policy: build
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: backend

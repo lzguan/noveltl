@@ -4,7 +4,7 @@ from typing import Any
 import jwt
 from pwdlib import PasswordHash
 
-from .config import ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, SECRET_KEY
+from src.auth.config import ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, SECRET_KEY
 
 password_hash = PasswordHash.recommended()
 

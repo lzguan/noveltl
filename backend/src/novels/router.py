@@ -14,14 +14,7 @@ from src.auth.models import User
 from src.database import get_db
 from src.exceptions import DataTooLongException, InsufficientPermissionsException
 from src.languages.exceptions import LanguageNotFoundException
-from src.novels.imports import BulkChapterUploadV1, upload_v1
-from src.novels.service import query_novel_and_users_by_id
-from src.requests.cache import redis_cache
-from src.requests.decorators import attl_cache, serialize_response_model
-from src.schemas import DetailHTTPErrorResponse, OperationStatus, RequestConflictErrorResponse
-
-from . import schemas
-from .exceptions import (
+from src.novels.exceptions import (
     ChapterContentNotFoundException,
     ChapterContentOutdatedException,
     ChapterDeleteFailedException,
@@ -30,7 +23,26 @@ from .exceptions import (
     NovelNotFoundException,
     SourceWorkNotFoundException,
 )
-from .service import (
+from src.novels.imports import BulkChapterUploadV1, upload_v1
+from src.novels.schemas import (
+    Chapter,
+    ChapterContent,
+    ChapterContentMeta,
+    ChapterData,
+    CreateChapter,
+    CreateNovel,
+    CreateSourceWork,
+    ModifyChapterContentResponse,
+    Novel,
+    NovelAndUsers,
+    SourceWork,
+    SourceWorkData,
+    UpdateChapter,
+    UpdateChapterContent,
+    UpdateNovel,
+    UpdateSourceWork,
+)
+from src.novels.service import (
     insert_chapter,
     insert_novel,
     insert_source_work,
@@ -45,6 +57,7 @@ from .service import (
     query_chapter_content_ids_by_chapter_id,
     query_chapter_content_status,
     query_chapters_by_novel,
+    query_novel_and_users_by_id,
     query_novel_by_id,
     query_novels_by_current_user,
     query_novels_by_source_work,
@@ -53,6 +66,9 @@ from .service import (
     query_source_works_by_title,
     remove_chapter,
 )
+from src.requests.cache import redis_cache
+from src.requests.decorators import attl_cache, serialize_response_model
+from src.schemas import DetailHTTPErrorResponse, OperationStatus, RequestConflictErrorResponse
 
 router = APIRouter()
 
@@ -61,7 +77,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-@router.get("/source-works", response_model=list[schemas.SourceWorkData])
+@router.get("/source-works", response_model=list[SourceWorkData])
 async def read_source_works(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
@@ -72,10 +88,10 @@ async def read_source_works(
     Endpoint for retrieving source works in bulk, optionally filtered by title substring.
     """
     source_works = query_source_works_by_title(db, current_user, title_contains, ret_novels)
-    return [schemas.SourceWorkData(source_work=sw, novels=novels) for sw, novels in source_works]
+    return [SourceWorkData(source_work=sw, novels=novels) for sw, novels in source_works]
 
 
-@router.get("/source-works/{sourceWorkId}", response_model=schemas.SourceWork)
+@router.get("/source-works/{sourceWorkId}", response_model=SourceWork)
 async def read_source_work(
     source_work_id: Annotated[uuid.UUID, Path(alias="sourceWorkId")],
     db: Annotated[Session, Depends(get_db)],
@@ -96,7 +112,7 @@ async def read_source_work(
     return source_work
 
 
-@router.get("/source-works/{sourceWorkId}/novels", response_model=list[schemas.Novel])
+@router.get("/source-works/{sourceWorkId}/novels", response_model=list[Novel])
 async def read_novels_by_source_work(
     source_work_id: Annotated[uuid.UUID, Path(alias="sourceWorkId")],
     db: Annotated[Session, Depends(get_db)],
@@ -117,9 +133,9 @@ async def read_novels_by_source_work(
     return novels
 
 
-@router.post("/source-works", response_model=schemas.SourceWork)
+@router.post("/source-works", response_model=SourceWork)
 async def create_source_work(
-    request: schemas.CreateSourceWork,
+    request: CreateSourceWork,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
@@ -136,10 +152,10 @@ async def create_source_work(
     return source_work
 
 
-@router.patch("/source-works/{sourceWorkId}", response_model=schemas.SourceWork)
+@router.patch("/source-works/{sourceWorkId}", response_model=SourceWork)
 async def update_source_work(
     source_work_id: Annotated[uuid.UUID, Path(alias="sourceWorkId")],
-    request: schemas.UpdateSourceWork,
+    request: UpdateSourceWork,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
@@ -171,7 +187,7 @@ async def update_source_work(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/novels", response_model=list[schemas.Novel])
+@router.get("/novels", response_model=list[Novel])
 async def read_novels(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
@@ -184,7 +200,7 @@ async def read_novels(
     return novels
 
 
-@router.get("/novels/mine", response_model=list[schemas.Novel])
+@router.get("/novels/mine", response_model=list[Novel])
 async def read_novels_mine(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
@@ -198,7 +214,7 @@ async def read_novels_mine(
     return novels
 
 
-@router.get("/novels/{novelId}", response_model=schemas.Novel)
+@router.get("/novels/{novelId}", response_model=Novel)
 async def read_novel(
     novel_id: Annotated[uuid.UUID, Path(alias="novelId")],
     db: Annotated[Session, Depends(get_db)],
@@ -217,7 +233,7 @@ async def read_novel(
     return novel
 
 
-@router.get("/novels/{novelId}/with-contributors", response_model=schemas.NovelAndUsers)
+@router.get("/novels/{novelId}/with-contributors", response_model=NovelAndUsers)
 async def read_novel_with_contributors(
     novel_id: Annotated[uuid.UUID, Path(alias="novelId")],
     db: Annotated[Session, Depends(get_db)],
@@ -236,9 +252,9 @@ async def read_novel_with_contributors(
     return novel_and_users
 
 
-@router.post("/novels", response_model=schemas.Novel)
+@router.post("/novels", response_model=Novel)
 async def create_novel(
-    request: schemas.CreateNovel,
+    request: CreateNovel,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
@@ -265,10 +281,10 @@ async def create_novel(
     return db_novel
 
 
-@router.patch("/novels/{novelId}", response_model=schemas.Novel)
+@router.patch("/novels/{novelId}", response_model=Novel)
 async def update_novel(
     novel_id: Annotated[uuid.UUID, Path(alias="novelId")],
-    request: schemas.UpdateNovel,
+    request: UpdateNovel,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
@@ -300,7 +316,7 @@ async def update_novel(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/chapters", response_model=list[schemas.Chapter])
+@router.get("/chapters", response_model=list[Chapter])
 async def read_chapters_by_novel(
     novel_id: Annotated[uuid.UUID, Query(alias="novelId")],
     db: Annotated[Session, Depends(get_db)],
@@ -321,7 +337,7 @@ async def read_chapters_by_novel(
     return chapters
 
 
-@router.get("/chapters/{chapterId}", response_model=schemas.Chapter)
+@router.get("/chapters/{chapterId}", response_model=Chapter)
 async def read_chapter_by_id(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
     db: Annotated[Session, Depends(get_db)],
@@ -342,10 +358,10 @@ async def read_chapter_by_id(
     return chapter
 
 
-@router.post("/novels/{novelId}/chapters", response_model=schemas.ChapterData)
+@router.post("/novels/{novelId}/chapters", response_model=ChapterData)
 async def create_chapter(
     novel_id: Annotated[uuid.UUID, Path(alias="novelId")],
-    request: schemas.CreateChapter,
+    request: CreateChapter,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
@@ -370,16 +386,16 @@ async def create_chapter(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Insufficient permissions to perform this action."
         ) from e
-    return schemas.ChapterData(
-        metadata=schemas.Chapter.model_validate(chapter, from_attributes=True),
-        content=schemas.ChapterContent.model_validate(chapter_content, from_attributes=True),
+    return ChapterData(
+        metadata=Chapter.model_validate(chapter, from_attributes=True),
+        content=ChapterContent.model_validate(chapter_content, from_attributes=True),
     )
 
 
-@router.patch("/chapters/{chapterId}", response_model=schemas.Chapter)
+@router.patch("/chapters/{chapterId}", response_model=Chapter)
 async def update_chapter(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
-    request: schemas.UpdateChapter,
+    request: UpdateChapter,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
@@ -437,7 +453,7 @@ async def delete_chapter(
     return delete_status
 
 
-@router.post("/chapters/{chapterId}/publish", response_model=schemas.Chapter)
+@router.post("/chapters/{chapterId}/publish", response_model=Chapter)
 async def action_publish_chapter(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
     db: Annotated[Session, Depends(get_db)],
@@ -468,7 +484,7 @@ async def action_publish_chapter(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/chapters/{chapterId}/content", response_model=schemas.ChapterContent)
+@router.get("/chapters/{chapterId}/content", response_model=ChapterContent)
 async def read_chapter_content(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
     db: Annotated[Session, Depends(get_db)],
@@ -493,7 +509,7 @@ async def read_chapter_content(
     return content
 
 
-@router.get("/chapter-contents/{chapterContentId}", response_model=schemas.ChapterContent)
+@router.get("/chapter-contents/{chapterContentId}", response_model=ChapterContent)
 async def read_chapter_content_by_id(
     chapter_content_id: Annotated[uuid.UUID, Path(alias="chapterContentId")],
     db: Annotated[Session, Depends(get_db)],
@@ -514,7 +530,7 @@ async def read_chapter_content_by_id(
     return content
 
 
-@router.get("/chapters/{chapterId}/content-versions", response_model=list[schemas.ChapterContentMeta])
+@router.get("/chapters/{chapterId}/content-versions", response_model=list[ChapterContentMeta])
 async def read_chapter_content_versions(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
     db: Annotated[Session, Depends(get_db)],
@@ -555,7 +571,7 @@ async def read_chapter_content_status(
 
 @router.patch(
     "/chapters/{chapterId}/content",
-    response_model=schemas.ModifyChapterContentResponse,
+    response_model=ModifyChapterContentResponse,
     responses={
         401: {"model": DetailHTTPErrorResponse, "description": "Insufficient permissions to modify this chapter."},
         404: {"model": DetailHTTPErrorResponse, "description": "Chapter content not found."},
@@ -569,11 +585,11 @@ async def read_chapter_content_status(
     ttl=60,
     cache=redis_cache,
     success_code=200,
-    serialize_ret=serialize_response_model(schemas.ModifyChapterContentResponse),
+    serialize_ret=serialize_response_model(ModifyChapterContentResponse),
 )
 async def update_chapter_content(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
-    request: schemas.UpdateChapterContent,
+    request: UpdateChapterContent,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
@@ -607,7 +623,7 @@ async def update_chapter_content(
 
 @router.post(
     "/chapters/upload",
-    response_model=list[schemas.Chapter],
+    response_model=list[Chapter],
     responses={
         400: {
             "model": DetailHTTPErrorResponse,

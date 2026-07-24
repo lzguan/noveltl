@@ -8,11 +8,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
-from . import models
-from .exceptions import LanguageNotFoundException
+from src.languages.exceptions import LanguageNotFoundException
+from src.languages.models import Language
 
 
-def query_language_by_code(db: Session, language_code: str) -> models.Language:
+def query_language_by_code(db: Session, language_code: str) -> Language:
     """
     Finds language with corresponding language_code in database.
 
@@ -23,7 +23,7 @@ def query_language_by_code(db: Session, language_code: str) -> models.Language:
     Raises:
         LanguageNotFoundException: language code not found in database.
     """
-    q = select(models.Language).where(models.Language.language_code == language_code)
+    q = select(Language).where(Language.language_code == language_code)
     result = db.execute(q)
     try:
         ret = result.scalar_one()
@@ -32,7 +32,7 @@ def query_language_by_code(db: Session, language_code: str) -> models.Language:
     return ret
 
 
-def query_all_languages(db: Session) -> Sequence[models.Language]:
+def query_all_languages(db: Session) -> Sequence[Language]:
     """
     Queries all languages in the database.
 
@@ -42,6 +42,6 @@ def query_all_languages(db: Session) -> Sequence[models.Language]:
     Returns:
         List of all languages in the database.
     """
-    q = select(models.Language)
+    q = select(Language)
     result = db.execute(q)
     return result.scalars().all()

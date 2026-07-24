@@ -1,8 +1,8 @@
 import logging
 from typing import Any, Protocol, TypeVar
 
-from ...labels.schemas import LabelBase
-from .. import params
+from src.autolabels import params
+from src.labels.schemas import LabelBase
 
 my_logger = logging.getLogger(__name__)
 my_logger.propagate = True

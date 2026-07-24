@@ -7,15 +7,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from .auth.router import router as auth_router
-from .autolabels.router import router as autolabel_router
-from .config import log_settings, uvicorn_logger
-from .editing.router import router as editing_router
-from .labels.router import router as label_router
-from .languages.router import router as language_router
-from .novels.router import router as novel_router
-from .redis_conn import set_redis
-from .requests.router import router as requests_router
+from src.auth.router import router as auth_router
+from src.autolabels.router import router as autolabel_router
+from src.config import log_settings, uvicorn_logger
+from src.editing.router import router as editing_router
+from src.labels.router import router as label_router
+from src.languages.router import router as language_router
+from src.novels.router import router as novel_router
+from src.redis_conn import set_redis
+from src.requests.router import router as requests_router
 
 logger = logging.getLogger("src")
 if log_settings.LOG_LEVEL == "DEBUG":

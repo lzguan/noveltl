@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from ... import config
+from src import config
 
 DB_URL = config.database_settings.DB_URL
 REDIS_HOST = "redis"

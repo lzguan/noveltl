@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 from typing import Annotated, Literal
 
@@ -129,7 +131,7 @@ class Get(Function):
     mutable: bool = False
 
     @model_validator(mode="after")
-    def validate_mutability(self) -> "Get":
+    def validate_mutability(self) -> Get:
         discriminate_type(self.type, mutable=self.mutable)
         return self
 
@@ -145,12 +147,11 @@ class Get(Function):
 
 class Compare(Function):
     name: Literal["compare"] = "compare"
-    field_name: FieldName
     type: Literal["string", "int", "float", "bool"]
     op: Literal["eq", "ne", "lt", "le", "gt", "ge"]
 
     @model_validator(mode="after")
-    def validate_operator(self) -> "Compare":
+    def validate_operator(self) -> Compare:
         if self.type == "bool" and self.op not in ("eq", "ne"):
             raise ValueError("Boolean comparisons support only 'eq' and 'ne'.")
         return self
@@ -159,9 +160,8 @@ class Compare(Function):
     @property
     def signature(self) -> Signature:
         field = discriminate_type(self.type)
-        argument = Schema(fields={self.field_name: field})
         return Signature(
-            args=(argument, argument),
+            args=(field, field),
             output=BoolField(mutable=False),
         )
 
@@ -193,7 +193,7 @@ class Rename(Function):
     original_schema: Schema
 
     @model_validator(mode="after")
-    def validate_rename_pairs(self) -> "Rename":
+    def validate_rename_pairs(self) -> Rename:
         old_names: set[str] = set()
         new_names: set[str] = set()
 
@@ -265,10 +265,23 @@ class Not(Function):
         )
 
 
-type ElementaryOutputFunction = Annotated[
-    LiteralString | LiteralInt | LiteralFloat | LiteralBool | Get | Compare | ProjectToSpan | Rename | And | Or | Not,
-    Field(discriminator="name"),
-]
+def output_when_called_on(function: Function, input_schema: Schema) -> SObj:
+    """
+    Return the output of calling function in an object-schema environment.
+
+    Nullary functions ignore the environment. Unary functions may consume it
+    when the environment structurally extends their required input. Functions
+    with multiple unbound arguments must first be bound through Call.
+    """
+
+    signature = function.signature
+    if len(signature.args) == 0:
+        return signature.output
+    if len(signature.args) != 1:
+        raise ValueError(f"Function must accept zero or one unbound argument; received {len(signature.args)}.")
+    if not extends(input_schema, signature.args[0]):
+        raise ValueError("Function cannot consume the provided input schema.")
+    return signature.output
 
 
 class Construct(Function):
@@ -279,23 +292,16 @@ class Construct(Function):
 
     name: Literal["construct"] = "construct"
     input_schema: Schema
-    fields: dict[FieldName, ElementaryOutputFunction] = Field(min_length=1, max_length=MAX_SCHEMA_FIELDS)
+    fields: dict[FieldName, FunctionType] = Field(min_length=1, max_length=MAX_SCHEMA_FIELDS)
 
     @model_validator(mode="after")
-    def validate_field_functions(self) -> "Construct":
+    def validate_field_functions(self) -> Construct:
         for field_name, function in self.fields.items():
-            child_signature = function.signature
-            if len(child_signature.args) != 1:
-                raise ValueError(
-                    f"Function for field '{field_name}' must accept exactly one argument; "
-                    f"received {len(child_signature.args)}."
-                )
-
-            child_input = child_signature.args[0]
-            if not isinstance(child_input, Schema) or not extends(self.input_schema, child_input):
-                raise ValueError(f"Function for field '{field_name}' cannot consume the construct input schema.")
-
-            if not isinstance(child_signature.output, SchemaFieldBase):
+            try:
+                output = output_when_called_on(function, self.input_schema)
+            except ValueError as exc:
+                raise ValueError(f"Invalid function for field '{field_name}': {exc}") from exc
+            if not isinstance(output, SchemaFieldBase):
                 raise ValueError(f"Function for field '{field_name}' must return an elementary data type.")
 
         return self
@@ -306,8 +312,88 @@ class Construct(Function):
         return Signature(
             args=(self.input_schema,),
             output=Schema(
-                fields={field_name: function.signature.output for field_name, function in self.fields.items()}
+                fields={
+                    field_name: output
+                    for field_name, function in self.fields.items()
+                    if isinstance((output := output_when_called_on(function, self.input_schema)), SchemaFieldBase)
+                }
             ),
+        )
+
+
+class Extend(Function):
+    """Preserve an input object and add fields derived from that object."""
+
+    name: Literal["extend"] = "extend"
+    input_schema: Schema
+    fields: dict[FieldName, FunctionType] = Field(min_length=1, max_length=MAX_SCHEMA_FIELDS)
+
+    @model_validator(mode="after")
+    def validate_field_functions(self) -> Extend:
+        collisions = set(self.input_schema.fields) & set(self.fields)
+        if collisions:
+            names = ", ".join(sorted(collisions))
+            raise ValueError(f"Extended fields conflict with existing fields: {names}.")
+        if len(self.input_schema.fields) + len(self.fields) > MAX_SCHEMA_FIELDS:
+            raise ValueError(f"Extended schema cannot contain more than {MAX_SCHEMA_FIELDS} fields.")
+
+        for field_name, function in self.fields.items():
+            try:
+                output = output_when_called_on(function, self.input_schema)
+            except ValueError as exc:
+                raise ValueError(f"Invalid function for field '{field_name}': {exc}") from exc
+            if not isinstance(output, SchemaFieldBase):
+                raise ValueError(f"Function for field '{field_name}' must return an elementary data type.")
+
+        return self
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        fields = dict(self.input_schema.fields)
+        fields.update(
+            {
+                field_name: output
+                for field_name, function in self.fields.items()
+                if isinstance((output := output_when_called_on(function, self.input_schema)), SchemaFieldBase)
+            }
+        )
+        return Signature(
+            args=(self.input_schema,),
+            output=Schema(fields=fields),
+        )
+
+
+class Call(Function):
+    """Bind a function's arguments to expressions sharing one input schema."""
+
+    name: Literal["call"] = "call"
+    input_schema: Schema
+    function: FunctionType
+    arguments: tuple[FunctionType, ...] = Field(max_length=MAX_FUNCTION_ARITY)
+
+    @model_validator(mode="after")
+    def validate_arguments(self) -> Call:
+        parameters = self.function.signature.args
+        if len(self.arguments) != len(parameters):
+            raise ValueError(f"Function requires {len(parameters)} arguments; received {len(self.arguments)}.")
+
+        for index, (argument, parameter) in enumerate(zip(self.arguments, parameters, strict=True)):
+            try:
+                argument_output = output_when_called_on(argument, self.input_schema)
+            except ValueError as exc:
+                raise ValueError(f"Invalid argument {index}: {exc}") from exc
+            if not extends(argument_output, parameter):
+                raise ValueError(f"Argument {index} output is incompatible with the function parameter.")
+
+        return self
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(
+            args=(self.input_schema,),
+            output=self.function.signature.output,
         )
 
 
@@ -323,6 +409,12 @@ type FunctionType = Annotated[
     | And
     | Or
     | Not
-    | Construct,
+    | Construct
+    | Extend
+    | Call,
     Field(discriminator="name"),
 ]
+
+Construct.model_rebuild()
+Extend.model_rebuild()
+Call.model_rebuild()

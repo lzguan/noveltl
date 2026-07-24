@@ -4,10 +4,10 @@ from typing import Any
 
 from arq.connections import RedisSettings
 
-from ...config import log_settings
-from .config import REDIS_HOST, REDIS_PORT
-from .inference import Cluener
-from .tasks import autolabel_infer, model_cache
+from src.autolabels.worker.config import REDIS_HOST, REDIS_PORT
+from src.autolabels.worker.inference import Cluener
+from src.autolabels.worker.tasks import autolabel_infer, model_cache
+from src.config import log_settings
 
 logger = logging.getLogger(__name__)
 

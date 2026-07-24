@@ -5,8 +5,8 @@ import redis
 from arq import ArqRedis, create_pool
 from fastapi import HTTPException, status
 
-from .config import _redis_settings, redis_settings
-from .exceptions import RedisNotInitializedError
+from src.config import _redis_settings, redis_settings
+from src.exceptions import RedisNotInitializedError
 
 redis_for_worker: ArqRedis | None = None
 

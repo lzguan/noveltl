@@ -1,11 +1,9 @@
 from typing import Any, Protocol, TypedDict, cast
 
-from src.autolabels.params import CluenerParams
-
-from ...labels.schemas import LabelBase
-from ..params import NERModelParamsBase
-from .interfaces import NERModel, Tokenizer
-from .utils import chunk_text
+from src.autolabels.params import CluenerParams, NERModelParamsBase
+from src.autolabels.worker.interfaces import NERModel, Tokenizer
+from src.autolabels.worker.utils import chunk_text
+from src.labels.schemas import LabelBase
 
 
 class TokenizerType(Protocol):

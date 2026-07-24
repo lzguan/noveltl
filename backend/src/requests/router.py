@@ -3,11 +3,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 
-from src.requests.cache import TTLCache
+from src.requests.cache import CacheEntry, TTLCache
 from src.requests.dependencies import get_redis_cache
 from src.schemas import DetailHTTPErrorResponse
-
-from .cache import CacheEntry
 
 router = APIRouter()
 

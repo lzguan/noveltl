@@ -20,8 +20,15 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
 
-from ..models import Base
-from .constants import MAX_AUTHOR_LENGTH, MAX_CHAPTER_TITLE_LEN, MAX_NOVEL_TITLE_LEN, NovelType, Role, Visibility
+from src.models import Base
+from src.novels.constants import (
+    MAX_AUTHOR_LENGTH,
+    MAX_CHAPTER_TITLE_LEN,
+    MAX_NOVEL_TITLE_LEN,
+    NovelType,
+    Role,
+    Visibility,
+)
 
 if TYPE_CHECKING:
     from ..auth.models import User

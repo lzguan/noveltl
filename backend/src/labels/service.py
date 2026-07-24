@@ -15,22 +15,19 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
-from ..auth.models import User
-from ..autolabels import models as autolabel_models
-from ..autolabels.constants import AutoLabelProgress
-from ..exceptions import DataTooLongException, NotFoundException
-from ..novels import models as novel_models
-from ..novels.exceptions import ChapterContentNotFoundException, NovelNotFoundException
-from ..novels.permissions import chapter_content_mod_access_select
-from . import models, schemas
-from .constants import LabelRole
-from .exceptions import (
+from src.auth.models import User
+from src.autolabels import models as autolabel_models
+from src.autolabels.constants import AutoLabelProgress
+from src.exceptions import DataTooLongException, NotFoundException
+from src.labels import models, schemas
+from src.labels.constants import LabelRole
+from src.labels.exceptions import (
     LabelDataNotFoundException,
     LabelDataRevisionDuplicateException,
     LabelGroupNotFoundException,
     LabelWordMismatchInvalidOperationException,
 )
-from .permissions import (
+from src.labels.permissions import (
     label_contributors_mod_access_select,
     label_data_mod_access_insert,
     label_data_mod_access_select,
@@ -38,7 +35,10 @@ from .permissions import (
     label_group_mod_access_select,
     label_group_mod_access_update,
 )
-from .utils import apply_operation
+from src.labels.utils import apply_operation
+from src.novels import models as novel_models
+from src.novels.exceptions import ChapterContentNotFoundException, NovelNotFoundException
+from src.novels.permissions import chapter_content_mod_access_select
 
 logger = logging.getLogger(__name__)
 

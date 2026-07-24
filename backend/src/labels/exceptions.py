@@ -2,7 +2,7 @@
 Exceptions relating to labels.
 """
 
-from ..exceptions import DuplicateException, NotFoundException
+from src.exceptions import DuplicateException, NotFoundException
 
 
 class LabelGroupNotFoundException(NotFoundException):

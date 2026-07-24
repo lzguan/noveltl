@@ -8,14 +8,12 @@ from pydantic import TypeAdapter, ValidationError
 from sqlalchemy import CursorResult, select, update
 from sqlalchemy.exc import NoResultFound
 
-from src.autolabels.models import AutoLabelRun
+from src.autolabels.constants import AutoLabelProgress
+from src.autolabels.models import AutoLabel, AutoLabelRun
 from src.autolabels.params import ModelName, NERParams
-
-from ...novels.models import ChapterContent
-from ..constants import AutoLabelProgress
-from ..models import AutoLabel
-from .config import SessionLocal
-from .interfaces import NERModel
+from src.autolabels.worker.config import SessionLocal
+from src.autolabels.worker.interfaces import NERModel
+from src.novels.models import ChapterContent
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +155,9 @@ async def autolabel_infer(ctx: Any, job_id: str, auto_label_id: uuid.UUID) -> No
             db.commit()
             raise e
         except Exception as e:
-            logger.exception("Autolabel chapter content lookup failed job_id=%s auto_label_id=%s", job_id, auto_label_id)
+            logger.exception(
+                "Autolabel chapter content lookup failed job_id=%s auto_label_id=%s", job_id, auto_label_id
+            )
             stmt = base_update.values(auto_label_status=AutoLabelProgress.FAILED, auto_label_message=str(e))
             db.execute(stmt)
             db.commit()
@@ -176,7 +176,9 @@ async def autolabel_infer(ctx: Any, job_id: str, auto_label_id: uuid.UUID) -> No
             elapsed_ms,
         )
         if err:
-            logger.warning("Autolabel inference returned message job_id=%s auto_label_id=%s message=%s", job_id, auto_label_id, err)
+            logger.warning(
+                "Autolabel inference returned message job_id=%s auto_label_id=%s message=%s", job_id, auto_label_id, err
+            )
     except Exception as e:
         logger.exception("Autolabel inference failed job_id=%s auto_label_id=%s", job_id, auto_label_id)
         with SessionLocal() as db:

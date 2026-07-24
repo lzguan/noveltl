@@ -4,28 +4,33 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.orm import Session
 
-from src.requests.cache import redis_cache
-from src.requests.decorators import attl_cache, serialize_response_model
-from src.schemas import DetailHTTPErrorResponse, RequestConflictErrorResponse
-
-from ..auth.dependencies import get_current_user
-from ..auth.models import User
-from ..database import get_db
-from . import schemas
-from .dependencies import get_arq_dispatcher
-from .exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
-from .service import (
+from src.auth.dependencies import get_current_user
+from src.auth.models import User
+from src.autolabels.dependencies import get_arq_dispatcher
+from src.autolabels.exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
+from src.autolabels.schemas import (
+    AutoLabel,
+    AutoLabelMetaWithCid,
+    AutoLabelRun,
+    CreateAutoLabels,
+    CreateAutoLabelsResponse,
+)
+from src.autolabels.service import (
     insert_auto_labels,
     query_auto_label_by_id,
     query_auto_label_runs,
     query_auto_labels_by_run,
 )
-from .utils import AutoLabelDispatcher
+from src.autolabels.utils import AutoLabelDispatcher
+from src.database import get_db
+from src.requests.cache import redis_cache
+from src.requests.decorators import attl_cache, serialize_response_model
+from src.schemas import DetailHTTPErrorResponse, RequestConflictErrorResponse
 
 router = APIRouter()
 
 
-@router.get("/auto-label-runs", response_model=list[schemas.AutoLabelRun])
+@router.get("/auto-label-runs", response_model=list[AutoLabelRun])
 async def read_auto_label_runs(
     novel_id: Annotated[uuid.UUID, Query(alias="novelId")],
     db: Annotated[Session, Depends(get_db)],
@@ -44,7 +49,7 @@ async def read_auto_label_runs(
 
 @router.get(
     "/auto-label-runs/{runId}/auto-labels",
-    response_model=list[schemas.AutoLabelMetaWithCid],
+    response_model=list[AutoLabelMetaWithCid],
 )
 async def read_auto_labels_by_run(
     run_id: Annotated[uuid.UUID, Path(alias="runId")],
@@ -64,7 +69,7 @@ async def read_auto_labels_by_run(
     return query_auto_labels_by_run(db, current_user, run_id, start, end)
 
 
-@router.get("/auto-labels/{autoLabelId}", response_model=schemas.AutoLabel)
+@router.get("/auto-labels/{autoLabelId}", response_model=AutoLabel)
 async def read_autolabel_by_id(
     auto_label_id: Annotated[uuid.UUID, Path(alias="autoLabelId")],
     db: Annotated[Session, Depends(get_db)],
@@ -88,15 +93,15 @@ async def read_autolabel_by_id(
 
 @router.post(
     "/auto-labels",
-    response_model=schemas.CreateAutoLabelsResponse,
+    response_model=CreateAutoLabelsResponse,
     responses={
         400: {"model": DetailHTTPErrorResponse, "description": "Invalid request data."},
         409: {"model": RequestConflictErrorResponse, "description": "Request key conflict."},
     },
 )
-@attl_cache(cache=redis_cache, ttl=60, serialize_ret=serialize_response_model(schemas.CreateAutoLabelsResponse))
+@attl_cache(cache=redis_cache, ttl=60, serialize_ret=serialize_response_model(CreateAutoLabelsResponse))
 async def create_autolabels(
-    request: schemas.CreateAutoLabels,
+    request: CreateAutoLabels,
     db: Annotated[Session, Depends(get_db)],
     dispatcher: Annotated[AutoLabelDispatcher, Depends(get_arq_dispatcher)],
     current_user: Annotated[User, Depends(get_current_user)],

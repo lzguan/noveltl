@@ -12,21 +12,21 @@ from fastapi import APIRouter, Depends, HTTPException, Path, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from ..database import get_db
-from ..exceptions import DataTooLongException, InsufficientPermissionsException
-from . import schemas
-from .config import ACCESS_TOKEN_EXPIRE_MINUTES
-from .dependencies import get_current_user, get_optional_user
-from .exceptions import UserAuthenticationFailedException, UserNameDuplicateException, UserNotFoundException
-from .service import authenticate_user, insert_user, query_user_by_user_name, remove_user
-from .utils import create_access_token
+from src.auth.config import ACCESS_TOKEN_EXPIRE_MINUTES
+from src.auth.dependencies import get_current_user, get_optional_user
+from src.auth.exceptions import UserAuthenticationFailedException, UserNameDuplicateException, UserNotFoundException
+from src.auth.schemas import CreateUser, DeleteUserStatus, Token, User
+from src.auth.service import authenticate_user, insert_user, query_user_by_user_name, remove_user
+from src.auth.utils import create_access_token
+from src.database import get_db
+from src.exceptions import DataTooLongException, InsufficientPermissionsException
 
 router = APIRouter()
 
 
 @router.post(
     "/token",
-    response_model=schemas.Token,
+    response_model=Token,
     responses={
         401: {"description": "Password does not match."},
     },
@@ -55,14 +55,14 @@ async def login_for_access_token(
         ) from e
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token({"sub": user.user_name}, access_token_expires)
-    return schemas.Token(access_token=access_token, token_type="bearer")
+    return Token(access_token=access_token, token_type="bearer")
 
 
-@router.post("/register", response_model=schemas.User)
+@router.post("/register", response_model=User)
 async def register_user(
-    request: schemas.CreateUser,
+    request: CreateUser,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[schemas.User | None, Depends(get_optional_user)],
+    current_user: Annotated[User | None, Depends(get_optional_user)],
 ):
     """
     Endpoint for registering a new user. Client with registration request must not be logged in.
@@ -90,11 +90,11 @@ async def register_user(
     return new_user
 
 
-@router.post("/users", response_model=schemas.User)
+@router.post("/users", response_model=User)
 async def create_user(
-    request: schemas.CreateUser,
+    request: CreateUser,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[schemas.User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
     Creates a user with metadata request, provided that the current_user has sufficient permissions.
@@ -120,8 +120,8 @@ async def create_user(
     return new_user
 
 
-@router.get("/users/me", response_model=schemas.User)
-async def read_user_me(current_user: Annotated[schemas.User, Depends(get_current_user)]):
+@router.get("/users/me", response_model=User)
+async def read_user_me(current_user: Annotated[User, Depends(get_current_user)]):
     """
     Return the current logged in user.
 
@@ -131,11 +131,11 @@ async def read_user_me(current_user: Annotated[schemas.User, Depends(get_current
     return current_user
 
 
-@router.get("/users/{userName}", response_model=schemas.User)
+@router.get("/users/{userName}", response_model=User)
 async def read_user(
     user_name: Annotated[str, Path(alias="userName")],
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[schemas.User | None, Depends(get_optional_user)],
+    current_user: Annotated[User | None, Depends(get_optional_user)],
 ):
     """
     Get user by username.
@@ -153,9 +153,9 @@ async def read_user(
     return user
 
 
-@router.delete("/users/me", response_model=schemas.DeleteUserStatus)
+@router.delete("/users/me", response_model=DeleteUserStatus)
 async def delete_user_me(
-    db: Annotated[Session, Depends(get_db)], current_user: Annotated[schemas.User, Depends(get_current_user)]
+    db: Annotated[Session, Depends(get_db)], current_user: Annotated[User, Depends(get_current_user)]
 ):
     """
     Delete the user currently logged in.
@@ -172,11 +172,11 @@ async def delete_user_me(
     return stat
 
 
-@router.delete("/users/{userId}", response_model=schemas.DeleteUserStatus)
+@router.delete("/users/{userId}", response_model=DeleteUserStatus)
 async def delete_user(
     user_id: Annotated[uuid.UUID, Path(alias="userId")],
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[schemas.User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
     Delete the user with user_id if the current user has sufficient permissions to perform this action. Throw an exception if the user currently logged in has insufficient permissions.

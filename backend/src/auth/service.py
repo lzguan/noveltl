@@ -6,15 +6,15 @@ from sqlalchemy import select
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
-from ..exceptions import DataTooLongException, InsufficientPermissionsException
-from . import models, schemas
-from .constants import UserType
-from .exceptions import (
+from src.auth import models, schemas
+from src.auth.constants import UserType
+from src.auth.exceptions import (
     UserAuthenticationFailedException,
     UserNameDuplicateException,
     UserNotFoundException,
 )
-from .utils import hash_password, verify_password
+from src.auth.utils import hash_password, verify_password
+from src.exceptions import DataTooLongException, InsufficientPermissionsException
 
 
 def query_user_by_user_name(db: Session, user_name: str) -> models.User:

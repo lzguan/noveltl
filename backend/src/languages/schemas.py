@@ -1,6 +1,6 @@
 from pydantic import ConfigDict
 
-from ..schemas import Model
+from src.schemas import Model
 
 
 class Language(Model):

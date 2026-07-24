@@ -7,8 +7,8 @@ from typing import Literal
 
 from pydantic import ConfigDict
 
-from ..schemas import Model
-from .constants import NovelType, Visibility
+from src.novels.constants import NovelType, Visibility
+from src.schemas import Model
 
 
 class SourceWork(Model):

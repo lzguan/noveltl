@@ -7,8 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from ..schemas import Model
-from .constants import UserType
+from src.auth.constants import UserType
+from src.schemas import Model
 
 
 class User(Model):

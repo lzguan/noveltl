@@ -1,16 +1,19 @@
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from src.filters.data_types import BoolField, IntField, Schema, StringField, TextSpanField
+from src.filters.data_types import BoolField, FloatField, IntField, Schema, StringField, TextSpanField
 from src.filters.functions import (
     MAX_FUNCTION_ARITY,
     MAX_LITERAL_STRING_LENGTH,
     MAX_RENAME_PAIRS,
     And,
+    Call,
     Compare,
     Construct,
+    Extend,
     FunctionType,
     Get,
+    LiteralBool,
     LiteralFloat,
     LiteralString,
     ProjectToSpan,
@@ -66,14 +69,14 @@ def test_get_signature_tracks_requested_type_and_mutability() -> None:
 
 
 def test_compare_signature_and_boolean_operator_validation() -> None:
-    comparison = Compare(field_name="count", type="int", op="ge")
-    argument = Schema(fields={"count": IntField(mutable=False)})
+    comparison = Compare(type="int", op="ge")
+    argument = IntField(mutable=False)
 
     assert comparison.signature.args == (argument, argument)
     assert comparison.signature.output == BoolField(mutable=False)
 
     with pytest.raises(ValidationError, match="Boolean comparisons"):
-        Compare(field_name="flag", type="bool", op="lt")
+        Compare(type="bool", op="lt")
 
 
 def test_project_to_span_signature() -> None:
@@ -212,8 +215,7 @@ def test_construct_parses_through_function_union() -> None:
 @pytest.mark.parametrize(
     "function, message",
     [
-        (LiteralString(value="constant"), "exactly one argument"),
-        (Compare(field_name="word", type="string", op="eq"), "exactly one argument"),
+        (Compare(type="string", op="eq"), "zero or one unbound argument"),
         (ProjectToSpan(), "cannot consume"),
     ],
 )
@@ -241,3 +243,108 @@ def test_construct_rejects_object_outputs() -> None:
 def test_construct_rejects_empty_field_map() -> None:
     with pytest.raises(ValidationError):
         Construct.model_validate({"inputSchema": {"fields": {}}, "fields": {}})
+
+
+def test_construct_lifts_literal_fields() -> None:
+    construct = Construct(
+        input_schema=Schema(fields={"word": StringField()}),
+        fields={"classification": LiteralString(value="name")},
+    )
+
+    assert construct.signature.output == Schema(fields={"classification": StringField()})
+
+
+def test_call_binds_shared_input_expressions() -> None:
+    input_schema = Schema(fields={"score": FloatField()})
+    call = Call(
+        input_schema=input_schema,
+        function=Compare(type="float", op="lt"),
+        arguments=(
+            Get(field_name="score", type="float"),
+            LiteralFloat(value=0.5),
+        ),
+    )
+
+    assert call.signature.args == (input_schema,)
+    assert call.signature.output == BoolField()
+
+
+def test_nested_call_round_trips_through_function_union() -> None:
+    input_schema = Schema(fields={"score": FloatField()})
+    comparison = Call(
+        input_schema=input_schema,
+        function=Compare(type="float", op="lt"),
+        arguments=(
+            Get(field_name="score", type="float"),
+            LiteralFloat(value=0.5),
+        ),
+    )
+    expression = Call(
+        input_schema=input_schema,
+        function=And(num=2),
+        arguments=(
+            comparison,
+            LiteralBool(value=True),
+        ),
+    )
+    definition = expression.model_dump(exclude_computed_fields=True, by_alias=True)
+
+    assert TypeAdapter(FunctionType).validate_python(definition) == expression
+
+
+def test_call_rejects_wrong_argument_count_and_types() -> None:
+    input_schema = Schema(fields={"score": FloatField()})
+
+    with pytest.raises(ValidationError, match="requires 2 arguments"):
+        Call(
+            input_schema=input_schema,
+            function=Compare(type="float", op="lt"),
+            arguments=(Get(field_name="score", type="float"),),
+        )
+
+    with pytest.raises(ValidationError, match="incompatible"):
+        Call(
+            input_schema=input_schema,
+            function=Compare(type="float", op="lt"),
+            arguments=(
+                Get(field_name="score", type="float"),
+                LiteralString(value="not a float"),
+            ),
+        )
+
+
+def test_extend_preserves_input_and_adds_derived_fields() -> None:
+    input_schema = Schema(fields={"score": FloatField()})
+    comparison = Call(
+        input_schema=input_schema,
+        function=Compare(type="float", op="lt"),
+        arguments=(
+            Get(field_name="score", type="float"),
+            LiteralFloat(value=0.5),
+        ),
+    )
+    extend = Extend(
+        input_schema=input_schema,
+        fields={
+            "lowScore": comparison,
+            "review": LiteralString(value="pending", mutable=True),
+        },
+    )
+
+    assert extend.signature.output == Schema(
+        fields={
+            "score": FloatField(),
+            "lowScore": BoolField(),
+            "review": StringField(mutable=True),
+        }
+    )
+
+
+def test_extend_rejects_field_collisions() -> None:
+    input_schema = Schema(fields={"score": FloatField()})
+
+    with pytest.raises(ValidationError, match="conflict"):
+        Extend(
+            input_schema=input_schema,
+            fields={"score": LiteralFloat(value=0.5)},
+        )

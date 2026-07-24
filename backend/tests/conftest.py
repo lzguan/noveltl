@@ -78,7 +78,6 @@ pytest_plugins = [
     "tests.fixtures.populators.score_filter_simple",
     "tests.fixtures.populators.text_ops",
     "tests.fixtures.populators.bundles",
-    "tests.fixtures.filters",
 ]
 
 

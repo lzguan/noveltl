@@ -47,6 +47,7 @@ class CompiledPythonFunction:
     def __call__(self, arguments: tuple[Data, ...]) -> Data:
         return self.executable(arguments)
 
+
 def _evaluate_in_environment(function: CompiledPythonFunction, environment: tuple[Data, ...]) -> Data:
     """
     Evaluate a nullary or unary expression in a shared object environment.
@@ -224,9 +225,7 @@ class PythonCompiler:
             compiled_function = self.compile(function.function)
 
             def call(arguments: tuple[Data, ...]) -> Data:
-                call_arguments = tuple(
-                    _evaluate_in_environment(argument, arguments) for argument in compiled_arguments
-                )
+                call_arguments = tuple(_evaluate_in_environment(argument, arguments) for argument in compiled_arguments)
                 return compiled_function(call_arguments)
 
             executable = call

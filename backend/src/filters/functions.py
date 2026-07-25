@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Annotated, Literal
 
-from pydantic import ConfigDict, Field, computed_field, model_validator
+from pydantic import ConfigDict, Field, TypeAdapter, computed_field, model_validator
 
 from src.filters.data_types import (
     MAX_SCHEMA_FIELDS,
@@ -431,3 +431,5 @@ Construct.model_rebuild()
 Extend.model_rebuild()
 Call.model_rebuild()
 Custom.model_rebuild()
+
+function_adapter = TypeAdapter[FunctionType](FunctionType)

@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated, Literal
 
-from pydantic import ConfigDict, Field, StringConstraints, model_validator
+from pydantic import ConfigDict, Field, StringConstraints, TypeAdapter, model_validator
 
 from src.schemas import Model
 
@@ -86,6 +86,7 @@ class Schema(Model):
 
 type SObj = Annotated[Schema | SchemaField, Field(discriminator="obj")]
 
+schema_adapter = TypeAdapter[SObj](SObj)
 
 # Data types
 
@@ -155,6 +156,8 @@ class DataObj(Model):
 
 
 type Data = Annotated[DataObj | DataType, Field(discriminator="obj")]
+
+data_adapter = TypeAdapter[Data](Data)
 
 
 def validate(data: DataObj, schema: Schema) -> None:

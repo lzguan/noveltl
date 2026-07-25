@@ -1,11 +1,8 @@
 import uuid
 
-import pytest
-
-from src.filters.compilers.python import CompiledPythonFunction, PythonCompiler
+from src.filters.compilers.python import PythonCompiler
 from src.filters.data_types import (
     BoolData,
-    BoolField,
     DataObj,
     FloatData,
     FloatField,
@@ -34,24 +31,15 @@ from src.filters.functions import (
     ProjectToSpan,
     Rename,
     RenamePair,
-    Signature,
 )
 
 
-def test_compiled_function_validates_arguments_and_output() -> None:
+def test_compiled_function_retains_signature_and_executes() -> None:
     compiler = PythonCompiler()
     literal = compiler.compile(LiteralString(value="constant"))
 
+    assert literal.signature == LiteralString(value="constant").signature
     assert literal(()) == StringData(value="constant")
-    with pytest.raises(ValueError, match="requires 0 arguments"):
-        literal((StringData(value="unexpected"),))
-
-    broken = CompiledPythonFunction(
-        signature=Signature(args=(StringField(),), output=BoolField()),
-        executable=lambda arguments: arguments[0],
-    )
-    with pytest.raises(ValueError, match="returned an invalid value"):
-        broken((StringData(value="not a boolean"),))
 
 
 def test_compile_call_evaluates_composed_comparison() -> None:
@@ -74,8 +62,6 @@ def test_compile_multi_argument_primitive() -> None:
     compiled = PythonCompiler().compile(And(num=2))
 
     assert compiled((BoolData(value=True), BoolData(value=False))) == BoolData(value=False)
-    with pytest.raises(ValueError, match="requires 2 arguments"):
-        compiled((BoolData(value=True),))
 
 
 def test_compile_rename_construct_and_extend() -> None:

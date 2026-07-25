@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, assert_never
+from typing import Any, assert_never, cast
 
 from src.filters.data_types import (
     BoolData,
@@ -10,12 +10,9 @@ from src.filters.data_types import (
     FloatData,
     IntData,
     LabelRefData,
-    Schema,
     StringData,
     TextSpan,
     TextSpanData,
-    validate,
-    validate_compatible,
 )
 from src.filters.functions import (
     And,
@@ -48,39 +45,7 @@ class CompiledPythonFunction:
     executable: PythonExecutable
 
     def __call__(self, arguments: tuple[Data, ...]) -> Data:
-        if len(arguments) != len(self.signature.args):
-            raise ValueError(f"Function requires {len(self.signature.args)} arguments; received {len(arguments)}.")
-
-        for index, (argument, parameter) in enumerate(zip(arguments, self.signature.args, strict=True)):
-            if isinstance(parameter, Schema):
-                if not isinstance(argument, DataObj):
-                    raise ValueError(f"Invalid argument {index}: expected an object value.")
-                try:
-                    validate_compatible(argument, parameter)
-                except ValueError as exc:
-                    raise ValueError(f"Invalid argument {index}: {exc}") from exc
-            elif isinstance(argument, DataObj) or argument.type != parameter.type:
-                actual_type = "object" if isinstance(argument, DataObj) else argument.type
-                raise ValueError(
-                    f"Invalid argument {index}: expected type '{parameter.type}', received '{actual_type}'."
-                )
-
-        result = self.executable(arguments)
-        output = self.signature.output
-        if isinstance(output, Schema):
-            if not isinstance(result, DataObj):
-                raise ValueError("Function returned an invalid value: expected an object value.")
-            try:
-                validate(result, output)
-            except ValueError as exc:
-                raise ValueError(f"Function returned an invalid value: {exc}") from exc
-        elif isinstance(result, DataObj) or result.type != output.type:
-            actual_type = "object" if isinstance(result, DataObj) else result.type
-            raise ValueError(
-                f"Function returned an invalid value: expected type '{output.type}', received '{actual_type}'."
-            )
-
-        return result
+        return self.executable(arguments)
 
 def _evaluate_in_environment(function: CompiledPythonFunction, environment: tuple[Data, ...]) -> Data:
     """
@@ -94,18 +59,6 @@ def _evaluate_in_environment(function: CompiledPythonFunction, environment: tupl
     if len(function.signature.args) == 0:
         return function(())
     return function(environment)
-
-
-def _require_object(data: Data, function_name: str) -> DataObj:
-    if not isinstance(data, DataObj):
-        raise ValueError(f"The '{function_name}' function can only be applied to objects.")
-    return data
-
-
-def _require_elementary(data: Data, function_name: str) -> DataType:
-    if isinstance(data, DataObj):
-        raise ValueError(f"The '{function_name}' function must produce an elementary value.")
-    return data
 
 
 def _compare_values(left: Any, right: Any, operation: str) -> bool:
@@ -131,7 +84,7 @@ class PythonCompiler:
         if isinstance(function, Get):
 
             def get(arguments: tuple[Data, ...]) -> Data:
-                data = _require_object(arguments[0], function.name)
+                data = cast(DataObj, arguments[0])
                 return data.fields[function.field_name]
 
             executable = get
@@ -139,9 +92,8 @@ class PythonCompiler:
         elif isinstance(function, Compare):
 
             def compare(arguments: tuple[Data, ...]) -> Data:
-                left, right = arguments
-                if isinstance(left, DataObj) or isinstance(right, DataObj):
-                    raise ValueError("The 'compare' function requires elementary values.")
+                left = cast(DataType, arguments[0])
+                right = cast(DataType, arguments[1])
                 return BoolData(value=_compare_values(left.value, right.value, function.op))
 
             executable = compare
@@ -149,9 +101,7 @@ class PythonCompiler:
         elif isinstance(function, Not):
 
             def not_fn(arguments: tuple[Data, ...]) -> Data:
-                data = arguments[0]
-                if not isinstance(data, BoolData):
-                    raise ValueError("The 'not' function can only be applied to boolean data.")
+                data = cast(BoolData, arguments[0])
                 return BoolData(value=not data.value)
 
             executable = not_fn
@@ -160,9 +110,7 @@ class PythonCompiler:
 
             def and_fn(arguments: tuple[Data, ...]) -> Data:
                 for data in arguments:
-                    if not isinstance(data, BoolData):
-                        raise ValueError("The 'and' function can only be applied to boolean data.")
-                    if not data.value:
+                    if not cast(BoolData, data).value:
                         return BoolData(value=False)
                 return BoolData(value=True)
 
@@ -172,9 +120,7 @@ class PythonCompiler:
 
             def or_fn(arguments: tuple[Data, ...]) -> Data:
                 for data in arguments:
-                    if not isinstance(data, BoolData):
-                        raise ValueError("The 'or' function can only be applied to boolean data.")
-                    if data.value:
+                    if cast(BoolData, data).value:
                         return BoolData(value=True)
                 return BoolData(value=False)
 
@@ -211,9 +157,7 @@ class PythonCompiler:
         elif isinstance(function, ProjectToSpan):
 
             def project_to_span(arguments: tuple[Data, ...]) -> Data:
-                data = arguments[0]
-                if not isinstance(data, LabelRefData):
-                    raise ValueError("The 'projectToSpan' function can only be applied to label reference data.")
+                data = cast(LabelRefData, arguments[0])
                 return TextSpanData(
                     value=TextSpan(
                         start=data.value.start,
@@ -225,11 +169,12 @@ class PythonCompiler:
             executable = project_to_span
 
         elif isinstance(function, Rename):
+            rename_function = function
 
             def rename(arguments: tuple[Data, ...]) -> Data:
-                data = _require_object(arguments[0], function.name)
+                data = cast(DataObj, arguments[0])
                 fields = dict(data.fields)
-                renamed = {pair.new_name: fields.pop(pair.old_name) for pair in function.rename_pairs}
+                renamed = {pair.new_name: fields.pop(pair.old_name) for pair in rename_function.rename_pairs}
                 fields.update(renamed)
                 return DataObj(fields=fields)
 
@@ -243,9 +188,9 @@ class PythonCompiler:
             def construct(arguments: tuple[Data, ...]) -> Data:
                 return DataObj(
                     fields={
-                        field_name: _require_elementary(
+                        field_name: cast(
+                            DataType,
                             _evaluate_in_environment(field_function, arguments),
-                            function.name,
                         )
                         for field_name, field_function in compiled_fields.items()
                     }
@@ -259,13 +204,13 @@ class PythonCompiler:
             }
 
             def extend(arguments: tuple[Data, ...]) -> Data:
-                data = _require_object(arguments[0], function.name)
+                data = cast(DataObj, arguments[0])
                 fields = dict(data.fields)
                 fields.update(
                     {
-                        field_name: _require_elementary(
+                        field_name: cast(
+                            DataType,
                             _evaluate_in_environment(field_function, arguments),
-                            function.name,
                         )
                         for field_name, field_function in compiled_fields.items()
                     }

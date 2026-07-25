@@ -109,20 +109,37 @@ class LabelRef(TextSpan):
     label_data_id: uuid.UUID
 
 
-class DTypeBase[T, TName](Model):
+class DTypeBase[T](Model):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     value: T
-    type: TName
+    type: str
     obj: Literal[False] = False
 
 
-StringData = DTypeBase[StringValue, Literal["string"]]
-IntData = DTypeBase[IntegerValue, Literal["int"]]
-FloatData = DTypeBase[FloatValue, Literal["float"]]
-BoolData = DTypeBase[BooleanValue, Literal["bool"]]
-TextSpanData = DTypeBase[TextSpan, Literal["textSpan"]]
-LabelRefData = DTypeBase[LabelRef, Literal["labelRef"]]
+class StringData(DTypeBase[StringValue]):
+    type: Literal["string"] = "string"
+
+
+class IntData(DTypeBase[IntegerValue]):
+    type: Literal["int"] = "int"
+
+
+class FloatData(DTypeBase[FloatValue]):
+    type: Literal["float"] = "float"
+
+
+class BoolData(DTypeBase[BooleanValue]):
+    type: Literal["bool"] = "bool"
+
+
+class TextSpanData(DTypeBase[TextSpan]):
+    type: Literal["textSpan"] = "textSpan"
+
+
+class LabelRefData(DTypeBase[LabelRef]):
+    type: Literal["labelRef"] = "labelRef"
+
 
 type DataType = Annotated[
     StringData | IntData | FloatData | BoolData | TextSpanData | LabelRefData,

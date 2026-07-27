@@ -68,7 +68,17 @@ class FunctionDefinition(Base):
     function_definition_id: Mapped[uuid.UUID] = mapped_column(
         postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
     )
+    namespace: Mapped[str] = mapped_column(String(100), nullable=False)
+    function_name: Mapped[str] = mapped_column(String(100), nullable=False)
     function_definition: Mapped[dict] = mapped_column(postgresql.JSONB, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "namespace",
+            "function_name",
+            name="uq_function_definitions_namespace_function_name",
+        ),
+    )
 
 
 class Grouping(Base):

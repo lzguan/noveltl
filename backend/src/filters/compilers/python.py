@@ -19,7 +19,6 @@ from src.filters.functions import (
     Call,
     Compare,
     Construct,
-    Custom,
     Extend,
     FunctionType,
     Get,
@@ -229,14 +228,6 @@ class PythonCompiler:
                 return compiled_function(call_arguments)
 
             executable = call
-
-        elif isinstance(function, Custom):
-            compiled_root = self.compile(function.root)
-
-            def custom(arguments: tuple[Data, ...]) -> Data:
-                return compiled_root(arguments)
-
-            executable = custom
 
         else:
             assert_never(function)

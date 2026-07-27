@@ -29,7 +29,11 @@ def _create_string_grouping(
     schema = Schema(fields={"word": StringField(mutable=mutable)})
     workflow = Workflow(workflow_name="Grouping test", schema=_dump(schema))
     function = Get(field_name="word", type="string")
-    function_definition = FunctionDefinition(function_definition=_dump(function))
+    function_definition = FunctionDefinition(
+        namespace="test",
+        function_name="word",
+        function_definition=_dump(function),
+    )
     db.add_all([workflow, function_definition])
     db.flush()
 

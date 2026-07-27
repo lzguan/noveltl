@@ -397,17 +397,6 @@ class Call(Function):
         )
 
 
-class Custom(Function):
-    name: Literal["custom"] = "custom"
-    custom_name: str
-    root: FunctionType
-
-    @computed_field
-    @property
-    def signature(self) -> Signature:
-        return self.root.signature
-
-
 type FunctionType = Annotated[
     LiteralString
     | LiteralInt
@@ -422,14 +411,12 @@ type FunctionType = Annotated[
     | Not
     | Construct
     | Extend
-    | Call
-    | Custom,
+    | Call,
     Field(discriminator="name"),
 ]
 
 Construct.model_rebuild()
 Extend.model_rebuild()
 Call.model_rebuild()
-Custom.model_rebuild()
 
 function_adapter = TypeAdapter[FunctionType](FunctionType)

@@ -21,12 +21,10 @@ from src.filters.functions import (
     Call,
     Compare,
     Construct,
-    Custom,
     Extend,
     Get,
     LiteralBool,
     LiteralFloat,
-    LiteralInt,
     LiteralString,
     ProjectToSpan,
     Rename,
@@ -121,20 +119,6 @@ def test_compile_rename_construct_and_extend() -> None:
             "accepted": BoolData(value=False),
         }
     )
-
-
-def test_compile_custom_delegates_to_root() -> None:
-    root = Call(
-        input_schema=Schema(fields={"count": IntField()}),
-        function=Compare(type="int", op="ge"),
-        arguments=(
-            Get(field_name="count", type="int"),
-            LiteralInt(value=2),
-        ),
-    )
-    compiled = PythonCompiler().compile(Custom(custom_name="atLeastTwo", root=root))
-
-    assert compiled((DataObj(fields={"count": IntData(value=3)}),)) == BoolData(value=True)
 
 
 def test_project_to_span_drops_label_only_fields() -> None:

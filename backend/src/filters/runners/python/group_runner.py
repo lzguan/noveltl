@@ -7,6 +7,7 @@ from sqlalchemy import and_, func, insert, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.filters.compilers.python import PythonCompiler
+from src.filters.context.python import PythonExecutionContextImpl, collect_resource_ids
 from src.filters.data_types import (
     BoolData,
     BoolField,
@@ -19,6 +20,7 @@ from src.filters.data_types import (
     data_adapter,
     extends,
 )
+from src.filters.dependencies import resolve_dependencies
 from src.filters.functions import function_adapter
 from src.filters.models import (
     FunctionDefinition,
@@ -109,6 +111,7 @@ class PythonGroupRunner(Runner[PythonGroupInput]):
                 raise ValueError("A grouping function must return an immutable string, integer, or boolean.")
 
             compiled_function = self.compiler.compile(function)
+            dependencies = resolve_dependencies(function)
 
             missing_assignment_condition = and_(
                 GroupAssignment.instance_id == Instance.instance_id,
@@ -139,10 +142,21 @@ class PythonGroupRunner(Runner[PythonGroupInput]):
                     if not instances:
                         break
 
+                    parsed_instances = [
+                        (instance_id, cast(DataObj, data_adapter.validate_python(raw_value)))
+                        for instance_id, raw_value in instances
+                    ]
+                    ctx = PythonExecutionContextImpl(db)
+                    ctx.load_resources(
+                        collect_resource_ids(
+                            dependencies,
+                            ((instance_data,) for _, instance_data in parsed_instances),
+                        )
+                    )
+
                     assignments: list[dict[str, object]] = []
-                    for instance_id, raw_value in instances:
-                        instance_data = cast(DataObj, data_adapter.validate_python(raw_value))
-                        result = cast(GroupData, compiled_function((instance_data,)))
+                    for instance_id, instance_data in parsed_instances:
+                        result = cast(GroupData, compiled_function((instance_data,), ctx))
                         assignments.append(
                             {
                                 "grouping_id": input.grouping_id,

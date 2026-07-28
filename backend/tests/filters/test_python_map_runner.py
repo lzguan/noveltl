@@ -4,14 +4,24 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.filters.data_types import DataObj, IntField, Schema, StringData, StringField
-from src.filters.functions import FunctionType, Get, Rename, RenamePair
+from src.filters.data_types import (
+    DataObj,
+    IntField,
+    Schema,
+    StringData,
+    StringField,
+    TextSpan,
+    TextSpanData,
+    TextSpanField,
+)
+from src.filters.functions import Call, Construct, FunctionType, Get, Rename, RenamePair, TextAround
 from src.filters.models import FunctionDefinition, Instance, Workflow, WorkflowStatus
 from src.filters.runners.python.map_runner import PythonMapInput, PythonMapRunner
+from src.novels.models import ChapterContent
 from src.schemas import Model
 
-JOB_ID = "78c9409e-c9ec-4f3b-9c70-f0eec979d88e"
-STALE_JOB_ID = "46fd62a2-bc62-40da-bda6-f521336188a9"
+JOB_ID = uuid.UUID("78c9409e-c9ec-4f3b-9c70-f0eec979d88e")
+STALE_JOB_ID = uuid.UUID("46fd62a2-bc62-40da-bda6-f521336188a9")
 
 
 def _dump(value: Model) -> dict[str, object]:
@@ -103,6 +113,73 @@ def test_map_runner_maps_in_bounded_batches_and_is_idempotent(
         assert isinstance(term, StringData)
         mapped_words.append(term.value)
     assert sorted(mapped_words) == ["alpha", "beta", "gamma"]
+
+
+def test_map_runner_preloads_text_dependencies(
+    test_db: Session,
+    testing_session_local: sessionmaker[Session],
+    sf_chapter_content: ChapterContent,
+) -> None:
+    source_schema = Schema(fields={"span": TextSpanField()})
+    text_around = Call(
+        input_schema=source_schema,
+        function=TextAround(slack=1),
+        arguments=(Get(field_name="span", type="textSpan"),),
+    )
+    function = Construct(
+        input_schema=source_schema,
+        fields={"text": text_around},
+    )
+    output_schema = function.signature.output
+    assert isinstance(output_schema, Schema)
+
+    source = Workflow(
+        workflow_name="Text map source",
+        schema=_dump(source_schema),
+        workflow_status=WorkflowStatus.COMPLETE,
+    )
+    output = Workflow(
+        workflow_name="Text map output",
+        schema=_dump(output_schema),
+        job_id=JOB_ID,
+    )
+    function_definition = FunctionDefinition(
+        namespace="test",
+        function_name="text-map",
+        function_definition=_dump(function),
+    )
+    test_db.add_all([source, output, function_definition])
+    test_db.flush()
+    test_db.add(
+        Instance(
+            workflow_id=source.workflow_id,
+            value=_dump(
+                DataObj(
+                    fields={
+                        "span": TextSpanData(
+                            value=TextSpan(
+                                start=6,
+                                end=11,
+                                chapter_content_id=sf_chapter_content.chapter_content_id,
+                            )
+                        )
+                    }
+                )
+            ),
+        )
+    )
+    test_db.commit()
+
+    PythonMapRunner(testing_session_local).execute(
+        JOB_ID,
+        _map_input(source, output, function_definition),
+    )
+
+    raw_output = test_db.execute(
+        select(Instance.value).where(Instance.workflow_id == output.workflow_id)
+    ).scalar_one()
+    mapped = DataObj.model_validate(raw_output)
+    assert mapped.fields["text"] == StringData(value=" world.")
 
 
 def test_map_runner_completes_empty_source(

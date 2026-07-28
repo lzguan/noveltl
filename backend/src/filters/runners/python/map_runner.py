@@ -7,7 +7,9 @@ from sqlalchemy import exists, func, insert, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.filters.compilers.python import PythonCompiler
+from src.filters.context.python import PythonExecutionContextImpl, collect_resource_ids
 from src.filters.data_types import DataObj, Schema, data_adapter, extends
+from src.filters.dependencies import resolve_dependencies
 from src.filters.functions import function_adapter
 from src.filters.models import FunctionDefinition, Instance, Workflow, WorkflowStatus
 from src.filters.runners.interfaces.runner import Runner
@@ -106,6 +108,7 @@ class PythonMapRunner(Runner[PythonMapInput]):
                 raise ValueError("Output workflow schema does not match the map function output schema.")
 
             compiled_function = self.compiler.compile(function)
+            dependencies = resolve_dependencies(function)
             batch_count = (source_count + self.batch_size - 1) // self.batch_size
             last_instance_id: uuid.UUID | None = None
             processed_count = 0
@@ -125,10 +128,21 @@ class PythonMapRunner(Runner[PythonMapInput]):
                     if not instances:
                         break
 
+                    parsed_instances = [
+                        (instance_id, cast(DataObj, data_adapter.validate_python(raw_value)))
+                        for instance_id, raw_value in instances
+                    ]
+                    ctx = PythonExecutionContextImpl(db)
+                    ctx.load_resources(
+                        collect_resource_ids(
+                            dependencies,
+                            ((instance_data,) for _, instance_data in parsed_instances),
+                        )
+                    )
+
                     mapped_instances: list[dict[str, object]] = []
-                    for _, raw_value in instances:
-                        instance_data = cast(DataObj, data_adapter.validate_python(raw_value))
-                        result = cast(DataObj, compiled_function((instance_data,)))
+                    for _, instance_data in parsed_instances:
+                        result = cast(DataObj, compiled_function((instance_data,), ctx))
                         mapped_instances.append(
                             {
                                 "workflow_id": input.output_workflow_id,

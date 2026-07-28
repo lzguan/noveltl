@@ -1,8 +1,18 @@
+import uuid
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.filters.data_types import DataObj, Schema, StringData, StringField
-from src.filters.functions import Get
+from src.filters.data_types import (
+    DataObj,
+    Schema,
+    StringData,
+    StringField,
+    TextSpan,
+    TextSpanData,
+    TextSpanField,
+)
+from src.filters.functions import Call, Get, TextOf
 from src.filters.models import (
     FunctionDefinition,
     GroupAssignment,
@@ -10,11 +20,13 @@ from src.filters.models import (
     GroupingStatus,
     Instance,
     Workflow,
+    WorkflowStatus,
 )
 from src.filters.runners.python.group_runner import PythonGroupInput, PythonGroupRunner
+from src.novels.models import ChapterContent
 from src.schemas import Model
 
-JOB_ID = "32a2fd0f-9d99-4da3-81aa-d41e338ed9fd"
+JOB_ID = uuid.UUID("32a2fd0f-9d99-4da3-81aa-d41e338ed9fd")
 
 
 def _dump(value: Model) -> dict[str, object]:
@@ -73,6 +85,64 @@ def test_group_runner_persists_raw_values_and_is_idempotent(
         select(GroupAssignment).where(GroupAssignment.grouping_id == grouping.grouping_id)
     ).scalars()
     assert sorted(assignment.function_value for assignment in assignments) == ["alpha", "alpha", "beta"]
+
+
+def test_group_runner_preloads_text_dependencies(
+    test_db: Session,
+    testing_session_local: sessionmaker[Session],
+    sf_chapter_content: ChapterContent,
+) -> None:
+    schema = Schema(fields={"span": TextSpanField()})
+    function = Call(
+        input_schema=schema,
+        function=TextOf(),
+        arguments=(Get(field_name="span", type="textSpan"),),
+    )
+    workflow = Workflow(
+        workflow_name="Text grouping",
+        schema=_dump(schema),
+        workflow_status=WorkflowStatus.COMPLETE,
+    )
+    function_definition = FunctionDefinition(
+        namespace="test",
+        function_name="text-group",
+        function_definition=_dump(function),
+    )
+    test_db.add_all([workflow, function_definition])
+    test_db.flush()
+    instance = Instance(
+        workflow_id=workflow.workflow_id,
+        value=_dump(
+            DataObj(
+                fields={
+                    "span": TextSpanData(
+                        value=TextSpan(
+                            start=0,
+                            end=5,
+                            chapter_content_id=sf_chapter_content.chapter_content_id,
+                        )
+                    )
+                }
+            )
+        ),
+    )
+    grouping = Grouping(
+        workflow_id=workflow.workflow_id,
+        function_definition_id=function_definition.function_definition_id,
+        job_id=JOB_ID,
+    )
+    test_db.add_all([instance, grouping])
+    test_db.commit()
+
+    PythonGroupRunner(testing_session_local).execute(
+        JOB_ID,
+        PythonGroupInput(grouping_id=grouping.grouping_id),
+    )
+
+    assignment = test_db.execute(
+        select(GroupAssignment).where(GroupAssignment.grouping_id == grouping.grouping_id)
+    ).scalar_one()
+    assert assignment.function_value == "Hello"
 
 
 def test_group_runner_resumes_from_cached_assignments(
@@ -140,7 +210,7 @@ def test_group_runner_ignores_stale_job(
     _, grouping, _ = _create_string_grouping(test_db)
 
     PythonGroupRunner(testing_session_local).execute(
-        "c8837b42-ecbd-4828-96bb-774c2d9a0540",
+        uuid.UUID("c8837b42-ecbd-4828-96bb-774c2d9a0540"),
         PythonGroupInput(grouping_id=grouping.grouping_id),
     )
 

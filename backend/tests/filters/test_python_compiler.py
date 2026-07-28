@@ -1,6 +1,7 @@
 import uuid
 
 from src.filters.compilers.python import PythonCompiler
+from src.filters.context.python import PythonExecutionContext
 from src.filters.data_types import (
     BoolData,
     DataObj,
@@ -32,12 +33,23 @@ from src.filters.functions import (
 )
 
 
+class _NoResourceContext:
+    def get_chapter_content(self, chapter_content_id: uuid.UUID) -> str:
+        raise AssertionError(f"Unexpected chapter content dependency: {chapter_content_id}")
+
+    def load_resources(self, resource_ids: object) -> None:
+        raise AssertionError(f"Unexpected resource preload: {resource_ids}")
+
+
+ctx: PythonExecutionContext = _NoResourceContext()
+
+
 def test_compiled_function_retains_signature_and_executes() -> None:
     compiler = PythonCompiler()
     literal = compiler.compile(LiteralString(value="constant"))
 
     assert literal.signature == LiteralString(value="constant").signature
-    assert literal(()) == StringData(value="constant")
+    assert literal((), ctx) == StringData(value="constant")
 
 
 def test_compile_call_evaluates_composed_comparison() -> None:
@@ -52,14 +64,14 @@ def test_compile_call_evaluates_composed_comparison() -> None:
     )
     compiled = PythonCompiler().compile(function)
 
-    assert compiled((DataObj(fields={"score": FloatData(value=0.25)}),)) == BoolData(value=True)
-    assert compiled((DataObj(fields={"score": FloatData(value=0.75)}),)) == BoolData(value=False)
+    assert compiled((DataObj(fields={"score": FloatData(value=0.25)}),), ctx) == BoolData(value=True)
+    assert compiled((DataObj(fields={"score": FloatData(value=0.75)}),), ctx) == BoolData(value=False)
 
 
 def test_compile_multi_argument_primitive() -> None:
     compiled = PythonCompiler().compile(And(num=2))
 
-    assert compiled((BoolData(value=True), BoolData(value=False))) == BoolData(value=False)
+    assert compiled((BoolData(value=True), BoolData(value=False)), ctx) == BoolData(value=False)
 
 
 def test_compile_rename_construct_and_extend() -> None:
@@ -83,7 +95,7 @@ def test_compile_rename_construct_and_extend() -> None:
             rename_pairs=(RenamePair(old_name="word", new_name="term"),),
         )
     )
-    assert rename((data,)) == DataObj(
+    assert rename((data,), ctx) == DataObj(
         fields={
             "term": StringData(value="name"),
             "count": IntData(value=2),
@@ -99,7 +111,7 @@ def test_compile_rename_construct_and_extend() -> None:
             },
         )
     )
-    assert construct((data,)) == DataObj(
+    assert construct((data,), ctx) == DataObj(
         fields={
             "term": StringData(value="name"),
             "decision": StringData(value="pending"),
@@ -112,7 +124,7 @@ def test_compile_rename_construct_and_extend() -> None:
             fields={"accepted": LiteralBool(value=False, mutable=True)},
         )
     )
-    assert extend((data,)) == DataObj(
+    assert extend((data,), ctx) == DataObj(
         fields={
             "word": StringData(value="name"),
             "count": IntData(value=2),
@@ -131,7 +143,7 @@ def test_project_to_span_drops_label_only_fields() -> None:
         label_data_id=uuid.uuid4(),
     )
 
-    result = PythonCompiler().compile(ProjectToSpan())((LabelRefData(value=label),))
+    result = PythonCompiler().compile(ProjectToSpan())((LabelRefData(value=label),), ctx)
 
     assert isinstance(result, TextSpanData)
     assert result == TextSpanData(value=TextSpan(start=1, end=4, chapter_content_id=chapter_content_id))

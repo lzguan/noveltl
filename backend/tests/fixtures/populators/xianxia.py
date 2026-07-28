@@ -66,9 +66,7 @@ def xianxia_novel(
 
 
 @pytest.fixture
-def xianxia_label_group(
-    xianxia_user: User, xianxia_novel: Novel, test_db: Session
-) -> LabelGroup:
+def xianxia_label_group(xianxia_user: User, xianxia_novel: Novel, test_db: Session) -> LabelGroup:
     """
     Fixture for a single label group.
     """
@@ -79,9 +77,7 @@ def xianxia_label_group(
 
 
 @pytest.fixture
-def xianxia_contributor(
-    xianxia_user: User, xianxia_novel: Novel, test_db: Session
-) -> NovelContributor:
+def xianxia_contributor(xianxia_user: User, xianxia_novel: Novel, test_db: Session) -> NovelContributor:
     contributor = NovelContributor(
         contributor_role=Role.OWNER,
         novel_id=xianxia_novel.novel_id,

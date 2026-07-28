@@ -43,25 +43,18 @@ def collect_resource_ids(
 
             for field_name in dependency.key_path:
                 if not isinstance(value, DataObj):
-                    raise ValueError(
-                        f"Dependency path {dependency.key_path!r} traverses a non-object value."
-                    )
+                    raise ValueError(f"Dependency path {dependency.key_path!r} traverses a non-object value.")
                 try:
                     value = value.fields[field_name]
                 except KeyError as exc:
                     raise ValueError(
-                        f"Dependency path {dependency.key_path!r} references missing field "
-                        f"'{field_name}'."
+                        f"Dependency path {dependency.key_path!r} references missing field '{field_name}'."
                     ) from exc
 
             if dependency.resource == "chapter_content_text":
                 if not isinstance(value, TextSpanData | LabelRefData):
-                    raise ValueError(
-                        "Chapter content dependencies must resolve to a text span or label reference."
-                    )
-                resource_ids.setdefault(dependency.resource, set()).add(
-                    value.value.chapter_content_id
-                )
+                    raise ValueError("Chapter content dependencies must resolve to a text span or label reference.")
+                resource_ids.setdefault(dependency.resource, set()).add(value.value.chapter_content_id)
             elif dependency.resource == "label":
                 if not isinstance(value, LabelRefData):
                     raise ValueError("Label dependencies must resolve to a label reference.")
@@ -118,9 +111,7 @@ class PythonExecutionContextImpl:
         if label_id not in self.label_cache:
             logger.debug("Label cache miss label_id=%s", label_id)
             row = self.session.execute(
-                select(Label.label_word, Label.label_score).where(
-                    Label.label_id == label_id
-                )
+                select(Label.label_word, Label.label_score).where(Label.label_id == label_id)
             ).one_or_none()
             if row is None:
                 raise ValueError(f"Label not found: {label_id}")
@@ -166,9 +157,7 @@ class PythonExecutionContextImpl:
         if not missing_ids:
             return
         rows = self.session.execute(
-            select(Label.label_id, Label.label_word, Label.label_score).where(
-                Label.label_id.in_(missing_ids)
-            )
+            select(Label.label_id, Label.label_word, Label.label_score).where(Label.label_id.in_(missing_ids))
         ).all()
         for label_id, label_word, label_score in rows:
             self.label_cache[label_id] = PythonLabelResource(

@@ -114,7 +114,15 @@ def compute_lock(root: Path | str, targets: list[str] | None = None) -> tuple[Ca
                         update={"inputs": LockInputs(text_sha256=text_hash, config_sha256=_sha256(config_path))}
                     )
 
-    schema_path = Path(__file__).resolve().parents[2] / "tests" / "test_data" / "schema" / "v1" / "json" / "catalog-lock.schema.json"
+    schema_path = (
+        Path(__file__).resolve().parents[2]
+        / "tests"
+        / "test_data"
+        / "schema"
+        / "v1"
+        / "json"
+        / "catalog-lock.schema.json"
+    )
     schema_uri = Path(os.path.relpath(schema_path, catalog.root)).as_posix()
     lock = CatalogLockDocument.model_validate(
         {
@@ -172,7 +180,10 @@ def check_lock(root: Path | str, targets: list[str] | None = None) -> None:
     current_selected = {
         relative: entry
         for relative, entry in current.files.items()
-        if any(root_path == dataset_root / relative or root_path in (dataset_root / relative).parents for root_path in selected_roots)
+        if any(
+            root_path == dataset_root / relative or root_path in (dataset_root / relative).parents
+            for root_path in selected_roots
+        )
         or relative in computed.files
     }
     if current_selected != computed.files:

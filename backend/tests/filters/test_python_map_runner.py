@@ -103,9 +103,7 @@ def test_map_runner_maps_in_bounded_batches_and_is_idempotent(
     stored_output = test_db.get(Workflow, output.workflow_id)
     assert stored_output is not None
     assert stored_output.workflow_status == WorkflowStatus.COMPLETE
-    values = test_db.execute(
-        select(Instance.value).where(Instance.workflow_id == output.workflow_id)
-    ).scalars()
+    values = test_db.execute(select(Instance.value).where(Instance.workflow_id == output.workflow_id)).scalars()
     parsed = [DataObj.model_validate(value) for value in values]
     mapped_words: list[str] = []
     for instance in parsed:
@@ -175,9 +173,7 @@ def test_map_runner_preloads_text_dependencies(
         _map_input(source, output, function_definition),
     )
 
-    raw_output = test_db.execute(
-        select(Instance.value).where(Instance.workflow_id == output.workflow_id)
-    ).scalar_one()
+    raw_output = test_db.execute(select(Instance.value).where(Instance.workflow_id == output.workflow_id)).scalar_one()
     mapped = DataObj.model_validate(raw_output)
     assert mapped.fields["text"] == StringData(value=" world.")
 
@@ -198,9 +194,7 @@ def test_map_runner_completes_empty_source(
     assert stored_output is not None
     assert stored_output.workflow_status == WorkflowStatus.COMPLETE
     assert (
-        test_db.scalar(
-            select(func.count()).select_from(Instance).where(Instance.workflow_id == output.workflow_id)
-        )
+        test_db.scalar(select(func.count()).select_from(Instance).where(Instance.workflow_id == output.workflow_id))
         == 0
     )
 
@@ -221,9 +215,7 @@ def test_map_runner_ignores_stale_job(
     assert stored_output is not None
     assert stored_output.workflow_status == WorkflowStatus.PENDING
     assert (
-        test_db.scalar(
-            select(func.count()).select_from(Instance).where(Instance.workflow_id == output.workflow_id)
-        )
+        test_db.scalar(select(func.count()).select_from(Instance).where(Instance.workflow_id == output.workflow_id))
         == 0
     )
 
@@ -379,8 +371,6 @@ def test_map_runner_preserves_committed_batches_on_terminal_failure(
 
     runner.execute(JOB_ID, request)
     assert (
-        test_db.scalar(
-            select(func.count()).select_from(Instance).where(Instance.workflow_id == output.workflow_id)
-        )
+        test_db.scalar(select(func.count()).select_from(Instance).where(Instance.workflow_id == output.workflow_id))
         == 1
     )

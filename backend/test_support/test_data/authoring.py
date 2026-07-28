@@ -165,7 +165,11 @@ def generate_autolabels(
     for content, artifact_id, existing in targets:
         prediction = predict(content.text, config)
         for label in prediction[0]:
-            if label.start >= label.end or label.end > len(content.text) or content.text[label.start : label.end] != label.text:
+            if (
+                label.start >= label.end
+                or label.end > len(content.text)
+                or content.text[label.start : label.end] != label.text
+            ):
                 raise TestDataError(f"Generated autolabel {label.text!r} has invalid bounds")
         generated.append((content, artifact_id, existing, prediction))
 

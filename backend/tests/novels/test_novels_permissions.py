@@ -732,7 +732,9 @@ class TestChapterContentModAccessSelect:
         p1_chapter_content_private: ChapterContent,
     ):
         content_alias = aliased(ChapterContent)
-        q = select(content_alias).where(content_alias.chapter_content_id == p1_chapter_content_private.chapter_content_id)
+        q = select(content_alias).where(
+            content_alias.chapter_content_id == p1_chapter_content_private.chapter_content_id
+        )
         q = chapter_content_mod_access_select(q, p1_user_1, content_alias)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
@@ -745,7 +747,9 @@ class TestChapterContentModAccessSelect:
         p1_chapter_content_private: ChapterContent,
     ):
         content_alias = aliased(ChapterContent)
-        q = select(content_alias).where(content_alias.chapter_content_id == p1_chapter_content_private.chapter_content_id)
+        q = select(content_alias).where(
+            content_alias.chapter_content_id == p1_chapter_content_private.chapter_content_id
+        )
         q = chapter_content_mod_access_select(q, p1_user_2, content_alias)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None

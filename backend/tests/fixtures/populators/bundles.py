@@ -436,13 +436,9 @@ def xianxia_autolabels_scenario(
     test_db: Session,
 ) -> ScenarioBundle:
     """Loader-backed scenario with cluener autolabel rows inserted."""
-    xianxia_scenario.novels[0].autolabels_by_name["cluener"] = (
-        xianxia_autolabels_cluener
-    )
+    xianxia_scenario.novels[0].autolabels_by_name["cluener"] = xianxia_autolabels_cluener
     run = test_db.execute(
-        select(AutoLabelRun).where(
-            AutoLabelRun.run_id == xianxia_autolabels_cluener[0].run_id
-        )
+        select(AutoLabelRun).where(AutoLabelRun.run_id == xianxia_autolabels_cluener[0].run_id)
     ).scalar_one()
     xianxia_scenario.novels[0].autolabel_runs_by_name["cluener"] = run
     return xianxia_scenario
@@ -533,13 +529,9 @@ def scifi_autolabels_scenario(
     test_db: Session,
 ) -> ScenarioBundle:
     """Loader-backed scenario with cluener autolabel rows inserted for scifi test data."""
-    scifi_scenario.novels[0].autolabels_by_name["cluener"] = (
-        scifi_autolabels_cluener
-    )
+    scifi_scenario.novels[0].autolabels_by_name["cluener"] = scifi_autolabels_cluener
     run = test_db.execute(
-        select(AutoLabelRun).where(
-            AutoLabelRun.run_id == scifi_autolabels_cluener[0].run_id
-        )
+        select(AutoLabelRun).where(AutoLabelRun.run_id == scifi_autolabels_cluener[0].run_id)
     ).scalar_one()
     scifi_scenario.novels[0].autolabel_runs_by_name["cluener"] = run
     return scifi_scenario

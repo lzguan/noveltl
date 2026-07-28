@@ -188,12 +188,16 @@ def validate_config_id(config_id: str) -> None:
         raise TestDataError(f"Config ID is not safe for artifact filenames: {config_id}")
 
 
-def write_autolabels(catalog_root: Path, novel_id: str, config: ModelConfigDocument, generated: list[GeneratedArtifact]) -> None:
+def write_autolabels(
+    catalog_root: Path, novel_id: str, config: ModelConfigDocument, generated: list[GeneratedArtifact]
+) -> None:
     originals: dict[Path, str | None] = {}
     try:
         for content, artifact_id, existing, (labels, errors) in generated:
             artifact_path = existing.path if existing else content.path.parent / f"autolabels.{config.id}.json"
-            originals.setdefault(artifact_path, artifact_path.read_text(encoding="utf-8") if artifact_path.exists() else None)
+            originals.setdefault(
+                artifact_path, artifact_path.read_text(encoding="utf-8") if artifact_path.exists() else None
+            )
             originals.setdefault(content.path, content.path.read_text(encoding="utf-8"))
             document = AutoLabelsDocument.model_validate(
                 {

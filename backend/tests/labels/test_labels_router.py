@@ -50,10 +50,7 @@ class TestReadLabelGroupsWithRole:
 
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
-        assert {
-            (entry["labelGroup"]["labelGroupName"], entry["role"])
-            for entry in payload
-        } == {
+        assert {(entry["labelGroup"]["labelGroupName"], entry["role"]) for entry in payload} == {
             ("Owner Only Group", "owner"),
             ("With Editor Group", "owner"),
             ("With Viewer Group", "owner"),
@@ -72,10 +69,7 @@ class TestReadLabelGroupsWithRole:
 
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
-        assert {
-            (entry["labelGroup"]["labelGroupName"], entry["role"])
-            for entry in payload
-        } == {
+        assert {(entry["labelGroup"]["labelGroupName"], entry["role"]) for entry in payload} == {
             ("With Editor Group", "editor"),
             ("With Viewer Group", "viewer"),
         }

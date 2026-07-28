@@ -63,21 +63,14 @@ class PythonLabelSourceRunner(Runner[PythonLabelSourceInput]):
                 ).scalar_one()
                 output_schema = Schema.model_validate(output_workflow.schema)
                 if output_schema != LABEL_SOURCE_SCHEMA:
-                    raise ValueError(
-                        "Label source output workflow schema must be exactly "
-                        "{'label': LabelRef}."
-                    )
+                    raise ValueError("Label source output workflow schema must be exactly {'label': LabelRef}.")
 
-                output_exists = db.scalar(
-                    select(exists().where(Instance.workflow_id == input.output_workflow_id))
-                )
+                output_exists = db.scalar(select(exists().where(Instance.workflow_id == input.output_workflow_id)))
                 if output_exists:
                     raise ValueError("Output workflow must be empty before loading labels.")
 
                 novel_id = db.execute(
-                    select(LabelGroup.novel_id).where(
-                        LabelGroup.label_group_id == input.label_group_id
-                    )
+                    select(LabelGroup.novel_id).where(LabelGroup.label_group_id == input.label_group_id)
                 ).scalar_one()
 
                 latest_versions = (
@@ -96,8 +89,7 @@ class PythonLabelSourceRunner(Runner[PythonLabelSourceInput]):
                             latest_versions,
                             and_(
                                 latest_versions.c.chapter_id == ChapterContent.chapter_id,
-                                latest_versions.c.version
-                                == ChapterContent.chapter_content_version,
+                                latest_versions.c.version == ChapterContent.chapter_content_version,
                             ),
                         )
                     )

@@ -166,9 +166,7 @@ def test_group_runner_resumes_from_cached_assignments(
     )
 
     assignment_count = test_db.scalar(
-        select(func.count())
-        .select_from(GroupAssignment)
-        .where(GroupAssignment.grouping_id == grouping.grouping_id)
+        select(func.count()).select_from(GroupAssignment).where(GroupAssignment.grouping_id == grouping.grouping_id)
     )
     assert assignment_count == 3
     cached_assignment = test_db.execute(
@@ -219,8 +217,6 @@ def test_group_runner_ignores_stale_job(
     assert stored_grouping is not None
     assert stored_grouping.grouping_status == GroupingStatus.PENDING
     assignment_count = test_db.scalar(
-        select(func.count())
-        .select_from(GroupAssignment)
-        .where(GroupAssignment.grouping_id == grouping.grouping_id)
+        select(func.count()).select_from(GroupAssignment).where(GroupAssignment.grouping_id == grouping.grouping_id)
     )
     assert assignment_count == 0

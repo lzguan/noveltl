@@ -33,6 +33,7 @@ from src.filters.runners.python.label_source_runner import (
 from src.filters.runners.python.map_runner import PythonMapInput, PythonMapRunner
 from src.labels.models import Label, LabelData, LabelGroup
 from src.schemas import Model
+from tests.fixtures.bundles import ScenarioBundle
 
 SOURCE_JOB_ID = uuid.UUID("b3cbf911-bb1b-4787-9bff-afbc83b53ad8")
 FILTER_JOB_ID = uuid.UUID("ab694f0d-55d3-424a-a298-9e42c283b42c")
@@ -45,24 +46,12 @@ def _dump(value: Model) -> dict[str, object]:
     return value.model_dump(mode="json", by_alias=True, exclude_computed_fields=True)
 
 
-def test_label_filter_map_rename_group_pipeline(
+def _run_pipeline(
     test_db: Session,
     testing_session_local: sessionmaker[Session],
-    sf_label_group: LabelGroup,
-    sf_label_data: LabelData,
-    sf_labels: list[Label],
-) -> None:
-    duplicate_word = Label(
-        label_data_id=sf_label_data.label_data_id,
-        label_entity_group="MISC",
-        label_word="world",
-        label_start=27,
-        label_end=32,
-        label_score=0.2,
-        label_dirty=False,
-    )
-    test_db.add(duplicate_word)
-
+    label_group_id: uuid.UUID,
+    score_threshold: float,
+) -> tuple[int, int, list[str | int | bool]]:
     score = Call(
         input_schema=LABEL_SOURCE_SCHEMA,
         function=ScoreOf(),
@@ -71,7 +60,7 @@ def test_label_filter_map_rename_group_pipeline(
     bad_score = Call(
         input_schema=LABEL_SOURCE_SCHEMA,
         function=Compare(type="float", op="lt"),
-        arguments=(score, LiteralFloat(value=0.6)),
+        arguments=(score, LiteralFloat(value=score_threshold)),
     )
     word = Call(
         input_schema=LABEL_SOURCE_SCHEMA,
@@ -156,7 +145,7 @@ def test_label_filter_map_rename_group_pipeline(
     PythonLabelSourceRunner(testing_session_local, batch_size=1).execute(
         SOURCE_JOB_ID,
         PythonLabelSourceInput(
-            label_group_id=sf_label_group.label_group_id,
+            label_group_id=label_group_id,
             output_workflow_id=source_workflow.workflow_id,
         ),
     )
@@ -194,28 +183,72 @@ def test_label_filter_map_rename_group_pipeline(
     assert stored_grouping is not None
     assert stored_grouping.grouping_status == GroupingStatus.COMPLETE
 
-    assert (
+    source_count = (
         test_db.scalar(
-            select(func.count())
-            .select_from(Instance)
-            .where(Instance.workflow_id == source_workflow.workflow_id)
+            select(func.count()).select_from(Instance).where(Instance.workflow_id == source_workflow.workflow_id)
         )
-        == len(sf_labels) + 1
+        or 0
     )
-    assert (
+    filtered_count = (
         test_db.scalar(
-            select(func.count())
-            .select_from(Instance)
-            .where(Instance.workflow_id == filtered_workflow.workflow_id)
+            select(func.count()).select_from(Instance).where(Instance.workflow_id == filtered_workflow.workflow_id)
         )
-        == 3
+        or 0
     )
     assignments = list(
         test_db.execute(
-            select(GroupAssignment.function_value).where(
-                GroupAssignment.grouping_id == grouping.grouping_id
-            )
+            select(GroupAssignment.function_value).where(GroupAssignment.grouping_id == grouping.grouping_id)
         ).scalars()
     )
+    return source_count, filtered_count, assignments
+
+
+def test_label_filter_map_rename_group_pipeline(
+    test_db: Session,
+    testing_session_local: sessionmaker[Session],
+    sf_label_group: LabelGroup,
+    sf_label_data: LabelData,
+    sf_labels: list[Label],
+) -> None:
+    test_db.add(
+        Label(
+            label_data_id=sf_label_data.label_data_id,
+            label_entity_group="MISC",
+            label_word="world",
+            label_start=27,
+            label_end=32,
+            label_score=0.2,
+            label_dirty=False,
+        )
+    )
+
+    source_count, filtered_count, assignments = _run_pipeline(
+        test_db,
+        testing_session_local,
+        sf_label_group.label_group_id,
+        0.6,
+    )
+
+    assert source_count == len(sf_labels) + 1
+    assert filtered_count == 3
     assert sorted(assignments) == ["test", "world", "world"]
     assert set(assignments) == {"test", "world"}
+
+
+def test_catalog_xianxia_data_flows_through_runner_pipeline(
+    test_db: Session,
+    testing_session_local: sessionmaker[Session],
+    xianxia_labels_scenario: ScenarioBundle,
+) -> None:
+    label_group = xianxia_labels_scenario.label_groups[0].label_group
+
+    source_count, filtered_count, assignments = _run_pipeline(
+        test_db,
+        testing_session_local,
+        label_group.label_group_id,
+        0.985,
+    )
+
+    assert source_count == len(xianxia_labels_scenario.labels) == 2
+    assert filtered_count == 1
+    assert assignments == ["青石城"]

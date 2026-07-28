@@ -101,9 +101,7 @@ def test_label_source_loads_only_latest_labels_in_batches(
     assert stored_output is not None
     assert stored_output.workflow_status == WorkflowStatus.COMPLETE
 
-    raw_values = test_db.execute(
-        select(Instance.value).where(Instance.workflow_id == output.workflow_id)
-    ).scalars()
+    raw_values = test_db.execute(select(Instance.value).where(Instance.workflow_id == output.workflow_id)).scalars()
     references = []
     for raw_value in raw_values:
         instance = DataObj.model_validate(raw_value)
@@ -111,9 +109,7 @@ def test_label_source_loads_only_latest_labels_in_batches(
         assert isinstance(label, LabelRefData)
         references.append(label.value)
 
-    assert {reference.label_id for reference in references} == {
-        label.label_id for label in current_labels
-    }
+    assert {reference.label_id for reference in references} == {label.label_id for label in current_labels}
     assert not ({reference.label_id for reference in references} & {label.label_id for label in sf_labels})
     assert {
         (
@@ -148,11 +144,7 @@ def test_label_source_completes_empty_group(
     assert stored_output is not None
     assert stored_output.workflow_status == WorkflowStatus.COMPLETE
     assert (
-        test_db.scalar(
-            select(func.count())
-            .select_from(Instance)
-            .where(Instance.workflow_id == output.workflow_id)
-        )
+        test_db.scalar(select(func.count()).select_from(Instance).where(Instance.workflow_id == output.workflow_id))
         == 0
     )
 

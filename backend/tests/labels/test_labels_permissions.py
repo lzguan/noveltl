@@ -376,7 +376,9 @@ class TestLabelDataSelect:
         assert result is not None
         assert result.label_data_id == label_group.label_data.label_data_id
 
-    @pytest.mark.dependency(name="labels::permissions::non_contributor_cannot_select_aliased_label_data", scope="session")
+    @pytest.mark.dependency(
+        name="labels::permissions::non_contributor_cannot_select_aliased_label_data", scope="session"
+    )
     def test_non_contributor_cannot_select_aliased_label_data(
         self,
         test_db: Session,
@@ -486,7 +488,9 @@ class TestLabelUpdate:
 
         assert result_ids == set(label_ids)
 
-    @pytest.mark.dependency(name="labels::permissions::label_editor_without_chapter_access_cannot_update", scope="session")
+    @pytest.mark.dependency(
+        name="labels::permissions::label_editor_without_chapter_access_cannot_update", scope="session"
+    )
     def test_label_editor_without_chapter_access_cannot_update(
         self,
         test_db: Session,
@@ -655,7 +659,9 @@ class TestLabelDelete:
         )
         assert len(remaining) == 0
 
-    @pytest.mark.dependency(name="labels::permissions::label_editor_without_chapter_access_cannot_delete", scope="session")
+    @pytest.mark.dependency(
+        name="labels::permissions::label_editor_without_chapter_access_cannot_delete", scope="session"
+    )
     def test_label_editor_without_chapter_access_cannot_delete(
         self,
         test_db: Session,

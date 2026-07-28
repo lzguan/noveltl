@@ -238,9 +238,7 @@ class TestAdditionalScenarioBundlesCreateData:
         assert "Group 2" in versioned_chapter_scenario.label_groups_by_name
 
     @pytest.mark.dependency(name="fixture_validation::xianxia_scenario", scope="session")
-    def test_xianxia_scenario_has_loader_backed_data(
-        self, xianxia_autolabels_scenario: ScenarioBundle
-    ) -> None:
+    def test_xianxia_scenario_has_loader_backed_data(self, xianxia_autolabels_scenario: ScenarioBundle) -> None:
         novel_bundle = xianxia_autolabels_scenario.novels[0]
         logger.info(
             "Chinese xianxia small test summary=%s autolabel_models=%s",

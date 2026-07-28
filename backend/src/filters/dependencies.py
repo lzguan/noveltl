@@ -81,9 +81,7 @@ def _symbolic_argument(schema: Schema | SchemaField, argument_index: int) -> _Sy
     if isinstance(schema, Schema):
         return _SymbolicObject(
             fields={
-                field_name: _SymbolicScalar(
-                    origins=frozenset({_SourceOrigin(argument_index, (field_name,))})
-                )
+                field_name: _SymbolicScalar(origins=frozenset({_SourceOrigin(argument_index, (field_name,))}))
                 for field_name in schema.fields
             }
         )
@@ -105,9 +103,7 @@ def _evaluate(
         try:
             return data.fields[function.field_name]
         except KeyError as exc:
-            raise ValueError(
-                f"Function '{function.name}' references unknown field '{function.field_name}'."
-            ) from exc
+            raise ValueError(f"Function '{function.name}' references unknown field '{function.field_name}'.") from exc
 
     if isinstance(function, ProjectToSpan):
         return _require_scalar(arguments[0], function)
@@ -146,24 +142,13 @@ def _evaluate(
 
     if isinstance(function, Call):
         call_arguments = tuple(
-            _evaluate_in_environment(argument, arguments, requirements)
-            for argument in function.arguments
+            _evaluate_in_environment(argument, arguments, requirements) for argument in function.arguments
         )
         return _evaluate(function.function, call_arguments, requirements)
 
     if isinstance(
         function,
-        Compare
-        | And
-        | Or
-        | Not
-        | StartOf
-        | EndOf
-        | LengthOf
-        | TextOf
-        | TextAround
-        | WordOf
-        | ScoreOf,
+        Compare | And | Or | Not | StartOf | EndOf | LengthOf | TextOf | TextAround | WordOf | ScoreOf,
     ):
         return _SymbolicScalar(origins=frozenset())
 
@@ -197,8 +182,7 @@ def _resolve_intrinsic_dependencies(
         value = _require_scalar(arguments[dependency.argument_index], function)
         if not value.origins:
             raise ValueError(
-                f"Function '{function.name}' resource dependency cannot be resolved "
-                "to a root argument key path."
+                f"Function '{function.name}' resource dependency cannot be resolved to a root argument key path."
             )
         requirements.update(
             ResolvedResourceDependency(

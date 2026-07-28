@@ -65,30 +65,23 @@ class PythonFilterRunner(Runner[PythonFilterInput]):
 
             with self.session_factory() as db:
                 source_workflow = db.execute(
-                    select(Workflow).where(
-                        Workflow.workflow_id == input.source_workflow_id
-                    )
+                    select(Workflow).where(Workflow.workflow_id == input.source_workflow_id)
                 ).scalar_one()
                 if source_workflow.workflow_status != WorkflowStatus.COMPLETE:
                     raise ValueError("Source workflow must be complete before filtering.")
                 source_schema = Schema.model_validate(source_workflow.schema)
 
                 output_workflow = db.execute(
-                    select(Workflow).where(
-                        Workflow.workflow_id == input.output_workflow_id
-                    )
+                    select(Workflow).where(Workflow.workflow_id == input.output_workflow_id)
                 ).scalar_one()
                 output_schema = Schema.model_validate(output_workflow.schema)
 
                 function_definition = db.execute(
                     select(FunctionDefinition).where(
-                        FunctionDefinition.function_definition_id
-                        == input.function_definition_id
+                        FunctionDefinition.function_definition_id == input.function_definition_id
                     )
                 ).scalar_one()
-                function = function_adapter.validate_python(
-                    function_definition.function_definition
-                )
+                function = function_adapter.validate_python(function_definition.function_definition)
 
                 source_count = (
                     db.scalar(
@@ -98,28 +91,16 @@ class PythonFilterRunner(Runner[PythonFilterInput]):
                     )
                     or 0
                 )
-                output_exists = db.scalar(
-                    select(
-                        exists().where(
-                            Instance.workflow_id == input.output_workflow_id
-                        )
-                    )
-                )
+                output_exists = db.scalar(select(exists().where(Instance.workflow_id == input.output_workflow_id)))
 
             if output_exists:
                 raise ValueError("Output workflow must be empty before filtering.")
             if output_schema != source_schema:
-                raise ValueError(
-                    "Filter output workflow schema must match the source workflow schema."
-                )
-            if len(function.signature.args) != 1 or not isinstance(
-                function.signature.args[0], Schema
-            ):
+                raise ValueError("Filter output workflow schema must match the source workflow schema.")
+            if len(function.signature.args) != 1 or not isinstance(function.signature.args[0], Schema):
                 raise ValueError("A filter function must accept exactly one object schema.")
             if not extends(source_schema, function.signature.args[0]):
-                raise ValueError(
-                    "Source workflow schema does not satisfy the filter function input schema."
-                )
+                raise ValueError("Source workflow schema does not satisfy the filter function input schema.")
             if not isinstance(function.signature.output, BoolField):
                 raise ValueError("A filter function must return a boolean.")
 
@@ -156,10 +137,7 @@ class PythonFilterRunner(Runner[PythonFilterInput]):
                     ctx.load_resources(
                         collect_resource_ids(
                             dependencies,
-                            (
-                                (instance_data,)
-                                for _, _, instance_data in parsed_instances
-                            ),
+                            ((instance_data,) for _, _, instance_data in parsed_instances),
                         )
                     )
 
@@ -184,8 +162,7 @@ class PythonFilterRunner(Runner[PythonFilterInput]):
 
             if processed_count != source_count:
                 raise ValueError(
-                    f"Filter instance count mismatch: expected {source_count}, "
-                    f"processed {processed_count}."
+                    f"Filter instance count mismatch: expected {source_count}, processed {processed_count}."
                 )
 
             with self.session_factory.begin() as db:

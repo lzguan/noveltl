@@ -66,9 +66,7 @@ def scifi_novel(
 
 
 @pytest.fixture
-def scifi_label_group(
-    scifi_user: User, scifi_novel: Novel, test_db: Session
-) -> LabelGroup:
+def scifi_label_group(scifi_user: User, scifi_novel: Novel, test_db: Session) -> LabelGroup:
     label_group = LabelGroup(label_group_name="scifi test", novel_id=scifi_novel.novel_id)
     test_db.add(label_group)
     test_db.commit()
@@ -76,9 +74,7 @@ def scifi_label_group(
 
 
 @pytest.fixture
-def scifi_contributor(
-    scifi_user: User, scifi_novel: Novel, test_db: Session
-) -> NovelContributor:
+def scifi_contributor(scifi_user: User, scifi_novel: Novel, test_db: Session) -> NovelContributor:
     contributor = NovelContributor(
         contributor_role=Role.OWNER,
         novel_id=scifi_novel.novel_id,
@@ -90,9 +86,7 @@ def scifi_contributor(
 
 
 @pytest.fixture
-def scifi_label_contributor(
-    scifi_user: User, scifi_label_group: LabelGroup, test_db: Session
-) -> LabelContributor:
+def scifi_label_contributor(scifi_user: User, scifi_label_group: LabelGroup, test_db: Session) -> LabelContributor:
     label_contributor = LabelContributor(
         label_contributor_role=LabelRole.OWNER,
         label_group_id=scifi_label_group.label_group_id,

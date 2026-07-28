@@ -33,10 +33,12 @@ from src.filters.functions import (
     Or,
     ProjectToSpan,
     Rename,
+    ScoreOf,
     Signature,
     StartOf,
     TextAround,
     TextOf,
+    WordOf,
 )
 
 type PythonExecutable = Callable[[tuple[Data, ...], PythonExecutionContext], Data]
@@ -175,6 +177,22 @@ class PythonCompiler:
                 )
 
             executable = project_to_span
+
+        elif isinstance(function, WordOf):
+
+            def word_of(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(LabelRefData, arguments[0])
+                return StringData(value=ctx.get_label(data.value.label_id).word)
+
+            executable = word_of
+
+        elif isinstance(function, ScoreOf):
+
+            def score_of(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(LabelRefData, arguments[0])
+                return FloatData(value=ctx.get_label(data.value.label_id).score)
+
+            executable = score_of
 
         elif isinstance(function, Rename):
             rename_function = function

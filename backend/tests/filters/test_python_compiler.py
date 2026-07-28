@@ -1,7 +1,7 @@
 import uuid
 
 from src.filters.compilers.python import PythonCompiler
-from src.filters.context.python import PythonExecutionContext
+from src.filters.context.python import PythonExecutionContext, PythonLabelResource
 from src.filters.data_types import (
     BoolData,
     DataObj,
@@ -39,6 +39,9 @@ class _NoResourceContext:
 
     def load_resources(self, resource_ids: object) -> None:
         raise AssertionError(f"Unexpected resource preload: {resource_ids}")
+
+    def get_label(self, label_id: uuid.UUID) -> PythonLabelResource:
+        raise AssertionError(f"Unexpected label dependency: {label_id}")
 
 
 ctx: PythonExecutionContext = _NoResourceContext()
@@ -141,6 +144,7 @@ def test_project_to_span_drops_label_only_fields() -> None:
         chapter_content_id=chapter_content_id,
         label_id=uuid.uuid4(),
         label_data_id=uuid.uuid4(),
+        label_group_id=uuid.uuid4(),
     )
 
     result = PythonCompiler().compile(ProjectToSpan())((LabelRefData(value=label),), ctx)

@@ -33,7 +33,7 @@ MAX_FUNCTION_ARITY = 256
 MAX_LITERAL_STRING_LENGTH = 10_000
 MAX_RENAME_PAIRS = 128
 
-type ResourceName = Literal["chapter_content_text"]
+type ResourceName = Literal["chapter_content_text", "label"]
 
 
 class Signature(Model):
@@ -201,6 +201,38 @@ class ProjectToSpan(Function):
         return Signature(
             args=(LabelRefField(),),
             output=TextSpanField(),
+        )
+
+
+class WordOf(Function):
+    name: Literal["wordOf"] = "wordOf"
+
+    @property
+    def dependencies(self) -> tuple[DependencyType, ...]:
+        return (ResourceDependency(resource="label", argument_index=0),)
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(
+            args=(LabelRefField(),),
+            output=StringField(),
+        )
+
+
+class ScoreOf(Function):
+    name: Literal["scoreOf"] = "scoreOf"
+
+    @property
+    def dependencies(self) -> tuple[DependencyType, ...]:
+        return (ResourceDependency(resource="label", argument_index=0),)
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(
+            args=(LabelRefField(),),
+            output=FloatField(),
         )
 
 
@@ -500,6 +532,8 @@ type FunctionType = Annotated[
     | Get
     | Compare
     | ProjectToSpan
+    | WordOf
+    | ScoreOf
     | Rename
     | And
     | Or

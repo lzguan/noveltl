@@ -22,9 +22,11 @@ from src.filters.functions import (
     Rename,
     ResourceDependency,
     ResourceName,
+    ScoreOf,
     StartOf,
     TextAround,
     TextOf,
+    WordOf,
 )
 
 
@@ -151,7 +153,17 @@ def _evaluate(
 
     if isinstance(
         function,
-        Compare | And | Or | Not | StartOf | EndOf | LengthOf | TextOf | TextAround,
+        Compare
+        | And
+        | Or
+        | Not
+        | StartOf
+        | EndOf
+        | LengthOf
+        | TextOf
+        | TextAround
+        | WordOf
+        | ScoreOf,
     ):
         return _SymbolicScalar(origins=frozenset())
 

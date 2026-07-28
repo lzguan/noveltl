@@ -6,8 +6,10 @@ from src.filters.functions import (
     Get,
     ProjectToSpan,
     ResourceDependency,
+    ScoreOf,
     TextAround,
     TextOf,
+    WordOf,
 )
 
 
@@ -20,6 +22,30 @@ def test_text_functions_declare_discriminated_resource_dependencies() -> None:
 
     assert TextOf().dependencies == (expected,)
     assert TextAround(slack=20).dependencies == (expected,)
+
+
+def test_label_functions_resolve_label_resources() -> None:
+    expected = ResourceDependency(
+        dependency_type="resource",
+        resource="label",
+        argument_index=0,
+    )
+    input_schema = Schema(fields={"label": LabelRefField()})
+    word = Call(
+        input_schema=input_schema,
+        function=WordOf(),
+        arguments=(Get(field_name="label", type="labelRef"),),
+    )
+
+    assert ScoreOf().dependencies == (expected,)
+    assert WordOf().dependencies == (expected,)
+    assert resolve_dependencies(word) == (
+        ResolvedResourceDependency(
+            resource="label",
+            argument_index=0,
+            key_path=("label",),
+        ),
+    )
 
 
 def test_resolve_direct_elementary_argument_dependency() -> None:

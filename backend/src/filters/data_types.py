@@ -108,6 +108,7 @@ class TextSpan(Model):
 class LabelRef(TextSpan):
     label_id: uuid.UUID
     label_data_id: uuid.UUID
+    label_group_id: uuid.UUID
 
 
 class DTypeBase[T](Model):

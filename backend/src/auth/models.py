@@ -35,7 +35,7 @@ class User(Base):
     user_name: Mapped[str] = mapped_column(String(MAX_USER_NAME_LEN), nullable=False)
     user_hashed_password: Mapped[str] = mapped_column(String(256), nullable=False)
     user_type: Mapped[UserType] = mapped_column(
-        Enum(UserType, native_enum=False, length=10, values_callable=lambda x: [str(e.value) for e in x]),  # type: ignore
+        Enum(UserType, native_enum=False, length=10, values_callable=lambda x: [str(e.value) for e in x]),
         nullable=False,
     )
 

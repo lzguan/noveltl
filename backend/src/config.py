@@ -1,5 +1,3 @@
-# type: ignore
-
 """This module provides global config variables."""
 
 import logging

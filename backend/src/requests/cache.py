@@ -39,7 +39,8 @@ class RedisCache(TTLCache):
     def get(self, key: uuid.UUID) -> CacheEntry | None:
         value = get_redis_for_ttl_cache_sync().get(str(key))
         if value is not None:
-            return json.loads(value)  # type: ignore
+            # pyrefly: ignore [bad-argument-type]
+            return json.loads(value)
         return None
 
     def set(self, key: uuid.UUID, value: CacheEntry, expire: int) -> None:
@@ -51,7 +52,7 @@ class RedisCache(TTLCache):
     async def aget(self, key: uuid.UUID) -> CacheEntry | None:
         value = await get_redis_for_ttl_cache_async().get(str(key))
         if value is not None:
-            return json.loads(value)  # type: ignore
+            return json.loads(value)
         return None
 
     async def aset(self, key: uuid.UUID, value: CacheEntry, expire: int) -> None:

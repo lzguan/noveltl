@@ -95,4 +95,4 @@ class TestInsertLabelDatasByAutolabels:
                 assert db_label.label_entity_group == source_label["label_entity_group"]
 
                 if "label_score" in source_label:
-                    assert db_label.label_score == pytest.approx(source_label["label_score"])  # type: ignore
+                    assert db_label.label_score == pytest.approx(source_label["label_score"])

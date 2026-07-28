@@ -1,6 +1,7 @@
 import logging
 import uuid
 from typing import cast
+from uuid import UUID
 
 from sqlalchemy import and_, func, insert, select, update
 from sqlalchemy.orm import Session, sessionmaker
@@ -28,6 +29,7 @@ from src.filters.models import (
     Workflow,
 )
 from src.filters.runners.interfaces.runner import Runner
+from src.filters.runners.python.helpers import handle_grouping_exception
 from src.schemas import Model
 
 logger = logging.getLogger(__name__)
@@ -55,7 +57,7 @@ class PythonGroupRunner(Runner[PythonGroupInput]):
         self.batch_size = batch_size
         self.compiler = compiler or PythonCompiler()
 
-    def execute(self, job_id: str, input: PythonGroupInput) -> None:
+    def execute(self, job_id: UUID, input: PythonGroupInput) -> None:
         try:
             with self.session_factory.begin() as db:
                 claim = db.execute(
@@ -178,24 +180,5 @@ class PythonGroupRunner(Runner[PythonGroupInput]):
                     )
                 )
         except Exception as exc:
-            try:
-                with self.session_factory.begin() as db:
-                    db.execute(
-                        update(Grouping)
-                        .where(
-                            Grouping.grouping_id == input.grouping_id,
-                            Grouping.job_id == job_id,
-                            Grouping.grouping_status == GroupingStatus.PROCESSING,
-                        )
-                        .values(
-                            grouping_status=GroupingStatus.FAILED,
-                            grouping_message=str(exc) or type(exc).__name__,
-                        )
-                    )
-            except Exception:
-                logger.exception(
-                    "Failed to record grouping failure grouping_id=%s job_id=%s",
-                    input.grouping_id,
-                    job_id,
-                )
+            handle_grouping_exception(self.session_factory, input.grouping_id, job_id, exc, logger)
             raise

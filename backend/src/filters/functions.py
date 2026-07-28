@@ -33,6 +33,8 @@ MAX_FUNCTION_ARITY = 256
 MAX_LITERAL_STRING_LENGTH = 10_000
 MAX_RENAME_PAIRS = 128
 
+type ResourceName = Literal["chapter_content_text"]
+
 
 class Signature(Model):
     """The input and output schemas of a function."""
@@ -41,6 +43,25 @@ class Signature(Model):
 
     args: tuple[SObj, ...] = ()
     output: SObj
+
+
+class Dependency(Model):
+    """An intrinsic external dependency of a function node."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    dependency_type: str
+
+
+class ResourceDependency(Dependency):
+    """A semantic resource read from one of the function's direct arguments."""
+
+    dependency_type: Literal["resource"] = "resource"
+    resource: ResourceName
+    argument_index: int = Field(ge=0, le=MAX_FUNCTION_ARITY)
+
+
+type DependencyType = ResourceDependency
 
 
 class Function(Model):
@@ -54,6 +75,11 @@ class Function(Model):
     def signature(self) -> Signature:
         """The input and output schemas of the function."""
         ...
+
+    @property
+    def dependencies(self) -> tuple[DependencyType, ...]:
+        """External dependencies intrinsic to this function node."""
+        return ()
 
     name: str
 
@@ -265,6 +291,75 @@ class Not(Function):
         )
 
 
+class StartOf(Function):
+    name: Literal["startOf"] = "startOf"
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(
+            args=(TextSpanField(),),
+            output=IntField(),
+        )
+
+
+class EndOf(Function):
+    name: Literal["endOf"] = "endOf"
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(
+            args=(TextSpanField(),),
+            output=IntField(),
+        )
+
+
+class LengthOf(Function):
+    name: Literal["lengthOf"] = "lengthOf"
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(
+            args=(TextSpanField(),),
+            output=IntField(),
+        )
+
+
+class TextOf(Function):
+    name: Literal["textOf"] = "textOf"
+
+    @property
+    def dependencies(self) -> tuple[DependencyType, ...]:
+        return (ResourceDependency(resource="chapter_content_text", argument_index=0),)
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(
+            args=(TextSpanField(),),
+            output=StringField(),
+        )
+
+
+class TextAround(Function):
+    name: Literal["textAround"] = "textAround"
+    slack: int
+
+    @property
+    def dependencies(self) -> tuple[DependencyType, ...]:
+        return (ResourceDependency(resource="chapter_content_text", argument_index=0),)
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(
+            args=(TextSpanField(),),
+            output=StringField(),
+        )
+
+
 def output_when_called_on(function: Function, input_schema: Schema) -> SObj:
     """
     Return the output of calling function in an object-schema environment.
@@ -411,7 +506,12 @@ type FunctionType = Annotated[
     | Not
     | Construct
     | Extend
-    | Call,
+    | Call
+    | StartOf
+    | EndOf
+    | LengthOf
+    | TextOf
+    | TextAround,
     Field(discriminator="name"),
 ]
 

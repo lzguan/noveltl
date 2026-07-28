@@ -1,6 +1,7 @@
 import logging
 import uuid
 from typing import cast
+from uuid import UUID
 
 from sqlalchemy import exists, func, insert, select, update
 from sqlalchemy.orm import Session, sessionmaker
@@ -10,6 +11,7 @@ from src.filters.data_types import DataObj, Schema, data_adapter, extends
 from src.filters.functions import function_adapter
 from src.filters.models import FunctionDefinition, Instance, Workflow, WorkflowStatus
 from src.filters.runners.interfaces.runner import Runner
+from src.filters.runners.python.helpers import handle_workflow_exception
 from src.schemas import Model
 
 logger = logging.getLogger(__name__)
@@ -37,7 +39,7 @@ class PythonMapRunner(Runner[PythonMapInput]):
         self.batch_size = batch_size
         self.compiler = compiler or PythonCompiler()
 
-    def execute(self, job_id: str, input: PythonMapInput) -> None:
+    def execute(self, job_id: UUID, input: PythonMapInput) -> None:
         try:
             with self.session_factory.begin() as db:
                 claim = db.execute(
@@ -87,9 +89,7 @@ class PythonMapRunner(Runner[PythonMapInput]):
                     )
                     or 0
                 )
-                output_exists = db.scalar(
-                    select(exists().where(Instance.workflow_id == input.output_workflow_id))
-                )
+                output_exists = db.scalar(select(exists().where(Instance.workflow_id == input.output_workflow_id)))
 
             if output_exists:
                 raise ValueError("Output workflow must be empty before mapping.")
@@ -145,9 +145,7 @@ class PythonMapRunner(Runner[PythonMapInput]):
                     processed_count += len(mapped_instances)
 
             if processed_count != source_count:
-                raise ValueError(
-                    f"Map instance count mismatch: expected {source_count}, processed {processed_count}."
-                )
+                raise ValueError(f"Map instance count mismatch: expected {source_count}, processed {processed_count}.")
 
             with self.session_factory.begin() as db:
                 db.execute(
@@ -163,24 +161,7 @@ class PythonMapRunner(Runner[PythonMapInput]):
                     )
                 )
         except Exception as exc:
-            try:
-                with self.session_factory.begin() as db:
-                    db.execute(
-                        update(Workflow)
-                        .where(
-                            Workflow.workflow_id == input.output_workflow_id,
-                            Workflow.job_id == job_id,
-                            Workflow.workflow_status == WorkflowStatus.PROCESSING,
-                        )
-                        .values(
-                            workflow_status=WorkflowStatus.FAILED,
-                            workflow_message=str(exc) or type(exc).__name__,
-                        )
-                    )
-            except Exception:
-                logger.exception(
-                    "Failed to record map failure output_workflow_id=%s job_id=%s",
-                    input.output_workflow_id,
-                    job_id,
-                )
+            handle_workflow_exception(
+                self.session_factory, input.output_workflow_id, job_id, exc, logger, "PythonMapRunner.execute"
+            )
             raise

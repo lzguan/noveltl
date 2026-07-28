@@ -2,6 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, assert_never, cast
 
+from src.filters.context.python import PythonExecutionContext
 from src.filters.data_types import (
     BoolData,
     Data,
@@ -19,9 +20,11 @@ from src.filters.functions import (
     Call,
     Compare,
     Construct,
+    EndOf,
     Extend,
     FunctionType,
     Get,
+    LengthOf,
     LiteralBool,
     LiteralFloat,
     LiteralInt,
@@ -31,9 +34,12 @@ from src.filters.functions import (
     ProjectToSpan,
     Rename,
     Signature,
+    StartOf,
+    TextAround,
+    TextOf,
 )
 
-type PythonExecutable = Callable[[tuple[Data, ...]], Data]
+type PythonExecutable = Callable[[tuple[Data, ...], PythonExecutionContext], Data]
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,11 +49,13 @@ class CompiledPythonFunction:
     signature: Signature
     executable: PythonExecutable
 
-    def __call__(self, arguments: tuple[Data, ...]) -> Data:
-        return self.executable(arguments)
+    def __call__(self, arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+        return self.executable(arguments, ctx)
 
 
-def _evaluate_in_environment(function: CompiledPythonFunction, environment: tuple[Data, ...]) -> Data:
+def _evaluate_in_environment(
+    function: CompiledPythonFunction, environment: tuple[Data, ...], ctx: PythonExecutionContext
+) -> Data:
     """
     Evaluate a nullary or unary expression in a shared object environment.
 
@@ -57,8 +65,8 @@ def _evaluate_in_environment(function: CompiledPythonFunction, environment: tupl
     """
 
     if len(function.signature.args) == 0:
-        return function(())
-    return function(environment)
+        return function((), ctx)
+    return function(environment, ctx)
 
 
 def _compare_values(left: Any, right: Any, operation: str) -> bool:
@@ -83,7 +91,7 @@ class PythonCompiler:
     def compile(self, function: FunctionType) -> CompiledPythonFunction:
         if isinstance(function, Get):
 
-            def get(arguments: tuple[Data, ...]) -> Data:
+            def get(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 data = cast(DataObj, arguments[0])
                 return data.fields[function.field_name]
 
@@ -91,7 +99,7 @@ class PythonCompiler:
 
         elif isinstance(function, Compare):
 
-            def compare(arguments: tuple[Data, ...]) -> Data:
+            def compare(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 left = cast(DataType, arguments[0])
                 right = cast(DataType, arguments[1])
                 return BoolData(value=_compare_values(left.value, right.value, function.op))
@@ -100,7 +108,7 @@ class PythonCompiler:
 
         elif isinstance(function, Not):
 
-            def not_fn(arguments: tuple[Data, ...]) -> Data:
+            def not_fn(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 data = cast(BoolData, arguments[0])
                 return BoolData(value=not data.value)
 
@@ -108,7 +116,7 @@ class PythonCompiler:
 
         elif isinstance(function, And):
 
-            def and_fn(arguments: tuple[Data, ...]) -> Data:
+            def and_fn(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 for data in arguments:
                     if not cast(BoolData, data).value:
                         return BoolData(value=False)
@@ -118,7 +126,7 @@ class PythonCompiler:
 
         elif isinstance(function, Or):
 
-            def or_fn(arguments: tuple[Data, ...]) -> Data:
+            def or_fn(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 for data in arguments:
                     if cast(BoolData, data).value:
                         return BoolData(value=True)
@@ -128,35 +136,35 @@ class PythonCompiler:
 
         elif isinstance(function, LiteralInt):
 
-            def literal_int(arguments: tuple[Data, ...]) -> Data:
+            def literal_int(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 return IntData(value=function.value)
 
             executable = literal_int
 
         elif isinstance(function, LiteralFloat):
 
-            def literal_float(arguments: tuple[Data, ...]) -> Data:
+            def literal_float(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 return FloatData(value=function.value)
 
             executable = literal_float
 
         elif isinstance(function, LiteralString):
 
-            def literal_string(arguments: tuple[Data, ...]) -> Data:
+            def literal_string(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 return StringData(value=function.value)
 
             executable = literal_string
 
         elif isinstance(function, LiteralBool):
 
-            def literal_bool(arguments: tuple[Data, ...]) -> Data:
+            def literal_bool(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 return BoolData(value=function.value)
 
             executable = literal_bool
 
         elif isinstance(function, ProjectToSpan):
 
-            def project_to_span(arguments: tuple[Data, ...]) -> Data:
+            def project_to_span(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 data = cast(LabelRefData, arguments[0])
                 return TextSpanData(
                     value=TextSpan(
@@ -171,7 +179,7 @@ class PythonCompiler:
         elif isinstance(function, Rename):
             rename_function = function
 
-            def rename(arguments: tuple[Data, ...]) -> Data:
+            def rename(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 data = cast(DataObj, arguments[0])
                 fields = dict(data.fields)
                 renamed = {pair.new_name: fields.pop(pair.old_name) for pair in rename_function.rename_pairs}
@@ -185,12 +193,12 @@ class PythonCompiler:
                 field_name: self.compile(field_function) for field_name, field_function in function.fields.items()
             }
 
-            def construct(arguments: tuple[Data, ...]) -> Data:
+            def construct(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 return DataObj(
                     fields={
                         field_name: cast(
                             DataType,
-                            _evaluate_in_environment(field_function, arguments),
+                            _evaluate_in_environment(field_function, arguments, ctx),
                         )
                         for field_name, field_function in compiled_fields.items()
                     }
@@ -203,14 +211,14 @@ class PythonCompiler:
                 field_name: self.compile(field_function) for field_name, field_function in function.fields.items()
             }
 
-            def extend(arguments: tuple[Data, ...]) -> Data:
+            def extend(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 data = cast(DataObj, arguments[0])
                 fields = dict(data.fields)
                 fields.update(
                     {
                         field_name: cast(
                             DataType,
-                            _evaluate_in_environment(field_function, arguments),
+                            _evaluate_in_environment(field_function, arguments, ctx),
                         )
                         for field_name, field_function in compiled_fields.items()
                     }
@@ -223,11 +231,54 @@ class PythonCompiler:
             compiled_arguments = tuple(self.compile(argument) for argument in function.arguments)
             compiled_function = self.compile(function.function)
 
-            def call(arguments: tuple[Data, ...]) -> Data:
-                call_arguments = tuple(_evaluate_in_environment(argument, arguments) for argument in compiled_arguments)
-                return compiled_function(call_arguments)
+            def call(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                call_arguments = tuple(
+                    _evaluate_in_environment(argument, arguments, ctx) for argument in compiled_arguments
+                )
+                return compiled_function(call_arguments, ctx)
 
             executable = call
+        elif isinstance(function, StartOf):
+
+            def start_of(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(TextSpanData, arguments[0])
+                return IntData(value=data.value.start)
+
+            executable = start_of
+        elif isinstance(function, EndOf):
+
+            def end_of(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(TextSpanData, arguments[0])
+                return IntData(value=data.value.end)
+
+            executable = end_of
+        elif isinstance(function, LengthOf):
+
+            def length_of(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(TextSpanData, arguments[0])
+                return IntData(value=data.value.end - data.value.start)
+
+            executable = length_of
+        elif isinstance(function, TextOf):
+
+            def text_of(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(TextSpanData, arguments[0])
+                return StringData(
+                    value=ctx.get_chapter_content(data.value.chapter_content_id)[data.value.start : data.value.end]
+                )
+
+            executable = text_of
+        elif isinstance(function, TextAround):
+
+            def text_around(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(TextSpanData, arguments[0])
+                return StringData(
+                    value=ctx.get_chapter_content(data.value.chapter_content_id)[
+                        max(0, data.value.start - function.slack) : data.value.end + function.slack
+                    ]
+                )
+
+            executable = text_around
 
         else:
             assert_never(function)

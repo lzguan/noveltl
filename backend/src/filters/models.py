@@ -32,7 +32,7 @@ class Workflow(Base):
     )
     workflow_name: Mapped[str] = mapped_column(String(100), nullable=True)
     schema: Mapped[dict] = mapped_column(postgresql.JSONB, nullable=False)
-    job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    job_id: Mapped[uuid.UUID | None] = mapped_column(postgresql.UUID, nullable=True)
     workflow_status: Mapped[WorkflowStatus] = mapped_column(
         Enum(
             WorkflowStatus,
@@ -99,7 +99,7 @@ class Grouping(Base):
         ),
         nullable=False,
     )
-    job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    job_id: Mapped[uuid.UUID | None] = mapped_column(postgresql.UUID, nullable=True)
     grouping_status: Mapped[GroupingStatus] = mapped_column(
         Enum(
             GroupingStatus,

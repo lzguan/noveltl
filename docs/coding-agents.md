@@ -2,7 +2,9 @@
 
 **Last updated:** 2026-05-10
 
-We (try to) maintain a set of skills/agent definitions in [`.claude`](../.claude/) and [`.agents`](../.agents/), as well as a [`CLAUDE.md`](../CLAUDE.md) and [`AGENTS.md`](../AGENTS.md) file. Anyone who wishes to use coding agents for this projects can feel free to contribute.
+We maintain project-specific agent guidance in [`.agents`](../.agents/), as
+well as [`CLAUDE.md`](../CLAUDE.md) and [`AGENTS.md`](../AGENTS.md). Anyone who
+wishes to use coding agents for this project can contribute improvements.
 
 ## Installing coding agents
 

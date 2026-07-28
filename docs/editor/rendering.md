@@ -28,7 +28,7 @@ graph LR
     MGR -->|"mutates"| SM
 ```
 
-The two panels involved are [EditorPanel.tsx](../../frontend/src/edit/panels/EditorPanel.tsx) — a thin wrapper that shows a loading state or mounts the editor — and [CodeMirrorEditor.tsx](../../frontend/src/edit/panels/CodeMirrorEditor.tsx), which holds all of the integration. The editor is keyed by the chapter id, so switching chapters tears down and rebuilds the `EditorView` against the new chapter's segment manager.
+The two panels involved are [EditorPanel.tsx](../../frontend/src/edit/panels/EditorPanel.tsx) — a thin wrapper that shows a loading state or mounts the editor — and [CodeMirrorEditor.tsx](../../frontend/src/edit/panels/editor/CodeMirrorEditor.tsx), which holds all of the integration. The editor is keyed by the chapter id, so switching chapters tears down and rebuilds the `EditorView` against the new chapter's segment manager.
 
 ## Text and caret out
 

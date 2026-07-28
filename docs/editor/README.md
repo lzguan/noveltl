@@ -8,7 +8,9 @@ This documentation will primarily be conceptual rather than going deep into impl
 
 ## Requirements
 
-See [labels.md](../labels.md) and [novels.md](../novels.md) for database model. See [filters.md](../filters.md) and [autolabels.md](../autolabels.md) for information about other services.
+See [labels.md](../labels.md) and [novels.md](../novels.md) for the database
+model. See the [filter docs](../filters/README.md) and
+[autolabels.md](../autolabels.md) for information about other services.
 
 The goal for this editor is to give the user a real-time way to edit the text/labels of a chapter on the frontend, as well as to display it in a viewer-friendly format. Specifically, the user needs to be able to perform the following operations:
 

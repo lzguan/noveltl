@@ -1,5 +1,10 @@
 # Filter workflows
 
+> **Status:** Design document. This describes the intended product workflow;
+> sampling, review, annotation, aggregation, and terminal application are not
+> all implemented. See [README.md](README.md) for the current implementation
+> boundary.
+
 ## Motivation
 
 NovelTL began as a collection of Python scripts that sent individual novel

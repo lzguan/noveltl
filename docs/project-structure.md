@@ -1,6 +1,6 @@
 # Project Structure
 
-**Last updated:** 2026-06-03
+**Last updated:** 2026-07-28
 
 This project is separated into a frontend and a backend. The backend is stateless and takes all data from either a Postgres database or a Redis cache. The backend can employ workers by sending tasks to the Redis cache, where the workers will pick up. Currently this project uses Arq to perform task queueing. This may change in the future.
 
@@ -38,7 +38,7 @@ graph TD
 
 ## Tools/technologies
 
-The backend consists of a FastAPI server instance that connects to a Postgres database using Sqlachemy and uses Pydantic for data validation. The backend also has a worker instance that performs named entity recognition using a pretrained BERT model ([found here](https://huggingface.co/uer/roberta-base-finetuned-cluener2020-chinese)). Since this model is from 2020, we plan to find a newer model, train our own, or explore LLM based solutions sometime in the future. This worker instance, along with the FastAPI server, connect to a Redis instance meant to serve as a task queue using [arq](https://github.com/python-arq/arq). We plan to replace this with a more frequently updated library. 
+The backend consists of a FastAPI server instance that connects to a Postgres database using SQLAlchemy and uses Pydantic for data validation. The backend also has a worker instance that performs named entity recognition using a pretrained BERT model ([found here](https://huggingface.co/uer/roberta-base-finetuned-cluener2020-chinese)). Since this model is from 2020, we plan to find a newer model, train our own, or explore LLM based solutions sometime in the future. This worker instance, along with the FastAPI server, connect to a Redis instance meant to serve as a task queue using [arq](https://github.com/python-arq/arq). We plan to replace this with a more frequently updated library.
 
 We use [uv](https://docs.astral.sh/uv/) as package manager, [Pyrefly](https://pyrefly.org/) for type checking, and [Ruff](https://docs.astral.sh/ruff/) for linting. We prefer stricter type checking so Pyright with strict type checking would be ideal, but Pyright is much slower than Pyrefly especially on slower hardware.
 
@@ -46,7 +46,7 @@ The frontend is written in Typescript and uses React and ShadCN for the componen
 
 The frontend and backend are synchronized using FastAPI's OpenAPI generation capabilities and [Orval](https://orval.dev/) to convert OpenAPI schema to typescript.
 
-We use pytest for backend testing and Vitest for frontend testing. We plan to use Playwright for integration testing.
+We use pytest for backend testing, Vitest for frontend unit testing, and Playwright for end-to-end testing.
 
 ## Backend structure
 
@@ -54,7 +54,7 @@ Broadly speaking, the backend is divided into services, where each service handl
 
 - Auth: self-explanatory. For now the project mostly just implements security described in the [fastapi docs](https://fastapi.tiangolo.com/tutorial/security/).
 - Autolabels: Automatically labeling text. More details in [autolabel docs](autolabels.md)
-- Filters: Search specific patterns in a certain novel/bulk operations. More details in [filters docs](filters.md)
+- Filters: Compile and run typed bulk operations over novel data. The rewrite is still in progress and is not exposed through the HTTP API yet. See the [filter docs](filters/README.md).
 - Editing: Serve initial data required for user editing. Details for what this does can be found in the [editor docs](editor/)
 - Labels: Store and serve label data for chapters. Core functionality. Details can be found in [labeling docs](labels.md)
 - Novels: Store and serve novels/chapters. Details can be found in [novels docs](novels.md)

@@ -1,5 +1,9 @@
 # Filter data types
 
+> **Status:** Design document. This describes the target type system and
+> includes capabilities that are not implemented yet. See
+> [README.md](README.md) for the current implementation boundary.
+
 ## Motivation
 
 The filter system needs to operate on more than one fixed shape of data.

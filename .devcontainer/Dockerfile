@@ -1,8 +1,9 @@
 FROM mcr.microsoft.com/devcontainers/base:dev-trixie
 
-ARG PNPM_VERSION=11.10.0
+ARG PNPM_VERSION=11.17.0
 ARG NODE_VERSION=22
 ARG PROJECT_ROOT=/workspaces/NovelTL_Dev
+ARG UV_VERSION=0.11.32
 
 ENV PNPM_HOME=/home/vscode/.local/share/pnpm
 ENV PATH="${PNPM_HOME}/bin:${PATH}"
@@ -14,7 +15,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 USER vscode
-COPY --from=ghcr.io/astral-sh/uv:0.10.9 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:${UV_VERSION} /uv /uvx /bin/
 RUN wget -qO- https://get.pnpm.io/install.sh | ENV="$HOME/.bashrc" SHELL="/bin/bash" bash -
 RUN pnpm runtime set node ${NODE_VERSION} -g
 

@@ -1,9 +1,8 @@
-# Filter workflows
+# Future filter workflows
 
-> **Status:** Design document. This describes the intended product workflow;
-> sampling, review, annotation, aggregation, and terminal application are not
-> all implemented. See [README.md](README.md) for the current implementation
-> boundary.
+> **Status:** Future design. This describes the intended review product, not
+> the current runner pipeline. See the [filter overview](../README.md) and
+> [runner guide](../runners.md) for implemented behavior.
 
 ## Motivation
 
@@ -288,7 +287,9 @@ Shared UI handles:
 The UI may use a renderer registry for semantic data types and complex
 operations. Straightforward types use generic schema-driven controls; known
 types such as labels, text spans, and sentence contexts receive purpose-built
-renderers. A specialized workflow may replace part of the shared interface
+renderers. It should compose the frontend's existing shadcn components and
+semantic theme tokens rather than create a separate filter-specific component
+system. A specialized workflow may replace part of the shared interface
 without reimplementing persistence and lifecycle behavior.
 
 ## Example: low-score label cleanup
@@ -338,7 +339,8 @@ remain open.
 
 ## Open questions
 
-- The exact source operations used to initialize workflows.
+- Which additional source operations should complement the implemented
+  label-group source.
 - The initial catalog of maps, predicates, groupers, samplers, aggregators,
   reviewers, and apply actions.
 - Whether application is atomic for the complete workflow, per group, or per

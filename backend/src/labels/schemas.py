@@ -7,10 +7,13 @@ from typing import Annotated, Literal, Self
 
 from pydantic import ConfigDict, Field, model_validator
 
-from src.labels.constants import LabelRole
-
-from ..schemas import Model
-from .constants import MAX_LABEL_ENTITY_GROUP_NAME_LEN, MAX_LABEL_GROUP_NAME_LEN, MAX_LABEL_WORD_LEN
+from src.labels.constants import (
+    MAX_LABEL_ENTITY_GROUP_NAME_LEN,
+    MAX_LABEL_GROUP_NAME_LEN,
+    MAX_LABEL_WORD_LEN,
+    LabelRole,
+)
+from src.schemas import Model
 
 
 class LabelGroup(Model):

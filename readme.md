@@ -1,11 +1,15 @@
-Automated translation platform for Chinese webnovels. Contains a suite of tools to assist in translations:
-- Automated text labeller
-- Automated glossary builder
-- Manual review tools to ensure labelling accuracy
+Automated translation platform for East Asian webnovels. The current
+application provides:
+
+- automated text labeling;
+- manual editing and review tools;
+- versioned novel, chapter, and annotation data.
 
 ## Getting started
 
-Disclaimer: the author has not had time to check that these commands work yet. Please contact the author if any of these commands do not work.
+The devcontainer is the supported development environment. See the
+[onboarding guide](docs/onboarding.md) for the current setup and production
+stack instructions.
 
 1. Clone the repository.
 2. Copy `.env.example` into `.env` and configure the indicated variables.
@@ -29,6 +33,7 @@ Alternatively,
 ## Coming eventually
 
 - Better tooling for manual review
+- Automated glossary building
 - One-click automated novel translation
 
 ## Tech stack
@@ -40,7 +45,7 @@ Alternatively,
 - TypeScript + React for frontend
 - Vite dev server + Vitest
 - Backend tools: uv, ruff, Pyrefly
-- Frontend tools: pnpm, ShadCN, hey-api
+- Frontend tools: pnpm, shadcn, Orval
 
 Nothing too fancy here. Read docs for details.
 

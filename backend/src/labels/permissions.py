@@ -10,13 +10,13 @@ from typing import Any
 from sqlalchemy import Delete, Select, Update, and_, exists, literal, or_, select
 from sqlalchemy.orm import aliased
 
-from ..auth.constants import UserType
-from ..auth.models import User
-from ..novels import models as novel_models
-from ..novels.constants import Visibility
-from ..novels.permissions import chapter_content_mod_access_select, novel_mod_access_select
-from .constants import LabelRole
-from .models import Label, LabelContributor, LabelData, LabelGroup
+from src.auth.constants import UserType
+from src.auth.models import User
+from src.labels.constants import LabelRole
+from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
+from src.novels import models as novel_models
+from src.novels.constants import Visibility
+from src.novels.permissions import chapter_content_mod_access_select, novel_mod_access_select
 
 
 def label_group_mod_access_select[T: Select[tuple[Any, ...]]](

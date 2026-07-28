@@ -68,17 +68,8 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 pytest_plugins = [
-    "tests.fixtures.populators.sample",
-    "tests.fixtures.populators.xianxia",
-    "tests.fixtures.populators.scifi",
-    "tests.fixtures.populators.permissions_one",
-    "tests.fixtures.populators.label_permissions",
-    "tests.fixtures.populators.novel_permissions",
+    "tests.fixtures.scenarios",
     "tests.fixtures.password_hash",
-    "tests.fixtures.populators.score_filter_simple",
-    "tests.fixtures.populators.text_ops",
-    "tests.fixtures.populators.bundles",
-    "tests.fixtures.filters",
 ]
 
 

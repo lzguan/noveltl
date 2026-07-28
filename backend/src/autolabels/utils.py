@@ -5,7 +5,7 @@ from typing import Protocol
 from arq import ArqRedis
 from redis.exceptions import ConnectionError, ResponseError, TimeoutError
 
-from .exceptions import EnqueueFailedException, QueueFullException
+from src.autolabels.exceptions import EnqueueFailedException, QueueFullException
 
 logger = logging.getLogger(__name__)
 
@@ -59,5 +59,7 @@ class ArqDispatcher(AutoLabelDispatcher):
             logger.exception("Autolabel enqueue protocol failure job_id=%s auto_label_id=%s", job_id, auto_label_id)
             raise EnqueueFailedException(f"Redis protocol error: {str(e)}") from e
         except (TypeError, ValueError) as e:
-            logger.exception("Autolabel enqueue serialization failure job_id=%s auto_label_id=%s", job_id, auto_label_id)
+            logger.exception(
+                "Autolabel enqueue serialization failure job_id=%s auto_label_id=%s", job_id, auto_label_id
+            )
             raise EnqueueFailedException(f"Failed to serialize job data: {str(e)}") from e

@@ -11,7 +11,6 @@ import pytest
 from src.labels.schemas import Label
 from src.novels.schemas import TextOp
 from src.novels.utils import apply_text_op, apply_text_ops
-from tests.gate_logging import log_gate
 
 
 def _label(word: str, start: int, end: int, score: float = 1.0) -> Label:
@@ -33,7 +32,6 @@ def _label(word: str, start: int, end: int, score: float = 1.0) -> Label:
 
 
 class TestDeleteOp:
-    @pytest.mark.dependency(name="novels::utils::delete_middle_shifts_labels", scope="session")
     def test_delete_middle_shifts_labels(self):
         # "Hello world. Test." with labels on "Hello" [0,5) and "Test" [13,17)
         text = "Hello world. Test."
@@ -51,7 +49,6 @@ class TestDeleteOp:
         assert test.label_start == 7  # 13 - 6
         assert test.label_end == 11  # 17 - 6
 
-    @pytest.mark.dependency(name="novels::utils::delete_at_start", scope="session")
     def test_delete_at_start(self):
         text = "Hello world."
         labels = [_label("world", 6, 11)]
@@ -64,7 +61,6 @@ class TestDeleteOp:
         assert new_labels[0].label_start == 0
         assert new_labels[0].label_end == 5
 
-    @pytest.mark.dependency(name="novels::utils::delete_at_end", scope="session")
     def test_delete_at_end(self):
         text = "Hello world."
         labels = [_label("Hello", 0, 5)]
@@ -77,7 +73,6 @@ class TestDeleteOp:
         assert new_labels[0].label_start == 0
         assert new_labels[0].label_end == 5
 
-    @pytest.mark.dependency(name="novels::utils::delete_overlapping_label_removes_it", scope="session")
     def test_delete_overlapping_label_removes_it(self):
         text = "Hello world. Test."
         labels = [_label("Hello", 0, 5), _label("world", 6, 11), _label("Test", 13, 17)]
@@ -94,7 +89,6 @@ class TestDeleteOp:
         assert new_labels[0].label_start == 6
         assert new_labels[0].label_end == 10
 
-    @pytest.mark.dependency(name="novels::utils::delete_empty_string_is_noop", scope="session")
     def test_delete_empty_string_is_noop(self):
         text = "Hello world."
         labels = [_label("Hello", 0, 5)]
@@ -106,7 +100,6 @@ class TestDeleteOp:
         assert len(new_labels) == 1
         assert new_labels[0].label_start == 0
 
-    @pytest.mark.dependency(name="novels::utils::delete_wrong_text_raises", scope="session")
     def test_delete_wrong_text_raises(self):
         text = "Hello world."
         op = TextOp(op="delete", start=0, text="Goodbye")
@@ -114,7 +107,6 @@ class TestDeleteOp:
         with pytest.raises(ValueError, match="does not match"):
             apply_text_op(text, op, [])
 
-    @pytest.mark.dependency(name="novels::utils::delete_out_of_bounds_raises", scope="session")
     def test_delete_out_of_bounds_raises(self):
         text = "Hello"
         op = TextOp(op="delete", start=10, text="x")
@@ -122,7 +114,6 @@ class TestDeleteOp:
         with pytest.raises(ValueError, match="out of bounds"):
             apply_text_op(text, op, [])
 
-    @pytest.mark.dependency(name="novels::utils::delete_extends_past_end_raises", scope="session")
     def test_delete_extends_past_end_raises(self):
         text = "Hello"
         op = TextOp(op="delete", start=3, text="loXX")
@@ -130,7 +121,6 @@ class TestDeleteOp:
         with pytest.raises(ValueError, match="out of bounds"):
             apply_text_op(text, op, [])
 
-    @pytest.mark.dependency(name="novels::utils::delete_negative_start_raises", scope="session")
     def test_delete_negative_start_raises(self):
         text = "Hello"
         op = TextOp(op="delete", start=-1, text="H")
@@ -138,7 +128,6 @@ class TestDeleteOp:
         with pytest.raises(ValueError, match="out of bounds"):
             apply_text_op(text, op, [])
 
-    @pytest.mark.dependency(name="novels::utils::delete_label_ending_at_boundary_preserved", scope="session")
     def test_delete_label_ending_at_boundary_preserved(self):
         # Label ends exactly at deletion start → preserved
         text = "Hello world."
@@ -153,7 +142,6 @@ class TestDeleteOp:
         assert new_labels[0].label_start == 0
         assert new_labels[0].label_end == 5
 
-    @pytest.mark.dependency(name="novels::utils::delete_label_starting_at_deletion_end_shifts", scope="session")
     def test_delete_label_starting_at_deletion_end_shifts(self):
         # Label starts exactly at deletion end → shifted
         text = "Hello world."
@@ -167,26 +155,6 @@ class TestDeleteOp:
         assert new_labels[0].label_start == 5
         assert new_labels[0].label_end == 10
 
-    @pytest.mark.dependency(
-        name="gate::novels::utils::delete_op",
-        depends=[
-            "novels::utils::delete_middle_shifts_labels",
-            "novels::utils::delete_at_start",
-            "novels::utils::delete_at_end",
-            "novels::utils::delete_overlapping_label_removes_it",
-            "novels::utils::delete_empty_string_is_noop",
-            "novels::utils::delete_wrong_text_raises",
-            "novels::utils::delete_out_of_bounds_raises",
-            "novels::utils::delete_extends_past_end_raises",
-            "novels::utils::delete_negative_start_raises",
-            "novels::utils::delete_label_ending_at_boundary_preserved",
-            "novels::utils::delete_label_starting_at_deletion_end_shifts",
-        ],
-        scope="session",
-    )
-    def test_class_gate(self):
-        pass
-
 
 # -------------------------------------------------------
 # apply_text_op — insert
@@ -194,7 +162,6 @@ class TestDeleteOp:
 
 
 class TestInsertOp:
-    @pytest.mark.dependency(name="novels::utils::insert_middle_shifts_labels", scope="session")
     def test_insert_middle_shifts_labels(self):
         text = "Hello world."
         labels = [_label("Hello", 0, 5), _label("world", 6, 11)]
@@ -211,7 +178,6 @@ class TestInsertOp:
         assert world.label_start == 11  # 6 + 5
         assert world.label_end == 16  # 11 + 5
 
-    @pytest.mark.dependency(name="novels::utils::insert_at_start", scope="session")
     def test_insert_at_start(self):
         text = "Hello world."
         labels = [_label("Hello", 0, 5)]
@@ -224,7 +190,6 @@ class TestInsertOp:
         assert new_labels[0].label_start == 5
         assert new_labels[0].label_end == 10
 
-    @pytest.mark.dependency(name="novels::utils::insert_at_end", scope="session")
     def test_insert_at_end(self):
         text = "Hello"
         labels = [_label("Hello", 0, 5)]
@@ -237,7 +202,6 @@ class TestInsertOp:
         assert new_labels[0].label_start == 0
         assert new_labels[0].label_end == 5
 
-    @pytest.mark.dependency(name="novels::utils::insert_empty_string_is_noop", scope="session")
     def test_insert_empty_string_is_noop(self):
         text = "Hello"
         labels = [_label("Hello", 0, 5)]
@@ -249,7 +213,6 @@ class TestInsertOp:
         assert len(new_labels) == 1
         assert new_labels[0].label_start == 0
 
-    @pytest.mark.dependency(name="novels::utils::insert_out_of_bounds_raises", scope="session")
     def test_insert_out_of_bounds_raises(self):
         text = "Hello"
         op = TextOp(op="insert", start=10, text="x")
@@ -257,7 +220,6 @@ class TestInsertOp:
         with pytest.raises(ValueError, match="out of bounds"):
             apply_text_op(text, op, [])
 
-    @pytest.mark.dependency(name="novels::utils::insert_negative_start_raises", scope="session")
     def test_insert_negative_start_raises(self):
         text = "Hello"
         op = TextOp(op="insert", start=-1, text="x")
@@ -265,7 +227,6 @@ class TestInsertOp:
         with pytest.raises(ValueError, match="out of bounds"):
             apply_text_op(text, op, [])
 
-    @pytest.mark.dependency(name="novels::utils::insert_label_ending_at_boundary_preserved", scope="session")
     def test_insert_label_ending_at_boundary_preserved(self):
         # Label ends at insert point → preserved (not shifted)
         text = "Hello world."
@@ -279,7 +240,6 @@ class TestInsertOp:
         assert new_labels[0].label_start == 0
         assert new_labels[0].label_end == 5
 
-    @pytest.mark.dependency(name="novels::utils::insert_label_starting_at_boundary_shifts", scope="session")
     def test_insert_label_starting_at_boundary_shifts(self):
         # Label starts exactly at insert point → shifted
         text = "Hello world."
@@ -293,7 +253,6 @@ class TestInsertOp:
         assert new_labels[0].label_start == 8
         assert new_labels[0].label_end == 13
 
-    @pytest.mark.dependency(name="novels::utils::insert_into_empty_text", scope="session")
     def test_insert_into_empty_text(self):
         text = ""
         op = TextOp(op="insert", start=0, text="Hello")
@@ -303,24 +262,6 @@ class TestInsertOp:
         assert new_text == "Hello"
         assert new_labels == []
 
-    @pytest.mark.dependency(
-        name="gate::novels::utils::insert_op",
-        depends=[
-            "novels::utils::insert_middle_shifts_labels",
-            "novels::utils::insert_at_start",
-            "novels::utils::insert_at_end",
-            "novels::utils::insert_empty_string_is_noop",
-            "novels::utils::insert_out_of_bounds_raises",
-            "novels::utils::insert_negative_start_raises",
-            "novels::utils::insert_label_ending_at_boundary_preserved",
-            "novels::utils::insert_label_starting_at_boundary_shifts",
-            "novels::utils::insert_into_empty_text",
-        ],
-        scope="session",
-    )
-    def test_class_gate(self):
-        pass
-
 
 # -------------------------------------------------------
 # apply_text_ops — sequential
@@ -328,7 +269,6 @@ class TestInsertOp:
 
 
 class TestApplyTextOps:
-    @pytest.mark.dependency(name="novels::utils::sequential_delete_then_insert", scope="session")
     def test_sequential_delete_then_insert(self):
         text = "Hello world."
         labels = [_label("Hello", 0, 5), _label("world", 6, 11)]
@@ -348,7 +288,6 @@ class TestApplyTextOps:
         assert new_labels[0].label_start == 10
         assert new_labels[0].label_end == 15
 
-    @pytest.mark.dependency(name="novels::utils::sequential_insert_then_delete", scope="session")
     def test_sequential_insert_then_delete(self):
         text = "AB"
         labels = [_label("AB", 0, 2)]
@@ -363,7 +302,6 @@ class TestApplyTextOps:
         # Not in labels_to_move (start >= 1 → False), not in labels_to_preserve (end <= 1 → False)
         assert len(new_labels) == 0
 
-    @pytest.mark.dependency(name="novels::utils::empty_ops_is_noop", scope="session")
     def test_empty_ops_is_noop(self):
         text = "Hello"
         labels = [_label("Hello", 0, 5)]
@@ -373,7 +311,6 @@ class TestApplyTextOps:
         assert new_text == "Hello"
         assert len(new_labels) == 1
 
-    @pytest.mark.dependency(name="novels::utils::invalid_second_op_raises", scope="session")
     def test_invalid_second_op_raises(self):
         text = "Hello world."
         ops = [
@@ -384,7 +321,6 @@ class TestApplyTextOps:
         with pytest.raises(ValueError):
             apply_text_ops(text, ops, [])
 
-    @pytest.mark.dependency(name="novels::utils::multiple_inserts_accumulate", scope="session")
     def test_multiple_inserts_accumulate(self):
         text = "AC"
         labels = [_label("A", 0, 1), _label("C", 1, 2)]
@@ -402,32 +338,3 @@ class TestApplyTextOps:
         assert a.label_end == 1
         assert c.label_start == 2
         assert c.label_end == 3
-
-    @pytest.mark.dependency(
-        name="gate::novels::utils::apply_text_ops",
-        depends=[
-            "novels::utils::sequential_delete_then_insert",
-            "novels::utils::sequential_insert_then_delete",
-            "novels::utils::empty_ops_is_noop",
-            "novels::utils::invalid_second_op_raises",
-            "novels::utils::multiple_inserts_accumulate",
-        ],
-        scope="session",
-    )
-    def test_class_gate(self):
-        pass
-
-
-@pytest.mark.order("last")
-@pytest.mark.dependency(
-    name="gate::novels::utils",
-    depends=[
-        "gate::novels::utils::delete_op",
-        "gate::novels::utils::insert_op",
-        "gate::novels::utils::apply_text_ops",
-    ],
-    scope="session",
-)
-def test_gate():
-    """All novels utils tests must pass before downstream layers run."""
-    log_gate("gate::novels::utils")

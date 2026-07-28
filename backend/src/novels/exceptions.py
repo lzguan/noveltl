@@ -2,7 +2,7 @@
 Exceptions for novels and chapters
 """
 
-from ..exceptions import DeleteFailedException, FieldInvalidException, NotFoundException, TooManyFoundException
+from src.exceptions import DeleteFailedException, FieldInvalidException, NotFoundException, TooManyFoundException
 
 
 class NovelNotFoundException(NotFoundException):

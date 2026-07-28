@@ -203,8 +203,10 @@ generated JSON is sent to the endpoint.
 - Relation bundles include source-work metadata and membership.
 - Language codes are resolved through Python fixtures that seed supported
   languages; version 1 has no language catalog.
-- Contributors, permissions, and database UUIDs remain the responsibility of
-  Python materializers and fixtures.
+- Users, contributors, permissions, human-review labels, and database UUIDs
+  remain the responsibility of the keyed Python scenario builder in
+  `test_support/test_data/scenarios.py`. Catalog documents remain authoritative
+  for novel text, content versions, and generated artifacts.
 - Raw autolabel artifacts represent model output, not database transport or
   human-review state.
 
@@ -216,3 +218,5 @@ generated JSON is sent to the endpoint.
   reordered translations after chapter relationships exist in the domain
   model. Schema version 1 intentionally does not model chapter alignment.
 - Whether chapter-version transitions should be stored as text operations.
+- Whether a future catalog version should represent reusable actors,
+  permissions, and human-review state currently composed by Python scenarios.

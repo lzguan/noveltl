@@ -43,10 +43,7 @@ def test_authored_legacy_corpora_load() -> None:
     catalog = load_catalog(LEGACY_DATASET_ROOT)
 
     assert set(catalog.novels) == {"qingyun", "quantum-path", "silverleaf", "starfall"}
-    chapter_counts = {
-        novel_id: len(load_novel(catalog, novel_id).chapters)
-        for novel_id in catalog.novels
-    }
+    chapter_counts = {novel_id: len(load_novel(catalog, novel_id).chapters) for novel_id in catalog.novels}
     assert chapter_counts == {"qingyun": 2, "quantum-path": 2, "silverleaf": 4, "starfall": 4}
     assert all(
         chapter.title == f"Chapter {chapter.number}"

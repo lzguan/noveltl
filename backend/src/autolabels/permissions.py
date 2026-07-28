@@ -6,10 +6,10 @@ from typing import Any
 
 from sqlalchemy import Select, exists, select
 
-from ..auth.models import User
-from ..novels import models as novel_models
-from ..novels.permissions import chapter_content_mod_access_select
-from .models import AutoLabel
+from src.auth.models import User
+from src.autolabels.models import AutoLabel
+from src.novels import models as novel_models
+from src.novels.permissions import chapter_content_mod_access_select
 
 
 def auto_label_mod_access_select[T: Select[tuple[Any, ...]]](

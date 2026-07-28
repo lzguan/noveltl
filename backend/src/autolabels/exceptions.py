@@ -2,7 +2,7 @@
 Exceptions used in the autolabeling service
 """
 
-from ..exceptions import DuplicateException, NotFoundException
+from src.exceptions import DuplicateException, NotFoundException
 
 
 class ChunkTooLargeException(Exception):

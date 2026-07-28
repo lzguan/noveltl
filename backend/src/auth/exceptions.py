@@ -2,7 +2,7 @@
 Exceptions related to authorization
 """
 
-from ..exceptions import DuplicateException, NotFoundException
+from src.exceptions import DuplicateException, NotFoundException
 
 
 class UserNotFoundException(NotFoundException):

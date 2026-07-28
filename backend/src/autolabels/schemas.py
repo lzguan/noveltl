@@ -7,11 +7,10 @@ from datetime import datetime
 
 from pydantic import ConfigDict, Field
 
+from src.autolabels.constants import AutoLabelProgress
 from src.autolabels.params import NERParams
-
-from ..labels.schemas import LabelBase
-from ..schemas import Model
-from .constants import AutoLabelProgress
+from src.labels.schemas import LabelBase
+from src.schemas import Model
 
 
 class AutoLabelRun(Model):

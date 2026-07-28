@@ -5,13 +5,12 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from src.auth.dependencies import get_current_user
+from src.auth.models import User, UserType
+from src.database import get_db
+from src.editing.schemas import EagerEntry, EditChapterData
+from src.editing.service import query_edit_chapter_data, query_edit_chapter_data_only_label_data
 from src.novels.exceptions import ChapterContentNotFoundException
-
-from ..auth.dependencies import get_current_user
-from ..auth.models import User, UserType
-from ..database import get_db
-from .schemas import EagerEntry, EditChapterData
-from .service import query_edit_chapter_data, query_edit_chapter_data_only_label_data
 
 router = APIRouter()
 

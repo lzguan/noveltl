@@ -6,7 +6,6 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from httpx import Response
@@ -18,15 +17,10 @@ from src.auth.utils import create_access_token
 from src.main import app
 from src.novels.constants import Role
 from src.novels.models import Chapter, ChapterContent, Novel
-from tests.gate_logging import log_gate
+from test_support.test_data.scenarios import DatabaseScenario
 
 STARFALL_UPLOAD_ARTIFACT = (
     Path(__file__).parents[1] / "test_data" / "artifacts" / "chapter-upload" / "v1" / "starfall.json"
-)
-
-pytestmark = pytest.mark.dependency(
-    depends=["gate::fixture_validation", "gate::novels::permissions"],
-    scope="session",
 )
 
 
@@ -71,103 +65,87 @@ def _post_chapter_upload(
 
 
 class TestReadNovelWithContributors:
-    @pytest.mark.dependency(name="novels::router::with_contributors_owner", scope="session")
     def test_owner_gets_private_novel_with_contributors(
-        self,
-        client: TestClient,
-        p1_novels: dict[str, Novel],
-        p1_user_1: User,
-        p1_user_2: User,
+        self, client: TestClient, novel_access_scenario: DatabaseScenario
     ) -> None:
-        novel = p1_novels["oe"]
+        novel = novel_access_scenario.novels["oe"]
 
-        response = client.get(_with_contributors_url(novel.novel_id), headers=_auth_headers(p1_user_1))
+        response = client.get(
+            _with_contributors_url(novel.novel_id), headers=_auth_headers(novel_access_scenario.users["owner"])
+        )
 
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
         assert payload["novel"]["novelId"] == str(novel.novel_id)
         assert _contributors(payload) == _expected_contributors(
             novel,
-            (p1_user_1, Role.OWNER),
-            (p1_user_2, Role.EDITOR),
+            (novel_access_scenario.users["owner"], Role.OWNER),
+            (novel_access_scenario.users["other"], Role.EDITOR),
         )
 
-    @pytest.mark.dependency(name="novels::router::with_contributors_editor", scope="session")
     def test_editor_gets_private_novel_with_contributors(
-        self,
-        client: TestClient,
-        p1_novels: dict[str, Novel],
-        p1_user_1: User,
-        p1_user_2: User,
+        self, client: TestClient, novel_access_scenario: DatabaseScenario
     ) -> None:
-        novel = p1_novels["oe"]
+        novel = novel_access_scenario.novels["oe"]
 
-        response = client.get(_with_contributors_url(novel.novel_id), headers=_auth_headers(p1_user_2))
+        response = client.get(
+            _with_contributors_url(novel.novel_id), headers=_auth_headers(novel_access_scenario.users["other"])
+        )
 
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
         assert payload["novel"]["novelId"] == str(novel.novel_id)
         assert _contributors(payload) == _expected_contributors(
             novel,
-            (p1_user_1, Role.OWNER),
-            (p1_user_2, Role.EDITOR),
+            (novel_access_scenario.users["owner"], Role.OWNER),
+            (novel_access_scenario.users["other"], Role.EDITOR),
         )
 
-    @pytest.mark.dependency(name="novels::router::with_contributors_admin", scope="session")
     def test_admin_gets_private_novel_with_contributors(
-        self,
-        client: TestClient,
-        p1_novels: dict[str, Novel],
-        p1_user_1: User,
-        p1_user_2: User,
-        p1_admin: User,
+        self, client: TestClient, novel_access_scenario: DatabaseScenario
     ) -> None:
-        novel = p1_novels["oe"]
+        novel = novel_access_scenario.novels["oe"]
 
-        response = client.get(_with_contributors_url(novel.novel_id), headers=_auth_headers(p1_admin))
+        response = client.get(
+            _with_contributors_url(novel.novel_id), headers=_auth_headers(novel_access_scenario.users["admin"])
+        )
 
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
         assert payload["novel"]["novelId"] == str(novel.novel_id)
         assert _contributors(payload) == _expected_contributors(
             novel,
-            (p1_user_1, Role.OWNER),
-            (p1_user_2, Role.EDITOR),
+            (novel_access_scenario.users["owner"], Role.OWNER),
+            (novel_access_scenario.users["other"], Role.EDITOR),
         )
 
-    @pytest.mark.dependency(name="novels::router::with_contributors_non_contributor_404", scope="session")
     def test_non_contributor_cannot_get_private_novel_with_contributors(
-        self,
-        client: TestClient,
-        p1_novels: dict[str, Novel],
-        p1_user_2: User,
+        self, client: TestClient, novel_access_scenario: DatabaseScenario
     ) -> None:
-        novel = p1_novels["prt"]
+        novel = novel_access_scenario.novels["prt"]
 
-        response = client.get(_with_contributors_url(novel.novel_id), headers=_auth_headers(p1_user_2))
+        response = client.get(
+            _with_contributors_url(novel.novel_id), headers=_auth_headers(novel_access_scenario.users["other"])
+        )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    @pytest.mark.dependency(name="novels::router::with_contributors_missing_404", scope="session")
-    def test_missing_novel_returns_404(self, client: TestClient, p1_user_1: User) -> None:
-        response = client.get(_with_contributors_url(uuid.uuid4()), headers=_auth_headers(p1_user_1))
+    def test_missing_novel_returns_404(self, client: TestClient, novel_access_scenario: DatabaseScenario) -> None:
+        response = client.get(
+            _with_contributors_url(uuid.uuid4()), headers=_auth_headers(novel_access_scenario.users["owner"])
+        )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 class TestCreateChaptersByUpload:
-    @pytest.mark.dependency(name="novels::router::chapter_upload_success", scope="session")
     def test_owner_uploads_chapters_and_initial_content_atomically(
-        self,
-        client: TestClient,
-        test_db: Session,
-        p1_novels: dict[str, Novel],
-        p1_user_1: User,
+        self, client: TestClient, test_db: Session, novel_access_scenario: DatabaseScenario
     ) -> None:
-        novel = p1_novels["prt"]
+        novel = novel_access_scenario.novels["prt"]
         request = json.loads(STARFALL_UPLOAD_ARTIFACT.read_text(encoding="utf-8"))
 
-        response = _post_chapter_upload(client, p1_user_1, novel.novel_id, request)
+        response = _post_chapter_upload(client, novel_access_scenario.users["owner"], novel.novel_id, request)
 
         assert response.status_code == status.HTTP_200_OK
         response_by_num = {chapter["chapterNum"]: chapter for chapter in response.json()}
@@ -187,15 +165,10 @@ class TestCreateChaptersByUpload:
         assert {content.chapter_content_text for content in contents} == expected_texts
         assert {content.chapter_content_version for content in contents} == {1}
 
-    @pytest.mark.dependency(name="novels::router::chapter_upload_duplicate", scope="session")
     def test_duplicate_chapter_numbers_return_conflict_without_partial_insert(
-        self,
-        client: TestClient,
-        test_db: Session,
-        p1_novels: dict[str, Novel],
-        p1_user_1: User,
+        self, client: TestClient, test_db: Session, novel_access_scenario: DatabaseScenario
     ) -> None:
-        novel = p1_novels["prt"]
+        novel = novel_access_scenario.novels["prt"]
         request = _chapter_upload(
             [
                 {"chapterNum": 201, "chapterContentText": "First duplicate."},
@@ -203,7 +176,7 @@ class TestCreateChaptersByUpload:
             ],
         )
 
-        response = _post_chapter_upload(client, p1_user_1, novel.novel_id, request)
+        response = _post_chapter_upload(client, novel_access_scenario.users["owner"], novel.novel_id, request)
 
         assert response.status_code == status.HTTP_409_CONFLICT
         assert (
@@ -211,18 +184,13 @@ class TestCreateChaptersByUpload:
             == []
         )
 
-    @pytest.mark.dependency(name="novels::router::chapter_upload_permissions", scope="session")
     def test_viewer_cannot_upload_chapters(
-        self,
-        client: TestClient,
-        test_db: Session,
-        p1_novels: dict[str, Novel],
-        p1_user_2: User,
+        self, client: TestClient, test_db: Session, novel_access_scenario: DatabaseScenario
     ) -> None:
-        novel = p1_novels["ov"]
+        novel = novel_access_scenario.novels["ov"]
         request = _chapter_upload([{"chapterNum": 301, "chapterContentText": "Denied."}])
 
-        response = _post_chapter_upload(client, p1_user_2, novel.novel_id, request)
+        response = _post_chapter_upload(client, novel_access_scenario.users["other"], novel.novel_id, request)
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert (
@@ -230,53 +198,48 @@ class TestCreateChaptersByUpload:
             == []
         )
 
-    @pytest.mark.dependency(name="novels::router::chapter_upload_missing", scope="session")
-    def test_admin_upload_to_missing_novel_returns_not_found(self, client: TestClient, p1_admin: User) -> None:
+    def test_admin_upload_to_missing_novel_returns_not_found(
+        self, client: TestClient, novel_access_scenario: DatabaseScenario
+    ) -> None:
         missing_novel_id = uuid.uuid4()
         request = _chapter_upload([{"chapterNum": 401, "chapterContentText": "Missing."}])
 
-        response = _post_chapter_upload(client, p1_admin, missing_novel_id, request)
+        response = _post_chapter_upload(client, novel_access_scenario.users["admin"], missing_novel_id, request)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    @pytest.mark.dependency(name="novels::router::chapter_upload_validation", scope="session")
     def test_empty_upload_returns_validation_error(
-        self,
-        client: TestClient,
-        p1_novels: dict[str, Novel],
-        p1_user_1: User,
+        self, client: TestClient, novel_access_scenario: DatabaseScenario
     ) -> None:
-        response = _post_chapter_upload(client, p1_user_1, p1_novels["prt"].novel_id, _chapter_upload([]))
+        response = _post_chapter_upload(
+            client,
+            novel_access_scenario.users["owner"],
+            novel_access_scenario.novels["prt"].novel_id,
+            _chapter_upload([]),
+        )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    @pytest.mark.dependency(name="novels::router::chapter_upload_invalid_json", scope="session")
     def test_invalid_json_upload_returns_bad_request(
-        self,
-        client: TestClient,
-        p1_novels: dict[str, Novel],
-        p1_user_1: User,
+        self, client: TestClient, novel_access_scenario: DatabaseScenario
     ) -> None:
-        response = _post_chapter_upload(client, p1_user_1, p1_novels["prt"].novel_id, b'{"chapters":')
+        response = _post_chapter_upload(
+            client, novel_access_scenario.users["owner"], novel_access_scenario.novels["prt"].novel_id, b'{"chapters":'
+        )
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    @pytest.mark.dependency(name="novels::router::chapter_upload_missing_file", scope="session")
     def test_missing_file_field_returns_validation_error(
-        self,
-        client: TestClient,
-        p1_novels: dict[str, Novel],
-        p1_user_1: User,
+        self, client: TestClient, novel_access_scenario: DatabaseScenario
     ) -> None:
         response = client.post(
             "/chapters/upload",
-            data={"novelId": str(p1_novels["prt"].novel_id), "version": "v1"},
-            headers=_auth_headers(p1_user_1),
+            data={"novelId": str(novel_access_scenario.novels["prt"].novel_id), "version": "v1"},
+            headers=_auth_headers(novel_access_scenario.users["owner"]),
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-    @pytest.mark.dependency(name="novels::router::chapter_upload_contract", scope="session")
     def test_openapi_contract_documents_upload_responses(self) -> None:
         openapi = app.openapi()
         operation = openapi["paths"]["/chapters/upload"]["post"]
@@ -292,27 +255,3 @@ class TestCreateChaptersByUpload:
         assert set(multipart_schema["required"]) == {"novelId", "version", "file"}
         assert multipart_schema["properties"]["version"]["const"] == "v1"
         assert multipart_schema["properties"]["file"]["format"] == "binary"
-
-
-@pytest.mark.dependency(
-    name="gate::novels::router",
-    depends=[
-        "novels::router::with_contributors_owner",
-        "novels::router::with_contributors_editor",
-        "novels::router::with_contributors_admin",
-        "novels::router::with_contributors_non_contributor_404",
-        "novels::router::with_contributors_missing_404",
-        "novels::router::chapter_upload_success",
-        "novels::router::chapter_upload_duplicate",
-        "novels::router::chapter_upload_permissions",
-        "novels::router::chapter_upload_missing",
-        "novels::router::chapter_upload_validation",
-        "novels::router::chapter_upload_invalid_json",
-        "novels::router::chapter_upload_missing_file",
-        "novels::router::chapter_upload_contract",
-    ],
-    scope="session",
-)
-def test_gate() -> None:
-    """All novel router tests must pass before downstream layers run."""
-    log_gate("gate::novels::router")

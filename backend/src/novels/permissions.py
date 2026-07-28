@@ -4,10 +4,10 @@ from typing import Any
 from sqlalchemy import Delete, Select, Update, exists, or_, select
 from sqlalchemy.orm import aliased
 
-from ..auth.constants import UserType
-from ..auth.models import User
-from .constants import Role, Visibility
-from .models import Chapter, ChapterContent, Novel, NovelContributor, SourceWork
+from src.auth.constants import UserType
+from src.auth.models import User
+from src.novels.constants import Role, Visibility
+from src.novels.models import Chapter, ChapterContent, Novel, NovelContributor, SourceWork
 
 
 def novel_mod_access_select[T: Select[tuple[Any, ...]]](

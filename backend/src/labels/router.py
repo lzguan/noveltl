@@ -4,16 +4,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.orm import Session
 
-from ..auth.dependencies import get_current_user
-from ..auth.models import User
-from ..database import get_db
-from ..exceptions import DataTooLongException, NotFoundException
-from ..novels.exceptions import ChapterContentNotFoundException, NovelNotFoundException
-from ..requests.cache import redis_cache
-from ..requests.decorators import serialize_response_model, ttl_cache
-from ..schemas import DetailHTTPErrorResponse, RequestConflictErrorResponse
-from . import schemas
-from .exceptions import (
+from src.auth.dependencies import get_current_user
+from src.auth.models import User
+from src.database import get_db
+from src.exceptions import DataTooLongException, NotFoundException
+from src.labels.exceptions import (
     LabelDataNotFoundException,
     LabelDataRevisionDuplicateException,
     LabelExclusionViolationInvalidOperationException,
@@ -23,7 +18,20 @@ from .exceptions import (
     LabelOutOfBoundsInvalidOperationException,
     LabelWordMismatchInvalidOperationException,
 )
-from .service import (
+from src.labels.schemas import (
+    CreateLabelData,
+    CreateLabelDataByAutoLabel,
+    CreateLabelDataByAutoLabelStatus,
+    CreateLabelGroup,
+    Label,
+    LabelContributor,
+    LabelData,
+    LabelGroup,
+    LabelGroupWithRole,
+    UpdateLabelDataStream,
+    UpdateLabelGroup,
+)
+from src.labels.service import (
     insert_label_data,
     insert_label_datas_by_autolabels,
     insert_label_group,
@@ -37,11 +45,15 @@ from .service import (
     query_label_groups_with_contributor_info,
     query_labels_by_label_data_id,
 )
+from src.novels.exceptions import ChapterContentNotFoundException, NovelNotFoundException
+from src.requests.cache import redis_cache
+from src.requests.decorators import serialize_response_model, ttl_cache
+from src.schemas import DetailHTTPErrorResponse, RequestConflictErrorResponse
 
 router = APIRouter()
 
 
-@router.get("/label-groups", response_model=list[schemas.LabelGroup])
+@router.get("/label-groups", response_model=list[LabelGroup])
 def read_label_groups(
     novel_id: Annotated[uuid.UUID, Query(alias="novelId")],
     db: Annotated[Session, Depends(get_db)],
@@ -53,7 +65,7 @@ def read_label_groups(
     return query_label_groups(db, current_user, novel_id)
 
 
-@router.get("/label-groups-with-role", response_model=list[schemas.LabelGroupWithRole])
+@router.get("/label-groups-with-role", response_model=list[LabelGroupWithRole])
 def read_label_groups_with_role(
     novel_id: Annotated[uuid.UUID, Query(alias="novelId")],
     db: Annotated[Session, Depends(get_db)],
@@ -65,7 +77,7 @@ def read_label_groups_with_role(
     return query_label_groups_with_contributor_info(db, current_user, novel_id)
 
 
-@router.get("/label-groups/{labelGroupId}", response_model=schemas.LabelGroup)
+@router.get("/label-groups/{labelGroupId}", response_model=LabelGroup)
 def read_label_group(
     label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
     db: Annotated[Session, Depends(get_db)],
@@ -86,7 +98,7 @@ def read_label_group(
     return label_group
 
 
-@router.get("/label-datas", response_model=list[schemas.LabelData])
+@router.get("/label-datas", response_model=list[LabelData])
 def read_label_datas_by_group_chapters(
     label_group_id: Annotated[uuid.UUID, Query(alias="labelGroupId")],
     db: Annotated[Session, Depends(get_db)],
@@ -101,7 +113,7 @@ def read_label_datas_by_group_chapters(
     return label_datas
 
 
-@router.get("/label-datas/{labelDataId}", response_model=schemas.LabelData)
+@router.get("/label-datas/{labelDataId}", response_model=LabelData)
 def read_label_data(
     label_data_id: Annotated[uuid.UUID, Path(alias="labelDataId")],
     db: Annotated[Session, Depends(get_db)],
@@ -120,7 +132,7 @@ def read_label_data(
     return label_data
 
 
-@router.get("/label-datas/{labelDataId}/labels", response_model=list[schemas.Label])
+@router.get("/label-datas/{labelDataId}/labels", response_model=list[Label])
 def read_labels_by_label_data(
     label_data_id: Annotated[uuid.UUID, Path(alias="labelDataId")],
     db: Annotated[Session, Depends(get_db)],
@@ -133,7 +145,7 @@ def read_labels_by_label_data(
     return labels
 
 
-@router.get("/label-groups/{labelGroupId}/contributors", response_model=list[schemas.LabelContributor])
+@router.get("/label-groups/{labelGroupId}/contributors", response_model=list[LabelContributor])
 def read_label_contributors(
     label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
     db: Annotated[Session, Depends(get_db)],
@@ -153,7 +165,7 @@ def read_label_contributors(
 
 @router.post(
     "/label-groups",
-    response_model=schemas.LabelGroup,
+    response_model=LabelGroup,
     responses={
         400: {"model": DetailHTTPErrorResponse, "description": "Label group name is too long."},
         404: {"model": DetailHTTPErrorResponse, "description": "Novel associated with this label group not found."},
@@ -163,9 +175,9 @@ def read_label_contributors(
         },
     },
 )
-@ttl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=serialize_response_model(schemas.LabelGroup))
+@ttl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=serialize_response_model(LabelGroup))
 def create_label_group(
-    request: schemas.CreateLabelGroup,
+    request: CreateLabelGroup,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
@@ -188,10 +200,10 @@ def create_label_group(
     return label_group
 
 
-@router.patch("/label-groups/{labelGroupId}", response_model=schemas.LabelGroup)
+@router.patch("/label-groups/{labelGroupId}", response_model=LabelGroup)
 def update_label_group(
     label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
-    request: schemas.UpdateLabelGroup,
+    request: UpdateLabelGroup,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
@@ -215,7 +227,7 @@ def update_label_group(
 
 @router.post(
     "/label-groups/{labelGroupId}/label-datas",
-    response_model=schemas.LabelData,
+    response_model=LabelData,
     responses={
         404: {"model": DetailHTTPErrorResponse, "description": "Label group or chapter content not found."},
         409: {
@@ -224,10 +236,10 @@ def update_label_group(
         },
     },
 )
-@ttl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=serialize_response_model(schemas.LabelData))
+@ttl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=serialize_response_model(LabelData))
 def create_label_data(
     label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
-    request: schemas.CreateLabelData,
+    request: CreateLabelData,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
@@ -276,7 +288,7 @@ def create_label_data(
 @ttl_cache(ttl=60, cache=redis_cache, success_code=204)
 def update_label_data_stream(
     label_data_id: Annotated[uuid.UUID, Path(alias="labelDataId")],
-    request: schemas.UpdateLabelDataStream,
+    request: UpdateLabelDataStream,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
@@ -321,7 +333,7 @@ def update_label_data_stream(
 
 @router.post(
     "/label-groups/{labelGroupId}/label-datas/auto-labels",
-    response_model=schemas.CreateLabelDataByAutoLabelStatus,
+    response_model=CreateLabelDataByAutoLabelStatus,
     responses={
         404: {"model": DetailHTTPErrorResponse, "description": "Label group not found."},
         409: {
@@ -333,11 +345,11 @@ def update_label_data_stream(
 @ttl_cache(
     ttl=3600,
     cache=redis_cache,
-    serialize_ret=serialize_response_model(schemas.CreateLabelDataByAutoLabelStatus),
+    serialize_ret=serialize_response_model(CreateLabelDataByAutoLabelStatus),
 )
 def create_label_datas_by_auto_labels(
     label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
-    request: schemas.CreateLabelDataByAutoLabel,
+    request: CreateLabelDataByAutoLabel,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,

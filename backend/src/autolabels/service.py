@@ -15,14 +15,14 @@ from sqlalchemy import exists, func, insert, literal, select
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session, defer
 
-from ..auth.models import User
-from ..novels import models as nm
-from ..novels.permissions import chapter_mod_access_select, novel_mod_access_select
-from . import models, schemas
-from .constants import AutoLabelProgress
-from .exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
-from .permissions import auto_label_mod_access_insert, auto_label_mod_access_select
-from .utils import AutoLabelDispatcher
+from src.auth.models import User
+from src.autolabels import models, schemas
+from src.autolabels.constants import AutoLabelProgress
+from src.autolabels.exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
+from src.autolabels.permissions import auto_label_mod_access_insert, auto_label_mod_access_select
+from src.autolabels.utils import AutoLabelDispatcher
+from src.novels import models as nm
+from src.novels.permissions import chapter_mod_access_select, novel_mod_access_select
 
 logger = logging.getLogger(__name__)
 

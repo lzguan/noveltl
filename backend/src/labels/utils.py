@@ -11,9 +11,9 @@ from sqlalchemy import and_, delete, insert, literal, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
-from ..auth.models import User
-from . import models, schemas
-from .exceptions import (
+from src.auth.models import User
+from src.labels import models, schemas
+from src.labels.exceptions import (
     LabelDataNotFoundException,
     LabelExclusionViolationInvalidOperationException,
     LabelInvalidOperationException,
@@ -21,7 +21,7 @@ from .exceptions import (
     LabelOutOfBoundsInvalidOperationException,
     LabelWordMismatchInvalidOperationException,
 )
-from .permissions import label_mod_access_delete, label_mod_access_insert, label_mod_access_update
+from src.labels.permissions import label_mod_access_delete, label_mod_access_insert, label_mod_access_update
 
 
 def _apply_add(db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.AddLabelOp) -> None:

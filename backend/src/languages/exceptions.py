@@ -1,4 +1,4 @@
-from ..exceptions import NotFoundException
+from src.exceptions import NotFoundException
 
 
 class LanguageNotFoundException(NotFoundException):

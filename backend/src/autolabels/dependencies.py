@@ -3,8 +3,8 @@ from typing import Annotated
 from arq import ArqRedis
 from fastapi import Depends
 
-from ..redis_conn import get_redis
-from .utils import ArqDispatcher, AutoLabelDispatcher
+from src.autolabels.utils import ArqDispatcher, AutoLabelDispatcher
+from src.redis_conn import get_redis
 
 
 def get_arq_dispatcher(redis: Annotated[ArqRedis, Depends(get_redis)]) -> AutoLabelDispatcher:

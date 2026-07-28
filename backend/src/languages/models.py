@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING
 from sqlalchemy import CheckConstraint, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..models import Base
-from .constants import MAX_LANGUAGE_CODE_LENGTH, MAX_LANGUAGE_NAME_LENGTH
+from src.languages.constants import MAX_LANGUAGE_CODE_LENGTH, MAX_LANGUAGE_NAME_LENGTH
+from src.models import Base
 
 if TYPE_CHECKING:
-    from ..novels.models import Novel
+    from src.novels.models import Novel
 
 
 class Language(Base):

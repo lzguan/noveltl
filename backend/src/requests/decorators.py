@@ -6,7 +6,7 @@ from typing import Any, cast
 from fastapi import HTTPException
 from pydantic import BaseModel
 
-from .cache import TTLCache
+from src.requests.cache import TTLCache
 
 
 def ttl_cache[**P, R: BaseModel](

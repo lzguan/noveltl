@@ -1,8 +1,8 @@
 from collections.abc import Generator
 
-from ..constants import SepPriority
-from ..exceptions import ChunkTooLargeException, TokenDoesNotExistException
-from .interfaces import Tokenizer
+from src.autolabels.constants import SepPriority
+from src.autolabels.exceptions import ChunkTooLargeException, TokenDoesNotExistException
+from src.autolabels.worker.interfaces import Tokenizer
 
 
 def _chunk_blocks(

@@ -1,6 +1,6 @@
-from ..labels.schemas import Label, LabelData, LabelGroup
-from ..novels.schemas import ChapterContent
-from ..schemas import Model
+from src.labels.schemas import Label, LabelData, LabelGroup
+from src.novels.schemas import ChapterContent
+from src.schemas import Model
 
 
 class LazyEntry(Model):

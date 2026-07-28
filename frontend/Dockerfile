@@ -1,4 +1,4 @@
-FROM ghcr.io/pnpm/pnpm:11.10.0 AS base
+FROM ghcr.io/pnpm/pnpm:11.17.0 AS base
 
 SHELL [ "/bin/bash", "-c" ]
 

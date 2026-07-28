@@ -15,8 +15,7 @@ from src.autolabels.utils import ArqDispatcher
 from src.labels import models as label_models
 from src.labels.schemas import CreateLabelDataByAutoLabel
 from src.labels.service import insert_label_datas_by_autolabels
-from tests.fixtures.bundles import ScenarioBundle
-from tests.gate_logging import log_gate
+from test_support.test_data.scenarios import DatabaseScenario
 
 logger = logging.getLogger(__name__)
 
@@ -26,34 +25,35 @@ class TestAutolabelEndToEnd:
 
     @pytest.mark.asyncio
     @pytest.mark.slow
-    @pytest.mark.dependency(name="autolabels::integration::end_to_end", scope="session")
     async def test_full_flow(
         self,
-        xianxia_scenario: ScenarioBundle,
+        xianxia_scenario: DatabaseScenario,
         redis: ArqRedis,
         test_db: Session,
         worker_mock: Worker,
     ):
-        novel_bundle = xianxia_scenario.novels[0]
-        label_bundle = novel_bundle.label_groups[0]
+        novel = xianxia_scenario.novels["novel"]
+        user = xianxia_scenario.users["owner"]
+        label_group = xianxia_scenario.label_groups["labels"]
+        chapters = [chapter for key, chapter in xianxia_scenario.chapters.items() if key.startswith("novel:")]
 
-        chapter_ids = [cb.chapter.chapter_id for cb in novel_bundle.chapters]
+        chapter_ids = [chapter.chapter_id for chapter in chapters]
         assert len(chapter_ids) > 0
 
         # 1. Create autolabels.
         ret = await insert_auto_labels(
             test_db,
-            novel_bundle.user,
+            user,
             ArqDispatcher(redis),
             CreateAutoLabels(
                 chapter_ids=chapter_ids,
-                novel_id=novel_bundle.novel.novel_id,
+                novel_id=novel.novel_id,
                 params=CluenerParams(model_name="cluener"),
             ),
         )
         run_id = ret.run.run_id
 
-        assert len(ret.autolabels) == len(novel_bundle.chapters)
+        assert len(ret.autolabels) == len(chapters)
         assert all(a.auto_label_meta.auto_label_status == AutoLabelProgress.PENDING for a in ret.autolabels)
 
         # 2. Run the worker to process all autolabels.
@@ -61,7 +61,7 @@ class TestAutolabelEndToEnd:
 
         q = select(AutoLabel).where(AutoLabel.run_id == run_id)
         autolabel_rows = test_db.execute(q).scalars().all()
-        assert len(autolabel_rows) == len(novel_bundle.chapters)
+        assert len(autolabel_rows) == len(chapters)
         for row in autolabel_rows:
             assert row.auto_label_status == AutoLabelProgress.DONE
             assert row.auto_label_data is not None
@@ -71,25 +71,25 @@ class TestAutolabelEndToEnd:
         promote_request = CreateLabelDataByAutoLabel(run_id=run_id)
         promote_result = insert_label_datas_by_autolabels(
             test_db,
-            novel_bundle.user,
-            label_bundle.label_group.label_group_id,
+            user,
+            label_group.label_group_id,
             promote_request,
         )
 
         assert len(promote_result.errors) == 0, f"Expected 0 promotion errors, got: {promote_result.errors}"
-        assert len(promote_result.success) == len(novel_bundle.chapters)
+        assert len(promote_result.success) == len(chapters)
 
         # 4. Verify label datas and labels are in the DB.
         label_datas = (
             test_db.execute(
                 select(label_models.LabelData).where(
-                    label_models.LabelData.label_group_id == label_bundle.label_group.label_group_id
+                    label_models.LabelData.label_group_id == label_group.label_group_id
                 )
             )
             .scalars()
             .all()
         )
-        assert len(label_datas) == len(novel_bundle.chapters)
+        assert len(label_datas) == len(chapters)
 
         # Build a map of autolabel data by chapter_content_id for verification.
         expected_data = {row.chapter_content_id: row.auto_label_data for row in autolabel_rows if row.auto_label_data}
@@ -115,19 +115,3 @@ class TestAutolabelEndToEnd:
                 assert db_label.label_word == src_label["label_word"]
                 assert db_label.label_start == src_label["label_start"]
                 assert db_label.label_end == src_label["label_end"]
-
-
-@pytest.mark.slow
-@pytest.mark.order("last")
-@pytest.mark.dependency(
-    name="gate::autolabels::integration::end_to_end",
-    depends=[
-        "autolabels::integration::end_to_end",
-        "gate::autolabels::worker::insert_auto_labels",
-        "gate::labels::integration::insert_label_datas_by_autolabels",
-    ],
-    scope="session",
-)
-def test_gate():
-    """Gate for the autolabel end-to-end integration test."""
-    log_gate("gate::autolabels::integration::end_to_end")

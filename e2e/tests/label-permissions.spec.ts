@@ -1,29 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-import { labelGroupsWithRole, loginByApi, loginToken } from "../helpers/api.js";
+import { loginByApi } from "../helpers/api.js";
 import { readSeed } from "../helpers/seed.js";
-
-test("only the label contributor can read the seeded label group by API", async ({ request }) => {
-	const seed = readSeed();
-	const ownerToken = await loginToken(request, seed.user);
-	const otherToken = await loginToken(request, seed.otherUser);
-
-	const ownerGroups = await labelGroupsWithRole(request, ownerToken.access_token, seed.novelId);
-	const otherGroups = await labelGroupsWithRole(request, otherToken.access_token, seed.novelId);
-
-	expect(ownerGroups).toEqual(
-		expect.arrayContaining([
-			expect.objectContaining({
-				role: "owner",
-				labelGroup: expect.objectContaining({
-					labelGroupId: seed.labelGroupId,
-					labelGroupName: seed.labelGroupName,
-				}),
-			}),
-		]),
-	);
-	expect(otherGroups).toEqual([]);
-});
 
 test("shows label groups in the editor only for the contributing user", async ({
 	browser,

@@ -9,13 +9,13 @@ from sqlalchemy import Enum, String, UniqueConstraint, func
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..models import Base
-from .constants import MAX_USER_NAME_LEN, UserType
+from src.auth.constants import MAX_USER_NAME_LEN, UserType
+from src.models import Base
 
 if TYPE_CHECKING:
-    from ..autolabels.models import AutoLabelRun
-    from ..labels.models import LabelContributor
-    from ..novels.models import NovelContributor
+    from src.autolabels.models import AutoLabelRun
+    from src.labels.models import LabelContributor
+    from src.novels.models import NovelContributor
 
 
 class User(Base):

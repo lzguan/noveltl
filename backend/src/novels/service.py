@@ -17,15 +17,14 @@ from sqlalchemy import CursorResult, and_, delete, exists, func, insert, literal
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
 from sqlalchemy.orm import Session, aliased, defer
 
-from ..auth.models import User
-from ..exceptions import DataTooLongException, InsufficientPermissionsException
-from ..labels import models as label_models
-from ..labels import schemas as label_schemas
-from ..languages.exceptions import LanguageNotFoundException
-from ..schemas import OperationStatus
-from . import models, schemas
-from .constants import Role, Visibility
-from .exceptions import (
+from src.auth.models import User
+from src.exceptions import DataTooLongException, InsufficientPermissionsException
+from src.labels import models as label_models
+from src.labels import schemas as label_schemas
+from src.languages.exceptions import LanguageNotFoundException
+from src.novels import models, schemas
+from src.novels.constants import Role, Visibility
+from src.novels.exceptions import (
     ChapterContentNotFoundException,
     ChapterContentOutdatedException,
     ChapterDeleteFailedException,
@@ -34,7 +33,7 @@ from .exceptions import (
     NovelNotFoundException,
     SourceWorkNotFoundException,
 )
-from .permissions import (
+from src.novels.permissions import (
     chapter_content_mod_access_insert,
     chapter_content_mod_access_select,
     chapter_mod_access_delete,
@@ -46,7 +45,8 @@ from .permissions import (
     source_work_mod_access_select,
     source_work_mod_access_update,
 )
-from .utils import apply_text_ops
+from src.novels.utils import apply_text_ops
+from src.schemas import OperationStatus
 
 logger = logging.getLogger(__name__)
 

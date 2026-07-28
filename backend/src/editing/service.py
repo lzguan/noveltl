@@ -3,7 +3,10 @@ import uuid
 from sqlalchemy import and_, exists, insert, literal, select, union_all
 from sqlalchemy.orm import Session
 
-from src.editing.schemas import EagerEntry, LazyEntry
+from src.auth.models import User
+from src.editing.schemas import EagerEntry, EditChapterData, LazyEntry
+from src.labels import models as lm
+from src.labels import schemas as ls
 from src.labels.permissions import (
     label_data_mod_access_insert,
     label_data_mod_access_select,
@@ -11,11 +14,6 @@ from src.labels.permissions import (
 )
 from src.novels.exceptions import ChapterContentNotFoundException
 from src.novels.service import query_chapter_content_by_most_recent, query_chapter_content_ids_by_chapter_id
-
-from ..auth.models import User
-from ..labels import models as lm
-from ..labels import schemas as ls
-from .schemas import EditChapterData
 
 
 def query_edit_chapter_data(

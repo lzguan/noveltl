@@ -1,5 +1,5 @@
-from ..labels.schemas import Label
-from .schemas import TextOp
+from src.labels.schemas import Label
+from src.novels.schemas import TextOp
 
 
 def apply_text_op(text: str, op: TextOp, labels: list[Label]) -> tuple[str, list[Label]]:

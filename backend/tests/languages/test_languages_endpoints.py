@@ -1,10 +1,9 @@
 from fastapi.testclient import TestClient
 
-from src.languages.models import Language
+from test_support.test_data.scenarios import DatabaseScenario
 
 
-def test_languages_endpoints(client: TestClient, sample_languages: dict[str, Language]) -> None:
-    # Test GET /languages
+def test_languages_endpoints(client: TestClient, sample_scenario: DatabaseScenario) -> None:
     response = client.get("/languages")
     assert response.status_code == 200
     languages = response.json()

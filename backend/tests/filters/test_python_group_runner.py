@@ -23,8 +23,8 @@ from src.filters.models import (
     WorkflowStatus,
 )
 from src.filters.runners.python.group_runner import PythonGroupInput, PythonGroupRunner
-from src.novels.models import ChapterContent
 from src.schemas import Model
+from test_support.test_data.scenarios import DatabaseScenario
 
 JOB_ID = uuid.UUID("32a2fd0f-9d99-4da3-81aa-d41e338ed9fd")
 
@@ -88,9 +88,7 @@ def test_group_runner_persists_raw_values_and_is_idempotent(
 
 
 def test_group_runner_preloads_text_dependencies(
-    test_db: Session,
-    testing_session_local: sessionmaker[Session],
-    sf_chapter_content: ChapterContent,
+    test_db: Session, testing_session_local: sessionmaker[Session], filter_scenario: DatabaseScenario
 ) -> None:
     schema = Schema(fields={"span": TextSpanField()})
     function = Call(
@@ -119,7 +117,7 @@ def test_group_runner_preloads_text_dependencies(
                         value=TextSpan(
                             start=0,
                             end=5,
-                            chapter_content_id=sf_chapter_content.chapter_content_id,
+                            chapter_content_id=filter_scenario.contents["content_v1"].chapter_content_id,
                         )
                     )
                 }

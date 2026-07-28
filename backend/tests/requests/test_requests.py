@@ -9,10 +9,9 @@ from pydantic.alias_generators import to_camel
 
 from src.auth.models import User
 from src.auth.utils import create_access_token
-from src.novels.models import Novel
 from src.requests.cache import CacheEntry, redis_cache
 from src.requests.decorators import attl_cache, serialize_response_model, ttl_cache
-from tests.fixtures.bundles import ScenarioBundle
+from test_support.test_data.scenarios import DatabaseScenario
 
 
 def _auth_headers(user: User) -> dict[str, str]:
@@ -80,11 +79,7 @@ class TestRequestsRouter:
         assert response.json() == expected
 
     def test_create_label_group_route_records_result(
-        self,
-        client: TestClient,
-        sample_users: list[User],
-        sample_novels: list[Novel],
-        sample_contributors: object,
+        self, client: TestClient, sample_scenario: DatabaseScenario
     ) -> None:
         request_key = uuid.uuid4()
 
@@ -92,10 +87,10 @@ class TestRequestsRouter:
             "/label-groups",
             params={"requestKey": str(request_key)},
             json={
-                "novelId": str(sample_novels[1].novel_id),
+                "novelId": str(sample_scenario.novels["novel_2"].novel_id),
                 "labelGroupName": "Request Cache Group",
             },
-            headers=_auth_headers(sample_users[1]),
+            headers=_auth_headers(sample_scenario.users["user"]),
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -108,9 +103,7 @@ class TestRequestsRouter:
         assert cached_response.json()["error"] is None
 
     def test_create_label_group_route_records_failure(
-        self,
-        client: TestClient,
-        sample_users: list[User],
+        self, client: TestClient, sample_scenario: DatabaseScenario
     ) -> None:
         request_key = uuid.uuid4()
 
@@ -121,7 +114,7 @@ class TestRequestsRouter:
                 "novelId": str(uuid.uuid4()),
                 "labelGroupName": "Request Cache Group",
             },
-            headers=_auth_headers(sample_users[1]),
+            headers=_auth_headers(sample_scenario.users["user"]),
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -139,12 +132,12 @@ class TestRequestsRouter:
     def test_update_chapter_content_route_records_result(
         self,
         client: TestClient,
-        versioned_chapter_scenario: ScenarioBundle,
+        editing_scenario: DatabaseScenario,
     ) -> None:
         request_key = uuid.uuid4()
-        actor = versioned_chapter_scenario.users.by_name["to_user"]
-        chapter = versioned_chapter_scenario.chapters[0].chapter
-        chapter_content = versioned_chapter_scenario.chapters[0].latest_content
+        actor = editing_scenario.users["owner"]
+        chapter = editing_scenario.chapters["chapter"]
+        chapter_content = editing_scenario.contents["content_v1"]
 
         response = client.patch(
             f"/chapters/{chapter.chapter_id}/content",
@@ -177,12 +170,12 @@ class TestRequestsRouter:
     def test_update_chapter_content_route_rejects_duplicate_request_key(
         self,
         client: TestClient,
-        versioned_chapter_scenario: ScenarioBundle,
+        editing_scenario: DatabaseScenario,
     ) -> None:
         request_key = uuid.uuid4()
-        actor = versioned_chapter_scenario.users.by_name["to_user"]
-        chapter = versioned_chapter_scenario.chapters[0].chapter
-        chapter_content = versioned_chapter_scenario.chapters[0].latest_content
+        actor = editing_scenario.users["owner"]
+        chapter = editing_scenario.chapters["chapter"]
+        chapter_content = editing_scenario.contents["content_v1"]
         payload = {
             "chapterContentId": str(chapter_content.chapter_content_id),
             "textOps": [{"op": "insert", "start": 0, "text": "Dear "}],
@@ -208,13 +201,13 @@ class TestRequestsRouter:
     def test_update_chapter_content_route_records_stale_content_failure(
         self,
         client: TestClient,
-        versioned_chapter_scenario: ScenarioBundle,
+        editing_scenario: DatabaseScenario,
     ) -> None:
         first_request_key = uuid.uuid4()
         stale_request_key = uuid.uuid4()
-        actor = versioned_chapter_scenario.users.by_name["to_user"]
-        chapter = versioned_chapter_scenario.chapters[0].chapter
-        chapter_content = versioned_chapter_scenario.chapters[0].latest_content
+        actor = editing_scenario.users["owner"]
+        chapter = editing_scenario.chapters["chapter"]
+        chapter_content = editing_scenario.contents["content_v1"]
         payload = {
             "chapterContentId": str(chapter_content.chapter_content_id),
             "textOps": [{"op": "insert", "start": 0, "text": "Dear "}],

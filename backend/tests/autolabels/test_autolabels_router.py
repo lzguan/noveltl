@@ -15,13 +15,7 @@ from src.labels import models as label_models
 from src.labels import service as label_service
 from src.labels.constants import MAX_LABEL_WORD_LEN
 from src.novels.models import Chapter, ChapterContent
-from tests.fixtures.bundles import ScenarioBundle
-from tests.gate_logging import log_gate
-
-pytestmark = pytest.mark.dependency(
-    depends=["gate::fixture_validation"],
-    scope="session",
-)
+from test_support.test_data.scenarios import DatabaseScenario
 
 
 def _auth_headers(user: User) -> dict[str, str]:
@@ -30,17 +24,16 @@ def _auth_headers(user: User) -> dict[str, str]:
 
 
 class TestAutoLabelRunsRouter:
-    @pytest.mark.dependency(name="autolabels::router::list_runs", scope="session")
     def test_list_runs(
         self,
         client: TestClient,
-        xianxia_autolabels_scenario: ScenarioBundle,
+        xianxia_autolabels_scenario: DatabaseScenario,
     ) -> None:
-        novel_bundle = xianxia_autolabels_scenario.novels[0]
-        user = novel_bundle.user
+        novel = xianxia_autolabels_scenario.novels["novel"]
+        user = xianxia_autolabels_scenario.users["owner"]
 
         response = client.get(
-            f"/auto-label-runs?novelId={novel_bundle.novel.novel_id}",
+            f"/auto-label-runs?novelId={novel.novel_id}",
             headers=_auth_headers(user),
         )
         assert response.status_code == status.HTTP_200_OK
@@ -53,17 +46,16 @@ class TestAutoLabelRunsRouter:
         assert "modelParams" in payload[0]
         assert payload[0]["modelParams"]["modelName"] == "cluener"
 
-    @pytest.mark.dependency(name="autolabels::router::list_runs_mine", scope="session")
     def test_list_runs_mine(
         self,
         client: TestClient,
-        xianxia_autolabels_scenario: ScenarioBundle,
+        xianxia_autolabels_scenario: DatabaseScenario,
     ) -> None:
-        novel_bundle = xianxia_autolabels_scenario.novels[0]
-        user = novel_bundle.user
+        novel = xianxia_autolabels_scenario.novels["novel"]
+        user = xianxia_autolabels_scenario.users["owner"]
 
         response = client.get(
-            f"/auto-label-runs?novelId={novel_bundle.novel.novel_id}&mine=true",
+            f"/auto-label-runs?novelId={novel.novel_id}&mine=true",
             headers=_auth_headers(user),
         )
         assert response.status_code == status.HTTP_200_OK
@@ -73,15 +65,14 @@ class TestAutoLabelRunsRouter:
 
 
 class TestAutoLabelRouter:
-    @pytest.mark.dependency(name="autolabels::router::get_by_id", scope="session")
     def test_get_autolabel_by_id(
         self,
         client: TestClient,
-        xianxia_autolabels_scenario: ScenarioBundle,
+        xianxia_autolabels_scenario: DatabaseScenario,
     ) -> None:
-        novel_bundle = xianxia_autolabels_scenario.novels[0]
-        user = novel_bundle.user
-        autolabel = novel_bundle.autolabels_by_name["cluener"][0]
+        xianxia_autolabels_scenario.novels["novel"]
+        user = xianxia_autolabels_scenario.users["owner"]
+        autolabel = xianxia_autolabels_scenario.autolabels["xianxia-source-chapter-0001"]
 
         response = client.get(
             f"/auto-labels/{autolabel.auto_label_id}",
@@ -96,14 +87,13 @@ class TestAutoLabelRouter:
         assert isinstance(payload["autoLabelData"], list)
         assert len(payload["autoLabelData"]) > 0
 
-    @pytest.mark.dependency(name="autolabels::router::get_by_id_not_found", scope="session")
     def test_get_autolabel_by_id_not_found(
         self,
         client: TestClient,
-        xianxia_autolabels_scenario: ScenarioBundle,
+        xianxia_autolabels_scenario: DatabaseScenario,
     ) -> None:
-        novel_bundle = xianxia_autolabels_scenario.novels[0]
-        user = novel_bundle.user
+        xianxia_autolabels_scenario.novels["novel"]
+        user = xianxia_autolabels_scenario.users["owner"]
         fake_id = uuid.uuid4()
 
         response = client.get(
@@ -114,16 +104,15 @@ class TestAutoLabelRouter:
 
 
 class TestAutoLabelsByRunRouter:
-    @pytest.mark.dependency(name="autolabels::router::autolabels_by_run", scope="session")
     def test_get_autolabels_by_run(
         self,
         client: TestClient,
-        xianxia_autolabels_scenario: ScenarioBundle,
+        xianxia_autolabels_scenario: DatabaseScenario,
     ) -> None:
-        novel_bundle = xianxia_autolabels_scenario.novels[0]
-        user = novel_bundle.user
-        run = novel_bundle.autolabel_runs_by_name["cluener"]
-        expected_count = len(novel_bundle.autolabels_by_name["cluener"])
+        xianxia_autolabels_scenario.novels["novel"]
+        user = xianxia_autolabels_scenario.users["owner"]
+        run = xianxia_autolabels_scenario.autolabel_runs["cluener"]
+        expected_count = len(xianxia_autolabels_scenario.autolabels)
 
         response = client.get(
             f"/auto-label-runs/{run.run_id}/auto-labels",
@@ -136,15 +125,14 @@ class TestAutoLabelsByRunRouter:
             assert entry["autoLabelMeta"]["runId"] == str(run.run_id)
             assert entry["autoLabelMeta"]["autoLabelStatus"] in ("done",)
 
-    @pytest.mark.dependency(name="autolabels::router::autolabels_by_run_with_range", scope="session")
     def test_get_autolabels_by_run_with_range(
         self,
         client: TestClient,
-        xianxia_autolabels_scenario: ScenarioBundle,
+        xianxia_autolabels_scenario: DatabaseScenario,
     ) -> None:
-        novel_bundle = xianxia_autolabels_scenario.novels[0]
-        user = novel_bundle.user
-        run = novel_bundle.autolabel_runs_by_name["cluener"]
+        xianxia_autolabels_scenario.novels["novel"]
+        user = xianxia_autolabels_scenario.users["owner"]
+        run = xianxia_autolabels_scenario.autolabel_runs["cluener"]
 
         response = client.get(
             f"/auto-label-runs/{run.run_id}/auto-labels?start=1&end=2",
@@ -157,19 +145,20 @@ class TestAutoLabelsByRunRouter:
 
 
 class TestCreateAutoLabelsRouter:
-    @pytest.mark.dependency(name="autolabels::router::create", scope="session")
     def test_create_autolabels(
         self,
         client: TestClient,
-        xianxia_scenario: ScenarioBundle,
+        xianxia_scenario: DatabaseScenario,
     ) -> None:
-        novel_bundle = xianxia_scenario.novels[0]
-        user = novel_bundle.user
-        chapter_ids = [cb.chapter.chapter_id for cb in novel_bundle.chapters]
+        novel = xianxia_scenario.novels["novel"]
+        user = xianxia_scenario.users["owner"]
+        chapter_ids = [
+            chapter.chapter_id for key, chapter in xianxia_scenario.chapters.items() if key.startswith("novel:")
+        ]
         assert len(chapter_ids) > 0
 
         body = {
-            "novelId": str(novel_bundle.novel.novel_id),
+            "novelId": str(novel.novel_id),
             "chapterIds": [str(cid) for cid in chapter_ids],
             "params": {
                 "modelName": "cluener",
@@ -187,7 +176,7 @@ class TestCreateAutoLabelsRouter:
         assert "run" in payload
         run = payload["run"]
         assert run["modelName"] == "cluener"
-        assert run["novelId"] == str(novel_bundle.novel.novel_id)
+        assert run["novelId"] == str(novel.novel_id)
         assert run["triggeredBy"] == str(user.user_id)
 
         assert "autolabels" in payload
@@ -204,20 +193,21 @@ class TestCreateAutoLabelsRouter:
         assert cached_payload["response"] == payload
         assert cached_payload["error"] is None
 
-    @pytest.mark.dependency(name="autolabels::router::create_scifi_novel", scope="session")
     def test_create_autolabels_different_novel(
         self,
         client: TestClient,
-        scifi_scenario: ScenarioBundle,
-        xianxia_scenario: ScenarioBundle,
+        scifi_scenario: DatabaseScenario,
+        xianxia_scenario: DatabaseScenario,
     ) -> None:
-        novel_bundle = scifi_scenario.novels[0]
-        user = novel_bundle.user
-        chapter_ids = [cb.chapter.chapter_id for cb in novel_bundle.chapters]
+        novel = scifi_scenario.novels["novel"]
+        user = scifi_scenario.users["owner"]
+        chapter_ids = [
+            chapter.chapter_id for key, chapter in scifi_scenario.chapters.items() if key.startswith("novel:")
+        ]
         assert len(chapter_ids) > 0
 
         body = {
-            "novelId": str(novel_bundle.novel.novel_id),
+            "novelId": str(novel.novel_id),
             "chapterIds": [str(cid) for cid in chapter_ids],
             "params": {
                 "modelName": "cluener",
@@ -232,53 +222,49 @@ class TestCreateAutoLabelsRouter:
         payload = response.json()
         assert len(payload["autolabels"]) == len(chapter_ids)
         # Verify this is a DIFFERENT novel from the xianxia one.
-        xianxia_novel_id = str(xianxia_scenario.novels[0].novel.novel_id)
-        assert payload["run"]["novelId"] == str(novel_bundle.novel.novel_id)
+        xianxia_novel_id = str(xianxia_scenario.novels["novel"].novel_id)
+        assert payload["run"]["novelId"] == str(novel.novel_id)
         assert payload["run"]["novelId"] != xianxia_novel_id
 
-    @pytest.mark.dependency(name="autolabels::router::create_scoped_to_novel", scope="session")
     def test_create_autolabels_without_chapter_filter_is_scoped_to_requested_novel(
         self,
         client: TestClient,
-        novel_resource_scenario: ScenarioBundle,
-        p1_admin: User,
+        novel_permission_scenario: DatabaseScenario,
     ) -> None:
-        target_novel = novel_resource_scenario.novels_by_title["pt"]
-        target_chapter = novel_resource_scenario.chapters_by_title["Public Ch1"]
+        target_novel = novel_permission_scenario.novels["put"]
+        target_chapter = novel_permission_scenario.chapters["public"]
 
         response = client.post(
             "/auto-labels",
             json={
-                "novelId": str(target_novel.novel.novel_id),
+                "novelId": str(target_novel.novel_id),
                 "params": {"modelName": "cluener"},
             },
-            headers=_auth_headers(p1_admin),
+            headers=_auth_headers(novel_permission_scenario.users["admin"]),
         )
 
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
-        assert payload["run"]["novelId"] == str(target_novel.novel.novel_id)
-        assert [entry["chapterId"] for entry in payload["autolabels"]] == [str(target_chapter.chapter.chapter_id)]
+        assert payload["run"]["novelId"] == str(target_novel.novel_id)
+        assert [entry["chapterId"] for entry in payload["autolabels"]] == [str(target_chapter.chapter_id)]
 
 
 class TestPromoteAutoLabelsRouter:
-    @pytest.mark.dependency(name="autolabels::router::promote", scope="session")
     def test_promote_autolabels(
         self,
         client: TestClient,
-        xianxia_autolabels_scenario: ScenarioBundle,
+        xianxia_autolabels_scenario: DatabaseScenario,
     ) -> None:
-        novel_bundle = xianxia_autolabels_scenario.novels[0]
-        label_bundle = novel_bundle.label_groups[0]
-        user = novel_bundle.user
-        run_id = novel_bundle.autolabel_runs_by_name["cluener"].run_id
-        expected_chapters = len(novel_bundle.autolabels_by_name["cluener"])
+        label_group = xianxia_autolabels_scenario.label_groups["labels"]
+        user = xianxia_autolabels_scenario.users["owner"]
+        run_id = xianxia_autolabels_scenario.autolabel_runs["cluener"].run_id
+        expected_chapters = len(xianxia_autolabels_scenario.autolabels)
 
         body = {
             "runId": str(run_id),
         }
         response = client.post(
-            f"/label-groups/{label_bundle.label_group.label_group_id}/label-datas/auto-labels",
+            f"/label-groups/{label_group.label_group_id}/label-datas/auto-labels",
             json=body,
             headers=_auth_headers(user),
         )
@@ -287,18 +273,17 @@ class TestPromoteAutoLabelsRouter:
         assert len(payload["errors"]) == 0
         assert len(payload["success"]) == expected_chapters
 
-    @pytest.mark.dependency(name="autolabels::router::promote_scoped_to_novel", scope="session")
     def test_promote_autolabels_ignores_cross_novel_rows_in_run(
         self,
         client: TestClient,
         test_db: Session,
-        xianxia_autolabels_scenario: ScenarioBundle,
-        scifi_scenario: ScenarioBundle,
+        xianxia_autolabels_scenario: DatabaseScenario,
+        scifi_scenario: DatabaseScenario,
     ) -> None:
-        novel_bundle = xianxia_autolabels_scenario.novels[0]
-        label_bundle = novel_bundle.label_groups[0]
-        run_id = novel_bundle.autolabel_runs_by_name["cluener"].run_id
-        foreign_content = scifi_scenario.novels[0].chapter_content
+        xianxia_autolabels_scenario.novels["novel"]
+        label_group = xianxia_autolabels_scenario.label_groups["labels"]
+        run_id = xianxia_autolabels_scenario.autolabel_runs["cluener"].run_id
+        foreign_content = scifi_scenario.contents["novel:xianxia-translation-chapter-0001-v0001"]
         test_db.add(
             AutoLabel(
                 auto_label_data=[],
@@ -310,36 +295,35 @@ class TestPromoteAutoLabelsRouter:
         test_db.commit()
 
         response = client.post(
-            f"/label-groups/{label_bundle.label_group.label_group_id}/label-datas/auto-labels",
+            f"/label-groups/{label_group.label_group_id}/label-datas/auto-labels",
             json={"runId": str(run_id)},
-            headers=_auth_headers(novel_bundle.user),
+            headers=_auth_headers(xianxia_autolabels_scenario.users["owner"]),
         )
 
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
         assert len(payload["errors"]) == 0
-        assert len(payload["success"]) == len(novel_bundle.autolabels_by_name["cluener"])
+        assert len(payload["success"]) == len(xianxia_autolabels_scenario.autolabels)
         promoted_content_ids = {content_id for _, content_id in payload["success"]}
         assert str(foreign_content.chapter_content_id) not in promoted_content_ids
 
-    @pytest.mark.dependency(name="autolabels::router::promote_isolates_batch_failure", scope="session")
     def test_promote_autolabels_isolates_failing_chapter_in_batch(
         self,
         client: TestClient,
         test_db: Session,
-        xianxia_autolabels_scenario: ScenarioBundle,
+        xianxia_autolabels_scenario: DatabaseScenario,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         monkeypatch.setattr(label_service, "PROMOTION_CANDIDATE_BATCH_SIZE", 2)
-        novel_bundle = xianxia_autolabels_scenario.novels[0]
-        label_bundle = novel_bundle.label_groups[0]
-        run_id = novel_bundle.autolabel_runs_by_name["cluener"].run_id
+        novel = xianxia_autolabels_scenario.novels["novel"]
+        label_group = xianxia_autolabels_scenario.label_groups["labels"]
+        run_id = xianxia_autolabels_scenario.autolabel_runs["cluener"].run_id
         oversized_word = "x" * (MAX_LABEL_WORD_LEN + 1)
         failing_chapter = Chapter(
             chapter_num=999_999,
             chapter_title="Promotion batch failure",
             chapter_is_public=True,
-            novel_id=novel_bundle.novel.novel_id,
+            novel_id=novel.novel_id,
         )
         test_db.add(failing_chapter)
         test_db.flush()
@@ -371,7 +355,7 @@ class TestPromoteAutoLabelsRouter:
             chapter_num=1_000_000,
             chapter_title="Promotion second batch",
             chapter_is_public=True,
-            novel_id=novel_bundle.novel.novel_id,
+            novel_id=novel.novel_id,
         )
         test_db.add(succeeding_chapter)
         test_db.flush()
@@ -393,15 +377,15 @@ class TestPromoteAutoLabelsRouter:
         test_db.commit()
 
         response = client.post(
-            f"/label-groups/{label_bundle.label_group.label_group_id}/label-datas/auto-labels",
+            f"/label-groups/{label_group.label_group_id}/label-datas/auto-labels",
             json={"runId": str(run_id)},
-            headers=_auth_headers(novel_bundle.user),
+            headers=_auth_headers(xianxia_autolabels_scenario.users["owner"]),
         )
 
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
         expected_success_ids = {
-            str(autolabel.chapter_content_id) for autolabel in novel_bundle.autolabels_by_name["cluener"]
+            str(autolabel.chapter_content_id) for autolabel in xianxia_autolabels_scenario.autolabels.values()
         }
         expected_success_ids.add(str(succeeding_content.chapter_content_id))
         assert {content_id for _, content_id in payload["success"]} == expected_success_ids
@@ -409,30 +393,8 @@ class TestPromoteAutoLabelsRouter:
         assert payload["errors"][0][1] == str(failing_content.chapter_content_id)
         failing_label_data = test_db.execute(
             select(label_models.LabelData).where(
-                label_models.LabelData.label_group_id == label_bundle.label_group.label_group_id,
+                label_models.LabelData.label_group_id == label_group.label_group_id,
                 label_models.LabelData.chapter_content_id == failing_content.chapter_content_id,
             )
         ).scalar_one_or_none()
         assert failing_label_data is None
-
-
-@pytest.mark.dependency(
-    name="gate::autolabels::router",
-    depends=[
-        "autolabels::router::list_runs",
-        "autolabels::router::list_runs_mine",
-        "autolabels::router::get_by_id",
-        "autolabels::router::get_by_id_not_found",
-        "autolabels::router::autolabels_by_run",
-        "autolabels::router::autolabels_by_run_with_range",
-        "autolabels::router::create",
-        "autolabels::router::create_scifi_novel",
-        "autolabels::router::create_scoped_to_novel",
-        "autolabels::router::promote",
-        "autolabels::router::promote_scoped_to_novel",
-        "autolabels::router::promote_isolates_batch_failure",
-    ],
-    scope="session",
-)
-def test_gate():
-    log_gate("gate::autolabels::router")

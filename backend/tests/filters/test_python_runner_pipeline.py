@@ -31,9 +31,9 @@ from src.filters.runners.python.label_source_runner import (
     PythonLabelSourceRunner,
 )
 from src.filters.runners.python.map_runner import PythonMapInput, PythonMapRunner
-from src.labels.models import Label, LabelData, LabelGroup
+from src.labels.models import Label
 from src.schemas import Model
-from tests.fixtures.bundles import ScenarioBundle
+from test_support.test_data.scenarios import DatabaseScenario
 
 SOURCE_JOB_ID = uuid.UUID("b3cbf911-bb1b-4787-9bff-afbc83b53ad8")
 FILTER_JOB_ID = uuid.UUID("ab694f0d-55d3-424a-a298-9e42c283b42c")
@@ -204,15 +204,11 @@ def _run_pipeline(
 
 
 def test_label_filter_map_rename_group_pipeline(
-    test_db: Session,
-    testing_session_local: sessionmaker[Session],
-    sf_label_group: LabelGroup,
-    sf_label_data: LabelData,
-    sf_labels: list[Label],
+    test_db: Session, testing_session_local: sessionmaker[Session], filter_scenario: DatabaseScenario
 ) -> None:
     test_db.add(
         Label(
-            label_data_id=sf_label_data.label_data_id,
+            label_data_id=filter_scenario.label_datas["labels"].label_data_id,
             label_entity_group="MISC",
             label_word="world",
             label_start=27,
@@ -225,11 +221,11 @@ def test_label_filter_map_rename_group_pipeline(
     source_count, filtered_count, assignments = _run_pipeline(
         test_db,
         testing_session_local,
-        sf_label_group.label_group_id,
+        filter_scenario.label_groups["labels"].label_group_id,
         0.6,
     )
 
-    assert source_count == len(sf_labels) + 1
+    assert source_count == len(filter_scenario.labels) + 1
     assert filtered_count == 3
     assert sorted(assignments) == ["test", "world", "world"]
     assert set(assignments) == {"test", "world"}
@@ -238,9 +234,9 @@ def test_label_filter_map_rename_group_pipeline(
 def test_catalog_xianxia_data_flows_through_runner_pipeline(
     test_db: Session,
     testing_session_local: sessionmaker[Session],
-    xianxia_labels_scenario: ScenarioBundle,
+    xianxia_labels_scenario: DatabaseScenario,
 ) -> None:
-    label_group = xianxia_labels_scenario.label_groups[0].label_group
+    label_group = xianxia_labels_scenario.label_groups["labels"]
 
     source_count, filtered_count, assignments = _run_pipeline(
         test_db,

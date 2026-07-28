@@ -6,15 +6,8 @@ import pytest
 from src.autolabels.params import CluenerParams
 from src.autolabels.worker.interfaces import NERModel
 from test_support.test_data import NovelDataset
-from tests.gate_logging import log_gate
 
-pytestmark = [
-    pytest.mark.implementation,
-    pytest.mark.dependency(
-        depends=["gate::autolabels::utils"],
-        scope="session",
-    ),
-]
+pytestmark = pytest.mark.implementation
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +27,6 @@ class TestCluenerPredict:
     """Tests for Cluener NER model inference."""
 
     @pytest.mark.slow
-    @pytest.mark.dependency(name="autolabels::implementation::pure_chinese_fantasy", scope="session")
     def test_pure_chinese_fantasy(
         self,
         cluener: ModelWrapper,
@@ -59,7 +51,6 @@ class TestCluenerPredict:
                 )
 
     @pytest.mark.slow
-    @pytest.mark.dependency(name="autolabels::implementation::mixed_chinese_scifi", scope="session")
     def test_mixed_chinese_scifi(
         self,
         cluener: ModelWrapper,
@@ -86,29 +77,3 @@ class TestCluenerPredict:
                         text[label["start"] : label["end"]],
                         cluener.model.normalize(text[label["start"] : label["end"]]),
                     )
-
-    @pytest.mark.slow
-    @pytest.mark.dependency(
-        name="gate::autolabels::implementation::cluener_predict",
-        depends=[
-            "autolabels::implementation::pure_chinese_fantasy",
-            "autolabels::implementation::mixed_chinese_scifi",
-        ],
-        scope="session",
-    )
-    def test_class_gate(self):
-        pass
-
-
-@pytest.mark.slow
-@pytest.mark.order("last")
-@pytest.mark.dependency(
-    name="gate::autolabels::implementation",
-    depends=[
-        "gate::autolabels::implementation::cluener_predict",
-    ],
-    scope="session",
-)
-def test_gate():
-    """All autolabels implementation tests must pass before downstream layers run."""
-    log_gate("gate::autolabels::implementation")

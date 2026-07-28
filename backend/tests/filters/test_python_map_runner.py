@@ -17,8 +17,8 @@ from src.filters.data_types import (
 from src.filters.functions import Call, Construct, FunctionType, Get, Rename, RenamePair, TextAround
 from src.filters.models import FunctionDefinition, Instance, Workflow, WorkflowStatus
 from src.filters.runners.python.map_runner import PythonMapInput, PythonMapRunner
-from src.novels.models import ChapterContent
 from src.schemas import Model
+from test_support.test_data.scenarios import DatabaseScenario
 
 JOB_ID = uuid.UUID("78c9409e-c9ec-4f3b-9c70-f0eec979d88e")
 STALE_JOB_ID = uuid.UUID("46fd62a2-bc62-40da-bda6-f521336188a9")
@@ -114,9 +114,7 @@ def test_map_runner_maps_in_bounded_batches_and_is_idempotent(
 
 
 def test_map_runner_preloads_text_dependencies(
-    test_db: Session,
-    testing_session_local: sessionmaker[Session],
-    sf_chapter_content: ChapterContent,
+    test_db: Session, testing_session_local: sessionmaker[Session], filter_scenario: DatabaseScenario
 ) -> None:
     source_schema = Schema(fields={"span": TextSpanField()})
     text_around = Call(
@@ -158,7 +156,7 @@ def test_map_runner_preloads_text_dependencies(
                             value=TextSpan(
                                 start=6,
                                 end=11,
-                                chapter_content_id=sf_chapter_content.chapter_content_id,
+                                chapter_content_id=filter_scenario.contents["content_v1"].chapter_content_id,
                             )
                         )
                     }

@@ -7,48 +7,41 @@ from sqlalchemy.orm import Session
 from src.auth.models import User
 from src.exceptions import InsufficientPermissionsException
 from src.labels.models import Label as LabelModel
-from src.labels.models import LabelData
+from src.labels.models import LabelData, LabelGroup
 from src.novels.exceptions import ChapterContentOutdatedException
 from src.novels.models import Chapter, ChapterContent
 from src.novels.schemas import TextOp
 from src.novels.service import modify_chapter_content
-from tests.fixtures.bundles import LabelFixtureBundle, ScenarioBundle
-from tests.gate_logging import log_gate
-
-pytestmark = pytest.mark.dependency(
-    depends=["gate::novels::service", "gate::novels::utils"],
-    scope="session",
-)
+from test_support.test_data.scenarios import DatabaseScenario
 
 
-def _text_ops_user(bundle: ScenarioBundle, user_name: str) -> User:
-    return bundle.users.by_name[user_name]
+def _text_ops_user(scenario: DatabaseScenario, user_key: str) -> User:
+    return scenario.users[user_key]
 
 
-def _text_ops_chapter(bundle: ScenarioBundle) -> Chapter:
-    return bundle.chapters[0].chapter
+def _text_ops_chapter(scenario: DatabaseScenario) -> Chapter:
+    return scenario.chapters["chapter"]
 
 
-def _text_ops_chapter_content(bundle: ScenarioBundle) -> ChapterContent:
-    return bundle.chapters[0].latest_content
+def _text_ops_chapter_content(scenario: DatabaseScenario) -> ChapterContent:
+    return scenario.contents["content_v1"]
 
 
-def _text_ops_label_group(bundle: ScenarioBundle, group_name: str) -> LabelFixtureBundle:
-    return bundle.label_groups_by_name[group_name]
+def _text_ops_label_group(scenario: DatabaseScenario, group_key: str) -> LabelGroup:
+    return scenario.label_groups[group_key]
 
 
 class TestBasicTextModification:
-    @pytest.mark.dependency(name="novels::integration::delete_shifts_labels_and_creates_new_version", scope="session")
     def test_delete_shifts_labels_and_creates_new_version(
         self,
         test_db: Session,
-        versioned_chapter_scenario: ScenarioBundle,
+        editing_scenario: DatabaseScenario,
     ):
-        actor = _text_ops_user(versioned_chapter_scenario, "to_user")
-        chapter = _text_ops_chapter(versioned_chapter_scenario)
-        chapter_content = _text_ops_chapter_content(versioned_chapter_scenario)
-        label_group_1 = _text_ops_label_group(versioned_chapter_scenario, "Group 1")
-        label_group_2 = _text_ops_label_group(versioned_chapter_scenario, "Group 2")
+        actor = _text_ops_user(editing_scenario, "owner")
+        chapter = _text_ops_chapter(editing_scenario)
+        chapter_content = _text_ops_chapter_content(editing_scenario)
+        label_group_1 = _text_ops_label_group(editing_scenario, "group_1")
+        label_group_2 = _text_ops_label_group(editing_scenario, "group_2")
         ops = [TextOp(op="delete", start=0, text="Hello ")]  # delete "Hello "
 
         modify_chapter_content(
@@ -81,7 +74,7 @@ class TestBasicTextModification:
         new_ld_1 = test_db.execute(
             select(LabelData).where(
                 LabelData.chapter_content_id == new_cc.chapter_content_id,
-                LabelData.label_group_id == label_group_1.label_group.label_group_id,
+                LabelData.label_group_id == label_group_1.label_group_id,
             )
         ).scalar_one()
         new_labels_1 = (
@@ -104,7 +97,7 @@ class TestBasicTextModification:
         new_ld_2 = test_db.execute(
             select(LabelData).where(
                 LabelData.chapter_content_id == new_cc.chapter_content_id,
-                LabelData.label_group_id == label_group_2.label_group.label_group_id,
+                LabelData.label_group_id == label_group_2.label_group_id,
             )
         ).scalar_one()
         new_labels_2 = (
@@ -117,16 +110,15 @@ class TestBasicTextModification:
         assert new_labels_2[0].label_start == 21  # was 27, shifted left by 6
         assert new_labels_2[0].label_end == 29
 
-    @pytest.mark.dependency(name="novels::integration::insert_shifts_labels", scope="session")
     def test_insert_shifts_labels(
         self,
         test_db: Session,
-        versioned_chapter_scenario: ScenarioBundle,
+        editing_scenario: DatabaseScenario,
     ):
-        actor = _text_ops_user(versioned_chapter_scenario, "to_user")
-        chapter = _text_ops_chapter(versioned_chapter_scenario)
-        chapter_content = _text_ops_chapter_content(versioned_chapter_scenario)
-        label_group_1 = _text_ops_label_group(versioned_chapter_scenario, "Group 1")
+        actor = _text_ops_user(editing_scenario, "owner")
+        chapter = _text_ops_chapter(editing_scenario)
+        chapter_content = _text_ops_chapter_content(editing_scenario)
+        label_group_1 = _text_ops_label_group(editing_scenario, "group_1")
         ops = [TextOp(op="insert", start=0, text="Dear ")]
 
         modify_chapter_content(
@@ -149,7 +141,7 @@ class TestBasicTextModification:
         new_ld = test_db.execute(
             select(LabelData).where(
                 LabelData.chapter_content_id == new_cc.chapter_content_id,
-                LabelData.label_group_id == label_group_1.label_group.label_group_id,
+                LabelData.label_group_id == label_group_1.label_group_id,
             )
         ).scalar_one()
         new_labels = (
@@ -160,15 +152,14 @@ class TestBasicTextModification:
         assert hello.label_start == 5
         assert hello.label_end == 10
 
-    @pytest.mark.dependency(name="novels::integration::multiple_ops_applied_sequentially", scope="session")
     def test_multiple_ops_applied_sequentially(
         self,
         test_db: Session,
-        versioned_chapter_scenario: ScenarioBundle,
+        editing_scenario: DatabaseScenario,
     ):
-        actor = _text_ops_user(versioned_chapter_scenario, "to_user")
-        chapter = _text_ops_chapter(versioned_chapter_scenario)
-        chapter_content = _text_ops_chapter_content(versioned_chapter_scenario)
+        actor = _text_ops_user(editing_scenario, "owner")
+        chapter = _text_ops_chapter(editing_scenario)
+        chapter_content = _text_ops_chapter_content(editing_scenario)
         ops = [
             TextOp(op="delete", start=0, text="Hello "),  # -> "world. This is a test sentence."
             TextOp(op="insert", start=0, text="Greetings "),  # -> "Greetings world. This is a test sentence."
@@ -190,33 +181,18 @@ class TestBasicTextModification:
         ).scalar_one()
         assert new_cc.chapter_content_text == "Greetings world. This is a test sentence."
 
-    @pytest.mark.dependency(
-        name="gate::novels::integration::basic_text_modification",
-        depends=[
-            "novels::integration::delete_shifts_labels_and_creates_new_version",
-            "novels::integration::insert_shifts_labels",
-            "novels::integration::multiple_ops_applied_sequentially",
-        ],
-        scope="session",
-    )
-    def test_class_gate(self):
-        pass
-
 
 class TestEdgeCases:
-    @pytest.mark.dependency(
-        name="novels::integration::empty_ops_creates_new_version_with_same_content", scope="session"
-    )
     def test_empty_ops_creates_new_version_with_same_content(
         self,
         test_db: Session,
-        versioned_chapter_scenario: ScenarioBundle,
+        editing_scenario: DatabaseScenario,
     ):
-        actor = _text_ops_user(versioned_chapter_scenario, "to_user")
-        chapter = _text_ops_chapter(versioned_chapter_scenario)
-        chapter_content = _text_ops_chapter_content(versioned_chapter_scenario)
-        label_group_1 = _text_ops_label_group(versioned_chapter_scenario, "Group 1")
-        label_group_2 = _text_ops_label_group(versioned_chapter_scenario, "Group 2")
+        actor = _text_ops_user(editing_scenario, "owner")
+        chapter = _text_ops_chapter(editing_scenario)
+        chapter_content = _text_ops_chapter_content(editing_scenario)
+        label_group_1 = _text_ops_label_group(editing_scenario, "group_1")
+        label_group_2 = _text_ops_label_group(editing_scenario, "group_2")
         modify_chapter_content(
             test_db,
             actor,
@@ -242,14 +218,10 @@ class TestEdgeCases:
         assert len(new_label_datas) == 2
 
         group_1_label_data = next(
-            label_data
-            for label_data in new_label_datas
-            if label_data.label_group_id == label_group_1.label_group.label_group_id
+            label_data for label_data in new_label_datas if label_data.label_group_id == label_group_1.label_group_id
         )
         group_2_label_data = next(
-            label_data
-            for label_data in new_label_datas
-            if label_data.label_group_id == label_group_2.label_group.label_group_id
+            label_data for label_data in new_label_datas if label_data.label_group_id == label_group_2.label_group_id
         )
 
         group_1_labels = (
@@ -265,27 +237,20 @@ class TestEdgeCases:
         assert len(group_1_labels) == 3
         assert len(group_2_labels) == 1
 
-    @pytest.mark.dependency(name="novels::integration::no_labels_on_chapter_content", scope="session")
-    def test_no_labels_on_chapter_content(
-        self,
-        test_db: Session,
-        to_user: User,
-        to_chapter: Chapter,
-        to_chapter_content: ChapterContent,
-    ):
+    def test_no_labels_on_chapter_content(self, test_db: Session, editing_scenario: DatabaseScenario):
         ops = [TextOp(op="insert", start=0, text="New ")]
 
         modify_chapter_content(
             test_db,
-            to_user,
-            to_chapter.chapter_id,
-            to_chapter_content.chapter_content_id,
+            editing_scenario.users["owner"],
+            editing_scenario.chapters["unlabeled_chapter"].chapter_id,
+            editing_scenario.contents["unlabeled_content_v1"].chapter_content_id,
             ops,
         )
 
         new_cc = test_db.execute(
             select(ChapterContent).where(
-                ChapterContent.chapter_id == to_chapter.chapter_id,
+                ChapterContent.chapter_id == editing_scenario.chapters["unlabeled_chapter"].chapter_id,
                 ChapterContent.chapter_content_version == 2,
             )
         ).scalar_one()
@@ -299,28 +264,16 @@ class TestEdgeCases:
         )
         assert len(new_lds) == 0
 
-    @pytest.mark.dependency(
-        name="gate::novels::integration::edge_cases",
-        depends=[
-            "novels::integration::empty_ops_creates_new_version_with_same_content",
-            "novels::integration::no_labels_on_chapter_content",
-        ],
-        scope="session",
-    )
-    def test_class_gate(self):
-        pass
-
 
 class TestStalenessChecks:
-    @pytest.mark.dependency(name="novels::integration::stale_chapter_content_id_raises", scope="session")
     def test_stale_chapter_content_id_raises(
         self,
         test_db: Session,
-        versioned_chapter_scenario: ScenarioBundle,
+        editing_scenario: DatabaseScenario,
     ):
-        actor = _text_ops_user(versioned_chapter_scenario, "to_user")
-        chapter = _text_ops_chapter(versioned_chapter_scenario)
-        chapter_content = _text_ops_chapter_content(versioned_chapter_scenario)
+        actor = _text_ops_user(editing_scenario, "owner")
+        chapter = _text_ops_chapter(editing_scenario)
+        chapter_content = _text_ops_chapter_content(editing_scenario)
         # First call succeeds and creates version 2
         modify_chapter_content(
             test_db,
@@ -340,15 +293,14 @@ class TestStalenessChecks:
                 [TextOp(op="insert", start=0, text="B")],
             )
 
-    @pytest.mark.dependency(name="novels::integration::successive_modifications_work", scope="session")
     def test_successive_modifications_work(
         self,
         test_db: Session,
-        versioned_chapter_scenario: ScenarioBundle,
+        editing_scenario: DatabaseScenario,
     ):
-        actor = _text_ops_user(versioned_chapter_scenario, "to_user")
-        chapter = _text_ops_chapter(versioned_chapter_scenario)
-        chapter_content = _text_ops_chapter_content(versioned_chapter_scenario)
+        actor = _text_ops_user(editing_scenario, "owner")
+        chapter = _text_ops_chapter(editing_scenario)
+        chapter_content = _text_ops_chapter_content(editing_scenario)
         # Create version 2
         modify_chapter_content(
             test_db,
@@ -383,28 +335,16 @@ class TestStalenessChecks:
         ).scalar_one()
         assert cc_v3.chapter_content_text.startswith("BA")
 
-    @pytest.mark.dependency(
-        name="gate::novels::integration::staleness_checks",
-        depends=[
-            "novels::integration::stale_chapter_content_id_raises",
-            "novels::integration::successive_modifications_work",
-        ],
-        scope="session",
-    )
-    def test_class_gate(self):
-        pass
-
 
 class TestPermissions:
-    @pytest.mark.dependency(name="novels::integration::non_contributor_cannot_modify", scope="session")
     def test_non_contributor_cannot_modify(
         self,
         test_db: Session,
-        versioned_chapter_scenario: ScenarioBundle,
+        editing_scenario: DatabaseScenario,
     ):
-        actor = _text_ops_user(versioned_chapter_scenario, "to_other")
-        chapter = _text_ops_chapter(versioned_chapter_scenario)
-        chapter_content = _text_ops_chapter_content(versioned_chapter_scenario)
+        actor = _text_ops_user(editing_scenario, "other")
+        chapter = _text_ops_chapter(editing_scenario)
+        chapter_content = _text_ops_chapter_content(editing_scenario)
         # Select passes (public novel) but insert fails (not a contributor).
         # The error handler calls query_chapter_content_status which passes (public),
         # then falls through to InsufficientPermissionsException.
@@ -436,15 +376,14 @@ class TestPermissions:
         )
         assert v2 is None
 
-    @pytest.mark.dependency(name="novels::integration::admin_can_modify", scope="session")
     def test_admin_can_modify(
         self,
         test_db: Session,
-        versioned_chapter_scenario: ScenarioBundle,
+        editing_scenario: DatabaseScenario,
     ):
-        actor = _text_ops_user(versioned_chapter_scenario, "to_admin")
-        chapter = _text_ops_chapter(versioned_chapter_scenario)
-        chapter_content = _text_ops_chapter_content(versioned_chapter_scenario)
+        actor = _text_ops_user(editing_scenario, "admin")
+        chapter = _text_ops_chapter(editing_scenario)
+        chapter_content = _text_ops_chapter_content(editing_scenario)
         modify_chapter_content(
             test_db,
             actor,
@@ -452,30 +391,3 @@ class TestPermissions:
             chapter_content.chapter_content_id,
             [TextOp(op="insert", start=0, text="Admin ")],
         )
-
-    @pytest.mark.dependency(
-        name="gate::novels::integration::permissions",
-        depends=[
-            "novels::integration::non_contributor_cannot_modify",
-            "novels::integration::admin_can_modify",
-        ],
-        scope="session",
-    )
-    def test_class_gate(self):
-        pass
-
-
-@pytest.mark.order("last")
-@pytest.mark.dependency(
-    name="gate::novels::integration",
-    depends=[
-        "gate::novels::integration::basic_text_modification",
-        "gate::novels::integration::edge_cases",
-        "gate::novels::integration::staleness_checks",
-        "gate::novels::integration::permissions",
-    ],
-    scope="session",
-)
-def test_gate():
-    """All novels integration tests must pass before downstream layers run."""
-    log_gate("gate::novels::integration")

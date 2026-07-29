@@ -6,6 +6,7 @@ import pytest
 
 from src.autolabels.dispatch.celery import CeleryDispatcher, celery_infer
 from src.autolabels.exceptions import EnqueueFailedException
+from src.celery_app import app
 
 
 class TestCeleryDispatcher:
@@ -40,3 +41,8 @@ class TestCeleryDispatcher:
     def test_inference_task_time_limits(self) -> None:
         assert celery_infer.soft_time_limit == 600
         assert celery_infer.time_limit == 660
+
+    def test_worker_configuration(self) -> None:
+        assert app.conf.worker_pool == "prefork"
+        assert app.conf.worker_concurrency == 2
+        assert app.conf.worker_prefetch_multiplier == 1

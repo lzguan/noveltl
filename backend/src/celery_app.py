@@ -8,3 +8,4 @@ app = Celery(
     broker=f"redis://{redis_settings.REDIS_HOST}:{redis_settings.REDIS_PORT}/0",
     include=["src.autolabels.dispatch.celery"],
 )
+app.config_from_object("src.celeryconfig")

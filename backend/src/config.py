@@ -1,11 +1,8 @@
-# type: ignore
-
 """This module provides global config variables."""
 
 import logging
 from typing import Literal
 
-from arq.connections import RedisSettings
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -34,7 +31,7 @@ class AuthSettings(BaseConfig):
     SECRET_KEY: str = Field(default="", min_length=1)
 
 
-class _RedisSettings(BaseConfig):
+class RedisSettings(BaseConfig):
     """Settings class for redis config variables."""
 
     REDIS_HOST: str = Field(default="", min_length=1)
@@ -51,6 +48,5 @@ class LogSettings(BaseConfig):
 
 database_settings = DatabaseSettings()
 auth_settings = AuthSettings()
-_redis_settings = _RedisSettings()
+redis_settings = RedisSettings()
 log_settings = LogSettings()
-redis_settings = RedisSettings(host=_redis_settings.REDIS_HOST, port=_redis_settings.REDIS_PORT, database=0)

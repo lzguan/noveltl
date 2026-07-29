@@ -1,11 +1,6 @@
-from typing import Annotated
-
-from arq import ArqRedis
-from fastapi import Depends
-
-from src.autolabels.utils import ArqDispatcher, AutoLabelDispatcher
-from src.redis_conn import get_redis
+from src.autolabels.dispatch.celery import CeleryDispatcher
+from src.autolabels.dispatch.dispatcher import AutoLabelDispatcher
 
 
-def get_arq_dispatcher(redis: Annotated[ArqRedis, Depends(get_redis)]) -> AutoLabelDispatcher:
-    return ArqDispatcher(redis)
+def get_dispatcher() -> AutoLabelDispatcher:
+    return CeleryDispatcher()

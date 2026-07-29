@@ -4,19 +4,15 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import redis as r
-from arq import ArqRedis, create_pool
-from arq.connections import RedisSettings
-from arq.worker import Worker
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.autolabels.worker.worker import WorkerSettings
+from src.autolabels.dependencies import get_dispatcher
 from src.database import get_db
 from src.main import app
 from src.models import Base
-from src.redis_conn import get_redis_for_app
+from test_support.autolabels import RecordingDispatcher
 from test_support.test_data import Catalog, NovelDataset, load_catalog, load_config, load_novel
 
 SYNTHETIC_DATA_ROOT = Path(__file__).parent / "test_data" / "datasets" / "synthetic-smoke"
@@ -52,7 +48,7 @@ class FakeTTLCacheAsyncRedis:
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    """Drop all tables in test_db before test session begins + drop redis cache."""
+    """Drop all tables in test_db before the test session begins."""
     url = os.getenv("TEST_URL")
     if url is None:
         return
@@ -61,10 +57,6 @@ def pytest_configure(config: pytest.Config) -> None:
         conn.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public;"))
         conn.commit()
     engine.dispose()
-
-    with r.Redis(host="test_redis", port=6379) as red:
-        red.flushall()
-        red.close()
 
 
 pytest_plugins = [
@@ -128,38 +120,17 @@ def test_db(test_engine: Engine, testing_session_local: sessionmaker[Session]) -
 
 
 @pytest.fixture
-async def redis():
-    pool = await create_pool(RedisSettings(host="test_redis", port=6379, database=0))
-    yield pool
-    await pool.aclose()
+def recording_dispatcher() -> RecordingDispatcher:
+    return RecordingDispatcher()
 
 
 @pytest.fixture
-async def worker_mock(test_url: str, monkeypatch: pytest.MonkeyPatch, redis: ArqRedis) -> Worker:
-    import src.autolabels.worker.tasks as worker_cfg
-
-    # infer_autolabels uses worker_cfg.SessionLocal to configure its database connection
-    monkeypatch.setattr(worker_cfg, "SessionLocal", sessionmaker(create_engine(test_url)))
-
-    return Worker(
-        functions=WorkerSettings.functions,
-        redis_pool=redis,
-        on_startup=WorkerSettings.on_startup,
-        burst=True,
-        poll_delay=0,
-    )
-
-
-@pytest.fixture
-def client(test_db: Session, redis: ArqRedis):
+def client(test_db: Session, recording_dispatcher: RecordingDispatcher):
     def override_get_db():
         yield test_db
 
-    def override_get_redis_for_app():
-        return redis
-
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_redis_for_app] = override_get_redis_for_app
+    app.dependency_overrides[get_dispatcher] = lambda: recording_dispatcher
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

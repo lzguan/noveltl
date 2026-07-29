@@ -75,7 +75,7 @@ class AutoLabel(Base):
         nullable=False,
         default=AutoLabelProgress.PENDING,
     )
-    auto_label_last_job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    auto_label_last_job_id: Mapped[uuid.UUID | None] = mapped_column(postgresql.UUID, nullable=True)
     auto_label_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     chapter_content_id: Mapped[uuid.UUID] = mapped_column(

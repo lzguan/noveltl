@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from ..languages.models import Language
 
 
-class EnumAsInteger(TypeDecorator):  # type: ignore
+class EnumAsInteger(TypeDecorator):
     """
     Custom SQLAlchemy type to store Python Enums as integers in the database.
 
@@ -48,7 +48,7 @@ class EnumAsInteger(TypeDecorator):  # type: ignore
     impl = Integer
     cache_ok = True
 
-    def __init__(self, enum_type):  # type: ignore
+    def __init__(self, enum_type):
         super().__init__()
         self.enum_type = enum_type
 
@@ -58,10 +58,10 @@ class EnumAsInteger(TypeDecorator):  # type: ignore
         raise ValueError(f"Invalid value {value} for enum {self.enum_type}")
 
     def process_result_value(self, value: Any | None, dialect: Dialect) -> Any | None:
-        return self.enum_type(value)  # type: ignore
+        return self.enum_type(value)
 
-    def copy(self, **kwargs):  # type: ignore
-        return EnumAsInteger(self.enum_type)  # type: ignore
+    def copy(self, **kwargs):
+        return EnumAsInteger(self.enum_type)
 
 
 class SourceWork(Base):
@@ -112,7 +112,7 @@ class Novel(Base):
     novel_type: Mapped[NovelType] = mapped_column(
         Enum(NovelType, native_enum=False, length=16, values_callable=lambda x: [str(e.value) for e in x]),
         nullable=False,
-    )  # type: ignore
+    )
 
     source_work_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("source_works.source_work_id"), nullable=False)
     source_work_of_novel: Mapped["SourceWork"] = relationship(back_populates="novels_with_source_work")
@@ -144,7 +144,7 @@ class NovelContributor(Base):
 
     contributor_role: Mapped[Role] = mapped_column(
         Enum(Role, native_enum=False, length=10, values_callable=lambda x: [str(e.value) for e in x]), nullable=False
-    )  # type: ignore
+    )
 
     novel_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("novels.novel_id"), primary_key=True)
     novel_of_contributor: Mapped["Novel"] = relationship(back_populates="novel_contributors_with_novel")

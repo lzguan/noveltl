@@ -58,7 +58,7 @@ def upgrade():
         sa.Column("novel_title", sa.String(length=255), nullable=False),
         sa.Column("novel_description", sa.Text(), nullable=True),
         sa.Column("novel_author", sa.String(length=31), nullable=True),
-        sa.Column("novel_visibility", EnumAsInteger(Visibility), nullable=False),  # type: ignore
+        sa.Column("novel_visibility", EnumAsInteger(Visibility), nullable=False),
         sa.Column(
             "novel_type",
             sa.Enum("original", "translation", "other", name="noveltype", native_enum=False, length=16),

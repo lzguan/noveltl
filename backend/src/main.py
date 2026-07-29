@@ -3,18 +3,16 @@ This is the main endpoint for the application.
 """
 
 import logging
-from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
 from src.auth.router import router as auth_router
 from src.autolabels.router import router as autolabel_router
-from src.config import log_settings, uvicorn_logger
+from src.config import log_settings
 from src.editing.router import router as editing_router
 from src.labels.router import router as label_router
 from src.languages.router import router as language_router
 from src.novels.router import router as novel_router
-from src.redis_conn import set_redis
 from src.requests.router import router as requests_router
 
 logger = logging.getLogger("src")
@@ -42,17 +40,7 @@ if log_settings.LOG_OUTPUT in ["STREAM", "BOTH"]:
     logger.addHandler(ch)
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    uvicorn_logger.info("Server starting.")
-    async with set_redis():
-        uvicorn_logger.info("Redis connection created.")
-        yield
-        uvicorn_logger.info("Redis connection aborting.")
-    uvicorn_logger.info("Closing server.")
-
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 app.include_router(auth_router)
 app.include_router(novel_router)

@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
-from src.autolabels.dependencies import get_arq_dispatcher
+from src.autolabels.dependencies import get_dispatcher
+from src.autolabels.dispatch.dispatcher import AutoLabelDispatcher
 from src.autolabels.exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
 from src.autolabels.schemas import (
     AutoLabel,
@@ -21,7 +22,6 @@ from src.autolabels.service import (
     query_auto_label_runs,
     query_auto_labels_by_run,
 )
-from src.autolabels.utils import AutoLabelDispatcher
 from src.database import get_db
 from src.requests.cache import redis_cache
 from src.requests.decorators import attl_cache, serialize_response_model
@@ -103,7 +103,7 @@ async def read_autolabel_by_id(
 async def create_autolabels(
     request: CreateAutoLabels,
     db: Annotated[Session, Depends(get_db)],
-    dispatcher: Annotated[AutoLabelDispatcher, Depends(get_arq_dispatcher)],
+    dispatcher: Annotated[AutoLabelDispatcher, Depends(get_dispatcher)],
     current_user: Annotated[User, Depends(get_current_user)],
     request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
 ):

@@ -8,9 +8,9 @@ def test_languages_endpoints(client: TestClient, sample_scenario: DatabaseScenar
     assert response.status_code == 200
     languages = response.json()
     assert isinstance(languages, list)
-    assert len(languages) == 4  # type: ignore
+    assert len(languages) == 4
 
-    lang_codes = {lang["languageCode"] for lang in languages}  # type: ignore
+    lang_codes = {lang["languageCode"] for lang in languages}
     assert "en" in lang_codes
     assert "zh" in lang_codes
     assert "kr" in lang_codes

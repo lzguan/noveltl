@@ -11,8 +11,8 @@ dependencies = [
     "pydantic>=2.10.0,<3",
     "pydantic-settings>=2.2.0,<3",
     "alembic>=1.13.0,<2",
-    "redis<=5.3.1",
-    "arq>=0.26.3,<0.27",
+    "celery[redis]>=5.6.3,<6",
+    "redis[hiredis]>=6.4.0",
 ]
 
 [dependency-groups]
@@ -22,7 +22,6 @@ backend = [
     "pyjwt==2.9.0",
     "argon2-cffi>=23.0.0,<24",
     "pwdlib>=0.3.0,<0.4",
-    "redis[hiredis]>=5.3.1",
     "python-multipart>=0.0.9",
 ]
 worker = [

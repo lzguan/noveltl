@@ -32,7 +32,7 @@ async def get_optional_user(
     if token is None:
         return None
     try:
-        payload: dict[str, Any] = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])  # type: ignore
+        payload: dict[str, Any] = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username = payload.get("sub")
         if username is None:
             logger.debug(f"Token payload does not contain 'sub' field. Payload: {payload}")

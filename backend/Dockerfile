@@ -36,4 +36,4 @@ RUN uv run --no-sync hf download \
       tokenizer_config.json \
       vocab.txt \
       --revision ${CLUENER_REVISION}
-CMD ["uv", "run", "--no-sync", "celery", "-A", "src.celery_app", "worker", "--loglevel=info", "--concurrency=1"]
+CMD ["uv", "run", "--no-sync", "celery", "-A", "src.celery_app", "worker", "--loglevel=info"]

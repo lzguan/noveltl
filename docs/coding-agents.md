@@ -15,11 +15,7 @@ See [onboarding](onboarding.md) for devcontainer setup.
 - [Claude code](https://code.claude.com/docs/en/quickstart)
     - `curl -fsSL https://claude.ai/install.sh | bash`
 - [Codex](https://developers.openai.com/codex/cli): 
-    - `pnpm setup`
-    - Start a new shell
-    - `pnpm add -g @openai/codex`.
-    - `sudo apt update`.
-    - `sudo apt install bubblewrap`.
+    - `curl -fsSL https://chatgpt.com/codex/install.sh | sh`
 - [Opencode](https://opencode.ai/docs/):
     - `curl -fsSL https://opencode.ai/install | bash`
 

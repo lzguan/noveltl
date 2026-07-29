@@ -55,7 +55,7 @@ class AutoLabel(Model):
     auto_label_data: list[LabelBase] | None = None
     auto_label_status: AutoLabelProgress
     auto_label_message: str | None = None
-    auto_label_last_job_id: str | None = None
+    auto_label_last_job_id: uuid.UUID | None = None
     chapter_content_id: uuid.UUID
     run_id: uuid.UUID
 
@@ -77,7 +77,7 @@ class AutoLabelMeta(Model):
     auto_label_id: uuid.UUID
     auto_label_status: AutoLabelProgress
     auto_label_message: str | None = None
-    auto_label_last_job_id: str | None = None
+    auto_label_last_job_id: uuid.UUID | None = None
     chapter_content_id: uuid.UUID
     run_id: uuid.UUID
 

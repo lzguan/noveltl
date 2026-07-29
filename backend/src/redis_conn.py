@@ -1,38 +1,10 @@
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
-
 import redis
-from arq import ArqRedis, create_pool
-from fastapi import HTTPException, status
 
-from src.config import _redis_settings, redis_settings
-from src.exceptions import RedisNotInitializedError
+from src.config import redis_settings
 
-redis_for_worker: ArqRedis | None = None
+redis_for_ttl_cache_sync = redis.Redis(host=redis_settings.REDIS_HOST, port=redis_settings.REDIS_PORT, db=1)
 
-redis_for_ttl_cache_sync = redis.Redis(host=_redis_settings.REDIS_HOST, port=_redis_settings.REDIS_PORT, db=1)
-
-redis_for_ttl_cache_async = redis.asyncio.Redis(host=_redis_settings.REDIS_HOST, port=_redis_settings.REDIS_PORT, db=1)
-
-
-@asynccontextmanager
-async def set_redis() -> AsyncGenerator[None]:
-    global redis_for_worker
-    redis_for_worker = await create_pool(redis_settings)
-    yield
-    await redis_for_worker.aclose()
-
-
-def get_redis() -> ArqRedis:
-    if redis_for_worker is not None:
-        return redis_for_worker
-    raise RedisNotInitializedError
-
-
-def get_redis_for_app() -> ArqRedis:
-    if redis_for_worker is not None:
-        return redis_for_worker
-    raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Request queueing down.")
+redis_for_ttl_cache_async = redis.asyncio.Redis(host=redis_settings.REDIS_HOST, port=redis_settings.REDIS_PORT, db=1)
 
 
 def get_redis_for_ttl_cache_sync() -> redis.Redis:

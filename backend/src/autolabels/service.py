@@ -18,9 +18,9 @@ from sqlalchemy.orm import Session, defer
 from src.auth.models import User
 from src.autolabels import models, schemas
 from src.autolabels.constants import AutoLabelProgress
+from src.autolabels.dispatch.dispatcher import AutoLabelDispatcher
 from src.autolabels.exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
 from src.autolabels.permissions import auto_label_mod_access_insert, auto_label_mod_access_select
-from src.autolabels.utils import AutoLabelDispatcher
 from src.novels import models as nm
 from src.novels.permissions import chapter_mod_access_select, novel_mod_access_select
 
@@ -241,7 +241,7 @@ async def insert_auto_labels(
     # 3. Dispatch worker tasks.
     tasks: list[Coroutine[Any, Any, None]] = []
     for autolabel in result_rows:
-        job_id = str(uuid4())
+        job_id = uuid4()
         autolabel.auto_label_last_job_id = job_id
         logger.info(
             "Autolabel job assigned run_id=%s auto_label_id=%s job_id=%s",
@@ -249,7 +249,7 @@ async def insert_auto_labels(
             autolabel.auto_label_id,
             job_id,
         )
-        tasks.append(dispatcher.enqueue(job_id, autolabel.auto_label_id))
+        tasks.append(dispatcher.aenqueue(job_id, autolabel.auto_label_id))
     try:
         db.commit()
     except Exception:

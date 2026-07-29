@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import uuid
 from time import perf_counter
@@ -12,6 +11,7 @@ from src.autolabels.constants import AutoLabelProgress
 from src.autolabels.models import AutoLabel, AutoLabelRun
 from src.autolabels.params import ModelName, NERParams
 from src.autolabels.worker.config import SessionLocal
+from src.autolabels.worker.inference import Cluener
 from src.autolabels.worker.interfaces import NERModel
 from src.novels.models import ChapterContent
 
@@ -23,11 +23,15 @@ model_cache: dict[ModelName, NERModel[Any]] = {}
 def get_ner_model(model_name: ModelName) -> NERModel[Any]:
     if model_name in model_cache:
         return model_cache[model_name]
+    elif model_name == "cluener":
+        model = Cluener()
+        model_cache[model_name] = model.model
+        return model.model
 
     raise ValueError(f"Model {model_name} not found in registry.")
 
 
-async def autolabel_infer(ctx: Any, job_id: str, auto_label_id: uuid.UUID) -> None:
+def autolabel_infer(job_id: uuid.UUID, auto_label_id: uuid.UUID) -> None:
     logger.info("Autolabel job started job_id=%s auto_label_id=%s", job_id, auto_label_id)
     with SessionLocal() as db:
         q = (
@@ -163,9 +167,8 @@ async def autolabel_infer(ctx: Any, job_id: str, auto_label_id: uuid.UUID) -> No
             db.commit()
             raise e
     try:
-        loop = asyncio.get_running_loop()
         start = perf_counter()
-        result, err = await loop.run_in_executor(None, ner_model.predict, text, params)
+        result, err = ner_model.predict(text, params)
         elapsed_ms = round((perf_counter() - start) * 1000, 2)
         logger.info(
             "Autolabel inference completed job_id=%s auto_label_id=%s model_name=%s label_count=%s elapsed_ms=%s",

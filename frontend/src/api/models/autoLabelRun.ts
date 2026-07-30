@@ -19,7 +19,7 @@ import type { DoNothingParams } from './doNothingParams';
  *     model_params: Parameters for the NER model.
  *     created_at: When the run was created.
  */
-export interface AutoLabelRunOutput {
+export interface AutoLabelRun {
   createdAt: string;
   modelName: string;
   modelParams: CluenerParams | DoNothingParams;

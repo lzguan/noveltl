@@ -318,7 +318,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SourceWorkData-Output"
+                    "$ref": "#/components/schemas/SourceWorkData"
                   },
                   "title": "Response Read Source Works Source Works Get"
                 }
@@ -2394,7 +2394,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/AutoLabelRun-Output"
+                    "$ref": "#/components/schemas/AutoLabelRun"
                   },
                   "title": "Response Read Auto Label Runs Auto Label Runs Get"
                 }
@@ -2476,7 +2476,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/AutoLabelMetaWithCid-Output"
+                    "$ref": "#/components/schemas/AutoLabelMetaWithCid"
                   },
                   "title": "Response Read Auto Labels By Run Auto Label Runs  Runid  Auto Labels Get"
                 }
@@ -2681,252 +2681,6 @@
                   },
                   "type": "array",
                   "title": "Response Read All Languages Languages Get"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/filters/schemas": {
-      "get": {
-        "summary": "Read Filter Schemas",
-        "description": "Retrieves the schemas for all registered filters, including the instance, context, and options schemas for each filter.\n\nReturns:\n    A dictionary mapping filter names to their schema information.",
-        "operationId": "read_filter_schemas_filters_schemas_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "$ref": "#/components/schemas/SchemaInfo"
-                  },
-                  "type": "object",
-                  "title": "Response Read Filter Schemas Filters Schemas Get"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/filters/{filterName}/flag-instances": {
-      "post": {
-        "summary": "Read Flagged Instances",
-        "description": "Flags instances using a specified filter and options.\n\nArgs:\n    filter_name: The name of the filter to use.\n    options: The options for flagging instances, which will be validated against the filter's schema.\n    db: Database session for any necessary database access during filtering.\n    current_user: The user making the request, which may be relevant for certain filters.",
-        "operationId": "read_flagged_instances_filters__filterName__flag_instances_post",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "filterName",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Filtername"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": true,
-                "title": "Options"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {},
-                  "title": "Response Read Flagged Instances Filters  Filtername  Flag Instances Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/filters/{filterName}/get-contexts": {
-      "post": {
-        "summary": "Read Contexts",
-        "description": "Retrieves contexts for a list of instances using a specified filter and options.\n\nArgs:\n    filter_name: The name of the filter to use.\n    instances: The list of instances to retrieve contexts for. Each instance will be validated against the filter's instance schema.\n    options: The options for retrieving contexts, which will be validated against the filter's schema.\n    db: Database session for any necessary database access during context retrieval.\n    current_user: The user making the request, which may be relevant for certain filters.",
-        "operationId": "read_contexts_filters__filterName__get_contexts_post",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "filterName",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Filtername"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InstanceOptions"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {},
-                  "title": "Response Read Contexts Filters  Filtername  Get Contexts Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/filters/{filterName}/decide-instances": {
-      "post": {
-        "summary": "Read Decisions",
-        "description": "Decides whether instances pass a filter in given contexts using specified options.\n\nArgs:\n    filter_name: The name of the filter to use.\n    body: An InstanceContextOptions object containing the list of instance-context pairs and the options for deciding instances. Each instance and context will be validated against the filter's schemas.\n    db: Database session for any necessary database access during the decision process.\n    current_user: The user making the request, which may be relevant for certain filters.",
-        "operationId": "read_decisions_filters__filterName__decide_instances_post",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "filterName",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Filtername"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InstanceContextOptions"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "boolean"
-                  },
-                  "title": "Response Read Decisions Filters  Filtername  Decide Instances Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/filters/{filterName}/apply": {
-      "post": {
-        "summary": "Apply Filter",
-        "description": "Applies a filter to a label group for a list of instances using specified options.\n\nArgs:\n    filter_name: The name of the filter to apply.\n    body: An InstanceOptions object containing the list of instances and the options for applying the filter. Each instance will be validated against the filter's instance schema, and the options will be validated against the filter's apply filter options schema.\n    db: Database session for any necessary database access during filter application.\n    current_user: The user making the request, which may be relevant for certain filters.",
-        "operationId": "apply_filter_filters__filterName__apply_post",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "filterName",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Filtername"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InstanceOptions"
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -3244,7 +2998,8 @@
           "autoLabelLastJobId": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "uuid"
               },
               {
                 "type": "null"
@@ -3297,7 +3052,8 @@
           "autoLabelLastJobId": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "uuid"
               },
               {
                 "type": "null"
@@ -3326,25 +3082,7 @@
         "title": "AutoLabelMeta",
         "description": "Pydantic schema for auto-label metadata (no label data payload).\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to."
       },
-      "AutoLabelMetaWithCid-Input": {
-        "properties": {
-          "autoLabelMeta": {
-            "$ref": "#/components/schemas/AutoLabelMeta"
-          },
-          "chapterId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Chapterid"
-          }
-        },
-        "type": "object",
-        "required": [
-          "autoLabelMeta",
-          "chapterId"
-        ],
-        "title": "AutoLabelMetaWithCid"
-      },
-      "AutoLabelMetaWithCid-Output": {
+      "AutoLabelMetaWithCid": {
         "properties": {
           "autoLabelMeta": {
             "$ref": "#/components/schemas/AutoLabelMeta"
@@ -3373,57 +3111,7 @@
         "title": "AutoLabelProgress",
         "description": "Status for an autolabel in database. One of 'failed', 'pending', 'processing', 'done'"
       },
-      "AutoLabelRun-Input": {
-        "properties": {
-          "runId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Runid"
-          },
-          "novelId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Novelid"
-          },
-          "triggeredBy": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Triggeredby"
-          },
-          "modelName": {
-            "type": "string",
-            "title": "Modelname"
-          },
-          "modelParams": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CluenerParams"
-              },
-              {
-                "$ref": "#/components/schemas/DoNothingParams"
-              }
-            ],
-            "title": "Modelparams"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Createdat"
-          }
-        },
-        "type": "object",
-        "required": [
-          "runId",
-          "novelId",
-          "triggeredBy",
-          "modelName",
-          "modelParams",
-          "createdAt"
-        ],
-        "title": "AutoLabelRun",
-        "description": "Pydantic schema for an autolabel run (batch).\n\nA run groups autolabels created together in a single request.\n\nAttributes:\n    run_id: UUID identifier for this run.\n    triggered_by: UUID of user who triggered the run, or None.\n    model_name: Name of the NER model used.\n    model_params: Parameters for the NER model.\n    created_at: When the run was created."
-      },
-      "AutoLabelRun-Output": {
+      "AutoLabelRun": {
         "properties": {
           "runId": {
             "type": "string",
@@ -3860,11 +3548,11 @@
       "CreateAutoLabelsResponse": {
         "properties": {
           "run": {
-            "$ref": "#/components/schemas/AutoLabelRun-Output"
+            "$ref": "#/components/schemas/AutoLabelRun"
           },
           "autolabels": {
             "items": {
-              "$ref": "#/components/schemas/AutoLabelMetaWithCid-Output"
+              "$ref": "#/components/schemas/AutoLabelMetaWithCid"
             },
             "type": "array",
             "title": "Autolabels"
@@ -4314,54 +4002,6 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
-      },
-      "InstanceContextOptions": {
-        "properties": {
-          "instanceContexts": {
-            "items": {
-              "prefixItems": [
-                {},
-                {}
-              ],
-              "type": "array",
-              "maxItems": 2,
-              "minItems": 2
-            },
-            "type": "array",
-            "title": "Instancecontexts"
-          },
-          "options": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Options"
-          }
-        },
-        "type": "object",
-        "required": [
-          "instanceContexts",
-          "options"
-        ],
-        "title": "InstanceContextOptions"
-      },
-      "InstanceOptions": {
-        "properties": {
-          "instances": {
-            "items": {},
-            "type": "array",
-            "title": "Instances"
-          },
-          "options": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Options"
-          }
-        },
-        "type": "object",
-        "required": [
-          "instances",
-          "options"
-        ],
-        "title": "InstanceOptions"
       },
       "Label": {
         "properties": {
@@ -4829,65 +4469,6 @@
         "title": "RequestConflictErrorResponse",
         "description": "HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail."
       },
-      "SchemaInfo": {
-        "properties": {
-          "description": {
-            "type": "string",
-            "title": "Description"
-          },
-          "supports_decide": {
-            "type": "boolean",
-            "title": "Supports Decide"
-          },
-          "supports_apply": {
-            "type": "boolean",
-            "title": "Supports Apply"
-          },
-          "instance_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Instance Schema"
-          },
-          "context_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Context Schema"
-          },
-          "flag_instances_options_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Flag Instances Options Schema"
-          },
-          "get_contexts_options_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Get Contexts Options Schema"
-          },
-          "decide_instances_options_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Decide Instances Options Schema"
-          },
-          "apply_filter_options_schema": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Apply Filter Options Schema"
-          }
-        },
-        "type": "object",
-        "required": [
-          "description",
-          "supports_decide",
-          "supports_apply",
-          "instance_schema",
-          "context_schema",
-          "flag_instances_options_schema",
-          "get_contexts_options_schema",
-          "decide_instances_options_schema",
-          "apply_filter_options_schema"
-        ],
-        "title": "SchemaInfo"
-      },
       "SepPriority": {
         "type": "integer",
         "enum": [
@@ -4928,28 +4509,7 @@
         "title": "SourceWork",
         "description": "Pydantic schema for a source work.\n\nAttributes:\n    source_work_id: UUID id of source work in db.\n    source_work_title: Title of the source work.\n    source_work_description: Optional description of the source work."
       },
-      "SourceWorkData-Input": {
-        "properties": {
-          "sourceWork": {
-            "$ref": "#/components/schemas/SourceWork"
-          },
-          "novels": {
-            "items": {
-              "$ref": "#/components/schemas/Novel"
-            },
-            "type": "array",
-            "title": "Novels"
-          }
-        },
-        "type": "object",
-        "required": [
-          "sourceWork",
-          "novels"
-        ],
-        "title": "SourceWorkData",
-        "description": "Pydantic schema to represent a source work and all its associated novels.\n\nAttributes:\n    source_work: The source work metadata.\n    novels: A list of novels associated with this source work."
-      },
-      "SourceWorkData-Output": {
+      "SourceWorkData": {
         "properties": {
           "sourceWork": {
             "$ref": "#/components/schemas/SourceWork"

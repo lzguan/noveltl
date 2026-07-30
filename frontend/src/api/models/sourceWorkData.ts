@@ -14,7 +14,7 @@ import type { SourceWork } from './sourceWork';
  *     source_work: The source work metadata.
  *     novels: A list of novels associated with this source work.
  */
-export interface SourceWorkDataOutput {
+export interface SourceWorkData {
   novels: Novel[];
   sourceWork: SourceWork;
 }

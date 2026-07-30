@@ -6,7 +6,7 @@
  */
 import type { AutoLabelMeta } from './autoLabelMeta';
 
-export interface AutoLabelMetaWithCidOutput {
+export interface AutoLabelMetaWithCid {
   autoLabelMeta: AutoLabelMeta;
   chapterId: string;
 }

@@ -1,3 +1,5 @@
+import builtins
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, assert_never, cast
@@ -16,12 +18,17 @@ from src.filters.data_types import (
     TextSpanData,
 )
 from src.filters.functions import (
+    Add,
     And,
     Call,
+    Ceil,
     Compare,
+    Concat,
     Construct,
+    Contains,
     EndOf,
     Extend,
+    Floor,
     FunctionType,
     Get,
     LengthOf,
@@ -29,15 +36,20 @@ from src.filters.functions import (
     LiteralFloat,
     LiteralInt,
     LiteralString,
+    Maximum,
+    Minimum,
     Not,
     Or,
     ProjectToSpan,
     Rename,
+    Round,
     ScoreOf,
     Signature,
     StartOf,
+    Subtract,
     TextAround,
     TextOf,
+    ToFloat,
     WordOf,
 )
 
@@ -107,6 +119,100 @@ class PythonCompiler:
                 return BoolData(value=_compare_values(left.value, right.value, function.op))
 
             executable = compare
+
+        elif isinstance(function, Add):
+
+            def add(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                if function.type == "int":
+                    result = cast(IntData, arguments[0]).value
+                    for argument in arguments[1:]:
+                        result += cast(IntData, argument).value
+                    return IntData(value=result)
+                result = cast(FloatData, arguments[0]).value
+                for argument in arguments[1:]:
+                    result += cast(FloatData, argument).value
+                return FloatData(value=result)
+
+            executable = add
+
+        elif isinstance(function, Subtract):
+
+            def subtract(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                if function.type == "int":
+                    left = cast(IntData, arguments[0])
+                    right = cast(IntData, arguments[1])
+                    return IntData(value=left.value - right.value)
+                left = cast(FloatData, arguments[0])
+                right = cast(FloatData, arguments[1])
+                return FloatData(value=left.value - right.value)
+
+            executable = subtract
+
+        elif isinstance(function, Maximum):
+
+            def maximum(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                if function.type == "int":
+                    return IntData(value=builtins.max(cast(IntData, argument).value for argument in arguments))
+                return FloatData(value=builtins.max(cast(FloatData, argument).value for argument in arguments))
+
+            executable = maximum
+
+        elif isinstance(function, Minimum):
+
+            def minimum(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                if function.type == "int":
+                    return IntData(value=builtins.min(cast(IntData, argument).value for argument in arguments))
+                return FloatData(value=builtins.min(cast(FloatData, argument).value for argument in arguments))
+
+            executable = minimum
+
+        elif isinstance(function, Concat):
+
+            def concat(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                return StringData(value="".join(cast(StringData, argument).value for argument in arguments))
+
+            executable = concat
+
+        elif isinstance(function, Contains):
+
+            def contains(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                haystack = cast(StringData, arguments[0])
+                needle = cast(StringData, arguments[1])
+                return BoolData(value=needle.value in haystack.value)
+
+            executable = contains
+
+        elif isinstance(function, ToFloat):
+
+            def to_float(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(IntData, arguments[0])
+                return FloatData(value=builtins.float(data.value))
+
+            executable = to_float
+
+        elif isinstance(function, Floor):
+
+            def floor(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(FloatData, arguments[0])
+                return IntData(value=math.floor(data.value))
+
+            executable = floor
+
+        elif isinstance(function, Ceil):
+
+            def ceil(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(FloatData, arguments[0])
+                return IntData(value=math.ceil(data.value))
+
+            executable = ceil
+
+        elif isinstance(function, Round):
+
+            def round_fn(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(FloatData, arguments[0])
+                return IntData(value=builtins.round(data.value))
+
+            executable = round_fn
 
         elif isinstance(function, Not):
 

@@ -1,6 +1,6 @@
 # Filter functions
 
-**Last updated:** 2026-07-28
+**Last updated:** 2026-07-30
 
 Filter functions are persisted descriptions of safe computations. They form a
 closed, discriminated abstract syntax tree (AST): each node has a `name` tag,
@@ -47,13 +47,26 @@ signature to participate in structural compatibility checks.
 | Node | Behavior |
 | --- | --- |
 | `compare` | Compare two strings, integers, floats, or booleans |
+| `add` | Add one or more integers or floats |
+| `subtract` | Subtract two integers or two floats |
+| `max` | Return the largest of one or more integers or floats |
+| `min` | Return the smallest of one or more integers or floats |
+| `concat` | Concatenate one or more strings in argument order |
+| `contains` | Test whether the second string occurs verbatim in the first |
+| `float` | Convert an integer to a float |
+| `floor` | Round a float down to an integer |
+| `ceil` | Round a float up to an integer |
+| `round` | Round a float to the nearest integer, with ties to even |
 | `and` | Require all boolean arguments to be true |
 | `or` | Require at least one boolean argument to be true |
 | `not` | Negate one boolean |
 
 Comparisons support `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Boolean values
 support only equality and inequality. `and` and `or` require at least one
-argument.
+argument. `add`, `max`, `min`, and `concat` declare their arity with `num`, from
+one through 256 arguments. Numeric operations declare either `int` or `float`
+and do not perform implicit promotion. Float addition evaluates left-to-right.
+`contains` is case-sensitive and treats an empty needle as a match.
 
 ### References and text
 

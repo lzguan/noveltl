@@ -34,6 +34,7 @@ MAX_LITERAL_STRING_LENGTH = 10_000
 MAX_RENAME_PAIRS = 128
 
 type ResourceName = Literal["chapter_content_text", "label"]
+type NumericTypeName = Literal["int", "float"]
 
 
 class Signature(Model):
@@ -190,6 +191,118 @@ class Compare(Function):
             args=(field, field),
             output=BoolField(mutable=False),
         )
+
+
+def binary_numeric_signature(type_name: NumericTypeName) -> Signature:
+    field = discriminate_type(type_name)
+    return Signature(args=(field, field), output=field)
+
+
+def variadic_numeric_signature(type_name: NumericTypeName, num: int) -> Signature:
+    field = discriminate_type(type_name)
+    return Signature(args=tuple(field for _ in range(num)), output=field)
+
+
+class Add(Function):
+    name: Literal["add"] = "add"
+    type: NumericTypeName
+    num: IntegerValue = Field(ge=1, le=MAX_FUNCTION_ARITY)
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return variadic_numeric_signature(self.type, self.num)
+
+
+class Subtract(Function):
+    name: Literal["subtract"] = "subtract"
+    type: NumericTypeName
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return binary_numeric_signature(self.type)
+
+
+class Maximum(Function):
+    name: Literal["max"] = "max"
+    type: NumericTypeName
+    num: IntegerValue = Field(ge=1, le=MAX_FUNCTION_ARITY)
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return variadic_numeric_signature(self.type, self.num)
+
+
+class Minimum(Function):
+    name: Literal["min"] = "min"
+    type: NumericTypeName
+    num: IntegerValue = Field(ge=1, le=MAX_FUNCTION_ARITY)
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return variadic_numeric_signature(self.type, self.num)
+
+
+class Concat(Function):
+    name: Literal["concat"] = "concat"
+    num: IntegerValue = Field(ge=1, le=MAX_FUNCTION_ARITY)
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        field = StringField()
+        return Signature(args=tuple(field for _ in range(self.num)), output=field)
+
+
+class Contains(Function):
+    name: Literal["contains"] = "contains"
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(
+            args=(StringField(), StringField()),
+            output=BoolField(),
+        )
+
+
+class ToFloat(Function):
+    name: Literal["float"] = "float"
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(args=(IntField(),), output=FloatField())
+
+
+class Floor(Function):
+    name: Literal["floor"] = "floor"
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(args=(FloatField(),), output=IntField())
+
+
+class Ceil(Function):
+    name: Literal["ceil"] = "ceil"
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(args=(FloatField(),), output=IntField())
+
+
+class Round(Function):
+    name: Literal["round"] = "round"
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(args=(FloatField(),), output=IntField())
 
 
 class ProjectToSpan(Function):
@@ -535,6 +648,16 @@ type FunctionType = Annotated[
     | LiteralBool
     | Get
     | Compare
+    | Add
+    | Subtract
+    | Maximum
+    | Minimum
+    | Concat
+    | Contains
+    | ToFloat
+    | Floor
+    | Ceil
+    | Round
     | ProjectToSpan
     | WordOf
     | ScoreOf

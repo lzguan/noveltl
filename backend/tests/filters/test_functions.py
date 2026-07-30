@@ -6,18 +6,28 @@ from src.filters.functions import (
     MAX_FUNCTION_ARITY,
     MAX_LITERAL_STRING_LENGTH,
     MAX_RENAME_PAIRS,
+    Add,
     And,
     Call,
+    Ceil,
     Compare,
+    Concat,
     Construct,
+    Contains,
     Extend,
+    Floor,
     FunctionType,
     Get,
     LiteralBool,
     LiteralFloat,
     LiteralString,
+    Maximum,
+    Minimum,
     ProjectToSpan,
     Rename,
+    Round,
+    Subtract,
+    ToFloat,
 )
 
 
@@ -77,6 +87,50 @@ def test_compare_signature_and_boolean_operator_validation() -> None:
 
     with pytest.raises(ValidationError, match="Boolean comparisons"):
         Compare(type="bool", op="lt")
+
+
+@pytest.mark.parametrize("function_type", ["int", "float"])
+def test_numeric_signatures(function_type: str) -> None:
+    field = IntField() if function_type == "int" else FloatField()
+
+    for function in (
+        Add.model_validate({"type": function_type, "num": 3}),
+        Maximum.model_validate({"type": function_type, "num": 3}),
+        Minimum.model_validate({"type": function_type, "num": 3}),
+    ):
+        assert function.signature.args == (field, field, field)
+        assert function.signature.output == field
+
+    assert Subtract.model_validate({"type": function_type}).signature.args == (field, field)
+
+
+@pytest.mark.parametrize("function", [Add, Maximum, Minimum, Concat])
+def test_variadic_functions_validate_arity(function: type[Add | Maximum | Minimum | Concat]) -> None:
+    values: dict[str, object] = {"num": 1}
+    if function is not Concat:
+        values["type"] = "int"
+    assert len(function.model_validate(values).signature.args) == 1
+
+    with pytest.raises(ValidationError):
+        function.model_validate({**values, "num": 0})
+
+    with pytest.raises(ValidationError):
+        function.model_validate({**values, "num": MAX_FUNCTION_ARITY + 1})
+
+
+def test_string_and_numeric_conversion_signatures() -> None:
+    string = StringField()
+
+    assert Concat(num=3).signature.args == (string, string, string)
+    assert Concat(num=3).signature.output == string
+    assert Contains().signature.args == (string, string)
+    assert Contains().signature.output == BoolField()
+    assert ToFloat().signature.args == (IntField(),)
+    assert ToFloat().signature.output == FloatField()
+
+    for function in (Floor(), Ceil(), Round()):
+        assert function.signature.args == (FloatField(),)
+        assert function.signature.output == IntField()
 
 
 def test_project_to_span_signature() -> None:

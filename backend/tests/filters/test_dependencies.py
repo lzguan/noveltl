@@ -1,14 +1,24 @@
 from src.filters.data_types import LabelRefField, Schema, TextSpanField
 from src.filters.dependencies import ResolvedResourceDependency, resolve_dependencies
 from src.filters.functions import (
+    Add,
     Call,
+    Ceil,
+    Concat,
     Construct,
+    Contains,
+    Floor,
     Get,
+    Maximum,
+    Minimum,
     ProjectToSpan,
     ResourceDependency,
+    Round,
     ScoreOf,
+    Subtract,
     TextAround,
     TextOf,
+    ToFloat,
     WordOf,
 )
 
@@ -56,6 +66,22 @@ def test_resolve_direct_elementary_argument_dependency() -> None:
             key_path=(),
         ),
     )
+
+
+def test_pure_scalar_functions_have_no_resource_dependencies() -> None:
+    for function in (
+        Add(type="int", num=3),
+        Subtract(type="float"),
+        Maximum(type="int", num=3),
+        Minimum(type="float", num=3),
+        Concat(num=3),
+        Contains(),
+        ToFloat(),
+        Floor(),
+        Ceil(),
+        Round(),
+    ):
+        assert resolve_dependencies(function) == ()
 
 
 def test_resolve_dependency_through_call_and_projection() -> None:

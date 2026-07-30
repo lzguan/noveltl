@@ -24,12 +24,17 @@ from dataclasses import dataclass
 
 from src.filters.data_types import FieldName, Schema, SchemaField
 from src.filters.functions import (
+    Add,
     And,
     Call,
+    Ceil,
     Compare,
+    Concat,
     Construct,
+    Contains,
     EndOf,
     Extend,
+    Floor,
     Function,
     FunctionType,
     Get,
@@ -38,16 +43,21 @@ from src.filters.functions import (
     LiteralFloat,
     LiteralInt,
     LiteralString,
+    Maximum,
+    Minimum,
     Not,
     Or,
     ProjectToSpan,
     Rename,
     ResourceDependency,
     ResourceName,
+    Round,
     ScoreOf,
     StartOf,
+    Subtract,
     TextAround,
     TextOf,
+    ToFloat,
     WordOf,
 )
 
@@ -180,7 +190,27 @@ def evaluate(
 
     if isinstance(
         function,
-        Compare | And | Or | Not | StartOf | EndOf | LengthOf | TextOf | TextAround | WordOf | ScoreOf,
+        Compare
+        | Add
+        | Subtract
+        | Maximum
+        | Minimum
+        | Concat
+        | Contains
+        | ToFloat
+        | Floor
+        | Ceil
+        | Round
+        | And
+        | Or
+        | Not
+        | StartOf
+        | EndOf
+        | LengthOf
+        | TextOf
+        | TextAround
+        | WordOf
+        | ScoreOf,
     ):
         return SymbolicScalar(origins=frozenset())
 

@@ -9,6 +9,7 @@ from src.auth.models import User
 from src.database import get_db
 from src.exceptions import DataTooLongException, NotFoundException
 from src.labels.exceptions import (
+    LabelConcurrentModificationException,
     LabelDataNotFoundException,
     LabelDataRevisionDuplicateException,
     LabelExclusionViolationInvalidOperationException,
@@ -281,7 +282,7 @@ def create_label_data(
         },
         409: {
             "model": RequestConflictErrorResponse,
-            "description": "Label stream conflict, such as word mismatch, overlap violation, or request-key conflict.",
+            "description": "Label stream conflict, such as a concurrent update, overlap violation, or request-key conflict.",
         },
     },
 )
@@ -298,7 +299,7 @@ def update_label_data_stream(
 
     Raises:
         404: Label data or its underlying revision text not found, or target label does not exist.
-        409: Word mismatch or label overlap detected.
+        409: Concurrent modification or label overlap detected.
         400: Operation positions out of bounds or invalid operation.
     """
     try:
@@ -317,6 +318,11 @@ def update_label_data_stream(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Label overlap detected. Operations violate exclusion constraints.",
+        ) from e
+    except LabelConcurrentModificationException as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The label was modified concurrently. Refresh it and retry the operation.",
         ) from e
     except LabelOutOfBoundsInvalidOperationException as e:
         raise HTTPException(

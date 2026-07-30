@@ -154,9 +154,10 @@ def test_if_parses_and_round_trips_with_elementary_schemas() -> None:
     assert isinstance(parsed, If)
     assert parsed.signature.args == (BoolField(),)
     assert parsed.signature.output == BoolField()
-    assert TypeAdapter(FunctionType).validate_python(
-        parsed.model_dump(exclude_computed_fields=True, by_alias=True)
-    ) == parsed
+    assert (
+        TypeAdapter(FunctionType).validate_python(parsed.model_dump(exclude_computed_fields=True, by_alias=True))
+        == parsed
+    )
 
 
 def test_if_signature_supports_record_schemas() -> None:
@@ -191,9 +192,7 @@ def test_if_signature_supports_record_schemas() -> None:
 def test_if_rejects_invalid_conditions(condition: object, message: str) -> None:
     input_schema = Schema(
         fields={
-            "value": BoolField(mutable=True)
-            if isinstance(condition, Get) and condition.type == "bool"
-            else IntField()
+            "value": BoolField(mutable=True) if isinstance(condition, Get) and condition.type == "bool" else IntField()
         }
     )
 

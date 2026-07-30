@@ -35,3 +35,7 @@ class LabelNotExistsInvalidOperationException(LabelInvalidOperationException):
 
 class LabelExclusionViolationInvalidOperationException(LabelInvalidOperationException):
     pass
+
+
+class LabelConcurrentModificationException(LabelInvalidOperationException):
+    pass

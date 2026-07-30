@@ -1975,7 +1975,7 @@
       },
       "patch": {
         "summary": "Update Label Data Stream",
-        "description": "Applies a stream of edit operations to labels.\n\nRaises:\n    404: Label data or its underlying revision text not found, or target label does not exist.\n    409: Word mismatch or label overlap detected.\n    400: Operation positions out of bounds or invalid operation.",
+        "description": "Applies a stream of edit operations to labels.\n\nRaises:\n    404: Label data or its underlying revision text not found, or target label does not exist.\n    409: Concurrent modification or label overlap detected.\n    400: Operation positions out of bounds or invalid operation.",
         "operationId": "update_label_data_stream_label_datas__labelDataId__patch",
         "security": [
           {
@@ -2046,7 +2046,7 @@
             }
           },
           "409": {
-            "description": "Label stream conflict, such as word mismatch, overlap violation, or request-key conflict.",
+            "description": "Label stream conflict, such as a concurrent update, overlap violation, or request-key conflict.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2905,21 +2905,6 @@
     "schemas": {
       "AddLabelOp": {
         "properties": {
-          "startPos": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Startpos"
-          },
-          "endPos": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Endpos"
-          },
-          "word": {
-            "type": "string",
-            "maxLength": 128,
-            "title": "Word"
-          },
           "op": {
             "type": "string",
             "const": "add",
@@ -2948,17 +2933,26 @@
             "minimum": 0.0,
             "title": "Score",
             "default": 1.0
+          },
+          "startPos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Startpos"
+          },
+          "endPos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Endpos"
           }
         },
         "type": "object",
         "required": [
+          "op",
           "startPos",
-          "endPos",
-          "word",
-          "op"
+          "endPos"
         ],
         "title": "AddLabelOp",
-        "description": "Pydantic schema for a label add operation. Inherits all attributes from LabelOpBase.\n\nAttributes:\n    op: The string literal 'add'.\n    dirty: Boolean whether to mark the label as dirty.\n    entity_group: String representing what entity group this label belongs to. If none, then set a default value.\n    score: Float score between 0.0 and 1.0 representing how likely this label is to be an entity."
+        "description": "Pydantic schema for a label add operation. Adds a new label to the label data with the given parameters.\n\nAttributes:\n    op: The string literal 'add'.\n    dirty: Boolean whether to mark the label as dirty.\n    entity_group: Optional entity group assigned to the label.\n    score: Float score between 0.0 and 1.0 representing how likely this label is to be an entity.\n    start_pos: Inclusive start position in the chapter text.\n    end_pos: Exclusive end position in the chapter text."
       },
       "AutoLabel": {
         "properties": {
@@ -3841,36 +3835,24 @@
       },
       "DeleteLabelOp": {
         "properties": {
-          "startPos": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Startpos"
-          },
-          "endPos": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Endpos"
-          },
-          "word": {
-            "type": "string",
-            "maxLength": 128,
-            "title": "Word"
-          },
           "op": {
             "type": "string",
             "const": "delete",
             "title": "Op"
+          },
+          "labelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Labelid"
           }
         },
         "type": "object",
         "required": [
-          "startPos",
-          "endPos",
-          "word",
-          "op"
+          "op",
+          "labelId"
         ],
         "title": "DeleteLabelOp",
-        "description": "Pydantic schema for a label delete operation. Inherits all attributes from LabelOpBase.\n\nAttributes:\n    op: The string literal 'delete'."
+        "description": "Pydantic schema for a label delete operation. Deletes the label with label_id.\n\nAttributes:\n    op: The string literal 'delete'.\n    label_id: ID of the label to delete."
       },
       "DeleteUserStatus": {
         "properties": {
@@ -4214,6 +4196,27 @@
         ],
         "title": "LabelGroupWithRole",
         "description": "Pydantic schema for a label group with a user's role in that label group.\n\nAttributes:\n    label_group: LabelGroup object.\n    role: Role of the user in this label group."
+      },
+      "LabelOp": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AddLabelOp"
+          },
+          {
+            "$ref": "#/components/schemas/DeleteLabelOp"
+          },
+          {
+            "$ref": "#/components/schemas/UpdateLabelOp"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "op",
+          "mapping": {
+            "add": "#/components/schemas/AddLabelOp",
+            "delete": "#/components/schemas/DeleteLabelOp",
+            "update": "#/components/schemas/UpdateLabelOp"
+          }
+        }
       },
       "LabelRole": {
         "type": "string",
@@ -4618,25 +4621,7 @@
         "properties": {
           "ops": {
             "items": {
-              "oneOf": [
-                {
-                  "$ref": "#/components/schemas/AddLabelOp"
-                },
-                {
-                  "$ref": "#/components/schemas/DeleteLabelOp"
-                },
-                {
-                  "$ref": "#/components/schemas/UpdateLabelOp"
-                }
-              ],
-              "discriminator": {
-                "propertyName": "op",
-                "mapping": {
-                  "add": "#/components/schemas/AddLabelOp",
-                  "delete": "#/components/schemas/DeleteLabelOp",
-                  "update": "#/components/schemas/UpdateLabelOp"
-                }
-              }
+              "$ref": "#/components/schemas/LabelOp"
             },
             "type": "array",
             "title": "Ops"
@@ -4647,7 +4632,7 @@
           "ops"
         ],
         "title": "UpdateLabelDataStream",
-        "description": "Pydantic schema for a buffered stream of label operations.\n\nAttributes:\n    ops: A list of label operations."
+        "description": "Pydantic schema for an atomic stream of label operations.\n\nAttributes:\n    ops: A list of label operations."
       },
       "UpdateLabelGroup": {
         "properties": {
@@ -4666,27 +4651,12 @@
       },
       "UpdateLabelOp": {
         "properties": {
-          "startPos": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Startpos"
-          },
-          "endPos": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Endpos"
-          },
-          "word": {
-            "type": "string",
-            "maxLength": 128,
-            "title": "Word"
-          },
           "op": {
             "type": "string",
             "const": "update",
             "title": "Op"
           },
-          "newStartPos": {
+          "startPos": {
             "anyOf": [
               {
                 "type": "integer",
@@ -4696,9 +4666,9 @@
                 "type": "null"
               }
             ],
-            "title": "Newstartpos"
+            "title": "Startpos"
           },
-          "newEndPos": {
+          "endPos": {
             "anyOf": [
               {
                 "type": "integer",
@@ -4708,19 +4678,7 @@
                 "type": "null"
               }
             ],
-            "title": "Newendpos"
-          },
-          "newWord": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 128
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Newword"
+            "title": "Endpos"
           },
           "dirty": {
             "anyOf": [
@@ -4757,17 +4715,20 @@
               }
             ],
             "title": "Score"
+          },
+          "labelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Labelid"
           }
         },
         "type": "object",
         "required": [
-          "startPos",
-          "endPos",
-          "word",
-          "op"
+          "op",
+          "labelId"
         ],
         "title": "UpdateLabelOp",
-        "description": "Pydantic schema for a label update operation. Inherits all attributes from LabelOpBase.\n\nAttributes:\n    op: The string literal 'update'.\n    new_start_pos: Optional parameter. The new start position of the label.\n    new_end_pos: Optional parameter. The new end position of the label.\n    new_word: Optional parameter. The new word the label is labelling. Must satisfy `new_word == chapter_text[new_start_pos : new_end_pos]`.\n    dirty: Optional parameter. Value to change the current label's dirty value to.\n    entity_group: Optional parameter. New entity group for this label.\n    score: Optional parameter. New score for the entity."
+        "description": "Pydantic schema for a label update operation. Partial updates performed on label with label_id.\n\nAttributes:\n    op: The string literal 'update'.\n    label_id: ID of the label to update.\n    start_pos: Optional parameter. The new start position of the label.\n    end_pos: Optional parameter. The new end position of the label.\n    dirty: Optional parameter. Value to change the current label's dirty value to.\n    entity_group: Optional parameter. New entity group for this label.\n    score: Optional parameter. New score for the entity."
       },
       "UpdateNovel": {
         "properties": {

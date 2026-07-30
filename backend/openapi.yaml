@@ -1,12 +1,13 @@
 components:
   schemas:
     AddLabelOp:
-      description: "Pydantic schema for a label add operation. Inherits all attributes\
-        \ from LabelOpBase.\n\nAttributes:\n    op: The string literal 'add'.\n  \
-        \  dirty: Boolean whether to mark the label as dirty.\n    entity_group: String\
-        \ representing what entity group this label belongs to. If none, then set\
-        \ a default value.\n    score: Float score between 0.0 and 1.0 representing\
-        \ how likely this label is to be an entity."
+      description: "Pydantic schema for a label add operation. Adds a new label to\
+        \ the label data with the given parameters.\n\nAttributes:\n    op: The string\
+        \ literal 'add'.\n    dirty: Boolean whether to mark the label as dirty.\n\
+        \    entity_group: Optional entity group assigned to the label.\n    score:\
+        \ Float score between 0.0 and 1.0 representing how likely this label is to\
+        \ be an entity.\n    start_pos: Inclusive start position in the chapter text.\n\
+        \    end_pos: Exclusive end position in the chapter text."
       properties:
         dirty:
           default: true
@@ -36,15 +37,10 @@ components:
           minimum: 0.0
           title: Startpos
           type: integer
-        word:
-          maxLength: 128
-          title: Word
-          type: string
       required:
+      - op
       - startPos
       - endPos
-      - word
-      - op
       title: AddLabelOp
       type: object
     AutoLabel:
@@ -704,30 +700,21 @@ components:
       title: CreateUser
       type: object
     DeleteLabelOp:
-      description: "Pydantic schema for a label delete operation. Inherits all attributes\
-        \ from LabelOpBase.\n\nAttributes:\n    op: The string literal 'delete'."
+      description: "Pydantic schema for a label delete operation. Deletes the label\
+        \ with label_id.\n\nAttributes:\n    op: The string literal 'delete'.\n  \
+        \  label_id: ID of the label to delete."
       properties:
-        endPos:
-          minimum: 0.0
-          title: Endpos
-          type: integer
+        labelId:
+          format: uuid
+          title: Labelid
+          type: string
         op:
           const: delete
           title: Op
           type: string
-        startPos:
-          minimum: 0.0
-          title: Startpos
-          type: integer
-        word:
-          maxLength: 128
-          title: Word
-          type: string
       required:
-      - startPos
-      - endPos
-      - word
       - op
+      - labelId
       title: DeleteLabelOp
       type: object
     DeleteUserStatus:
@@ -1011,6 +998,17 @@ components:
       - role
       title: LabelGroupWithRole
       type: object
+    LabelOp:
+      discriminator:
+        mapping:
+          add: '#/components/schemas/AddLabelOp'
+          delete: '#/components/schemas/DeleteLabelOp'
+          update: '#/components/schemas/UpdateLabelOp'
+        propertyName: op
+      oneOf:
+      - $ref: '#/components/schemas/AddLabelOp'
+      - $ref: '#/components/schemas/DeleteLabelOp'
+      - $ref: '#/components/schemas/UpdateLabelOp'
     LabelRole:
       enum:
       - owner
@@ -1332,21 +1330,12 @@ components:
       title: UpdateChapterContent
       type: object
     UpdateLabelDataStream:
-      description: "Pydantic schema for a buffered stream of label operations.\n\n\
+      description: "Pydantic schema for an atomic stream of label operations.\n\n\
         Attributes:\n    ops: A list of label operations."
       properties:
         ops:
           items:
-            discriminator:
-              mapping:
-                add: '#/components/schemas/AddLabelOp'
-                delete: '#/components/schemas/DeleteLabelOp'
-                update: '#/components/schemas/UpdateLabelOp'
-              propertyName: op
-            oneOf:
-            - $ref: '#/components/schemas/AddLabelOp'
-            - $ref: '#/components/schemas/DeleteLabelOp'
-            - $ref: '#/components/schemas/UpdateLabelOp'
+            $ref: '#/components/schemas/LabelOp'
           title: Ops
           type: array
       required:
@@ -1366,15 +1355,14 @@ components:
       title: UpdateLabelGroup
       type: object
     UpdateLabelOp:
-      description: "Pydantic schema for a label update operation. Inherits all attributes\
-        \ from LabelOpBase.\n\nAttributes:\n    op: The string literal 'update'.\n\
-        \    new_start_pos: Optional parameter. The new start position of the label.\n\
-        \    new_end_pos: Optional parameter. The new end position of the label.\n\
-        \    new_word: Optional parameter. The new word the label is labelling. Must\
-        \ satisfy `new_word == chapter_text[new_start_pos : new_end_pos]`.\n    dirty:\
-        \ Optional parameter. Value to change the current label's dirty value to.\n\
-        \    entity_group: Optional parameter. New entity group for this label.\n\
-        \    score: Optional parameter. New score for the entity."
+      description: "Pydantic schema for a label update operation. Partial updates\
+        \ performed on label with label_id.\n\nAttributes:\n    op: The string literal\
+        \ 'update'.\n    label_id: ID of the label to update.\n    start_pos: Optional\
+        \ parameter. The new start position of the label.\n    end_pos: Optional parameter.\
+        \ The new end position of the label.\n    dirty: Optional parameter. Value\
+        \ to change the current label's dirty value to.\n    entity_group: Optional\
+        \ parameter. New entity group for this label.\n    score: Optional parameter.\
+        \ New score for the entity."
       properties:
         dirty:
           anyOf:
@@ -1382,33 +1370,21 @@ components:
           - type: 'null'
           title: Dirty
         endPos:
-          minimum: 0.0
+          anyOf:
+          - minimum: 0.0
+            type: integer
+          - type: 'null'
           title: Endpos
-          type: integer
         entityGroup:
           anyOf:
           - maxLength: 64
             type: string
           - type: 'null'
           title: Entitygroup
-        newEndPos:
-          anyOf:
-          - minimum: 0.0
-            type: integer
-          - type: 'null'
-          title: Newendpos
-        newStartPos:
-          anyOf:
-          - minimum: 0.0
-            type: integer
-          - type: 'null'
-          title: Newstartpos
-        newWord:
-          anyOf:
-          - maxLength: 128
-            type: string
-          - type: 'null'
-          title: Newword
+        labelId:
+          format: uuid
+          title: Labelid
+          type: string
         op:
           const: update
           title: Op
@@ -1421,18 +1397,14 @@ components:
           - type: 'null'
           title: Score
         startPos:
-          minimum: 0.0
+          anyOf:
+          - minimum: 0.0
+            type: integer
+          - type: 'null'
           title: Startpos
-          type: integer
-        word:
-          maxLength: 128
-          title: Word
-          type: string
       required:
-      - startPos
-      - endPos
-      - word
       - op
+      - labelId
       title: UpdateLabelOp
       type: object
     UpdateNovel:
@@ -2368,8 +2340,8 @@ paths:
     patch:
       description: "Applies a stream of edit operations to labels.\n\nRaises:\n  \
         \  404: Label data or its underlying revision text not found, or target label\
-        \ does not exist.\n    409: Word mismatch or label overlap detected.\n   \
-        \ 400: Operation positions out of bounds or invalid operation."
+        \ does not exist.\n    409: Concurrent modification or label overlap detected.\n\
+        \    400: Operation positions out of bounds or invalid operation."
       operationId: update_label_data_stream_label_datas__labelDataId__patch
       parameters:
       - in: path
@@ -2415,8 +2387,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RequestConflictErrorResponse'
-          description: Label stream conflict, such as word mismatch, overlap violation,
-            or request-key conflict.
+          description: Label stream conflict, such as a concurrent update, overlap
+            violation, or request-key conflict.
         '422':
           content:
             application/json:

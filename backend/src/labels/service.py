@@ -375,11 +375,11 @@ def modify_label_data_by_stream(
     Raises:
         ChapterContentNotFoundException: If the chapter content associated with the label data is not found.
         LabelOutOfBoundsInvalidOperationException: If an operation refers to positions outside the text bounds.
-        LabelWordMismatchInvalidOperationException: If the word provided in an operation does not match the text at the specified positions.
         LabelDataNotFoundException: If the LabelData does not exist or the user lacks permissions.
         LabelExclusionViolationInvalidOperationException: If an add/update operation creates an overlapping label (exclusion constraint violation).
         LabelNotExistsInvalidOperationException: If a delete operation targets a label that does not exist.
-        LabelInvalidOperationException: If an update operation is malformed (e.g. setting a new word without moving the label).
+        LabelInvalidOperationException: If an operation contains an invalid range.
+        LabelConcurrentModificationException: If an update loses an optimistic-lock race.
     """
     q = (
         select(novel_models.ChapterContent.chapter_content_text)

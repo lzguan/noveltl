@@ -90,13 +90,16 @@ context types are not implemented.
 | --- | --- |
 | `construct` | Build a new record from named elementary-output expressions |
 | `extend` | Preserve an input record and add derived fields |
+| `if` | Lazily select one of two expressions and project it to a declared output schema |
 | `rename` | Rename one or more fields simultaneously |
 | `call` | Bind a function's arguments to expressions over one input record |
 
 `construct` and `extend` require at least one derived field and reject object
 outputs for individual fields. `extend` rejects collisions with existing
 fields. `rename` rejects missing sources, duplicate sources or destinations,
-and collisions with fields that are not being renamed.
+and collisions with fields that are not being renamed. `if` validates and
+compiles both branches, evaluates only the selected branch, and conservatively
+collects dependencies from both.
 
 ## Composition example
 

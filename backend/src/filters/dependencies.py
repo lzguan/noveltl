@@ -38,6 +38,7 @@ from src.filters.functions import (
     Function,
     FunctionType,
     Get,
+    If,
     LengthOf,
     LiteralBool,
     LiteralFloat,
@@ -156,6 +157,25 @@ def evaluate(
         renamed = {pair.new_name: fields.pop(pair.old_name) for pair in function.rename_pairs}
         fields.update(renamed)
         return SymbolicObject(fields=fields)
+
+    if isinstance(function, If):
+        _require_scalar(_evaluate_in_environment(function.condition, arguments, requirements), function.condition)
+        then_branch = _evaluate_in_environment(function.then_branch, arguments, requirements)
+        else_branch = _evaluate_in_environment(function.else_branch, arguments, requirements)
+        if isinstance(function.output_schema, Schema):
+            then_obj = _require_object(then_branch, function.then_branch)
+            else_obj = _require_object(else_branch, function.else_branch)
+            return SymbolicObject(
+                fields={
+                    field_name: SymbolicScalar(
+                        origins=then_obj.fields[field_name].origins | else_obj.fields[field_name].origins
+                    )
+                    for field_name in function.output_schema.fields
+                }
+            )
+        then_scalar = _require_scalar(then_branch, function.then_branch)
+        else_scalar = _require_scalar(else_branch, function.else_branch)
+        return SymbolicScalar(origins=then_scalar.origins | else_scalar.origins)
 
     if isinstance(function, Construct):
         return SymbolicObject(

@@ -13,6 +13,8 @@ from src.filters.data_types import (
     FloatData,
     IntData,
     LabelRefData,
+    Schema,
+    SObj,
     StringData,
     TextSpan,
     TextSpanData,
@@ -31,6 +33,7 @@ from src.filters.functions import (
     Floor,
     FunctionType,
     Get,
+    If,
     LengthOf,
     LiteralBool,
     LiteralFloat,
@@ -81,6 +84,13 @@ def _evaluate_in_environment(
     if len(function.signature.args) == 0:
         return function((), ctx)
     return function(environment, ctx)
+
+
+def _project_to_schema(data: Data, schema: SObj) -> Data:
+    if not isinstance(schema, Schema):
+        return data
+    obj = cast(DataObj, data)
+    return DataObj(fields={field_name: obj.fields[field_name] for field_name in schema.fields})
 
 
 def _compare_values(left: Any, right: Any, operation: str) -> bool:
@@ -313,6 +323,21 @@ class PythonCompiler:
                 return DataObj(fields=fields)
 
             executable = rename
+        elif isinstance(function, If):
+            compiled_condition = self.compile(function.condition)
+            compiled_then_branch = self.compile(function.then_branch)
+            compiled_else_branch = self.compile(function.else_branch)
+
+            def if_function(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                condition_result = _evaluate_in_environment(compiled_condition, arguments, ctx)
+                condition_result_value = cast(BoolData, condition_result).value
+                if condition_result_value:
+                    result = _evaluate_in_environment(compiled_then_branch, arguments, ctx)
+                else:
+                    result = _evaluate_in_environment(compiled_else_branch, arguments, ctx)
+                return _project_to_schema(result, function.output_schema)
+
+            executable = if_function
 
         elif isinstance(function, Construct):
             compiled_fields = {

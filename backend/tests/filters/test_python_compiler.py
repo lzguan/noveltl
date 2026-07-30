@@ -6,6 +6,7 @@ from src.filters.compilers.python import PythonCompiler
 from src.filters.context.python import PythonExecutionContext, PythonLabelResource
 from src.filters.data_types import (
     BoolData,
+    BoolField,
     DataObj,
     FloatData,
     FloatField,
@@ -13,6 +14,7 @@ from src.filters.data_types import (
     IntField,
     LabelRef,
     LabelRefData,
+    LabelRefField,
     Schema,
     StringData,
     StringField,
@@ -31,6 +33,7 @@ from src.filters.functions import (
     Extend,
     Floor,
     Get,
+    If,
     LiteralBool,
     LiteralFloat,
     LiteralString,
@@ -42,6 +45,7 @@ from src.filters.functions import (
     Round,
     Subtract,
     ToFloat,
+    WordOf,
 )
 
 
@@ -95,9 +99,9 @@ def test_compile_binary_numeric_functions() -> None:
     assert compiler.compile(Add(type="int", num=3))(
         (IntData(value=2), IntData(value=3), IntData(value=4)), ctx
     ) == IntData(value=9)
-    assert compiler.compile(Subtract(type="float"))(
-        (FloatData(value=5.5), FloatData(value=2.0)), ctx
-    ) == FloatData(value=3.5)
+    assert compiler.compile(Subtract(type="float"))((FloatData(value=5.5), FloatData(value=2.0)), ctx) == FloatData(
+        value=3.5
+    )
     assert compiler.compile(Maximum(type="int", num=3))(
         (IntData(value=2), IntData(value=7), IntData(value=3)), ctx
     ) == IntData(value=7)
@@ -193,6 +197,94 @@ def test_compile_rename_construct_and_extend() -> None:
             "accepted": BoolData(value=False),
         }
     )
+
+
+def test_compile_if_selects_lazily_and_projects_object_output() -> None:
+    input_schema = Schema(
+        fields={
+            "condition": BoolField(),
+            "then": StringField(),
+            "else": StringField(),
+            "extra": IntField(),
+        }
+    )
+    output_schema = Schema(fields={"result": StringField()})
+
+    def branch(field_name: str) -> Construct:
+        return Construct(
+            input_schema=input_schema,
+            fields={
+                "result": Get(field_name=field_name, type="string"),
+                "extra": Get(field_name="extra", type="int"),
+            },
+        )
+
+    function = If(
+        input_schema=input_schema,
+        output_schema=output_schema,
+        condition=Get(field_name="condition", type="bool"),
+        then_branch=branch("then"),
+        else_branch=branch("else"),
+    )
+    compiled = PythonCompiler().compile(function)
+
+    def data(condition: bool) -> DataObj:
+        return DataObj(
+            fields={
+                "condition": BoolData(value=condition),
+                "then": StringData(value="then"),
+                "else": StringData(value="else"),
+                "extra": IntData(value=1),
+            }
+        )
+
+    assert compiled((data(True),), ctx) == DataObj(fields={"result": StringData(value="then")})
+    assert compiled((data(False),), ctx) == DataObj(fields={"result": StringData(value="else")})
+
+
+def test_compile_if_does_not_evaluate_unselected_branch() -> None:
+    input_schema = Schema(
+        fields={
+            "condition": BoolField(),
+            "label": LabelRefField(),
+            "fallback": StringField(),
+        }
+    )
+    label = LabelRefData(
+        value=LabelRef(
+            chapter_id=uuid.uuid4(),
+            chapter_content_id=uuid.uuid4(),
+            label_id=uuid.uuid4(),
+            label_data_id=uuid.uuid4(),
+            label_group_id=uuid.uuid4(),
+        )
+    )
+    function = If(
+        input_schema=input_schema,
+        output_schema=StringField(),
+        condition=Get(field_name="condition", type="bool"),
+        then_branch=Call(
+            input_schema=input_schema,
+            function=WordOf(),
+            arguments=(Get(field_name="label", type="labelRef"),),
+        ),
+        else_branch=Get(field_name="fallback", type="string"),
+    )
+
+    result = PythonCompiler().compile(function)(
+        (
+            DataObj(
+                fields={
+                    "condition": BoolData(value=False),
+                    "label": label,
+                    "fallback": StringData(value="fallback"),
+                }
+            ),
+        ),
+        ctx,
+    )
+
+    assert result == StringData(value="fallback")
 
 
 def test_project_to_span_drops_label_only_fields() -> None:

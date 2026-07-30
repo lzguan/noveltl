@@ -528,6 +528,45 @@ def output_when_called_on(function: Function, input_schema: Schema) -> SObj:
     return signature.output
 
 
+class If(Function):
+    name: Literal["if"] = "if"
+    input_schema: SObj
+    output_schema: SObj
+    condition: FunctionType
+    then_branch: FunctionType
+    else_branch: FunctionType
+
+    @model_validator(mode="after")
+    def validate_branches(self) -> If:
+        if self.condition.signature.output != BoolField(mutable=False):
+            raise ValueError("Condition function must return a boolean value.")
+        if len(self.condition.signature.args) != 1:
+            raise ValueError("Condition function must accept exactly one argument.")
+        if len(self.then_branch.signature.args) != 1:
+            raise ValueError("Then branch function must accept exactly one argument.")
+        if len(self.else_branch.signature.args) != 1:
+            raise ValueError("Else branch function must accept exactly one argument.")
+        if not extends(self.input_schema, self.condition.signature.args[0]):
+            raise ValueError("Condition function cannot consume the provided input schema.")
+        if not extends(self.input_schema, self.then_branch.signature.args[0]):
+            raise ValueError("Then branch function cannot consume the provided input schema.")
+        if not extends(self.input_schema, self.else_branch.signature.args[0]):
+            raise ValueError("Else branch function cannot consume the provided input schema.")
+        if not extends(self.then_branch.signature.output, self.output_schema):
+            raise ValueError("Then branch output is incompatible with the declared output schema.")
+        if not extends(self.else_branch.signature.output, self.output_schema):
+            raise ValueError("Else branch output is incompatible with the declared output schema.")
+        return self
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(
+            args=(self.input_schema,),
+            output=self.output_schema,
+        )
+
+
 class Construct(Function):
     """
     Build an object by evaluating several elementary-output functions against
@@ -666,6 +705,7 @@ type FunctionType = Annotated[
     | Or
     | Not
     | Construct
+    | If
     | Extend
     | Call
     | StartOf
@@ -679,5 +719,6 @@ type FunctionType = Annotated[
 Construct.model_rebuild()
 Extend.model_rebuild()
 Call.model_rebuild()
+If.model_rebuild()
 
 function_adapter = TypeAdapter[FunctionType](FunctionType)

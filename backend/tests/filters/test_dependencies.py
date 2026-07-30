@@ -1,4 +1,4 @@
-from src.filters.data_types import LabelRefField, Schema, TextSpanField
+from src.filters.data_types import BoolField, LabelRefField, Schema, TextSpanField
 from src.filters.dependencies import ResolvedResourceDependency, resolve_dependencies
 from src.filters.functions import (
     Add,
@@ -9,6 +9,7 @@ from src.filters.functions import (
     Contains,
     Floor,
     Get,
+    If,
     Maximum,
     Minimum,
     ProjectToSpan,
@@ -107,6 +108,41 @@ def test_resolve_dependency_through_call_and_projection() -> None:
             resource="label",
             argument_index=0,
             key_path=("label",),
+        ),
+    )
+
+
+def test_if_merges_branch_origins_for_downstream_dependencies() -> None:
+    input_schema = Schema(
+        fields={
+            "condition": BoolField(),
+            "thenLabel": LabelRefField(),
+            "elseLabel": LabelRefField(),
+        }
+    )
+    choice = If(
+        input_schema=input_schema,
+        output_schema=LabelRefField(),
+        condition=Get(field_name="condition", type="bool"),
+        then_branch=Get(field_name="thenLabel", type="labelRef"),
+        else_branch=Get(field_name="elseLabel", type="labelRef"),
+    )
+    word = Call(
+        input_schema=input_schema,
+        function=WordOf(),
+        arguments=(choice,),
+    )
+
+    assert resolve_dependencies(word) == (
+        ResolvedResourceDependency(
+            resource="label",
+            argument_index=0,
+            key_path=("elseLabel",),
+        ),
+        ResolvedResourceDependency(
+            resource="label",
+            argument_index=0,
+            key_path=("thenLabel",),
         ),
     )
 

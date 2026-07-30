@@ -72,7 +72,7 @@ and do not perform implicit promotion. Float addition evaluates left-to-right.
 
 | Node | Behavior | External resource |
 | --- | --- | --- |
-| `projectToSpan` | Drop label-specific IDs and return a text span | None |
+| `projectToSpan` | Resolve current offsets and return a text span | Label row |
 | `wordOf` | Read a label's current word | Label row |
 | `scoreOf` | Read a label's current score | Label row |
 | `startOf` | Return a span's start offset | None |

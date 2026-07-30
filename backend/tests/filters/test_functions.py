@@ -18,11 +18,13 @@ from src.filters.functions import (
     Floor,
     FunctionType,
     Get,
+    If,
     LiteralBool,
     LiteralFloat,
     LiteralString,
     Maximum,
     Minimum,
+    Not,
     ProjectToSpan,
     Rename,
     Round,
@@ -135,6 +137,163 @@ def test_string_and_numeric_conversion_signatures() -> None:
 
 def test_project_to_span_signature() -> None:
     assert ProjectToSpan().signature.output == TextSpanField()
+
+
+def test_if_parses_and_round_trips_with_elementary_schemas() -> None:
+    definition = {
+        "name": "if",
+        "inputSchema": {"obj": False, "type": "bool"},
+        "outputSchema": {"obj": False, "type": "bool"},
+        "condition": {"name": "not"},
+        "thenBranch": {"name": "not"},
+        "elseBranch": {"name": "not"},
+    }
+
+    parsed = TypeAdapter(FunctionType).validate_python(definition)
+
+    assert isinstance(parsed, If)
+    assert parsed.signature.args == (BoolField(),)
+    assert parsed.signature.output == BoolField()
+    assert TypeAdapter(FunctionType).validate_python(
+        parsed.model_dump(exclude_computed_fields=True, by_alias=True)
+    ) == parsed
+
+
+def test_if_signature_supports_record_schemas() -> None:
+    input_schema = Schema(
+        fields={
+            "condition": BoolField(),
+            "then": StringField(),
+            "else": StringField(),
+        }
+    )
+    function = If(
+        input_schema=input_schema,
+        output_schema=StringField(),
+        condition=Get(field_name="condition", type="bool"),
+        then_branch=Get(field_name="then", type="string"),
+        else_branch=Get(field_name="else", type="string"),
+    )
+
+    assert function.signature.args == (input_schema,)
+    assert function.signature.output == StringField()
+
+
+@pytest.mark.parametrize(
+    ("condition", "message"),
+    [
+        (Get(field_name="value", type="int"), "return a boolean"),
+        (Get(field_name="value", type="bool", mutable=True), "return a boolean"),
+        (LiteralBool(value=True), "accept exactly one argument"),
+        (And(num=2), "accept exactly one argument"),
+    ],
+)
+def test_if_rejects_invalid_conditions(condition: object, message: str) -> None:
+    input_schema = Schema(
+        fields={
+            "value": BoolField(mutable=True)
+            if isinstance(condition, Get) and condition.type == "bool"
+            else IntField()
+        }
+    )
+
+    with pytest.raises(ValidationError, match=message):
+        If.model_validate(
+            {
+                "inputSchema": input_schema,
+                "outputSchema": IntField(),
+                "condition": condition,
+                "thenBranch": Get(field_name="value", type="int"),
+                "elseBranch": Get(field_name="value", type="int"),
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    ("then_branch", "else_branch", "message"),
+    [
+        (LiteralBool(value=True), Not(), "Then branch function must accept exactly one argument"),
+        (Not(), LiteralBool(value=True), "Else branch function must accept exactly one argument"),
+        (And(num=2), Not(), "Then branch function must accept exactly one argument"),
+        (Not(), And(num=2), "Else branch function must accept exactly one argument"),
+    ],
+)
+def test_if_rejects_non_unary_branches(
+    then_branch: object,
+    else_branch: object,
+    message: str,
+) -> None:
+    with pytest.raises(ValidationError, match=message):
+        If.model_validate(
+            {
+                "inputSchema": BoolField(),
+                "outputSchema": BoolField(),
+                "condition": Not(),
+                "thenBranch": then_branch,
+                "elseBranch": else_branch,
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    ("input_schema", "condition", "then_branch", "else_branch", "message"),
+    [
+        (IntField(), Not(), ToFloat(), ToFloat(), "Condition function cannot consume"),
+        (BoolField(), Not(), ToFloat(), Not(), "Then branch function cannot consume"),
+        (BoolField(), Not(), Not(), ToFloat(), "Else branch function cannot consume"),
+    ],
+)
+def test_if_rejects_children_incompatible_with_input(
+    input_schema: object,
+    condition: object,
+    then_branch: object,
+    else_branch: object,
+    message: str,
+) -> None:
+    with pytest.raises(ValidationError, match=message):
+        If.model_validate(
+            {
+                "inputSchema": input_schema,
+                "outputSchema": BoolField(),
+                "condition": condition,
+                "thenBranch": then_branch,
+                "elseBranch": else_branch,
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    ("then_branch", "else_branch", "message"),
+    [
+        (
+            Get(field_name="integer", type="int"),
+            Get(field_name="boolean", type="bool"),
+            "Then branch output is incompatible",
+        ),
+        (
+            Get(field_name="boolean", type="bool"),
+            Get(field_name="integer", type="int"),
+            "Else branch output is incompatible",
+        ),
+    ],
+)
+def test_if_rejects_branch_outputs_incompatible_with_declared_output(
+    then_branch: object,
+    else_branch: object,
+    message: str,
+) -> None:
+    input_schema = Schema(fields={"boolean": BoolField(), "integer": IntField()})
+
+    with pytest.raises(ValidationError, match=message):
+        If.model_validate(
+            {
+                "inputSchema": input_schema,
+                "outputSchema": BoolField(),
+                "condition": Get(field_name="boolean", type="bool"),
+                "thenBranch": then_branch,
+                "elseBranch": else_branch,
+            }
+        )
 
 
 def test_rename_preserves_unrenamed_fields_and_supports_swaps() -> None:

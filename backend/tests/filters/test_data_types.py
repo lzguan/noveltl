@@ -9,6 +9,7 @@ from src.filters.data_types import (
     BoolData,
     Data,
     DataObj,
+    LabelRef,
     Schema,
     SObj,
     StringData,
@@ -118,17 +119,34 @@ def test_object_schema_extends_structurally() -> None:
 
 
 def test_text_span_rejects_invalid_ranges_and_extra_fields() -> None:
+    chapter_id = uuid.uuid4()
     content_id = uuid.uuid4()
 
     with pytest.raises(ValidationError):
-        TextSpan(start=2, end=1, chapter_content_id=content_id)
+        TextSpan(start=2, end=1, chapter_id=chapter_id, chapter_content_id=content_id)
 
     with pytest.raises(ValidationError):
         TextSpan.model_validate(
             {
                 "start": 0,
                 "end": 1,
+                "chapterId": chapter_id,
                 "chapterContentId": content_id,
                 "unexpected": True,
+            }
+        )
+
+
+def test_label_reference_rejects_embedded_offsets() -> None:
+    with pytest.raises(ValidationError):
+        LabelRef.model_validate(
+            {
+                "chapterId": uuid.uuid4(),
+                "chapterContentId": uuid.uuid4(),
+                "labelId": uuid.uuid4(),
+                "labelDataId": uuid.uuid4(),
+                "labelGroupId": uuid.uuid4(),
+                "start": 0,
+                "end": 1,
             }
         )

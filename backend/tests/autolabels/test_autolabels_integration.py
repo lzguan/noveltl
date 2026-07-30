@@ -115,8 +115,7 @@ class TestAutolabelEndToEnd:
             test_db.expire_all()
             autolabel_rows = test_db.execute(q).scalars().all()
             if autolabel_rows and all(
-                row.auto_label_status in (AutoLabelProgress.DONE, AutoLabelProgress.FAILED)
-                for row in autolabel_rows
+                row.auto_label_status in (AutoLabelProgress.DONE, AutoLabelProgress.FAILED) for row in autolabel_rows
             ):
                 break
             await asyncio.sleep(0.05)

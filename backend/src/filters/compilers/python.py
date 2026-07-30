@@ -168,11 +168,13 @@ class PythonCompiler:
 
             def project_to_span(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 data = cast(LabelRefData, arguments[0])
+                label = ctx.get_label(data.value.label_id)
                 return TextSpanData(
                     value=TextSpan(
-                        start=data.value.start,
-                        end=data.value.end,
+                        start=label.start,
+                        end=label.end,
                         chapter_content_id=data.value.chapter_content_id,
+                        chapter_id=data.value.chapter_id,
                     )
                 )
 

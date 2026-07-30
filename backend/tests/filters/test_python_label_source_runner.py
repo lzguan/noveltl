@@ -115,6 +115,7 @@ def test_label_source_loads_only_latest_labels_in_batches(
         (
             reference.label_group_id,
             reference.label_data_id,
+            reference.chapter_id,
             reference.chapter_content_id,
         )
         for reference in references
@@ -122,6 +123,7 @@ def test_label_source_loads_only_latest_labels_in_batches(
         (
             filter_scenario.label_groups["labels"].label_group_id,
             current_label_data.label_data_id,
+            current_content.chapter_id,
             current_content.chapter_content_id,
         )
     }

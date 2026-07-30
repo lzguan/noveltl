@@ -137,18 +137,34 @@ def test_compile_rename_construct_and_extend() -> None:
 
 
 def test_project_to_span_drops_label_only_fields() -> None:
+    chapter_id = uuid.uuid4()
     chapter_content_id = uuid.uuid4()
+    expected_label_id = uuid.uuid4()
     label = LabelRef(
-        start=1,
-        end=4,
+        chapter_id=chapter_id,
         chapter_content_id=chapter_content_id,
-        label_id=uuid.uuid4(),
+        label_id=expected_label_id,
         label_data_id=uuid.uuid4(),
         label_group_id=uuid.uuid4(),
     )
 
-    result = PythonCompiler().compile(ProjectToSpan())((LabelRefData(value=label),), ctx)
+    class _LabelContext(_NoResourceContext):
+        def get_label(self, label_id: uuid.UUID) -> PythonLabelResource:
+            assert label_id == expected_label_id
+            return PythonLabelResource(word="name", score=1.0, start=1, end=4)
+
+    result = PythonCompiler().compile(ProjectToSpan())(
+        (LabelRefData(value=label),),
+        _LabelContext(),
+    )
 
     assert isinstance(result, TextSpanData)
-    assert result == TextSpanData(value=TextSpan(start=1, end=4, chapter_content_id=chapter_content_id))
+    assert result == TextSpanData(
+        value=TextSpan(
+            start=1,
+            end=4,
+            chapter_id=chapter_id,
+            chapter_content_id=chapter_content_id,
+        )
+    )
     assert type(result.value) is TextSpan

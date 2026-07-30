@@ -195,6 +195,10 @@ class Compare(Function):
 class ProjectToSpan(Function):
     name: Literal["projectToSpan"] = "projectToSpan"
 
+    @property
+    def dependencies(self) -> tuple[DependencyType, ...]:
+        return (ResourceDependency(resource="label", argument_index=0),)
+
     @computed_field
     @property
     def signature(self) -> Signature:

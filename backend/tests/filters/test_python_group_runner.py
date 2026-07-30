@@ -117,6 +117,7 @@ def test_group_runner_preloads_text_dependencies(
                         value=TextSpan(
                             start=0,
                             end=5,
+                            chapter_id=filter_scenario.contents["content_v1"].chapter_id,
                             chapter_content_id=filter_scenario.contents["content_v1"].chapter_content_id,
                         )
                     )

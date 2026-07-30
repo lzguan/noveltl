@@ -77,6 +77,11 @@ def test_resolve_dependency_through_call_and_projection() -> None:
             argument_index=0,
             key_path=("label",),
         ),
+        ResolvedResourceDependency(
+            resource="label",
+            argument_index=0,
+            key_path=("label",),
+        ),
     )
 
 

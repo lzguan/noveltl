@@ -105,10 +105,9 @@ class PythonLabelSourceRunner(Runner[PythonLabelSourceInput]):
                         select(
                             Label.label_id,
                             Label.label_data_id,
-                            Label.label_start,
-                            Label.label_end,
                             LabelData.chapter_content_id,
                             LabelData.label_group_id,
+                            ChapterContent.chapter_id,
                         )
                         .join(
                             LabelData,
@@ -117,6 +116,10 @@ class PythonLabelSourceRunner(Runner[PythonLabelSourceInput]):
                         .where(
                             LabelData.label_group_id == input.label_group_id,
                             LabelData.chapter_content_id.in_(chapter_content_ids),
+                        )
+                        .join(
+                            ChapterContent,
+                            ChapterContent.chapter_content_id == LabelData.chapter_content_id,
                         )
                         .order_by(Label.label_id)
                         .limit(self.batch_size)
@@ -142,9 +145,8 @@ class PythonLabelSourceRunner(Runner[PythonLabelSourceInput]):
                                         label_id=label.label_id,
                                         label_data_id=label.label_data_id,
                                         label_group_id=label.label_group_id,
+                                        chapter_id=label.chapter_id,
                                         chapter_content_id=label.chapter_content_id,
-                                        start=label.label_start,
-                                        end=label.label_end,
                                     )
                                 )
                             }

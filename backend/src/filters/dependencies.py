@@ -1,3 +1,25 @@
+"""
+Dependency resolution for semantic functions.
+
+A dependency is a resource that a function requires to execute. We represent a
+function dependency as a resource name, an argument index, and a key path. The
+argument index identifies which root function argument the dependency is
+derived from, and the key path identifies which field of that argument the
+dependency is derived from.
+
+The dependencies of a function are resolved by symbolically evaluating the
+function AST.
+
+The algorithm is approximately:
+1. For each root argument, create a symbolic value that represents the
+   argument's structure and tracks the origin of each field.
+2. Do a "virtual" evaluation of the function, propagating the symbolic values
+   through the function's operations. When a resource dependency is
+   encountered, record the origin of the value that produced it.
+3. Return the set of resolved dependencies, which are the resource names and
+   their corresponding argument indices and key paths.
+"""
+
 from dataclasses import dataclass
 
 from src.filters.data_types import FieldName, Schema, SchemaField
@@ -32,7 +54,7 @@ from src.filters.functions import (
 
 @dataclass(frozen=True, order=True, slots=True)
 class ResolvedResourceDependency:
-    """A semantic resource dependency bound to a root function argument."""
+    """A batch-load requirement bound to a root function argument."""
 
     resource: ResourceName
     argument_index: int
@@ -40,22 +62,32 @@ class ResolvedResourceDependency:
 
 
 @dataclass(frozen=True, slots=True)
-class _SourceOrigin:
+class SourceOrigin:
+    """The root argument and field path from which a symbolic value originated."""
+
     argument_index: int
     key_path: tuple[FieldName, ...]
 
 
 @dataclass(frozen=True, slots=True)
-class _SymbolicScalar:
-    origins: frozenset[_SourceOrigin]
+class SymbolicScalar:
+    """
+    Symbolic value that represents a scalar value and tracks its origin.
+    """
+
+    origins: frozenset[SourceOrigin]
 
 
 @dataclass(slots=True)
-class _SymbolicObject:
-    fields: dict[FieldName, _SymbolicScalar]
+class SymbolicObject:
+    """
+    Symbolic value that represents an object value and tracks its origin.
+    """
+
+    fields: dict[FieldName, SymbolicScalar]
 
 
-type _SymbolicValue = _SymbolicScalar | _SymbolicObject
+type SymbolicValue = SymbolicScalar | SymbolicObject
 
 
 def resolve_dependencies(function: FunctionType) -> tuple[ResolvedResourceDependency, ...]:
@@ -70,33 +102,33 @@ def resolve_dependencies(function: FunctionType) -> tuple[ResolvedResourceDepend
 
     requirements: set[ResolvedResourceDependency] = set()
     arguments = tuple(
-        _symbolic_argument(argument_schema, argument_index)
+        symbolic_argument(argument_schema, argument_index)
         for argument_index, argument_schema in enumerate(function.signature.args)
     )
-    _evaluate(function, arguments, requirements)
+    evaluate(function, arguments, requirements)
     return tuple(sorted(requirements))
 
 
-def _symbolic_argument(schema: Schema | SchemaField, argument_index: int) -> _SymbolicValue:
+def symbolic_argument(schema: Schema | SchemaField, argument_index: int) -> SymbolicValue:
     if isinstance(schema, Schema):
-        return _SymbolicObject(
+        return SymbolicObject(
             fields={
-                field_name: _SymbolicScalar(origins=frozenset({_SourceOrigin(argument_index, (field_name,))}))
+                field_name: SymbolicScalar(origins=frozenset({SourceOrigin(argument_index, (field_name,))}))
                 for field_name in schema.fields
             }
         )
-    return _SymbolicScalar(origins=frozenset({_SourceOrigin(argument_index, ())}))
+    return SymbolicScalar(origins=frozenset({SourceOrigin(argument_index, ())}))
 
 
-def _evaluate(
+def evaluate(
     function: Function,
-    arguments: tuple[_SymbolicValue, ...],
+    arguments: tuple[SymbolicValue, ...],
     requirements: set[ResolvedResourceDependency],
-) -> _SymbolicValue:
+) -> SymbolicValue:
     _resolve_intrinsic_dependencies(function, arguments, requirements)
 
     if isinstance(function, LiteralString | LiteralInt | LiteralFloat | LiteralBool):
-        return _SymbolicScalar(origins=frozenset())
+        return SymbolicScalar(origins=frozenset())
 
     if isinstance(function, Get):
         data = _require_object(arguments[0], function)
@@ -113,10 +145,10 @@ def _evaluate(
         fields = dict(data.fields)
         renamed = {pair.new_name: fields.pop(pair.old_name) for pair in function.rename_pairs}
         fields.update(renamed)
-        return _SymbolicObject(fields=fields)
+        return SymbolicObject(fields=fields)
 
     if isinstance(function, Construct):
-        return _SymbolicObject(
+        return SymbolicObject(
             fields={
                 field_name: _require_scalar(
                     _evaluate_in_environment(field_function, arguments, requirements),
@@ -138,36 +170,36 @@ def _evaluate(
                 for field_name, field_function in function.fields.items()
             }
         )
-        return _SymbolicObject(fields=fields)
+        return SymbolicObject(fields=fields)
 
     if isinstance(function, Call):
         call_arguments = tuple(
             _evaluate_in_environment(argument, arguments, requirements) for argument in function.arguments
         )
-        return _evaluate(function.function, call_arguments, requirements)
+        return evaluate(function.function, call_arguments, requirements)
 
     if isinstance(
         function,
         Compare | And | Or | Not | StartOf | EndOf | LengthOf | TextOf | TextAround | WordOf | ScoreOf,
     ):
-        return _SymbolicScalar(origins=frozenset())
+        return SymbolicScalar(origins=frozenset())
 
     raise TypeError(f"Unsupported function type during dependency resolution: {type(function).__name__}")
 
 
 def _evaluate_in_environment(
     function: Function,
-    environment: tuple[_SymbolicValue, ...],
+    environment: tuple[SymbolicValue, ...],
     requirements: set[ResolvedResourceDependency],
-) -> _SymbolicValue:
+) -> SymbolicValue:
     if len(function.signature.args) == 0:
-        return _evaluate(function, (), requirements)
-    return _evaluate(function, environment, requirements)
+        return evaluate(function, (), requirements)
+    return evaluate(function, environment, requirements)
 
 
 def _resolve_intrinsic_dependencies(
     function: Function,
-    arguments: tuple[_SymbolicValue, ...],
+    arguments: tuple[SymbolicValue, ...],
     requirements: set[ResolvedResourceDependency],
 ) -> None:
     for dependency in function.dependencies:
@@ -194,13 +226,13 @@ def _resolve_intrinsic_dependencies(
         )
 
 
-def _require_scalar(value: _SymbolicValue, function: Function) -> _SymbolicScalar:
-    if not isinstance(value, _SymbolicScalar):
+def _require_scalar(value: SymbolicValue, function: Function) -> SymbolicScalar:
+    if not isinstance(value, SymbolicScalar):
         raise ValueError(f"Function '{function.name}' requires an elementary argument.")
     return value
 
 
-def _require_object(value: _SymbolicValue, function: Function) -> _SymbolicObject:
-    if not isinstance(value, _SymbolicObject):
+def _require_object(value: SymbolicValue, function: Function) -> SymbolicObject:
+    if not isinstance(value, SymbolicObject):
         raise ValueError(f"Function '{function.name}' requires an object argument.")
     return value

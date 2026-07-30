@@ -22,6 +22,8 @@ type PythonResourceIds = dict[ResourceName, set[UUID]]
 class PythonLabelResource:
     word: str
     score: float
+    start: int
+    end: int
 
 
 def collect_resource_ids(
@@ -111,13 +113,17 @@ class PythonExecutionContextImpl:
         if label_id not in self.label_cache:
             logger.debug("Label cache miss label_id=%s", label_id)
             row = self.session.execute(
-                select(Label.label_word, Label.label_score).where(Label.label_id == label_id)
+                select(Label.label_word, Label.label_score, Label.label_start, Label.label_end).where(
+                    Label.label_id == label_id
+                )
             ).one_or_none()
             if row is None:
                 raise ValueError(f"Label not found: {label_id}")
             self.label_cache[label_id] = PythonLabelResource(
                 word=row.label_word,
                 score=row.label_score,
+                start=row.label_start,
+                end=row.label_end,
             )
         return self.label_cache[label_id]
 
@@ -157,12 +163,16 @@ class PythonExecutionContextImpl:
         if not missing_ids:
             return
         rows = self.session.execute(
-            select(Label.label_id, Label.label_word, Label.label_score).where(Label.label_id.in_(missing_ids))
+            select(Label.label_id, Label.label_word, Label.label_score, Label.label_start, Label.label_end).where(
+                Label.label_id.in_(missing_ids)
+            )
         ).all()
-        for label_id, label_word, label_score in rows:
+        for label_id, label_word, label_score, label_start, label_end in rows:
             self.label_cache[label_id] = PythonLabelResource(
                 word=label_word,
                 score=label_score,
+                start=label_start,
+                end=label_end,
             )
 
         unresolved_ids = missing_ids - self.label_cache.keys()

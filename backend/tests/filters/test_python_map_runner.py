@@ -156,6 +156,7 @@ def test_map_runner_preloads_text_dependencies(
                             value=TextSpan(
                                 start=6,
                                 end=11,
+                                chapter_id=filter_scenario.contents["content_v1"].chapter_id,
                                 chapter_content_id=filter_scenario.contents["content_v1"].chapter_content_id,
                             )
                         )

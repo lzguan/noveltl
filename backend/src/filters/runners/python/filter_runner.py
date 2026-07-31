@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import cast
+from typing import Literal, cast
 from uuid import UUID
 
 from sqlalchemy import exists, func, insert, select, update
@@ -14,14 +14,15 @@ from src.filters.functions import function_adapter
 from src.filters.models import FunctionDefinition, Instance, Workflow, WorkflowStatus
 from src.filters.runners.interfaces.runner import Runner
 from src.filters.runners.python.helpers import handle_workflow_exception
-from src.schemas import Model
+from src.filters.runners.python.interfaces import PythonRunnerInputBase
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_FILTER_BATCH_SIZE = 1_000
 
 
-class PythonFilterInput(Model):
+class PythonFilterInput(PythonRunnerInputBase):
+    runner_name: Literal["filter"]
     source_workflow_id: uuid.UUID
     output_workflow_id: uuid.UUID
     function_definition_id: uuid.UUID

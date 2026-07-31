@@ -11,13 +11,13 @@ from celery.contrib.testing.worker import start_worker
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from src.autolabels.celery_app import app
 from src.autolabels.constants import AutoLabelProgress
 from src.autolabels.dispatch.celery import CeleryDispatcher
 from src.autolabels.models import AutoLabel
 from src.autolabels.params import CluenerParams
 from src.autolabels.schemas import CreateAutoLabels
 from src.autolabels.service import insert_auto_labels
-from src.celery_app import app
 from src.labels import models as label_models
 from src.labels.schemas import CreateLabelDataByAutoLabel
 from src.labels.service import insert_label_datas_by_autolabels

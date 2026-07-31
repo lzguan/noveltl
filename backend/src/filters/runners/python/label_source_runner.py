@@ -1,5 +1,6 @@
 import logging
 import uuid
+from typing import Literal
 from uuid import UUID
 
 from sqlalchemy import and_, exists, func, insert, select, update
@@ -9,9 +10,9 @@ from src.filters.data_types import DataObj, LabelRef, LabelRefData, LabelRefFiel
 from src.filters.models import Instance, Workflow, WorkflowStatus
 from src.filters.runners.interfaces.runner import Runner
 from src.filters.runners.python.helpers import handle_workflow_exception
+from src.filters.runners.python.interfaces import PythonRunnerInputBase
 from src.labels.models import Label, LabelData, LabelGroup
 from src.novels.models import Chapter, ChapterContent
-from src.schemas import Model
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,8 @@ DEFAULT_LABEL_SOURCE_BATCH_SIZE = 1_000
 LABEL_SOURCE_SCHEMA = Schema(fields={"label": LabelRefField()})
 
 
-class PythonLabelSourceInput(Model):
+class PythonLabelSourceInput(PythonRunnerInputBase):
+    runner_name: Literal["ls"]
     label_group_id: uuid.UUID
     output_workflow_id: uuid.UUID
 

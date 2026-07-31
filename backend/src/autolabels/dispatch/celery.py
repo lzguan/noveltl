@@ -2,10 +2,10 @@ import asyncio
 import logging
 import uuid
 
+from src.autolabels.celery_app import app
 from src.autolabels.dispatch.dispatcher import AutoLabelDispatcher
 from src.autolabels.exceptions import EnqueueFailedException
 from src.autolabels.worker.tasks import autolabel_infer
-from src.celery_app import app
 
 logger = logging.getLogger(__name__)
 

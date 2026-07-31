@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from src.autolabels.celery_app import app
 from src.autolabels.dispatch.celery import CeleryDispatcher, celery_infer
 from src.autolabels.exceptions import EnqueueFailedException
-from src.celery_app import app
 
 
 class TestCeleryDispatcher:

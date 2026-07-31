@@ -55,12 +55,12 @@ services:
       <<: [*db-env, *redis-env]
       SECRET_KEY: ${SECRET_KEY}
 
-  worker:
-    image: ghcr.io/lzguan/noveltl-worker:${IMAGE_TAG:-latest}
+  autolabels-worker:
+    image: ghcr.io/lzguan/noveltl-autolabels-worker:${IMAGE_TAG:-latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: worker
+      target: autolabels-worker
     restart: unless-stopped
     depends_on:
       db:

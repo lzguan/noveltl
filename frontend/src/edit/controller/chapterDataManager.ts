@@ -253,6 +253,30 @@ export const buildChapterDataManager = (
 				return { ...op, labelId: serverId };
 			});
 
+		const splitLabelOpBatches = (
+			ops: readonly { labelId: LProvId; op: ULabelOp }[],
+		): { labelId: LProvId; op: ULabelOp }[][] => {
+			const batches: { labelId: LProvId; op: ULabelOp }[][] = [];
+			let batch: { labelId: LProvId; op: ULabelOp }[] = [];
+			const labelsCreatedInBatch = new Set<LProvId>();
+
+			for (const entry of ops) {
+				if (entry.op.op !== "add" && labelsCreatedInBatch.has(entry.labelId)) {
+					batches.push(batch);
+					batch = [];
+					labelsCreatedInBatch.clear();
+				}
+				batch.push(entry);
+				if (entry.op.op === "add") {
+					labelsCreatedInBatch.add(entry.labelId);
+				}
+			}
+			if (batch.length > 0) {
+				batches.push(batch);
+			}
+			return batches;
+		};
+
 		const _flush = (): Effect.Effect<RequestEvent[], UnknownException> =>
 			Effect.gen(function* () {
 				if (opQueue.tag === "label") {
@@ -268,121 +292,129 @@ export const buildChapterDataManager = (
 							),
 						);
 						const labelDataProvId = slot.meta.labelData.labelDataId;
-						const opsSnapshot = [...ops];
-						const labelOpReserveList: ReserveList = {
-							labelData: [
-								{
-									id: labelDataProvId,
-									kind: "labelData",
-									desiredState: "updating",
+						for (const opsSnapshot of splitLabelOpBatches(ops)) {
+							const labelOpReserveList: ReserveList = {
+								labelData: [
+									{
+										id: labelDataProvId,
+										kind: "labelData",
+										desiredState: "updating",
+									},
+								],
+								chapterContent: [
+									{
+										id: chapterContentId,
+										kind: "chapterContent",
+										desiredState: "locked",
+									},
+								],
+								label: buildLabelReservations(opsSnapshot),
+								autoLabel: [],
+								autoLabelRun: [],
+								chapter: [],
+								labelGroup: [],
+							};
+							events.push({
+								cached: true,
+								variant: "labelOp",
+								active: true,
+								retries: 3,
+								reservationRequest: {
+									reserveList: IdempotentCallable(() => labelOpReserveList),
+									skip: () => false,
+									wait: () =>
+										isAllReserveable(idRepo, labelOpReserveList).pipe(
+											Effect.map((ready) => !ready),
+										),
 								},
-							],
-							chapterContent: [
-								{
-									id: chapterContentId,
-									kind: "chapterContent",
-									desiredState: "locked",
-								},
-							],
-							label: buildLabelReservations(opsSnapshot),
-							autoLabel: [],
-							autoLabelRun: [],
-							chapter: [],
-							labelGroup: [],
-						};
-						events.push({
-							cached: true,
-							variant: "labelOp",
-							active: true,
-							retries: 3,
-							reservationRequest: {
-								reserveList: IdempotentCallable(() => labelOpReserveList),
-								skip: () => false,
-								wait: () =>
-									isAllReserveable(idRepo, labelOpReserveList).pipe(
-										Effect.map((ready) => !ready),
-									),
-							},
-							onFailure: () => Effect.succeed(void 0),
-							onFatalError: () => Effect.succeed(void 0),
-							preSend: () => Effect.succeed(void 0),
-							send: (requestKey) =>
-								Effect.gen(function* () {
-									const servLdId = yield* idRepo
-										.getServerId({ kind: "labelData", provId: labelDataProvId })
-										.pipe(
+								onFailure: () => Effect.succeed(void 0),
+								onFatalError: () => Effect.succeed(void 0),
+								preSend: () => Effect.succeed(void 0),
+								send: (requestKey) =>
+									Effect.gen(function* () {
+										const servLdId = yield* idRepo
+											.getServerId({
+												kind: "labelData",
+												provId: labelDataProvId,
+											})
+											.pipe(
+												Effect.mapError(
+													(err) => new FatalException({ orig: err }),
+												),
+											);
+										if (!servLdId) {
+											return yield* Effect.fail(
+												new FatalException({
+													orig: new Error("Label data has no server ID"),
+												}),
+											);
+										}
+										const serverOps = yield* Effect.all(
+											opsSnapshot.map(servIdOfOp),
+										);
+										const resp = yield* Effect.tryPromise(() =>
+											updateLabelDataStreamLabelDatasLabelDataIdPatch(
+												servLdId,
+												{ ops: serverOps },
+												{ requestKey },
+											),
+										).pipe(
+											Effect.mapError(
+												(err) => new ConnectionException({ orig: err }),
+											),
+										);
+										if (resp.status === 409 && resp.data.detail.cacheConflict) {
+											return yield* Effect.fail(
+												new CacheConflictException({ requestKey }),
+											);
+										}
+										if (resp.status !== 200) {
+											return yield* Effect.fail(
+												new FatalException({
+													orig: new Error(
+														`Label op failed: ${resp.status}`,
+													),
+												}),
+											);
+										}
+										return resp.data;
+									}),
+								postSend: (data) =>
+									Effect.gen(function* () {
+										const decoded = yield* Schema.decodeUnknown(
+											UpdateLabelDataStreamLabelDatasLabelDataIdPatch200Response,
+										)(data).pipe(
 											Effect.mapError(
 												(err) => new FatalException({ orig: err }),
 											),
 										);
-									if (!servLdId) {
-										return yield* Effect.fail(
-											new FatalException({
-												orig: new Error("Label data has no server ID"),
-											}),
-										);
-									}
-									const serverOps = yield* Effect.all(
-										opsSnapshot.map(servIdOfOp),
-									);
-									const resp = yield* Effect.tryPromise(() =>
-										updateLabelDataStreamLabelDatasLabelDataIdPatch(
-											servLdId,
-											{ ops: serverOps },
-											{ requestKey },
-										),
-									).pipe(
-										Effect.mapError(
-											(err) => new ConnectionException({ orig: err }),
-										),
-									);
-									if (resp.status === 409 && resp.data.detail.cacheConflict) {
-										return yield* Effect.fail(
-											new CacheConflictException({ requestKey }),
-										);
-									}
-									if (resp.status !== 200) {
-										return yield* Effect.fail(
-											new FatalException({
-												orig: new Error(`Label op failed: ${resp.status}`),
-											}),
-										);
-									}
-									return resp.data;
-								}),
-							postSend: (data) =>
-								Effect.gen(function* () {
-									const decoded = yield* Schema.decodeUnknown(
-										UpdateLabelDataStreamLabelDatasLabelDataIdPatch200Response,
-									)(data).pipe(
-										Effect.mapError((err) => new FatalException({ orig: err })),
-									);
-									if (decoded.results.length !== opsSnapshot.length) {
-										return yield* Effect.fail(
-											new FatalException({
-												orig: new Error(
-													`Label operation result count mismatch: expected ${opsSnapshot.length}, received ${decoded.results.length}`,
-												),
-											}),
-										);
-									}
-									const withServId = opsSnapshot.map((v, index) => ({
-										...v,
-										servId: LServId(decoded.results[index]),
-									}));
-									for (const { labelId, op, servId } of withServId) {
-										if (op.op === "add") {
-											yield* idRepo.bindServerId({
-												kind: "label",
-												provId: labelId,
-												servId,
-											});
+										if (decoded.results.length !== opsSnapshot.length) {
+											return yield* Effect.fail(
+												new FatalException({
+													orig: new Error(
+														`Label operation result count mismatch: expected ${opsSnapshot.length}, received ${decoded.results.length}`,
+													),
+												}),
+											);
 										}
-									}
-								}).pipe(
-									Effect.mapError((err) => new FatalException({ orig: err })),
-								),
-						});
+										const withServId = opsSnapshot.map((v, index) => ({
+											...v,
+											servId: LServId(decoded.results[index]),
+										}));
+										for (const { labelId, op, servId } of withServId) {
+											if (op.op === "add") {
+												yield* idRepo.bindServerId({
+													kind: "label",
+													provId: labelId,
+													servId,
+												});
+											}
+										}
+									}).pipe(
+										Effect.mapError((err) => new FatalException({ orig: err })),
+									),
+							});
+						}
 					}
 					opQueue = { tag: "neither" };
 					return events;

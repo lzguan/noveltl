@@ -53,7 +53,7 @@ def test_add_derives_word_from_immutable_chapter_content(
         ],
     )
 
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_200_OK
     added = test_db.execute(
         select(Label).where(
             Label.label_data_id == label_data.label_data_id,
@@ -92,7 +92,7 @@ def test_update_targets_label_id_and_accepts_falsy_values(
         ],
     )
 
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_200_OK
     test_db.expire_all()
     updated = test_db.get(Label, label.label_id)
     assert updated is not None
@@ -177,7 +177,7 @@ def test_delete_targets_label_id(
         [{"op": "delete", "labelId": str(label.label_id)}],
     )
 
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_200_OK
     test_db.expire_all()
     assert test_db.get(Label, label.label_id) is None
 

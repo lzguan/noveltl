@@ -47,6 +47,8 @@ def _create_output(
 
 def _input(label_group: LabelGroup, output: Workflow) -> PythonLabelSourceInput:
     return PythonLabelSourceInput(
+        runner_name="ls",
+        runtime_name="python",
         label_group_id=label_group.label_group_id,
         output_workflow_id=output.workflow_id,
     )
@@ -200,6 +202,8 @@ def test_label_source_rejects_missing_group(
         PythonLabelSourceRunner(testing_session_local).execute(
             JOB_ID,
             PythonLabelSourceInput(
+                runner_name="ls",
+                runtime_name="python",
                 label_group_id=uuid.uuid4(),
                 output_workflow_id=output.workflow_id,
             ),

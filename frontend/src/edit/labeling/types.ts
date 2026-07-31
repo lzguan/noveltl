@@ -1,5 +1,5 @@
 import type { Color } from "@/edit/lib/text-model/builtin/colors";
-import type { LGProvId } from "../controller/types/idTypes";
+import type { LGProvId, LProvId } from "../controller/types/idTypes";
 
 /**
  * Metadata a label can carry besides its text range and word.
@@ -14,7 +14,12 @@ export type AddTarget = { labelGroupId: LGProvId; groupName: string; color: Colo
 /**
  * An existing label, as the editor needs to see it for hit-testing/deletion.
  */
-export type EditorLabel = AddTarget & { start: number; end: number; word: string };
+export type EditorLabel = AddTarget & {
+	labelId: LProvId;
+	start: number;
+	end: number;
+	word: string;
+};
 
 export type LabelRange = { start: number; end: number; word: string };
 
@@ -39,7 +44,7 @@ export interface LabelSource {
  */
 export interface LabelSink {
 	add(target: LGProvId, range: LabelRange, meta: LabelMeta): void;
-	remove(target: LGProvId, range: LabelRange): void;
+	remove(target: LGProvId, labelId: LProvId): void;
 }
 
 export type LabelEditing = { source: LabelSource; sink: LabelSink };

@@ -89,11 +89,8 @@ export function EditNovelPage() {
 					target,
 				);
 			},
-			remove: (target, range) => {
-				managers?.editorMgr.labelOp(
-					{ op: "delete", startPos: range.start, endPos: range.end, word: range.word },
-					target,
-				);
+			remove: (target, labelId) => {
+				managers?.editorMgr.labelOp({ op: "delete", labelId }, target);
 			},
 		};
 		return { source, sink };

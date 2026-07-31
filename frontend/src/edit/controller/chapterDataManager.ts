@@ -27,7 +27,7 @@ import {
 	Prov,
 	type LabelGroupSlot,
 } from "./types/helperTypes";
-import type { Novel, TextOp } from "@/api/models";
+import type { LabelOp as ApiLabelOp, Novel, TextOp } from "@/api/models";
 import type { RequestEvent, Reservation, ReserveList } from "./types/requestTypes";
 import {
 	ReadEditChapterDataEditChapterDataChapterIdPost200Response,
@@ -229,6 +229,30 @@ export const buildChapterDataManager = (
 			}));
 		};
 
+		const servIdOfOp = ({
+			labelId,
+			op,
+		}: {
+			labelId: LProvId;
+			op: ULabelOp;
+		}): Effect.Effect<ApiLabelOp, FatalException> =>
+			Effect.gen(function* () {
+				if (op.op === "add") {
+					return op;
+				}
+				const serverId = yield* idRepo
+					.getServerId({ kind: "label", provId: labelId })
+					.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
+				if (!serverId) {
+					return yield* Effect.fail(
+						new FatalException({
+							orig: new Error(`Label ${labelId} has no server ID`),
+						}),
+					);
+				}
+				return { ...op, labelId: serverId };
+			});
+
 		const _flush = (): Effect.Effect<RequestEvent[], UnknownException> =>
 			Effect.gen(function* () {
 				if (opQueue.tag === "label") {
@@ -267,7 +291,7 @@ export const buildChapterDataManager = (
 							labelGroup: [],
 						};
 						events.push({
-							cached: false,
+							cached: true,
 							variant: "labelOp",
 							active: true,
 							retries: 3,
@@ -282,7 +306,7 @@ export const buildChapterDataManager = (
 							onFailure: () => Effect.succeed(void 0),
 							onFatalError: () => Effect.succeed(void 0),
 							preSend: () => Effect.succeed(void 0),
-							send: () =>
+							send: (requestKey) =>
 								Effect.gen(function* () {
 									const servLdId = yield* idRepo
 										.getServerId({ kind: "labelData", provId: labelDataProvId })
@@ -298,43 +322,50 @@ export const buildChapterDataManager = (
 											}),
 										);
 									}
+									const serverOps = yield* Effect.all(
+										opsSnapshot.map(servIdOfOp),
+									);
 									const resp = yield* Effect.tryPromise(() =>
-										updateLabelDataStreamLabelDatasLabelDataIdPatch(servLdId, {
-											ops: opsSnapshot.map(({ op }) =>
-												op.op === "add"
-													? op
-													: {
-															...op,
-															labelId:
-																Effect.runSync(
-																	idRepo.getServerId({
-																		kind: "label",
-																		provId: op.labelId,
-																	}),
-																) ??
-																(() => {
-																	throw new FatalException({
-																		orig: new Error(
-																			"Label has no server ID",
-																		),
-																	});
-																})(),
-														},
-											),
-										}),
+										updateLabelDataStreamLabelDatasLabelDataIdPatch(
+											servLdId,
+											{ ops: serverOps },
+											{ requestKey },
+										),
 									).pipe(
 										Effect.mapError(
 											(err) => new ConnectionException({ orig: err }),
 										),
 									);
-
+									if (resp.status === 409 && resp.data.detail.cacheConflict) {
+										return yield* Effect.fail(
+											new CacheConflictException({ requestKey }),
+										);
+									}
+									if (resp.status !== 200) {
+										return yield* Effect.fail(
+											new FatalException({
+												orig: new Error(`Label op failed: ${resp.status}`),
+											}),
+										);
+									}
 									return resp.data;
 								}),
 							postSend: (data) =>
 								Effect.gen(function* () {
-									const decoded = Schema.decodeUnknownSync(
+									const decoded = yield* Schema.decodeUnknown(
 										UpdateLabelDataStreamLabelDatasLabelDataIdPatch200Response,
-									)(data);
+									)(data).pipe(
+										Effect.mapError((err) => new FatalException({ orig: err })),
+									);
+									if (decoded.results.length !== opsSnapshot.length) {
+										return yield* Effect.fail(
+											new FatalException({
+												orig: new Error(
+													`Label operation result count mismatch: expected ${opsSnapshot.length}, received ${decoded.results.length}`,
+												),
+											}),
+										);
+									}
 									const withServId = opsSnapshot.map((v, index) => ({
 										...v,
 										servId: LServId(decoded.results[index]),
@@ -659,7 +690,6 @@ export const buildChapterDataManager = (
 						labelId: provLabelId,
 						op: {
 							op: "add",
-							labelId: provLabelId,
 							startPos,
 							endPos,
 							entityGroup: entityGroup ?? null,

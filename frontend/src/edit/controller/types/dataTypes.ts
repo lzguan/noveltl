@@ -1,6 +1,6 @@
-import type { CProvId, LGProvId, LProvId, ALRProvId, AProvId, DistributiveOmit } from "./idTypes";
+import type { CProvId, LGProvId, LProvId, ALRProvId, AProvId } from "./idTypes";
 import type { RequestEvent } from "./requestTypes";
-import type { LabelOp } from "@/api/models";
+import type { AddLabelOp, DeleteLabelOp, UpdateLabelOp } from "@/api/models";
 import type { Effect } from "effect";
 import type { UnknownException } from "effect/Cause";
 import type {
@@ -15,8 +15,15 @@ import type { NovelGetters } from "./controllerTypes";
 import type { AutoLabelRunGetterSlot } from "./helperTypes";
 import type { CluenerParams, DoNothingParams } from "@/api/models";
 
-export type ULabelOp = DistributiveOmit<LabelOp, "labelId"> & { labelId: LProvId };
-export type IDLabelOp = LabelOp & { labelId: LProvId; labelGroupId: LGProvId; chapterId: CProvId };
+type ProvDeleteLabelOp = Omit<DeleteLabelOp, "labelId"> & { labelId: LProvId };
+type ProvUpdateLabelOp = Omit<UpdateLabelOp, "labelId"> & { labelId: LProvId };
+
+export type ULabelOp = AddLabelOp | ProvDeleteLabelOp | ProvUpdateLabelOp;
+export type IDLabelOp = ULabelOp & {
+	labelId: LProvId;
+	labelGroupId: LGProvId;
+	chapterId: CProvId;
+};
 /**
  * A data manager is a data structure that maintains the state of some defined data. It provides a set of actions that can be performed on the data and a set of getters to retrieve the data. The intended use of a data manager is to manage the internal state of the application and provide a clear interface for performing operations on the data and retrieving the data, while abstracting away the details of how the data is stored and updated.
  *

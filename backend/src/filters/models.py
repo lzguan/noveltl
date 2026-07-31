@@ -46,6 +46,48 @@ class Workflow(Base):
     workflow_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
+class WorkflowNovel(Base):
+    """Associate a workflow with a novel in its permission scope."""
+
+    __tablename__ = "workflow_novels"
+
+    workflow_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(
+            "workflows.workflow_id",
+            name="fk_workflow_novels_workflow_id_workflows",
+        ),
+        primary_key=True,
+    )
+    novel_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(
+            "novels.novel_id",
+            name="fk_workflow_novels_novel_id_novels",
+        ),
+        primary_key=True,
+    )
+
+
+class WorkflowLabelGroup(Base):
+    """Associate a workflow with a label group in its permission scope."""
+
+    __tablename__ = "workflow_label_groups"
+
+    workflow_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(
+            "workflows.workflow_id",
+            name="fk_workflow_label_groups_workflow_id_workflows",
+        ),
+        primary_key=True,
+    )
+    label_group_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(
+            "label_groups.label_group_id",
+            name="fk_workflow_label_groups_label_group_id_label_groups",
+        ),
+        primary_key=True,
+    )
+
+
 class Instance(Base):
     """ """
 

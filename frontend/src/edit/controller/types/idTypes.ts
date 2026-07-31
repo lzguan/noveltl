@@ -8,7 +8,7 @@ import type {
 import type {
 	AutoLabel,
 	AutoLabelMeta,
-	AutoLabelRunOutput,
+	AutoLabelRun,
 	Chapter,
 	ChapterContent,
 	Label,
@@ -60,8 +60,8 @@ export type CCServId = ServId & Brand.Brand<"CC">;
 export const CCServId = Brand.nominal<CCServId>();
 export type CServId = ServId & Brand.Brand<"C">;
 export const CServId = Brand.nominal<CServId>();
-export type LServEx = ServEx & Brand.Brand<"L">;
-export const LServEx = Brand.nominal<LServEx>();
+export type LServId = ServId & Brand.Brand<"L">;
+export const LServId = Brand.nominal<LServId>();
 export type AServId = ServId & Brand.Brand<"A">;
 export const AServId = Brand.nominal<AServId>();
 export type ALRServId = ServId & Brand.Brand<"ALR">;
@@ -92,7 +92,7 @@ export type ServTypes = {
 	labelData: LDServId;
 	chapterContent: CCServId;
 	chapter: CServId;
-	label: LServEx;
+	label: LServId;
 	autoLabel: AServId;
 	autoLabelRun: ALRServId;
 };
@@ -102,7 +102,7 @@ export const ServTypes = {
 	labelData: LDServId,
 	chapterContent: CCServId,
 	chapter: CServId,
-	label: LServEx,
+	label: LServId,
 	autoLabel: AServId,
 	autoLabelRun: ALRServId,
 } as const;
@@ -134,7 +134,7 @@ export type ProvAutoLabelMetaWithCid = {
 	autoLabelMeta: ProvAutoLabelMeta;
 	chapterId: CProvId;
 };
-export type ProvAutoLabelRun = ProvDataT<AutoLabelRunOutput, { runId: ALRProvId }>;
+export type ProvAutoLabelRun = ProvDataT<AutoLabelRun, { runId: ALRProvId }>;
 
 /**
  * An id status is a status associated with a provisional id. Id statuses are split into two categories:
@@ -254,8 +254,9 @@ export const identifiableKinds = [
 	"chapter",
 	"autoLabel",
 	"autoLabelRun",
+	"label",
 ] as const;
-export const existableKinds = ["label"] as const;
+export const existableKinds = [] as const;
 export const kinds = [...identifiableKinds, ...existableKinds] as const;
 
 export type Kind = (typeof kinds)[number];
@@ -331,13 +332,17 @@ export interface IDRepository {
 	newIdAndBindId(
 		params: Omit<ProvServKind<"autoLabelRun">, "provId">,
 	): Effect.Effect<ProvTypes["autoLabelRun"], ResourceConflictException>;
+	newIdAndBindId(
+		params: Omit<ProvServKind<"label">, "provId">,
+	): Effect.Effect<ProvTypes["label"], ResourceConflictException>;
 
 	/**
 	 * Create a new id and bind it to the given server existence flag, and manage it in the repository.
 	 */
+
 	newIdAndBindExists(
-		params: Omit<ProvServKind<"label">, "provId" | "servId">,
-	): Effect.Effect<ProvTypes["label"]>;
+		params: DistributiveOmit<ProvServKind<ExistableKind>, "provId">,
+	): Effect.Effect<ProvTypes[ExistableKind], ResourceConflictException>;
 
 	/**
 	 * Get the server id corresponding to a provisional id. If server id has not been bound yet, return null.
@@ -360,12 +365,17 @@ export interface IDRepository {
 	getServerId(
 		params: Omit<ProvServKind<"autoLabelRun">, "servId">,
 	): Effect.Effect<ALRServId | null, NotFoundException>;
+	getServerId(
+		params: Omit<ProvServKind<"label">, "servId">,
+	): Effect.Effect<LServId | null, NotFoundException>;
+
 	/**
 	 * Get the server existence flag corresponding to a provisional id. If existence flag has not been bound yet, return null.
 	 */
+
 	getServerExists(
-		params: Omit<ProvServKind<"label">, "servId">,
-	): Effect.Effect<LServEx | null, NotFoundException>;
+		params: DistributiveOmit<ProvServKind<ExistableKind>, "servId">,
+	): Effect.Effect<ServEx | null, NotFoundException>;
 
 	/**
 	 * Bind a provisional id to a server id, so that the controller can update the corresponding entry with the new server id when it receives the signal from the request event. Raises ResourceConflictException if the server id is already bound to another provisional id or if the provisional id is already bound to a server id. Raises NotFoundException if the provisional id is not found in the repository.
@@ -422,6 +432,9 @@ export interface IDRepository {
 	queryProvId(
 		params: Omit<ProvServKind<"autoLabelRun">, "provId">,
 	): Effect.Effect<ProvTypes["autoLabelRun"] | null>;
+	queryProvId(
+		params: Omit<ProvServKind<"label">, "provId">,
+	): Effect.Effect<ProvTypes["label"] | null>;
 
 	gc(): void;
 }

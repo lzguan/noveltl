@@ -363,7 +363,7 @@ def insert_label_data(
 
 def modify_label_data_by_stream(
     db: Session, current_user: User, label_data_id: uuid.UUID, request: schemas.UpdateLabelDataStream
-) -> None:
+) -> list[schemas.OpResult]:
     """
     Processes a stream of label datas
 
@@ -398,13 +398,15 @@ def modify_label_data_by_stream(
         raise ChapterContentNotFoundException from e
     except Exception:
         raise
+    result = list()
     try:
         for op in request.ops:
-            apply_operation(db, current_user, label_data_id, text, op)
+            result.append(apply_operation(db, current_user, label_data_id, text, op))
         db.commit()
     except Exception as e:
         db.rollback()
         raise e
+    return result
 
 
 def _insert_label_datas_by_autolabels(

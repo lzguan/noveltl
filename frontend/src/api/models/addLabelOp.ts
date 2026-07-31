@@ -4,22 +4,25 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
+import type { AddLabelOpOp } from './addLabelOpOp';
 
 /**
- * Pydantic schema for a label add operation. Inherits all attributes from LabelOpBase.
+ * Pydantic schema for a label add operation. Adds a new label to the label data with the given parameters.
  *
  * Attributes:
  *     op: The string literal 'add'.
  *     dirty: Boolean whether to mark the label as dirty.
- *     entity_group: String representing what entity group this label belongs to. If none, then set a default value.
+ *     entity_group: Optional entity group assigned to the label.
  *     score: Float score between 0.0 and 1.0 representing how likely this label is to be an entity.
+ *     start_pos: Inclusive start position in the chapter text.
+ *     end_pos: Exclusive end position in the chapter text.
  */
 export interface AddLabelOp {
   dirty?: boolean;
   /** @minimum 0 */
   endPos: number;
   entityGroup?: string | null;
-  op: 'add';
+  op: AddLabelOpOp;
   /**
      * @minimum 0
      * @maximum 1
@@ -27,6 +30,4 @@ export interface AddLabelOp {
   score?: number;
   /** @minimum 0 */
   startPos: number;
-  /** @maxLength 128 */
-  word: string;
 }

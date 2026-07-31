@@ -20,7 +20,7 @@ import {
 	CCServId,
 	LGServId,
 	LDServId,
-	LServEx,
+	LServId,
 	AServId,
 	ALRServId,
 	ServTypes,
@@ -74,11 +74,10 @@ export function buildIdRepository(): IDRepository {
 		chapter: new Map<ProvTypes["chapter"], ServIdStatus<"chapter">>(),
 		autoLabel: new Map<ProvTypes["autoLabel"], ServIdStatus<"autoLabel">>(),
 		autoLabelRun: new Map<ProvTypes["autoLabelRun"], ServIdStatus<"autoLabelRun">>(),
+		label: new Map<ProvTypes["label"], ServIdStatus<"label">>(),
 	};
 
-	const existableKindMap: ExistableKindMap = {
-		label: new Map<ProvTypes["label"], ServExistsStatus<"label">>(),
-	};
+	const existableKindMap: ExistableKindMap = {};
 
 	const revMap: RevMap = {
 		labelGroup: new Map<ServTypes["labelGroup"], ProvTypes["labelGroup"]>(),
@@ -86,6 +85,7 @@ export function buildIdRepository(): IDRepository {
 		chapterContent: new Map<ServTypes["chapterContent"], ProvTypes["chapterContent"]>(),
 		chapter: new Map<ServTypes["chapter"], ProvTypes["chapter"]>(),
 		autoLabel: new Map<ServTypes["autoLabel"], ProvTypes["autoLabel"]>(),
+		label: new Map<ServTypes["label"], ProvTypes["label"]>(),
 		autoLabelRun: new Map<ServTypes["autoLabelRun"], ProvTypes["autoLabelRun"]>(),
 	};
 
@@ -100,7 +100,6 @@ export function buildIdRepository(): IDRepository {
 	function newId(kind: Kind): ProvTypes[Kind] {
 		const provId = ProvId(`provisional-${counterRef++}`);
 		const id = ProvTypes[kind](provId);
-		// @ts-expect-error
 		if (identifiableKinds.includes(kind)) {
 			// @ts-expect-error
 			identifiableKindMap[kind as keyof IdentifiableKindMap].set(id, {
@@ -137,6 +136,9 @@ export function buildIdRepository(): IDRepository {
 	function newIdAndBindId(
 		params: Omit<ProvServKind<"autoLabelRun">, "provId">,
 	): Effect.Effect<ProvTypes["autoLabelRun"], ResourceConflictException>;
+	function newIdAndBindId(
+		params: Omit<ProvServKind<"label">, "provId">,
+	): Effect.Effect<ProvTypes["label"], ResourceConflictException>;
 
 	function newIdAndBindId({
 		kind,
@@ -170,17 +172,21 @@ export function buildIdRepository(): IDRepository {
 		return Effect.succeed(id);
 	}
 
-	function newIdAndBindExists(
-		params: Omit<ProvServKind<"label">, "provId" | "servId">,
-	): Effect.Effect<ProvTypes["label"]>;
-
-	function newIdAndBindExists({ kind }: { kind: "label" }): Effect.Effect<ProvTypes["label"]> {
+	function newIdAndBindExists({
+		kind,
+	}: {
+		kind: ExistableKind;
+	}): Effect.Effect<ProvTypes[ExistableKind], ResourceConflictException> {
+		// @ts-expect-error
 		const id = ProvTypes[kind](ProvId(`provisional-${counterRef++}`));
+		// @ts-expect-error
 		existableKindMap[kind].set(id, {
+			// @ts-expect-error
 			serverExists: ServTypes[kind](ServEx(true)),
 			status: "clean",
 			lockCount: 0,
 		});
+		// @ts-expect-error
 		return Effect.succeed(id);
 	}
 
@@ -202,6 +208,9 @@ export function buildIdRepository(): IDRepository {
 	function getServerId(
 		params: Omit<ProvServKind<"autoLabelRun">, "servId">,
 	): Effect.Effect<ALRServId | null, NotFoundException>;
+	function getServerId(
+		params: Omit<ProvServKind<"label">, "servId">,
+	): Effect.Effect<LServId | null, NotFoundException>;
 
 	function getServerId<K extends IdentifiableKind>({
 		kind,
@@ -216,10 +225,6 @@ export function buildIdRepository(): IDRepository {
 		}
 		return Effect.succeed(entry.serverId);
 	}
-
-	function getServerExists(
-		params: ProvServKind<"label">,
-	): Effect.Effect<LServEx | null, NotFoundException>;
 
 	function getServerExists<K extends ExistableKind>({
 		kind,
@@ -279,7 +284,8 @@ export function buildIdRepository(): IDRepository {
 			logger.error(`Provisional id ${provId} not found for kind ${kind} in bindServerExists`);
 			return Effect.fail(new NotFoundException());
 		}
-		entry.serverExists = LServEx(true);
+		// @ts-expect-error
+		entry.serverExists = ServTypes[kind](true);
 		return Effect.succeed(void 0);
 	}
 
@@ -294,7 +300,6 @@ export function buildIdRepository(): IDRepository {
 		kind: Kind;
 		id: ProvTypes[Kind];
 	}): Effect.Effect<IdStatus, NotFoundException> {
-		// @ts-expect-error
 		if (identifiableKinds.includes(kind)) {
 			// @ts-expect-error
 			const entry = identifiableKindMap[kind].get(id);
@@ -322,7 +327,6 @@ export function buildIdRepository(): IDRepository {
 		return Effect.gen(function* () {
 			let currentState: IdStatus;
 			let serverState: ServId | ServEx | null;
-			// @ts-expect-error
 			if (identifiableKinds.includes(kind)) {
 				currentState = yield* idObjState({ kind, id });
 				// @ts-expect-error
@@ -371,7 +375,6 @@ export function buildIdRepository(): IDRepository {
 						lockCount: number;
 				  }
 				| undefined;
-			// @ts-expect-error
 			if (identifiableKinds.includes(kind)) {
 				// @ts-expect-error
 				entry = identifiableKindMap[kind].get(id);
@@ -393,7 +396,6 @@ export function buildIdRepository(): IDRepository {
 	function releaseIdObjState(post: (status: InFlightIdStatus) => GroundIdStatus) {
 		return ({ kind, id }: Omit<AnyReservation<Kind>, "desiredState">) => {
 			let entry: ServExistsStatus<ExistableKind> | ServIdStatus<IdentifiableKind> | undefined;
-			// @ts-expect-error
 			if (identifiableKinds.includes(kind)) {
 				// @ts-expect-error
 				entry = identifiableKindMap[kind].get(id);
@@ -415,7 +417,6 @@ export function buildIdRepository(): IDRepository {
 			}
 			entry.status = post(entry.status);
 			if (
-				// @ts-expect-error
 				identifiableKinds.includes(kind) &&
 				isTerminal(entry.status) &&
 				"serverId" in entry
@@ -454,8 +455,10 @@ export function buildIdRepository(): IDRepository {
 			}
 		}
 		for (const kind of existableKinds) {
+			// @ts-expect-error
 			for (const [provId, entry] of existableKindMap[kind]) {
 				if (isTerminal(entry.status)) {
+					// @ts-expect-error
 					keys[kind].push([provId, kind]);
 				}
 			}
@@ -465,7 +468,6 @@ export function buildIdRepository(): IDRepository {
 				keys,
 				([provId, kind]: [ProvId, Kind]) =>
 					Effect.sync(() => {
-						// @ts-expect-error
 						if (identifiableKinds.includes(kind)) {
 							// @ts-expect-error
 							identifiableKindMap[kind].delete(provId);
@@ -497,6 +499,9 @@ export function buildIdRepository(): IDRepository {
 	function queryProvId(
 		params: Omit<ProvServKind<"autoLabelRun">, "provId">,
 	): Effect.Effect<ProvTypes["autoLabelRun"] | null>;
+	function queryProvId(
+		params: Omit<ProvServKind<"label">, "provId">,
+	): Effect.Effect<ProvTypes["label"] | null>;
 
 	function queryProvId({
 		kind,

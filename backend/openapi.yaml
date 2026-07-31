@@ -1163,6 +1163,9 @@ components:
       - other
       title: NovelType
       type: string
+    OpResult:
+      format: uuid
+      type: string
     OperationStatus:
       description: "Pydantic model to signal return status of operation.\n\nAttributes:\n\
         \    status: One of \"success\", \"fail\".\n    detail: Details on operation.\n\
@@ -1183,6 +1186,19 @@ components:
       required:
       - status
       title: OperationStatus
+      type: object
+    OpsResult:
+      description: "Pydantic schema for a list of label operation results.\n\nAttributes:\n\
+        \    results: A list of UUIDs corresponding to the results of each label operation."
+      properties:
+        results:
+          items:
+            $ref: '#/components/schemas/OpResult'
+          title: Results
+          type: array
+      required:
+      - results
+      title: OpsResult
       type: object
     RequestConflictDetail:
       description: "Structured detail payload used by request-key wrapped 409 responses.\n\
@@ -2367,7 +2383,11 @@ paths:
               $ref: '#/components/schemas/UpdateLabelDataStream'
         required: true
       responses:
-        '204':
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsResult'
           description: Successful Response
         '400':
           content:

@@ -4,31 +4,26 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateLabelOpOp } from './updateLabelOpOp';
 
 /**
- * Pydantic schema for a label update operation. Inherits all attributes from LabelOpBase.
+ * Pydantic schema for a label update operation. Partial updates performed on label with label_id.
  *
  * Attributes:
  *     op: The string literal 'update'.
- *     new_start_pos: Optional parameter. The new start position of the label.
- *     new_end_pos: Optional parameter. The new end position of the label.
- *     new_word: Optional parameter. The new word the label is labelling. Must satisfy `new_word == chapter_text[new_start_pos : new_end_pos]`.
+ *     label_id: ID of the label to update.
+ *     start_pos: Optional parameter. The new start position of the label.
+ *     end_pos: Optional parameter. The new end position of the label.
  *     dirty: Optional parameter. Value to change the current label's dirty value to.
  *     entity_group: Optional parameter. New entity group for this label.
  *     score: Optional parameter. New score for the entity.
  */
 export interface UpdateLabelOp {
   dirty?: boolean | null;
-  /** @minimum 0 */
-  endPos: number;
+  endPos?: number | null;
   entityGroup?: string | null;
-  newEndPos?: number | null;
-  newStartPos?: number | null;
-  newWord?: string | null;
-  op: 'update';
+  labelId: string;
+  op: UpdateLabelOpOp;
   score?: number | null;
-  /** @minimum 0 */
-  startPos: number;
-  /** @maxLength 128 */
-  word: string;
+  startPos?: number | null;
 }

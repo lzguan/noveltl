@@ -6,14 +6,14 @@ import { LoadingList } from "../components/LoadingList";
 import { StaticRouteInput } from "@/view/components/StaticRouteInput";
 import { routeTo } from "@/routes";
 import { readSourceWorksSourceWorksGet } from "@/api/endpoints/default/default";
-import type { SourceWorkDataOutput } from "@/api/models";
+import type { SourceWorkData } from "@/api/models";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 
 function SourceWorksPage() {
 	const [searchParams] = useSearchParams();
 	const [loading, setLoading] = useState(false);
 	const { search } = extractParams.view.sourceworks(searchParams);
-	const [sourceWorkData, setSourceWorkData] = useState<SourceWorkDataOutput[]>([]);
+	const [sourceWorkData, setSourceWorkData] = useState<SourceWorkData[]>([]);
 	const [error, setError] = useState<unknown>(null);
 
 	useEffect(() => {

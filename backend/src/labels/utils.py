@@ -22,9 +22,12 @@ from src.labels.exceptions import (
     LabelOutOfBoundsInvalidOperationException,
 )
 from src.labels.permissions import label_mod_access_delete, label_mod_access_insert, label_mod_access_update
+from src.labels.schemas import OpResult
 
 
-def _apply_add(db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.AddLabelOp) -> None:
+def _apply_add(
+    db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.AddLabelOp
+) -> OpResult:
     """
     Applies a label add operation to database. Does not commit. Secure operation.
 
@@ -64,7 +67,7 @@ def _apply_add(db: Session, current_user: User, label_data_id: uuid.UUID, text: 
     stmt = insert(models.Label).from_select(cols, vals).returning(models.Label)
     try:
         result = db.execute(stmt)
-        result.scalar_one()
+        return result.scalar_one().label_id
     except NoResultFound as e:
         raise LabelDataNotFoundException from e
     except IntegrityError as e:
@@ -79,7 +82,7 @@ def _apply_add(db: Session, current_user: User, label_data_id: uuid.UUID, text: 
 
 def _apply_update(
     db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.UpdateLabelOp
-) -> None:
+) -> OpResult:
     """
     Applies a label update operation to database. Does not commit. Secure operation.
 
@@ -141,7 +144,7 @@ def _apply_update(
     stmt = label_mod_access_update(stmt, current_user)
     try:
         result = db.execute(stmt)
-        result.scalar_one()
+        return result.scalar_one().label_id
     except NoResultFound as e:
         raise LabelConcurrentModificationException from e
     except IntegrityError as e:
@@ -156,7 +159,7 @@ def _apply_update(
 
 def _apply_delete(
     db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.DeleteLabelOp
-) -> None:
+) -> OpResult:
     """
     Applies a label delete operation. Does not commit.
 
@@ -181,14 +184,16 @@ def _apply_delete(
 
     try:
         result = db.execute(stmt)
-        result.scalar_one()
+        return result.scalar_one().label_id
     except NoResultFound as e:
         raise LabelNotExistsInvalidOperationException from e
     except Exception:
         raise
 
 
-def apply_operation(db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.LabelOp) -> None:
+def apply_operation(
+    db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.LabelOp
+) -> OpResult:
     """
     Applies a single label operation.
 
@@ -211,10 +216,10 @@ def apply_operation(db: Session, current_user: User, label_data_id: uuid.UUID, t
         This function acts as a wrapper for calling `_apply_(add, update, delete)`. See documentation for these functions for when the corresponding types of operations get passed into op.
     """
     if isinstance(op, schemas.AddLabelOp):
-        _apply_add(db, current_user, label_data_id, text, op)
+        return _apply_add(db, current_user, label_data_id, text, op)
     elif isinstance(op, schemas.UpdateLabelOp):
-        _apply_update(db, current_user, label_data_id, text, op)
+        return _apply_update(db, current_user, label_data_id, text, op)
     elif isinstance(op, schemas.DeleteLabelOp):
-        _apply_delete(db, current_user, label_data_id, text, op)
+        return _apply_delete(db, current_user, label_data_id, text, op)
     else:
         raise LabelInvalidOperationException("Unknown operation type.")

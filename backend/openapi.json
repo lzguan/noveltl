@@ -2022,8 +2022,15 @@
           }
         },
         "responses": {
-          "204": {
-            "description": "Successful Response"
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsResult"
+                }
+              }
+            }
           },
           "400": {
             "description": "Operation positions are out of bounds or the operation is otherwise invalid.",
@@ -4411,6 +4418,10 @@
         ],
         "title": "NovelType"
       },
+      "OpResult": {
+        "type": "string",
+        "format": "uuid"
+      },
       "OperationStatus": {
         "properties": {
           "status": {
@@ -4439,6 +4450,23 @@
         ],
         "title": "OperationStatus",
         "description": "Pydantic model to signal return status of operation.\n\nAttributes:\n    status: One of \"success\", \"fail\".\n    detail: Details on operation.\n\nNotes:\n    Unless under exceptional circumstances, should not return fail and just raise an exception."
+      },
+      "OpsResult": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/OpResult"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "title": "OpsResult",
+        "description": "Pydantic schema for a list of label operation results.\n\nAttributes:\n    results: A list of UUIDs corresponding to the results of each label operation."
       },
       "RequestConflictDetail": {
         "properties": {

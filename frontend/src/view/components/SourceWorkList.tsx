@@ -1,7 +1,7 @@
-import type { SourceWorkDataOutput } from "@/api/models";
+import type { SourceWorkData } from "@/api/models";
 import { SourceWorkCard } from "./SourceWorkCard";
 
-function SourceWorkList({ data }: { data: SourceWorkDataOutput[] }) {
+function SourceWorkList({ data }: { data: SourceWorkData[] }) {
 	return (
 		<div className="space-y-4">
 			{data.map((item) => (

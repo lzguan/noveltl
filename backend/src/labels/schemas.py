@@ -231,6 +231,19 @@ class UpdateLabelOp(Model):
 type LabelOp = Annotated[AddLabelOp | DeleteLabelOp | UpdateLabelOp, Field(discriminator="op")]
 label_op_adapter = TypeAdapter[LabelOp](LabelOp)
 
+type OpResult = Annotated[uuid.UUID, Field()]
+
+
+class OpsResult(Model):
+    """
+    Pydantic schema for a list of label operation results.
+
+    Attributes:
+        results: A list of UUIDs corresponding to the results of each label operation.
+    """
+
+    results: list[OpResult]
+
 
 class UpdateLabelDataStream(Model):
     """

@@ -29,6 +29,7 @@ from src.labels.schemas import (
     LabelData,
     LabelGroup,
     LabelGroupWithRole,
+    OpsResult,
     UpdateLabelDataStream,
     UpdateLabelGroup,
 )
@@ -270,7 +271,7 @@ def create_label_data(
 
 @router.patch(
     "/label-datas/{labelDataId}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=OpsResult,
     responses={
         400: {
             "model": DetailHTTPErrorResponse,
@@ -286,14 +287,14 @@ def create_label_data(
         },
     },
 )
-@ttl_cache(ttl=60, cache=redis_cache, success_code=204)
+@ttl_cache(ttl=60, cache=redis_cache, serialize_ret=serialize_response_model(OpsResult))
 def update_label_data_stream(
     label_data_id: Annotated[uuid.UUID, Path(alias="labelDataId")],
     request: UpdateLabelDataStream,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
-) -> None:
+) -> OpsResult:
     """
     Applies a stream of edit operations to labels.
 
@@ -303,7 +304,7 @@ def update_label_data_stream(
         400: Operation positions out of bounds or invalid operation.
     """
     try:
-        modify_label_data_by_stream(db, current_user, label_data_id, request)
+        return OpsResult(results=modify_label_data_by_stream(db, current_user, label_data_id, request))
     except (LabelDataNotFoundException, ChapterContentNotFoundException) as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -334,7 +335,6 @@ def update_label_data_stream(
         ) from e
     except LabelInvalidOperationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e) or "Invalid operation.") from e
-    return
 
 
 @router.post(

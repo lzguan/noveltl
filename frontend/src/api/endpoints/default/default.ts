@@ -44,6 +44,7 @@ import type {
   Novel,
   NovelAndUsers,
   OperationStatus,
+  OpsResult,
   ReadAutoLabelRunsAutoLabelRunsGetParams,
   ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetParams,
   ReadChaptersByNovelChaptersGetParams,
@@ -1131,9 +1132,9 @@ export const readLabelDataLabelDatasLabelDataIdGet = async (labelDataId: string,
 );}
 
 
-export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponse204 = {
-  data: void
-  status: 204
+export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponse200 = {
+  data: OpsResult
+  status: 200
 }
 
 export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponse400 = {
@@ -1156,7 +1157,7 @@ export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponse422 = {
   status: 422
 }
 
-export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponseSuccess = (updateLabelDataStreamLabelDatasLabelDataIdPatchResponse204) & {
+export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponseSuccess = (updateLabelDataStreamLabelDatasLabelDataIdPatchResponse200) & {
   headers: Headers;
 };
 export type updateLabelDataStreamLabelDatasLabelDataIdPatchResponseError = (updateLabelDataStreamLabelDatasLabelDataIdPatchResponse400 | updateLabelDataStreamLabelDatasLabelDataIdPatchResponse404 | updateLabelDataStreamLabelDatasLabelDataIdPatchResponse409 | updateLabelDataStreamLabelDatasLabelDataIdPatchResponse422) & {
@@ -1186,7 +1187,7 @@ export const getUpdateLabelDataStreamLabelDatasLabelDataIdPatchUrl = (labelDataI
  *
  * Raises:
  *     404: Label data or its underlying revision text not found, or target label does not exist.
- *     409: Word mismatch or label overlap detected.
+ *     409: Concurrent modification or label overlap detected.
  *     400: Operation positions out of bounds or invalid operation.
  * @summary Update Label Data Stream
  */

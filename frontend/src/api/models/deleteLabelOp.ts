@@ -4,19 +4,16 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
+import type { DeleteLabelOpOp } from './deleteLabelOpOp';
 
 /**
- * Pydantic schema for a label delete operation. Inherits all attributes from LabelOpBase.
+ * Pydantic schema for a label delete operation. Deletes the label with label_id.
  *
  * Attributes:
  *     op: The string literal 'delete'.
+ *     label_id: ID of the label to delete.
  */
 export interface DeleteLabelOp {
-  /** @minimum 0 */
-  endPos: number;
-  op: 'delete';
-  /** @minimum 0 */
-  startPos: number;
-  /** @maxLength 128 */
-  word: string;
+  labelId: string;
+  op: DeleteLabelOpOp;
 }

@@ -18,6 +18,7 @@ import {
 	LGProvId,
 	LGServId,
 	LProvId,
+	LServId,
 	type ProvLabel,
 } from "./types/idTypes";
 import {
@@ -28,11 +29,11 @@ import {
 } from "./types/helperTypes";
 import type { Novel, TextOp } from "@/api/models";
 import type { RequestEvent, Reservation, ReserveList } from "./types/requestTypes";
-import type { LabelOp } from "./types/dataTypes";
 import {
 	ReadEditChapterDataEditChapterDataChapterIdPost200Response,
 	ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200Response,
 	UpdateChapterContentChaptersChapterIdContentPatch200Response,
+	UpdateLabelDataStreamLabelDatasLabelDataIdPatch200Response,
 } from "@/api/endpoints/default/default.effect";
 import {
 	readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
@@ -40,7 +41,7 @@ import {
 	updateLabelDataStreamLabelDatasLabelDataIdPatch,
 } from "@/api/endpoints/default/default";
 import type { Role } from "@/api/models/role";
-import type { ChapterDataManager } from "./types/dataTypes";
+import type { ChapterDataManager, ULabelOp } from "./types/dataTypes";
 
 export const buildChapterDataManager = (
 	editChapterData: typeof ReadEditChapterDataEditChapterDataChapterIdPost200Response.Type,
@@ -101,7 +102,7 @@ export const buildChapterDataManager = (
 				const provLabels: ProvLabel[] = entry.labels
 					.map((l) => {
 						const provLabelId = Effect.runSync(
-							idRepo.newIdAndBindExists({ kind: "label" }),
+							idRepo.newIdAndBindId({ kind: "label", servId: LServId(l.labelId) }),
 						);
 						return Prov({
 							...l,
@@ -167,7 +168,7 @@ export const buildChapterDataManager = (
 		// Op queue: keyed by labelGroupProvId for label ops.
 		// Only one tag can be active at a time. Tag switching is handled by auto-flush in actions.
 		let opQueue:
-			| { tag: "label"; queue: Map<LGProvId, { labelId: LProvId; op: LabelOp }[]> }
+			| { tag: "label"; queue: Map<LGProvId, { labelId: LProvId; op: ULabelOp }[]> }
 			| { tag: "text"; queue: TextOp[] }
 			| { tag: "neither" } = { tag: "neither" };
 
@@ -202,7 +203,7 @@ export const buildChapterDataManager = (
 			flushQueued().pipe(Effect.map(lockChapter));
 
 		const buildLabelReservations = (
-			ops: { labelId: LProvId; op: LabelOp }[],
+			ops: { labelId: LProvId; op: ULabelOp }[],
 		): Reservation<"label">[] => {
 			const map = new Map<LProvId, InFlightIdStatus>();
 			for (const { labelId, op } of ops) {
@@ -299,29 +300,51 @@ export const buildChapterDataManager = (
 									}
 									const resp = yield* Effect.tryPromise(() =>
 										updateLabelDataStreamLabelDatasLabelDataIdPatch(servLdId, {
-											ops: opsSnapshot.map(({ op }) => op),
+											ops: opsSnapshot.map(({ op }) =>
+												op.op === "add"
+													? op
+													: {
+															...op,
+															labelId:
+																Effect.runSync(
+																	idRepo.getServerId({
+																		kind: "label",
+																		provId: op.labelId,
+																	}),
+																) ??
+																(() => {
+																	throw new FatalException({
+																		orig: new Error(
+																			"Label has no server ID",
+																		),
+																	});
+																})(),
+														},
+											),
 										}),
 									).pipe(
 										Effect.mapError(
 											(err) => new ConnectionException({ orig: err }),
 										),
 									);
-									if (resp.status !== 204) {
-										return yield* Effect.fail(
-											new FatalException({
-												orig: new Error(`Label op failed: ${resp.status}`),
-											}),
-										);
-									}
+
 									return resp.data;
 								}),
-							postSend: () =>
+							postSend: (data) =>
 								Effect.gen(function* () {
-									for (const { labelId, op } of opsSnapshot) {
+									const decoded = Schema.decodeUnknownSync(
+										UpdateLabelDataStreamLabelDatasLabelDataIdPatch200Response,
+									)(data);
+									const withServId = opsSnapshot.map((v, index) => ({
+										...v,
+										servId: LServId(decoded.results[index]),
+									}));
+									for (const { labelId, op, servId } of withServId) {
 										if (op.op === "add") {
-											yield* idRepo.bindServerExists({
+											yield* idRepo.bindServerId({
 												kind: "label",
 												provId: labelId,
+												servId,
 											});
 										}
 									}
@@ -566,7 +589,6 @@ export const buildChapterDataManager = (
 			labelGroupId: LGProvId,
 			startPos: number,
 			endPos: number,
-			word: string,
 			entityGroup?: string,
 			score?: number,
 			dirty?: boolean,
@@ -584,9 +606,9 @@ export const buildChapterDataManager = (
 						new UnknownException({ message: "Label bounds are out of range" }),
 					);
 				}
-				if (text.slice(startPos, endPos) !== word) {
+				if (endPos - startPos > 128) {
 					return yield* Effect.fail(
-						new UnknownException({ message: "Label word must match text" }),
+						new UnknownException({ message: "Label is too long" }),
 					);
 				}
 				if (
@@ -610,7 +632,7 @@ export const buildChapterDataManager = (
 					labelDataId: labelDataProvId,
 					labelStart: startPos,
 					labelEnd: endPos,
-					labelWord: word,
+					labelWord: text.slice(startPos, endPos),
 					labelDirty: dirty ?? true,
 					labelEntityGroup: entityGroup ?? null,
 					labelScore: score ?? 1.0,
@@ -637,9 +659,9 @@ export const buildChapterDataManager = (
 						labelId: provLabelId,
 						op: {
 							op: "add",
+							labelId: provLabelId,
 							startPos,
 							endPos,
-							word,
 							entityGroup: entityGroup ?? null,
 							score: score ?? 1.0,
 							dirty: dirty ?? true,
@@ -653,7 +675,6 @@ export const buildChapterDataManager = (
 						op: "add",
 						startPos,
 						endPos,
-						word,
 						entityGroup: entityGroup ?? null,
 						score: score ?? 1.0,
 						dirty: dirty ?? true,
@@ -667,8 +688,7 @@ export const buildChapterDataManager = (
 
 		const _deleteLabel = (
 			labelGroupId: LGProvId,
-			startPos: number,
-			endPos: number,
+			labelId: LProvId,
 		): Effect.Effect<RequestEvent[], UnknownException> =>
 			Effect.gen(function* () {
 				if (destroyed)
@@ -678,13 +698,11 @@ export const buildChapterDataManager = (
 
 				const { labels } = yield* getReadyLabels(labelGroupId, true);
 
-				const labelIndex = labels.findIndex(
-					(l) => l.labelStart === startPos && l.labelEnd === endPos,
-				);
+				const labelIndex = labels.findIndex((l) => l.labelId === labelId);
 				if (labelIndex === -1) {
 					return yield* Effect.fail(
 						new UnknownException({
-							message: `Label [${startPos}, ${endPos}) not found`,
+							message: `Label [${labelId}] not found`,
 						}),
 					);
 				}
@@ -709,7 +727,7 @@ export const buildChapterDataManager = (
 					}
 					opQueue.queue.get(labelGroupId)!.push({
 						labelId: label.labelId,
-						op: { op: "delete", startPos, endPos, word: label.labelWord },
+						op: { op: "delete", labelId: label.labelId },
 					});
 				}
 
@@ -717,9 +735,6 @@ export const buildChapterDataManager = (
 					eventType: "labelChanged",
 					op: {
 						op: "delete",
-						startPos,
-						endPos,
-						word: label.labelWord,
 						labelGroupId,
 						chapterId,
 						labelId: label.labelId,
@@ -730,11 +745,9 @@ export const buildChapterDataManager = (
 
 		const _updateLabel = (
 			labelGroupId: LGProvId,
-			startPos: number,
-			endPos: number,
-			newStartPos?: number | null,
-			newEndPos?: number | null,
-			newWord?: string | null,
+			labelId: LProvId,
+			startPos?: number,
+			endPos?: number,
 			entityGroup?: string,
 			score?: number,
 			dirty?: boolean,
@@ -747,9 +760,7 @@ export const buildChapterDataManager = (
 
 				const { labels } = yield* getReadyLabels(labelGroupId, true);
 
-				const labelIndex = labels.findIndex(
-					(l) => l.labelStart === startPos && l.labelEnd === endPos,
-				);
+				const labelIndex = labels.findIndex((l) => l.labelId === labelId);
 				if (labelIndex === -1) {
 					return yield* Effect.fail(
 						new UnknownException({
@@ -758,32 +769,17 @@ export const buildChapterDataManager = (
 					);
 				}
 				const currentLabel = labels[labelIndex];
-				const nextStart = newStartPos ?? currentLabel.labelStart;
-				const nextEnd = newEndPos ?? currentLabel.labelEnd;
-				const boundsChanged = newStartPos != null || newEndPos != null;
-				if (boundsChanged && newWord == null) {
+				const nextStart = startPos ?? currentLabel.labelStart;
+				const nextEnd = endPos ?? currentLabel.labelEnd;
+
+				if (nextEnd - nextStart > 128) {
 					return yield* Effect.fail(
-						new UnknownException({
-							message: "Must provide new word when changing bounds",
-						}),
+						new UnknownException({ message: "Updated label is too long" }),
 					);
 				}
-				if (!boundsChanged && newWord != null) {
-					return yield* Effect.fail(
-						new UnknownException({
-							message: "Cannot set new word without changing bounds",
-						}),
-					);
-				}
-				const nextWord = newWord ?? currentLabel.labelWord;
 				if (nextStart >= nextEnd || nextStart < 0 || nextEnd > text.length) {
 					return yield* Effect.fail(
 						new UnknownException({ message: "Updated label bounds out of range" }),
-					);
-				}
-				if (text.slice(nextStart, nextEnd) !== nextWord) {
-					return yield* Effect.fail(
-						new UnknownException({ message: "Updated word must match text" }),
 					);
 				}
 
@@ -803,7 +799,7 @@ export const buildChapterDataManager = (
 					...currentLabel,
 					labelStart: nextStart,
 					labelEnd: nextEnd,
-					labelWord: nextWord,
+					labelWord: text.slice(nextStart, nextEnd),
 					labelEntityGroup: entityGroup ?? currentLabel.labelEntityGroup,
 					labelScore: score ?? currentLabel.labelScore,
 					labelDirty: dirty ?? currentLabel.labelDirty,
@@ -830,12 +826,9 @@ export const buildChapterDataManager = (
 						labelId: currentLabel.labelId,
 						op: {
 							op: "update",
+							labelId: currentLabel.labelId,
 							startPos,
 							endPos,
-							word: currentLabel.labelWord,
-							newStartPos: newStartPos ?? undefined,
-							newEndPos: newEndPos ?? undefined,
-							newWord: newWord ?? undefined,
 							entityGroup: entityGroup ?? undefined,
 							score: score ?? undefined,
 							dirty: dirty ?? undefined,
@@ -849,10 +842,6 @@ export const buildChapterDataManager = (
 						op: "update",
 						startPos,
 						endPos,
-						word: currentLabel.labelWord,
-						newStartPos: newStartPos ?? undefined,
-						newEndPos: newEndPos ?? undefined,
-						newWord: newWord ?? undefined,
 						entityGroup: entityGroup ?? undefined,
 						score: score ?? undefined,
 						dirty: dirty ?? undefined,
@@ -1194,7 +1183,7 @@ export const buildChapterDataManager = (
 
 				const event: RequestEvent = {
 					cached: false,
-					variant: "reloadGroup",
+					variant: "reloadGroup" as const,
 					active: false,
 					retries: 3,
 					reservationRequest: {
@@ -1267,7 +1256,10 @@ export const buildChapterDataManager = (
 							const provLabels: ProvLabel[] = entry.labels
 								.map((l) => {
 									const provLabelId = Effect.runSync(
-										idRepo.newIdAndBindExists({ kind: "label" }),
+										idRepo.newIdAndBindId({
+											kind: "label",
+											servId: LServId(l.labelId),
+										}),
 									);
 									return Prov({
 										...l,

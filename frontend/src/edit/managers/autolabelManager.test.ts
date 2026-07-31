@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { Effect } from "effect";
 import type { NovelData } from "../controller/novelDataManager";
-import { buildNovelController } from "../controller/controller";
+import { buildController } from "../controller/controller";
 import type { NovelUserEvent } from "../controller/types/controllerTypes";
 import { IdempotentCallable } from "../controller/types/helperTypes";
 import { ALRProvId, LGProvId } from "../controller/types/idTypes";
@@ -36,7 +36,7 @@ function makeNovelData(): NovelData {
 }
 
 function renderManager(onUserEvent?: (event: NovelUserEvent) => void) {
-	const controller = Effect.runSync(buildNovelController(makeNovelData()));
+	const controller = Effect.runSync(buildController(makeNovelData()));
 	const userEvents: NovelUserEvent[] = [];
 	const hooks = renderHook(() => ({
 		autoLabels: useAutoLabelState(),

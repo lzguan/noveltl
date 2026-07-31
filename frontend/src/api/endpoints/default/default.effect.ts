@@ -836,7 +836,7 @@ export const ReadLabelDataLabelDatasLabelDataIdGet422Response = S.Struct({
  *
  * Raises:
  *     404: Label data or its underlying revision text not found, or target label does not exist.
- *     409: Word mismatch or label overlap detected.
+ *     409: Concurrent modification or label overlap detected.
  *     400: Operation positions out of bounds or invalid operation.
  * @summary Update Label Data Stream
  */
@@ -859,30 +859,14 @@ export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneScoreM
 
 export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneStartPosMin = 0;
 
-export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneWordMax = 128;
-
-export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemTwoEndPosMin = 0;
-
-export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemTwoStartPosMin = 0;
-
-export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemTwoWordMax = 128;
-
-export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeEndPosMin = 0;
+export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeEndPosOneMin = 0;
 
 export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeEntityGroupOneMax = 64;
-
-export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeNewEndPosOneMin = 0;
-
-export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeNewStartPosOneMin = 0;
-
-export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeNewWordOneMax = 128;
 
 export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeScoreOneMin = 0;
 export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeScoreOneMax = 1;
 
-export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeStartPosMin = 0;
-
-export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeWordMax = 128;
+export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeStartPosOneMin = 0;
 
 
 
@@ -891,28 +875,26 @@ export const UpdateLabelDataStreamLabelDatasLabelDataIdPatchBody = S.Struct({
   "dirty": S.optionalWith(S.Boolean, { default: () => updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneDirtyDefault }),
   "endPos": S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneEndPosMin)),
   "entityGroup": S.optional(S.Union(S.String.pipe(S.maxLength(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneEntityGroupOneMax)), S.Null)),
-  "op": S.Literal("add"),
+  "op": S.Literal('add'),
   "score": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneScoreMin), S.lessThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneScoreMax)), { default: () => updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneScoreDefault }),
-  "startPos": S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneStartPosMin)),
-  "word": S.String.pipe(S.maxLength(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneWordMax))
-}).annotations({ description: 'Pydantic schema for a label add operation. Inherits all attributes from LabelOpBase.\n\nAttributes:\n    op: The string literal \'add\'.\n    dirty: Boolean whether to mark the label as dirty.\n    entity_group: String representing what entity group this label belongs to. If none, then set a default value.\n    score: Float score between 0.0 and 1.0 representing how likely this label is to be an entity.' }), S.Struct({
-  "endPos": S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemTwoEndPosMin)),
-  "op": S.Literal("delete"),
-  "startPos": S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemTwoStartPosMin)),
-  "word": S.String.pipe(S.maxLength(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemTwoWordMax))
-}).annotations({ description: 'Pydantic schema for a label delete operation. Inherits all attributes from LabelOpBase.\n\nAttributes:\n    op: The string literal \'delete\'.' }), S.Struct({
+  "startPos": S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneStartPosMin))
+}).annotations({ description: 'Pydantic schema for a label add operation. Adds a new label to the label data with the given parameters.\n\nAttributes:\n    op: The string literal \'add\'.\n    dirty: Boolean whether to mark the label as dirty.\n    entity_group: Optional entity group assigned to the label.\n    score: Float score between 0.0 and 1.0 representing how likely this label is to be an entity.\n    start_pos: Inclusive start position in the chapter text.\n    end_pos: Exclusive end position in the chapter text.' }), S.Struct({
+  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "op": S.Literal('delete')
+}).annotations({ description: 'Pydantic schema for a label delete operation. Deletes the label with label_id.\n\nAttributes:\n    op: The string literal \'delete\'.\n    label_id: ID of the label to delete.' }), S.Struct({
   "dirty": S.optional(S.Union(S.Boolean, S.Null)),
-  "endPos": S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeEndPosMin)),
+  "endPos": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeEndPosOneMin)), S.Null)),
   "entityGroup": S.optional(S.Union(S.String.pipe(S.maxLength(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeEntityGroupOneMax)), S.Null)),
-  "newEndPos": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeNewEndPosOneMin)), S.Null)),
-  "newStartPos": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeNewStartPosOneMin)), S.Null)),
-  "newWord": S.optional(S.Union(S.String.pipe(S.maxLength(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeNewWordOneMax)), S.Null)),
-  "op": S.Literal("update"),
+  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "op": S.Literal('update'),
   "score": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeScoreOneMin), S.lessThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeScoreOneMax)), S.Null)),
-  "startPos": S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeStartPosMin)),
-  "word": S.String.pipe(S.maxLength(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeWordMax))
-}).annotations({ description: 'Pydantic schema for a label update operation. Inherits all attributes from LabelOpBase.\n\nAttributes:\n    op: The string literal \'update\'.\n    new_start_pos: Optional parameter. The new start position of the label.\n    new_end_pos: Optional parameter. The new end position of the label.\n    new_word: Optional parameter. The new word the label is labelling. Must satisfy `new_word == chapter_text[new_start_pos : new_end_pos]`.\n    dirty: Optional parameter. Value to change the current label\'s dirty value to.\n    entity_group: Optional parameter. New entity group for this label.\n    score: Optional parameter. New score for the entity.' })))
-}).annotations({ description: 'Pydantic schema for a buffered stream of label operations.\n\nAttributes:\n    ops: A list of label operations.' })
+  "startPos": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeStartPosOneMin)), S.Null))
+}).annotations({ description: 'Pydantic schema for a label update operation. Partial updates performed on label with label_id.\n\nAttributes:\n    op: The string literal \'update\'.\n    label_id: ID of the label to update.\n    start_pos: Optional parameter. The new start position of the label.\n    end_pos: Optional parameter. The new end position of the label.\n    dirty: Optional parameter. Value to change the current label\'s dirty value to.\n    entity_group: Optional parameter. New entity group for this label.\n    score: Optional parameter. New score for the entity.' })))
+}).annotations({ description: 'Pydantic schema for an atomic stream of label operations.\n\nAttributes:\n    ops: A list of label operations.' })
+
+export const UpdateLabelDataStreamLabelDatasLabelDataIdPatch200Response = S.Struct({
+  "results": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))
+}).annotations({ description: 'Pydantic schema for a list of label operation results.\n\nAttributes:\n    results: A list of UUIDs corresponding to the results of each label operation.' })
 
 export const UpdateLabelDataStreamLabelDatasLabelDataIdPatch400Response = S.Struct({
   "detail": S.String

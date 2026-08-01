@@ -1,9 +1,11 @@
+from enum import StrEnum
 from typing import Annotated, Self
 from uuid import UUID
 
-from pydantic import Field, TypeAdapter, model_validator
+from pydantic import ConfigDict, Field, TypeAdapter, model_validator
 
-from src.filters.data_types import Schema
+from src.filters.data_types import DataObj, FieldName, Schema
+from src.filters.exceptions import InvalidSortKeyException, UnsupportedSortTypeException
 from src.filters.runners.python.group_runner import GroupData
 from src.filters.runners.python.types import PythonRunnerInput
 from src.schemas import Model
@@ -14,7 +16,7 @@ runner_input_adapter = TypeAdapter(RunnerInput)
 
 class GroupFilter(Model):
     grouping_id: UUID
-    values: list[GroupData]
+    values: list[GroupData] = Field(max_length=100)
 
 
 class FunctionDefinitionMeta(Model):
@@ -23,10 +25,33 @@ class FunctionDefinitionMeta(Model):
     function_name: str
 
 
-class Frame(Model):
-    group_filters: list[GroupFilter]
+class InstanceResponse(Model):
+    model_config = ConfigDict(from_attributes=True)
+
+    instance_id: UUID
     workflow_id: UUID
-    sort_keys: list[tuple[str, bool]] = Field(default_factory=list)  # List of (field_name, ascending) tuples
+    value: DataObj
+
+
+class InstanceQueryResult(Model):
+    instance: InstanceResponse
+    group_values: dict[UUID, GroupData]
+
+
+class SortDirection(StrEnum):
+    ASCENDING = "asc"
+    DESCENDING = "desc"
+
+
+class SortKey(Model):
+    field_name: FieldName
+    direction: SortDirection
+
+
+class Frame(Model):
+    group_filters: list[GroupFilter] = Field(max_length=10)
+    workflow_id: UUID
+    sort_keys: list[SortKey] = Field(default_factory=list, max_length=3)
 
     @model_validator(mode="after")
     def validate_group_filters(self) -> Self:
@@ -39,9 +64,7 @@ class Frame(Model):
 
     @model_validator(mode="after")
     def validate_sort_keys(self) -> Self:
-        if len(self.sort_keys) > 3:
-            raise ValueError("At most 3 sort keys are allowed in a frame")
-        if len(set(key for key, _ in self.sort_keys)) != len(self.sort_keys):
+        if len({sort_key.field_name for sort_key in self.sort_keys}) != len(self.sort_keys):
             raise ValueError("Duplicate sort keys are not allowed in a frame")
         return self
 
@@ -56,8 +79,10 @@ class InstanceQuery(Model):
 
 
 def validate_frame_workflow(frame: Frame, schema: Schema):
-    for sort_key, _ in frame.sort_keys:
-        if sort_key not in schema.fields:
-            raise ValueError(f"Sort key {sort_key} is not a valid field in the schema")
-        if schema.fields[sort_key].type not in ("string", "int", "bool", "float"):
-            raise ValueError(f"Sort key {sort_key} must be of type string, int, bool, or float")
+    for sort_key in frame.sort_keys:
+        if sort_key.field_name not in schema.fields:
+            raise InvalidSortKeyException(f"Sort key {sort_key.field_name} is not a valid field in the schema")
+        if schema.fields[sort_key.field_name].type not in ("string", "int", "bool", "float"):
+            raise UnsupportedSortTypeException(
+                f"Sort key {sort_key.field_name} must be of type string, int, bool, or float"
+            )

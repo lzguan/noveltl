@@ -1,5 +1,5 @@
 from src.filters.data_types import BoolField, LabelRefField, Schema, TextSpanField
-from src.filters.dependencies import ResolvedResourceDependency, resolve_dependencies
+from src.filters.function_dependencies import ResolvedResourceDependency, resolve_dependencies
 from src.filters.functions import (
     Add,
     Call,

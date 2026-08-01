@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.filters.data_types import Data, DataObj, LabelRefData, TextSpanData
-from src.filters.dependencies import ResolvedResourceDependency
+from src.filters.function_dependencies import ResolvedResourceDependency
 from src.filters.functions import ResourceName
 from src.labels.models import Label
 from src.novels.models import ChapterContent

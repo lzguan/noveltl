@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from src.filters.compilers.python import PythonCompiler
 from src.filters.context.python import PythonExecutionContextImpl, collect_resource_ids
 from src.filters.data_types import DataObj, Schema, data_adapter, extends
-from src.filters.dependencies import resolve_dependencies
+from src.filters.function_dependencies import resolve_dependencies
 from src.filters.functions import function_adapter
 from src.filters.models import FunctionDefinition, Instance, Workflow, WorkflowStatus
 from src.filters.runners.interfaces.runner import Runner

@@ -24,10 +24,7 @@ def add_workflow(
     workflow = Workflow(workflow_name="Permission test", schema={"fields": {}})
     db.add(workflow)
     db.flush()
-    db.add_all(
-        WorkflowNovel(workflow_id=workflow.workflow_id, novel_id=novel.novel_id)
-        for novel in novels
-    )
+    db.add_all(WorkflowNovel(workflow_id=workflow.workflow_id, novel_id=novel.novel_id) for novel in novels)
     db.add_all(
         WorkflowLabelGroup(
             workflow_id=workflow.workflow_id,
@@ -269,10 +266,7 @@ class TestWorkflowMutationPermissions:
             novels=[label_access_scenario.novels["public"]],
             label_groups=[label_access_scenario.label_groups["with_viewer"]],
         )
-        stmt = (
-            delete(Workflow)
-            .where(Workflow.workflow_id == workflow.workflow_id)
-        )
+        stmt = delete(Workflow).where(Workflow.workflow_id == workflow.workflow_id)
         stmt = workflow_mod_access_delete(stmt, label_access_scenario.users["collaborator"])
 
         test_db.execute(stmt)

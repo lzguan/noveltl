@@ -111,6 +111,8 @@ and applying decisions back to NovelTL are future work.
   runners
 - [`backend/tests/filters/`](../../backend/tests/filters/): unit and pipeline
   tests
+- [API endpoint design](endpoints.md): draft public routes, pagination, and
+  permission behavior
 
 ## Future design
 

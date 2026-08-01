@@ -22,6 +22,11 @@ class WorkflowStatus(StrEnum):
     FAILED = "failed"
 
 
+class WorkflowUseCase(StrEnum):
+    ADVANCED = "advanced"
+    GLOSSARY = "glossary"
+
+
 class Workflow(Base):
     """ """
 
@@ -31,6 +36,17 @@ class Workflow(Base):
         postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
     )
     workflow_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    use_case: Mapped[WorkflowUseCase] = mapped_column(
+        Enum(
+            WorkflowUseCase,
+            native_enum=False,
+            length=10,
+            values_callable=lambda values: [use_case.value for use_case in values],
+        ),
+        nullable=False,
+        default=WorkflowUseCase.ADVANCED,
+        server_default=WorkflowUseCase.ADVANCED.value,
+    )
     schema: Mapped[dict] = mapped_column(postgresql.JSONB, nullable=False)
     job_id: Mapped[uuid.UUID | None] = mapped_column(postgresql.UUID, nullable=True)
     workflow_status: Mapped[WorkflowStatus] = mapped_column(

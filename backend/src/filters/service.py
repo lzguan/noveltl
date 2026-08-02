@@ -154,9 +154,7 @@ def query_workflow(db: Session, current_user: User, workflow_id: UUID) -> Workfl
             .order_by(WorkflowLabelGroup.label_group_id)
         ).scalars()
     )
-    instance_count = (
-        db.scalar(select(func.count(Instance.instance_id)).where(Instance.workflow_id == workflow_id)) or 0
-    )
+    instance_count = db.scalar(select(func.count(Instance.instance_id)).where(Instance.workflow_id == workflow_id)) or 0
     return WorkflowResponse.model_validate(
         {
             "workflow_id": workflow.workflow_id,

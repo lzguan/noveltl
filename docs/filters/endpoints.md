@@ -21,10 +21,11 @@ the API does not expose runner or function-type metadata endpoints.
 - A non-administrator may access a workflow only when they are an owner or
   editor of every associated novel and a contributor to every associated
   label group.
-- Collection responses are paginated.
+- Resource collection responses are paginated.
 - `limit` defaults to `50` and may not exceed `100`.
-- UUID-keyset collections use an opaque `cursor`. Aggregated group values use
-  `offset`, because their ordering is based on a calculated value and count.
+- UUID-keyset collections use the last returned resource ID as `cursor`.
+  Aggregated group values use `offset`, because their ordering is based on a
+  calculated value and count.
 - Public response fields use the repository's existing camel-case aliases.
 
 ## Function registry
@@ -44,10 +45,13 @@ This endpoint searches the general function library. Runner forms can narrow
 the library by namespace or search term, while the selected runner validates
 its own parameters when an operation is submitted.
 
+Each list entry contains the function-definition ID, namespace, and function
+name. The serialized AST is reserved for the detail endpoint.
+
 ### `GET /filters/functions/{functionDefinitionId}`
 
-Return one saved function definition, including its serialized AST and
-computed signature.
+Return one saved function definition, including its namespace, name, and
+persisted serialized AST.
 
 Function definitions do not currently have a finalized ownership model. The
 initial read implementation may expose the shared function registry to every
@@ -95,11 +99,12 @@ Supported query parameters:
 
 - `limit` and `cursor`: pagination.
 
-Each entry contains `instanceId` and the typed `value` object. Complex
+The workflow must be complete before its instances can be queried. Each entry
+contains `instanceId`, `workflowId`, and the typed `value` object. Complex
 filtering across multiple groupings is intentionally not encoded into this GET
-endpoint. Use the workflow query endpoint below for that operation.
+endpoint. Use the instance query endpoint below for that operation.
 
-### `POST /filters/workflows/{workflowId}/instances/query`
+### `POST /filters/instances/query`
 
 Perform a read-only, paginated instance query using values selected from any
 subset of the workflow's groupings. A POST is used because typed, nested
@@ -109,19 +114,30 @@ Request body:
 
 ```json
 {
-  "groupFilters": [
-    {
-      "groupingId": "00000000-0000-0000-0000-000000000000",
-      "values": [
-        { "type": "string", "value": "Alice" },
-        { "type": "string", "value": "Bob" }
-      ]
-    },
-    {
-      "groupingId": "00000000-0000-0000-0000-000000000001",
-      "values": [{ "type": "bool", "value": true }]
-    }
-  ],
+  "frame": {
+    "workflowId": "00000000-0000-0000-0000-000000000010",
+    "groupFilters": [
+      {
+        "groupingId": "00000000-0000-0000-0000-000000000000",
+        "values": [
+          { "type": "string", "value": "Alice" },
+          { "type": "string", "value": "Bob" }
+        ]
+      },
+      {
+        "groupingId": "00000000-0000-0000-0000-000000000001",
+        "values": [{ "type": "bool", "value": true }]
+      },
+      {
+        "groupingId": "00000000-0000-0000-0000-000000000002",
+        "values": []
+      }
+    ],
+    "sortKeys": [
+      { "fieldName": "score", "direction": "desc" },
+      { "fieldName": "name", "direction": "asc" }
+    ]
+  },
   "limit": 50,
   "cursor": null
 }
@@ -131,12 +147,37 @@ Values within one grouping are combined with OR. Different grouping filters
 are combined with AND. An empty `groupFilters` list is equivalent to the
 unfiltered workflow instance endpoint. Each grouping must belong to the
 workflow and be complete before it can be queried. Values must match the
-grouping's declared scalar output type.
+grouping's declared scalar output type. A grouping with an empty `values` list
+does not filter rows; it projects that grouping's value into each result so it
+can be displayed as a column.
 
-The response uses the same instance representation and opaque keyset cursor as
-`GET /filters/workflows/{workflowId}/instances`. It additionally returns each
-selected grouping's value for every row so the frontend can render those
-values as table columns without issuing per-instance requests.
+A frame accepts at most 10 groupings, each with at most 100 selected values,
+and at most 3 sort keys. Sort keys name scalar fields in the workflow schema
+and may use `asc` or `desc`. The workflow must be complete. The final ordering
+always uses ascending `instanceId` as a stable tie-breaker.
+
+Each response entry contains an `instance` and a `groupValues` object keyed by
+grouping ID:
+
+```json
+{
+  "instance": {
+    "instanceId": "00000000-0000-0000-0000-000000000100",
+    "workflowId": "00000000-0000-0000-0000-000000000010",
+    "value": { "obj": true, "fields": {} }
+  },
+  "groupValues": {
+    "00000000-0000-0000-0000-000000000002": {
+      "type": "string",
+      "value": "Alice"
+    }
+  }
+}
+```
+
+For the next page, clients pass the final returned `instanceId` as `cursor`.
+The backend loads that instance's sort-key values and resumes the composite
+ordering after it. A cursor must belong to the selected workflow.
 
 ### `GET /filters/workflows/{workflowId}/groupings`
 
@@ -156,8 +197,9 @@ grouping detail endpoint.
 
 ### `GET /filters/groupings/{groupingId}`
 
-Return one grouping with its workflow ID, function definition, output type,
-status, message, and assignment count.
+Return one grouping with its workflow ID, function-definition summary, output
+type, status, message, and assignment count. The function summary contains its
+ID, namespace, and name rather than the serialized AST.
 
 Permission is determined exclusively through the grouping's workflow.
 
@@ -173,7 +215,8 @@ Supported query parameters:
 
 Values retain their declared scalar type rather than being returned as display
 strings. Results are ordered by descending instance count and then by their
-typed JSON value to make offset pagination deterministic.
+typed JSON value to make offset pagination deterministic. The grouping must be
+complete before its values can be queried.
 
 ## Existing selector endpoints
 

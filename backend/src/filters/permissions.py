@@ -131,9 +131,7 @@ def grouping_mod_access_select[T: Select[tuple[Any, ...]]](
     return stmt.where(
         exists(
             workflow_mod_access_select(
-                select(1)
-                .select_from(workflow_alias)
-                .where(workflow_alias.workflow_id == grouping_type.workflow_id),
+                select(1).select_from(workflow_alias).where(workflow_alias.workflow_id == grouping_type.workflow_id),
                 current_user,
                 workflow_alias,
             )

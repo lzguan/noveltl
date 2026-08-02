@@ -25,10 +25,11 @@ The backend currently implements:
   and group assignments;
 - bounded batch execution with job ownership and failure statuses.
 
-The subsystem is not exposed through FastAPI or the frontend yet. Its database
-models are registered with SQLAlchemy, but no Alembic migration creates their
-tables. The runners are callable backend classes rather than registered worker
-tasks.
+The read API is exposed through FastAPI, but the frontend and mutation or
+runner-execution endpoints are not implemented yet. Alembic migrations create
+the filter persistence tables and workflow permission-scope associations. The
+runners are registered as Celery worker tasks, while public operation services
+still need to create their target rows and enqueue those tasks.
 
 ## Pipeline model
 

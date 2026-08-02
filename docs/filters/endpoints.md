@@ -1,7 +1,7 @@
 # Filter API endpoints
 
-> **Status:** Draft. This document defines the intended public HTTP API. The
-> filter subsystem is not yet exposed through FastAPI.
+> **Status:** Read API implemented. Runner execution and mutation endpoints
+> remain to be designed and implemented.
 
 The filter API uses explicit resources for saved functions, workflows,
 instances, and groupings. Runner execution endpoints will be documented

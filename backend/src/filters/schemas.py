@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Annotated, Literal, Self
+from typing import Annotated, Any, Literal, Self
 from uuid import UUID
 
 from pydantic import ConfigDict, Field, TypeAdapter, model_validator
@@ -27,6 +27,28 @@ class FunctionDefinitionMeta(Model):
     function_name: str
 
 
+class FunctionDefinitionResponse(FunctionDefinitionMeta):
+    model_config = ConfigDict(from_attributes=True)
+
+    function_definition: dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+
+class WorkflowSummary(Model):
+    model_config = ConfigDict(from_attributes=True)
+
+    workflow_id: UUID
+    workflow_name: str | None
+    use_case: WorkflowUseCase
+    workflow_schema: Schema = Field(alias="schema")
+    job_id: UUID | None
+    workflow_status: WorkflowStatus
+    workflow_message: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
 class WorkflowResponse(Model):
     workflow_id: UUID
     workflow_name: str | None
@@ -38,6 +60,19 @@ class WorkflowResponse(Model):
     novel_ids: list[UUID]
     label_group_ids: list[UUID]
     instance_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class GroupingSummary(Model):
+    model_config = ConfigDict(from_attributes=True)
+
+    grouping_id: UUID
+    workflow_id: UUID
+    function_definition_id: UUID
+    job_id: UUID | None
+    grouping_status: GroupingStatus
+    grouping_message: str | None
     created_at: datetime
     updated_at: datetime
 

@@ -73,9 +73,7 @@ def read_function(
 ) -> FunctionDefinitionResponse:
     """Return one saved function definition."""
     try:
-        return FunctionDefinitionResponse.model_validate(
-            query_function(db, current_user, function_definition_id)
-        )
+        return FunctionDefinitionResponse.model_validate(query_function(db, current_user, function_definition_id))
     except FunctionNotFoundException as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

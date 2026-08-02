@@ -89,9 +89,7 @@ def test_filter_read_endpoints_return_locked_contract(
     headers = _auth_headers(sample_scenario.users["admin"])
 
     functions_response = client.get("/filters/functions?namespace=router", headers=headers)
-    function_response = client.get(
-        f"/filters/functions/{function_definition.function_definition_id}", headers=headers
-    )
+    function_response = client.get(f"/filters/functions/{function_definition.function_definition_id}", headers=headers)
     workflows_response = client.get("/filters/workflows?search=Router&status=complete", headers=headers)
     workflow_response = client.get(f"/filters/workflows/{workflow.workflow_id}", headers=headers)
     first_instances_response = client.get(
@@ -103,9 +101,7 @@ def test_filter_read_endpoints_return_locked_contract(
     )
     groupings_response = client.get(f"/filters/workflows/{workflow.workflow_id}/groupings", headers=headers)
     grouping_response = client.get(f"/filters/groupings/{grouping.grouping_id}", headers=headers)
-    values_response = client.get(
-        f"/filters/groupings/{grouping.grouping_id}/values?search=Ali", headers=headers
-    )
+    values_response = client.get(f"/filters/groupings/{grouping.grouping_id}/values?search=Ali", headers=headers)
     advanced_response = client.post(
         "/filters/instances/query",
         headers=headers,
@@ -148,9 +144,7 @@ def test_filter_read_endpoints_return_locked_contract(
     assert [entry["instanceId"] for entry in second_instances_response.json()] == [str(instances[2].instance_id)]
 
     assert groupings_response.status_code == status.HTTP_200_OK
-    assert groupings_response.json()[0]["functionDefinitionId"] == str(
-        function_definition.function_definition_id
-    )
+    assert groupings_response.json()[0]["functionDefinitionId"] == str(function_definition.function_definition_id)
     assert "assignmentCount" not in groupings_response.json()[0]
     assert grouping_response.status_code == status.HTTP_200_OK
     assert grouping_response.json()["assignmentCount"] == 3

@@ -82,6 +82,8 @@ class WorkflowNovel(Base):
         primary_key=True,
     )
 
+    __table_args__ = (Index("ix_workflow_novels_novel_id", "novel_id"),)
+
 
 class WorkflowLabelGroup(Base):
     """Associate a workflow with a label group in its permission scope."""
@@ -102,6 +104,8 @@ class WorkflowLabelGroup(Base):
         ),
         primary_key=True,
     )
+
+    __table_args__ = (Index("ix_workflow_label_groups_label_group_id", "label_group_id"),)
 
 
 class Instance(Base):

@@ -1,7 +1,6 @@
 from uuid import UUID
 
 from src.database import SessionLocal
-from src.filters.celery_app import app
 from src.filters.compilers.python import PythonCompiler
 from src.filters.runners.python.filter_runner import PythonFilterInput, PythonFilterRunner
 from src.filters.runners.python.group_runner import PythonGroupInput, PythonGroupRunner
@@ -21,8 +20,7 @@ runners = {
 }
 
 
-@app.task(soft_time_limit=600, time_limit=660)
-def run_runner_task(job_id: UUID, input: RunnerInput):
+def run_runner(job_id: UUID, input: RunnerInput) -> None:
     if isinstance(input, PythonLabelSourceInput):
         runners["python"]["ls"].execute(job_id, input)
     elif isinstance(input, PythonGroupInput):

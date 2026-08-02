@@ -39,3 +39,9 @@ class InvalidSortKeyException(InvalidInstanceQueryException):
 
 class UnsupportedSortTypeException(InvalidInstanceQueryException):
     pass
+
+
+class RunnerEnqueueFailedException(Exception):
+    """Raised when a filter runner task cannot be published."""
+
+    pass

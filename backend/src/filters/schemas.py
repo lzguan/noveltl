@@ -1,11 +1,13 @@
+from datetime import datetime
 from enum import StrEnum
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
 from pydantic import ConfigDict, Field, TypeAdapter, model_validator
 
 from src.filters.data_types import DataObj, FieldName, Schema
 from src.filters.exceptions import InvalidSortKeyException, UnsupportedSortTypeException
+from src.filters.models import GroupingStatus, WorkflowStatus, WorkflowUseCase
 from src.filters.runners.python.group_runner import GroupData
 from src.filters.runners.python.types import PythonRunnerInput
 from src.schemas import Model
@@ -23,6 +25,39 @@ class FunctionDefinitionMeta(Model):
     function_definition_id: UUID
     namespace: str
     function_name: str
+
+
+class WorkflowResponse(Model):
+    workflow_id: UUID
+    workflow_name: str | None
+    use_case: WorkflowUseCase
+    workflow_schema: Schema = Field(alias="schema")
+    job_id: UUID | None
+    workflow_status: WorkflowStatus
+    workflow_message: str | None
+    novel_ids: list[UUID]
+    label_group_ids: list[UUID]
+    instance_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class GroupingResponse(Model):
+    grouping_id: UUID
+    workflow_id: UUID
+    function_definition: FunctionDefinitionMeta
+    output_type: Literal["string", "int", "bool"]
+    job_id: UUID | None
+    grouping_status: GroupingStatus
+    grouping_message: str | None
+    assignment_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class GroupValueCount(Model):
+    value: GroupData
+    count: int
 
 
 class InstanceResponse(Model):

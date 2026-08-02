@@ -40,9 +40,9 @@ Supported query parameters:
 - `namespace`: exact namespace filter;
 - `limit` and `cursor`: pagination.
 
-This endpoint searches the general function library. Compatibility with a
-particular workflow and runner is handled by the workflow-scoped endpoint
-below.
+This endpoint searches the general function library. Runner forms can narrow
+the library by namespace or search term, while the selected runner validates
+its own parameters when an operation is submitted.
 
 ### `GET /filters/functions/{functionDefinitionId}`
 
@@ -53,25 +53,6 @@ Function definitions do not currently have a finalized ownership model. The
 initial read implementation may expose the shared function registry to every
 authenticated user who can access filter workflows; mutation permissions will
 be specified with the write endpoints.
-
-### `GET /filters/workflows/{workflowId}/compatible-functions`
-
-Return saved function definitions compatible with the workflow's schema and a
-selected runner.
-
-Supported query parameters:
-
-- `runtimeName`: exact runtime discriminator, initially `python`;
-- `runnerName`: exact runner discriminator, such as `map`, `filter`, or
-  `group`;
-- either `namespace` or `search` must be supplied so the backend does not scan
-  the entire function registry;
-- `limit` and `cursor`: pagination.
-
-The database query first narrows the candidates by namespace or search term.
-The backend then applies its existing type system to those candidates. This
-keeps compatibility logic out of the frontend without attempting to encode
-the symbolic type system as a SQL function or index.
 
 ## Workflows
 
@@ -88,9 +69,9 @@ Supported query parameters:
 - `search`: case-insensitive workflow-name search;
 - `limit` and `cursor`: pagination.
 
-Each list entry contains at least the workflow ID, name, use case, schema,
-status, message, associated novel IDs, associated label-group IDs,
-creation/update timestamps, and an instance count.
+Each list entry contains the workflow's directly stored fields. Association
+IDs and the instance count are reserved for the workflow detail endpoint so a
+collection query does not perform enrichment work for every page.
 
 `useCase` is assigned by the backend according to the feature that created the
 workflow. It is not an arbitrary user-editable tag. Ordinary feature surfaces,
@@ -166,8 +147,10 @@ Supported query parameters:
 - `status`: grouping status filter;
 - `limit` and `cursor`: pagination.
 
-Each entry contains the grouping ID, function definition summary, status,
-message, job ID, and timestamps.
+Each entry contains the grouping's directly stored fields: grouping and
+workflow IDs, function-definition ID, status, message, job ID, and timestamps.
+Derived output-type and assignment-count information is reserved for the
+grouping detail endpoint.
 
 ## Groupings
 
@@ -189,14 +172,15 @@ Supported query parameters:
 - `limit` and `offset`: pagination.
 
 Values retain their declared scalar type rather than being returned as display
-strings.
+strings. Results are ordered by descending instance count and then by their
+typed JSON value to make offset pagination deterministic.
 
 ## Existing selector endpoints
 
 Runner forms should reuse existing NovelTL read APIs for resource selectors
-where possible, including novel and label-group listing endpoints. Filter
-endpoints are added only when selection requires filter-specific compatibility
-logic, such as choosing a function compatible with a workflow and runner.
+where possible, including novel and label-group listing endpoints.
+Runner-specific compatibility remains part of runner request validation
+rather than a separate generic read API.
 
 ## Workflow use-case limitation
 

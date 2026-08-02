@@ -26,6 +26,7 @@ from src.filters.exceptions import (
     GroupingNotReadyException,
     GroupingValueTypeMismatchException,
     InstanceNotFoundException,
+    InvalidInstanceQueryException,
     InvalidSortKeyException,
     WorkflowNotFoundException,
     WorkflowNotReadyException,
@@ -49,6 +50,8 @@ from src.filters.models import (
     GroupingStatus,
     Instance,
     Workflow,
+    WorkflowLabelGroup,
+    WorkflowNovel,
     WorkflowStatus,
 )
 from src.filters.runners.python.group_runner import PythonGroupInput, PythonGroupRunner
@@ -59,7 +62,16 @@ from src.filters.runners.python.label_source_runner import (
 )
 from src.filters.runners.python.map_runner import PythonMapInput, PythonMapRunner
 from src.filters.schemas import Frame, GroupFilter, InstanceQuery, SortDirection, SortKey
-from src.filters.service import query_functions, query_instances_of_workflow, query_instances_of_workflow_advanced
+from src.filters.service import (
+    query_functions,
+    query_grouping,
+    query_grouping_values,
+    query_groupings,
+    query_instances_of_workflow,
+    query_instances_of_workflow_advanced,
+    query_workflow,
+    query_workflows,
+)
 from src.labels.constants import LabelRole
 from src.labels.schemas import CreateLabelDataByAutoLabel
 from src.labels.service import insert_label_datas_by_autolabels
@@ -431,6 +443,80 @@ def test_function_query_selects_metadata_without_loading_definition(
     assert {result.function_name for result in results} == {f"group-{name}" for name in data.groupings}
 
 
+def test_workflow_queries_include_scope_and_instance_count(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    data = _create_advanced_query_data(test_db)
+    novel = sample_scenario.novels["novel_1"]
+    label_group = sample_scenario.label_groups["official"]
+    test_db.add_all(
+        [
+            WorkflowNovel(workflow_id=data.workflow.workflow_id, novel_id=novel.novel_id),
+            WorkflowLabelGroup(
+                workflow_id=data.workflow.workflow_id,
+                label_group_id=label_group.label_group_id,
+            ),
+        ]
+    )
+    test_db.commit()
+    admin = sample_scenario.users["admin"]
+
+    detail = query_workflow(test_db, admin, data.workflow.workflow_id)
+    listed = query_workflows(test_db, admin, novel.novel_id, None, None, None, "Advanced", 10, None)
+
+    assert detail.workflow_schema == Schema.model_validate(data.workflow.schema)
+    assert detail.novel_ids == [novel.novel_id]
+    assert detail.label_group_ids == [label_group.label_group_id]
+    assert detail.instance_count == len(data.instances)
+    assert [workflow.workflow_id for workflow in listed] == [data.workflow.workflow_id]
+
+
+def test_grouping_queries_return_metadata_and_aggregated_values(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    data = _create_advanced_query_data(test_db)
+    admin = sample_scenario.users["admin"]
+
+    groupings = query_groupings(test_db, admin, data.workflow.workflow_id, GroupingStatus.COMPLETE, 2, None)
+    next_groupings = query_groupings(
+        test_db,
+        admin,
+        data.workflow.workflow_id,
+        GroupingStatus.COMPLETE,
+        2,
+        groupings[-1].grouping_id,
+    )
+    category = query_grouping(test_db, admin, data.groupings["category"].grouping_id)
+    values = query_grouping_values(test_db, admin, category.grouping_id, None, 1, 0)
+    next_values = query_grouping_values(test_db, admin, category.grouping_id, None, 1, 1)
+    searched = query_grouping_values(test_db, admin, category.grouping_id, "A", 10, 0)
+
+    assert len([*groupings, *next_groupings]) == 3
+    assert category.output_type == "string"
+    assert category.assignment_count == len(data.instances)
+    assert {entry.value for entry in [*values, *next_values]} == {StringData(value="A"), StringData(value="B")}
+    assert all(entry.count == 3 for entry in [*values, *next_values])
+    assert [(entry.value, entry.count) for entry in searched] == [(StringData(value="A"), 3)]
+
+
+def test_grouping_values_reject_search_for_non_strings_and_incomplete_groupings(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    data = _create_advanced_query_data(test_db)
+    admin = sample_scenario.users["admin"]
+
+    with pytest.raises(InvalidInstanceQueryException, match="only for string"):
+        query_grouping_values(test_db, admin, data.groupings["rank"].grouping_id, "1", 10, 0)
+
+    data.groupings["category"].grouping_status = GroupingStatus.PROCESSING
+    test_db.commit()
+    with pytest.raises(GroupingNotReadyException, match="processing"):
+        query_grouping_values(test_db, admin, data.groupings["category"].grouping_id, None, 10, 0)
+
+
 def test_empty_simple_instance_query_distinguishes_accessible_and_inaccessible_workflows(
     test_db: Session,
     sample_scenario: DatabaseScenario,
@@ -494,7 +580,10 @@ def test_advanced_query_combines_groupings_with_and_and_values_with_or(
         ],
     )
 
-    assert [result.instance.instance_id for result in results] == [data.instances[0].instance_id, data.instances[2].instance_id]
+    assert [result.instance.instance_id for result in results] == [
+        data.instances[0].instance_id,
+        data.instances[2].instance_id,
+    ]
     assert results[0].group_values == {
         data.groupings["category"].grouping_id: StringData(value="A"),
         data.groupings["rank"].grouping_id: IntData(value=1),

@@ -3,8 +3,10 @@ from collections.abc import Iterable
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session, aliased
 
-from src.filters.models import Workflow, WorkflowLabelGroup, WorkflowNovel
+from src.filters.functions import Get
+from src.filters.models import FunctionDefinition, Grouping, Workflow, WorkflowLabelGroup, WorkflowNovel
 from src.filters.permissions import (
+    grouping_mod_access_select,
     workflow_mod_access_delete,
     workflow_mod_access_select,
     workflow_mod_access_update,
@@ -63,6 +65,25 @@ def select_workflow(
     stmt = select(Workflow).where(Workflow.workflow_id == workflow.workflow_id)
     stmt = workflow_mod_access_select(stmt, scenario.users[user])
     return db.execute(stmt).scalar_one_or_none()
+
+
+def add_grouping(db: Session, workflow: Workflow) -> Grouping:
+    function_definition = FunctionDefinition(
+        namespace="permissions",
+        function_name=f"group-{workflow.workflow_id}",
+        function_definition=Get(field_name="value", type="string").model_dump(
+            mode="json", by_alias=True, exclude_computed_fields=True
+        ),
+    )
+    db.add(function_definition)
+    db.flush()
+    grouping = Grouping(
+        workflow_id=workflow.workflow_id,
+        function_definition_id=function_definition.function_definition_id,
+    )
+    db.add(grouping)
+    db.commit()
+    return grouping
 
 
 class TestWorkflowSelectPermissions:
@@ -271,3 +292,41 @@ class TestWorkflowMutationPermissions:
 
         test_db.execute(stmt)
         assert test_db.get(Workflow, workflow.workflow_id) is not None
+
+
+class TestGroupingSelectPermissions:
+    def test_grouping_inherits_accessible_workflow_scope(
+        self,
+        test_db: Session,
+        label_access_scenario: DatabaseScenario,
+    ) -> None:
+        workflow = add_workflow(
+            test_db,
+            novels=[label_access_scenario.novels["public"]],
+            label_groups=[label_access_scenario.label_groups["owner_only"]],
+        )
+        grouping = add_grouping(test_db, workflow)
+        statement = grouping_mod_access_select(
+            select(Grouping).where(Grouping.grouping_id == grouping.grouping_id),
+            label_access_scenario.users["owner"],
+        )
+
+        assert test_db.execute(statement).scalar_one_or_none() is not None
+
+    def test_grouping_hides_inaccessible_workflow_scope(
+        self,
+        test_db: Session,
+        label_access_scenario: DatabaseScenario,
+    ) -> None:
+        workflow = add_workflow(
+            test_db,
+            novels=[label_access_scenario.novels["public"]],
+            label_groups=[label_access_scenario.label_groups["owner_only"]],
+        )
+        grouping = add_grouping(test_db, workflow)
+        statement = grouping_mod_access_select(
+            select(Grouping).where(Grouping.grouping_id == grouping.grouping_id),
+            label_access_scenario.users["collaborator"],
+        )
+
+        assert test_db.execute(statement).scalar_one_or_none() is None

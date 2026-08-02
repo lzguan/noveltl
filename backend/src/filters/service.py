@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import Boolean, Float, Integer, and_, cast, exists, or_, select, type_coerce
+from sqlalchemy import Boolean, Float, Integer, String, and_, cast, exists, func, or_, select, type_coerce
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session, aliased
@@ -13,6 +13,7 @@ from src.filters.exceptions import (
     GroupingNotReadyException,
     GroupingValueTypeMismatchException,
     InstanceNotFoundException,
+    InvalidInstanceQueryException,
     UnsupportedSortTypeException,
     WorkflowNotFoundException,
     WorkflowNotReadyException,
@@ -30,12 +31,15 @@ from src.filters.models import (
     WorkflowStatus,
     WorkflowUseCase,
 )
-from src.filters.permissions import instance_mod_access_select, workflow_mod_access_select
+from src.filters.permissions import grouping_mod_access_select, instance_mod_access_select, workflow_mod_access_select
 from src.filters.schemas import (
     FunctionDefinitionMeta,
+    GroupingResponse,
+    GroupValueCount,
     InstanceQuery,
     InstanceQueryResult,
     SortDirection,
+    WorkflowResponse,
     validate_frame_workflow,
 )
 
@@ -129,13 +133,149 @@ def query_workflows(
     return list(db.execute(q).scalars().all())
 
 
-def query_workflow(db: Session, current_user: User, workflow_id: UUID) -> Workflow:
+def query_workflow(db: Session, current_user: User, workflow_id: UUID) -> WorkflowResponse:
     q = select(Workflow).where(Workflow.workflow_id == workflow_id)
     q = workflow_mod_access_select(q, current_user)
     try:
-        return db.execute(q).scalar_one()
+        workflow = db.execute(q).scalar_one()
     except NoResultFound as e:
         raise WorkflowNotFoundException(f"Workflow with ID {workflow_id} not found or not accessible.") from e
+    novel_ids = list(
+        db.execute(
+            select(WorkflowNovel.novel_id)
+            .where(WorkflowNovel.workflow_id == workflow_id)
+            .order_by(WorkflowNovel.novel_id)
+        ).scalars()
+    )
+    label_group_ids = list(
+        db.execute(
+            select(WorkflowLabelGroup.label_group_id)
+            .where(WorkflowLabelGroup.workflow_id == workflow_id)
+            .order_by(WorkflowLabelGroup.label_group_id)
+        ).scalars()
+    )
+    instance_count = (
+        db.scalar(select(func.count(Instance.instance_id)).where(Instance.workflow_id == workflow_id)) or 0
+    )
+    return WorkflowResponse.model_validate(
+        {
+            "workflow_id": workflow.workflow_id,
+            "workflow_name": workflow.workflow_name,
+            "use_case": workflow.use_case,
+            "schema": workflow.schema,
+            "job_id": workflow.job_id,
+            "workflow_status": workflow.workflow_status,
+            "workflow_message": workflow.workflow_message,
+            "novel_ids": novel_ids,
+            "label_group_ids": label_group_ids,
+            "instance_count": instance_count,
+            "created_at": workflow.created_at,
+            "updated_at": workflow.updated_at,
+        }
+    )
+
+
+def query_groupings(
+    db: Session,
+    current_user: User,
+    workflow_id: UUID,
+    status: GroupingStatus | None,
+    limit: int,
+    cursor: UUID | None,
+) -> list[Grouping]:
+    workflow_query = workflow_mod_access_select(
+        select(Workflow.workflow_id).where(Workflow.workflow_id == workflow_id),
+        current_user,
+    )
+    if db.execute(workflow_query).scalar_one_or_none() is None:
+        raise WorkflowNotFoundException(f"Workflow with ID {workflow_id} not found or not accessible.")
+    query = select(Grouping).where(Grouping.workflow_id == workflow_id)
+    if status is not None:
+        query = query.where(Grouping.grouping_status == status)
+    if cursor is not None:
+        query = query.where(Grouping.grouping_id > cursor)
+    query = grouping_mod_access_select(query, current_user)
+    return list(db.execute(query.order_by(Grouping.grouping_id).limit(limit)).scalars())
+
+
+def query_grouping(db: Session, current_user: User, grouping_id: UUID) -> GroupingResponse:
+    assignment_count = (
+        select(func.count(GroupAssignment.group_assignment_id))
+        .where(GroupAssignment.grouping_id == Grouping.grouping_id)
+        .correlate(Grouping)
+        .scalar_subquery()
+    )
+    query = (
+        select(Grouping, FunctionDefinition, assignment_count)
+        .join(FunctionDefinition, FunctionDefinition.function_definition_id == Grouping.function_definition_id)
+        .where(Grouping.grouping_id == grouping_id)
+    )
+    query = grouping_mod_access_select(query, current_user)
+    try:
+        grouping, function_definition, count = db.execute(query).one()
+    except NoResultFound as e:
+        raise GroupingNotFoundException(f"Grouping with ID {grouping_id} not found or not accessible.") from e
+    function = function_adapter.validate_python(function_definition.function_definition)
+    output = function.signature.output
+    if not isinstance(output, (StringField, IntField, BoolField)) or output.mutable:
+        raise ValueError(
+            f"Grouping function {function_definition.function_definition_id} must return an immutable "
+            "string, integer, or boolean."
+        )
+    return GroupingResponse(
+        grouping_id=grouping.grouping_id,
+        workflow_id=grouping.workflow_id,
+        function_definition=FunctionDefinitionMeta(
+            function_definition_id=function_definition.function_definition_id,
+            namespace=function_definition.namespace,
+            function_name=function_definition.function_name,
+        ),
+        output_type=output.type,
+        job_id=grouping.job_id,
+        grouping_status=grouping.grouping_status,
+        grouping_message=grouping.grouping_message,
+        assignment_count=count,
+        created_at=grouping.created_at,
+        updated_at=grouping.updated_at,
+    )
+
+
+def query_grouping_values(
+    db: Session,
+    current_user: User,
+    grouping_id: UUID,
+    search: str | None,
+    limit: int,
+    offset: int,
+) -> list[GroupValueCount]:
+    grouping = query_grouping(db, current_user, grouping_id)
+    if grouping.grouping_status != GroupingStatus.COMPLETE:
+        raise GroupingNotReadyException(
+            f"Grouping {grouping_id} is {grouping.grouping_status.value} and cannot be queried for values."
+        )
+    if search is not None and grouping.output_type != "string":
+        raise InvalidInstanceQueryException("Grouping value search is supported only for string-valued groupings.")
+
+    value_count = func.count(GroupAssignment.group_assignment_id).label("value_count")
+    query = (
+        select(GroupAssignment.function_value, value_count)
+        .where(GroupAssignment.grouping_id == grouping_id)
+        .group_by(GroupAssignment.function_value)
+    )
+    if search is not None:
+        query = query.where(cast(GroupAssignment.function_value, String).ilike(f"%{search}%"))
+    rows = db.execute(
+        query.order_by(value_count.desc(), GroupAssignment.function_value.asc()).offset(offset).limit(limit)
+    ).all()
+    return [
+        GroupValueCount.model_validate(
+            {
+                "value": {"type": grouping.output_type, "value": value},
+                "count": count,
+            }
+        )
+        for value, count in rows
+    ]
 
 
 def query_instances_of_workflow(
@@ -188,10 +328,7 @@ def query_instances_of_workflow_advanced(
         .join(FunctionDefinition, Grouping.function_definition_id == FunctionDefinition.function_definition_id)
     )
     group_rows = db.execute(group_select).all()
-    groups = {
-        grouping.grouping_id: (grouping, function_definition)
-        for grouping, function_definition in group_rows
-    }
+    groups = {grouping.grouping_id: (grouping, function_definition) for grouping, function_definition in group_rows}
     if len(groups) != len(request.frame.group_filters):
         missing_ids = {group_filter.grouping_id for group_filter in request.frame.group_filters} - groups.keys()
         raise GroupingNotFoundException(f"Grouping IDs not found in workflow {workflow_id}: {missing_ids}")

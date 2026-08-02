@@ -6,7 +6,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from src.auth.constants import UserType
 from src.auth.models import User
-from src.filters.models import Instance, Workflow, WorkflowLabelGroup, WorkflowNovel
+from src.filters.models import Grouping, Instance, Workflow, WorkflowLabelGroup, WorkflowNovel
 from src.labels.models import LabelContributor
 from src.novels.constants import Role
 from src.novels.models import NovelContributor
@@ -116,6 +116,26 @@ def instance_mod_access_select[T: Select[tuple[Any, ...]]](
                 select(1).select_from(wf_alias).where(wf_alias.workflow_id == instance_type.workflow_id),
                 current_user,
                 wf_alias,
+            )
+        )
+    )
+
+
+def grouping_mod_access_select[T: Select[tuple[Any, ...]]](
+    stmt: T, current_user: User, grouping_type: type[Grouping] = Grouping
+) -> T:
+    """Restrict a grouping select through the grouping's workflow scope."""
+    if current_user.user_type == UserType.ADMIN:
+        return stmt
+    workflow_alias = aliased(Workflow)
+    return stmt.where(
+        exists(
+            workflow_mod_access_select(
+                select(1)
+                .select_from(workflow_alias)
+                .where(workflow_alias.workflow_id == grouping_type.workflow_id),
+                current_user,
+                workflow_alias,
             )
         )
     )

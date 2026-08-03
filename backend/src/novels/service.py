@@ -758,12 +758,15 @@ def modify_chapter_content(
             .scalar_subquery()
         )
     )
-    q = chapter_content_mod_access_select(q, current_user)
+    q = chapter_content_mod_access_select(q, current_user, edit_only=True)
     try:
         result = db.execute(q)
         chapter_content = result.scalar_one()
     except NoResultFound as e:
-        raise ChapterContentNotFoundException from e
+        # Preserve the existing missing/stale/insufficient-permission error
+        # distinction without loading or processing content for a viewer.
+        query_chapter_content_status(db, current_user, chapter_id, chapter_content_id)
+        raise InsufficientPermissionsException from e
     if chapter_content.chapter_content_id != chapter_content_id:
         raise ChapterContentOutdatedException("Chapter content is outdated. Please refresh and try again.")
 

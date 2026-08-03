@@ -38,3 +38,37 @@ def test_insert_edit_only_denies_novel_viewer(
     )
 
     assert test_db.execute(statement).scalar_one_or_none() is None
+
+
+def test_insert_contributor_only_allows_novel_viewer(
+    test_db: Session,
+    novel_permission_scenario: DatabaseScenario,
+) -> None:
+    content = novel_permission_scenario.contents["owner_viewer_v1"]
+    statement = select(ChapterContent.chapter_content_id).where(
+        ChapterContent.chapter_content_id == content.chapter_content_id
+    )
+    statement = auto_label_mod_access_insert(
+        statement,
+        novel_permission_scenario.users["other"],
+        contributor_only=True,
+    )
+
+    assert test_db.execute(statement).scalar_one_or_none() == content.chapter_content_id
+
+
+def test_insert_contributor_only_denies_public_novel_reader(
+    test_db: Session,
+    novel_permission_scenario: DatabaseScenario,
+) -> None:
+    content = novel_permission_scenario.contents["public_v1"]
+    statement = select(ChapterContent.chapter_content_id).where(
+        ChapterContent.chapter_content_id == content.chapter_content_id
+    )
+    statement = auto_label_mod_access_insert(
+        statement,
+        novel_permission_scenario.users["other"],
+        contributor_only=True,
+    )
+
+    assert test_db.execute(statement).scalar_one_or_none() is None

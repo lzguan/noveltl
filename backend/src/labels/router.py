@@ -363,5 +363,10 @@ def create_label_datas_by_auto_labels(
     """
     Creates label datas and populates labels from autolabel results.
     """
-    result = insert_label_datas_by_autolabels(db, current_user, label_group_id, request)
-    return result
+    try:
+        return insert_label_datas_by_autolabels(db, current_user, label_group_id, request)
+    except LabelGroupNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Label group {label_group_id} not found or not accessible.",
+        ) from e

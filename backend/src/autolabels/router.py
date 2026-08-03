@@ -23,6 +23,7 @@ from src.autolabels.service import (
     query_auto_labels_by_run,
 )
 from src.database import get_db
+from src.novels.exceptions import NovelNotFoundException
 from src.requests.cache import redis_cache
 from src.requests.decorators import attl_cache, serialize_response_model
 from src.schemas import DetailHTTPErrorResponse, RequestConflictErrorResponse
@@ -96,6 +97,7 @@ async def read_autolabel_by_id(
     response_model=CreateAutoLabelsResponse,
     responses={
         400: {"model": DetailHTTPErrorResponse, "description": "Invalid request data."},
+        404: {"model": DetailHTTPErrorResponse, "description": "Novel not found or inaccessible."},
         409: {"model": RequestConflictErrorResponse, "description": "Request key conflict."},
     },
 )
@@ -119,6 +121,11 @@ async def create_autolabels(
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             detail="An unexpected error occurred, likely because you tried creating auto labels at the same time as someone else.",
+        ) from e
+    except NovelNotFoundException as e:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            detail=str(e),
         ) from e
     except Exception as e:
         raise HTTPException(

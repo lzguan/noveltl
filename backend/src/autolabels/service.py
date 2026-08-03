@@ -22,6 +22,7 @@ from src.autolabels.dispatch.dispatcher import AutoLabelDispatcher
 from src.autolabels.exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
 from src.autolabels.permissions import auto_label_mod_access_insert, auto_label_mod_access_select
 from src.novels import models as nm
+from src.novels.exceptions import NovelNotFoundException
 from src.novels.permissions import chapter_mod_access_select, novel_mod_access_select
 
 logger = logging.getLogger(__name__)
@@ -157,6 +158,23 @@ async def insert_auto_labels(
         len(request.chapter_ids) if request.chapter_ids else 0,
     )
 
+    # Starting inference requires membership in the novel, but viewers are
+    # intentionally allowed alongside editors and owners.
+    permission_query = (
+        select(literal(1))
+        .select_from(nm.ChapterContent)
+        .join(nm.Chapter, nm.Chapter.chapter_id == nm.ChapterContent.chapter_id)
+        .where(nm.Chapter.novel_id == request.novel_id)
+        .limit(1)
+    )
+    permission_query = auto_label_mod_access_insert(
+        permission_query,
+        current_user,
+        contributor_only=True,
+    )
+    if db.execute(permission_query).scalar_one_or_none() is None:
+        raise NovelNotFoundException(f"Novel with ID {request.novel_id} not found or not accessible.")
+
     # 1. Create the run.
     run = models.AutoLabelRun(
         novel_id=request.novel_id,
@@ -208,7 +226,7 @@ async def insert_auto_labels(
         q = q.where(nm.Chapter.chapter_num < request.end)
     if request.is_public is not None:
         q = q.where(nm.Chapter.chapter_is_public == request.is_public)
-    q = auto_label_mod_access_insert(q, current_user)
+    q = auto_label_mod_access_insert(q, current_user, contributor_only=True)
     stmt = insert(models.AutoLabel).from_select(columns, q).returning(models.AutoLabel)
     try:
         result = db.execute(stmt)

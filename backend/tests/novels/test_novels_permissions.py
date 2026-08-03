@@ -92,6 +92,24 @@ class TestNovelModAccessSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
+    def test_edit_only_allows_editor(self, test_db: Session, novel_permission_scenario: DatabaseScenario):
+        q = select(Novel).where(Novel.novel_id == novel_permission_scenario.novels["oe"].novel_id)
+        q = novel_mod_access_select(q, novel_permission_scenario.users["other"], edit_only=True)
+
+        assert test_db.execute(q).scalar_one_or_none() is not None
+
+    def test_edit_only_denies_viewer(self, test_db: Session, novel_permission_scenario: DatabaseScenario):
+        q = select(Novel).where(Novel.novel_id == novel_permission_scenario.novels["ov"].novel_id)
+        q = novel_mod_access_select(q, novel_permission_scenario.users["other"], edit_only=True)
+
+        assert test_db.execute(q).scalar_one_or_none() is None
+
+    def test_edit_only_denies_guest(self, test_db: Session, novel_permission_scenario: DatabaseScenario):
+        q = select(Novel).where(Novel.novel_id == novel_permission_scenario.novels["put"].novel_id)
+        q = novel_mod_access_select(q, None, edit_only=True)
+
+        assert test_db.execute(q).scalar_one_or_none() is None
+
 
 # ============================================================
 # novel_mod_access_update
@@ -216,6 +234,26 @@ class TestChapterModAccessSelect:
         q = chapter_mod_access_select(q, novel_permission_scenario.users["admin"])
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
+
+    def test_edit_only_allows_novel_editor(self, test_db: Session, novel_permission_scenario: DatabaseScenario):
+        chapter_id = novel_permission_scenario.contents["owner_editor_v1"].chapter_id
+        q = chapter_mod_access_select(
+            select(Chapter).where(Chapter.chapter_id == chapter_id),
+            novel_permission_scenario.users["other"],
+            edit_only=True,
+        )
+
+        assert test_db.execute(q).scalar_one_or_none() is not None
+
+    def test_edit_only_denies_novel_viewer(self, test_db: Session, novel_permission_scenario: DatabaseScenario):
+        chapter_id = novel_permission_scenario.contents["owner_viewer_v1"].chapter_id
+        q = chapter_mod_access_select(
+            select(Chapter).where(Chapter.chapter_id == chapter_id),
+            novel_permission_scenario.users["other"],
+            edit_only=True,
+        )
+
+        assert test_db.execute(q).scalar_one_or_none() is None
 
 
 # ============================================================
@@ -434,6 +472,26 @@ class TestChapterContentModAccessSelect:
         q = chapter_content_mod_access_select(q, novel_permission_scenario.users["other"])
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
+
+    def test_edit_only_allows_novel_editor(self, test_db: Session, novel_permission_scenario: DatabaseScenario):
+        content = novel_permission_scenario.contents["owner_editor_v1"]
+        q = chapter_content_mod_access_select(
+            select(ChapterContent).where(ChapterContent.chapter_content_id == content.chapter_content_id),
+            novel_permission_scenario.users["other"],
+            edit_only=True,
+        )
+
+        assert test_db.execute(q).scalar_one_or_none() is not None
+
+    def test_edit_only_denies_novel_viewer(self, test_db: Session, novel_permission_scenario: DatabaseScenario):
+        content = novel_permission_scenario.contents["owner_viewer_v1"]
+        q = chapter_content_mod_access_select(
+            select(ChapterContent).where(ChapterContent.chapter_content_id == content.chapter_content_id),
+            novel_permission_scenario.users["other"],
+            edit_only=True,
+        )
+
+        assert test_db.execute(q).scalar_one_or_none() is None
 
     def test_contributor_sees_aliased_content(self, test_db: Session, novel_permission_scenario: DatabaseScenario):
         content_alias = aliased(ChapterContent)

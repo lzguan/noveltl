@@ -268,9 +268,7 @@ def test_runner_publication_failure_returns_503_and_persists_failed_target(
     )
 
     assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
-    workflow = test_db.execute(
-        select(Workflow).where(Workflow.workflow_name == "Failed publication")
-    ).scalar_one()
+    workflow = test_db.execute(select(Workflow).where(Workflow.workflow_name == "Failed publication")).scalar_one()
     assert workflow.workflow_status == WorkflowStatus.FAILED
     assert recording_runner_dispatcher.jobs == []
 

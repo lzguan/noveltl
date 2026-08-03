@@ -19,7 +19,6 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session, aliased
 
-from src.auth.constants import UserType
 from src.auth.models import User
 from src.filters.data_types import BoolField, IntField, Schema, StringField, data_adapter, extends
 from src.filters.dispatch.dispatcher import RunnerDispatcher
@@ -81,9 +80,8 @@ from src.filters.schemas import (
     WorkflowResponse,
     validate_frame_workflow,
 )
-from src.labels.models import LabelContributor, LabelGroup
-from src.novels.constants import Role
-from src.novels.models import NovelContributor
+from src.labels.models import LabelGroup
+from src.labels.permissions import label_group_mod_access_select
 
 
 def query_function_namespaces(db: Session, current_user: User, search: str | None) -> list[str]:
@@ -638,25 +636,14 @@ def run_label_source(
     request: PythonLabelSourceRequest,
 ) -> WorkflowOperationAccepted:
     """Create and dispatch a label-source workflow operation."""
-    # Label-source workflows require both edit access to the novel and contributor
-    # access to the selected label group. Admins bypass both checks.
+    # Label-source workflows require novel edit access but only read access to
+    # the selected label group.
     statement = select(LabelGroup).where(LabelGroup.label_group_id == request.label_group_id)
-    if current_user.user_type != UserType.ADMIN:
-        statement = statement.where(
-            exists(
-                select(1).where(
-                    NovelContributor.novel_id == LabelGroup.novel_id,
-                    NovelContributor.user_id == current_user.user_id,
-                    NovelContributor.contributor_role.in_([Role.OWNER, Role.EDITOR]),
-                )
-            ),
-            exists(
-                select(1).where(
-                    LabelContributor.label_group_id == LabelGroup.label_group_id,
-                    LabelContributor.user_id == current_user.user_id,
-                )
-            ),
-        )
+    statement = label_group_mod_access_select(
+        statement,
+        current_user,
+        novel_edit_only=True,
+    )
     try:
         label_group = db.execute(statement).scalar_one()
     except NoResultFound as exc:

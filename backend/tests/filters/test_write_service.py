@@ -44,6 +44,8 @@ from src.filters.service import (
     run_label_source,
     run_map,
 )
+from src.novels.constants import Role
+from src.novels.models import NovelContributor
 from src.schemas import Model
 from test_support.filters import RecordingRunnerDispatcher
 from test_support.test_data.scenarios import DatabaseScenario
@@ -188,11 +190,37 @@ def test_label_source_hides_inaccessible_group_and_does_not_dispatch(
             test_db,
             sample_scenario.users["user"],
             dispatcher,
-            PythonLabelSourceRequest(
-                labelGroupId=sample_scenario.label_groups["official"].label_group_id
-            ),
+            PythonLabelSourceRequest(labelGroupId=sample_scenario.label_groups["official"].label_group_id),
         )
     assert dispatcher.jobs == []
+
+
+def test_label_source_allows_novel_editor_with_label_group_view_access(
+    test_db: Session,
+    label_access_scenario: DatabaseScenario,
+) -> None:
+    actor = label_access_scenario.users["collaborator"]
+    label_group = label_access_scenario.label_groups["with_viewer"]
+    test_db.add(
+        NovelContributor(
+            novel_id=label_group.novel_id,
+            user_id=actor.user_id,
+            contributor_role=Role.EDITOR,
+        )
+    )
+    test_db.commit()
+    dispatcher = RecordingRunnerDispatcher()
+
+    result = run_label_source(
+        test_db,
+        actor,
+        dispatcher,
+        PythonLabelSourceRequest(labelGroupId=label_group.label_group_id),
+    )
+
+    assert result.workflow.novel_ids == [label_group.novel_id]
+    assert result.workflow.label_group_ids == [label_group.label_group_id]
+    assert len(dispatcher.jobs) == 1
 
 
 def test_map_filter_and_group_create_correct_targets_and_payloads(
@@ -291,9 +319,7 @@ def test_runner_validation_happens_before_target_creation_or_dispatch(
 
     assert dispatcher.jobs == []
     output_count = test_db.scalar(
-        select(func.count())
-        .select_from(Workflow)
-        .where(Workflow.workflow_id != source.workflow_id)
+        select(func.count()).select_from(Workflow).where(Workflow.workflow_id != source.workflow_id)
     )
     assert output_count == 0
 
@@ -366,9 +392,7 @@ def test_enqueue_failure_marks_committed_target_failed(
     test_db: Session,
     sample_scenario: DatabaseScenario,
 ) -> None:
-    dispatcher = RecordingRunnerDispatcher(
-        enqueue_error=RunnerEnqueueFailedException("broker unavailable")
-    )
+    dispatcher = RecordingRunnerDispatcher(enqueue_error=RunnerEnqueueFailedException("broker unavailable"))
     admin = sample_scenario.users["admin"]
 
     if operation == "workflow":
@@ -380,9 +404,7 @@ def test_enqueue_failure_marks_committed_target_failed(
                 dispatcher,
                 PythonLabelSourceRequest(labelGroupId=label_group.label_group_id, outputName="Failed"),
             )
-        target = test_db.execute(
-            select(Workflow).where(Workflow.workflow_name == "Failed")
-        ).scalar_one()
+        target = test_db.execute(select(Workflow).where(Workflow.workflow_name == "Failed")).scalar_one()
         assert target.workflow_status == WorkflowStatus.FAILED
         assert target.workflow_message == "Runner publication failed."
     else:
@@ -402,8 +424,6 @@ def test_enqueue_failure_marks_committed_target_failed(
                     functionDefinitionId=function.function_definition_id,
                 ),
             )
-        target = test_db.execute(
-            select(Grouping).where(Grouping.workflow_id == workflow.workflow_id)
-        ).scalar_one()
+        target = test_db.execute(select(Grouping).where(Grouping.workflow_id == workflow.workflow_id)).scalar_one()
         assert target.grouping_status == GroupingStatus.FAILED
         assert target.grouping_message == "Runner publication failed."

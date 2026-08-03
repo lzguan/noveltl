@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import Delete, Select, Update, exists, or_, select
+from sqlalchemy import Delete, Select, Update, exists, false, or_, select
 from sqlalchemy.orm import aliased
 
 from src.auth.constants import UserType
@@ -11,7 +11,11 @@ from src.novels.models import Chapter, ChapterContent, Novel, NovelContributor, 
 
 
 def novel_mod_access_select[T: Select[tuple[Any, ...]]](
-    q: T, current_user: User | None, aliased_type: type[Novel] = Novel
+    q: T,
+    current_user: User | None,
+    aliased_type: type[Novel] = Novel,
+    *,
+    edit_only: bool = False,
 ) -> T:
     """
     Takes a select statement for novels and returns a select statement that restricts permissions on q.
@@ -27,12 +31,27 @@ def novel_mod_access_select[T: Select[tuple[Any, ...]]](
     stmt = select(alias).where(alias.novel_id == novel_id)
     stmt = novel_mod_access_select(stmt, current_user, alias)
     ```
+
+    Set ``edit_only`` to require an authenticated owner or editor instead of
+    ordinary visibility or contributor access.
     """
     nc_alias = aliased(NovelContributor)
 
+    if edit_only and current_user is None:
+        return q.where(false())
     if current_user is None:
         return q.where(aliased_type.novel_visibility >= Visibility.UNLISTED)
-    elif current_user.user_type != UserType.ADMIN:
+    if current_user.user_type != UserType.ADMIN and edit_only:
+        return q.where(
+            exists(
+                select(1)
+                .select_from(nc_alias)
+                .where(nc_alias.novel_id == aliased_type.novel_id)
+                .where(nc_alias.user_id == current_user.user_id)
+                .where(nc_alias.contributor_role.in_([Role.OWNER, Role.EDITOR]))
+            )
+        )
+    if current_user.user_type != UserType.ADMIN:
         return q.where(
             or_(
                 aliased_type.novel_visibility >= Visibility.UNLISTED,
@@ -113,13 +132,27 @@ def source_work_mod_access_update[T: Update](
 
 
 def chapter_mod_access_select[T: Select[tuple[Any, ...]]](
-    q: T, current_user: User | None, aliased_type: type[Chapter] = Chapter
+    q: T,
+    current_user: User | None,
+    aliased_type: type[Chapter] = Chapter,
+    *,
+    edit_only: bool = False,
 ) -> T:
     """
     Takes a select statement on chapters and returns a select statement that restricts permissions on chapters.
     """
     novel_alias = aliased(Novel)
     nc_alias = aliased(NovelContributor)
+
+    if edit_only:
+        sub_q = (
+            select(1)
+            .select_from(novel_alias)
+            .where(aliased_type.novel_id == novel_alias.novel_id)
+            .correlate(aliased_type)
+        )
+        sub_q = novel_mod_access_select(sub_q, current_user, novel_alias, edit_only=True)
+        return q.where(exists(sub_q))
 
     if current_user is None:
         return q.where(
@@ -202,7 +235,11 @@ def chapter_mod_access_delete[T: Delete](stmt: T, current_user: User, aliased_ty
 
 
 def chapter_content_mod_access_select[T: Select[tuple[Any, ...]]](
-    q: T, current_user: User | None, aliased_type: type[ChapterContent] = ChapterContent
+    q: T,
+    current_user: User | None,
+    aliased_type: type[ChapterContent] = ChapterContent,
+    *,
+    edit_only: bool = False,
 ) -> T:
     chapter_alias = aliased(Chapter)
     subq = (
@@ -211,7 +248,7 @@ def chapter_content_mod_access_select[T: Select[tuple[Any, ...]]](
         .where(chapter_alias.chapter_id == aliased_type.chapter_id)
         .correlate(aliased_type)
     )
-    subq = chapter_mod_access_select(subq, current_user, chapter_alias)
+    subq = chapter_mod_access_select(subq, current_user, chapter_alias, edit_only=edit_only)
     return q.where(exists(subq))
 
 

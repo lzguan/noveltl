@@ -250,6 +250,46 @@ components:
       - password
       title: Body_login_for_access_token_token_post
       type: object
+    BoolData:
+      additionalProperties: false
+      properties:
+        obj:
+          const: false
+          default: false
+          title: Obj
+          type: boolean
+        type:
+          const: bool
+          default: bool
+          title: Type
+          type: string
+        value:
+          $ref: '#/components/schemas/BooleanValue'
+      required:
+      - value
+      title: BoolData
+      type: object
+    BoolField:
+      additionalProperties: false
+      properties:
+        mutable:
+          default: false
+          title: Mutable
+          type: boolean
+        obj:
+          const: false
+          default: false
+          title: Obj
+          type: boolean
+        type:
+          const: bool
+          default: bool
+          title: Type
+          type: string
+      title: BoolField
+      type: object
+    BooleanValue:
+      type: boolean
     CacheEntry:
       properties:
         error:
@@ -521,6 +561,29 @@ components:
       - chapterNum
       title: CreateChapter
       type: object
+    CreateFunctionDefinitionRequest:
+      additionalProperties: false
+      properties:
+        functionDefinition:
+          additionalProperties: true
+          title: Functiondefinition
+          type: object
+        functionName:
+          maxLength: 100
+          minLength: 1
+          title: Functionname
+          type: string
+        namespace:
+          maxLength: 100
+          minLength: 1
+          title: Namespace
+          type: string
+      required:
+      - namespace
+      - functionName
+      - functionDefinition
+      title: CreateFunctionDefinitionRequest
+      type: object
     CreateLabelData:
       description: "Pydantic schema for validating create requests for label data.\n\
         \nAttributes:\n    chapter_content_id: UUID of chapter content being labelled."
@@ -699,6 +762,41 @@ components:
       - userType
       title: CreateUser
       type: object
+    DataObj:
+      additionalProperties: false
+      properties:
+        fields:
+          additionalProperties:
+            $ref: '#/components/schemas/DataType'
+          maxProperties: 256
+          propertyNames:
+            $ref: '#/components/schemas/FieldName'
+          title: Fields
+          type: object
+        obj:
+          const: true
+          default: true
+          title: Obj
+          type: boolean
+      title: DataObj
+      type: object
+    DataType:
+      discriminator:
+        mapping:
+          bool: '#/components/schemas/BoolData'
+          float: '#/components/schemas/FloatData'
+          int: '#/components/schemas/IntData'
+          labelRef: '#/components/schemas/LabelRefData'
+          string: '#/components/schemas/StringData'
+          textSpan: '#/components/schemas/TextSpanData'
+        propertyName: type
+      oneOf:
+      - $ref: '#/components/schemas/StringData'
+      - $ref: '#/components/schemas/IntData'
+      - $ref: '#/components/schemas/FloatData'
+      - $ref: '#/components/schemas/BoolData'
+      - $ref: '#/components/schemas/TextSpanData'
+      - $ref: '#/components/schemas/LabelRefData'
     DeleteLabelOp:
       description: "Pydantic schema for a label delete operation. Deletes the label\
         \ with label_id.\n\nAttributes:\n    op: The string literal 'delete'.\n  \
@@ -807,6 +905,288 @@ components:
       - eagerLabelData
       title: EditChapterData
       type: object
+    FieldName:
+      maxLength: 128
+      minLength: 1
+      pattern: .*\S.*
+      type: string
+    FloatData:
+      additionalProperties: false
+      properties:
+        obj:
+          const: false
+          default: false
+          title: Obj
+          type: boolean
+        type:
+          const: float
+          default: float
+          title: Type
+          type: string
+        value:
+          $ref: '#/components/schemas/FloatValue'
+      required:
+      - value
+      title: FloatData
+      type: object
+    FloatField:
+      additionalProperties: false
+      properties:
+        mutable:
+          default: false
+          title: Mutable
+          type: boolean
+        obj:
+          const: false
+          default: false
+          title: Obj
+          type: boolean
+        type:
+          const: float
+          default: float
+          title: Type
+          type: string
+      title: FloatField
+      type: object
+    FloatValue:
+      type: number
+    Frame:
+      properties:
+        groupFilters:
+          items:
+            $ref: '#/components/schemas/GroupFilter'
+          maxItems: 10
+          title: Groupfilters
+          type: array
+        sortKeys:
+          items:
+            $ref: '#/components/schemas/SortKey'
+          maxItems: 3
+          title: Sortkeys
+          type: array
+        workflowId:
+          format: uuid
+          title: Workflowid
+          type: string
+      required:
+      - groupFilters
+      - workflowId
+      title: Frame
+      type: object
+    FunctionDefinitionMeta:
+      properties:
+        functionDefinitionId:
+          format: uuid
+          title: Functiondefinitionid
+          type: string
+        functionName:
+          title: Functionname
+          type: string
+        namespace:
+          title: Namespace
+          type: string
+      required:
+      - functionDefinitionId
+      - namespace
+      - functionName
+      title: FunctionDefinitionMeta
+      type: object
+    FunctionDefinitionResponse:
+      properties:
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        functionDefinition:
+          additionalProperties: true
+          title: Functiondefinition
+          type: object
+        functionDefinitionId:
+          format: uuid
+          title: Functiondefinitionid
+          type: string
+        functionName:
+          title: Functionname
+          type: string
+        namespace:
+          title: Namespace
+          type: string
+        updatedAt:
+          format: date-time
+          title: Updatedat
+          type: string
+      required:
+      - functionDefinitionId
+      - namespace
+      - functionName
+      - functionDefinition
+      - createdAt
+      - updatedAt
+      title: FunctionDefinitionResponse
+      type: object
+    GroupData:
+      discriminator:
+        mapping:
+          bool: '#/components/schemas/BoolData'
+          int: '#/components/schemas/IntData'
+          string: '#/components/schemas/StringData'
+        propertyName: type
+      oneOf:
+      - $ref: '#/components/schemas/StringData'
+      - $ref: '#/components/schemas/IntData'
+      - $ref: '#/components/schemas/BoolData'
+    GroupFilter:
+      properties:
+        groupingId:
+          format: uuid
+          title: Groupingid
+          type: string
+        values:
+          items:
+            $ref: '#/components/schemas/GroupData'
+          maxItems: 100
+          title: Values
+          type: array
+      required:
+      - groupingId
+      - values
+      title: GroupFilter
+      type: object
+    GroupOperationAccepted:
+      properties:
+        grouping:
+          $ref: '#/components/schemas/GroupingResponse'
+        jobId:
+          format: uuid
+          title: Jobid
+          type: string
+      required:
+      - jobId
+      - grouping
+      title: GroupOperationAccepted
+      type: object
+    GroupValueCount:
+      properties:
+        count:
+          title: Count
+          type: integer
+        value:
+          $ref: '#/components/schemas/GroupData'
+      required:
+      - value
+      - count
+      title: GroupValueCount
+      type: object
+    GroupingResponse:
+      properties:
+        assignmentCount:
+          title: Assignmentcount
+          type: integer
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        functionDefinition:
+          $ref: '#/components/schemas/FunctionDefinitionMeta'
+        groupingId:
+          format: uuid
+          title: Groupingid
+          type: string
+        groupingMessage:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Groupingmessage
+        groupingStatus:
+          $ref: '#/components/schemas/GroupingStatus'
+        jobId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Jobid
+        outputType:
+          enum:
+          - string
+          - int
+          - bool
+          title: Outputtype
+          type: string
+        updatedAt:
+          format: date-time
+          title: Updatedat
+          type: string
+        workflowId:
+          format: uuid
+          title: Workflowid
+          type: string
+      required:
+      - groupingId
+      - workflowId
+      - functionDefinition
+      - outputType
+      - jobId
+      - groupingStatus
+      - groupingMessage
+      - assignmentCount
+      - createdAt
+      - updatedAt
+      title: GroupingResponse
+      type: object
+    GroupingStatus:
+      enum:
+      - pending
+      - processing
+      - complete
+      - failed
+      title: GroupingStatus
+      type: string
+    GroupingSummary:
+      properties:
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        functionDefinitionId:
+          format: uuid
+          title: Functiondefinitionid
+          type: string
+        groupingId:
+          format: uuid
+          title: Groupingid
+          type: string
+        groupingMessage:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Groupingmessage
+        groupingStatus:
+          $ref: '#/components/schemas/GroupingStatus'
+        jobId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Jobid
+        updatedAt:
+          format: date-time
+          title: Updatedat
+          type: string
+        workflowId:
+          format: uuid
+          title: Workflowid
+          type: string
+      required:
+      - groupingId
+      - workflowId
+      - functionDefinitionId
+      - jobId
+      - groupingStatus
+      - groupingMessage
+      - createdAt
+      - updatedAt
+      title: GroupingSummary
+      type: object
     HTTPValidationError:
       properties:
         detail:
@@ -815,6 +1195,101 @@ components:
           title: Detail
           type: array
       title: HTTPValidationError
+      type: object
+    InstanceQuery:
+      properties:
+        cursor:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          description: Cursor for pagination. If provided, must be a valid instance
+            id. The query will return results after this cursor according to the sort
+            keys.
+          title: Cursor
+        frame:
+          $ref: '#/components/schemas/Frame'
+        limit:
+          default: 50
+          maximum: 100.0
+          minimum: 1.0
+          title: Limit
+          type: integer
+      required:
+      - frame
+      title: InstanceQuery
+      type: object
+    InstanceQueryResult:
+      properties:
+        groupValues:
+          additionalProperties:
+            $ref: '#/components/schemas/GroupData'
+          propertyNames:
+            format: uuid
+          title: Groupvalues
+          type: object
+        instance:
+          $ref: '#/components/schemas/InstanceResponse'
+      required:
+      - instance
+      - groupValues
+      title: InstanceQueryResult
+      type: object
+    InstanceResponse:
+      properties:
+        instanceId:
+          format: uuid
+          title: Instanceid
+          type: string
+        value:
+          $ref: '#/components/schemas/DataObj'
+        workflowId:
+          format: uuid
+          title: Workflowid
+          type: string
+      required:
+      - instanceId
+      - workflowId
+      - value
+      title: InstanceResponse
+      type: object
+    IntData:
+      additionalProperties: false
+      properties:
+        obj:
+          const: false
+          default: false
+          title: Obj
+          type: boolean
+        type:
+          const: int
+          default: int
+          title: Type
+          type: string
+        value:
+          $ref: '#/components/schemas/src__filters__data_types__IntegerValue__1'
+      required:
+      - value
+      title: IntData
+      type: object
+    IntField:
+      additionalProperties: false
+      properties:
+        mutable:
+          default: false
+          title: Mutable
+          type: boolean
+        obj:
+          const: false
+          default: false
+          title: Obj
+          type: boolean
+        type:
+          const: int
+          default: int
+          title: Type
+          type: string
+      title: IntField
       type: object
     Label:
       description: 'Pydantic schema for a label that belongs to a LabelData.
@@ -1009,6 +1484,76 @@ components:
       - $ref: '#/components/schemas/AddLabelOp'
       - $ref: '#/components/schemas/DeleteLabelOp'
       - $ref: '#/components/schemas/UpdateLabelOp'
+    LabelRef:
+      additionalProperties: false
+      properties:
+        chapterContentId:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+        chapterId:
+          format: uuid
+          title: Chapterid
+          type: string
+        labelDataId:
+          format: uuid
+          title: Labeldataid
+          type: string
+        labelGroupId:
+          format: uuid
+          title: Labelgroupid
+          type: string
+        labelId:
+          format: uuid
+          title: Labelid
+          type: string
+      required:
+      - chapterId
+      - chapterContentId
+      - labelId
+      - labelDataId
+      - labelGroupId
+      title: LabelRef
+      type: object
+    LabelRefData:
+      additionalProperties: false
+      properties:
+        obj:
+          const: false
+          default: false
+          title: Obj
+          type: boolean
+        type:
+          const: labelRef
+          default: labelRef
+          title: Type
+          type: string
+        value:
+          $ref: '#/components/schemas/LabelRef'
+      required:
+      - value
+      title: LabelRefData
+      type: object
+    LabelRefField:
+      additionalProperties: false
+      properties:
+        mutable:
+          const: false
+          default: false
+          title: Mutable
+          type: boolean
+        obj:
+          const: false
+          default: false
+          title: Obj
+          type: boolean
+        type:
+          const: labelRef
+          default: labelRef
+          title: Type
+          type: string
+      title: LabelRefField
+      type: object
     LabelRole:
       enum:
       - owner
@@ -1200,6 +1745,103 @@ components:
       - results
       title: OpsResult
       type: object
+    PythonFilterRequest:
+      additionalProperties: false
+      properties:
+        functionDefinitionId:
+          description: Saved object-to-boolean function to execute.
+          format: uuid
+          title: Functiondefinitionid
+          type: string
+        outputName:
+          anyOf:
+          - maxLength: 100
+            type: string
+          - type: 'null'
+          title: Outputname
+        sourceWorkflowId:
+          description: Completed workflow whose instances will be filtered.
+          format: uuid
+          title: Sourceworkflowid
+          type: string
+      required:
+      - sourceWorkflowId
+      - functionDefinitionId
+      title: PythonFilterRequest
+      type: object
+    PythonGroupRequest:
+      additionalProperties: false
+      properties:
+        functionDefinitionId:
+          description: Saved object-to-scalar grouping function to execute.
+          format: uuid
+          title: Functiondefinitionid
+          type: string
+        workflowId:
+          description: Completed workflow whose instances will be grouped.
+          format: uuid
+          title: Workflowid
+          type: string
+      required:
+      - workflowId
+      - functionDefinitionId
+      title: PythonGroupRequest
+      type: object
+    PythonLabelSourceRequest:
+      additionalProperties: false
+      properties:
+        labelGroupId:
+          description: Label group whose current labels will seed the workflow.
+          format: uuid
+          title: Labelgroupid
+          type: string
+        outputName:
+          anyOf:
+          - maxLength: 100
+            type: string
+          - type: 'null'
+          title: Outputname
+      required:
+      - labelGroupId
+      title: PythonLabelSourceRequest
+      type: object
+    PythonMapRequest:
+      additionalProperties: false
+      properties:
+        functionDefinitionId:
+          description: Saved object-to-object function to execute.
+          format: uuid
+          title: Functiondefinitionid
+          type: string
+        outputName:
+          anyOf:
+          - maxLength: 100
+            type: string
+          - type: 'null'
+          title: Outputname
+        sourceWorkflowId:
+          description: Completed workflow whose instances will be mapped.
+          format: uuid
+          title: Sourceworkflowid
+          type: string
+      required:
+      - sourceWorkflowId
+      - functionDefinitionId
+      title: PythonMapRequest
+      type: object
+    RenameWorkflowRequest:
+      additionalProperties: false
+      properties:
+        workflowName:
+          anyOf:
+          - maxLength: 100
+            type: string
+          - type: 'null'
+          title: Workflowname
+      required:
+      - workflowName
+      title: RenameWorkflowRequest
+      type: object
     RequestConflictDetail:
       description: "Structured detail payload used by request-key wrapped 409 responses.\n\
         \nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict:\
@@ -1226,6 +1868,41 @@ components:
       - detail
       title: RequestConflictErrorResponse
       type: object
+    Schema:
+      additionalProperties: false
+      properties:
+        fields:
+          additionalProperties:
+            $ref: '#/components/schemas/SchemaField'
+          maxProperties: 256
+          propertyNames:
+            $ref: '#/components/schemas/FieldName'
+          title: Fields
+          type: object
+        obj:
+          const: true
+          default: true
+          title: Obj
+          type: boolean
+      title: Schema
+      type: object
+    SchemaField:
+      discriminator:
+        mapping:
+          bool: '#/components/schemas/BoolField'
+          float: '#/components/schemas/FloatField'
+          int: '#/components/schemas/IntField'
+          labelRef: '#/components/schemas/LabelRefField'
+          string: '#/components/schemas/StringField'
+          textSpan: '#/components/schemas/TextSpanField'
+        propertyName: type
+      oneOf:
+      - $ref: '#/components/schemas/StringField'
+      - $ref: '#/components/schemas/IntField'
+      - $ref: '#/components/schemas/FloatField'
+      - $ref: '#/components/schemas/BoolField'
+      - $ref: '#/components/schemas/LabelRefField'
+      - $ref: '#/components/schemas/TextSpanField'
     SepPriority:
       enum:
       - 1
@@ -1233,6 +1910,23 @@ components:
       - 3
       title: SepPriority
       type: integer
+    SortDirection:
+      enum:
+      - asc
+      - desc
+      title: SortDirection
+      type: string
+    SortKey:
+      properties:
+        direction:
+          $ref: '#/components/schemas/SortDirection'
+        fieldName:
+          $ref: '#/components/schemas/FieldName'
+      required:
+      - fieldName
+      - direction
+      title: SortKey
+      type: object
     SourceWork:
       description: "Pydantic schema for a source work.\n\nAttributes:\n    source_work_id:\
         \ UUID id of source work in db.\n    source_work_title: Title of the source\
@@ -1272,6 +1966,46 @@ components:
       - novels
       title: SourceWorkData
       type: object
+    StringData:
+      additionalProperties: false
+      properties:
+        obj:
+          const: false
+          default: false
+          title: Obj
+          type: boolean
+        type:
+          const: string
+          default: string
+          title: Type
+          type: string
+        value:
+          $ref: '#/components/schemas/StringValue'
+      required:
+      - value
+      title: StringData
+      type: object
+    StringField:
+      additionalProperties: false
+      properties:
+        mutable:
+          default: false
+          title: Mutable
+          type: boolean
+        obj:
+          const: false
+          default: false
+          title: Obj
+          type: boolean
+        type:
+          const: string
+          default: string
+          title: Type
+          type: string
+      title: StringField
+      type: object
+    StringValue:
+      type: string
     TextOp:
       description: "Pydantic schema to update text content of a chapter.\n\nAttributes:\n\
         \    op: The text operation, either \"insert\" or \"delete\".\n    start:\
@@ -1296,6 +2030,67 @@ components:
       - start
       - text
       title: TextOp
+      type: object
+    TextSpan:
+      additionalProperties: false
+      properties:
+        chapterContentId:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+        chapterId:
+          format: uuid
+          title: Chapterid
+          type: string
+        end:
+          $ref: '#/components/schemas/src__filters__data_types__IntegerValue__2'
+        start:
+          $ref: '#/components/schemas/src__filters__data_types__IntegerValue__2'
+      required:
+      - chapterId
+      - chapterContentId
+      - start
+      - end
+      title: TextSpan
+      type: object
+    TextSpanData:
+      additionalProperties: false
+      properties:
+        obj:
+          const: false
+          default: false
+          title: Obj
+          type: boolean
+        type:
+          const: textSpan
+          default: textSpan
+          title: Type
+          type: string
+        value:
+          $ref: '#/components/schemas/TextSpan'
+      required:
+      - value
+      title: TextSpanData
+      type: object
+    TextSpanField:
+      additionalProperties: false
+      properties:
+        mutable:
+          const: false
+          default: false
+          title: Mutable
+          type: boolean
+        obj:
+          const: false
+          default: false
+          title: Obj
+          type: boolean
+        type:
+          const: textSpan
+          default: textSpan
+          title: Type
+          type: string
+      title: TextSpanField
       type: object
     Token:
       description: "Pydantic schema for a JWT\n\nAttributes:\n    access_token: Payload.\n\
@@ -1531,6 +2326,152 @@ components:
       - 3
       title: Visibility
       type: integer
+    WorkflowOperationAccepted:
+      properties:
+        jobId:
+          format: uuid
+          title: Jobid
+          type: string
+        workflow:
+          $ref: '#/components/schemas/WorkflowResponse'
+      required:
+      - jobId
+      - workflow
+      title: WorkflowOperationAccepted
+      type: object
+    WorkflowResponse:
+      properties:
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        instanceCount:
+          title: Instancecount
+          type: integer
+        jobId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Jobid
+        labelGroupIds:
+          items:
+            format: uuid
+            type: string
+          title: Labelgroupids
+          type: array
+        novelIds:
+          items:
+            format: uuid
+            type: string
+          title: Novelids
+          type: array
+        schema:
+          $ref: '#/components/schemas/Schema'
+        updatedAt:
+          format: date-time
+          title: Updatedat
+          type: string
+        useCase:
+          $ref: '#/components/schemas/WorkflowUseCase'
+        workflowId:
+          format: uuid
+          title: Workflowid
+          type: string
+        workflowMessage:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workflowmessage
+        workflowName:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workflowname
+        workflowStatus:
+          $ref: '#/components/schemas/WorkflowStatus'
+      required:
+      - workflowId
+      - workflowName
+      - useCase
+      - schema
+      - jobId
+      - workflowStatus
+      - workflowMessage
+      - novelIds
+      - labelGroupIds
+      - instanceCount
+      - createdAt
+      - updatedAt
+      title: WorkflowResponse
+      type: object
+    WorkflowStatus:
+      enum:
+      - pending
+      - processing
+      - complete
+      - failed
+      title: WorkflowStatus
+      type: string
+    WorkflowSummary:
+      properties:
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        jobId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Jobid
+        schema:
+          $ref: '#/components/schemas/Schema'
+        updatedAt:
+          format: date-time
+          title: Updatedat
+          type: string
+        useCase:
+          $ref: '#/components/schemas/WorkflowUseCase'
+        workflowId:
+          format: uuid
+          title: Workflowid
+          type: string
+        workflowMessage:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workflowmessage
+        workflowName:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workflowname
+        workflowStatus:
+          $ref: '#/components/schemas/WorkflowStatus'
+      required:
+      - workflowId
+      - workflowName
+      - useCase
+      - schema
+      - jobId
+      - workflowStatus
+      - workflowMessage
+      - createdAt
+      - updatedAt
+      title: WorkflowSummary
+      type: object
+    WorkflowUseCase:
+      enum:
+      - advanced
+      - glossary
+      title: WorkflowUseCase
+      type: string
+    src__filters__data_types__IntegerValue__1:
+      type: integer
+    src__filters__data_types__IntegerValue__2:
+      minimum: 0.0
+      type: integer
   securitySchemes:
     OAuth2PasswordBearer:
       flows:
@@ -1671,6 +2612,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/DetailHTTPErrorResponse'
           description: Invalid request data.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Novel not found or inaccessible.
         '409':
           content:
             application/json:
@@ -2276,6 +3223,786 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Read Edit Chapter Label Data
+  /filters/functions:
+    get:
+      description: List saved function definitions.
+      operationId: read_functions_filters_functions_get
+      parameters:
+      - in: query
+        name: search
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Search
+      - in: query
+        name: namespace
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Namespace
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Cursor
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/FunctionDefinitionMeta'
+                title: Response Read Functions Filters Functions Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Functions
+      tags:
+      - filters
+    post:
+      description: Save an immutable function definition in the shared registry.
+      operationId: create_filter_function
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFunctionDefinitionRequest'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunctionDefinitionResponse'
+          description: Successful Response
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Create Filter Function
+      tags:
+      - filters
+  /filters/functions/{functionDefinitionId}:
+    get:
+      description: Return one saved function definition.
+      operationId: read_function_filters_functions__functionDefinitionId__get
+      parameters:
+      - in: path
+        name: functionDefinitionId
+        required: true
+        schema:
+          format: uuid
+          title: Functiondefinitionid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunctionDefinitionResponse'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Function
+      tags:
+      - filters
+  /filters/groupings/{groupingId}:
+    get:
+      description: Return one grouping with derived output metadata.
+      operationId: read_grouping_filters_groupings__groupingId__get
+      parameters:
+      - in: path
+        name: groupingId
+        required: true
+        schema:
+          format: uuid
+          title: Groupingid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupingResponse'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Grouping
+      tags:
+      - filters
+  /filters/groupings/{groupingId}/values:
+    get:
+      description: List distinct values and counts for one completed grouping.
+      operationId: read_grouping_values_filters_groupings__groupingId__values_get
+      parameters:
+      - in: path
+        name: groupingId
+        required: true
+        schema:
+          format: uuid
+          title: Groupingid
+          type: string
+      - in: query
+        name: search
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Search
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/GroupValueCount'
+                title: Response Read Grouping Values Filters Groupings  Groupingid  Values
+                  Get
+                type: array
+          description: Successful Response
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Grouping Values
+      tags:
+      - filters
+  /filters/instances/query:
+    post:
+      description: Query instances with grouping filters and scalar sort keys.
+      operationId: read_instances_advanced_filters_instances_query_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstanceQuery'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/InstanceQueryResult'
+                title: Response Read Instances Advanced Filters Instances Query Post
+                type: array
+          description: Successful Response
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Instances Advanced
+      tags:
+      - filters
+  /filters/runners/python/filter:
+    post:
+      description: Create and enqueue a filtered workflow.
+      operationId: run_python_filter
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PythonFilterRequest'
+        required: true
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowOperationAccepted'
+          description: Successful Response
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Service Unavailable
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Run Python Filter
+      tags:
+      - filters
+  /filters/runners/python/group:
+    post:
+      description: Create and enqueue grouping assignments for a workflow.
+      operationId: run_python_group
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PythonGroupRequest'
+        required: true
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupOperationAccepted'
+          description: Successful Response
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Service Unavailable
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Run Python Group
+      tags:
+      - filters
+  /filters/runners/python/label-source:
+    post:
+      description: Create and enqueue a workflow from the current labels in a group.
+      operationId: run_python_label_source
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PythonLabelSourceRequest'
+        required: true
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowOperationAccepted'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Service Unavailable
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Run Python Label Source
+      tags:
+      - filters
+  /filters/runners/python/map:
+    post:
+      description: Create and enqueue a mapped workflow.
+      operationId: run_python_map
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PythonMapRequest'
+        required: true
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowOperationAccepted'
+          description: Successful Response
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Service Unavailable
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Run Python Map
+      tags:
+      - filters
+  /filters/workflows:
+    get:
+      description: List workflows accessible to the current user.
+      operationId: read_workflows_filters_workflows_get
+      parameters:
+      - in: query
+        name: novelId
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Novelid
+      - in: query
+        name: labelGroupId
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Labelgroupid
+      - in: query
+        name: useCase
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/WorkflowUseCase'
+          - type: 'null'
+          title: Usecase
+      - in: query
+        name: status
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/WorkflowStatus'
+          - type: 'null'
+          title: Status
+      - in: query
+        name: search
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Search
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Cursor
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/WorkflowSummary'
+                title: Response Read Workflows Filters Workflows Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Workflows
+      tags:
+      - filters
+  /filters/workflows/{workflowId}:
+    get:
+      description: Return one workflow with its permission scope and instance count.
+      operationId: read_workflow_filters_workflows__workflowId__get
+      parameters:
+      - in: path
+        name: workflowId
+        required: true
+        schema:
+          format: uuid
+          title: Workflowid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowResponse'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Workflow
+      tags:
+      - filters
+    patch:
+      description: Rename or clear the name of an accessible workflow.
+      operationId: rename_filter_workflow
+      parameters:
+      - in: path
+        name: workflowId
+        required: true
+        schema:
+          format: uuid
+          title: Workflowid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenameWorkflowRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowResponse'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Rename Filter Workflow
+      tags:
+      - filters
+  /filters/workflows/{workflowId}/groupings:
+    get:
+      description: List groupings attached to one workflow.
+      operationId: read_workflow_groupings_filters_workflows__workflowId__groupings_get
+      parameters:
+      - in: path
+        name: workflowId
+        required: true
+        schema:
+          format: uuid
+          title: Workflowid
+          type: string
+      - in: query
+        name: status
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/GroupingStatus'
+          - type: 'null'
+          title: Status
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Cursor
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/GroupingSummary'
+                title: Response Read Workflow Groupings Filters Workflows  Workflowid  Groupings
+                  Get
+                type: array
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Workflow Groupings
+      tags:
+      - filters
+  /filters/workflows/{workflowId}/instances:
+    get:
+      description: List instances of one completed workflow.
+      operationId: read_workflow_instances_filters_workflows__workflowId__instances_get
+      parameters:
+      - in: path
+        name: workflowId
+        required: true
+        schema:
+          format: uuid
+          title: Workflowid
+          type: string
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Cursor
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/InstanceResponse'
+                title: Response Read Workflow Instances Filters Workflows  Workflowid  Instances
+                  Get
+                type: array
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Workflow Instances
+      tags:
+      - filters
   /label-datas:
     get:
       description: Gets all label datas in a label group, optionally filtered by chapter

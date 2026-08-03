@@ -2609,6 +2609,16 @@
               }
             }
           },
+          "404": {
+            "description": "Novel not found or inaccessible.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
             "description": "Request key conflict.",
             "content": {
@@ -2905,6 +2915,1304 @@
             }
           }
         }
+      }
+    },
+    "/filters/functions": {
+      "get": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Read Functions",
+        "description": "List saved function definitions.",
+        "operationId": "read_functions_filters_functions_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "namespace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Namespace"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FunctionDefinitionMeta"
+                  },
+                  "title": "Response Read Functions Filters Functions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Create Filter Function",
+        "description": "Save an immutable function definition in the shared registry.",
+        "operationId": "create_filter_function",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFunctionDefinitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FunctionDefinitionResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/filters/functions/{functionDefinitionId}": {
+      "get": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Read Function",
+        "description": "Return one saved function definition.",
+        "operationId": "read_function_filters_functions__functionDefinitionId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "functionDefinitionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Functiondefinitionid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FunctionDefinitionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/filters/workflows": {
+      "get": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Read Workflows",
+        "description": "List workflows accessible to the current user.",
+        "operationId": "read_workflows_filters_workflows_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Novelid"
+            }
+          },
+          {
+            "name": "labelGroupId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Labelgroupid"
+            }
+          },
+          {
+            "name": "useCase",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/WorkflowUseCase"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Usecase"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/WorkflowStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowSummary"
+                  },
+                  "title": "Response Read Workflows Filters Workflows Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/filters/workflows/{workflowId}": {
+      "get": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Read Workflow",
+        "description": "Return one workflow with its permission scope and instance count.",
+        "operationId": "read_workflow_filters_workflows__workflowId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflowId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Workflowid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Rename Filter Workflow",
+        "description": "Rename or clear the name of an accessible workflow.",
+        "operationId": "rename_filter_workflow",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflowId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Workflowid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameWorkflowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/filters/workflows/{workflowId}/instances": {
+      "get": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Read Workflow Instances",
+        "description": "List instances of one completed workflow.",
+        "operationId": "read_workflow_instances_filters_workflows__workflowId__instances_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflowId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Workflowid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InstanceResponse"
+                  },
+                  "title": "Response Read Workflow Instances Filters Workflows  Workflowid  Instances Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/filters/instances/query": {
+      "post": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Read Instances Advanced",
+        "description": "Query instances with grouping filters and scalar sort keys.",
+        "operationId": "read_instances_advanced_filters_instances_query_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstanceQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InstanceQueryResult"
+                  },
+                  "type": "array",
+                  "title": "Response Read Instances Advanced Filters Instances Query Post"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/filters/workflows/{workflowId}/groupings": {
+      "get": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Read Workflow Groupings",
+        "description": "List groupings attached to one workflow.",
+        "operationId": "read_workflow_groupings_filters_workflows__workflowId__groupings_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflowId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Workflowid"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/GroupingStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GroupingSummary"
+                  },
+                  "title": "Response Read Workflow Groupings Filters Workflows  Workflowid  Groupings Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/filters/groupings/{groupingId}": {
+      "get": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Read Grouping",
+        "description": "Return one grouping with derived output metadata.",
+        "operationId": "read_grouping_filters_groupings__groupingId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "groupingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Groupingid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupingResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/filters/groupings/{groupingId}/values": {
+      "get": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Read Grouping Values",
+        "description": "List distinct values and counts for one completed grouping.",
+        "operationId": "read_grouping_values_filters_groupings__groupingId__values_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "groupingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Groupingid"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GroupValueCount"
+                  },
+                  "title": "Response Read Grouping Values Filters Groupings  Groupingid  Values Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/filters/runners/python/label-source": {
+      "post": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Run Python Label Source",
+        "description": "Create and enqueue a workflow from the current labels in a group.",
+        "operationId": "run_python_label_source",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PythonLabelSourceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowOperationAccepted"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/filters/runners/python/map": {
+      "post": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Run Python Map",
+        "description": "Create and enqueue a mapped workflow.",
+        "operationId": "run_python_map",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PythonMapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowOperationAccepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/filters/runners/python/filter": {
+      "post": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Run Python Filter",
+        "description": "Create and enqueue a filtered workflow.",
+        "operationId": "run_python_filter",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PythonFilterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowOperationAccepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/filters/runners/python/group": {
+      "post": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Run Python Group",
+        "description": "Create and enqueue grouping assignments for a workflow.",
+        "operationId": "run_python_group",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PythonGroupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupOperationAccepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
       }
     }
   },
@@ -3246,6 +4554,58 @@
           "password"
         ],
         "title": "Body_login_for_access_token_token_post"
+      },
+      "BoolData": {
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/BooleanValue"
+          },
+          "type": {
+            "type": "string",
+            "const": "bool",
+            "title": "Type",
+            "default": "bool"
+          },
+          "obj": {
+            "type": "boolean",
+            "const": false,
+            "title": "Obj",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "BoolData"
+      },
+      "BoolField": {
+        "properties": {
+          "obj": {
+            "type": "boolean",
+            "const": false,
+            "title": "Obj",
+            "default": false
+          },
+          "type": {
+            "type": "string",
+            "const": "bool",
+            "title": "Type",
+            "default": "bool"
+          },
+          "mutable": {
+            "type": "boolean",
+            "title": "Mutable",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BoolField"
+      },
+      "BooleanValue": {
+        "type": "boolean"
       },
       "CacheEntry": {
         "properties": {
@@ -3591,6 +4951,35 @@
         "title": "CreateChapter",
         "description": "Pydantic schema to validate data for creating a new chapter. The novel_id is expected to be passed via the URL path.\n\nAttributes:\n    chapter_num: The chapter number to create.\n    chapter_title: Title of the chapter. Defaults to empty string.\n    chapter_is_public: Whether the chapter is publicly visible. Defaults to False."
       },
+      "CreateFunctionDefinitionRequest": {
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Namespace"
+          },
+          "functionName": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Functionname"
+          },
+          "functionDefinition": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Functiondefinition"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "namespace",
+          "functionName",
+          "functionDefinition"
+        ],
+        "title": "CreateFunctionDefinitionRequest"
+      },
       "CreateLabelData": {
         "properties": {
           "chapterContentId": {
@@ -3840,6 +5229,63 @@
         "title": "CreateUser",
         "description": "Pydantic schema to validate data required to create a user.\n\nAttributes:\n    user_name: Username of user being created.\n    user_password: Unhashed password of user being create.\n    user_type: UserType type of user to be created.\nNotes:"
       },
+      "DataObj": {
+        "properties": {
+          "fields": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DataType"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/FieldName"
+            },
+            "type": "object",
+            "maxProperties": 256,
+            "title": "Fields"
+          },
+          "obj": {
+            "type": "boolean",
+            "const": true,
+            "title": "Obj",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DataObj"
+      },
+      "DataType": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StringData"
+          },
+          {
+            "$ref": "#/components/schemas/IntData"
+          },
+          {
+            "$ref": "#/components/schemas/FloatData"
+          },
+          {
+            "$ref": "#/components/schemas/BoolData"
+          },
+          {
+            "$ref": "#/components/schemas/TextSpanData"
+          },
+          {
+            "$ref": "#/components/schemas/LabelRefData"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "bool": "#/components/schemas/BoolData",
+            "float": "#/components/schemas/FloatData",
+            "int": "#/components/schemas/IntData",
+            "labelRef": "#/components/schemas/LabelRefData",
+            "string": "#/components/schemas/StringData",
+            "textSpan": "#/components/schemas/TextSpanData"
+          }
+        }
+      },
       "DeleteLabelOp": {
         "properties": {
           "op": {
@@ -3979,6 +5425,397 @@
         "title": "EditChapterData",
         "description": "Pydantic schema for the data needed to edit a chapter.\n\nAttributes:\n    chapter_content: ChapterContent being edited.\n    no_label_data: List of LabelGroup objects that have no label data associated with them."
       },
+      "FieldName": {
+        "type": "string",
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": ".*\\S.*"
+      },
+      "FloatData": {
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/FloatValue"
+          },
+          "type": {
+            "type": "string",
+            "const": "float",
+            "title": "Type",
+            "default": "float"
+          },
+          "obj": {
+            "type": "boolean",
+            "const": false,
+            "title": "Obj",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "FloatData"
+      },
+      "FloatField": {
+        "properties": {
+          "obj": {
+            "type": "boolean",
+            "const": false,
+            "title": "Obj",
+            "default": false
+          },
+          "type": {
+            "type": "string",
+            "const": "float",
+            "title": "Type",
+            "default": "float"
+          },
+          "mutable": {
+            "type": "boolean",
+            "title": "Mutable",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "FloatField"
+      },
+      "FloatValue": {
+        "type": "number"
+      },
+      "Frame": {
+        "properties": {
+          "groupFilters": {
+            "items": {
+              "$ref": "#/components/schemas/GroupFilter"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Groupfilters"
+          },
+          "workflowId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workflowid"
+          },
+          "sortKeys": {
+            "items": {
+              "$ref": "#/components/schemas/SortKey"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Sortkeys"
+          }
+        },
+        "type": "object",
+        "required": [
+          "groupFilters",
+          "workflowId"
+        ],
+        "title": "Frame"
+      },
+      "FunctionDefinitionMeta": {
+        "properties": {
+          "functionDefinitionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Functiondefinitionid"
+          },
+          "namespace": {
+            "type": "string",
+            "title": "Namespace"
+          },
+          "functionName": {
+            "type": "string",
+            "title": "Functionname"
+          }
+        },
+        "type": "object",
+        "required": [
+          "functionDefinitionId",
+          "namespace",
+          "functionName"
+        ],
+        "title": "FunctionDefinitionMeta"
+      },
+      "FunctionDefinitionResponse": {
+        "properties": {
+          "functionDefinitionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Functiondefinitionid"
+          },
+          "namespace": {
+            "type": "string",
+            "title": "Namespace"
+          },
+          "functionName": {
+            "type": "string",
+            "title": "Functionname"
+          },
+          "functionDefinition": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Functiondefinition"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "functionDefinitionId",
+          "namespace",
+          "functionName",
+          "functionDefinition",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "FunctionDefinitionResponse"
+      },
+      "GroupData": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StringData"
+          },
+          {
+            "$ref": "#/components/schemas/IntData"
+          },
+          {
+            "$ref": "#/components/schemas/BoolData"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "bool": "#/components/schemas/BoolData",
+            "int": "#/components/schemas/IntData",
+            "string": "#/components/schemas/StringData"
+          }
+        }
+      },
+      "GroupFilter": {
+        "properties": {
+          "groupingId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Groupingid"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/GroupData"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "groupingId",
+          "values"
+        ],
+        "title": "GroupFilter"
+      },
+      "GroupOperationAccepted": {
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Jobid"
+          },
+          "grouping": {
+            "$ref": "#/components/schemas/GroupingResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobId",
+          "grouping"
+        ],
+        "title": "GroupOperationAccepted"
+      },
+      "GroupValueCount": {
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/GroupData"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "count"
+        ],
+        "title": "GroupValueCount"
+      },
+      "GroupingResponse": {
+        "properties": {
+          "groupingId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Groupingid"
+          },
+          "workflowId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workflowid"
+          },
+          "functionDefinition": {
+            "$ref": "#/components/schemas/FunctionDefinitionMeta"
+          },
+          "outputType": {
+            "type": "string",
+            "enum": [
+              "string",
+              "int",
+              "bool"
+            ],
+            "title": "Outputtype"
+          },
+          "jobId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jobid"
+          },
+          "groupingStatus": {
+            "$ref": "#/components/schemas/GroupingStatus"
+          },
+          "groupingMessage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groupingmessage"
+          },
+          "assignmentCount": {
+            "type": "integer",
+            "title": "Assignmentcount"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "groupingId",
+          "workflowId",
+          "functionDefinition",
+          "outputType",
+          "jobId",
+          "groupingStatus",
+          "groupingMessage",
+          "assignmentCount",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "GroupingResponse"
+      },
+      "GroupingStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "processing",
+          "complete",
+          "failed"
+        ],
+        "title": "GroupingStatus"
+      },
+      "GroupingSummary": {
+        "properties": {
+          "groupingId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Groupingid"
+          },
+          "workflowId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workflowid"
+          },
+          "functionDefinitionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Functiondefinitionid"
+          },
+          "jobId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jobid"
+          },
+          "groupingStatus": {
+            "$ref": "#/components/schemas/GroupingStatus"
+          },
+          "groupingMessage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groupingmessage"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "groupingId",
+          "workflowId",
+          "functionDefinitionId",
+          "jobId",
+          "groupingStatus",
+          "groupingMessage",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "GroupingSummary"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3991,6 +5828,134 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "InstanceQuery": {
+        "properties": {
+          "frame": {
+            "$ref": "#/components/schemas/Frame"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 50
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cursor",
+            "description": "Cursor for pagination. If provided, must be a valid instance id. The query will return results after this cursor according to the sort keys."
+          }
+        },
+        "type": "object",
+        "required": [
+          "frame"
+        ],
+        "title": "InstanceQuery"
+      },
+      "InstanceQueryResult": {
+        "properties": {
+          "instance": {
+            "$ref": "#/components/schemas/InstanceResponse"
+          },
+          "groupValues": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/GroupData"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "type": "object",
+            "title": "Groupvalues"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instance",
+          "groupValues"
+        ],
+        "title": "InstanceQueryResult"
+      },
+      "InstanceResponse": {
+        "properties": {
+          "instanceId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Instanceid"
+          },
+          "workflowId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workflowid"
+          },
+          "value": {
+            "$ref": "#/components/schemas/DataObj"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instanceId",
+          "workflowId",
+          "value"
+        ],
+        "title": "InstanceResponse"
+      },
+      "IntData": {
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/src__filters__data_types__IntegerValue__1"
+          },
+          "type": {
+            "type": "string",
+            "const": "int",
+            "title": "Type",
+            "default": "int"
+          },
+          "obj": {
+            "type": "boolean",
+            "const": false,
+            "title": "Obj",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "IntData"
+      },
+      "IntField": {
+        "properties": {
+          "obj": {
+            "type": "boolean",
+            "const": false,
+            "title": "Obj",
+            "default": false
+          },
+          "type": {
+            "type": "string",
+            "const": "int",
+            "title": "Type",
+            "default": "int"
+          },
+          "mutable": {
+            "type": "boolean",
+            "title": "Mutable",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "IntField"
       },
       "Label": {
         "properties": {
@@ -4224,6 +6189,95 @@
             "update": "#/components/schemas/UpdateLabelOp"
           }
         }
+      },
+      "LabelRef": {
+        "properties": {
+          "chapterId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chapterid"
+          },
+          "chapterContentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chaptercontentid"
+          },
+          "labelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Labelid"
+          },
+          "labelDataId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Labeldataid"
+          },
+          "labelGroupId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Labelgroupid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "chapterId",
+          "chapterContentId",
+          "labelId",
+          "labelDataId",
+          "labelGroupId"
+        ],
+        "title": "LabelRef"
+      },
+      "LabelRefData": {
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/LabelRef"
+          },
+          "type": {
+            "type": "string",
+            "const": "labelRef",
+            "title": "Type",
+            "default": "labelRef"
+          },
+          "obj": {
+            "type": "boolean",
+            "const": false,
+            "title": "Obj",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "LabelRefData"
+      },
+      "LabelRefField": {
+        "properties": {
+          "obj": {
+            "type": "boolean",
+            "const": false,
+            "title": "Obj",
+            "default": false
+          },
+          "type": {
+            "type": "string",
+            "const": "labelRef",
+            "title": "Type",
+            "default": "labelRef"
+          },
+          "mutable": {
+            "type": "boolean",
+            "const": false,
+            "title": "Mutable",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "LabelRefField"
       },
       "LabelRole": {
         "type": "string",
@@ -4468,6 +6522,149 @@
         "title": "OpsResult",
         "description": "Pydantic schema for a list of label operation results.\n\nAttributes:\n    results: A list of UUIDs corresponding to the results of each label operation."
       },
+      "PythonFilterRequest": {
+        "properties": {
+          "sourceWorkflowId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sourceworkflowid",
+            "description": "Completed workflow whose instances will be filtered."
+          },
+          "functionDefinitionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Functiondefinitionid",
+            "description": "Saved object-to-boolean function to execute."
+          },
+          "outputName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outputname"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sourceWorkflowId",
+          "functionDefinitionId"
+        ],
+        "title": "PythonFilterRequest"
+      },
+      "PythonGroupRequest": {
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workflowid",
+            "description": "Completed workflow whose instances will be grouped."
+          },
+          "functionDefinitionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Functiondefinitionid",
+            "description": "Saved object-to-scalar grouping function to execute."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workflowId",
+          "functionDefinitionId"
+        ],
+        "title": "PythonGroupRequest"
+      },
+      "PythonLabelSourceRequest": {
+        "properties": {
+          "labelGroupId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Labelgroupid",
+            "description": "Label group whose current labels will seed the workflow."
+          },
+          "outputName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outputname"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "labelGroupId"
+        ],
+        "title": "PythonLabelSourceRequest"
+      },
+      "PythonMapRequest": {
+        "properties": {
+          "sourceWorkflowId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sourceworkflowid",
+            "description": "Completed workflow whose instances will be mapped."
+          },
+          "functionDefinitionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Functiondefinitionid",
+            "description": "Saved object-to-object function to execute."
+          },
+          "outputName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outputname"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sourceWorkflowId",
+          "functionDefinitionId"
+        ],
+        "title": "PythonMapRequest"
+      },
+      "RenameWorkflowRequest": {
+        "properties": {
+          "workflowName": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowname"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workflowName"
+        ],
+        "title": "RenameWorkflowRequest"
+      },
       "RequestConflictDetail": {
         "properties": {
           "detail": {
@@ -4500,6 +6697,63 @@
         "title": "RequestConflictErrorResponse",
         "description": "HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail."
       },
+      "Schema": {
+        "properties": {
+          "obj": {
+            "type": "boolean",
+            "const": true,
+            "title": "Obj",
+            "default": true
+          },
+          "fields": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SchemaField"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/FieldName"
+            },
+            "type": "object",
+            "maxProperties": 256,
+            "title": "Fields"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Schema"
+      },
+      "SchemaField": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StringField"
+          },
+          {
+            "$ref": "#/components/schemas/IntField"
+          },
+          {
+            "$ref": "#/components/schemas/FloatField"
+          },
+          {
+            "$ref": "#/components/schemas/BoolField"
+          },
+          {
+            "$ref": "#/components/schemas/LabelRefField"
+          },
+          {
+            "$ref": "#/components/schemas/TextSpanField"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "bool": "#/components/schemas/BoolField",
+            "float": "#/components/schemas/FloatField",
+            "int": "#/components/schemas/IntField",
+            "labelRef": "#/components/schemas/LabelRefField",
+            "string": "#/components/schemas/StringField",
+            "textSpan": "#/components/schemas/TextSpanField"
+          }
+        }
+      },
       "SepPriority": {
         "type": "integer",
         "enum": [
@@ -4508,6 +6762,30 @@
           3
         ],
         "title": "SepPriority"
+      },
+      "SortDirection": {
+        "type": "string",
+        "enum": [
+          "asc",
+          "desc"
+        ],
+        "title": "SortDirection"
+      },
+      "SortKey": {
+        "properties": {
+          "fieldName": {
+            "$ref": "#/components/schemas/FieldName"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/SortDirection"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fieldName",
+          "direction"
+        ],
+        "title": "SortKey"
       },
       "SourceWork": {
         "properties": {
@@ -4561,6 +6839,58 @@
         "title": "SourceWorkData",
         "description": "Pydantic schema to represent a source work and all its associated novels.\n\nAttributes:\n    source_work: The source work metadata.\n    novels: A list of novels associated with this source work."
       },
+      "StringData": {
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/StringValue"
+          },
+          "type": {
+            "type": "string",
+            "const": "string",
+            "title": "Type",
+            "default": "string"
+          },
+          "obj": {
+            "type": "boolean",
+            "const": false,
+            "title": "Obj",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "StringData"
+      },
+      "StringField": {
+        "properties": {
+          "obj": {
+            "type": "boolean",
+            "const": false,
+            "title": "Obj",
+            "default": false
+          },
+          "type": {
+            "type": "string",
+            "const": "string",
+            "title": "Type",
+            "default": "string"
+          },
+          "mutable": {
+            "type": "boolean",
+            "title": "Mutable",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "StringField"
+      },
+      "StringValue": {
+        "type": "string"
+      },
       "TextOp": {
         "properties": {
           "op": {
@@ -4588,6 +6918,85 @@
         ],
         "title": "TextOp",
         "description": "Pydantic schema to update text content of a chapter.\n\nAttributes:\n    op: The text operation, either \"insert\" or \"delete\".\n    start: The starting index in the text content where the operation should be applied.\n    text: The text to insert (for insert operations) or the text to delete (for delete operations)."
+      },
+      "TextSpan": {
+        "properties": {
+          "chapterId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chapterid"
+          },
+          "chapterContentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chaptercontentid"
+          },
+          "start": {
+            "$ref": "#/components/schemas/src__filters__data_types__IntegerValue__2"
+          },
+          "end": {
+            "$ref": "#/components/schemas/src__filters__data_types__IntegerValue__2"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "chapterId",
+          "chapterContentId",
+          "start",
+          "end"
+        ],
+        "title": "TextSpan"
+      },
+      "TextSpanData": {
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/TextSpan"
+          },
+          "type": {
+            "type": "string",
+            "const": "textSpan",
+            "title": "Type",
+            "default": "textSpan"
+          },
+          "obj": {
+            "type": "boolean",
+            "const": false,
+            "title": "Obj",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "TextSpanData"
+      },
+      "TextSpanField": {
+        "properties": {
+          "obj": {
+            "type": "boolean",
+            "const": false,
+            "title": "Obj",
+            "default": false
+          },
+          "type": {
+            "type": "string",
+            "const": "textSpan",
+            "title": "Type",
+            "default": "textSpan"
+          },
+          "mutable": {
+            "type": "boolean",
+            "const": false,
+            "title": "Mutable",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TextSpanField"
       },
       "Token": {
         "properties": {
@@ -4922,6 +7331,222 @@
           3
         ],
         "title": "Visibility"
+      },
+      "WorkflowOperationAccepted": {
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Jobid"
+          },
+          "workflow": {
+            "$ref": "#/components/schemas/WorkflowResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobId",
+          "workflow"
+        ],
+        "title": "WorkflowOperationAccepted"
+      },
+      "WorkflowResponse": {
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workflowid"
+          },
+          "workflowName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowname"
+          },
+          "useCase": {
+            "$ref": "#/components/schemas/WorkflowUseCase"
+          },
+          "schema": {
+            "$ref": "#/components/schemas/Schema"
+          },
+          "jobId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jobid"
+          },
+          "workflowStatus": {
+            "$ref": "#/components/schemas/WorkflowStatus"
+          },
+          "workflowMessage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowmessage"
+          },
+          "novelIds": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Novelids"
+          },
+          "labelGroupIds": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Labelgroupids"
+          },
+          "instanceCount": {
+            "type": "integer",
+            "title": "Instancecount"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflowId",
+          "workflowName",
+          "useCase",
+          "schema",
+          "jobId",
+          "workflowStatus",
+          "workflowMessage",
+          "novelIds",
+          "labelGroupIds",
+          "instanceCount",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "WorkflowResponse"
+      },
+      "WorkflowStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "processing",
+          "complete",
+          "failed"
+        ],
+        "title": "WorkflowStatus"
+      },
+      "WorkflowSummary": {
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workflowid"
+          },
+          "workflowName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowname"
+          },
+          "useCase": {
+            "$ref": "#/components/schemas/WorkflowUseCase"
+          },
+          "schema": {
+            "$ref": "#/components/schemas/Schema"
+          },
+          "jobId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jobid"
+          },
+          "workflowStatus": {
+            "$ref": "#/components/schemas/WorkflowStatus"
+          },
+          "workflowMessage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflowmessage"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflowId",
+          "workflowName",
+          "useCase",
+          "schema",
+          "jobId",
+          "workflowStatus",
+          "workflowMessage",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "WorkflowSummary"
+      },
+      "WorkflowUseCase": {
+        "type": "string",
+        "enum": [
+          "advanced",
+          "glossary"
+        ],
+        "title": "WorkflowUseCase"
+      },
+      "src__filters__data_types__IntegerValue__1": {
+        "type": "integer"
+      },
+      "src__filters__data_types__IntegerValue__2": {
+        "type": "integer",
+        "minimum": 0.0
       }
     },
     "securitySchemes": {

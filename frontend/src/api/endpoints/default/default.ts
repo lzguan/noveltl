@@ -194,6 +194,11 @@ export type createAutolabelsAutoLabelsPostResponse400 = {
   status: 400
 }
 
+export type createAutolabelsAutoLabelsPostResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
 export type createAutolabelsAutoLabelsPostResponse409 = {
   data: RequestConflictErrorResponse
   status: 409
@@ -207,7 +212,7 @@ export type createAutolabelsAutoLabelsPostResponse422 = {
 export type createAutolabelsAutoLabelsPostResponseSuccess = (createAutolabelsAutoLabelsPostResponse200) & {
   headers: Headers;
 };
-export type createAutolabelsAutoLabelsPostResponseError = (createAutolabelsAutoLabelsPostResponse400 | createAutolabelsAutoLabelsPostResponse409 | createAutolabelsAutoLabelsPostResponse422) & {
+export type createAutolabelsAutoLabelsPostResponseError = (createAutolabelsAutoLabelsPostResponse400 | createAutolabelsAutoLabelsPostResponse404 | createAutolabelsAutoLabelsPostResponse409 | createAutolabelsAutoLabelsPostResponse422) & {
   headers: Headers;
 };
 

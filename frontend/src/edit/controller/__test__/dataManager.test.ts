@@ -382,7 +382,9 @@ describe("buildChapterDataManager", () => {
 		it("does not require the caller to provide the label word", () => {
 			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
 
-			const result = Effect.runSync(chapterDM.addLabel(labelGroupId, 6, 9).pipe(Effect.either));
+			const result = Effect.runSync(
+				chapterDM.addLabel(labelGroupId, 6, 9).pipe(Effect.either),
+			);
 
 			expect(result._tag).toBe("Right");
 		});
@@ -390,9 +392,8 @@ describe("buildChapterDataManager", () => {
 
 	describe("deleteLabel", () => {
 		it("deletes an existing label", () => {
-			const { chapterDM, triggerEvents, labelGroupId, idRepo } = Effect.runSync(
-				buildTestChapterDM(),
-			);
+			const { chapterDM, triggerEvents, labelGroupId, idRepo } =
+				Effect.runSync(buildTestChapterDM());
 			const labelId = getLabelProvId(idRepo, UUID5);
 
 			const events = Effect.runSync(chapterDM.deleteLabel(labelGroupId, labelId));
@@ -562,9 +563,8 @@ describe("buildChapterDataManager", () => {
 
 	describe("insertTextAt", () => {
 		it("shifts labels after insertion point", () => {
-			const { chapterDM, triggerEvents, labelGroupId, idRepo } = Effect.runSync(
-				buildTestChapterDM(),
-			);
+			const { chapterDM, triggerEvents, labelGroupId, idRepo } =
+				Effect.runSync(buildTestChapterDM());
 			const bobId = getLabelProvId(idRepo, UUID6);
 
 			Effect.runSync(chapterDM.insertTextAt(6, "bravely "));

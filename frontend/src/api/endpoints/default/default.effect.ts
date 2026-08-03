@@ -175,6 +175,10 @@ export const CreateAutolabelsAutoLabelsPost400Response = S.Struct({
   "detail": S.String
 }).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
+export const CreateAutolabelsAutoLabelsPost404Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
 export const CreateAutolabelsAutoLabelsPost409Response = S.Struct({
   "detail": S.Struct({
   "cacheConflict": S.Boolean,

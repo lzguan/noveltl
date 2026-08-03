@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/devcontainers/base:dev-trixie
 
-ARG PNPM_VERSION=11.17.0
+ARG PNPM_VERSION=11.18.0
 ARG NODE_VERSION=22
 ARG PROJECT_ROOT=/workspaces/NovelTL_Dev
 

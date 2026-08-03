@@ -1,8 +1,7 @@
 # Filter API endpoints
 
-> **Status:** Read API implemented. The write API has an implementation-ready
-> specification in [write-endpoints.md](write-endpoints.md), but is not yet
-> implemented.
+> **Status:** Read API implemented. The implemented write API is specified in
+> [write-endpoints.md](write-endpoints.md).
 
 The filter API uses explicit resources for saved functions, workflows,
 instances, and groupings. Runner execution uses separate public endpoints for

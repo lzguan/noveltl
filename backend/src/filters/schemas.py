@@ -3,10 +3,11 @@ from enum import StrEnum
 from typing import Annotated, Any, Literal, Self
 from uuid import UUID
 
-from pydantic import ConfigDict, Field, TypeAdapter, model_validator
+from pydantic import ConfigDict, Field, StringConstraints, TypeAdapter, field_validator, model_validator
 
 from src.filters.data_types import DataObj, FieldName, Schema
 from src.filters.exceptions import InvalidSortKeyException, UnsupportedSortTypeException
+from src.filters.functions import function_adapter
 from src.filters.models import GroupingStatus, WorkflowStatus, WorkflowUseCase
 from src.filters.runners.python.group_runner import GroupData
 from src.filters.runners.python.types import PythonRunnerInput
@@ -146,6 +147,61 @@ class InstanceQuery(Model):
         default=None,
         description="Cursor for pagination. If provided, must be a valid instance id. The query will return results after this cursor according to the sort keys.",
     )
+
+
+RegistryName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+
+
+class FilterWriteRequest(Model):
+    model_config = ConfigDict(extra="forbid")
+
+
+class CreateFunctionDefinitionRequest(FilterWriteRequest):
+    namespace: RegistryName
+    function_name: RegistryName
+    function_definition: dict[str, Any]
+
+    @field_validator("function_definition")
+    @classmethod
+    def validate_function_definition(cls, value: dict[str, Any]) -> dict[str, Any]:
+        function_adapter.validate_python(value)
+        return value
+
+
+class RenameWorkflowRequest(FilterWriteRequest):
+    workflow_name: str | None = Field(max_length=100)
+
+
+class PythonLabelSourceRequest(FilterWriteRequest):
+    label_group_id: UUID = Field(description="Label group whose current labels will seed the workflow.")
+    output_name: str | None = Field(default=None, max_length=100)
+
+
+class PythonMapRequest(FilterWriteRequest):
+    source_workflow_id: UUID = Field(description="Completed workflow whose instances will be mapped.")
+    function_definition_id: UUID = Field(description="Saved object-to-object function to execute.")
+    output_name: str | None = Field(default=None, max_length=100)
+
+
+class PythonFilterRequest(FilterWriteRequest):
+    source_workflow_id: UUID = Field(description="Completed workflow whose instances will be filtered.")
+    function_definition_id: UUID = Field(description="Saved object-to-boolean function to execute.")
+    output_name: str | None = Field(default=None, max_length=100)
+
+
+class PythonGroupRequest(FilterWriteRequest):
+    workflow_id: UUID = Field(description="Completed workflow whose instances will be grouped.")
+    function_definition_id: UUID = Field(description="Saved object-to-scalar grouping function to execute.")
+
+
+class WorkflowOperationAccepted(Model):
+    job_id: UUID
+    workflow: WorkflowResponse
+
+
+class GroupOperationAccepted(Model):
+    job_id: UUID
+    grouping: GroupingResponse
 
 
 def validate_frame_workflow(frame: Frame, schema: Schema):

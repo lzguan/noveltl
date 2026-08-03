@@ -1,24 +1,44 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, Float, Integer, String, and_, cast, exists, func, or_, select, type_coerce
+from sqlalchemy import (
+    Boolean,
+    Float,
+    Integer,
+    String,
+    and_,
+    cast,
+    exists,
+    func,
+    insert,
+    or_,
+    select,
+    type_coerce,
+    update,
+)
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session, aliased
 
+from src.auth.constants import UserType
 from src.auth.models import User
-from src.filters.data_types import BoolField, IntField, Schema, StringField, data_adapter
+from src.filters.data_types import BoolField, IntField, Schema, StringField, data_adapter, extends
+from src.filters.dispatch.dispatcher import RunnerDispatcher
 from src.filters.exceptions import (
+    FunctionAlreadyExistsException,
     FunctionNotFoundException,
+    GroupingAlreadyExistsException,
     GroupingNotFoundException,
     GroupingNotReadyException,
     GroupingValueTypeMismatchException,
     InstanceNotFoundException,
     InvalidInstanceQueryException,
+    InvalidRunnerRequestException,
+    RunnerEnqueueFailedException,
     UnsupportedSortTypeException,
     WorkflowNotFoundException,
     WorkflowNotReadyException,
 )
-from src.filters.functions import function_adapter
+from src.filters.functions import FunctionType, function_adapter
 from src.filters.models import (
     FunctionDefinition,
     GroupAssignment,
@@ -31,17 +51,39 @@ from src.filters.models import (
     WorkflowStatus,
     WorkflowUseCase,
 )
-from src.filters.permissions import grouping_mod_access_select, instance_mod_access_select, workflow_mod_access_select
+from src.filters.permissions import (
+    grouping_mod_access_select,
+    instance_mod_access_select,
+    workflow_mod_access_select,
+    workflow_mod_access_update,
+)
+from src.filters.runners.python.filter_runner import PythonFilterInput
+from src.filters.runners.python.group_runner import PythonGroupInput
+from src.filters.runners.python.label_source_runner import LABEL_SOURCE_SCHEMA, PythonLabelSourceInput
+from src.filters.runners.python.map_runner import PythonMapInput
 from src.filters.schemas import (
+    CreateFunctionDefinitionRequest,
     FunctionDefinitionMeta,
+    FunctionDefinitionResponse,
     GroupingResponse,
+    GroupOperationAccepted,
     GroupValueCount,
     InstanceQuery,
     InstanceQueryResult,
+    PythonFilterRequest,
+    PythonGroupRequest,
+    PythonLabelSourceRequest,
+    PythonMapRequest,
+    RenameWorkflowRequest,
+    RunnerInput,
     SortDirection,
+    WorkflowOperationAccepted,
     WorkflowResponse,
     validate_frame_workflow,
 )
+from src.labels.models import LabelContributor, LabelGroup
+from src.novels.constants import Role
+from src.novels.models import NovelContributor
 
 
 def query_function_namespaces(db: Session, current_user: User, search: str | None) -> list[str]:
@@ -450,3 +492,396 @@ def query_instances_of_workflow_advanced(
         )
         for row in rows
     ]
+
+
+def create_function_definition(
+    db: Session,
+    request: CreateFunctionDefinitionRequest,
+) -> FunctionDefinitionResponse:
+    """Validate and save a function in the shared immutable registry."""
+    function = function_adapter.validate_python(request.function_definition)
+    try:
+        definition = db.execute(
+            insert(FunctionDefinition)
+            .values(
+                namespace=request.namespace,
+                function_name=request.function_name,
+                function_definition=function.model_dump(
+                    mode="json",
+                    by_alias=True,
+                    exclude_computed_fields=True,
+                ),
+            )
+            .returning(FunctionDefinition)
+        ).scalar_one()
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        existing_id = db.scalar(
+            select(FunctionDefinition.function_definition_id).where(
+                FunctionDefinition.namespace == request.namespace,
+                FunctionDefinition.function_name == request.function_name,
+            )
+        )
+        if existing_id is not None:
+            raise FunctionAlreadyExistsException(
+                f"Function '{request.namespace}.{request.function_name}' already exists."
+            ) from None
+        raise
+    return FunctionDefinitionResponse.model_validate(definition)
+
+
+def rename_workflow(
+    db: Session,
+    current_user: User,
+    workflow_id: UUID,
+    request: RenameWorkflowRequest,
+) -> WorkflowResponse:
+    """Rename an accessible workflow without changing its execution state."""
+    statement = (
+        update(Workflow)
+        .where(Workflow.workflow_id == workflow_id)
+        .values(workflow_name=request.workflow_name)
+        .returning(Workflow.workflow_id)
+    )
+    statement = workflow_mod_access_update(statement, current_user)
+    updated_id = db.scalar(statement)
+    if updated_id is None:
+        db.rollback()
+        raise WorkflowNotFoundException(f"Workflow with ID {workflow_id} not found or not accessible.")
+    db.commit()
+    return query_workflow(db, current_user, workflow_id)
+
+
+def _parse_fn_def(db: Session, function_definition_id: UUID) -> FunctionType:
+    """Load and parse a saved function definition."""
+    try:
+        definition = db.execute(
+            select(FunctionDefinition).where(FunctionDefinition.function_definition_id == function_definition_id)
+        ).scalar_one()
+    except NoResultFound as exc:
+        raise FunctionNotFoundException(f"Function definition with ID {function_definition_id} not found.") from exc
+    return function_adapter.validate_python(definition.function_definition)
+
+
+def _parse_workflow_schema(
+    db: Session,
+    current_user: User,
+    workflow_id: UUID,
+) -> tuple[Workflow, Schema]:
+    """Load an accessible completed workflow and parse its schema."""
+    statement = workflow_mod_access_select(
+        select(Workflow).where(Workflow.workflow_id == workflow_id),
+        current_user,
+    )
+    try:
+        workflow = db.execute(statement).scalar_one()
+    except NoResultFound as exc:
+        raise WorkflowNotFoundException(f"Workflow with ID {workflow_id} not found or not accessible.") from exc
+    if workflow.workflow_status != WorkflowStatus.COMPLETE:
+        raise WorkflowNotReadyException(
+            f"Workflow {workflow_id} is {workflow.workflow_status.value} and must be complete."
+        )
+    return workflow, Schema.model_validate(workflow.schema)
+
+
+def dispatch_workflow_runner(
+    db: Session,
+    dispatcher: RunnerDispatcher,
+    workflow_id: UUID,
+    job_id: UUID,
+    runner_input: RunnerInput,
+) -> None:
+    """Publish a committed workflow job and persist a definite publication failure."""
+    try:
+        dispatcher.enqueue(job_id, runner_input)
+    except RunnerEnqueueFailedException:
+        db.execute(
+            update(Workflow)
+            .where(Workflow.workflow_id == workflow_id, Workflow.job_id == job_id)
+            .values(
+                workflow_status=WorkflowStatus.FAILED,
+                workflow_message="Runner publication failed.",
+            )
+        )
+        db.commit()
+        raise
+
+
+def dispatch_grouping_runner(
+    db: Session,
+    dispatcher: RunnerDispatcher,
+    grouping_id: UUID,
+    job_id: UUID,
+    runner_input: RunnerInput,
+) -> None:
+    """Publish a committed grouping job and persist a definite publication failure."""
+    try:
+        dispatcher.enqueue(job_id, runner_input)
+    except RunnerEnqueueFailedException:
+        db.execute(
+            update(Grouping)
+            .where(Grouping.grouping_id == grouping_id, Grouping.job_id == job_id)
+            .values(
+                grouping_status=GroupingStatus.FAILED,
+                grouping_message="Runner publication failed.",
+            )
+        )
+        db.commit()
+        raise
+
+
+def run_label_source(
+    db: Session,
+    current_user: User,
+    dispatcher: RunnerDispatcher,
+    request: PythonLabelSourceRequest,
+) -> WorkflowOperationAccepted:
+    """Create and dispatch a label-source workflow operation."""
+    # Label-source workflows require both edit access to the novel and contributor
+    # access to the selected label group. Admins bypass both checks.
+    statement = select(LabelGroup).where(LabelGroup.label_group_id == request.label_group_id)
+    if current_user.user_type != UserType.ADMIN:
+        statement = statement.where(
+            exists(
+                select(1).where(
+                    NovelContributor.novel_id == LabelGroup.novel_id,
+                    NovelContributor.user_id == current_user.user_id,
+                    NovelContributor.contributor_role.in_([Role.OWNER, Role.EDITOR]),
+                )
+            ),
+            exists(
+                select(1).where(
+                    LabelContributor.label_group_id == LabelGroup.label_group_id,
+                    LabelContributor.user_id == current_user.user_id,
+                )
+            ),
+        )
+    try:
+        label_group = db.execute(statement).scalar_one()
+    except NoResultFound as exc:
+        raise WorkflowNotFoundException(
+            f"Label group with ID {request.label_group_id} not found or not accessible."
+        ) from exc
+
+    job_id = uuid4()
+    workflow = db.execute(
+        insert(Workflow)
+        .values(
+            workflow_name=request.output_name,
+            use_case=WorkflowUseCase.ADVANCED,
+            schema=LABEL_SOURCE_SCHEMA.model_dump(
+                mode="json",
+                by_alias=True,
+                exclude_computed_fields=True,
+            ),
+            job_id=job_id,
+            workflow_status=WorkflowStatus.PENDING,
+        )
+        .returning(Workflow)
+    ).scalar_one()
+    db.add_all(
+        [
+            WorkflowNovel(workflow_id=workflow.workflow_id, novel_id=label_group.novel_id),
+            WorkflowLabelGroup(workflow_id=workflow.workflow_id, label_group_id=label_group.label_group_id),
+        ]
+    )
+    db.commit()
+
+    runner_input = PythonLabelSourceInput(
+        runtime_name="python",
+        runner_name="ls",
+        label_group_id=label_group.label_group_id,
+        output_workflow_id=workflow.workflow_id,
+    )
+    dispatch_workflow_runner(db, dispatcher, workflow.workflow_id, job_id, runner_input)
+    return WorkflowOperationAccepted(
+        job_id=job_id,
+        workflow=query_workflow(db, current_user, workflow.workflow_id),
+    )
+
+
+def validate_object_function(function: FunctionType, operation_name: str) -> Schema:
+    """Return the single object input schema required by a workflow operation."""
+    if len(function.signature.args) != 1 or not isinstance(function.signature.args[0], Schema):
+        raise InvalidRunnerRequestException(f"A {operation_name} function must accept exactly one object schema.")
+    return function.signature.args[0]
+
+
+def create_derived_workflow(
+    db: Session,
+    source_workflow_id: UUID,
+    workflow_name: str | None,
+    schema: Schema,
+    job_id: UUID,
+) -> Workflow:
+    """Create and commit a pending workflow with its inherited permission scope."""
+    workflow = db.execute(
+        insert(Workflow)
+        .values(
+            workflow_name=workflow_name,
+            use_case=WorkflowUseCase.ADVANCED,
+            schema=schema.model_dump(mode="json", by_alias=True, exclude_computed_fields=True),
+            job_id=job_id,
+            workflow_status=WorkflowStatus.PENDING,
+        )
+        .returning(Workflow)
+    ).scalar_one()
+
+    # Derived workflows inherit every novel and label-group association used to
+    # authorize access to their source workflow.
+    novel_ids = db.scalars(select(WorkflowNovel.novel_id).where(WorkflowNovel.workflow_id == source_workflow_id)).all()
+    label_group_ids = db.scalars(
+        select(WorkflowLabelGroup.label_group_id).where(WorkflowLabelGroup.workflow_id == source_workflow_id)
+    ).all()
+    db.add_all(WorkflowNovel(workflow_id=workflow.workflow_id, novel_id=novel_id) for novel_id in novel_ids)
+    db.add_all(
+        WorkflowLabelGroup(workflow_id=workflow.workflow_id, label_group_id=label_group_id)
+        for label_group_id in label_group_ids
+    )
+    db.commit()
+    return workflow
+
+
+def run_map(
+    db: Session,
+    current_user: User,
+    dispatcher: RunnerDispatcher,
+    request: PythonMapRequest,
+) -> WorkflowOperationAccepted:
+    """Create and dispatch a map workflow operation."""
+    source, source_schema = _parse_workflow_schema(db, current_user, request.source_workflow_id)
+    function = _parse_fn_def(db, request.function_definition_id)
+    required_schema = validate_object_function(function, "map")
+    if not extends(source_schema, required_schema):
+        raise InvalidRunnerRequestException("Source workflow schema does not satisfy the map function input schema.")
+    output_schema = function.signature.output
+    if not isinstance(output_schema, Schema):
+        raise InvalidRunnerRequestException("A map function must return an object schema.")
+
+    job_id = uuid4()
+    output = create_derived_workflow(
+        db,
+        source.workflow_id,
+        request.output_name,
+        output_schema,
+        job_id,
+    )
+    runner_input = PythonMapInput(
+        runtime_name="python",
+        runner_name="map",
+        source_workflow_id=source.workflow_id,
+        output_workflow_id=output.workflow_id,
+        function_definition_id=request.function_definition_id,
+    )
+    dispatch_workflow_runner(db, dispatcher, output.workflow_id, job_id, runner_input)
+    return WorkflowOperationAccepted(
+        job_id=job_id,
+        workflow=query_workflow(db, current_user, output.workflow_id),
+    )
+
+
+def run_filter(
+    db: Session,
+    current_user: User,
+    dispatcher: RunnerDispatcher,
+    request: PythonFilterRequest,
+) -> WorkflowOperationAccepted:
+    """Create and dispatch a filter workflow operation."""
+    source, source_schema = _parse_workflow_schema(db, current_user, request.source_workflow_id)
+    function = _parse_fn_def(db, request.function_definition_id)
+    required_schema = validate_object_function(function, "filter")
+    if not extends(source_schema, required_schema):
+        raise InvalidRunnerRequestException("Source workflow schema does not satisfy the filter function input schema.")
+    if not isinstance(function.signature.output, BoolField):
+        raise InvalidRunnerRequestException("A filter function must return a boolean.")
+
+    job_id = uuid4()
+    output = create_derived_workflow(
+        db,
+        source.workflow_id,
+        request.output_name,
+        source_schema,
+        job_id,
+    )
+    runner_input = PythonFilterInput(
+        runtime_name="python",
+        runner_name="filter",
+        source_workflow_id=source.workflow_id,
+        output_workflow_id=output.workflow_id,
+        function_definition_id=request.function_definition_id,
+    )
+    dispatch_workflow_runner(db, dispatcher, output.workflow_id, job_id, runner_input)
+    return WorkflowOperationAccepted(
+        job_id=job_id,
+        workflow=query_workflow(db, current_user, output.workflow_id),
+    )
+
+
+def run_group(
+    db: Session,
+    current_user: User,
+    dispatcher: RunnerDispatcher,
+    request: PythonGroupRequest,
+) -> GroupOperationAccepted:
+    """Create and dispatch a grouping operation."""
+    workflow, workflow_schema = _parse_workflow_schema(db, current_user, request.workflow_id)
+    function = _parse_fn_def(db, request.function_definition_id)
+    required_schema = validate_object_function(function, "grouping")
+    if not extends(workflow_schema, required_schema):
+        raise InvalidRunnerRequestException("Workflow schema does not satisfy the grouping function input schema.")
+    mutable_dependencies = [
+        field_name for field_name in required_schema.fields if workflow_schema.fields[field_name].mutable
+    ]
+    if mutable_dependencies:
+        raise InvalidRunnerRequestException(
+            "Grouping functions cannot depend on mutable workflow fields: " + ", ".join(mutable_dependencies)
+        )
+    output = function.signature.output
+    if not isinstance(output, StringField | IntField | BoolField) or output.mutable:
+        raise InvalidRunnerRequestException("A grouping function must return an immutable string, integer, or boolean.")
+
+    job_id = uuid4()
+    try:
+        grouping = db.execute(
+            insert(Grouping)
+            .values(
+                workflow_id=workflow.workflow_id,
+                function_definition_id=request.function_definition_id,
+                job_id=job_id,
+                grouping_status=GroupingStatus.PENDING,
+            )
+            .returning(Grouping)
+        ).scalar_one()
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        existing_id = db.scalar(
+            select(Grouping.grouping_id).where(
+                Grouping.workflow_id == workflow.workflow_id,
+                Grouping.function_definition_id == request.function_definition_id,
+            )
+        )
+        if existing_id is not None:
+            raise GroupingAlreadyExistsException(
+                f"A grouping already exists for workflow {workflow.workflow_id} "
+                f"and function {request.function_definition_id}."
+            ) from None
+        raise
+
+    runner_input = PythonGroupInput(
+        runtime_name="python",
+        runner_name="group",
+        grouping_id=grouping.grouping_id,
+    )
+    dispatch_grouping_runner(
+        db,
+        dispatcher,
+        grouping.grouping_id,
+        job_id,
+        runner_input,
+    )
+    return GroupOperationAccepted(
+        job_id=job_id,
+        grouping=query_grouping(db, current_user, grouping.grouping_id),
+    )

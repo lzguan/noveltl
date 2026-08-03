@@ -7,29 +7,44 @@ from sqlalchemy.orm import Session
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
 from src.database import get_db
+from src.filters.dependencies import get_dispatcher
+from src.filters.dispatch.dispatcher import RunnerDispatcher
 from src.filters.exceptions import (
+    FunctionAlreadyExistsException,
     FunctionNotFoundException,
+    GroupingAlreadyExistsException,
     GroupingNotFoundException,
     GroupingNotReadyException,
     InstanceNotFoundException,
     InvalidInstanceQueryException,
+    InvalidRunnerRequestException,
+    RunnerEnqueueFailedException,
     WorkflowNotFoundException,
     WorkflowNotReadyException,
 )
 from src.filters.models import GroupingStatus, WorkflowStatus, WorkflowUseCase
 from src.filters.schemas import (
+    CreateFunctionDefinitionRequest,
     FunctionDefinitionMeta,
     FunctionDefinitionResponse,
     GroupingResponse,
     GroupingSummary,
+    GroupOperationAccepted,
     GroupValueCount,
     InstanceQuery,
     InstanceQueryResult,
     InstanceResponse,
+    PythonFilterRequest,
+    PythonGroupRequest,
+    PythonLabelSourceRequest,
+    PythonMapRequest,
+    RenameWorkflowRequest,
+    WorkflowOperationAccepted,
     WorkflowResponse,
     WorkflowSummary,
 )
 from src.filters.service import (
+    create_function_definition,
     query_function,
     query_functions,
     query_grouping,
@@ -39,6 +54,11 @@ from src.filters.service import (
     query_instances_of_workflow_advanced,
     query_workflow,
     query_workflows,
+    rename_workflow,
+    run_filter,
+    run_group,
+    run_label_source,
+    run_map,
 )
 from src.schemas import DetailHTTPErrorResponse
 
@@ -266,3 +286,198 @@ def read_grouping_values(
         ) from exc
     except InvalidInstanceQueryException as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post(
+    "/functions",
+    response_model=FunctionDefinitionResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={409: {"model": DetailHTTPErrorResponse}},
+    operation_id="create_filter_function",
+)
+def create_filter_function(
+    request: CreateFunctionDefinitionRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> FunctionDefinitionResponse:
+    """Save an immutable function definition in the shared registry."""
+    try:
+        return create_function_definition(db, request)
+    except FunctionAlreadyExistsException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc) or "Function definition already exists.",
+        ) from exc
+
+
+@router.patch(
+    "/workflows/{workflowId}",
+    response_model=WorkflowResponse,
+    responses={404: {"model": DetailHTTPErrorResponse}},
+    operation_id="rename_filter_workflow",
+)
+def rename_filter_workflow(
+    workflow_id: Annotated[UUID, Path(alias="workflowId")],
+    request: RenameWorkflowRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> WorkflowResponse:
+    """Rename or clear the name of an accessible workflow."""
+    try:
+        return rename_workflow(db, current_user, workflow_id, request)
+    except WorkflowNotFoundException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc) or "Workflow not found.",
+        ) from exc
+
+
+@router.post(
+    "/runners/python/label-source",
+    response_model=WorkflowOperationAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        404: {"model": DetailHTTPErrorResponse},
+        503: {"model": DetailHTTPErrorResponse},
+    },
+    operation_id="run_python_label_source",
+)
+def run_python_label_source(
+    request: PythonLabelSourceRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    dispatcher: Annotated[RunnerDispatcher, Depends(get_dispatcher)],
+) -> WorkflowOperationAccepted:
+    """Create and enqueue a workflow from the current labels in a group."""
+    try:
+        return run_label_source(db, current_user, dispatcher, request)
+    except WorkflowNotFoundException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc) or "Label group not found or not accessible.",
+        ) from exc
+    except RunnerEnqueueFailedException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc) or "Runner publication failed.",
+        ) from exc
+
+
+@router.post(
+    "/runners/python/map",
+    response_model=WorkflowOperationAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        400: {"model": DetailHTTPErrorResponse},
+        404: {"model": DetailHTTPErrorResponse},
+        409: {"model": DetailHTTPErrorResponse},
+        503: {"model": DetailHTTPErrorResponse},
+    },
+    operation_id="run_python_map",
+)
+def run_python_map(
+    request: PythonMapRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    dispatcher: Annotated[RunnerDispatcher, Depends(get_dispatcher)],
+) -> WorkflowOperationAccepted:
+    """Create and enqueue a mapped workflow."""
+    try:
+        return run_map(db, current_user, dispatcher, request)
+    except (WorkflowNotFoundException, FunctionNotFoundException) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc) or "Filter resource not found.",
+        ) from exc
+    except WorkflowNotReadyException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc) or "Workflow is not ready.",
+        ) from exc
+    except InvalidRunnerRequestException as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except RunnerEnqueueFailedException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc) or "Runner publication failed.",
+        ) from exc
+
+
+@router.post(
+    "/runners/python/filter",
+    response_model=WorkflowOperationAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        400: {"model": DetailHTTPErrorResponse},
+        404: {"model": DetailHTTPErrorResponse},
+        409: {"model": DetailHTTPErrorResponse},
+        503: {"model": DetailHTTPErrorResponse},
+    },
+    operation_id="run_python_filter",
+)
+def run_python_filter(
+    request: PythonFilterRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    dispatcher: Annotated[RunnerDispatcher, Depends(get_dispatcher)],
+) -> WorkflowOperationAccepted:
+    """Create and enqueue a filtered workflow."""
+    try:
+        return run_filter(db, current_user, dispatcher, request)
+    except (WorkflowNotFoundException, FunctionNotFoundException) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc) or "Filter resource not found.",
+        ) from exc
+    except WorkflowNotReadyException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc) or "Workflow is not ready.",
+        ) from exc
+    except InvalidRunnerRequestException as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except RunnerEnqueueFailedException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc) or "Runner publication failed.",
+        ) from exc
+
+
+@router.post(
+    "/runners/python/group",
+    response_model=GroupOperationAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        400: {"model": DetailHTTPErrorResponse},
+        404: {"model": DetailHTTPErrorResponse},
+        409: {"model": DetailHTTPErrorResponse},
+        503: {"model": DetailHTTPErrorResponse},
+    },
+    operation_id="run_python_group",
+)
+def run_python_group(
+    request: PythonGroupRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    dispatcher: Annotated[RunnerDispatcher, Depends(get_dispatcher)],
+) -> GroupOperationAccepted:
+    """Create and enqueue grouping assignments for a workflow."""
+    try:
+        return run_group(db, current_user, dispatcher, request)
+    except (WorkflowNotFoundException, FunctionNotFoundException) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc) or "Filter resource not found.",
+        ) from exc
+    except (WorkflowNotReadyException, GroupingAlreadyExistsException) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc) or "Grouping operation conflicts with current state.",
+        ) from exc
+    except InvalidRunnerRequestException as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except RunnerEnqueueFailedException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc) or "Runner publication failed.",
+        ) from exc

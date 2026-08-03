@@ -1,6 +1,6 @@
 # Filter write API specification
 
-> **Status:** Implementation specification. These endpoints are not yet implemented.
+> **Status:** Implemented.
 
 This document defines the first filter write API. It should be sufficient for
 another coding agent to implement the public schemas, service functions,

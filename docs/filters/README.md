@@ -25,14 +25,13 @@ The backend currently implements:
   and group assignments;
 - bounded batch execution with job ownership and failure statuses.
 
-The read API is exposed through FastAPI, but the frontend and mutation or
-runner-execution endpoints are not implemented yet. Alembic migrations create
-the filter persistence tables and workflow permission-scope associations. The
-runners are registered as Celery worker tasks, while public operation services
-still need to create their target rows and enqueue those tasks.
+The read and write APIs are exposed through FastAPI, but the frontend is not
+implemented yet. Alembic migrations create the filter persistence tables and
+workflow permission-scope associations. Public operation services create
+pending targets and enqueue the registered Celery runner tasks.
 
 The read API contract is documented in [endpoints.md](endpoints.md). The
-planned mutation and runner API is specified in
+mutation and runner API is specified in
 [write-endpoints.md](write-endpoints.md).
 
 ## Pipeline model

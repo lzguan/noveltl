@@ -5,6 +5,12 @@ class FunctionNotFoundException(NotFoundException):
     pass
 
 
+class FunctionAlreadyExistsException(Exception):
+    """Raised when a function namespace and name are already registered."""
+
+    pass
+
+
 class WorkflowNotFoundException(NotFoundException):
     pass
 
@@ -14,6 +20,12 @@ class InstanceNotFoundException(NotFoundException):
 
 
 class GroupingNotFoundException(NotFoundException):
+    pass
+
+
+class GroupingAlreadyExistsException(Exception):
+    """Raised when a workflow already has the requested grouping function."""
+
     pass
 
 
@@ -38,6 +50,12 @@ class InvalidSortKeyException(InvalidInstanceQueryException):
 
 
 class UnsupportedSortTypeException(InvalidInstanceQueryException):
+    pass
+
+
+class InvalidRunnerRequestException(Exception):
+    """Raised when a runner function is incompatible with its source."""
+
     pass
 
 

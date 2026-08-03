@@ -164,6 +164,45 @@ describe("bindServerId", () => {
 	});
 });
 
+describe("replaceServerId", () => {
+	it("replaces a binding while the provisional ID is idUpdating", () => {
+		const repo = buildIdRepository();
+		const provId = Effect.runSync(
+			repo.newIdAndBindId({ kind: "labelData", servId: LDServId(UUID1) }),
+		);
+		Effect.runSync(
+			repo.reserveIdObjState({ kind: "labelData", id: provId, desiredState: "idUpdating" }),
+		);
+
+		Effect.runSync(
+			repo.replaceServerId({ kind: "labelData", provId, servId: LDServId(UUID2) }),
+		);
+
+		expect(Effect.runSync(repo.getServerId({ kind: "labelData", provId }))).toBe(
+			LDServId(UUID2),
+		);
+		expect(
+			Effect.runSync(repo.queryProvId({ kind: "labelData", servId: LDServId(UUID1) })),
+		).toBeNull();
+		expect(
+			Effect.runSync(repo.queryProvId({ kind: "labelData", servId: LDServId(UUID2) })),
+		).toBe(provId);
+	});
+
+	it("rejects replacement without an idUpdating reservation", () => {
+		const repo = buildIdRepository();
+		const provId = Effect.runSync(
+			repo.newIdAndBindId({ kind: "labelData", servId: LDServId(UUID1) }),
+		);
+
+		const result = Effect.runSyncExit(
+			repo.replaceServerId({ kind: "labelData", provId, servId: LDServId(UUID2) }),
+		);
+
+		expect(result._tag).toBe("Failure");
+	});
+});
+
 describe("label data versioning", () => {
 	it("multiple label data versions coexist", () => {
 		const repo = buildIdRepository();

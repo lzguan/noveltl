@@ -180,6 +180,10 @@ function makeOpenChapterResponse(): readEditChapterDataEditChapterDataChapterIdP
 
 function makeReloadResponse(
 	labelDataId: string,
+	labelIds: readonly [string, string] = [
+		"00000000-0000-0000-0000-0000000000e0",
+		"00000000-0000-0000-0000-0000000000e1",
+	],
 ): readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse {
 	return {
 		status: 200,
@@ -197,7 +201,7 @@ function makeReloadResponse(
 				},
 				labels: [
 					{
-						labelId: "00000000-0000-0000-0000-0000000000e0",
+						labelId: labelIds[0],
 						labelDataId,
 						labelStart: 0,
 						labelEnd: 5,
@@ -207,7 +211,7 @@ function makeReloadResponse(
 						labelDirty: false,
 					},
 					{
-						labelId: "00000000-0000-0000-0000-0000000000e1",
+						labelId: labelIds[1],
 						labelDataId,
 						labelStart: 10,
 						labelEnd: 13,
@@ -654,10 +658,12 @@ describe("buildChapterDataManager", () => {
 			Effect.runSync(chapterDM.insertTextAt(0, "Hello "));
 			const events = Effect.runSync(chapterDM.destroy());
 
-			expect(events).toHaveLength(1);
-			expect(events[0].reservationRequest.reserveList().chapter).toEqual([
-				{ id: chapterId, kind: "chapter", desiredState: "locked" },
-			]);
+			expect(events).toHaveLength(2);
+			for (const event of events) {
+				expect(event.reservationRequest.reserveList().chapter).toEqual([
+					{ id: chapterId, kind: "chapter", desiredState: "locked" },
+				]);
+			}
 		});
 	});
 
@@ -681,17 +687,15 @@ describe("buildChapterDataManager", () => {
 				headers: new Headers(),
 			});
 
-			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
 
 			Effect.runSync(chapterDM.insertTextAt(5, " first"));
 			const events1 = Effect.runSync(chapterDM.flush());
 			expect(events1).toHaveLength(1);
+			const firstReserveList = events1[0].reservationRequest.reserveList();
+			Effect.runSync(reserveAll(idRepo, firstReserveList));
 
 			await Effect.runPromise(events1[0].send(RequestKey("key-1")));
-			console.log(
-				"After first send, updateChapterContentMock calls:",
-				updateChapterContentMock.mock.calls,
-			);
 			await Effect.runPromise(
 				events1[0]
 					.postSend({
@@ -703,11 +707,7 @@ describe("buildChapterDataManager", () => {
 					})
 					.pipe(Effect.tapError((err) => Effect.logError(`postSend failed: ${err}`))),
 			);
-
-			console.log(
-				"After first postSend, updateChapterContentMock calls:",
-				updateChapterContentMock.mock.calls,
-			);
+			Effect.runSync(releaseAllOnSuccess(idRepo, firstReserveList));
 
 			const afterFirstText = Effect.runSync(chapterDM.getters.text());
 			expect(afterFirstText).toBe("Alice first met Bob at the park.");
@@ -737,7 +737,7 @@ describe("buildChapterDataManager", () => {
 
 			Effect.runSync(chapterDM.insertTextAt(10, " second"));
 			const events2 = Effect.runSync(chapterDM.flush());
-			expect(events2).toHaveLength(1);
+			expect(events2.map(({ variant }) => variant)).toEqual(["reloadGroup", "textOp"]);
 
 			const afterSecondText = Effect.runSync(chapterDM.getters.text());
 			expect(afterSecondText).toBe("Alice firs secondt met Bob at the park.");
@@ -753,7 +753,7 @@ describe("buildChapterDataManager", () => {
 				]);
 			}
 
-			await Effect.runPromise(events2[0].send(RequestKey("key-2")));
+			await Effect.runPromise(events2[1].send(RequestKey("key-2")));
 
 			expect(updateChapterContentMock).toHaveBeenCalledTimes(1);
 			expect(updateChapterContentMock).toHaveBeenCalledWith(
@@ -766,7 +766,158 @@ describe("buildChapterDataManager", () => {
 		});
 	});
 
+	describe("text then label synchronization", () => {
+		it.each(["update", "delete"] as const)(
+			"refreshes recreated label IDs before sending a queued label %s",
+			async (operation) => {
+				const newLabelDataId = "00000000-0000-0000-0000-000000000008";
+				const newAliceId = "00000000-0000-0000-0000-0000000000e0";
+				const newBobId = "00000000-0000-0000-0000-0000000000e1";
+				const updateChapterContentMock = vi.mocked(
+					updateChapterContentChaptersChapterIdContentPatch,
+				);
+				const reloadMock = vi.mocked(
+					readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
+				);
+				const labelOpMock = vi.mocked(updateLabelDataStreamLabelDatasLabelDataIdPatch);
+				updateChapterContentMock.mockClear();
+				reloadMock.mockClear();
+				labelOpMock.mockClear();
+				updateChapterContentMock.mockResolvedValue({
+					status: 200,
+					data: {
+						chapterContentId: UUID7,
+						chapterContentVersion: 2,
+						labelDataIdMap: { [UUID4]: newLabelDataId },
+					},
+					headers: new Headers(),
+				});
+				reloadMock.mockResolvedValue({
+					status: 200,
+					data: [
+						{
+							labelData: {
+								labelDataId: newLabelDataId,
+								chapterContentId: UUID7,
+								labelGroupId: UUID3,
+							},
+							labelGroup: {
+								labelGroupId: UUID3,
+								labelGroupName: "Characters",
+								novelId: NOVEL_ID,
+							},
+							labels: [
+								{
+									labelId: newAliceId,
+									labelDataId: newLabelDataId,
+									labelStart: 0,
+									labelEnd: 5,
+									labelWord: "Alice",
+									labelEntityGroup: "character",
+									labelScore: 1,
+									labelDirty: false,
+								},
+								{
+									labelId: newBobId,
+									labelDataId: newLabelDataId,
+									labelStart: 18,
+									labelEnd: 21,
+									labelWord: "Bob",
+									labelEntityGroup: "character",
+									labelScore: 1,
+									labelDirty: false,
+								},
+							],
+						},
+					],
+					headers: new Headers(),
+				});
+				labelOpMock.mockResolvedValue({
+					status: 200,
+					data: { results: [newBobId] },
+					headers: new Headers(),
+				});
+
+				const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
+				const bobId = getLabelProvId(idRepo, UUID6);
+				const requestManager = Effect.runSync(
+					buildRequestManager(idRepo, () => Effect.succeed(void 0)),
+				);
+
+				Effect.runSync(chapterDM.insertTextAt(6, "bravely "));
+				const textEvents = Effect.runSync(
+					operation === "update"
+						? chapterDM.updateLabel(labelGroupId, bobId, undefined, undefined, "person")
+						: chapterDM.deleteLabel(labelGroupId, bobId),
+				);
+				const remainingEvents = Effect.runSync(chapterDM.flush());
+				expect([...textEvents, ...remainingEvents].map(({ variant }) => variant)).toEqual([
+					"textOp",
+					"reloadGroup",
+					"labelOp",
+				]);
+				for (const event of [...textEvents, ...remainingEvents]) {
+					requestManager.enqueueRequest(event);
+				}
+
+				const flushResult = await Effect.runPromise(
+					Effect.either(requestManager.waitFlush().pipe(Effect.timeout("1 second"))),
+				);
+
+				expect(flushResult._tag).toBe("Right");
+				expect(labelOpMock).toHaveBeenCalledWith(
+					newLabelDataId,
+					{
+						ops: [expect.objectContaining({ op: operation, labelId: newBobId })],
+					},
+					expect.any(Object),
+				);
+				if (operation === "update") {
+					expect(
+						Effect.runSync(idRepo.getServerId({ kind: "label", provId: bobId })),
+					).toBe(newBobId);
+				} else {
+					expect(
+						Effect.runSync(
+							idRepo.queryProvId({ kind: "label", servId: LServId(newBobId) }),
+						),
+					).toBeNull();
+				}
+			},
+		);
+	});
+
 	describe("reload then text edit", () => {
+		it("reuses unchanged label IDs while reloading an already-loaded group", async () => {
+			const reloadMock = vi.mocked(
+				readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
+			);
+			reloadMock.mockClear();
+			reloadMock.mockResolvedValue(makeReloadResponse(UUID4, [UUID5, UUID6]));
+
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
+			const aliceId = getLabelProvId(idRepo, UUID5);
+			const bobId = getLabelProvId(idRepo, UUID6);
+			const reloadEvents = Effect.runSync(chapterDM.reloadGroup(labelGroupId, true));
+			const primaryReload = reloadEvents[0];
+			const cleanupReload = reloadEvents[1];
+			const primaryReserveList = primaryReload.reservationRequest.reserveList();
+
+			Effect.runSync(reserveAll(idRepo, primaryReserveList));
+			const responseData = await Effect.runPromise(
+				primaryReload.send(RequestKey("reload-key")),
+			);
+			await Effect.runPromise(primaryReload.postSend(responseData));
+
+			const slot = Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId));
+			expect(slot.status).toBe("ready");
+			if (slot.status === "ready") {
+				expect(slot.data.labels.map(({ labelId }) => labelId)).toEqual([aliceId, bobId]);
+			}
+			expect(cleanupReload.reservationRequest.skip()).toBe(true);
+			Effect.runSync(releaseAllOnSuccess(idRepo, primaryReserveList));
+		});
+
 		it("does not leave reloadGroup waiting after openChapter then addLabelGroup", async () => {
 			const { chapterDM, labelGroupId } = await buildOpenedNovelWithAddedLabelGroup();
 
@@ -789,13 +940,7 @@ describe("buildChapterDataManager", () => {
 
 			expect(labelGroupReady).toBe(true);
 			expect(reserveList.labelData).toEqual([]);
-			expect(cleanupReserveList.labelData).toEqual([
-				{
-					id: cleanupReserveList.labelData[0].id,
-					kind: "labelData",
-					desiredState: "killing",
-				},
-			]);
+			expect(cleanupReserveList.labelData).toEqual([]);
 		});
 
 		it("blocks text op reservation when reload returns same labelDataId", async () => {

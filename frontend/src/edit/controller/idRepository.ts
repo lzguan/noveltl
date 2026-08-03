@@ -268,6 +268,31 @@ export function buildIdRepository(): IDRepository {
 		return Effect.succeed(void 0);
 	}
 
+	function replaceServerId({ kind, provId, servId }: AnyProvServKind<IdentifiableKind>) {
+		// @ts-expect-error -- the discriminated kind selects the matching map.
+		const entry = identifiableKindMap[kind].get(provId);
+		if (!entry) {
+			logger.error(`Provisional id ${provId} not found for kind ${kind} in replaceServerId`);
+			return Effect.fail(new NotFoundException());
+		}
+		if (entry.status !== "idUpdating") {
+			return Effect.fail(new ResourceConflictException({ id: servId, status: entry.status }));
+		}
+		// @ts-expect-error -- the discriminated kind selects the matching reverse map.
+		const existing = revMap[kind].get(servId);
+		if (existing !== undefined && existing !== provId) {
+			return Effect.fail(new ResourceConflictException({ id: servId, status: entry.status }));
+		}
+		if (entry.serverId !== null) {
+			// @ts-expect-error -- the entry and reverse map share the same kind.
+			revMap[kind].delete(entry.serverId);
+		}
+		// @ts-expect-error -- the discriminated kind selects the matching reverse map.
+		revMap[kind].set(servId, provId);
+		entry.serverId = servId;
+		return Effect.succeed(void 0);
+	}
+
 	function bindServerExists(
 		params: AnyProvServKind<ExistableKind>,
 	): Effect.Effect<void, NotFoundException>;
@@ -521,6 +546,7 @@ export function buildIdRepository(): IDRepository {
 		getServerId,
 		getServerExists,
 		bindServerId,
+		replaceServerId,
 		bindServerExists,
 		idObjState,
 		isReserveable,

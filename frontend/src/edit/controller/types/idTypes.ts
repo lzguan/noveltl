@@ -384,6 +384,13 @@ export interface IDRepository {
 		params: AnyProvServKind<IdentifiableKind>,
 	): Effect.Effect<void, NotFoundException | ResourceConflictException>;
 	/**
+	 * Replace the server ID bound to an existing provisional ID while that ID is
+	 * reserved as `idUpdating`.
+	 */
+	replaceServerId(
+		params: AnyProvServKind<IdentifiableKind>,
+	): Effect.Effect<void, NotFoundException | ResourceConflictException>;
+	/**
 	 * Bind a provisional id to a server existence flag, so that the controller can update the corresponding entry with the new server existence flag when it receives the signal from the request event.
 	 */
 	bindServerExists(

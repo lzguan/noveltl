@@ -1,11 +1,13 @@
 # Filter API endpoints
 
-> **Status:** Read API implemented. Runner execution and mutation endpoints
-> remain to be designed and implemented.
+> **Status:** Read API implemented. The write API has an implementation-ready
+> specification in [write-endpoints.md](write-endpoints.md), but is not yet
+> implemented.
 
 The filter API uses explicit resources for saved functions, workflows,
-instances, and groupings. Runner execution endpoints will be documented
-separately after the read API is settled.
+instances, and groupings. Runner execution uses separate public endpoints for
+each operation; see the write API specification for their request, response,
+validation, and job-lifecycle contracts.
 
 Runner forms and the function editor's building-block palette are maintained
 by the frontend. They are small, closed sets that need custom interfaces, so

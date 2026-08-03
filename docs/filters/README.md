@@ -31,6 +31,10 @@ the filter persistence tables and workflow permission-scope associations. The
 runners are registered as Celery worker tasks, while public operation services
 still need to create their target rows and enqueue those tasks.
 
+The read API contract is documented in [endpoints.md](endpoints.md). The
+planned mutation and runner API is specified in
+[write-endpoints.md](write-endpoints.md).
+
 ## Pipeline model
 
 In the current implementation, a `Workflow` is one materialized pipeline

@@ -72,7 +72,11 @@ def test_group_runner_persists_raw_values_and_is_idempotent(
 ) -> None:
     _, grouping, _ = _create_string_grouping(test_db)
     runner = PythonGroupRunner(testing_session_local, batch_size=1)
-    request = PythonGroupInput(grouping_id=grouping.grouping_id)
+    request = PythonGroupInput(
+        runner_name="group",
+        runtime_name="python",
+        grouping_id=grouping.grouping_id,
+    )
 
     runner.execute(JOB_ID, request)
     runner.execute(JOB_ID, request)
@@ -117,6 +121,7 @@ def test_group_runner_preloads_text_dependencies(
                         value=TextSpan(
                             start=0,
                             end=5,
+                            chapter_id=filter_scenario.contents["content_v1"].chapter_id,
                             chapter_content_id=filter_scenario.contents["content_v1"].chapter_content_id,
                         )
                     )
@@ -134,7 +139,11 @@ def test_group_runner_preloads_text_dependencies(
 
     PythonGroupRunner(testing_session_local).execute(
         JOB_ID,
-        PythonGroupInput(grouping_id=grouping.grouping_id),
+        PythonGroupInput(
+            runner_name="group",
+            runtime_name="python",
+            grouping_id=grouping.grouping_id,
+        ),
     )
 
     assignment = test_db.execute(
@@ -160,7 +169,11 @@ def test_group_runner_resumes_from_cached_assignments(
 
     PythonGroupRunner(testing_session_local, batch_size=1).execute(
         JOB_ID,
-        PythonGroupInput(grouping_id=grouping.grouping_id),
+        PythonGroupInput(
+            runner_name="group",
+            runtime_name="python",
+            grouping_id=grouping.grouping_id,
+        ),
     )
 
     assignment_count = test_db.scalar(
@@ -185,7 +198,11 @@ def test_group_runner_rejects_mutable_dependencies(
     try:
         PythonGroupRunner(testing_session_local).execute(
             JOB_ID,
-            PythonGroupInput(grouping_id=grouping.grouping_id),
+            PythonGroupInput(
+                runner_name="group",
+                runtime_name="python",
+                grouping_id=grouping.grouping_id,
+            ),
         )
     except ValueError as exc:
         assert "mutable workflow fields" in str(exc)
@@ -207,7 +224,11 @@ def test_group_runner_ignores_stale_job(
 
     PythonGroupRunner(testing_session_local).execute(
         uuid.UUID("c8837b42-ecbd-4828-96bb-774c2d9a0540"),
-        PythonGroupInput(grouping_id=grouping.grouping_id),
+        PythonGroupInput(
+            runner_name="group",
+            runtime_name="python",
+            grouping_id=grouping.grouping_id,
+        ),
     )
 
     test_db.expire_all()

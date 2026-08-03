@@ -82,6 +82,8 @@ def _map_input(
     function_definition: FunctionDefinition,
 ) -> PythonMapInput:
     return PythonMapInput(
+        runner_name="map",
+        runtime_name="python",
         source_workflow_id=source.workflow_id,
         output_workflow_id=output.workflow_id,
         function_definition_id=function_definition.function_definition_id,
@@ -156,6 +158,7 @@ def test_map_runner_preloads_text_dependencies(
                             value=TextSpan(
                                 start=6,
                                 end=11,
+                                chapter_id=filter_scenario.contents["content_v1"].chapter_id,
                                 chapter_content_id=filter_scenario.contents["content_v1"].chapter_content_id,
                             )
                         )
@@ -265,6 +268,8 @@ def test_map_runner_rejects_same_source_and_output(
         PythonMapRunner(testing_session_local).execute(
             JOB_ID,
             PythonMapInput(
+                runner_name="map",
+                runtime_name="python",
                 source_workflow_id=workflow.workflow_id,
                 output_workflow_id=workflow.workflow_id,
                 function_definition_id=function_definition.function_definition_id,

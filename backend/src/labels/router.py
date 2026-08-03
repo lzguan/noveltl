@@ -9,6 +9,7 @@ from src.auth.models import User
 from src.database import get_db
 from src.exceptions import DataTooLongException, NotFoundException
 from src.labels.exceptions import (
+    LabelConcurrentModificationException,
     LabelDataNotFoundException,
     LabelDataRevisionDuplicateException,
     LabelExclusionViolationInvalidOperationException,
@@ -28,6 +29,7 @@ from src.labels.schemas import (
     LabelData,
     LabelGroup,
     LabelGroupWithRole,
+    OpsResult,
     UpdateLabelDataStream,
     UpdateLabelGroup,
 )
@@ -269,7 +271,7 @@ def create_label_data(
 
 @router.patch(
     "/label-datas/{labelDataId}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=OpsResult,
     responses={
         400: {
             "model": DetailHTTPErrorResponse,
@@ -281,28 +283,28 @@ def create_label_data(
         },
         409: {
             "model": RequestConflictErrorResponse,
-            "description": "Label stream conflict, such as word mismatch, overlap violation, or request-key conflict.",
+            "description": "Label stream conflict, such as a concurrent update, overlap violation, or request-key conflict.",
         },
     },
 )
-@ttl_cache(ttl=60, cache=redis_cache, success_code=204)
+@ttl_cache(ttl=60, cache=redis_cache, serialize_ret=serialize_response_model(OpsResult))
 def update_label_data_stream(
     label_data_id: Annotated[uuid.UUID, Path(alias="labelDataId")],
     request: UpdateLabelDataStream,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
-) -> None:
+) -> OpsResult:
     """
     Applies a stream of edit operations to labels.
 
     Raises:
         404: Label data or its underlying revision text not found, or target label does not exist.
-        409: Word mismatch or label overlap detected.
+        409: Concurrent modification or label overlap detected.
         400: Operation positions out of bounds or invalid operation.
     """
     try:
-        modify_label_data_by_stream(db, current_user, label_data_id, request)
+        return OpsResult(results=modify_label_data_by_stream(db, current_user, label_data_id, request))
     except (LabelDataNotFoundException, ChapterContentNotFoundException) as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -318,6 +320,11 @@ def update_label_data_stream(
             status_code=status.HTTP_409_CONFLICT,
             detail="Label overlap detected. Operations violate exclusion constraints.",
         ) from e
+    except LabelConcurrentModificationException as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The label was modified concurrently. Refresh it and retry the operation.",
+        ) from e
     except LabelOutOfBoundsInvalidOperationException as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Operation positions are out of bounds of the chapter text."
@@ -328,7 +335,6 @@ def update_label_data_stream(
         ) from e
     except LabelInvalidOperationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e) or "Invalid operation.") from e
-    return
 
 
 @router.post(
@@ -357,5 +363,10 @@ def create_label_datas_by_auto_labels(
     """
     Creates label datas and populates labels from autolabel results.
     """
-    result = insert_label_datas_by_autolabels(db, current_user, label_group_id, request)
-    return result
+    try:
+        return insert_label_datas_by_autolabels(db, current_user, label_group_id, request)
+    except LabelGroupNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Label group {label_group_id} not found or not accessible.",
+        ) from e

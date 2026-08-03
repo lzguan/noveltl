@@ -55,8 +55,8 @@ services:
   test_redis:
     image: redis
 
-  worker:
-    image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-worker:${IMAGE_TAG:-latest}
+  autolabels-worker:
+    image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-autolabels-worker:${IMAGE_TAG:-latest}
     pull_policy: always
     depends_on:
       - db

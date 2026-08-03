@@ -5,7 +5,19 @@ Database models for labels.
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, CheckConstraint, Enum, Float, ForeignKey, Integer, String, UniqueConstraint, and_, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    and_,
+    func,
+    text,
+)
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -119,7 +131,7 @@ class Label(Base):
     Database model for a single labeled entity (e.g. a name, location, or term) within a specific text range.
 
     Attributes:
-        label_id: Integer primary key identifier.
+        label_id: UUID primary key identifier.
         label_entity_group: The category of the entity (e.g., 'PER', 'LOC', 'ORG', 'TECHNIQUE').
         label_score: Confidence score of the label, between 0.0 and 1.0. Defaults to 1.0.
         label_word: The exact text content of the label. Max length 128 characters.
@@ -127,6 +139,7 @@ class Label(Base):
         label_end: The ending character index of the label in the text (exclusive).
         label_dirty: Boolean flag indicating if the label has been manually edited/verified (True) or is raw AI output (False).
         label_data_id: Foreign key identifier for the parent LabelData group.
+        version: Integer version number for optimistic locking. Defaults to 1.
 
     Note:
         Constraints ensure that `label_start` < `label_end`.
@@ -152,6 +165,7 @@ class Label(Base):
         ForeignKey("label_datas.label_data_id", name="fk_labels_label_data_id_label_datas"), nullable=False
     )
     label_data_of_label: Mapped["LabelData"] = relationship(back_populates="labels_with_label_data")
+    version: Mapped[int] = mapped_column(Integer, server_default=text("1"), nullable=False)  # use as lock
 
     __table_args__ = (
         CheckConstraint(and_(label_score >= 0.0, label_score <= 1.0), name="chk_score_bounds"),

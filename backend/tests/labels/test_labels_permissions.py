@@ -18,6 +18,8 @@ from src.labels.permissions import (
     label_mod_access_delete,
     label_mod_access_update,
 )
+from src.novels.constants import Role
+from src.novels.models import NovelContributor
 from test_support.test_data.scenarios import DatabaseScenario
 
 
@@ -78,20 +80,20 @@ class TestLabelGroupSelect:
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
 
-    def test_viewer_cannot_select_with_only_editors(
+    def test_viewer_cannot_select_with_label_edit_only(
         self,
         test_db: Session,
         label_access_scenario: DatabaseScenario,
     ):
-        """Viewer should not be able to select when only_editors=True."""
+        """Viewer should not be able to select when label_edit_only=True."""
         actor = label_access_scenario.users["collaborator"]
         label_group = label_access_scenario.label_groups["with_viewer"]
         q = select(label_models.LabelGroup).where(label_models.LabelGroup.label_group_id == label_group.label_group_id)
-        q = label_group_mod_access_select(q, actor, only_editors=True)
+        q = label_group_mod_access_select(q, actor, label_edit_only=True)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is None
 
-    def test_editor_can_select_with_only_editors(
+    def test_editor_can_select_with_label_edit_only(
         self,
         test_db: Session,
         label_access_scenario: DatabaseScenario,
@@ -99,9 +101,59 @@ class TestLabelGroupSelect:
         actor = label_access_scenario.users["collaborator"]
         label_group = label_access_scenario.label_groups["with_editor"]
         q = select(label_models.LabelGroup).where(label_models.LabelGroup.label_group_id == label_group.label_group_id)
-        q = label_group_mod_access_select(q, actor, only_editors=True)
+        q = label_group_mod_access_select(q, actor, label_edit_only=True)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
+
+    def test_novel_edit_and_label_read_flags_are_independent(
+        self,
+        test_db: Session,
+        label_access_scenario: DatabaseScenario,
+    ):
+        actor = label_access_scenario.users["collaborator"]
+        label_group = label_access_scenario.label_groups["with_viewer"]
+        test_db.add(
+            NovelContributor(
+                novel_id=label_group.novel_id,
+                user_id=actor.user_id,
+                contributor_role=Role.EDITOR,
+            )
+        )
+        test_db.commit()
+        q = select(label_models.LabelGroup).where(label_models.LabelGroup.label_group_id == label_group.label_group_id)
+        q = label_group_mod_access_select(
+            q,
+            actor,
+            novel_edit_only=True,
+            label_edit_only=False,
+        )
+
+        assert test_db.execute(q).scalar_one_or_none() is not None
+
+    def test_novel_edit_only_denies_novel_viewer_with_label_edit_access(
+        self,
+        test_db: Session,
+        label_access_scenario: DatabaseScenario,
+    ):
+        actor = label_access_scenario.users["collaborator"]
+        label_group = label_access_scenario.label_groups["with_editor"]
+        test_db.add(
+            NovelContributor(
+                novel_id=label_group.novel_id,
+                user_id=actor.user_id,
+                contributor_role=Role.VIEWER,
+            )
+        )
+        test_db.commit()
+        q = select(label_models.LabelGroup).where(label_models.LabelGroup.label_group_id == label_group.label_group_id)
+        q = label_group_mod_access_select(
+            q,
+            actor,
+            novel_edit_only=True,
+            label_edit_only=True,
+        )
+
+        assert test_db.execute(q).scalar_one_or_none() is None
 
     def test_non_contributor_cannot_select_group(
         self,
@@ -262,6 +314,61 @@ class TestLabelDataSelect:
         q = label_data_mod_access_select(q, actor)
         result = test_db.execute(q).scalar_one_or_none()
         assert result is not None
+
+    def test_label_edit_only_denies_viewer(
+        self,
+        test_db: Session,
+        label_access_scenario: DatabaseScenario,
+    ):
+        actor = label_access_scenario.users["collaborator"]
+        label_group = label_access_scenario.label_groups["with_viewer"]
+        q = select(label_models.LabelData).where(
+            label_models.LabelData.label_data_id == _label_data(label_access_scenario, label_group).label_data_id
+        )
+        q = label_data_mod_access_select(q, actor, label_edit_only=True)
+
+        assert test_db.execute(q).scalar_one_or_none() is None
+
+    def test_label_edit_only_allows_editor(
+        self,
+        test_db: Session,
+        label_access_scenario: DatabaseScenario,
+    ):
+        actor = label_access_scenario.users["collaborator"]
+        label_group = label_access_scenario.label_groups["with_editor"]
+        q = select(label_models.LabelData).where(
+            label_models.LabelData.label_data_id == _label_data(label_access_scenario, label_group).label_data_id
+        )
+        q = label_data_mod_access_select(q, actor, label_edit_only=True)
+
+        assert test_db.execute(q).scalar_one_or_none() is not None
+
+    def test_novel_edit_only_denies_novel_viewer_with_label_edit_access(
+        self,
+        test_db: Session,
+        label_access_scenario: DatabaseScenario,
+    ):
+        actor = label_access_scenario.users["collaborator"]
+        label_group = label_access_scenario.label_groups["with_editor"]
+        test_db.add(
+            NovelContributor(
+                novel_id=label_group.novel_id,
+                user_id=actor.user_id,
+                contributor_role=Role.VIEWER,
+            )
+        )
+        test_db.commit()
+        q = select(label_models.LabelData).where(
+            label_models.LabelData.label_data_id == _label_data(label_access_scenario, label_group).label_data_id
+        )
+        q = label_data_mod_access_select(
+            q,
+            actor,
+            novel_edit_only=True,
+            label_edit_only=True,
+        )
+
+        assert test_db.execute(q).scalar_one_or_none() is None
 
     def test_non_contributor_cannot_select_label_data(
         self,

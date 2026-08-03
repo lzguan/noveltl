@@ -1,6 +1,6 @@
 # Filter functions
 
-**Last updated:** 2026-07-28
+**Last updated:** 2026-07-30
 
 Filter functions are persisted descriptions of safe computations. They form a
 closed, discriminated abstract syntax tree (AST): each node has a `name` tag,
@@ -47,19 +47,32 @@ signature to participate in structural compatibility checks.
 | Node | Behavior |
 | --- | --- |
 | `compare` | Compare two strings, integers, floats, or booleans |
+| `add` | Add one or more integers or floats |
+| `subtract` | Subtract two integers or two floats |
+| `max` | Return the largest of one or more integers or floats |
+| `min` | Return the smallest of one or more integers or floats |
+| `concat` | Concatenate one or more strings in argument order |
+| `contains` | Test whether the second string occurs verbatim in the first |
+| `float` | Convert an integer to a float |
+| `floor` | Round a float down to an integer |
+| `ceil` | Round a float up to an integer |
+| `round` | Round a float to the nearest integer, with ties to even |
 | `and` | Require all boolean arguments to be true |
 | `or` | Require at least one boolean argument to be true |
 | `not` | Negate one boolean |
 
 Comparisons support `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Boolean values
 support only equality and inequality. `and` and `or` require at least one
-argument.
+argument. `add`, `max`, `min`, and `concat` declare their arity with `num`, from
+one through 256 arguments. Numeric operations declare either `int` or `float`
+and do not perform implicit promotion. Float addition evaluates left-to-right.
+`contains` is case-sensitive and treats an empty needle as a match.
 
 ### References and text
 
 | Node | Behavior | External resource |
 | --- | --- | --- |
-| `projectToSpan` | Drop label-specific IDs and return a text span | None |
+| `projectToSpan` | Resolve current offsets and return a text span | Label row |
 | `wordOf` | Read a label's current word | Label row |
 | `scoreOf` | Read a label's current score | Label row |
 | `startOf` | Return a span's start offset | None |
@@ -77,13 +90,16 @@ context types are not implemented.
 | --- | --- |
 | `construct` | Build a new record from named elementary-output expressions |
 | `extend` | Preserve an input record and add derived fields |
+| `if` | Lazily select one of two expressions and project it to a declared output schema |
 | `rename` | Rename one or more fields simultaneously |
 | `call` | Bind a function's arguments to expressions over one input record |
 
 `construct` and `extend` require at least one derived field and reject object
 outputs for individual fields. `extend` rejects collisions with existing
 fields. `rename` rejects missing sources, duplicate sources or destinations,
-and collisions with fields that are not being renamed.
+and collisions with fields that are not being renamed. `if` validates and
+compiles both branches, evaluates only the selected branch, and conservatively
+collects dependencies from both.
 
 ## Composition example
 

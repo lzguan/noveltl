@@ -15,9 +15,15 @@ import type { NovelGetters } from "./controllerTypes";
 import type { AutoLabelRunGetterSlot } from "./helperTypes";
 import type { CluenerParams, DoNothingParams } from "@/api/models";
 
-export type LabelOp = AddLabelOp | DeleteLabelOp | UpdateLabelOp;
+type ProvDeleteLabelOp = Omit<DeleteLabelOp, "labelId"> & { labelId: LProvId };
+type ProvUpdateLabelOp = Omit<UpdateLabelOp, "labelId"> & { labelId: LProvId };
 
-export type IDLabelOp = LabelOp & { labelId: LProvId; labelGroupId: LGProvId; chapterId: CProvId };
+export type ULabelOp = AddLabelOp | ProvDeleteLabelOp | ProvUpdateLabelOp;
+export type IDLabelOp = ULabelOp & {
+	labelId: LProvId;
+	labelGroupId: LGProvId;
+	chapterId: CProvId;
+};
 /**
  * A data manager is a data structure that maintains the state of some defined data. It provides a set of actions that can be performed on the data and a set of getters to retrieve the data. The intended use of a data manager is to manage the internal state of the application and provide a clear interface for performing operations on the data and retrieving the data, while abstracting away the details of how the data is stored and updated.
  *
@@ -202,7 +208,6 @@ export type ChapterDataManager = DataManager<
 			labelGroupId: LGProvId,
 			startPos: number,
 			endPos: number,
-			word: string,
 			entityGroup?: string,
 			score?: number,
 			dirty?: boolean,
@@ -210,13 +215,11 @@ export type ChapterDataManager = DataManager<
 		/**
 		 * Fails if: label group not loaded, or no label exists at [startPos, endPos).
 		 * @param labelGroupId - Target label group.
-		 * @param startPos - Exact start of label to delete.
-		 * @param endPos - Exact end of label to delete.
+		 * @param labelId - ID of the label to delete.
 		 */
 		deleteLabel: (
 			labelGroupId: LGProvId,
-			startPos: number,
-			endPos: number,
+			labelId: LProvId,
 		) => Effect.Effect<RequestEvent[], UnknownException>;
 		/**
 		 * Updates a label keyed by its current [startPos, endPos). Pass null/undefined to keep a field unchanged. If bounds change, newWord is required. Fails if newWord is provided without changing bounds.
@@ -230,11 +233,9 @@ export type ChapterDataManager = DataManager<
 		 */
 		updateLabel: (
 			labelGroupId: LGProvId,
-			startPos: number,
-			endPos: number,
-			newStartPos?: number | null,
-			newEndPos?: number | null,
-			newWord?: string | null,
+			labelId: LProvId,
+			startPos?: number,
+			endPos?: number,
 			entityGroup?: string,
 			score?: number,
 			dirty?: boolean,

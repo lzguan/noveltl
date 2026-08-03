@@ -1,4 +1,4 @@
-FROM ghcr.io/pnpm/pnpm:11.17.0 AS base
+FROM ghcr.io/pnpm/pnpm:11.18.0 AS base
 
 SHELL [ "/bin/bash", "-c" ]
 
@@ -27,8 +27,7 @@ WORKDIR /home/${UNAME}/frontend
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-RUN --mount=type=cache,id=frontend-pnpm-store-v11,target=/home/${UNAME}/.pnpm-store,sharing=locked,uid=${UID},gid=${GID} \
-    pnpm install --frozen-lockfile --store-dir=/home/${UNAME}/.pnpm-store
+RUN pnpm install --frozen-lockfile --store-dir=/home/${UNAME}/.pnpm-store
 
 COPY --chown=${UNAME}:${GNAME} . .
 EXPOSE 5173

@@ -6,7 +6,7 @@ import { buildIdRepository } from "../idRepository";
 import { NotFoundException } from "../types/errors";
 import type { TriggerEvent } from "../types/controllerTypes";
 import { CProvId, LGProvId } from "../types/idTypes";
-import type { AutoLabelMetaWithCidOutput, AutoLabelRunOutput } from "@/api/models";
+import type { AutoLabelMetaWithCid, AutoLabelRun } from "@/api/models";
 
 const NOVEL_ID = "00000000-0000-0000-0000-00000000000a";
 const RUN_ID = "00000000-0000-0000-0000-00000000000b";
@@ -14,7 +14,7 @@ const AUTOLABEL_ID = "00000000-0000-0000-0000-00000000000c";
 const CHAPTER_ID = "00000000-0000-0000-0000-00000000000d";
 const CHAPTER_CONTENT_ID = "00000000-0000-0000-0000-00000000000e";
 
-const run: AutoLabelRunOutput = {
+const run: AutoLabelRun = {
 	createdAt: "2026-01-01T00:00:00Z",
 	modelName: "do_nothing",
 	modelParams: DoNothingParamsValue,
@@ -23,7 +23,7 @@ const run: AutoLabelRunOutput = {
 	triggeredBy: "00000000-0000-0000-0000-00000000000f",
 };
 
-const autoLabel: AutoLabelMetaWithCidOutput = {
+const autoLabel: AutoLabelMetaWithCid = {
 	autoLabelMeta: {
 		autoLabelId: AUTOLABEL_ID,
 		autoLabelLastJobId: null,

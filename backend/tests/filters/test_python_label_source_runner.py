@@ -47,6 +47,8 @@ def _create_output(
 
 def _input(label_group: LabelGroup, output: Workflow) -> PythonLabelSourceInput:
     return PythonLabelSourceInput(
+        runner_name="ls",
+        runtime_name="python",
         label_group_id=label_group.label_group_id,
         output_workflow_id=output.workflow_id,
     )
@@ -115,6 +117,7 @@ def test_label_source_loads_only_latest_labels_in_batches(
         (
             reference.label_group_id,
             reference.label_data_id,
+            reference.chapter_id,
             reference.chapter_content_id,
         )
         for reference in references
@@ -122,6 +125,7 @@ def test_label_source_loads_only_latest_labels_in_batches(
         (
             filter_scenario.label_groups["labels"].label_group_id,
             current_label_data.label_data_id,
+            current_content.chapter_id,
             current_content.chapter_content_id,
         )
     }
@@ -198,6 +202,8 @@ def test_label_source_rejects_missing_group(
         PythonLabelSourceRunner(testing_session_local).execute(
             JOB_ID,
             PythonLabelSourceInput(
+                runner_name="ls",
+                runtime_name="python",
                 label_group_id=uuid.uuid4(),
                 output_workflow_id=output.workflow_id,
             ),

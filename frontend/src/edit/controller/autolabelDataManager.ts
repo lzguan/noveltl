@@ -12,7 +12,7 @@ import {
 } from "./types/errors";
 import { UnknownException } from "effect/Cause";
 import type { ChapterFilter, TriggerEvent } from "./types/controllerTypes";
-import type { AutoLabelRunOutput, CluenerParams, DoNothingParams } from "@/api/models";
+import type { AutoLabelRun, CluenerParams, DoNothingParams } from "@/api/models";
 import {
 	ALRProvId,
 	ALRServId,
@@ -111,7 +111,7 @@ export const buildAutolabelDataManager = (
 			NotFoundException
 		>;
 	},
-	autoLabelRuns: AutoLabelRunOutput[],
+	autoLabelRuns: AutoLabelRun[],
 ): Effect.Effect<AutolabelDataManager, FatalException> =>
 	Effect.gen(function* () {
 		const { decorate, flush } = buildRequestQueueDispatcher<RequestEvent>();

@@ -48,6 +48,7 @@ export function makeActiveGroupLabelSource(opts: {
 				if (!label.style[1].active) continue;
 				const { start, end } = label.interval;
 				out.push({
+					labelId: id,
 					labelGroupId: activeId,
 					color: active.color,
 					groupName: active.labelGroup.labelGroupName,

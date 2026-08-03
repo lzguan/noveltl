@@ -25,10 +25,14 @@ The backend currently implements:
   and group assignments;
 - bounded batch execution with job ownership and failure statuses.
 
-The subsystem is not exposed through FastAPI or the frontend yet. Its database
-models are registered with SQLAlchemy, but no Alembic migration creates their
-tables. The runners are callable backend classes rather than registered worker
-tasks.
+The read and write APIs are exposed through FastAPI, but the frontend is not
+implemented yet. Alembic migrations create the filter persistence tables and
+workflow permission-scope associations. Public operation services create
+pending targets and enqueue the registered Celery runner tasks.
+
+The read API contract is documented in [endpoints.md](endpoints.md). The
+mutation and runner API is specified in
+[write-endpoints.md](write-endpoints.md).
 
 ## Pipeline model
 
@@ -111,6 +115,8 @@ and applying decisions back to NovelTL are future work.
   runners
 - [`backend/tests/filters/`](../../backend/tests/filters/): unit and pipeline
   tests
+- [API endpoint design](endpoints.md): draft public routes, pagination, and
+  permission behavior
 
 ## Future design
 

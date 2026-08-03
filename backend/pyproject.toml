@@ -39,6 +39,7 @@ dev = [
     "types-psycopg2>=2.9.21.20260408",
     "pyyaml>=6.0.3",
     "types-pyyaml>=6.0.12.20260518",
+    "celery-types>=0.26.0",
 ]
 
 [tool.uv]
@@ -109,6 +110,8 @@ project-excludes = [
     "**/node_modules",
     "**/__pycache__",
     "**/.*",
+    "**/.venv/**",
+    "**/.git/**"
 ]
 infer-with-first-use = false
 search-path = ["."]

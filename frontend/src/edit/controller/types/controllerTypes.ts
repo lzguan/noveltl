@@ -1,4 +1,4 @@
-import type { IDLabelOp, LabelOp } from "./dataTypes";
+import type { IDLabelOp, ULabelOp } from "./dataTypes";
 import type {
 	ALRProvId,
 	AProvId,
@@ -90,7 +90,7 @@ export type ChapterFilter = {
  */
 export type NovelUserEvent =
 	| { eventType: "textOp"; op: TextOp; chapterId: CProvId }
-	| { eventType: "labelOp"; op: LabelOp; labelGroupId: LGProvId; chapterId: CProvId }
+	| { eventType: "labelOp"; op: ULabelOp; labelGroupId: LGProvId; chapterId: CProvId }
 	| { eventType: "addLabelGroup"; labelGroupName: string }
 	| { eventType: "loadLabelData"; labelGroupId: LGProvId; chapterId: CProvId }
 	| {

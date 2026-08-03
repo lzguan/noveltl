@@ -27,10 +27,10 @@ jobs:
             context: ./backend
             file: ./backend/Dockerfile
             target: backend
-          - image: noveltl-worker
+          - image: noveltl-autolabels-worker
             context: ./backend
             file: ./backend/Dockerfile
-            target: worker
+            target: autolabels-worker
           - image: noveltl-frontend
             context: ./frontend
             file: ./frontend/Dockerfile

@@ -37,6 +37,10 @@ class RedisSettings(BaseConfig):
     REDIS_HOST: str = Field(default="", min_length=1)
     REDIS_PORT: int = Field(default=6379, gt=0)
 
+    FILTERS_DATABASE: int = Field(default=0, ge=0)
+    AUTOLABELS_DATABASE: int = Field(default=1, ge=0)
+    REQUESTS_DATABASE: int = Field(default=2, ge=0)
+
 
 class LogSettings(BaseConfig):
     """Settings class for logging config variables."""

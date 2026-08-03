@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Effect } from "effect";
-import { buildNovelController } from "../controller";
+import { buildController } from "../controller";
 import type { NovelData } from "../novelDataManager";
 import { CProvId } from "../types/idTypes";
 import type { NovelGetters, TriggerEvent } from "../types/controllerTypes";
@@ -37,7 +37,7 @@ function makeNovelData(): NovelData {
 
 describe("buildNovelController", () => {
 	it("ignores events when not running", () => {
-		const controller = Effect.runSync(buildNovelController(makeNovelData()));
+		const controller = Effect.runSync(buildController(makeNovelData()));
 		const events: TriggerEvent[] = [];
 		controller.subscribe((_getters: NovelGetters, event: TriggerEvent) => {
 			events.push(event);
@@ -56,7 +56,7 @@ describe("buildNovelController", () => {
 	});
 
 	it("raises error trigger event when chapter not loaded", async () => {
-		const controller = Effect.runSync(buildNovelController(makeNovelData()));
+		const controller = Effect.runSync(buildController(makeNovelData()));
 		const events: TriggerEvent[] = [];
 		controller.subscribe((_getters: NovelGetters, event: TriggerEvent) => {
 			events.push(event);
@@ -80,7 +80,7 @@ describe("buildNovelController", () => {
 	});
 
 	it("subscribe returns working unsubscribe function", async () => {
-		const controller = Effect.runSync(buildNovelController(makeNovelData()));
+		const controller = Effect.runSync(buildController(makeNovelData()));
 		const events: TriggerEvent[] = [];
 		const unsubscribe = controller.subscribe((_getters: NovelGetters, event: TriggerEvent) => {
 			events.push(event);
@@ -112,7 +112,7 @@ describe("buildNovelController", () => {
 	});
 
 	it("provides getters with novel data", () => {
-		const controller = Effect.runSync(buildNovelController(makeNovelData()));
+		const controller = Effect.runSync(buildController(makeNovelData()));
 
 		expect(Effect.runSync(controller.getters.novel()).novelId).toBe(NOVEL_UUID);
 		const chapters = Effect.runSync(controller.getters.chapterIds());
@@ -121,7 +121,7 @@ describe("buildNovelController", () => {
 	});
 
 	it("processes addLabelGroup when running", async () => {
-		const controller = Effect.runSync(buildNovelController(makeNovelData()));
+		const controller = Effect.runSync(buildController(makeNovelData()));
 		const events: TriggerEvent[] = [];
 		controller.subscribe((_getters: NovelGetters, event: TriggerEvent) => {
 			events.push(event);

@@ -20,10 +20,19 @@ from src.novels.permissions import chapter_content_mod_access_select, novel_mod_
 
 
 def label_group_mod_access_select[T: Select[tuple[Any, ...]]](
-    q: T, current_user: User, only_editors: bool = False, aliased_type: type[LabelGroup] = LabelGroup
+    q: T,
+    current_user: User,
+    aliased_type: type[LabelGroup] = LabelGroup,
+    *,
+    novel_edit_only: bool = False,
+    label_edit_only: bool = False,
 ) -> T:
     """
     Takes a select statement for label groups and returns a select statement that restricts permissions on q.
+
+    ``novel_edit_only`` requires owner/editor access to the underlying novel.
+    ``label_edit_only`` independently requires an owner/editor role on the
+    label group.
     """
     novel_alias = aliased(novel_models.Novel)
     lc_alias = aliased(LabelContributor)
@@ -31,7 +40,12 @@ def label_group_mod_access_select[T: Select[tuple[Any, ...]]](
     q_exists_novel = (
         select(novel_alias.novel_id).where(novel_alias.novel_id == aliased_type.novel_id).correlate(aliased_type)
     )
-    q_exists_novel = novel_mod_access_select(q_exists_novel, current_user, novel_alias)
+    q_exists_novel = novel_mod_access_select(
+        q_exists_novel,
+        current_user,
+        novel_alias,
+        edit_only=novel_edit_only,
+    )
     q = q.where(exists(q_exists_novel))
     if current_user.user_type != UserType.ADMIN:
         return q.where(
@@ -43,7 +57,7 @@ def label_group_mod_access_select[T: Select[tuple[Any, ...]]](
                         lc_alias.label_group_id == aliased_type.label_group_id,
                         lc_alias.user_id == current_user.user_id,
                         or_(
-                            literal(only_editors is False),
+                            literal(label_edit_only is False),
                             lc_alias.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR]),
                         ),
                     )
@@ -96,7 +110,12 @@ def label_group_mod_access_update[T: Update](
 
 
 def label_data_mod_access_select[T: Select[tuple[Any, ...]]](
-    q: T, current_user: User, aliased_type: type[LabelData] = LabelData
+    q: T,
+    current_user: User,
+    aliased_type: type[LabelData] = LabelData,
+    *,
+    novel_edit_only: bool = False,
+    label_edit_only: bool = False,
 ) -> T:
     """
     Takes a select statement for label datas and returns a select statement that restricts permissions on q.
@@ -109,7 +128,12 @@ def label_data_mod_access_select[T: Select[tuple[Any, ...]]](
         .where(cc_alias.chapter_content_id == aliased_type.chapter_content_id)
         .correlate(aliased_type)
     )
-    q_exists_chapter_content = chapter_content_mod_access_select(q_exists_chapter_content, current_user, cc_alias)
+    q_exists_chapter_content = chapter_content_mod_access_select(
+        q_exists_chapter_content,
+        current_user,
+        cc_alias,
+        edit_only=novel_edit_only,
+    )
     q = q.where(exists(q_exists_chapter_content))
     if current_user.user_type != UserType.ADMIN:
         return q.where(
@@ -120,6 +144,10 @@ def label_data_mod_access_select[T: Select[tuple[Any, ...]]](
                     and_(
                         lc_alias.label_group_id == aliased_type.label_group_id,
                         lc_alias.user_id == current_user.user_id,
+                        or_(
+                            literal(label_edit_only is False),
+                            lc_alias.label_contributor_role.in_([LabelRole.OWNER, LabelRole.EDITOR]),
+                        ),
                     )
                 )
             )

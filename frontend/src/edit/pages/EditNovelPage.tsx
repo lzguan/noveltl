@@ -7,7 +7,7 @@ import {
 	readNovelWithContributorsNovelsNovelIdWithContributorsGet,
 } from "@/api/endpoints/default/default";
 import type { Chapter, LabelGroupWithRole, Novel } from "@/api/models";
-import { buildNovelController } from "../controller/controller";
+import { buildController } from "../controller/controller";
 import type { NovelData } from "../controller/novelDataManager";
 import { Prov } from "../controller/types/helperTypes";
 import type { ProvChapter } from "../controller/types/idTypes";
@@ -82,7 +82,6 @@ export function EditNovelPage() {
 						op: "add",
 						startPos: range.start,
 						endPos: range.end,
-						word: range.word,
 						entityGroup: meta.entityGroup,
 						score: meta.score,
 						dirty: meta.dirty,
@@ -90,11 +89,8 @@ export function EditNovelPage() {
 					target,
 				);
 			},
-			remove: (target, range) => {
-				managers?.editorMgr.labelOp(
-					{ op: "delete", startPos: range.start, endPos: range.end, word: range.word },
-					target,
-				);
+			remove: (target, labelId) => {
+				managers?.editorMgr.labelOp({ op: "delete", labelId }, target);
 			},
 		};
 		return { source, sink };
@@ -146,7 +142,7 @@ export function EditNovelPage() {
 			chapters: chapters,
 			autoLabelRuns: autoLabelRuns,
 		};
-		const ctrl = Effect.runSync(buildNovelController(novelData));
+		const ctrl = Effect.runSync(buildController(novelData));
 		const errorMgr = createErrorManager();
 
 		const controllerUserEvent = (event: Parameters<typeof ctrl.handleUserEvent>[0]) => {

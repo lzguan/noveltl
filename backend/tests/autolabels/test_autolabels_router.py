@@ -10,10 +10,10 @@ from sqlalchemy.orm import Session
 from src.auth.models import User
 from src.auth.utils import create_access_token
 from src.autolabels.constants import AutoLabelProgress
-from src.autolabels.models import AutoLabel
+from src.autolabels.models import AutoLabel, AutoLabelRun
 from src.labels import models as label_models
 from src.labels import service as label_service
-from src.labels.constants import MAX_LABEL_WORD_LEN
+from src.labels.constants import MAX_LABEL_WORD_LEN, LabelRole
 from src.novels.models import Chapter, ChapterContent
 from test_support.test_data.scenarios import DatabaseScenario
 
@@ -248,6 +248,48 @@ class TestCreateAutoLabelsRouter:
         assert payload["run"]["novelId"] == str(target_novel.novel_id)
         assert [entry["chapterId"] for entry in payload["autolabels"]] == [str(target_chapter.chapter_id)]
 
+    def test_novel_viewer_can_create_autolabels(
+        self,
+        client: TestClient,
+        novel_permission_scenario: DatabaseScenario,
+    ) -> None:
+        novel = novel_permission_scenario.novels["ov"]
+        content = novel_permission_scenario.contents["owner_viewer_v1"]
+        response = client.post(
+            "/auto-labels",
+            json={
+                "novelId": str(novel.novel_id),
+                "chapterIds": [str(content.chapter_id)],
+                "params": {"modelName": "cluener"},
+            },
+            headers=_auth_headers(novel_permission_scenario.users["other"]),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert [entry["chapterId"] for entry in response.json()["autolabels"]] == [str(content.chapter_id)]
+
+    def test_public_novel_reader_cannot_create_autolabel_run(
+        self,
+        client: TestClient,
+        test_db: Session,
+        novel_permission_scenario: DatabaseScenario,
+    ) -> None:
+        novel = novel_permission_scenario.novels["put"]
+        actor = novel_permission_scenario.users["other"]
+        run_count_before = test_db.query(AutoLabelRun).count()
+
+        response = client.post(
+            "/auto-labels",
+            json={
+                "novelId": str(novel.novel_id),
+                "params": {"modelName": "cluener"},
+            },
+            headers=_auth_headers(actor),
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert test_db.query(AutoLabelRun).count() == run_count_before
+
 
 class TestPromoteAutoLabelsRouter:
     def test_promote_autolabels(
@@ -272,6 +314,31 @@ class TestPromoteAutoLabelsRouter:
         payload = response.json()
         assert len(payload["errors"]) == 0
         assert len(payload["success"]) == expected_chapters
+
+    def test_label_group_viewer_cannot_promote_autolabels(
+        self,
+        client: TestClient,
+        test_db: Session,
+        xianxia_autolabels_scenario: DatabaseScenario,
+    ) -> None:
+        label_group = xianxia_autolabels_scenario.label_groups["labels"]
+        user = xianxia_autolabels_scenario.users["owner"]
+        contributor = test_db.execute(
+            select(label_models.LabelContributor).where(
+                label_models.LabelContributor.label_group_id == label_group.label_group_id,
+                label_models.LabelContributor.user_id == user.user_id,
+            )
+        ).scalar_one()
+        contributor.label_contributor_role = LabelRole.VIEWER
+        test_db.commit()
+
+        response = client.post(
+            f"/label-groups/{label_group.label_group_id}/label-datas/auto-labels",
+            json={"runId": str(xianxia_autolabels_scenario.autolabel_runs["cluener"].run_id)},
+            headers=_auth_headers(user),
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_promote_autolabels_ignores_cross_novel_rows_in_run(
         self,

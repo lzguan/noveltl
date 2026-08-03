@@ -13,7 +13,7 @@ import type { ConnectionException, FatalException } from "./types/errors";
 import type { TimeoutException, UnknownException } from "effect/Cause";
 import { buildPubSub } from "../utils/pubsub";
 
-export const buildNovelController = (
+export const buildController = (
 	novelData: NovelData,
 ): Effect.Effect<NovelController, ConnectionException | FatalException | TimeoutException> =>
 	Effect.gen(function* () {
@@ -105,7 +105,6 @@ export const buildNovelController = (
 									event.labelGroupId,
 									event.op.startPos,
 									event.op.endPos,
-									event.op.word,
 									event.op.entityGroup ?? undefined,
 									event.op.score ?? undefined,
 									event.op.dirty ?? undefined,
@@ -113,21 +112,15 @@ export const buildNovelController = (
 							);
 						} else if (event.op.op === "delete") {
 							yield* dispatch(
-								chapterDM.deleteLabel(
-									event.labelGroupId,
-									event.op.startPos,
-									event.op.endPos,
-								),
+								chapterDM.deleteLabel(event.labelGroupId, event.op.labelId),
 							);
 						} else {
 							yield* dispatch(
 								chapterDM.updateLabel(
 									event.labelGroupId,
-									event.op.startPos,
-									event.op.endPos,
-									event.op.newStartPos,
-									event.op.newEndPos,
-									event.op.newWord,
+									event.op.labelId,
+									event.op.startPos ?? undefined,
+									event.op.endPos ?? undefined,
 									event.op.entityGroup ?? undefined,
 									event.op.score ?? undefined,
 									event.op.dirty ?? undefined,

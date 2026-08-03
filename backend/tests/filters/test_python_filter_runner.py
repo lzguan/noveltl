@@ -50,6 +50,8 @@ def test_filter_runner_rejects_non_boolean_function(
         PythonFilterRunner(testing_session_local).execute(
             JOB_ID,
             PythonFilterInput(
+                runner_name="filter",
+                runtime_name="python",
                 source_workflow_id=source.workflow_id,
                 output_workflow_id=output.workflow_id,
                 function_definition_id=function_definition.function_definition_id,

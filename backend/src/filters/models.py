@@ -22,6 +22,11 @@ class WorkflowStatus(StrEnum):
     FAILED = "failed"
 
 
+class WorkflowUseCase(StrEnum):
+    ADVANCED = "advanced"
+    GLOSSARY = "glossary"
+
+
 class Workflow(Base):
     """ """
 
@@ -31,6 +36,17 @@ class Workflow(Base):
         postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
     )
     workflow_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    use_case: Mapped[WorkflowUseCase] = mapped_column(
+        Enum(
+            WorkflowUseCase,
+            native_enum=False,
+            length=10,
+            values_callable=lambda values: [use_case.value for use_case in values],
+        ),
+        nullable=False,
+        default=WorkflowUseCase.ADVANCED,
+        server_default=WorkflowUseCase.ADVANCED.value,
+    )
     schema: Mapped[dict] = mapped_column(postgresql.JSONB, nullable=False)
     job_id: Mapped[uuid.UUID | None] = mapped_column(postgresql.UUID, nullable=True)
     workflow_status: Mapped[WorkflowStatus] = mapped_column(
@@ -44,6 +60,52 @@ class Workflow(Base):
         default=WorkflowStatus.PENDING,
     )
     workflow_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class WorkflowNovel(Base):
+    """Associate a workflow with a novel in its permission scope."""
+
+    __tablename__ = "workflow_novels"
+
+    workflow_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(
+            "workflows.workflow_id",
+            name="fk_workflow_novels_workflow_id_workflows",
+        ),
+        primary_key=True,
+    )
+    novel_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(
+            "novels.novel_id",
+            name="fk_workflow_novels_novel_id_novels",
+        ),
+        primary_key=True,
+    )
+
+    __table_args__ = (Index("ix_workflow_novels_novel_id", "novel_id"),)
+
+
+class WorkflowLabelGroup(Base):
+    """Associate a workflow with a label group in its permission scope."""
+
+    __tablename__ = "workflow_label_groups"
+
+    workflow_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(
+            "workflows.workflow_id",
+            name="fk_workflow_label_groups_workflow_id_workflows",
+        ),
+        primary_key=True,
+    )
+    label_group_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(
+            "label_groups.label_group_id",
+            name="fk_workflow_label_groups_label_group_id_label_groups",
+        ),
+        primary_key=True,
+    )
+
+    __table_args__ = (Index("ix_workflow_label_groups_label_group_id", "label_group_id"),)
 
 
 class Instance(Base):

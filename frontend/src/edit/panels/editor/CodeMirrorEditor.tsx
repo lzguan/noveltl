@@ -296,11 +296,7 @@ export function CodeMirrorEditor({
 
 	const handleDelete = useCallback(
 		(label: EditorLabel) => {
-			labeling.sink.remove(label.labelGroupId, {
-				start: label.start,
-				end: label.end,
-				word: label.word,
-			});
+			labeling.sink.remove(label.labelGroupId, label.labelId);
 		},
 		[labeling],
 	);

@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:0.11.32-python3.12-trixie-slim AS base
+FROM ghcr.io/astral-sh/uv:0.12.1-python3.12-trixie-slim AS base
 
 ARG GNAME=newgroup
 ARG UNAME=newuser
@@ -23,7 +23,7 @@ COPY --chown=${UNAME}:${GNAME} . .
 
 CMD ["uv", "run", "--no-sync", "uvicorn", "src.main:app", "--host", "0.0.0.0"]
 
-FROM base AS worker
+FROM base AS autolabels-worker
 RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --group worker --no-group backend --no-group dev --no-install-project
 COPY --chown=${UNAME}:${GNAME} . .
 
@@ -36,4 +36,4 @@ RUN uv run --no-sync hf download \
       tokenizer_config.json \
       vocab.txt \
       --revision ${CLUENER_REVISION}
-CMD ["uv", "run", "--no-sync", "celery", "-A", "src.celery_app", "worker", "--loglevel=info"]
+CMD ["uv", "run", "--no-sync", "celery", "-A", "src.autolabels.celery_app", "worker", "--loglevel=info"]

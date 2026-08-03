@@ -37,8 +37,7 @@ from src.labels.permissions import (
 )
 from src.labels.utils import apply_operation
 from src.novels import models as novel_models
-from src.novels.exceptions import ChapterContentNotFoundException, NovelNotFoundException
-from src.novels.permissions import chapter_content_mod_access_select
+from src.novels.exceptions import NovelNotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -363,7 +362,7 @@ def insert_label_data(
 
 def modify_label_data_by_stream(
     db: Session, current_user: User, label_data_id: uuid.UUID, request: schemas.UpdateLabelDataStream
-) -> None:
+) -> list[schemas.OpResult]:
     """
     Processes a stream of label datas
 
@@ -375,11 +374,11 @@ def modify_label_data_by_stream(
     Raises:
         ChapterContentNotFoundException: If the chapter content associated with the label data is not found.
         LabelOutOfBoundsInvalidOperationException: If an operation refers to positions outside the text bounds.
-        LabelWordMismatchInvalidOperationException: If the word provided in an operation does not match the text at the specified positions.
         LabelDataNotFoundException: If the LabelData does not exist or the user lacks permissions.
         LabelExclusionViolationInvalidOperationException: If an add/update operation creates an overlapping label (exclusion constraint violation).
         LabelNotExistsInvalidOperationException: If a delete operation targets a label that does not exist.
-        LabelInvalidOperationException: If an update operation is malformed (e.g. setting a new word without moving the label).
+        LabelInvalidOperationException: If an operation contains an invalid range.
+        LabelConcurrentModificationException: If an update loses an optimistic-lock race.
     """
     q = (
         select(novel_models.ChapterContent.chapter_content_text)
@@ -390,21 +389,23 @@ def modify_label_data_by_stream(
             novel_models.ChapterContent.chapter_content_id == models.LabelData.chapter_content_id,
         )
     )
-    q = chapter_content_mod_access_select(q, current_user)
+    q = label_data_mod_access_select(q, current_user, label_edit_only=True)
     try:
         result = db.execute(q)
         text = result.scalar_one()
     except NoResultFound as e:
-        raise ChapterContentNotFoundException from e
+        raise LabelDataNotFoundException from e
     except Exception:
         raise
+    result = list()
     try:
         for op in request.ops:
-            apply_operation(db, current_user, label_data_id, text, op)
+            result.append(apply_operation(db, current_user, label_data_id, text, op))
         db.commit()
     except Exception as e:
         db.rollback()
         raise e
+    return result
 
 
 def _insert_label_datas_by_autolabels(
@@ -574,6 +575,17 @@ def insert_label_datas_by_autolabels(
     """
     promotion_started = perf_counter()
     log_context = f"run_id={request.run_id} label_group_id={label_group_id}"
+
+    # Promotion writes into the target group, so viewers must be rejected
+    # before candidate identifiers are loaded.
+    permission_query = label_group_mod_access_select(
+        select(models.LabelGroup.label_group_id).where(models.LabelGroup.label_group_id == label_group_id),
+        current_user,
+        label_edit_only=True,
+    )
+    if db.execute(permission_query).scalar_one_or_none() is None:
+        raise LabelGroupNotFoundException(f"Label group with ID {label_group_id} not found or not accessible.")
+
     q = (
         select(
             autolabel_models.AutoLabel.chapter_content_id,
@@ -605,7 +617,7 @@ def insert_label_datas_by_autolabels(
         )
         .order_by(novel_models.Chapter.chapter_num)
     )
-    q = label_group_mod_access_select(q, current_user)
+    q = label_group_mod_access_select(q, current_user, label_edit_only=True)
     if request.chapter_ids is not None and len(request.chapter_ids) > 0:
         q = q.where(novel_models.Chapter.chapter_id.in_(request.chapter_ids))
     if request.start is not None:

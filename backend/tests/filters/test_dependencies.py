@@ -1,14 +1,25 @@
-from src.filters.data_types import LabelRefField, Schema, TextSpanField
-from src.filters.dependencies import ResolvedResourceDependency, resolve_dependencies
+from src.filters.data_types import BoolField, LabelRefField, Schema, TextSpanField
+from src.filters.function_dependencies import ResolvedResourceDependency, resolve_dependencies
 from src.filters.functions import (
+    Add,
     Call,
+    Ceil,
+    Concat,
     Construct,
+    Contains,
+    Floor,
     Get,
+    If,
+    Maximum,
+    Minimum,
     ProjectToSpan,
     ResourceDependency,
+    Round,
     ScoreOf,
+    Subtract,
     TextAround,
     TextOf,
+    ToFloat,
     WordOf,
 )
 
@@ -58,6 +69,22 @@ def test_resolve_direct_elementary_argument_dependency() -> None:
     )
 
 
+def test_pure_scalar_functions_have_no_resource_dependencies() -> None:
+    for function in (
+        Add(type="int", num=3),
+        Subtract(type="float"),
+        Maximum(type="int", num=3),
+        Minimum(type="float", num=3),
+        Concat(num=3),
+        Contains(),
+        ToFloat(),
+        Floor(),
+        Ceil(),
+        Round(),
+    ):
+        assert resolve_dependencies(function) == ()
+
+
 def test_resolve_dependency_through_call_and_projection() -> None:
     input_schema = Schema(fields={"label": LabelRefField()})
     span = Call(
@@ -76,6 +103,46 @@ def test_resolve_dependency_through_call_and_projection() -> None:
             resource="chapter_content_text",
             argument_index=0,
             key_path=("label",),
+        ),
+        ResolvedResourceDependency(
+            resource="label",
+            argument_index=0,
+            key_path=("label",),
+        ),
+    )
+
+
+def test_if_merges_branch_origins_for_downstream_dependencies() -> None:
+    input_schema = Schema(
+        fields={
+            "condition": BoolField(),
+            "thenLabel": LabelRefField(),
+            "elseLabel": LabelRefField(),
+        }
+    )
+    choice = If(
+        input_schema=input_schema,
+        output_schema=LabelRefField(),
+        condition=Get(field_name="condition", type="bool"),
+        then_branch=Get(field_name="thenLabel", type="labelRef"),
+        else_branch=Get(field_name="elseLabel", type="labelRef"),
+    )
+    word = Call(
+        input_schema=input_schema,
+        function=WordOf(),
+        arguments=(choice,),
+    )
+
+    assert resolve_dependencies(word) == (
+        ResolvedResourceDependency(
+            resource="label",
+            argument_index=0,
+            key_path=("elseLabel",),
+        ),
+        ResolvedResourceDependency(
+            resource="label",
+            argument_index=0,
+            key_path=("thenLabel",),
         ),
     )
 

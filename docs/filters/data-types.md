@@ -1,6 +1,6 @@
 # Filter data types
 
-**Last updated:** 2026-07-28
+**Last updated:** 2026-07-30
 
 The filter subsystem uses a small tagged type system for persisted workflow
 schemas, instance values, and function signatures. It validates data loaded
@@ -61,6 +61,7 @@ JSON, SQL, or comparison semantics.
 
 A `TextSpan` contains:
 
+- `chapterId`;
 - `chapterContentId`;
 - a non-negative inclusive `start`;
 - a non-negative exclusive `end`.
@@ -72,16 +73,19 @@ context.
 
 ### Label references
 
-A `LabelRef` extends a text span with:
+A `LabelRef` contains:
 
+- `chapterId`;
+- `chapterContentId`;
 - `labelId`;
 - `labelDataId`;
 - `labelGroupId`.
 
-The reference captures the label's source IDs and range. It does not snapshot
-the label's word, score, category, or dirty state. The implemented `wordOf` and
-`scoreOf` functions load the current label row by `labelId` when a runner
-executes.
+The reference captures the label and chapter-content identities, but it does
+not snapshot the label's range, word, score, category, or dirty state. The
+implemented `wordOf`, `scoreOf`, and `projectToSpan` functions load the current
+label row by `labelId` when a runner executes. `projectToSpan` combines that
+row's current offsets with the reference's stored chapter IDs.
 
 Reference integrity, authorization, and staleness validation are not part of
 the Pydantic value model and do not yet have a separate execution preflight.

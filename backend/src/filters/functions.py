@@ -34,6 +34,7 @@ MAX_LITERAL_STRING_LENGTH = 10_000
 MAX_RENAME_PAIRS = 128
 
 type ResourceName = Literal["chapter_content_text", "label"]
+type NumericTypeName = Literal["int", "float"]
 
 
 class Signature(Model):
@@ -192,8 +193,124 @@ class Compare(Function):
         )
 
 
+def binary_numeric_signature(type_name: NumericTypeName) -> Signature:
+    field = discriminate_type(type_name)
+    return Signature(args=(field, field), output=field)
+
+
+def variadic_numeric_signature(type_name: NumericTypeName, num: int) -> Signature:
+    field = discriminate_type(type_name)
+    return Signature(args=tuple(field for _ in range(num)), output=field)
+
+
+class Add(Function):
+    name: Literal["add"] = "add"
+    type: NumericTypeName
+    num: IntegerValue = Field(ge=1, le=MAX_FUNCTION_ARITY)
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return variadic_numeric_signature(self.type, self.num)
+
+
+class Subtract(Function):
+    name: Literal["subtract"] = "subtract"
+    type: NumericTypeName
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return binary_numeric_signature(self.type)
+
+
+class Maximum(Function):
+    name: Literal["max"] = "max"
+    type: NumericTypeName
+    num: IntegerValue = Field(ge=1, le=MAX_FUNCTION_ARITY)
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return variadic_numeric_signature(self.type, self.num)
+
+
+class Minimum(Function):
+    name: Literal["min"] = "min"
+    type: NumericTypeName
+    num: IntegerValue = Field(ge=1, le=MAX_FUNCTION_ARITY)
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return variadic_numeric_signature(self.type, self.num)
+
+
+class Concat(Function):
+    name: Literal["concat"] = "concat"
+    num: IntegerValue = Field(ge=1, le=MAX_FUNCTION_ARITY)
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        field = StringField()
+        return Signature(args=tuple(field for _ in range(self.num)), output=field)
+
+
+class Contains(Function):
+    name: Literal["contains"] = "contains"
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(
+            args=(StringField(), StringField()),
+            output=BoolField(),
+        )
+
+
+class ToFloat(Function):
+    name: Literal["float"] = "float"
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(args=(IntField(),), output=FloatField())
+
+
+class Floor(Function):
+    name: Literal["floor"] = "floor"
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(args=(FloatField(),), output=IntField())
+
+
+class Ceil(Function):
+    name: Literal["ceil"] = "ceil"
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(args=(FloatField(),), output=IntField())
+
+
+class Round(Function):
+    name: Literal["round"] = "round"
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(args=(FloatField(),), output=IntField())
+
+
 class ProjectToSpan(Function):
     name: Literal["projectToSpan"] = "projectToSpan"
+
+    @property
+    def dependencies(self) -> tuple[DependencyType, ...]:
+        return (ResourceDependency(resource="label", argument_index=0),)
 
     @computed_field
     @property
@@ -411,6 +528,45 @@ def output_when_called_on(function: Function, input_schema: Schema) -> SObj:
     return signature.output
 
 
+class If(Function):
+    name: Literal["if"] = "if"
+    input_schema: SObj
+    output_schema: SObj
+    condition: FunctionType
+    then_branch: FunctionType
+    else_branch: FunctionType
+
+    @model_validator(mode="after")
+    def validate_branches(self) -> If:
+        if self.condition.signature.output != BoolField(mutable=False):
+            raise ValueError("Condition function must return a boolean value.")
+        if len(self.condition.signature.args) != 1:
+            raise ValueError("Condition function must accept exactly one argument.")
+        if len(self.then_branch.signature.args) != 1:
+            raise ValueError("Then branch function must accept exactly one argument.")
+        if len(self.else_branch.signature.args) != 1:
+            raise ValueError("Else branch function must accept exactly one argument.")
+        if not extends(self.input_schema, self.condition.signature.args[0]):
+            raise ValueError("Condition function cannot consume the provided input schema.")
+        if not extends(self.input_schema, self.then_branch.signature.args[0]):
+            raise ValueError("Then branch function cannot consume the provided input schema.")
+        if not extends(self.input_schema, self.else_branch.signature.args[0]):
+            raise ValueError("Else branch function cannot consume the provided input schema.")
+        if not extends(self.then_branch.signature.output, self.output_schema):
+            raise ValueError("Then branch output is incompatible with the declared output schema.")
+        if not extends(self.else_branch.signature.output, self.output_schema):
+            raise ValueError("Else branch output is incompatible with the declared output schema.")
+        return self
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(
+            args=(self.input_schema,),
+            output=self.output_schema,
+        )
+
+
 class Construct(Function):
     """
     Build an object by evaluating several elementary-output functions against
@@ -531,6 +687,16 @@ type FunctionType = Annotated[
     | LiteralBool
     | Get
     | Compare
+    | Add
+    | Subtract
+    | Maximum
+    | Minimum
+    | Concat
+    | Contains
+    | ToFloat
+    | Floor
+    | Ceil
+    | Round
     | ProjectToSpan
     | WordOf
     | ScoreOf
@@ -539,6 +705,7 @@ type FunctionType = Annotated[
     | Or
     | Not
     | Construct
+    | If
     | Extend
     | Call
     | StartOf
@@ -552,5 +719,6 @@ type FunctionType = Annotated[
 Construct.model_rebuild()
 Extend.model_rebuild()
 Call.model_rebuild()
+If.model_rebuild()
 
 function_adapter = TypeAdapter[FunctionType](FunctionType)

@@ -9,11 +9,11 @@ import type {
 } from "../controller/types/controllerTypes";
 import type { LGProvId } from "../controller/types/idTypes";
 import type { CProvId } from "../controller/types/idTypes";
-import type { LabelOp } from "../controller/types/dataTypes";
 import { ChapterLoadingException } from "../controller/types/errors";
 import type { EditorData, LoadingPayload } from "../hooks/useEditorState";
 import { gatherLabelData } from "./readers";
 import type { LabelGroupView } from "../hooks/useTrackedLabelGroups";
+import type { ULabelOp } from "../controller/types/dataTypes";
 
 export type LabelStyle = ProductStyle<
 	[
@@ -129,8 +129,12 @@ export function createEditorManager({
 					} else if (event.op.op === "delete") {
 						sm.removeLabel(event.op.labelId);
 					} else if (event.op.op === "update") {
+						const curLabel = sm.getLabel(event.op.labelId);
 						sm.updateLabel(event.op.labelId, {
-							interval: { start: event.op.startPos, end: event.op.endPos },
+							interval: {
+								start: event.op.startPos ?? curLabel.interval.start,
+								end: event.op.endPos ?? curLabel.interval.end,
+							},
 							style: [
 								{ color: groupStatus.color },
 								{
@@ -155,7 +159,7 @@ export function createEditorManager({
 		controllerUserEvent({ eventType: "textOp", op, chapterId: current.chapterId });
 	}
 
-	function labelOp(op: LabelOp, labelGroupId: LGProvId) {
+	function labelOp(op: ULabelOp, labelGroupId: LGProvId) {
 		if (modeRef.current !== "label") return;
 		const current = dataRef.current;
 		if (current.empty) return;

@@ -1,5 +1,6 @@
 import logging
 import uuid
+from typing import Literal
 from uuid import UUID
 
 from sqlalchemy import and_, exists, func, insert, select, update
@@ -9,9 +10,9 @@ from src.filters.data_types import DataObj, LabelRef, LabelRefData, LabelRefFiel
 from src.filters.models import Instance, Workflow, WorkflowStatus
 from src.filters.runners.interfaces.runner import Runner
 from src.filters.runners.python.helpers import handle_workflow_exception
+from src.filters.runners.python.interfaces import PythonRunnerInputBase
 from src.labels.models import Label, LabelData, LabelGroup
 from src.novels.models import Chapter, ChapterContent
-from src.schemas import Model
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,8 @@ DEFAULT_LABEL_SOURCE_BATCH_SIZE = 1_000
 LABEL_SOURCE_SCHEMA = Schema(fields={"label": LabelRefField()})
 
 
-class PythonLabelSourceInput(Model):
+class PythonLabelSourceInput(PythonRunnerInputBase):
+    runner_name: Literal["ls"]
     label_group_id: uuid.UUID
     output_workflow_id: uuid.UUID
 
@@ -105,10 +107,9 @@ class PythonLabelSourceRunner(Runner[PythonLabelSourceInput]):
                         select(
                             Label.label_id,
                             Label.label_data_id,
-                            Label.label_start,
-                            Label.label_end,
                             LabelData.chapter_content_id,
                             LabelData.label_group_id,
+                            ChapterContent.chapter_id,
                         )
                         .join(
                             LabelData,
@@ -117,6 +118,10 @@ class PythonLabelSourceRunner(Runner[PythonLabelSourceInput]):
                         .where(
                             LabelData.label_group_id == input.label_group_id,
                             LabelData.chapter_content_id.in_(chapter_content_ids),
+                        )
+                        .join(
+                            ChapterContent,
+                            ChapterContent.chapter_content_id == LabelData.chapter_content_id,
                         )
                         .order_by(Label.label_id)
                         .limit(self.batch_size)
@@ -142,9 +147,8 @@ class PythonLabelSourceRunner(Runner[PythonLabelSourceInput]):
                                         label_id=label.label_id,
                                         label_data_id=label.label_data_id,
                                         label_group_id=label.label_group_id,
+                                        chapter_id=label.chapter_id,
                                         chapter_content_id=label.chapter_content_id,
-                                        start=label.label_start,
-                                        end=label.label_end,
                                     )
                                 )
                             }

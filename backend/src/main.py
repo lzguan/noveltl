@@ -10,6 +10,7 @@ from src.auth.router import router as auth_router
 from src.autolabels.router import router as autolabel_router
 from src.config import log_settings
 from src.editing.router import router as editing_router
+from src.filters.router import router as filter_router
 from src.labels.router import router as label_router
 from src.languages.router import router as language_router
 from src.novels.router import router as novel_router
@@ -49,6 +50,7 @@ app.include_router(autolabel_router)
 app.include_router(language_router)
 app.include_router(editing_router)
 app.include_router(requests_router)
+app.include_router(filter_router)
 
 if __name__ == "__main__":
     import uvicorn

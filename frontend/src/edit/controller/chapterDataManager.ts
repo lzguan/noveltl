@@ -18,6 +18,7 @@ import {
 	LGProvId,
 	LGServId,
 	LProvId,
+	LServId,
 	type ProvLabel,
 } from "./types/idTypes";
 import {
@@ -26,13 +27,13 @@ import {
 	Prov,
 	type LabelGroupSlot,
 } from "./types/helperTypes";
-import type { Novel, TextOp } from "@/api/models";
+import type { LabelOp as ApiLabelOp, Novel, TextOp } from "@/api/models";
 import type { RequestEvent, Reservation, ReserveList } from "./types/requestTypes";
-import type { LabelOp } from "./types/dataTypes";
 import {
 	ReadEditChapterDataEditChapterDataChapterIdPost200Response,
 	ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200Response,
 	UpdateChapterContentChaptersChapterIdContentPatch200Response,
+	UpdateLabelDataStreamLabelDatasLabelDataIdPatch200Response,
 } from "@/api/endpoints/default/default.effect";
 import {
 	readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
@@ -40,7 +41,7 @@ import {
 	updateLabelDataStreamLabelDatasLabelDataIdPatch,
 } from "@/api/endpoints/default/default";
 import type { Role } from "@/api/models/role";
-import type { ChapterDataManager } from "./types/dataTypes";
+import type { ChapterDataManager, ULabelOp } from "./types/dataTypes";
 
 export const buildChapterDataManager = (
 	editChapterData: typeof ReadEditChapterDataEditChapterDataChapterIdPost200Response.Type,
@@ -101,7 +102,7 @@ export const buildChapterDataManager = (
 				const provLabels: ProvLabel[] = entry.labels
 					.map((l) => {
 						const provLabelId = Effect.runSync(
-							idRepo.newIdAndBindExists({ kind: "label" }),
+							idRepo.newIdAndBindId({ kind: "label", servId: LServId(l.labelId) }),
 						);
 						return Prov({
 							...l,
@@ -167,7 +168,7 @@ export const buildChapterDataManager = (
 		// Op queue: keyed by labelGroupProvId for label ops.
 		// Only one tag can be active at a time. Tag switching is handled by auto-flush in actions.
 		let opQueue:
-			| { tag: "label"; queue: Map<LGProvId, { labelId: LProvId; op: LabelOp }[]> }
+			| { tag: "label"; queue: Map<LGProvId, { labelId: LProvId; op: ULabelOp }[]> }
 			| { tag: "text"; queue: TextOp[] }
 			| { tag: "neither" } = { tag: "neither" };
 
@@ -202,7 +203,7 @@ export const buildChapterDataManager = (
 			flushQueued().pipe(Effect.map(lockChapter));
 
 		const buildLabelReservations = (
-			ops: { labelId: LProvId; op: LabelOp }[],
+			ops: { labelId: LProvId; op: ULabelOp }[],
 		): Reservation<"label">[] => {
 			const map = new Map<LProvId, InFlightIdStatus>();
 			for (const { labelId, op } of ops) {
@@ -228,6 +229,54 @@ export const buildChapterDataManager = (
 			}));
 		};
 
+		const servIdOfOp = ({
+			labelId,
+			op,
+		}: {
+			labelId: LProvId;
+			op: ULabelOp;
+		}): Effect.Effect<ApiLabelOp, FatalException> =>
+			Effect.gen(function* () {
+				if (op.op === "add") {
+					return op;
+				}
+				const serverId = yield* idRepo
+					.getServerId({ kind: "label", provId: labelId })
+					.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
+				if (!serverId) {
+					return yield* Effect.fail(
+						new FatalException({
+							orig: new Error(`Label ${labelId} has no server ID`),
+						}),
+					);
+				}
+				return { ...op, labelId: serverId };
+			});
+
+		const splitLabelOpBatches = (
+			ops: readonly { labelId: LProvId; op: ULabelOp }[],
+		): { labelId: LProvId; op: ULabelOp }[][] => {
+			const batches: { labelId: LProvId; op: ULabelOp }[][] = [];
+			let batch: { labelId: LProvId; op: ULabelOp }[] = [];
+			const labelsCreatedInBatch = new Set<LProvId>();
+
+			for (const entry of ops) {
+				if (entry.op.op !== "add" && labelsCreatedInBatch.has(entry.labelId)) {
+					batches.push(batch);
+					batch = [];
+					labelsCreatedInBatch.clear();
+				}
+				batch.push(entry);
+				if (entry.op.op === "add") {
+					labelsCreatedInBatch.add(entry.labelId);
+				}
+			}
+			if (batch.length > 0) {
+				batches.push(batch);
+			}
+			return batches;
+		};
+
 		const _flush = (): Effect.Effect<RequestEvent[], UnknownException> =>
 			Effect.gen(function* () {
 				if (opQueue.tag === "label") {
@@ -243,92 +292,129 @@ export const buildChapterDataManager = (
 							),
 						);
 						const labelDataProvId = slot.meta.labelData.labelDataId;
-						const opsSnapshot = [...ops];
-						const labelOpReserveList: ReserveList = {
-							labelData: [
-								{
-									id: labelDataProvId,
-									kind: "labelData",
-									desiredState: "updating",
+						for (const opsSnapshot of splitLabelOpBatches(ops)) {
+							const labelOpReserveList: ReserveList = {
+								labelData: [
+									{
+										id: labelDataProvId,
+										kind: "labelData",
+										desiredState: "updating",
+									},
+								],
+								chapterContent: [
+									{
+										id: chapterContentId,
+										kind: "chapterContent",
+										desiredState: "locked",
+									},
+								],
+								label: buildLabelReservations(opsSnapshot),
+								autoLabel: [],
+								autoLabelRun: [],
+								chapter: [],
+								labelGroup: [],
+							};
+							events.push({
+								cached: true,
+								variant: "labelOp",
+								active: true,
+								retries: 3,
+								reservationRequest: {
+									reserveList: IdempotentCallable(() => labelOpReserveList),
+									skip: () => false,
+									wait: () =>
+										isAllReserveable(idRepo, labelOpReserveList).pipe(
+											Effect.map((ready) => !ready),
+										),
 								},
-							],
-							chapterContent: [
-								{
-									id: chapterContentId,
-									kind: "chapterContent",
-									desiredState: "locked",
-								},
-							],
-							label: buildLabelReservations(opsSnapshot),
-							autoLabel: [],
-							autoLabelRun: [],
-							chapter: [],
-							labelGroup: [],
-						};
-						events.push({
-							cached: false,
-							variant: "labelOp",
-							active: true,
-							retries: 3,
-							reservationRequest: {
-								reserveList: IdempotentCallable(() => labelOpReserveList),
-								skip: () => false,
-								wait: () =>
-									isAllReserveable(idRepo, labelOpReserveList).pipe(
-										Effect.map((ready) => !ready),
-									),
-							},
-							onFailure: () => Effect.succeed(void 0),
-							onFatalError: () => Effect.succeed(void 0),
-							preSend: () => Effect.succeed(void 0),
-							send: () =>
-								Effect.gen(function* () {
-									const servLdId = yield* idRepo
-										.getServerId({ kind: "labelData", provId: labelDataProvId })
-										.pipe(
+								onFailure: () => Effect.succeed(void 0),
+								onFatalError: () => Effect.succeed(void 0),
+								preSend: () => Effect.succeed(void 0),
+								send: (requestKey) =>
+									Effect.gen(function* () {
+										const servLdId = yield* idRepo
+											.getServerId({
+												kind: "labelData",
+												provId: labelDataProvId,
+											})
+											.pipe(
+												Effect.mapError(
+													(err) => new FatalException({ orig: err }),
+												),
+											);
+										if (!servLdId) {
+											return yield* Effect.fail(
+												new FatalException({
+													orig: new Error("Label data has no server ID"),
+												}),
+											);
+										}
+										const serverOps = yield* Effect.all(
+											opsSnapshot.map(servIdOfOp),
+										);
+										const resp = yield* Effect.tryPromise(() =>
+											updateLabelDataStreamLabelDatasLabelDataIdPatch(
+												servLdId,
+												{ ops: serverOps },
+												{ requestKey },
+											),
+										).pipe(
+											Effect.mapError(
+												(err) => new ConnectionException({ orig: err }),
+											),
+										);
+										if (resp.status === 409 && resp.data.detail.cacheConflict) {
+											return yield* Effect.fail(
+												new CacheConflictException({ requestKey }),
+											);
+										}
+										if (resp.status !== 200) {
+											return yield* Effect.fail(
+												new FatalException({
+													orig: new Error(
+														`Label op failed: ${resp.status}`,
+													),
+												}),
+											);
+										}
+										return resp.data;
+									}),
+								postSend: (data) =>
+									Effect.gen(function* () {
+										const decoded = yield* Schema.decodeUnknown(
+											UpdateLabelDataStreamLabelDatasLabelDataIdPatch200Response,
+										)(data).pipe(
 											Effect.mapError(
 												(err) => new FatalException({ orig: err }),
 											),
 										);
-									if (!servLdId) {
-										return yield* Effect.fail(
-											new FatalException({
-												orig: new Error("Label data has no server ID"),
-											}),
-										);
-									}
-									const resp = yield* Effect.tryPromise(() =>
-										updateLabelDataStreamLabelDatasLabelDataIdPatch(servLdId, {
-											ops: opsSnapshot.map(({ op }) => op),
-										}),
-									).pipe(
-										Effect.mapError(
-											(err) => new ConnectionException({ orig: err }),
-										),
-									);
-									if (resp.status !== 204) {
-										return yield* Effect.fail(
-											new FatalException({
-												orig: new Error(`Label op failed: ${resp.status}`),
-											}),
-										);
-									}
-									return resp.data;
-								}),
-							postSend: () =>
-								Effect.gen(function* () {
-									for (const { labelId, op } of opsSnapshot) {
-										if (op.op === "add") {
-											yield* idRepo.bindServerExists({
-												kind: "label",
-												provId: labelId,
-											});
+										if (decoded.results.length !== opsSnapshot.length) {
+											return yield* Effect.fail(
+												new FatalException({
+													orig: new Error(
+														`Label operation result count mismatch: expected ${opsSnapshot.length}, received ${decoded.results.length}`,
+													),
+												}),
+											);
 										}
-									}
-								}).pipe(
-									Effect.mapError((err) => new FatalException({ orig: err })),
-								),
-						});
+										const withServId = opsSnapshot.map((v, index) => ({
+											...v,
+											servId: LServId(decoded.results[index]),
+										}));
+										for (const { labelId, op, servId } of withServId) {
+											if (op.op === "add") {
+												yield* idRepo.bindServerId({
+													kind: "label",
+													provId: labelId,
+													servId,
+												});
+											}
+										}
+									}).pipe(
+										Effect.mapError((err) => new FatalException({ orig: err })),
+									),
+							});
+						}
 					}
 					opQueue = { tag: "neither" };
 					return events;
@@ -566,7 +652,6 @@ export const buildChapterDataManager = (
 			labelGroupId: LGProvId,
 			startPos: number,
 			endPos: number,
-			word: string,
 			entityGroup?: string,
 			score?: number,
 			dirty?: boolean,
@@ -584,9 +669,9 @@ export const buildChapterDataManager = (
 						new UnknownException({ message: "Label bounds are out of range" }),
 					);
 				}
-				if (text.slice(startPos, endPos) !== word) {
+				if (endPos - startPos > 128) {
 					return yield* Effect.fail(
-						new UnknownException({ message: "Label word must match text" }),
+						new UnknownException({ message: "Label is too long" }),
 					);
 				}
 				if (
@@ -610,7 +695,7 @@ export const buildChapterDataManager = (
 					labelDataId: labelDataProvId,
 					labelStart: startPos,
 					labelEnd: endPos,
-					labelWord: word,
+					labelWord: text.slice(startPos, endPos),
 					labelDirty: dirty ?? true,
 					labelEntityGroup: entityGroup ?? null,
 					labelScore: score ?? 1.0,
@@ -639,7 +724,6 @@ export const buildChapterDataManager = (
 							op: "add",
 							startPos,
 							endPos,
-							word,
 							entityGroup: entityGroup ?? null,
 							score: score ?? 1.0,
 							dirty: dirty ?? true,
@@ -653,7 +737,6 @@ export const buildChapterDataManager = (
 						op: "add",
 						startPos,
 						endPos,
-						word,
 						entityGroup: entityGroup ?? null,
 						score: score ?? 1.0,
 						dirty: dirty ?? true,
@@ -667,8 +750,7 @@ export const buildChapterDataManager = (
 
 		const _deleteLabel = (
 			labelGroupId: LGProvId,
-			startPos: number,
-			endPos: number,
+			labelId: LProvId,
 		): Effect.Effect<RequestEvent[], UnknownException> =>
 			Effect.gen(function* () {
 				if (destroyed)
@@ -678,13 +760,11 @@ export const buildChapterDataManager = (
 
 				const { labels } = yield* getReadyLabels(labelGroupId, true);
 
-				const labelIndex = labels.findIndex(
-					(l) => l.labelStart === startPos && l.labelEnd === endPos,
-				);
+				const labelIndex = labels.findIndex((l) => l.labelId === labelId);
 				if (labelIndex === -1) {
 					return yield* Effect.fail(
 						new UnknownException({
-							message: `Label [${startPos}, ${endPos}) not found`,
+							message: `Label [${labelId}] not found`,
 						}),
 					);
 				}
@@ -709,7 +789,7 @@ export const buildChapterDataManager = (
 					}
 					opQueue.queue.get(labelGroupId)!.push({
 						labelId: label.labelId,
-						op: { op: "delete", startPos, endPos, word: label.labelWord },
+						op: { op: "delete", labelId: label.labelId },
 					});
 				}
 
@@ -717,9 +797,6 @@ export const buildChapterDataManager = (
 					eventType: "labelChanged",
 					op: {
 						op: "delete",
-						startPos,
-						endPos,
-						word: label.labelWord,
 						labelGroupId,
 						chapterId,
 						labelId: label.labelId,
@@ -730,11 +807,9 @@ export const buildChapterDataManager = (
 
 		const _updateLabel = (
 			labelGroupId: LGProvId,
-			startPos: number,
-			endPos: number,
-			newStartPos?: number | null,
-			newEndPos?: number | null,
-			newWord?: string | null,
+			labelId: LProvId,
+			startPos?: number,
+			endPos?: number,
 			entityGroup?: string,
 			score?: number,
 			dirty?: boolean,
@@ -747,9 +822,7 @@ export const buildChapterDataManager = (
 
 				const { labels } = yield* getReadyLabels(labelGroupId, true);
 
-				const labelIndex = labels.findIndex(
-					(l) => l.labelStart === startPos && l.labelEnd === endPos,
-				);
+				const labelIndex = labels.findIndex((l) => l.labelId === labelId);
 				if (labelIndex === -1) {
 					return yield* Effect.fail(
 						new UnknownException({
@@ -758,32 +831,17 @@ export const buildChapterDataManager = (
 					);
 				}
 				const currentLabel = labels[labelIndex];
-				const nextStart = newStartPos ?? currentLabel.labelStart;
-				const nextEnd = newEndPos ?? currentLabel.labelEnd;
-				const boundsChanged = newStartPos != null || newEndPos != null;
-				if (boundsChanged && newWord == null) {
+				const nextStart = startPos ?? currentLabel.labelStart;
+				const nextEnd = endPos ?? currentLabel.labelEnd;
+
+				if (nextEnd - nextStart > 128) {
 					return yield* Effect.fail(
-						new UnknownException({
-							message: "Must provide new word when changing bounds",
-						}),
+						new UnknownException({ message: "Updated label is too long" }),
 					);
 				}
-				if (!boundsChanged && newWord != null) {
-					return yield* Effect.fail(
-						new UnknownException({
-							message: "Cannot set new word without changing bounds",
-						}),
-					);
-				}
-				const nextWord = newWord ?? currentLabel.labelWord;
 				if (nextStart >= nextEnd || nextStart < 0 || nextEnd > text.length) {
 					return yield* Effect.fail(
 						new UnknownException({ message: "Updated label bounds out of range" }),
-					);
-				}
-				if (text.slice(nextStart, nextEnd) !== nextWord) {
-					return yield* Effect.fail(
-						new UnknownException({ message: "Updated word must match text" }),
 					);
 				}
 
@@ -803,7 +861,7 @@ export const buildChapterDataManager = (
 					...currentLabel,
 					labelStart: nextStart,
 					labelEnd: nextEnd,
-					labelWord: nextWord,
+					labelWord: text.slice(nextStart, nextEnd),
 					labelEntityGroup: entityGroup ?? currentLabel.labelEntityGroup,
 					labelScore: score ?? currentLabel.labelScore,
 					labelDirty: dirty ?? currentLabel.labelDirty,
@@ -830,12 +888,9 @@ export const buildChapterDataManager = (
 						labelId: currentLabel.labelId,
 						op: {
 							op: "update",
+							labelId: currentLabel.labelId,
 							startPos,
 							endPos,
-							word: currentLabel.labelWord,
-							newStartPos: newStartPos ?? undefined,
-							newEndPos: newEndPos ?? undefined,
-							newWord: newWord ?? undefined,
 							entityGroup: entityGroup ?? undefined,
 							score: score ?? undefined,
 							dirty: dirty ?? undefined,
@@ -849,10 +904,6 @@ export const buildChapterDataManager = (
 						op: "update",
 						startPos,
 						endPos,
-						word: currentLabel.labelWord,
-						newStartPos: newStartPos ?? undefined,
-						newEndPos: newEndPos ?? undefined,
-						newWord: newWord ?? undefined,
 						entityGroup: entityGroup ?? undefined,
 						score: score ?? undefined,
 						dirty: dirty ?? undefined,
@@ -1194,7 +1245,7 @@ export const buildChapterDataManager = (
 
 				const event: RequestEvent = {
 					cached: false,
-					variant: "reloadGroup",
+					variant: "reloadGroup" as const,
 					active: false,
 					retries: 3,
 					reservationRequest: {
@@ -1267,7 +1318,10 @@ export const buildChapterDataManager = (
 							const provLabels: ProvLabel[] = entry.labels
 								.map((l) => {
 									const provLabelId = Effect.runSync(
-										idRepo.newIdAndBindExists({ kind: "label" }),
+										idRepo.newIdAndBindId({
+											kind: "label",
+											servId: LServId(l.labelId),
+										}),
 									);
 									return Prov({
 										...l,

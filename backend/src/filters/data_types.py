@@ -91,12 +91,16 @@ schema_adapter = TypeAdapter[SObj](SObj)
 # Data types
 
 
-class TextSpan(Model):
+class ChapterRef(Model):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    chapter_id: uuid.UUID
+    chapter_content_id: uuid.UUID
+
+
+class TextSpan(ChapterRef):
     start: IntegerValue = Field(ge=0)
     end: IntegerValue = Field(ge=0)
-    chapter_content_id: uuid.UUID
 
     @model_validator(mode="after")
     def validate_range(self) -> "TextSpan":
@@ -105,7 +109,7 @@ class TextSpan(Model):
         return self
 
 
-class LabelRef(TextSpan):
+class LabelRef(ChapterRef):
     label_id: uuid.UUID
     label_data_id: uuid.UUID
     label_group_id: uuid.UUID

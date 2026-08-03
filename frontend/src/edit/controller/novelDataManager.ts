@@ -27,7 +27,7 @@ import {
 	type ProvLabelGroup,
 } from "./types/idTypes";
 import { makeReservationRequest, Prov } from "./types/helperTypes";
-import type { AutoLabelRunOutput, Chapter, LabelGroup, LabelRole, Novel } from "@/api/models";
+import type { AutoLabelRun, Chapter, LabelGroup, LabelRole, Novel } from "@/api/models";
 import type { RequestEvent } from "./types/requestTypes";
 import {
 	CreateChapterNovelsNovelIdChaptersPost200Response,
@@ -49,7 +49,7 @@ export type NovelData = {
 	chapters: Chapter[];
 	labelGroups: { labelGroup: LabelGroup; role: LabelRole }[];
 	novelRole: Role;
-	autoLabelRuns: AutoLabelRunOutput[];
+	autoLabelRuns: AutoLabelRun[];
 };
 
 export const buildNovelDataManager = (

@@ -6,7 +6,7 @@ import json
 import uuid
 from typing import Literal, Protocol, TypedDict
 
-from src.redis_conn import get_redis_for_ttl_cache_async, get_redis_for_ttl_cache_sync
+from src.requests.redis_conn import get_redis_for_ttl_cache_async, get_redis_for_ttl_cache_sync
 
 RequestStatus = Literal["pending", "success", "failure"]
 

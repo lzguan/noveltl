@@ -28,7 +28,7 @@ Note that the exact keys vary by context. A label operation identifies its range
 
 The backend will then validate any operation that sends an identifier with the following expression (note that `end_pos == start_pos + len(word)` is enforced by the schema):
 ```python
-text[start_pos : end_pos] == word
+text[start_pos:end_pos] == word
 ```
 
 As an example, if we need to validate that there exists a label with said identifier in some label data, then we can perform an SQL query of the form
@@ -152,9 +152,9 @@ To mitigate this problem, we will temporarily store request *results* in a Redis
 ```python
 {
     "status": "pending" | "success" | "failure",
-    "status_code": int | None,   # the HTTP status the original request resolved to
-    "response": dict | None,      # the serialized success payload, if any
-    "error": { "detail": ..., "cacheConflict": bool } | None,
+    "status_code": int | None,  # the HTTP status the original request resolved to
+    "response": dict | None,  # the serialized success payload, if any
+    "error": {"detail": ..., "cacheConflict": bool} | None,
 }
 ```
 

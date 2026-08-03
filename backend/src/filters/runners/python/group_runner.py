@@ -1,8 +1,9 @@
 import logging
 import uuid
-from typing import cast
+from typing import Annotated, Literal, cast
 from uuid import UUID
 
+from pydantic import Field
 from sqlalchemy import and_, func, insert, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -20,7 +21,7 @@ from src.filters.data_types import (
     data_adapter,
     extends,
 )
-from src.filters.dependencies import resolve_dependencies
+from src.filters.function_dependencies import resolve_dependencies
 from src.filters.functions import function_adapter
 from src.filters.models import (
     FunctionDefinition,
@@ -32,16 +33,17 @@ from src.filters.models import (
 )
 from src.filters.runners.interfaces.runner import Runner
 from src.filters.runners.python.helpers import handle_grouping_exception
-from src.schemas import Model
+from src.filters.runners.python.interfaces import PythonRunnerInputBase
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_GROUP_BATCH_SIZE = 1_000
 
-type GroupData = StringData | IntData | BoolData
+type GroupData = Annotated[StringData | IntData | BoolData, Field(discriminator="type")]
 
 
-class PythonGroupInput(Model):
+class PythonGroupInput(PythonRunnerInputBase):
+    runner_name: Literal["group"]
     grouping_id: uuid.UUID
 
 

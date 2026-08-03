@@ -5,7 +5,7 @@ Pydantic schemas for labels.
 import uuid
 from typing import Annotated, Literal, Self
 
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, TypeAdapter, model_validator
 
 from src.labels.constants import (
     MAX_LABEL_ENTITY_GROUP_NAME_LEN,
@@ -150,113 +150,110 @@ class CreateLabelData(Model):
     chapter_content_id: uuid.UUID
 
 
-class LabelOpBase(Model):
+class AddLabelOp(Model):
     """
-    Base class for a label operation. Any label operation must include these parameters to validate the request.
-
-    Attributes:
-        start_pos: Start position of label to be operated on/created/...
-        end_pos: End position of label to be operated on/created/...
-        word: Word this label is labelling. Note that in order for any label operation to be valid, we must have chapter_text[start_pos:end_pos] == word.
-    """
-
-    start_pos: int = Field(ge=0)
-    end_pos: int = Field(ge=0)
-    word: str = Field(max_length=MAX_LABEL_WORD_LEN)
-
-    @model_validator(mode="after")
-    def check_start_lt_end(self) -> Self:
-        if self.start_pos >= self.end_pos:
-            raise ValueError("Label start must be less than label end")
-        return self
-
-    @model_validator(mode="after")
-    def check_word_len(self) -> Self:
-        if len(self.word) != self.end_pos - self.start_pos:
-            raise ValueError("Length of word does not match label bounds")
-        return self
-
-
-class AddLabelOp(LabelOpBase):
-    """
-    Pydantic schema for a label add operation. Inherits all attributes from LabelOpBase.
+    Pydantic schema for a label add operation. Adds a new label to the label data with the given parameters.
 
     Attributes:
         op: The string literal 'add'.
         dirty: Boolean whether to mark the label as dirty.
-        entity_group: String representing what entity group this label belongs to. If none, then set a default value.
+        entity_group: Optional entity group assigned to the label.
         score: Float score between 0.0 and 1.0 representing how likely this label is to be an entity.
+        start_pos: Inclusive start position in the chapter text.
+        end_pos: Exclusive end position in the chapter text.
     """
 
     op: Literal["add"]
     dirty: bool = True
     entity_group: str | None = Field(default=None, max_length=MAX_LABEL_ENTITY_GROUP_NAME_LEN)
     score: float = Field(default=1.0, ge=0.0, le=1.0)
+    start_pos: int = Field(ge=0)
+    end_pos: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def check_start_lt_end(self) -> Self:
+        if self.start_pos >= self.end_pos:
+            raise ValueError("Start pos must be less than end pos")
+        return self
+
+    @model_validator(mode="after")
+    def check_length(self) -> Self:
+        if self.end_pos - self.start_pos > MAX_LABEL_WORD_LEN:
+            raise ValueError(f"Label length must be less than or equal to {MAX_LABEL_WORD_LEN}")
+        return self
 
 
-class DeleteLabelOp(LabelOpBase):
+class DeleteLabelOp(Model):
     """
-    Pydantic schema for a label delete operation. Inherits all attributes from LabelOpBase.
+    Pydantic schema for a label delete operation. Deletes the label with label_id.
 
     Attributes:
         op: The string literal 'delete'.
+        label_id: ID of the label to delete.
     """
 
     op: Literal["delete"]
+    label_id: uuid.UUID
 
 
-class UpdateLabelOp(LabelOpBase):
+class UpdateLabelOp(Model):
     """
-    Pydantic schema for a label update operation. Inherits all attributes from LabelOpBase.
+    Pydantic schema for a label update operation. Partial updates performed on label with label_id.
 
     Attributes:
         op: The string literal 'update'.
-        new_start_pos: Optional parameter. The new start position of the label.
-        new_end_pos: Optional parameter. The new end position of the label.
-        new_word: Optional parameter. The new word the label is labelling. Must satisfy `new_word == chapter_text[new_start_pos : new_end_pos]`.
+        label_id: ID of the label to update.
+        start_pos: Optional parameter. The new start position of the label.
+        end_pos: Optional parameter. The new end position of the label.
         dirty: Optional parameter. Value to change the current label's dirty value to.
         entity_group: Optional parameter. New entity group for this label.
         score: Optional parameter. New score for the entity.
     """
 
     op: Literal["update"]
-    new_start_pos: int | None = Field(default=None, ge=0)
-    new_end_pos: int | None = Field(default=None, ge=0)
-    new_word: str | None = Field(default=None, max_length=MAX_LABEL_WORD_LEN)
+    start_pos: int | None = Field(default=None, ge=0)
+    end_pos: int | None = Field(default=None, ge=0)
     dirty: bool | None = None
     entity_group: str | None = Field(default=None, max_length=MAX_LABEL_ENTITY_GROUP_NAME_LEN)
     score: float | None = Field(default=None, ge=0, le=1)
+    label_id: uuid.UUID
 
     @model_validator(mode="after")
-    def check_new_start_lt_new_end(self) -> Self:
-        cur_start = self.new_start_pos if self.new_start_pos is not None else self.start_pos
-        cur_end = self.new_end_pos if self.new_end_pos is not None else self.end_pos
-        if cur_start >= cur_end:
-            raise ValueError("Start pos must be less than end pos")
+    def check_start_lt_end(self) -> Self:
+        if self.start_pos is not None and self.end_pos is not None:
+            if self.start_pos >= self.end_pos:
+                raise ValueError("Start pos must be less than end pos")
         return self
 
-    @model_validator(mode="after")
-    def check_new_word_len(self) -> Self:
-        if self.new_word is None:
-            if self.new_end_pos is not None or self.new_start_pos is not None:
-                raise ValueError("New word not defined when label bounds changed")
-            return self
-        cur_start = self.new_start_pos if self.new_start_pos is not None else self.start_pos
-        cur_end = self.new_end_pos if self.new_end_pos is not None else self.end_pos
-        if len(self.new_word) != cur_end - cur_start:
-            raise ValueError("Length of new word does not match label bounds")
-        return self
+    # need to perform length validation at runtime
+
+
+type LabelOp = Annotated[AddLabelOp | DeleteLabelOp | UpdateLabelOp, Field(discriminator="op")]
+label_op_adapter = TypeAdapter[LabelOp](LabelOp)
+
+type OpResult = Annotated[uuid.UUID, Field()]
+
+
+class OpsResult(Model):
+    """
+    Pydantic schema for a list of label operation results.
+
+    Attributes:
+        results: A list of UUIDs corresponding to the results of each label operation.
+    """
+
+    results: list[OpResult]
 
 
 class UpdateLabelDataStream(Model):
     """
-    Pydantic schema for a buffered stream of label operations.
+    Pydantic schema for an atomic stream of label operations.
 
     Attributes:
         ops: A list of label operations.
     """
 
-    ops: list[Annotated[AddLabelOp | DeleteLabelOp | UpdateLabelOp, Field(discriminator="op")]]
+    ops: list[LabelOp]
 
 
 class CreateLabelDataByAutoLabel(Model):

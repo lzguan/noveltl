@@ -4,7 +4,7 @@ import { buildChapterDataManager } from "../chapterDataManager";
 import { buildIdRepository } from "../idRepository";
 import { buildRequestManager } from "../requestmanager";
 import { buildNovelDataManager, type NovelData } from "../novelDataManager";
-import { CServId, LGServId, type IDRepository } from "../types/idTypes";
+import { CServId, LGServId, LServId, type IDRepository } from "../types/idTypes";
 import type { TriggerEvent } from "../types/controllerTypes";
 import { Prov } from "../types/helperTypes";
 import { buildLabelGroupIndex } from "../dmHelpers";
@@ -40,6 +40,7 @@ const UUID4 = "00000000-0000-0000-0000-000000000004";
 const UUID5 = "00000000-0000-0000-0000-000000000005";
 const UUID6 = "00000000-0000-0000-0000-000000000006";
 const UUID7 = "00000000-0000-0000-0000-000000000007";
+const UUID8 = "00000000-0000-0000-0000-000000000008";
 const NOVEL_ID = "00000000-0000-0000-0000-00000000000a";
 const SOURCE_WORK_ID = "00000000-0000-0000-0000-00000000000b";
 
@@ -272,6 +273,16 @@ const releaseAllOnSuccess = (idRepo: IDRepository, reserveList: ReserveList) =>
 		}
 	});
 
+function getLabelProvId(idRepo: IDRepository, serverId: string) {
+	const labelId = Effect.runSync(
+		idRepo.queryProvId({ kind: "label", servId: LServId(serverId) }),
+	);
+	if (!labelId) {
+		throw new Error(`Label with server ID ${serverId} is not tracked`);
+	}
+	return labelId;
+}
+
 async function buildOpenedNovelWithAddedLabelGroup() {
 	const openChapterMock = vi.mocked(readEditChapterDataEditChapterDataChapterIdPost);
 	const createLabelGroupMock = vi.mocked(createLabelGroupLabelGroupsPost);
@@ -337,14 +348,14 @@ describe("buildChapterDataManager", () => {
 			const { chapterDM, triggerEvents, labelGroupId } = Effect.runSync(buildTestChapterDM());
 
 			const events = Effect.runSync(
-				chapterDM.addLabel(labelGroupId, 6, 9, "met", "verb", 0.9, true),
+				chapterDM.addLabel(labelGroupId, 6, 9, "verb", 0.9, true),
 			);
 
 			expect(events).toEqual([]);
 			expect(triggerEvents).toHaveLength(1);
 			expect(triggerEvents[0]).toMatchObject({
 				eventType: "labelChanged",
-				op: { op: "add", startPos: 6, endPos: 9, word: "met" },
+				op: { op: "add", startPos: 6, endPos: 9 },
 			});
 		});
 
@@ -352,7 +363,7 @@ describe("buildChapterDataManager", () => {
 			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
 
 			const result = Effect.runSync(
-				chapterDM.addLabel(labelGroupId, 3, 8, "ce me", "overlap").pipe(Effect.either),
+				chapterDM.addLabel(labelGroupId, 3, 8, "overlap").pipe(Effect.either),
 			);
 
 			expect(result._tag).toBe("Left");
@@ -362,42 +373,45 @@ describe("buildChapterDataManager", () => {
 			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
 
 			const result = Effect.runSync(
-				chapterDM.addLabel(labelGroupId, -1, 5, "Alice").pipe(Effect.either),
+				chapterDM.addLabel(labelGroupId, -1, 5).pipe(Effect.either),
 			);
 
 			expect(result._tag).toBe("Left");
 		});
 
-		it("rejects word mismatch with text", () => {
+		it("does not require the caller to provide the label word", () => {
 			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
 
 			const result = Effect.runSync(
-				chapterDM.addLabel(labelGroupId, 6, 9, "xyz").pipe(Effect.either),
+				chapterDM.addLabel(labelGroupId, 6, 9).pipe(Effect.either),
 			);
 
-			expect(result._tag).toBe("Left");
+			expect(result._tag).toBe("Right");
 		});
 	});
 
 	describe("deleteLabel", () => {
 		it("deletes an existing label", () => {
-			const { chapterDM, triggerEvents, labelGroupId } = Effect.runSync(buildTestChapterDM());
+			const { chapterDM, triggerEvents, labelGroupId, idRepo } =
+				Effect.runSync(buildTestChapterDM());
+			const labelId = getLabelProvId(idRepo, UUID5);
 
-			const events = Effect.runSync(chapterDM.deleteLabel(labelGroupId, 0, 5));
+			const events = Effect.runSync(chapterDM.deleteLabel(labelGroupId, labelId));
 
 			expect(events).toEqual([]);
 			expect(triggerEvents).toHaveLength(1);
 			expect(triggerEvents[0]).toMatchObject({
 				eventType: "labelChanged",
-				op: { op: "delete", startPos: 0, endPos: 5, word: "Alice" },
+				op: { op: "delete", labelId },
 			});
 		});
 
 		it("rejects deleting nonexistent label", () => {
-			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
+			const missingLabelId = idRepo.newId("label");
 
 			const result = Effect.runSync(
-				chapterDM.deleteLabel(labelGroupId, 7, 9).pipe(Effect.either),
+				chapterDM.deleteLabel(labelGroupId, missingLabelId).pipe(Effect.either),
 			);
 
 			expect(result._tag).toBe("Left");
@@ -408,7 +422,7 @@ describe("buildChapterDataManager", () => {
 		it("flushes label ops when switching to text ops", () => {
 			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
 
-			Effect.runSync(chapterDM.addLabel(labelGroupId, 6, 9, "met"));
+			Effect.runSync(chapterDM.addLabel(labelGroupId, 6, 9));
 
 			const events = Effect.runSync(chapterDM.insertTextAt(26, "!"));
 
@@ -421,17 +435,18 @@ describe("buildChapterDataManager", () => {
 
 			Effect.runSync(chapterDM.insertTextAt(26, "!"));
 
-			const events = Effect.runSync(chapterDM.addLabel(labelGroupId, 6, 9, "met"));
+			const events = Effect.runSync(chapterDM.addLabel(labelGroupId, 6, 9));
 
 			expect(events.length).toBeGreaterThan(0);
 			expect(events[0]).toMatchObject({ variant: "textOp", active: true });
 		});
 
 		it("does not flush when same tag", () => {
-			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
+			const labelId = getLabelProvId(idRepo, UUID5);
 
-			Effect.runSync(chapterDM.addLabel(labelGroupId, 6, 9, "met"));
-			const events = Effect.runSync(chapterDM.deleteLabel(labelGroupId, 0, 5));
+			Effect.runSync(chapterDM.addLabel(labelGroupId, 6, 9));
+			const events = Effect.runSync(chapterDM.deleteLabel(labelGroupId, labelId));
 
 			expect(events).toEqual([]);
 		});
@@ -443,6 +458,60 @@ describe("buildChapterDataManager", () => {
 
 			const events = Effect.runSync(chapterDM.flush());
 			expect(events).toEqual([]);
+		});
+
+		it("splits an update of a newly added label into a later request", () => {
+			const { chapterDM, triggerEvents, labelGroupId } = Effect.runSync(buildTestChapterDM());
+
+			Effect.runSync(chapterDM.addLabel(labelGroupId, 6, 9));
+			const addEvent = triggerEvents[0];
+			if (addEvent?.eventType !== "labelChanged" || addEvent.op.op !== "add") {
+				throw new Error("Expected an add-label trigger event");
+			}
+			Effect.runSync(chapterDM.updateLabel(labelGroupId, addEvent.op.labelId, 6, 8));
+
+			const events = Effect.runSync(chapterDM.flush());
+
+			expect(events).toHaveLength(2);
+			expect(events[0].reservationRequest.reserveList().label).toEqual([
+				expect.objectContaining({
+					id: addEvent.op.labelId,
+					desiredState: "creating",
+				}),
+			]);
+			expect(events[1].reservationRequest.reserveList().label).toEqual([
+				expect.objectContaining({
+					id: addEvent.op.labelId,
+					desiredState: "updating",
+				}),
+			]);
+		});
+
+		it("splits deletion of a newly added label into a later request", () => {
+			const { chapterDM, triggerEvents, labelGroupId } = Effect.runSync(buildTestChapterDM());
+
+			Effect.runSync(chapterDM.addLabel(labelGroupId, 6, 9));
+			const addEvent = triggerEvents[0];
+			if (addEvent?.eventType !== "labelChanged" || addEvent.op.op !== "add") {
+				throw new Error("Expected an add-label trigger event");
+			}
+			Effect.runSync(chapterDM.deleteLabel(labelGroupId, addEvent.op.labelId));
+
+			const events = Effect.runSync(chapterDM.flush());
+
+			expect(events).toHaveLength(2);
+			expect(events[0].reservationRequest.reserveList().label).toEqual([
+				expect.objectContaining({
+					id: addEvent.op.labelId,
+					desiredState: "creating",
+				}),
+			]);
+			expect(events[1].reservationRequest.reserveList().label).toEqual([
+				expect.objectContaining({
+					id: addEvent.op.labelId,
+					desiredState: "deleting",
+				}),
+			]);
 		});
 
 		it("creates cached text-op requests that pass request keys", async () => {
@@ -484,7 +553,7 @@ describe("buildChapterDataManager", () => {
 		it("resets op queue after flush", () => {
 			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
 
-			Effect.runSync(chapterDM.addLabel(labelGroupId, 6, 9, "met"));
+			Effect.runSync(chapterDM.addLabel(labelGroupId, 6, 9));
 			Effect.runSync(chapterDM.flush());
 			const events = Effect.runSync(chapterDM.flush());
 
@@ -494,7 +563,9 @@ describe("buildChapterDataManager", () => {
 
 	describe("insertTextAt", () => {
 		it("shifts labels after insertion point", () => {
-			const { chapterDM, triggerEvents, labelGroupId } = Effect.runSync(buildTestChapterDM());
+			const { chapterDM, triggerEvents, labelGroupId, idRepo } =
+				Effect.runSync(buildTestChapterDM());
+			const bobId = getLabelProvId(idRepo, UUID6);
 
 			Effect.runSync(chapterDM.insertTextAt(6, "bravely "));
 
@@ -506,29 +577,31 @@ describe("buildChapterDataManager", () => {
 			Effect.runSync(chapterDM.flush());
 
 			const deleteResult = Effect.runSync(
-				chapterDM.deleteLabel(labelGroupId, 18, 21).pipe(Effect.either),
+				chapterDM.deleteLabel(labelGroupId, bobId).pipe(Effect.either),
 			);
 			expect(deleteResult._tag).toBe("Right");
 		});
 
 		it("drops labels straddling insertion point", () => {
-			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
+			const aliceId = getLabelProvId(idRepo, UUID5);
 
 			Effect.runSync(chapterDM.insertTextAt(2, "XX"));
 
 			const deleteResult = Effect.runSync(
-				chapterDM.deleteLabel(labelGroupId, 0, 5).pipe(Effect.either),
+				chapterDM.deleteLabel(labelGroupId, aliceId).pipe(Effect.either),
 			);
 			expect(deleteResult._tag).toBe("Left");
 		});
 
 		it("preserves labels before insertion point", () => {
-			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
+			const aliceId = getLabelProvId(idRepo, UUID5);
 
 			Effect.runSync(chapterDM.insertTextAt(14, " yesterday"));
 
 			const deleteResult = Effect.runSync(
-				chapterDM.deleteLabel(labelGroupId, 0, 5).pipe(Effect.either),
+				chapterDM.deleteLabel(labelGroupId, aliceId).pipe(Effect.either),
 			);
 			expect(deleteResult._tag).toBe("Right");
 		});
@@ -536,25 +609,27 @@ describe("buildChapterDataManager", () => {
 
 	describe("deleteTextAt", () => {
 		it("shifts labels after deletion range", () => {
-			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
+			const bobId = getLabelProvId(idRepo, UUID6);
 
 			Effect.runSync(chapterDM.deleteTextAt(5, 10));
 
 			Effect.runSync(chapterDM.flush());
 
 			const deleteResult = Effect.runSync(
-				chapterDM.deleteLabel(labelGroupId, 5, 8).pipe(Effect.either),
+				chapterDM.deleteLabel(labelGroupId, bobId).pipe(Effect.either),
 			);
 			expect(deleteResult._tag).toBe("Right");
 		});
 
 		it("drops labels overlapping deletion range", () => {
-			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
+			const bobId = getLabelProvId(idRepo, UUID6);
 
 			Effect.runSync(chapterDM.deleteTextAt(8, 14));
 
 			const deleteResult = Effect.runSync(
-				chapterDM.deleteLabel(labelGroupId, 10, 13).pipe(Effect.either),
+				chapterDM.deleteLabel(labelGroupId, bobId).pipe(Effect.either),
 			);
 			expect(deleteResult._tag).toBe("Left");
 		});
@@ -567,7 +642,7 @@ describe("buildChapterDataManager", () => {
 			Effect.runSync(chapterDM.destroy());
 
 			const result = Effect.runSync(
-				chapterDM.addLabel(labelGroupId, 6, 9, "met").pipe(Effect.either),
+				chapterDM.addLabel(labelGroupId, 6, 9).pipe(Effect.either),
 			);
 			expect(result._tag).toBe("Left");
 			expect(chapterDM.getters.isDestroyed()).toBe(true);
@@ -823,8 +898,8 @@ describe("buildChapterDataManager", () => {
 			labelOpMock.mockClear();
 			reloadMock.mockClear();
 			labelOpMock.mockResolvedValue({
-				status: 204,
-				data: undefined,
+				status: 200,
+				data: { results: [UUID8] },
 				headers: new Headers(),
 			});
 			reloadMock.mockResolvedValue(makeReloadResponse(UUID7));
@@ -834,7 +909,7 @@ describe("buildChapterDataManager", () => {
 				buildRequestManager(idRepo, () => Effect.succeed(void 0)),
 			);
 
-			Effect.runSync(chapterDM.addLabel(labelGroupId, 6, 9, "met"));
+			Effect.runSync(chapterDM.addLabel(labelGroupId, 6, 9));
 			const reloadEvents = Effect.runSync(chapterDM.reloadGroup(labelGroupId, true));
 			expect(reloadEvents.map((event) => event.variant)).toEqual([
 				"labelOp",

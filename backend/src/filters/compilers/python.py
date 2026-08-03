@@ -1,3 +1,5 @@
+import builtins
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, assert_never, cast
@@ -11,33 +13,46 @@ from src.filters.data_types import (
     FloatData,
     IntData,
     LabelRefData,
+    Schema,
+    SObj,
     StringData,
     TextSpan,
     TextSpanData,
 )
 from src.filters.functions import (
+    Add,
     And,
     Call,
+    Ceil,
     Compare,
+    Concat,
     Construct,
+    Contains,
     EndOf,
     Extend,
+    Floor,
     FunctionType,
     Get,
+    If,
     LengthOf,
     LiteralBool,
     LiteralFloat,
     LiteralInt,
     LiteralString,
+    Maximum,
+    Minimum,
     Not,
     Or,
     ProjectToSpan,
     Rename,
+    Round,
     ScoreOf,
     Signature,
     StartOf,
+    Subtract,
     TextAround,
     TextOf,
+    ToFloat,
     WordOf,
 )
 
@@ -69,6 +84,13 @@ def _evaluate_in_environment(
     if len(function.signature.args) == 0:
         return function((), ctx)
     return function(environment, ctx)
+
+
+def _project_to_schema(data: Data, schema: SObj) -> Data:
+    if not isinstance(schema, Schema):
+        return data
+    obj = cast(DataObj, data)
+    return DataObj(fields={field_name: obj.fields[field_name] for field_name in schema.fields})
 
 
 def _compare_values(left: Any, right: Any, operation: str) -> bool:
@@ -107,6 +129,100 @@ class PythonCompiler:
                 return BoolData(value=_compare_values(left.value, right.value, function.op))
 
             executable = compare
+
+        elif isinstance(function, Add):
+
+            def add(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                if function.type == "int":
+                    result = cast(IntData, arguments[0]).value
+                    for argument in arguments[1:]:
+                        result += cast(IntData, argument).value
+                    return IntData(value=result)
+                result = cast(FloatData, arguments[0]).value
+                for argument in arguments[1:]:
+                    result += cast(FloatData, argument).value
+                return FloatData(value=result)
+
+            executable = add
+
+        elif isinstance(function, Subtract):
+
+            def subtract(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                if function.type == "int":
+                    left = cast(IntData, arguments[0])
+                    right = cast(IntData, arguments[1])
+                    return IntData(value=left.value - right.value)
+                left = cast(FloatData, arguments[0])
+                right = cast(FloatData, arguments[1])
+                return FloatData(value=left.value - right.value)
+
+            executable = subtract
+
+        elif isinstance(function, Maximum):
+
+            def maximum(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                if function.type == "int":
+                    return IntData(value=builtins.max(cast(IntData, argument).value for argument in arguments))
+                return FloatData(value=builtins.max(cast(FloatData, argument).value for argument in arguments))
+
+            executable = maximum
+
+        elif isinstance(function, Minimum):
+
+            def minimum(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                if function.type == "int":
+                    return IntData(value=builtins.min(cast(IntData, argument).value for argument in arguments))
+                return FloatData(value=builtins.min(cast(FloatData, argument).value for argument in arguments))
+
+            executable = minimum
+
+        elif isinstance(function, Concat):
+
+            def concat(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                return StringData(value="".join(cast(StringData, argument).value for argument in arguments))
+
+            executable = concat
+
+        elif isinstance(function, Contains):
+
+            def contains(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                haystack = cast(StringData, arguments[0])
+                needle = cast(StringData, arguments[1])
+                return BoolData(value=needle.value in haystack.value)
+
+            executable = contains
+
+        elif isinstance(function, ToFloat):
+
+            def to_float(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(IntData, arguments[0])
+                return FloatData(value=builtins.float(data.value))
+
+            executable = to_float
+
+        elif isinstance(function, Floor):
+
+            def floor(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(FloatData, arguments[0])
+                return IntData(value=math.floor(data.value))
+
+            executable = floor
+
+        elif isinstance(function, Ceil):
+
+            def ceil(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(FloatData, arguments[0])
+                return IntData(value=math.ceil(data.value))
+
+            executable = ceil
+
+        elif isinstance(function, Round):
+
+            def round_fn(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(FloatData, arguments[0])
+                return IntData(value=builtins.round(data.value))
+
+            executable = round_fn
 
         elif isinstance(function, Not):
 
@@ -168,11 +284,13 @@ class PythonCompiler:
 
             def project_to_span(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
                 data = cast(LabelRefData, arguments[0])
+                label = ctx.get_label(data.value.label_id)
                 return TextSpanData(
                     value=TextSpan(
-                        start=data.value.start,
-                        end=data.value.end,
+                        start=label.start,
+                        end=label.end,
                         chapter_content_id=data.value.chapter_content_id,
+                        chapter_id=data.value.chapter_id,
                     )
                 )
 
@@ -205,6 +323,21 @@ class PythonCompiler:
                 return DataObj(fields=fields)
 
             executable = rename
+        elif isinstance(function, If):
+            compiled_condition = self.compile(function.condition)
+            compiled_then_branch = self.compile(function.then_branch)
+            compiled_else_branch = self.compile(function.else_branch)
+
+            def if_function(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                condition_result = _evaluate_in_environment(compiled_condition, arguments, ctx)
+                condition_result_value = cast(BoolData, condition_result).value
+                if condition_result_value:
+                    result = _evaluate_in_environment(compiled_then_branch, arguments, ctx)
+                else:
+                    result = _evaluate_in_environment(compiled_else_branch, arguments, ctx)
+                return _project_to_schema(result, function.output_schema)
+
+            executable = if_function
 
         elif isinstance(function, Construct):
             compiled_fields = {

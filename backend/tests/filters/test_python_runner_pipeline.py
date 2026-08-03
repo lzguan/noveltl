@@ -145,6 +145,8 @@ def _run_pipeline(
     PythonLabelSourceRunner(testing_session_local, batch_size=1).execute(
         SOURCE_JOB_ID,
         PythonLabelSourceInput(
+            runner_name="ls",
+            runtime_name="python",
             label_group_id=label_group_id,
             output_workflow_id=source_workflow.workflow_id,
         ),
@@ -152,6 +154,8 @@ def _run_pipeline(
     PythonFilterRunner(testing_session_local, batch_size=1).execute(
         FILTER_JOB_ID,
         PythonFilterInput(
+            runner_name="filter",
+            runtime_name="python",
             source_workflow_id=source_workflow.workflow_id,
             output_workflow_id=filtered_workflow.workflow_id,
             function_definition_id=score_definition.function_definition_id,
@@ -160,6 +164,8 @@ def _run_pipeline(
     PythonMapRunner(testing_session_local, batch_size=1).execute(
         WORD_MAP_JOB_ID,
         PythonMapInput(
+            runner_name="map",
+            runtime_name="python",
             source_workflow_id=filtered_workflow.workflow_id,
             output_workflow_id=word_workflow.workflow_id,
             function_definition_id=word_definition.function_definition_id,
@@ -168,6 +174,8 @@ def _run_pipeline(
     PythonMapRunner(testing_session_local, batch_size=1).execute(
         RENAME_MAP_JOB_ID,
         PythonMapInput(
+            runner_name="map",
+            runtime_name="python",
             source_workflow_id=word_workflow.workflow_id,
             output_workflow_id=renamed_workflow.workflow_id,
             function_definition_id=rename_definition.function_definition_id,
@@ -175,7 +183,11 @@ def _run_pipeline(
     )
     PythonGroupRunner(testing_session_local, batch_size=1).execute(
         GROUP_JOB_ID,
-        PythonGroupInput(grouping_id=grouping.grouping_id),
+        PythonGroupInput(
+            runner_name="group",
+            runtime_name="python",
+            grouping_id=grouping.grouping_id,
+        ),
     )
 
     test_db.expire_all()

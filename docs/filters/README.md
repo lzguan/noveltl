@@ -1,6 +1,6 @@
 # Filters
 
-**Last updated:** 2026-07-28
+**Last updated:** 2026-08-04
 
 The filter subsystem builds typed, repeatable data-processing pipelines over
 NovelTL data. Its first implemented pipeline starts with the current labels in
@@ -28,7 +28,10 @@ The backend currently implements:
 The read and write APIs are exposed through FastAPI, but the frontend is not
 implemented yet. Alembic migrations create the filter persistence tables and
 workflow permission-scope associations. Public operation services create
-pending targets and enqueue the registered Celery runner tasks.
+pending targets and enqueue the registered Celery runner tasks, which the
+`filters-worker` process consumes. See
+[workers and task queues](../project-structure.md#workers-and-task-queues) for
+how that worker is configured, built, and started.
 
 The read API contract is documented in [endpoints.md](endpoints.md). The
 mutation and runner API is specified in

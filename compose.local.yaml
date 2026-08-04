@@ -29,3 +29,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: autolabels-worker
+
+  filters-worker:
+    image: noveltl-filters-worker:local
+    pull_policy: build
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: filters-worker

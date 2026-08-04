@@ -1,11 +1,11 @@
 # Filter runners and persistence
 
-**Last updated:** 2026-07-28
+**Last updated:** 2026-08-04
 
 Runners materialize or organize workflow instances using persisted schemas and
 function definitions. They are synchronous backend classes with a shared
-`execute(job_id, input)` protocol. They are not yet registered as HTTP
-endpoints or Arq worker tasks.
+`execute(job_id, input)` protocol. They are invoked as Celery tasks in the
+filters worker; see [workers and task queues](../project-structure.md#workers-and-task-queues).
 
 ## Persistence model
 
@@ -139,19 +139,29 @@ equivalent to full retryability.
 
 ## Current integration boundary
 
-The filter models are imported by the shared SQLAlchemy metadata registry, so
-tests using `Base.metadata.create_all()` can create them. Production
-integration is incomplete:
+Backend integration is complete:
 
-- no Alembic migration creates the tables;
-- no FastAPI router exposes workflows or operations;
-- no service layer creates and connects pipeline stages;
-- no Arq task invokes these runners;
-- no user or permission model scopes execution;
+- [`alembic/versions/d386545e4f4a_filters.py`](../../backend/alembic/versions/d386545e4f4a_filters.py)
+  creates the tables;
+- [`filters/router.py`](../../backend/src/filters/router.py) exposes workflows
+  and operations, and is registered in
+  [`main.py`](../../backend/src/main.py);
+- [`filters/service.py`](../../backend/src/filters/service.py) creates and
+  connects pipeline stages;
+- [`filters/dispatch/celery.py`](../../backend/src/filters/dispatch/celery.py)
+  enqueues runner jobs, which
+  [`filters/worker/tasks.py`](../../backend/src/filters/worker/tasks.py)
+  executes in the filters worker;
+- [`filters/permissions.py`](../../backend/src/filters/permissions.py) scopes
+  execution to users.
+
+One piece is still missing:
+
 - no frontend renders workflows, instances, or groups.
 
-Until those pieces exist, tests and direct backend callers must construct the
-persistence rows and invoke runners explicitly.
+Until it exists, the runners are reachable through the HTTP API but have no
+user-facing entry point, so tests and direct backend callers remain the
+primary consumers.
 
 ## Testing
 

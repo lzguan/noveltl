@@ -1,6 +1,6 @@
 # Autolabels
 
-**Last updated:** 2026-07-15
+**Last updated:** 2026-08-04
 
 This document describes the autolabel service: the backend NER inference pipeline, the frontend UI for creating and managing autolabel runs, and how the frontend integrates with the controller ecosystem.
 
@@ -9,6 +9,8 @@ This document describes the autolabel service: the backend NER inference pipelin
 The autolabel service runs named entity recognition (NER) models against novel chapters and stores the detected entities as autolabel data. Users can review the results and promote accepted autolabels into a label group, where they become regular labels in the chapter editor.
 
 The backend handles model inference via a background worker queue. The frontend provides a UI panel within the [editor](editor/README.md) for creating runs, monitoring progress, and promoting results.
+
+Inference runs in the `autolabels-worker` process, a Celery application with its own Redis database. See [workers and task queues](project-structure.md#workers-and-task-queues) for how the workers are configured, built, and started.
 
 ## Backend architecture
 

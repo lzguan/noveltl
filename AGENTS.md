@@ -33,7 +33,7 @@ When debugging, if the issue turns out to be more subtle or require a broader fi
 
 ## Skills/Agents
 
-Skills are currently located in [.claude/skills/](.claude/skills/). Agents are currently located in [.claude/agents/](.claude/agents/). If none of the above conventions fits the format that your tool expects, let the user know at the beginning of a session.
+Skills are currently located in [.agents/skills/](.agents/skills/) and tracked in [skills-lock.json](skills-lock.json). There is no shared agents directory yet. If none of the above conventions fits the format that your tool expects, let the user know at the beginning of a session.
 
 Actively suggest ways for the user to improve their workflow, such as using plan mode, subagents, or various other features that you offer if they fit the task scope.
 

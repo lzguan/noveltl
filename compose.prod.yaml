@@ -71,6 +71,22 @@ services:
       <<: [*db-env, *redis-env]
       SECRET_KEY: ${SECRET_KEY}
 
+  filters-worker:
+    image: ghcr.io/lzguan/noveltl-filters-worker:${IMAGE_TAG:-latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: filters-worker
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: [*db-env, *redis-env]
+      SECRET_KEY: ${SECRET_KEY}
+
   frontend:
     image: ghcr.io/lzguan/noveltl-frontend:${IMAGE_TAG:-latest}
     build:

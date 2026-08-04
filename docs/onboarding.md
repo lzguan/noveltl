@@ -1,6 +1,6 @@
 # Onboarding
 
-**Last updated:** 2026-07-20
+**Last updated:** 2026-08-04
 
 ## Getting started
 
@@ -52,7 +52,7 @@ docker compose \
   up -d db redis
 ```
 
-The worker image downloads the pinned autolabel model during its first build, so the initial build may take longer than subsequent builds.
+The autolabels worker image downloads the pinned autolabel model during its first build, so the initial build may take longer than subsequent builds. The filters worker image installs only the base dependencies and builds quickly.
 
 Run database migrations:
 
@@ -111,11 +111,12 @@ Pushes to `master` publish the backend, worker, and frontend production images t
 
 ```text
 ghcr.io/lzguan/noveltl-backend
-ghcr.io/lzguan/noveltl-worker
+ghcr.io/lzguan/noveltl-autolabels-worker
+ghcr.io/lzguan/noveltl-filters-worker
 ghcr.io/lzguan/noveltl-frontend
 ```
 
-The first publication of each package is private by default. Either change all three package visibilities to public in GitHub, or authenticate the server with a classic personal access token that has only the `read:packages` scope:
+The first publication of each package is private by default. Either change all four package visibilities to public in GitHub, or authenticate the server with a classic personal access token that has only the `read:packages` scope:
 
 ```bash
 read -rsp "GHCR token: " CR_PAT
@@ -127,7 +128,7 @@ unset CR_PAT
 
 Create the server environment file from [`.env.prod.example`](../.env.prod.example). Change `COMPOSE_PROJECT_NAME` to `noveltl_prod`, generate production values for `DB_PASSWORD` and `SECRET_KEY`, and set `SITE_ADDRESS` to the public domain once its DNS records point to the server.
 
-Keep `IMAGE_TAG=latest` to deploy the newest build after all three publishing jobs succeed. For reproducible deployments and rollbacks, set it to the full commit SHA shown by the successful publishing workflow instead.
+Keep `IMAGE_TAG=latest` to deploy the newest build after all four publishing jobs succeed. For reproducible deployments and rollbacks, set it to the full commit SHA shown by the successful publishing workflow instead.
 
 Pull the images and start PostgreSQL and Redis:
 

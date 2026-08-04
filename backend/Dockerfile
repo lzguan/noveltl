@@ -37,3 +37,10 @@ RUN uv run --no-sync hf download \
       vocab.txt \
       --revision ${CLUENER_REVISION}
 CMD ["uv", "run", "--no-sync", "celery", "-A", "src.autolabels.celery_app", "worker", "--loglevel=info"]
+
+FROM base AS filters-worker
+# The filter runners need only the base dependencies. Nothing reachable from
+# src.filters.celery_app imports FastAPI or torch, so no dependency group is synced here.
+COPY --chown=${UNAME}:${GNAME} . .
+
+CMD ["uv", "run", "--no-sync", "celery", "-A", "src.filters.celery_app", "worker", "--loglevel=info"]

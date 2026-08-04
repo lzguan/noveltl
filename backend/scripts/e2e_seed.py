@@ -10,7 +10,7 @@ from src.auth.constants import UserType
 from src.auth.models import User
 from src.auth.utils import hash_password
 from src.labels.constants import LabelRole
-from src.labels.models import LabelContributor, LabelData, LabelGroup
+from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.languages.models import Language
 from src.models import Base
 from src.novels.constants import NovelType, Role, Visibility
@@ -122,6 +122,10 @@ def main() -> None:
         db.add(label_group)
         db.commit()
 
+        label_data = LabelData(
+            label_group_id=label_group.label_group_id,
+            chapter_content_id=content.chapter_content_id,
+        )
         db.add_all(
             [
                 LabelContributor(
@@ -129,11 +133,21 @@ def main() -> None:
                     user_id=user.user_id,
                     label_contributor_role=LabelRole.OWNER,
                 ),
-                LabelData(
-                    label_group_id=label_group.label_group_id,
-                    chapter_content_id=content.chapter_content_id,
-                ),
+                label_data,
             ]
+        )
+        db.commit()
+        db.refresh(label_data)
+        db.add(
+            Label(
+                label_data_id=label_data.label_data_id,
+                label_word="Alice",
+                label_start=0,
+                label_end=5,
+                label_entity_group="character",
+                label_score=1,
+                label_dirty=False,
+            )
         )
         db.commit()
         db.refresh(novel)

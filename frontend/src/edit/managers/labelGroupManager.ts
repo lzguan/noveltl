@@ -358,6 +358,14 @@ export function createLabelGroupManager({
 					if (event.chapterId !== readChapterId()) break;
 					yield* updateLabelGroupStatus(event.labelGroupId, "startLoading");
 					break;
+				case "labelDataOutdated":
+					if (event.chapterId !== readChapterId()) break;
+					controllerUserEvent({
+						eventType: "loadLabelData",
+						labelGroupId: event.labelGroupId,
+						chapterId: event.chapterId,
+					});
+					break;
 				case "chapterOpened":
 					if (!event.flags.forEditor) break;
 					yield* updateAllLabelGroupsStatus();

@@ -1415,15 +1415,13 @@ export const buildChapterDataManager = (
 						labelGroup: [
 							{ id: labelGroupId, kind: "labelGroup", desiredState: "locked" },
 						],
-						labelData: oldLabelDataIsBound
-							? [
-									{
-										id: oldLabelDataProvId,
-										kind: "labelData",
-										desiredState: "locked",
-									},
-								]
-							: [],
+						labelData: [
+							{
+								id: oldLabelDataProvId,
+								kind: "labelData",
+								desiredState: oldLabelDataIsBound ? "idUpdating" : "loading",
+							},
+						],
 						label: oldLabelIds.map((id) => ({
 							id,
 							kind: "label" as const,
@@ -1497,12 +1495,20 @@ export const buildChapterDataManager = (
 									}),
 								);
 							}
-							const newLabelDataProvId = yield* idRepo
-								.newIdAndBindId({
-									kind: "labelData",
-									servId: LDServId(entry.labelData.labelDataId),
-								})
-								.pipe(Effect.mapError((err) => new FatalException({ orig: err })));
+							const newLabelDataServId = LDServId(entry.labelData.labelDataId);
+							yield* (
+								oldLabelDataIsBound
+									? idRepo.replaceServerId({
+											kind: "labelData",
+											provId: oldLabelDataProvId,
+											servId: newLabelDataServId,
+										})
+									: idRepo.bindServerId({
+											kind: "labelData",
+											provId: oldLabelDataProvId,
+											servId: newLabelDataServId,
+										})
+							).pipe(Effect.mapError((err) => new FatalException({ orig: err })));
 							const provLabels: ProvLabel[] = entry.labels
 								.map((l) => {
 									const provLabelId = Effect.runSync(
@@ -1515,7 +1521,7 @@ export const buildChapterDataManager = (
 									return Prov({
 										...l,
 										labelId: provLabelId,
-										labelDataId: newLabelDataProvId,
+										labelDataId: oldLabelDataProvId,
 									});
 								})
 								.sort((a, b) => a.labelStart - b.labelStart);
@@ -1526,17 +1532,7 @@ export const buildChapterDataManager = (
 									desiredState: "detaching",
 								});
 							}
-							if (newLabelDataProvId !== oldLabelDataProvId) {
-								cleanupReserveListValue.labelData.push({
-									id: oldLabelDataProvId,
-									kind: "labelData",
-									desiredState: oldLabelDataIsBound ? "detaching" : "killing",
-								});
-							}
-							if (
-								cleanupReserveListValue.label.length > 0 ||
-								cleanupReserveListValue.labelData.length > 0
-							) {
+							if (cleanupReserveListValue.label.length > 0) {
 								cleanupReserveListValue.labelGroup.push({
 									id: labelGroupId,
 									kind: "labelGroup",
@@ -1548,7 +1544,7 @@ export const buildChapterDataManager = (
 							yield* labelDataIndex
 								.setMeta(labelGroupId, {
 									labelData: Prov({
-										labelDataId: newLabelDataProvId,
+										labelDataId: oldLabelDataProvId,
 										chapterContentId,
 										labelGroupId,
 									}),

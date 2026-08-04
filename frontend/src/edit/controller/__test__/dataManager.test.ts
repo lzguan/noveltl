@@ -888,20 +888,29 @@ describe("buildChapterDataManager", () => {
 	});
 
 	describe("reload then text edit", () => {
-		it("reuses unchanged label IDs while reloading an already-loaded group", async () => {
+		it("reuses provisional IDs while reloading an already-loaded group", async () => {
 			const reloadMock = vi.mocked(
 				readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
 			);
 			reloadMock.mockClear();
-			reloadMock.mockResolvedValue(makeReloadResponse(UUID4, [UUID5, UUID6]));
+			reloadMock.mockResolvedValue(makeReloadResponse(UUID7, [UUID5, UUID6]));
 
 			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM());
 			const aliceId = getLabelProvId(idRepo, UUID5);
 			const bobId = getLabelProvId(idRepo, UUID6);
+			const originalSlot = Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId));
+			const originalLabelDataId = originalSlot.meta.labelData.labelDataId;
 			const reloadEvents = Effect.runSync(chapterDM.reloadGroup(labelGroupId, true));
 			const primaryReload = reloadEvents[0];
 			const cleanupReload = reloadEvents[1];
 			const primaryReserveList = primaryReload.reservationRequest.reserveList();
+			expect(primaryReserveList.labelData).toEqual([
+				{
+					id: originalLabelDataId,
+					kind: "labelData",
+					desiredState: "idUpdating",
+				},
+			]);
 
 			Effect.runSync(reserveAll(idRepo, primaryReserveList));
 			const responseData = await Effect.runPromise(
@@ -911,6 +920,12 @@ describe("buildChapterDataManager", () => {
 
 			const slot = Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId));
 			expect(slot.status).toBe("ready");
+			expect(slot.meta.labelData.labelDataId).toBe(originalLabelDataId);
+			expect(
+				Effect.runSync(
+					idRepo.getServerId({ kind: "labelData", provId: originalLabelDataId }),
+				),
+			).toBe(UUID7);
 			if (slot.status === "ready") {
 				expect(slot.data.labels.map(({ labelId }) => labelId)).toEqual([aliceId, bobId]);
 			}
@@ -928,19 +943,46 @@ describe("buildChapterDataManager", () => {
 			expect(waitResult).toBe(false);
 		});
 
-		it("omits pending labelData from reloadGroup primary request for a newly added group", async () => {
+		it("loads a newly added group's server ID into its existing provisional ID", async () => {
+			const reloadMock = vi.mocked(
+				readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
+			);
+			reloadMock.mockClear();
+			reloadMock.mockResolvedValue(makeReloadResponse(UUID4));
 			const { chapterDM, idRepo, labelGroupId } = await buildOpenedNovelWithAddedLabelGroup();
 
 			const reloadEvents = Effect.runSync(chapterDM.reloadGroup(labelGroupId, true));
 			expect(reloadEvents).toHaveLength(2);
+			const pendingSlot = Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId));
+			const originalLabelDataId = pendingSlot.meta.labelData.labelDataId;
 
 			const reserveList = reloadEvents[0].reservationRequest.reserveList();
 			const labelGroupReady = Effect.runSync(idRepo.isReserveable(reserveList.labelGroup[0]));
-			const cleanupReserveList = reloadEvents[1].reservationRequest.reserveList();
 
 			expect(labelGroupReady).toBe(true);
-			expect(reserveList.labelData).toEqual([]);
-			expect(cleanupReserveList.labelData).toEqual([]);
+			expect(reserveList.labelData).toEqual([
+				{
+					id: originalLabelDataId,
+					kind: "labelData",
+					desiredState: "loading",
+				},
+			]);
+
+			Effect.runSync(reserveAll(idRepo, reserveList));
+			const responseData = await Effect.runPromise(
+				reloadEvents[0].send(RequestKey("reload-key")),
+			);
+			await Effect.runPromise(reloadEvents[0].postSend(responseData));
+
+			const loadedSlot = Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId));
+			expect(loadedSlot.meta.labelData.labelDataId).toBe(originalLabelDataId);
+			expect(
+				Effect.runSync(
+					idRepo.getServerId({ kind: "labelData", provId: originalLabelDataId }),
+				),
+			).toBe(UUID4);
+			expect(reloadEvents[1].reservationRequest.reserveList().labelData).toEqual([]);
+			Effect.runSync(releaseAllOnSuccess(idRepo, reserveList));
 		});
 
 		it("blocks text op reservation when reload returns same labelDataId", async () => {
@@ -955,11 +997,16 @@ describe("buildChapterDataManager", () => {
 
 			const reloadEvents = Effect.runSync(chapterDM.reloadGroup(labelGroupId, true));
 			expect(reloadEvents[0].variant).toBe("reloadGroup");
+			const reloadReserveList = reloadEvents[0].reservationRequest.reserveList();
+			expect(reloadReserveList.labelData).toHaveLength(1);
+			expect(reloadReserveList.labelData[0].desiredState).toBe("idUpdating");
+			Effect.runSync(reserveAll(idRepo, reloadReserveList));
 
 			const responseData = await Effect.runPromise(
 				reloadEvents[0].send(RequestKey("reload-key")),
 			);
 			await Effect.runPromise(reloadEvents[0].postSend(responseData));
+			Effect.runSync(releaseAllOnSuccess(idRepo, reloadReserveList));
 
 			const slot = Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId));
 			expect(slot.status).toBe("ready");

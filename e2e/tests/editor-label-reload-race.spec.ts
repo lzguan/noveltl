@@ -124,3 +124,100 @@ test("continues processing text after a new label reload overlaps an edit", asyn
 		})
 		.toBe(expectedText);
 });
+
+test("reloads authoritative labels after text invalidates an in-flight reload", async ({
+	page,
+	request,
+}) => {
+	const seed = readSeed();
+	const token = await loginByApi(page, request);
+	const initialContent = await latestChapterContent(request, token, seed.chapterId);
+	const reloadPath = `/api/edit-chapter-data/${seed.chapterId}/label-data`;
+	let targetReloadRequestCount = 0;
+	const isSeededGroupReload = (method: string, url: string, body: unknown) =>
+		method === "POST" &&
+		new URL(url).pathname === reloadPath &&
+		Array.isArray(body) &&
+		body.includes(seed.labelGroupId);
+
+	let releaseReload = () => {};
+	const reloadGate = new Promise<void>((resolve) => {
+		releaseReload = resolve;
+	});
+	let reportReloadStarted = () => {};
+	const reloadStarted = new Promise<void>((resolve) => {
+		reportReloadStarted = resolve;
+	});
+
+	await page.route(`**${reloadPath}`, async (route) => {
+		const interceptedRequest = route.request();
+		if (
+			!isSeededGroupReload(
+				interceptedRequest.method(),
+				interceptedRequest.url(),
+				interceptedRequest.postDataJSON(),
+			)
+		) {
+			await route.continue();
+			return;
+		}
+		targetReloadRequestCount += 1;
+		if (targetReloadRequestCount === 1) {
+			reportReloadStarted();
+			await reloadGate;
+		}
+		await route.continue();
+	});
+
+	await page.goto(`/edit/novels/${seed.novelId}`);
+	await page.getByText(`Ch.1: ${seed.chapterTitle}`).click();
+	await expect(page.locator(".cm-content")).toContainText(initialContent.chapterContentText);
+
+	await page.getByRole("tab", { name: "Label Groups" }).click();
+	const labelGroupPanel = page.getByRole("tabpanel", { name: "Label Groups" });
+	const labelGroupRow = labelGroupPanel.getByText(seed.labelGroupName).locator("..");
+	await labelGroupRow.locator("button:has(svg.lucide-refresh-cw)").click();
+	await reloadStarted;
+
+	await page.getByRole("button", { name: "Edit" }).click();
+	const editor = page.locator(".cm-content");
+	await editor.click();
+	await page.keyboard.press(process.platform === "darwin" ? "Meta+Home" : "Control+Home");
+	const prefix = "Inserted during labeled reload: ";
+	await page.keyboard.type(prefix);
+	const expectedText = `${prefix}${initialContent.chapterContentText}`;
+	await expect(editor).toContainText(expectedText);
+	await page.waitForTimeout(reloadQueueDelayMs);
+
+	const authoritativeReloadFinished = page.waitForResponse(
+		(response) =>
+			isSeededGroupReload(
+				response.request().method(),
+				response.url(),
+				response.request().postDataJSON(),
+			) && targetReloadRequestCount >= 2,
+	);
+	releaseReload();
+	const authoritativeReload = await authoritativeReloadFinished;
+	await page.unroute(`**${reloadPath}`);
+
+	expect(authoritativeReload.ok()).toBe(true);
+	const aliceStart = expectedText.indexOf("Alice");
+	expect(await authoritativeReload.json()).toEqual([
+		expect.objectContaining({
+			labels: expect.arrayContaining([
+				expect.objectContaining({
+					labelWord: "Alice",
+					labelStart: aliceStart,
+					labelEnd: aliceStart + "Alice".length,
+				}),
+			]),
+		}),
+	]);
+	await expect
+		.poll(async () => {
+			const content = await latestChapterContent(request, token, seed.chapterId);
+			return content.chapterContentText;
+		})
+		.toBe(expectedText);
+});

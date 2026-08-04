@@ -172,6 +172,8 @@ export const buildChapterDataManager = (
 			| { tag: "text"; queue: TextOp[] }
 			| { tag: "neither" } = { tag: "neither" };
 		const orphanedLabelIds = new Set<LProvId>();
+		let pendingTextRequestCount = 0;
+		let textRequestGeneration = 0;
 
 		let destroyed = false;
 
@@ -501,6 +503,15 @@ export const buildChapterDataManager = (
 						}
 						return reservations;
 					};
+					pendingTextRequestCount += 1;
+					textRequestGeneration += 1;
+					let textRequestFinished = false;
+					const finishTextRequest = () =>
+						Effect.sync(() => {
+							if (textRequestFinished) return;
+							textRequestFinished = true;
+							pendingTextRequestCount -= 1;
+						});
 					const event: RequestEvent = {
 						cached: true,
 						variant: "textOp",
@@ -514,8 +525,8 @@ export const buildChapterDataManager = (
 									Effect.map((ready) => !ready),
 								),
 						},
-						onFailure: () => Effect.succeed(void 0),
-						onFatalError: () => Effect.succeed(void 0),
+						onFailure: finishTextRequest,
+						onFatalError: finishTextRequest,
 						preSend: () => Effect.succeed(void 0),
 						send: (requestKey) =>
 							Effect.gen(function* () {
@@ -629,6 +640,7 @@ export const buildChapterDataManager = (
 										}),
 									});
 								}
+								yield* finishTextRequest();
 							}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
 					};
 					if (loadedLabelData.length === 0) {
@@ -1384,6 +1396,8 @@ export const buildChapterDataManager = (
 				};
 				let cleanupSkip = false;
 				let wait = true;
+				let textRequestGenerationAtSend = textRequestGeneration;
+				let textWasPendingAtSend = false;
 
 				const onError = () =>
 					Effect.gen(function* () {
@@ -1447,7 +1461,12 @@ export const buildChapterDataManager = (
 					},
 					onFailure: onError,
 					onFatalError: onError,
-					preSend: () => Effect.succeed(void 0),
+					preSend: () =>
+						Effect.sync(() => {
+							textRequestGenerationAtSend = textRequestGeneration;
+							textWasPendingAtSend =
+								opQueue.tag === "text" || pendingTextRequestCount > 0;
+						}),
 					send: () =>
 						Effect.gen(function* () {
 							const servChapterId = yield* idRepo
@@ -1509,6 +1528,46 @@ export const buildChapterDataManager = (
 											servId: newLabelDataServId,
 										})
 							).pipe(Effect.mapError((err) => new FatalException({ orig: err })));
+							const reloadIsOutdated =
+								textWasPendingAtSend ||
+								textRequestGenerationAtSend !== textRequestGeneration ||
+								opQueue.tag === "text" ||
+								pendingTextRequestCount > 0;
+							if (reloadIsOutdated) {
+								for (const oldLabelId of oldLabelIds) {
+									cleanupReserveListValue.label.push({
+										id: oldLabelId,
+										kind: "label",
+										desiredState: "detaching",
+									});
+								}
+								if (cleanupReserveListValue.label.length > 0) {
+									cleanupReserveListValue.labelGroup.push({
+										id: labelGroupId,
+										kind: "labelGroup",
+										desiredState: "locked",
+									});
+								} else {
+									cleanupSkip = true;
+								}
+								yield* labelDataIndex
+									.setData(labelGroupId, { status: "idle" })
+									.pipe(
+										Effect.mapError((err) => new FatalException({ orig: err })),
+									);
+								yield* labelDataIndex
+									.decrement(labelGroupId)
+									.pipe(
+										Effect.mapError((err) => new FatalException({ orig: err })),
+									);
+								wait = false;
+								yield* raiseTriggerEvent({
+									eventType: "labelDataOutdated",
+									labelGroupId,
+									chapterId,
+								});
+								return;
+							}
 							const provLabels: ProvLabel[] = entry.labels
 								.map((l) => {
 									const provLabelId = Effect.runSync(

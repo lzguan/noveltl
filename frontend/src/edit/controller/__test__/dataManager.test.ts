@@ -888,6 +888,48 @@ describe("buildChapterDataManager", () => {
 	});
 
 	describe("reload then text edit", () => {
+		it("discards a reload response when a flushed text request is waiting", async () => {
+			const reloadMock = vi.mocked(
+				readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,
+			);
+			reloadMock.mockClear();
+			reloadMock.mockResolvedValue(makeReloadResponse(UUID4, [UUID5, UUID6]));
+
+			const { chapterDM, labelGroupId, idRepo, triggerEvents } =
+				Effect.runSync(buildTestChapterDM());
+			const reloadEvents = Effect.runSync(chapterDM.reloadGroup(labelGroupId, true));
+			const primaryReload = reloadEvents[0];
+			const cleanupReload = reloadEvents[1];
+			const primaryReserveList = primaryReload.reservationRequest.reserveList();
+
+			Effect.runSync(reserveAll(idRepo, primaryReserveList));
+			Effect.runSync(primaryReload.preSend());
+			const responseData = await Effect.runPromise(
+				primaryReload.send(RequestKey("reload-key")),
+			);
+
+			Effect.runSync(chapterDM.insertTextAt(0, "Dear "));
+			const textEvents = Effect.runSync(chapterDM.flush());
+			expect(textEvents.map(({ variant }) => variant)).toEqual(["textOp"]);
+
+			await Effect.runPromise(primaryReload.postSend(responseData));
+
+			expect(triggerEvents).toContainEqual({
+				eventType: "labelDataOutdated",
+				chapterId: expect.any(String),
+				labelGroupId,
+			});
+			expect(Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId)).status).toBe(
+				"idle",
+			);
+			expect(cleanupReload.reservationRequest.reserveList().label).toEqual([
+				expect.objectContaining({ desiredState: "detaching" }),
+				expect.objectContaining({ desiredState: "detaching" }),
+			]);
+			expect(cleanupReload.reservationRequest.reserveList().labelData).toEqual([]);
+			Effect.runSync(releaseAllOnSuccess(idRepo, primaryReserveList));
+		});
+
 		it("reuses provisional IDs while reloading an already-loaded group", async () => {
 			const reloadMock = vi.mocked(
 				readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost,

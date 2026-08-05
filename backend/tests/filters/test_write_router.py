@@ -147,6 +147,31 @@ def test_write_routes_return_operation_specific_success_responses(
     assert len(recording_runner_dispatcher.jobs) == 4
 
 
+def test_validate_function_returns_signature_without_persisting(
+    client: TestClient,
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    function_ids_before = set(test_db.scalars(select(FunctionDefinition.function_definition_id)))
+
+    response = client.post(
+        "/filters/functions/validate",
+        headers=auth_headers(sample_scenario.users["admin"]),
+        json={
+            "functionDefinition": {"name": "literalString", "value": "Alice"},
+        },
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+        "signature": {
+            "args": [],
+            "output": {"obj": False, "type": "string", "mutable": False},
+        }
+    }
+    assert set(test_db.scalars(select(FunctionDefinition.function_definition_id))) == function_ids_before
+
+
 def test_write_routes_map_missing_resources_to_404(
     client: TestClient,
     test_db: Session,
@@ -287,6 +312,15 @@ def test_write_request_validation_and_openapi_contract(
             "functionDefinition": {"name": "not-a-function"},
         },
     )
+    invalid_draft = client.post(
+        "/filters/functions/validate",
+        headers=headers,
+        json={"functionDefinition": {"name": "not-a-function"}},
+    )
+    unauthenticated_draft = client.post(
+        "/filters/functions/validate",
+        json={"functionDefinition": {"name": "literalString", "value": "Alice"}},
+    )
     empty_rename = client.patch(
         f"/filters/workflows/{uuid4()}",
         headers=headers,
@@ -303,10 +337,17 @@ def test_write_request_validation_and_openapi_contract(
     openapi = client.get("/openapi.json").json()
 
     assert invalid_ast.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert invalid_draft.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert unauthenticated_draft.status_code == status.HTTP_401_UNAUTHORIZED
     assert empty_rename.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert internal_runner_fields.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     expected_operations = {
+        "/filters/functions/validate": (
+            "post",
+            "validate_filter_function",
+            "ValidateFunctionDefinitionRequest",
+        ),
         "/filters/functions": ("post", "create_filter_function", "CreateFunctionDefinitionRequest"),
         "/filters/workflows/{workflowId}": ("patch", "rename_filter_workflow", "RenameWorkflowRequest"),
         "/filters/runners/python/label-source": (

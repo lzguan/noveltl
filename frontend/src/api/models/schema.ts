@@ -8,5 +8,5 @@ import type { SchemaFields } from './schemaFields';
 
 export interface Schema {
   fields?: SchemaFields;
-  obj?: true;
+  obj: false;
 }

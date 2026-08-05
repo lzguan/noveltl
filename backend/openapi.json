@@ -3887,6 +3887,53 @@
         }
       }
     },
+    "/filters/functions/validate": {
+      "post": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Validate Filter Function",
+        "description": "Validate a function draft and return its computed signature without saving it.",
+        "operationId": "validate_filter_function",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateFunctionDefinitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FunctionDefinitionValidationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/filters/runners/python/label-source": {
       "post": {
         "tags": [
@@ -5580,6 +5627,18 @@
         ],
         "title": "FunctionDefinitionResponse"
       },
+      "FunctionDefinitionValidationResponse": {
+        "properties": {
+          "signature": {
+            "$ref": "#/components/schemas/Signature"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signature"
+        ],
+        "title": "FunctionDefinitionValidationResponse"
+      },
       "GroupData": {
         "oneOf": [
           {
@@ -6697,6 +6756,23 @@
         "title": "RequestConflictErrorResponse",
         "description": "HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail."
       },
+      "SObj": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Schema"
+          },
+          {
+            "$ref": "#/components/schemas/SchemaField"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "obj",
+          "mapping": {
+            "False": "#/components/schemas/SchemaField",
+            "True": "#/components/schemas/Schema"
+          }
+        }
+      },
       "Schema": {
         "properties": {
           "obj": {
@@ -6762,6 +6838,28 @@
           3
         ],
         "title": "SepPriority"
+      },
+      "Signature": {
+        "properties": {
+          "args": {
+            "items": {
+              "$ref": "#/components/schemas/SObj"
+            },
+            "type": "array",
+            "title": "Args",
+            "default": []
+          },
+          "output": {
+            "$ref": "#/components/schemas/SObj"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "output"
+        ],
+        "title": "Signature",
+        "description": "The input and output schemas of a function."
       },
       "SortDirection": {
         "type": "string",
@@ -7288,6 +7386,21 @@
         ],
         "title": "UserType",
         "description": "Enum of possible user types."
+      },
+      "ValidateFunctionDefinitionRequest": {
+        "properties": {
+          "functionDefinition": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Functiondefinition"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "functionDefinition"
+        ],
+        "title": "ValidateFunctionDefinitionRequest"
       },
       "ValidationError": {
         "properties": {

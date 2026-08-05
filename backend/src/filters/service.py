@@ -64,6 +64,7 @@ from src.filters.schemas import (
     CreateFunctionDefinitionRequest,
     FunctionDefinitionMeta,
     FunctionDefinitionResponse,
+    FunctionDefinitionValidationResponse,
     GroupingResponse,
     GroupOperationAccepted,
     GroupValueCount,
@@ -76,6 +77,7 @@ from src.filters.schemas import (
     RenameWorkflowRequest,
     RunnerInput,
     SortDirection,
+    ValidateFunctionDefinitionRequest,
     WorkflowOperationAccepted,
     WorkflowResponse,
     validate_frame_workflow,
@@ -527,6 +529,14 @@ def create_function_definition(
             ) from None
         raise
     return FunctionDefinitionResponse.model_validate(definition)
+
+
+def validate_function_definition(
+    request: ValidateFunctionDefinitionRequest,
+) -> FunctionDefinitionValidationResponse:
+    """Validate a function draft without reading or writing persistent state."""
+    function = function_adapter.validate_python(request.function_definition)
+    return FunctionDefinitionValidationResponse(signature=function.signature)
 
 
 def rename_workflow(

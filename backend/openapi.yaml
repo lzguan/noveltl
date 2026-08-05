@@ -1024,6 +1024,14 @@ components:
       - updatedAt
       title: FunctionDefinitionResponse
       type: object
+    FunctionDefinitionValidationResponse:
+      properties:
+        signature:
+          $ref: '#/components/schemas/Signature'
+      required:
+      - signature
+      title: FunctionDefinitionValidationResponse
+      type: object
     GroupData:
       discriminator:
         mapping:
@@ -1868,6 +1876,15 @@ components:
       - detail
       title: RequestConflictErrorResponse
       type: object
+    SObj:
+      discriminator:
+        mapping:
+          'False': '#/components/schemas/SchemaField'
+          'True': '#/components/schemas/Schema'
+        propertyName: obj
+      oneOf:
+      - $ref: '#/components/schemas/Schema'
+      - $ref: '#/components/schemas/SchemaField'
     Schema:
       additionalProperties: false
       properties:
@@ -1910,6 +1927,22 @@ components:
       - 3
       title: SepPriority
       type: integer
+    Signature:
+      additionalProperties: false
+      description: The input and output schemas of a function.
+      properties:
+        args:
+          default: []
+          items:
+            $ref: '#/components/schemas/SObj'
+          title: Args
+          type: array
+        output:
+          $ref: '#/components/schemas/SObj'
+      required:
+      - output
+      title: Signature
+      type: object
     SortDirection:
       enum:
       - asc
@@ -2297,6 +2330,17 @@ components:
       - admin
       title: UserType
       type: string
+    ValidateFunctionDefinitionRequest:
+      additionalProperties: false
+      properties:
+        functionDefinition:
+          additionalProperties: true
+          title: Functiondefinition
+          type: object
+      required:
+      - functionDefinition
+      title: ValidateFunctionDefinitionRequest
+      type: object
     ValidationError:
       properties:
         loc:
@@ -3314,6 +3358,35 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Create Filter Function
+      tags:
+      - filters
+  /filters/functions/validate:
+    post:
+      description: Validate a function draft and return its computed signature without
+        saving it.
+      operationId: validate_filter_function
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateFunctionDefinitionRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunctionDefinitionValidationResponse'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Validate Filter Function
       tags:
       - filters
   /filters/functions/{functionDefinitionId}:

@@ -27,6 +27,7 @@ from src.filters.schemas import (
     CreateFunctionDefinitionRequest,
     FunctionDefinitionMeta,
     FunctionDefinitionResponse,
+    FunctionDefinitionValidationResponse,
     GroupingResponse,
     GroupingSummary,
     GroupOperationAccepted,
@@ -39,6 +40,7 @@ from src.filters.schemas import (
     PythonLabelSourceRequest,
     PythonMapRequest,
     RenameWorkflowRequest,
+    ValidateFunctionDefinitionRequest,
     WorkflowOperationAccepted,
     WorkflowResponse,
     WorkflowSummary,
@@ -59,6 +61,7 @@ from src.filters.service import (
     run_group,
     run_label_source,
     run_map,
+    validate_function_definition,
 )
 from src.schemas import DetailHTTPErrorResponse
 
@@ -286,6 +289,19 @@ def read_grouping_values(
         ) from exc
     except InvalidInstanceQueryException as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post(
+    "/functions/validate",
+    response_model=FunctionDefinitionValidationResponse,
+    operation_id="validate_filter_function",
+)
+def validate_filter_function(
+    request: ValidateFunctionDefinitionRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> FunctionDefinitionValidationResponse:
+    """Validate a function draft and return its computed signature without saving it."""
+    return validate_function_definition(request)
 
 
 @router.post(

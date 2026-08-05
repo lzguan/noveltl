@@ -11,6 +11,7 @@ read endpoints are documented in [endpoints.md](endpoints.md).
 
 | Method | Path | Success | Purpose |
 | --- | --- | --- | --- |
+| `POST` | `/filters/functions/validate` | `200` | Validate a function draft without saving it |
 | `POST` | `/filters/functions` | `201` | Save an immutable function definition |
 | `PATCH` | `/filters/workflows/{workflowId}` | `200` | Rename or clear a workflow name |
 | `POST` | `/filters/runners/python/label-source` | `202` | Materialize labels as a new workflow |
@@ -44,6 +45,33 @@ output_workflow_id, function_definition_id)`, and
 `PythonGroupInput(grouping_id)`.
 
 ## Function creation
+
+### `POST /filters/functions/validate`
+
+Request model: `ValidateFunctionDefinitionRequest`.
+
+```json
+{
+  "functionDefinition": { "name": "literalString", "value": "Alice" }
+}
+```
+
+Parse the AST with the existing `function_adapter` and return its computed
+signature. This endpoint is authenticated but does not read or write the
+database, check registry-name conflicts, or require a namespace and function
+name. Invalid serialized ASTs return `422` with the standard Pydantic error
+body.
+
+Response model: `FunctionDefinitionValidationResponse`.
+
+```json
+{
+  "signature": {
+    "args": [],
+    "output": { "obj": false, "type": "string", "mutable": false }
+  }
+}
+```
 
 ### `POST /filters/functions`
 
@@ -297,8 +325,9 @@ inaccessible resource exists.
 - Keep four distinct runner operations. Do not expose a generic execute route
   or the internal discriminated union publicly.
 - Use stable operation IDs: `create_filter_function`,
-  `rename_filter_workflow`, `run_python_label_source`, `run_python_map`,
-  `run_python_filter`, and `run_python_group`.
+  `validate_filter_function`, `rename_filter_workflow`,
+  `run_python_label_source`, `run_python_map`, `run_python_filter`, and
+  `run_python_group`.
 
 ## Required tests
 
@@ -307,6 +336,7 @@ Add service and HTTP tests for:
 - successful creation and response shape for every endpoint;
 - four distinct OpenAPI runner schemas and stable operation IDs;
 - AST validation and function-name conflicts;
+- side-effect-free draft validation and its computed signature;
 - rename, clearing the name, and inaccessible workflows;
 - missing and inaccessible sources producing the same response;
 - source status and runner function/schema validation;

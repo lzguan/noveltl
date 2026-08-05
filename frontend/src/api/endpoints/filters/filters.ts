@@ -9,6 +9,7 @@ import type {
   DetailHTTPErrorResponse,
   FunctionDefinitionMeta,
   FunctionDefinitionResponse,
+  FunctionDefinitionValidationResponse,
   GroupOperationAccepted,
   GroupValueCount,
   GroupingResponse,
@@ -27,6 +28,7 @@ import type {
   ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGetParams,
   ReadWorkflowsFiltersWorkflowsGetParams,
   RenameWorkflowRequest,
+  ValidateFunctionDefinitionRequest,
   WorkflowOperationAccepted,
   WorkflowResponse,
   WorkflowSummary
@@ -128,6 +130,49 @@ export const createFilterFunction = async (createFunctionDefinitionRequest: Crea
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(createFunctionDefinitionRequest)
+  }
+);}
+
+
+export type validateFilterFunctionResponse200 = {
+  data: FunctionDefinitionValidationResponse
+  status: 200
+}
+
+export type validateFilterFunctionResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type validateFilterFunctionResponseSuccess = (validateFilterFunctionResponse200) & {
+  headers: Headers;
+};
+export type validateFilterFunctionResponseError = (validateFilterFunctionResponse422) & {
+  headers: Headers;
+};
+
+export type validateFilterFunctionResponse = (validateFilterFunctionResponseSuccess | validateFilterFunctionResponseError)
+
+export const getValidateFilterFunctionUrl = () => {
+
+
+
+
+  return `/api/filters/functions/validate`
+}
+
+/**
+ * Validate a function draft and return its computed signature without saving it.
+ * @summary Validate Filter Function
+ */
+export const validateFilterFunction = async (validateFunctionDefinitionRequest: ValidateFunctionDefinitionRequest, options?: Parameters<typeof customFetch>[1]): Promise<validateFilterFunctionResponse> => {
+
+  return customFetch<validateFilterFunctionResponse>(getValidateFilterFunctionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(validateFunctionDefinitionRequest)
   }
 );}
 

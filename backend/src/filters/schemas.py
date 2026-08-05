@@ -7,7 +7,7 @@ from pydantic import ConfigDict, Field, StringConstraints, TypeAdapter, field_va
 
 from src.filters.data_types import DataObj, FieldName, Schema
 from src.filters.exceptions import InvalidSortKeyException, UnsupportedSortTypeException
-from src.filters.functions import function_adapter
+from src.filters.functions import Signature, function_adapter
 from src.filters.models import GroupingStatus, WorkflowStatus, WorkflowUseCase
 from src.filters.runners.python.group_runner import GroupData
 from src.filters.runners.python.types import PythonRunnerInput
@@ -166,6 +166,20 @@ class CreateFunctionDefinitionRequest(FilterWriteRequest):
     def validate_function_definition(cls, value: dict[str, Any]) -> dict[str, Any]:
         function_adapter.validate_python(value)
         return value
+
+
+class ValidateFunctionDefinitionRequest(FilterWriteRequest):
+    function_definition: dict[str, Any]
+
+    @field_validator("function_definition")
+    @classmethod
+    def validate_function_definition(cls, value: dict[str, Any]) -> dict[str, Any]:
+        function_adapter.validate_python(value)
+        return value
+
+
+class FunctionDefinitionValidationResponse(Model):
+    signature: Signature
 
 
 class RenameWorkflowRequest(FilterWriteRequest):

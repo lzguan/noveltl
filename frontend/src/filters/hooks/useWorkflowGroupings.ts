@@ -1,7 +1,7 @@
 import { readGroupingValuesFiltersGroupingsGroupingIdValuesGet } from "@/api/endpoints/filters/filters";
 import type { GroupData, GroupingResponse } from "@/api/models";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ActiveGroupingState, GroupingSectionModel, Loadable } from "../panels/filters/types";
+import type { ActiveGroupingState, GroupingSectionModel, Loadable } from "../types";
 import { errorMessage, requestError, WORKFLOW_VIEWER_PAGE_SIZE } from "./workflowViewerUtils";
 
 interface GroupingViewState extends ActiveGroupingState {

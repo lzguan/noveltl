@@ -4,7 +4,7 @@ import type {
 	InstanceResultsModel,
 	QuerySectionModel,
 	WorkflowSelectionModel,
-} from "./types";
+} from "../types";
 import type {
 	GroupingResponse,
 	InstanceQueryResult,

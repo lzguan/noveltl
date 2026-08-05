@@ -3,7 +3,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { Page } from "./types";
+import type { Page } from "../types";
 
 export function shortId(value: string) {
 	return value.slice(0, 8);

@@ -16,12 +16,12 @@ import {
 	EmptyTitle,
 } from "@/components/ui/empty";
 import { Database } from "lucide-react";
-import { GroupingSection } from "./GroupingSection";
-import { ErrorBlock, LoadingBlock, shortId, statusVariant } from "./panelUi";
-import { QueryCard } from "./QueryCard";
-import { ResultsCard } from "./ResultsCard";
-import type { WorkflowDisplayPanelProps } from "./types";
-import { WorkflowPicker } from "./WorkflowPicker";
+import { GroupingSection } from "../components/GroupingSection";
+import { ErrorBlock, LoadingBlock, shortId, statusVariant } from "../components/panelUi";
+import { QueryCard } from "../components/QueryCard";
+import { ResultsCard } from "../components/ResultsCard";
+import type { WorkflowDisplayPanelProps } from "../types";
+import { WorkflowPicker } from "../components/WorkflowPicker";
 
 export function WorkflowDisplayPanel(props: WorkflowDisplayPanelProps) {
 	const { workflowSelection, groupingSection, querySection, instanceResults } = props;
@@ -152,4 +152,4 @@ export function WorkflowDisplayPanel(props: WorkflowDisplayPanelProps) {
 	);
 }
 
-export type { ActiveGroupingState, Loadable, WorkflowDisplayPanelProps } from "./types";
+export type { ActiveGroupingState, Loadable, WorkflowDisplayPanelProps } from "../types";

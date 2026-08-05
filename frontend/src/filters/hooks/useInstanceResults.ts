@@ -1,7 +1,7 @@
 import { readInstancesAdvancedFiltersInstancesQueryPost } from "@/api/endpoints/filters/filters";
 import type { Frame } from "@/api/models";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { InstanceResultsModel, QueryStatus } from "../panels/filters/types";
+import type { InstanceResultsModel, QueryStatus } from "../types";
 import { errorMessage, requestError, WORKFLOW_VIEWER_PAGE_SIZE } from "./workflowViewerUtils";
 
 interface ResultPagination {

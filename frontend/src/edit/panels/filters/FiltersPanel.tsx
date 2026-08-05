@@ -1,6 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useWorkflowViewer } from "../../hooks/useWorkflowViewer";
-import { WorkflowDisplayPanel } from "./WorkflowDisplayPanel";
+import { useWorkflowViewer } from "../../../filters/hooks/useWorkflowViewer";
+import { WorkflowDisplayPanel } from "../../../filters/panels/WorkflowDisplayPanel";
 
 export function FiltersPanel({ novelId }: { novelId: string }) {
 	const viewer = useWorkflowViewer(novelId);

@@ -20,7 +20,7 @@ import {
 import { RefreshCw } from "lucide-react";
 import { DataCell, GroupDataCell } from "./DataCells";
 import { ErrorBlock, groupingLabel, LoadingBlock, PageControls, shortId } from "./panelUi";
-import type { ActiveGroupingState, Loadable, Page } from "./types";
+import type { ActiveGroupingState, Loadable, Page } from "../types";
 
 function ResultsTable({
 	workflow,

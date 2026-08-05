@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/combobox";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { ErrorBlock, shortId, statusVariant } from "./panelUi";
-import type { Loadable } from "./types";
+import type { Loadable } from "../types";
 
 function workflowLabel(workflow: WorkflowSummary) {
 	return workflow.workflowName?.trim() || `Untitled workflow · ${shortId(workflow.workflowId)}`;

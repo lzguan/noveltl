@@ -1,6 +1,6 @@
 import type { SortDirection, SortKey, WorkflowResponse } from "@/api/models";
 import { useCallback, useState } from "react";
-import type { QuerySectionModel } from "../panels/filters/types";
+import type { QuerySectionModel } from "../types";
 
 function sortableFieldNames(workflow: WorkflowResponse | null) {
 	if (!workflow) return [];

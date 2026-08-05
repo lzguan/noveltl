@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { ErrorBlock } from "./panelUi";
-import type { QueryStatus } from "./types";
+import type { QueryStatus } from "../types";
 
 function sortableFields(workflow: WorkflowResponse) {
 	return Object.entries(workflow.schema.fields ?? {}).filter((entry) => {

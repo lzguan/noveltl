@@ -1,6 +1,6 @@
 import type { Frame, SortKey, WorkflowResponse } from "@/api/models";
 import { useEffect } from "react";
-import type { ActiveGroupingState, WorkflowDisplayPanelProps } from "../panels/filters/types";
+import type { ActiveGroupingState, WorkflowDisplayPanelProps } from "../types";
 import { useFrameDraft } from "./useFrameDraft";
 import { useInstanceResults } from "./useInstanceResults";
 import { useWorkflowGroupings } from "./useWorkflowGroupings";

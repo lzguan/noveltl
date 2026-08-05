@@ -33,8 +33,9 @@ MAX_FUNCTION_ARITY = 256
 MAX_LITERAL_STRING_LENGTH = 10_000
 MAX_RENAME_PAIRS = 128
 
-type ResourceName = Literal["chapter_content_text", "label"]
+type ResourceName = Literal["chapter_content_text", "chapter_number", "label"]
 type NumericTypeName = Literal["int", "float"]
+type ChapterReferenceTypeName = Literal["labelRef", "textSpan"]
 
 
 class Signature(Model):
@@ -366,6 +367,23 @@ class ScoreOf(Function):
         return Signature(
             args=(LabelRefField(),),
             output=FloatField(),
+        )
+
+
+class ChapterNumberOf(Function):
+    name: Literal["chapterNumberOf"] = "chapterNumberOf"
+    type: ChapterReferenceTypeName
+
+    @property
+    def dependencies(self) -> tuple[DependencyType, ...]:
+        return (ResourceDependency(resource="chapter_number", argument_index=0),)
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(
+            args=(discriminate_type(self.type),),
+            output=IntField(),
         )
 
 
@@ -717,6 +735,7 @@ type FunctionType = Annotated[
     | WordOf
     | EntityGroupOf
     | ScoreOf
+    | ChapterNumberOf
     | Rename
     | And
     | Or

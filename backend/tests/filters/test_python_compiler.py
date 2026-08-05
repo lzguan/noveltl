@@ -26,6 +26,7 @@ from src.filters.functions import (
     And,
     Call,
     Ceil,
+    ChapterNumberOf,
     Compare,
     Concat,
     Construct,
@@ -53,6 +54,9 @@ from src.filters.functions import (
 class _NoResourceContext:
     def get_chapter_content(self, chapter_content_id: uuid.UUID) -> str:
         raise AssertionError(f"Unexpected chapter content dependency: {chapter_content_id}")
+
+    def get_chapter_number(self, chapter_id: uuid.UUID) -> int:
+        raise AssertionError(f"Unexpected chapter number dependency: {chapter_id}")
 
     def load_resources(self, resource_ids: object) -> None:
         raise AssertionError(f"Unexpected resource preload: {resource_ids}")
@@ -320,6 +324,36 @@ def test_project_to_span_drops_label_only_fields() -> None:
         )
     )
     assert type(result.value) is TextSpan
+
+
+def test_compile_chapter_number_of_supports_label_refs_and_text_spans() -> None:
+    expected_chapter_id = uuid.uuid4()
+
+    class _ChapterContext(_NoResourceContext):
+        def get_chapter_number(self, chapter_id: uuid.UUID) -> int:
+            assert chapter_id == expected_chapter_id
+            return 42
+
+    label = LabelRefData(
+        value=LabelRef(
+            chapter_id=expected_chapter_id,
+            chapter_content_id=uuid.uuid4(),
+            label_id=uuid.uuid4(),
+            label_data_id=uuid.uuid4(),
+            label_group_id=uuid.uuid4(),
+        )
+    )
+    span = TextSpanData(
+        value=TextSpan(
+            chapter_id=expected_chapter_id,
+            chapter_content_id=uuid.uuid4(),
+            start=2,
+            end=5,
+        )
+    )
+
+    assert PythonCompiler().compile(ChapterNumberOf(type="labelRef"))((label,), _ChapterContext()) == IntData(value=42)
+    assert PythonCompiler().compile(ChapterNumberOf(type="textSpan"))((span,), _ChapterContext()) == IntData(value=42)
 
 
 def test_compile_entity_group_of_reads_current_label_metadata() -> None:

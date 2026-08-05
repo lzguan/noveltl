@@ -24,6 +24,7 @@ from src.filters.functions import (
     And,
     Call,
     Ceil,
+    ChapterNumberOf,
     Compare,
     Concat,
     Construct,
@@ -296,6 +297,14 @@ class PythonCompiler:
                 )
 
             executable = project_to_span
+
+        elif isinstance(function, ChapterNumberOf):
+
+            def chapter_number_of(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(LabelRefData | TextSpanData, arguments[0])
+                return IntData(value=ctx.get_chapter_number(data.value.chapter_id))
+
+            executable = chapter_number_of
 
         elif isinstance(function, WordOf):
 

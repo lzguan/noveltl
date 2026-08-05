@@ -10,6 +10,7 @@ from src.filters.functions import (
     And,
     Call,
     Ceil,
+    ChapterNumberOf,
     Compare,
     Concat,
     Construct,
@@ -146,6 +147,21 @@ def test_entity_group_of_signature() -> None:
     assert isinstance(parsed, EntityGroupOf)
     assert parsed.signature.args == (LabelRefField(),)
     assert parsed.signature.output == StringField()
+
+
+@pytest.mark.parametrize(
+    ("reference_type", "input_field"),
+    [("labelRef", LabelRefField()), ("textSpan", TextSpanField())],
+)
+def test_chapter_number_of_has_a_typed_reference_signature(
+    reference_type: str,
+    input_field: LabelRefField | TextSpanField,
+) -> None:
+    parsed = TypeAdapter(FunctionType).validate_python({"name": "chapterNumberOf", "type": reference_type})
+
+    assert isinstance(parsed, ChapterNumberOf)
+    assert parsed.signature.args == (input_field,)
+    assert parsed.signature.output == IntField()
 
 
 def test_if_parses_and_round_trips_with_elementary_schemas() -> None:

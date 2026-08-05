@@ -28,6 +28,7 @@ from src.filters.functions import (
     And,
     Call,
     Ceil,
+    ChapterNumberOf,
     Compare,
     Concat,
     Construct,
@@ -230,6 +231,7 @@ def evaluate(
         | LengthOf
         | TextOf
         | TextAround
+        | ChapterNumberOf
         | WordOf
         | EntityGroupOf
         | ScoreOf,

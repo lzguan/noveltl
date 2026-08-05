@@ -4,6 +4,7 @@ from src.filters.functions import (
     Add,
     Call,
     Ceil,
+    ChapterNumberOf,
     Concat,
     Construct,
     Contains,
@@ -69,6 +70,22 @@ def test_resolve_direct_elementary_argument_dependency() -> None:
             key_path=(),
         ),
     )
+
+
+def test_chapter_number_functions_resolve_chapter_resources() -> None:
+    expected = (
+        ResolvedResourceDependency(
+            resource="chapter_number",
+            argument_index=0,
+            key_path=(),
+        ),
+    )
+
+    assert ChapterNumberOf(type="labelRef").dependencies == (
+        ResourceDependency(resource="chapter_number", argument_index=0),
+    )
+    assert resolve_dependencies(ChapterNumberOf(type="labelRef")) == expected
+    assert resolve_dependencies(ChapterNumberOf(type="textSpan")) == expected
 
 
 def test_pure_scalar_functions_have_no_resource_dependencies() -> None:

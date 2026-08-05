@@ -7,7 +7,7 @@
 import type { FloatFieldType } from './floatFieldType';
 
 export interface FloatField {
+  kind?: 'field';
   mutable?: boolean;
-  obj?: false;
   type: FloatFieldType;
 }

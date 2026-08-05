@@ -54,7 +54,7 @@ def test_signature_is_computed_and_cannot_be_supplied() -> None:
                 "value": "value",
                 "signature": {
                     "args": [],
-                    "output": {"obj": False, "type": "int", "mutable": False},
+                    "output": {"kind": "field", "type": "int", "mutable": False},
                 },
             }
         )
@@ -142,8 +142,8 @@ def test_project_to_span_signature() -> None:
 def test_if_parses_and_round_trips_with_elementary_schemas() -> None:
     definition = {
         "name": "if",
-        "inputSchema": {"obj": False, "type": "bool"},
-        "outputSchema": {"obj": False, "type": "bool"},
+        "inputSchema": {"kind": "field", "type": "bool"},
+        "outputSchema": {"kind": "field", "type": "bool"},
         "condition": {"name": "not"},
         "thenBranch": {"name": "not"},
         "elseBranch": {"name": "not"},

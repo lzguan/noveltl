@@ -166,7 +166,7 @@ def test_validate_function_returns_signature_without_persisting(
     assert response.json() == {
         "signature": {
             "args": [],
-            "output": {"obj": False, "type": "string", "mutable": False},
+            "output": {"kind": "field", "type": "string", "mutable": False},
         }
     }
     assert set(test_db.scalars(select(FunctionDefinition.function_definition_id))) == function_ids_before

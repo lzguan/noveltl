@@ -4629,11 +4629,11 @@
       },
       "BoolField": {
         "properties": {
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "field",
+            "title": "Kind",
+            "default": "field"
           },
           "type": {
             "type": "string",
@@ -5505,11 +5505,11 @@
       },
       "FloatField": {
         "properties": {
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "field",
+            "title": "Kind",
+            "default": "field"
           },
           "type": {
             "type": "string",
@@ -5994,11 +5994,11 @@
       },
       "IntField": {
         "properties": {
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "field",
+            "title": "Kind",
+            "default": "field"
           },
           "type": {
             "type": "string",
@@ -6315,11 +6315,11 @@
       },
       "LabelRefField": {
         "properties": {
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "field",
+            "title": "Kind",
+            "default": "field"
           },
           "type": {
             "type": "string",
@@ -6766,20 +6766,20 @@
           }
         ],
         "discriminator": {
-          "propertyName": "obj",
+          "propertyName": "kind",
           "mapping": {
-            "False": "#/components/schemas/SchemaField",
-            "True": "#/components/schemas/Schema"
+            "field": "#/components/schemas/SchemaField",
+            "schema": "#/components/schemas/Schema"
           }
         }
       },
       "Schema": {
         "properties": {
-          "obj": {
-            "type": "boolean",
-            "const": true,
-            "title": "Obj",
-            "default": true
+          "kind": {
+            "type": "string",
+            "const": "schema",
+            "title": "Kind",
+            "default": "schema"
           },
           "fields": {
             "additionalProperties": {
@@ -6964,11 +6964,11 @@
       },
       "StringField": {
         "properties": {
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "field",
+            "title": "Kind",
+            "default": "field"
           },
           "type": {
             "type": "string",
@@ -7073,11 +7073,11 @@
       },
       "TextSpanField": {
         "properties": {
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "field",
+            "title": "Kind",
+            "default": "field"
           },
           "type": {
             "type": "string",

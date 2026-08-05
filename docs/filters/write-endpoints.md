@@ -68,7 +68,7 @@ Response model: `FunctionDefinitionValidationResponse`.
 {
   "signature": {
     "args": [],
-    "output": { "obj": false, "type": "string", "mutable": false }
+    "output": { "kind": "field", "type": "string", "mutable": false }
   }
 }
 ```

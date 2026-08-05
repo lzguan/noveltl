@@ -36,7 +36,7 @@ type BooleanValue = Annotated[bool, Field(strict=True)]
 class SchemaFieldBase(Model):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    obj: Literal[False] = False
+    kind: Literal["field"] = "field"
     type: ElementaryTypeName
     mutable: bool
 
@@ -80,11 +80,11 @@ type SchemaField = Annotated[
 class Schema(Model):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    obj: Literal[True] = True
+    kind: Literal["schema"] = "schema"
     fields: dict[FieldName, SchemaField] = Field(default_factory=dict, max_length=MAX_SCHEMA_FIELDS)
 
 
-type SObj = Annotated[Schema | SchemaField, Field(discriminator="obj")]
+type SObj = Annotated[Schema | SchemaField, Field(discriminator="kind")]
 
 schema_adapter = TypeAdapter[SObj](SObj)
 

@@ -86,194 +86,194 @@ export const ValidateFilterFunctionBody = S.Struct({
 })
 
 export const validateFilterFunction200ResponseSignatureArgsDefault = [];
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneObjDefault = false;
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneTypeDefault = `string`;
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoObjDefault = false;
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoTypeDefault = `int`;
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeObjDefault = false;
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeTypeDefault = `float`;
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourObjDefault = false;
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourTypeDefault = `bool`;
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveObjDefault = false;
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveTypeDefault = `labelRef`;
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixObjDefault = false;
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixTypeDefault = `textSpan`;
-export const validateFilterFunction200ResponseSignatureArgsItemOneObjDefault = true;
+export const validateFilterFunction200ResponseSignatureArgsItemOneKindDefault = `schema`;
+export const validateFilterFunction200ResponseSignatureArgsItemTwoOneKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureArgsItemTwoOneMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoOneObjDefault = false;
 export const validateFilterFunction200ResponseSignatureArgsItemTwoOneTypeDefault = `string`;
+export const validateFilterFunction200ResponseSignatureArgsItemTwoTwoKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureArgsItemTwoTwoMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoTwoObjDefault = false;
 export const validateFilterFunction200ResponseSignatureArgsItemTwoTwoTypeDefault = `int`;
+export const validateFilterFunction200ResponseSignatureArgsItemTwoThreeKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureArgsItemTwoThreeMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoThreeObjDefault = false;
 export const validateFilterFunction200ResponseSignatureArgsItemTwoThreeTypeDefault = `float`;
+export const validateFilterFunction200ResponseSignatureArgsItemTwoFourKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureArgsItemTwoFourMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoFourObjDefault = false;
 export const validateFilterFunction200ResponseSignatureArgsItemTwoFourTypeDefault = `bool`;
+export const validateFilterFunction200ResponseSignatureArgsItemTwoFiveKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureArgsItemTwoFiveMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoFiveObjDefault = false;
 export const validateFilterFunction200ResponseSignatureArgsItemTwoFiveTypeDefault = `labelRef`;
+export const validateFilterFunction200ResponseSignatureArgsItemTwoSixKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureArgsItemTwoSixMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoSixObjDefault = false;
 export const validateFilterFunction200ResponseSignatureArgsItemTwoSixTypeDefault = `textSpan`;
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsOneKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsOneMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsOneObjDefault = false;
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsOneTypeDefault = `string`;
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsTwoKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsTwoMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsTwoObjDefault = false;
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsTwoTypeDefault = `int`;
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsThreeKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsThreeMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsThreeObjDefault = false;
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsThreeTypeDefault = `float`;
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsFourKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsFourMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsFourObjDefault = false;
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsFourTypeDefault = `bool`;
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsFiveKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsFiveMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsFiveObjDefault = false;
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsFiveTypeDefault = `labelRef`;
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsSixKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsSixMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsSixObjDefault = false;
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsSixTypeDefault = `textSpan`;
-export const validateFilterFunction200ResponseSignatureOutputOneObjDefault = true;
+export const validateFilterFunction200ResponseSignatureOutputOneKindDefault = `schema`;
+export const validateFilterFunction200ResponseSignatureOutputTwoOneKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureOutputTwoOneMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputTwoOneObjDefault = false;
 export const validateFilterFunction200ResponseSignatureOutputTwoOneTypeDefault = `string`;
+export const validateFilterFunction200ResponseSignatureOutputTwoTwoKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureOutputTwoTwoMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputTwoTwoObjDefault = false;
 export const validateFilterFunction200ResponseSignatureOutputTwoTwoTypeDefault = `int`;
+export const validateFilterFunction200ResponseSignatureOutputTwoThreeKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureOutputTwoThreeMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputTwoThreeObjDefault = false;
 export const validateFilterFunction200ResponseSignatureOutputTwoThreeTypeDefault = `float`;
+export const validateFilterFunction200ResponseSignatureOutputTwoFourKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureOutputTwoFourMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputTwoFourObjDefault = false;
 export const validateFilterFunction200ResponseSignatureOutputTwoFourTypeDefault = `bool`;
+export const validateFilterFunction200ResponseSignatureOutputTwoFiveKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureOutputTwoFiveMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputTwoFiveObjDefault = false;
 export const validateFilterFunction200ResponseSignatureOutputTwoFiveTypeDefault = `labelRef`;
+export const validateFilterFunction200ResponseSignatureOutputTwoSixKindDefault = `field`;
 export const validateFilterFunction200ResponseSignatureOutputTwoSixMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputTwoSixObjDefault = false;
 export const validateFilterFunction200ResponseSignatureOutputTwoSixTypeDefault = `textSpan`;
 
 export const ValidateFilterFunction200Response = S.Struct({
   "signature": S.Struct({
   "args": S.optionalWith(S.Array(S.Union(S.Struct({
   "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneObjDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoObjDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeObjDefault }),
   "type": S.optionalWith(S.Literal('float'), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourObjDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveObjDefault }),
   "type": S.optionalWith(S.Literal('labelRef'), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixObjDefault }),
   "type": S.optionalWith(S.Literal('textSpan'), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixTypeDefault })
 })), S.Struct({
-  "obj": S.Literal('False')
+  "kind": S.Literal('field')
 })) })),
-  "obj": S.optionalWith(S.Literal(false), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneObjDefault })
+  "kind": S.optionalWith(S.Literal('schema'), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneKindDefault })
 }), S.extend(S.Union(S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoOneKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoOneMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoOneObjDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoOneTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoTwoKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoTwoMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoTwoObjDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoTwoTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoThreeKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoThreeMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoThreeObjDefault }),
   "type": S.optionalWith(S.Literal('float'), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoThreeTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoFourKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoFourMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoFourObjDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoFourTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoFiveKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoFiveMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoFiveObjDefault }),
   "type": S.optionalWith(S.Literal('labelRef'), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoFiveTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoSixKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoSixMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoSixObjDefault }),
   "type": S.optionalWith(S.Literal('textSpan'), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoSixTypeDefault })
 })), S.Struct({
-  "obj": S.Literal('False')
+  "kind": S.Literal('field')
 })))), { default: () => validateFilterFunction200ResponseSignatureArgsDefault }),
   "output": S.Union(S.Struct({
   "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsOneKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsOneMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsOneObjDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsOneTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsTwoKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsTwoMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsTwoObjDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsTwoTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsThreeKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsThreeMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsThreeObjDefault }),
   "type": S.optionalWith(S.Literal('float'), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsThreeTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsFourKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsFourMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsFourObjDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsFourTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsFiveKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsFiveMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsFiveObjDefault }),
   "type": S.optionalWith(S.Literal('labelRef'), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsFiveTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsSixKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsSixMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsSixObjDefault }),
   "type": S.optionalWith(S.Literal('textSpan'), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsSixTypeDefault })
 })), S.Struct({
-  "obj": S.Literal('False')
+  "kind": S.Literal('field')
 })) })),
-  "obj": S.optionalWith(S.Literal(false), { default: () => validateFilterFunction200ResponseSignatureOutputOneObjDefault })
+  "kind": S.optionalWith(S.Literal('schema'), { default: () => validateFilterFunction200ResponseSignatureOutputOneKindDefault })
 }), S.extend(S.Union(S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputTwoOneKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoOneMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoOneObjDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => validateFilterFunction200ResponseSignatureOutputTwoOneTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputTwoTwoKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoTwoMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoTwoObjDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => validateFilterFunction200ResponseSignatureOutputTwoTwoTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputTwoThreeKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoThreeMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoThreeObjDefault }),
   "type": S.optionalWith(S.Literal('float'), { default: () => validateFilterFunction200ResponseSignatureOutputTwoThreeTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputTwoFourKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoFourMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoFourObjDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => validateFilterFunction200ResponseSignatureOutputTwoFourTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputTwoFiveKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoFiveMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoFiveObjDefault }),
   "type": S.optionalWith(S.Literal('labelRef'), { default: () => validateFilterFunction200ResponseSignatureOutputTwoFiveTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputTwoSixKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoSixMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoSixObjDefault }),
   "type": S.optionalWith(S.Literal('textSpan'), { default: () => validateFilterFunction200ResponseSignatureOutputTwoSixTypeDefault })
 })), S.Struct({
-  "obj": S.Literal('False')
+  "kind": S.Literal('field')
 })))
 }).annotations({ description: 'The input and output schemas of a function.' })
 })
@@ -590,25 +590,25 @@ export const RunPythonFilterBody = S.Struct({
   "sourceWorkflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Completed workflow whose instances will be filtered.' })
 })
 
+export const runPythonFilter202ResponseWorkflowSchemaFieldsOneKindDefault = `field`;
 export const runPythonFilter202ResponseWorkflowSchemaFieldsOneMutableDefault = false;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsOneObjDefault = false;
 export const runPythonFilter202ResponseWorkflowSchemaFieldsOneTypeDefault = `string`;
+export const runPythonFilter202ResponseWorkflowSchemaFieldsTwoKindDefault = `field`;
 export const runPythonFilter202ResponseWorkflowSchemaFieldsTwoMutableDefault = false;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsTwoObjDefault = false;
 export const runPythonFilter202ResponseWorkflowSchemaFieldsTwoTypeDefault = `int`;
+export const runPythonFilter202ResponseWorkflowSchemaFieldsThreeKindDefault = `field`;
 export const runPythonFilter202ResponseWorkflowSchemaFieldsThreeMutableDefault = false;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsThreeObjDefault = false;
 export const runPythonFilter202ResponseWorkflowSchemaFieldsThreeTypeDefault = `float`;
+export const runPythonFilter202ResponseWorkflowSchemaFieldsFourKindDefault = `field`;
 export const runPythonFilter202ResponseWorkflowSchemaFieldsFourMutableDefault = false;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsFourObjDefault = false;
 export const runPythonFilter202ResponseWorkflowSchemaFieldsFourTypeDefault = `bool`;
+export const runPythonFilter202ResponseWorkflowSchemaFieldsFiveKindDefault = `field`;
 export const runPythonFilter202ResponseWorkflowSchemaFieldsFiveMutableDefault = false;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsFiveObjDefault = false;
 export const runPythonFilter202ResponseWorkflowSchemaFieldsFiveTypeDefault = `labelRef`;
+export const runPythonFilter202ResponseWorkflowSchemaFieldsSixKindDefault = `field`;
 export const runPythonFilter202ResponseWorkflowSchemaFieldsSixMutableDefault = false;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsSixObjDefault = false;
 export const runPythonFilter202ResponseWorkflowSchemaFieldsSixTypeDefault = `textSpan`;
-export const runPythonFilter202ResponseWorkflowSchemaObjDefault = true;
+export const runPythonFilter202ResponseWorkflowSchemaKindDefault = `schema`;
 
 export const RunPythonFilter202Response = S.Struct({
   "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -620,33 +620,33 @@ export const RunPythonFilter202Response = S.Struct({
   "novelIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
   "schema": S.Struct({
   "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsOneKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsOneMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsOneObjDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsOneTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsTwoKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsTwoMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsTwoObjDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsTwoTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsThreeKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsThreeMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsThreeObjDefault }),
   "type": S.optionalWith(S.Literal('float'), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsThreeTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsFourKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsFourMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsFourObjDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsFourTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsFiveKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsFiveMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsFiveObjDefault }),
   "type": S.optionalWith(S.Literal('labelRef'), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsFiveTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsSixKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsSixMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsSixObjDefault }),
   "type": S.optionalWith(S.Literal('textSpan'), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsSixTypeDefault })
 })), S.Struct({
-  "obj": S.Literal('False')
+  "kind": S.Literal('field')
 })) })),
-  "obj": S.optionalWith(S.Literal(false), { default: () => runPythonFilter202ResponseWorkflowSchemaObjDefault })
+  "kind": S.optionalWith(S.Literal('schema'), { default: () => runPythonFilter202ResponseWorkflowSchemaKindDefault })
 }),
   "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "useCase": S.Literal('advanced', 'glossary'),
@@ -747,25 +747,25 @@ export const RunPythonLabelSourceBody = S.Struct({
   "outputName": S.optional(S.Union(S.String.pipe(S.maxLength(runPythonLabelSourceBodyOutputNameOneMax)), S.Null))
 })
 
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsOneKindDefault = `field`;
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsOneMutableDefault = false;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsOneObjDefault = false;
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsOneTypeDefault = `string`;
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoKindDefault = `field`;
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoMutableDefault = false;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoObjDefault = false;
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoTypeDefault = `int`;
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeKindDefault = `field`;
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeMutableDefault = false;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeObjDefault = false;
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeTypeDefault = `float`;
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFourKindDefault = `field`;
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFourMutableDefault = false;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFourObjDefault = false;
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFourTypeDefault = `bool`;
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveKindDefault = `field`;
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveMutableDefault = false;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveObjDefault = false;
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveTypeDefault = `labelRef`;
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsSixKindDefault = `field`;
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsSixMutableDefault = false;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsSixObjDefault = false;
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsSixTypeDefault = `textSpan`;
-export const runPythonLabelSource202ResponseWorkflowSchemaObjDefault = true;
+export const runPythonLabelSource202ResponseWorkflowSchemaKindDefault = `schema`;
 
 export const RunPythonLabelSource202Response = S.Struct({
   "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -777,33 +777,33 @@ export const RunPythonLabelSource202Response = S.Struct({
   "novelIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
   "schema": S.Struct({
   "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsOneKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsOneMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsOneObjDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsOneTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoObjDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeObjDefault }),
   "type": S.optionalWith(S.Literal('float'), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsFourKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsFourMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsFourObjDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsFourTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveObjDefault }),
   "type": S.optionalWith(S.Literal('labelRef'), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsSixKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsSixMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsSixObjDefault }),
   "type": S.optionalWith(S.Literal('textSpan'), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsSixTypeDefault })
 })), S.Struct({
-  "obj": S.Literal('False')
+  "kind": S.Literal('field')
 })) })),
-  "obj": S.optionalWith(S.Literal(false), { default: () => runPythonLabelSource202ResponseWorkflowSchemaObjDefault })
+  "kind": S.optionalWith(S.Literal('schema'), { default: () => runPythonLabelSource202ResponseWorkflowSchemaKindDefault })
 }),
   "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "useCase": S.Literal('advanced', 'glossary'),
@@ -844,25 +844,25 @@ export const RunPythonMapBody = S.Struct({
   "sourceWorkflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Completed workflow whose instances will be mapped.' })
 })
 
+export const runPythonMap202ResponseWorkflowSchemaFieldsOneKindDefault = `field`;
 export const runPythonMap202ResponseWorkflowSchemaFieldsOneMutableDefault = false;
-export const runPythonMap202ResponseWorkflowSchemaFieldsOneObjDefault = false;
 export const runPythonMap202ResponseWorkflowSchemaFieldsOneTypeDefault = `string`;
+export const runPythonMap202ResponseWorkflowSchemaFieldsTwoKindDefault = `field`;
 export const runPythonMap202ResponseWorkflowSchemaFieldsTwoMutableDefault = false;
-export const runPythonMap202ResponseWorkflowSchemaFieldsTwoObjDefault = false;
 export const runPythonMap202ResponseWorkflowSchemaFieldsTwoTypeDefault = `int`;
+export const runPythonMap202ResponseWorkflowSchemaFieldsThreeKindDefault = `field`;
 export const runPythonMap202ResponseWorkflowSchemaFieldsThreeMutableDefault = false;
-export const runPythonMap202ResponseWorkflowSchemaFieldsThreeObjDefault = false;
 export const runPythonMap202ResponseWorkflowSchemaFieldsThreeTypeDefault = `float`;
+export const runPythonMap202ResponseWorkflowSchemaFieldsFourKindDefault = `field`;
 export const runPythonMap202ResponseWorkflowSchemaFieldsFourMutableDefault = false;
-export const runPythonMap202ResponseWorkflowSchemaFieldsFourObjDefault = false;
 export const runPythonMap202ResponseWorkflowSchemaFieldsFourTypeDefault = `bool`;
+export const runPythonMap202ResponseWorkflowSchemaFieldsFiveKindDefault = `field`;
 export const runPythonMap202ResponseWorkflowSchemaFieldsFiveMutableDefault = false;
-export const runPythonMap202ResponseWorkflowSchemaFieldsFiveObjDefault = false;
 export const runPythonMap202ResponseWorkflowSchemaFieldsFiveTypeDefault = `labelRef`;
+export const runPythonMap202ResponseWorkflowSchemaFieldsSixKindDefault = `field`;
 export const runPythonMap202ResponseWorkflowSchemaFieldsSixMutableDefault = false;
-export const runPythonMap202ResponseWorkflowSchemaFieldsSixObjDefault = false;
 export const runPythonMap202ResponseWorkflowSchemaFieldsSixTypeDefault = `textSpan`;
-export const runPythonMap202ResponseWorkflowSchemaObjDefault = true;
+export const runPythonMap202ResponseWorkflowSchemaKindDefault = `schema`;
 
 export const RunPythonMap202Response = S.Struct({
   "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -874,33 +874,33 @@ export const RunPythonMap202Response = S.Struct({
   "novelIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
   "schema": S.Struct({
   "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsOneKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsOneMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsOneObjDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsOneTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsTwoKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsTwoMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsTwoObjDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsTwoTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsThreeKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsThreeMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsThreeObjDefault }),
   "type": S.optionalWith(S.Literal('float'), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsThreeTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsFourKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsFourMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsFourObjDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsFourTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsFiveKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsFiveMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsFiveObjDefault }),
   "type": S.optionalWith(S.Literal('labelRef'), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsFiveTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsSixKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsSixMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsSixObjDefault }),
   "type": S.optionalWith(S.Literal('textSpan'), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsSixTypeDefault })
 })), S.Struct({
-  "obj": S.Literal('False')
+  "kind": S.Literal('field')
 })) })),
-  "obj": S.optionalWith(S.Literal(false), { default: () => runPythonMap202ResponseWorkflowSchemaObjDefault })
+  "kind": S.optionalWith(S.Literal('schema'), { default: () => runPythonMap202ResponseWorkflowSchemaKindDefault })
 }),
   "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "useCase": S.Literal('advanced', 'glossary'),
@@ -954,58 +954,58 @@ export const ReadWorkflowsFiltersWorkflowsGetQueryParams = S.Struct({
   "cursor": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
 })
 
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneKindDefault = `field`;
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneMutableDefault = false;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneObjDefault = false;
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneTypeDefault = `string`;
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoKindDefault = `field`;
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoMutableDefault = false;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoObjDefault = false;
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoTypeDefault = `int`;
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeKindDefault = `field`;
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeMutableDefault = false;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeObjDefault = false;
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeTypeDefault = `float`;
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourKindDefault = `field`;
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourMutableDefault = false;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourObjDefault = false;
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourTypeDefault = `bool`;
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveKindDefault = `field`;
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveMutableDefault = false;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveObjDefault = false;
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveTypeDefault = `labelRef`;
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixKindDefault = `field`;
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixMutableDefault = false;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixObjDefault = false;
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixTypeDefault = `textSpan`;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaObjDefault = true;
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaKindDefault = `schema`;
 
 export const ReadWorkflowsFiltersWorkflowsGet200ResponseItem = S.Struct({
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
   "schema": S.Struct({
   "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneObjDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoObjDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeObjDefault }),
   "type": S.optionalWith(S.Literal('float'), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourObjDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveObjDefault }),
   "type": S.optionalWith(S.Literal('labelRef'), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixObjDefault }),
   "type": S.optionalWith(S.Literal('textSpan'), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixTypeDefault })
 })), S.Struct({
-  "obj": S.Literal('False')
+  "kind": S.Literal('field')
 })) })),
-  "obj": S.optionalWith(S.Literal(false), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaObjDefault })
+  "kind": S.optionalWith(S.Literal('schema'), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaKindDefault })
 }),
   "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "useCase": S.Literal('advanced', 'glossary'),
@@ -1032,25 +1032,25 @@ export const ReadWorkflowFiltersWorkflowsWorkflowIdGetParams = S.Struct({
   "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneKindDefault = `field`;
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneMutableDefault = false;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneObjDefault = false;
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneTypeDefault = `string`;
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoKindDefault = `field`;
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoMutableDefault = false;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoObjDefault = false;
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoTypeDefault = `int`;
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeKindDefault = `field`;
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeMutableDefault = false;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeObjDefault = false;
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeTypeDefault = `float`;
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourKindDefault = `field`;
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourMutableDefault = false;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourObjDefault = false;
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourTypeDefault = `bool`;
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveKindDefault = `field`;
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveMutableDefault = false;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveObjDefault = false;
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveTypeDefault = `labelRef`;
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixKindDefault = `field`;
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixMutableDefault = false;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixObjDefault = false;
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixTypeDefault = `textSpan`;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaObjDefault = true;
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaKindDefault = `schema`;
 
 export const ReadWorkflowFiltersWorkflowsWorkflowIdGet200Response = S.Struct({
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
@@ -1060,33 +1060,33 @@ export const ReadWorkflowFiltersWorkflowsWorkflowIdGet200Response = S.Struct({
   "novelIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
   "schema": S.Struct({
   "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneObjDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoObjDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeObjDefault }),
   "type": S.optionalWith(S.Literal('float'), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourObjDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveObjDefault }),
   "type": S.optionalWith(S.Literal('labelRef'), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixObjDefault }),
   "type": S.optionalWith(S.Literal('textSpan'), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixTypeDefault })
 })), S.Struct({
-  "obj": S.Literal('False')
+  "kind": S.Literal('field')
 })) })),
-  "obj": S.optionalWith(S.Literal(false), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaObjDefault })
+  "kind": S.optionalWith(S.Literal('schema'), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaKindDefault })
 }),
   "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "useCase": S.Literal('advanced', 'glossary'),
@@ -1124,25 +1124,25 @@ export const RenameFilterWorkflowBody = S.Struct({
   "workflowName": S.Union(S.String.pipe(S.maxLength(renameFilterWorkflowBodyWorkflowNameOneMax)), S.Null)
 })
 
+export const renameFilterWorkflow200ResponseSchemaFieldsOneKindDefault = `field`;
 export const renameFilterWorkflow200ResponseSchemaFieldsOneMutableDefault = false;
-export const renameFilterWorkflow200ResponseSchemaFieldsOneObjDefault = false;
 export const renameFilterWorkflow200ResponseSchemaFieldsOneTypeDefault = `string`;
+export const renameFilterWorkflow200ResponseSchemaFieldsTwoKindDefault = `field`;
 export const renameFilterWorkflow200ResponseSchemaFieldsTwoMutableDefault = false;
-export const renameFilterWorkflow200ResponseSchemaFieldsTwoObjDefault = false;
 export const renameFilterWorkflow200ResponseSchemaFieldsTwoTypeDefault = `int`;
+export const renameFilterWorkflow200ResponseSchemaFieldsThreeKindDefault = `field`;
 export const renameFilterWorkflow200ResponseSchemaFieldsThreeMutableDefault = false;
-export const renameFilterWorkflow200ResponseSchemaFieldsThreeObjDefault = false;
 export const renameFilterWorkflow200ResponseSchemaFieldsThreeTypeDefault = `float`;
+export const renameFilterWorkflow200ResponseSchemaFieldsFourKindDefault = `field`;
 export const renameFilterWorkflow200ResponseSchemaFieldsFourMutableDefault = false;
-export const renameFilterWorkflow200ResponseSchemaFieldsFourObjDefault = false;
 export const renameFilterWorkflow200ResponseSchemaFieldsFourTypeDefault = `bool`;
+export const renameFilterWorkflow200ResponseSchemaFieldsFiveKindDefault = `field`;
 export const renameFilterWorkflow200ResponseSchemaFieldsFiveMutableDefault = false;
-export const renameFilterWorkflow200ResponseSchemaFieldsFiveObjDefault = false;
 export const renameFilterWorkflow200ResponseSchemaFieldsFiveTypeDefault = `labelRef`;
+export const renameFilterWorkflow200ResponseSchemaFieldsSixKindDefault = `field`;
 export const renameFilterWorkflow200ResponseSchemaFieldsSixMutableDefault = false;
-export const renameFilterWorkflow200ResponseSchemaFieldsSixObjDefault = false;
 export const renameFilterWorkflow200ResponseSchemaFieldsSixTypeDefault = `textSpan`;
-export const renameFilterWorkflow200ResponseSchemaObjDefault = true;
+export const renameFilterWorkflow200ResponseSchemaKindDefault = `schema`;
 
 export const RenameFilterWorkflow200Response = S.Struct({
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
@@ -1152,33 +1152,33 @@ export const RenameFilterWorkflow200Response = S.Struct({
   "novelIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
   "schema": S.Struct({
   "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => renameFilterWorkflow200ResponseSchemaFieldsOneKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsOneMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsOneObjDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => renameFilterWorkflow200ResponseSchemaFieldsOneTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => renameFilterWorkflow200ResponseSchemaFieldsTwoKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsTwoMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsTwoObjDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => renameFilterWorkflow200ResponseSchemaFieldsTwoTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => renameFilterWorkflow200ResponseSchemaFieldsThreeKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsThreeMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsThreeObjDefault }),
   "type": S.optionalWith(S.Literal('float'), { default: () => renameFilterWorkflow200ResponseSchemaFieldsThreeTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => renameFilterWorkflow200ResponseSchemaFieldsFourKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsFourMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsFourObjDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => renameFilterWorkflow200ResponseSchemaFieldsFourTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => renameFilterWorkflow200ResponseSchemaFieldsFiveKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsFiveMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsFiveObjDefault }),
   "type": S.optionalWith(S.Literal('labelRef'), { default: () => renameFilterWorkflow200ResponseSchemaFieldsFiveTypeDefault })
 }), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => renameFilterWorkflow200ResponseSchemaFieldsSixKindDefault }),
   "mutable": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsSixMutableDefault }),
-  "obj": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsSixObjDefault }),
   "type": S.optionalWith(S.Literal('textSpan'), { default: () => renameFilterWorkflow200ResponseSchemaFieldsSixTypeDefault })
 })), S.Struct({
-  "obj": S.Literal('False')
+  "kind": S.Literal('field')
 })) })),
-  "obj": S.optionalWith(S.Literal(false), { default: () => renameFilterWorkflow200ResponseSchemaObjDefault })
+  "kind": S.optionalWith(S.Literal('schema'), { default: () => renameFilterWorkflow200ResponseSchemaKindDefault })
 }),
   "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "useCase": S.Literal('advanced', 'glossary'),

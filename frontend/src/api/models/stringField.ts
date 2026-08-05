@@ -7,7 +7,7 @@
 import type { StringFieldType } from './stringFieldType';
 
 export interface StringField {
+  kind?: 'field';
   mutable?: boolean;
-  obj?: false;
   type: StringFieldType;
 }

@@ -26,6 +26,21 @@ def test_schema_and_data_unions_generate_json_schemas() -> None:
     assert TypeAdapter(Data).json_schema()
 
 
+def test_schema_union_uses_string_kind_discriminator() -> None:
+    adapter = TypeAdapter(SObj)
+
+    parsed = adapter.validate_python(
+        {
+            "kind": "schema",
+            "fields": {"word": {"kind": "field", "type": "string"}},
+        }
+    )
+
+    assert parsed == Schema(fields={"word": StringField()})
+    with pytest.raises(ValidationError):
+        adapter.validate_python({"obj": True, "fields": {}})
+
+
 def test_bool_data_parses_through_data_union() -> None:
     parsed = TypeAdapter(Data).validate_python({"obj": False, "type": "bool", "value": True})
 

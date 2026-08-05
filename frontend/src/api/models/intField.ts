@@ -7,7 +7,7 @@
 import type { IntFieldType } from './intFieldType';
 
 export interface IntField {
+  kind?: 'field';
   mutable?: boolean;
-  obj?: false;
   type: IntFieldType;
 }

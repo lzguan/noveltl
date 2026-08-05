@@ -272,14 +272,14 @@ components:
     BoolField:
       additionalProperties: false
       properties:
+        kind:
+          const: field
+          default: field
+          title: Kind
+          type: string
         mutable:
           default: false
           title: Mutable
-          type: boolean
-        obj:
-          const: false
-          default: false
-          title: Obj
           type: boolean
         type:
           const: bool
@@ -932,14 +932,14 @@ components:
     FloatField:
       additionalProperties: false
       properties:
+        kind:
+          const: field
+          default: field
+          title: Kind
+          type: string
         mutable:
           default: false
           title: Mutable
-          type: boolean
-        obj:
-          const: false
-          default: false
-          title: Obj
           type: boolean
         type:
           const: float
@@ -1283,14 +1283,14 @@ components:
     IntField:
       additionalProperties: false
       properties:
+        kind:
+          const: field
+          default: field
+          title: Kind
+          type: string
         mutable:
           default: false
           title: Mutable
-          type: boolean
-        obj:
-          const: false
-          default: false
-          title: Obj
           type: boolean
         type:
           const: int
@@ -1545,15 +1545,15 @@ components:
     LabelRefField:
       additionalProperties: false
       properties:
+        kind:
+          const: field
+          default: field
+          title: Kind
+          type: string
         mutable:
           const: false
           default: false
           title: Mutable
-          type: boolean
-        obj:
-          const: false
-          default: false
-          title: Obj
           type: boolean
         type:
           const: labelRef
@@ -1879,9 +1879,9 @@ components:
     SObj:
       discriminator:
         mapping:
-          'False': '#/components/schemas/SchemaField'
-          'True': '#/components/schemas/Schema'
-        propertyName: obj
+          field: '#/components/schemas/SchemaField'
+          schema: '#/components/schemas/Schema'
+        propertyName: kind
       oneOf:
       - $ref: '#/components/schemas/Schema'
       - $ref: '#/components/schemas/SchemaField'
@@ -1896,11 +1896,11 @@ components:
             $ref: '#/components/schemas/FieldName'
           title: Fields
           type: object
-        obj:
-          const: true
-          default: true
-          title: Obj
-          type: boolean
+        kind:
+          const: schema
+          default: schema
+          title: Kind
+          type: string
       title: Schema
       type: object
     SchemaField:
@@ -2021,14 +2021,14 @@ components:
     StringField:
       additionalProperties: false
       properties:
+        kind:
+          const: field
+          default: field
+          title: Kind
+          type: string
         mutable:
           default: false
           title: Mutable
-          type: boolean
-        obj:
-          const: false
-          default: false
-          title: Obj
           type: boolean
         type:
           const: string
@@ -2108,15 +2108,15 @@ components:
     TextSpanField:
       additionalProperties: false
       properties:
+        kind:
+          const: field
+          default: field
+          title: Kind
+          type: string
         mutable:
           const: false
           default: false
           title: Mutable
-          type: boolean
-        obj:
-          const: false
-          default: false
-          title: Obj
           type: boolean
         type:
           const: textSpan

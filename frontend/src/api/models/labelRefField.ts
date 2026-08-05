@@ -7,7 +7,7 @@
 import type { LabelRefFieldType } from './labelRefFieldType';
 
 export interface LabelRefField {
+  kind?: 'field';
   mutable?: false;
-  obj?: false;
   type: LabelRefFieldType;
 }

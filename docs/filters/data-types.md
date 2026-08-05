@@ -1,6 +1,6 @@
 # Filter data types
 
-**Last updated:** 2026-07-30
+**Last updated:** 2026-08-05
 
 The filter subsystem uses a small tagged type system for persisted workflow
 schemas, instance values, and function signatures. It validates data loaded
@@ -17,15 +17,15 @@ A `Schema` contains a map of field names to schema fields:
 
 ```json
 {
-  "obj": true,
+  "kind": "schema",
   "fields": {
     "label": {
-      "obj": false,
+      "kind": "field",
       "type": "labelRef",
       "mutable": false
     },
     "comment": {
-      "obj": false,
+      "kind": "field",
       "type": "string",
       "mutable": true
     }
@@ -33,7 +33,7 @@ A `Schema` contains a map of field names to schema fields:
 }
 ```
 
-The `obj` discriminator separates record schemas from elementary fields. Field
+The `kind` discriminator separates record schemas from elementary fields. Field
 names must be non-empty, contain a non-whitespace character, and be at most 128
 characters. A schema may contain at most 256 fields.
 

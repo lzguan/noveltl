@@ -7,7 +7,7 @@
 import type { TextSpanFieldType } from './textSpanFieldType';
 
 export interface TextSpanField {
+  kind?: 'field';
   mutable?: false;
-  obj?: false;
   type: TextSpanFieldType;
 }

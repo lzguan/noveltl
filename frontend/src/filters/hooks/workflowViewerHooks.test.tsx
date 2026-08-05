@@ -33,7 +33,13 @@ vi.mock("@/api/endpoints/filters/filters", () => ({
 const workflowSummary: WorkflowSummary = {
 	createdAt: "2026-08-01T00:00:00Z",
 	jobId: null,
-	schema: { obj: true, fields: { name: { type: "string" }, rank: { type: "int" } } },
+	schema: {
+		kind: "schema",
+		fields: {
+			name: { kind: "field", type: "string" },
+			rank: { kind: "field", type: "int" },
+		},
+	},
 	updatedAt: "2026-08-01T00:00:00Z",
 	useCase: "advanced",
 	workflowId: "workflow-1",

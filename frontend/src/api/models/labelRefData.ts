@@ -8,7 +8,7 @@ import type { LabelRef } from './labelRef';
 import type { LabelRefDataType } from './labelRefDataType';
 
 export interface LabelRefData {
-  obj?: false;
+  kind?: 'value';
   type: LabelRefDataType;
   value: LabelRef;
 }

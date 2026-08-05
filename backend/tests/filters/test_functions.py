@@ -1,7 +1,7 @@
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from src.filters.data_types import BoolField, FloatField, IntField, Schema, StringField, TextSpanField
+from src.filters.data_types import BoolField, FloatField, IntField, LabelRefField, Schema, StringField, TextSpanField
 from src.filters.functions import (
     MAX_FUNCTION_ARITY,
     MAX_LITERAL_STRING_LENGTH,
@@ -10,10 +10,12 @@ from src.filters.functions import (
     And,
     Call,
     Ceil,
+    ChapterNumberOf,
     Compare,
     Concat,
     Construct,
     Contains,
+    EntityGroupOf,
     Extend,
     Floor,
     FunctionType,
@@ -54,7 +56,7 @@ def test_signature_is_computed_and_cannot_be_supplied() -> None:
                 "value": "value",
                 "signature": {
                     "args": [],
-                    "output": {"obj": False, "type": "int", "mutable": False},
+                    "output": {"kind": "field", "type": "int", "mutable": False},
                 },
             }
         )
@@ -139,11 +141,34 @@ def test_project_to_span_signature() -> None:
     assert ProjectToSpan().signature.output == TextSpanField()
 
 
+def test_entity_group_of_signature() -> None:
+    parsed = TypeAdapter(FunctionType).validate_python({"name": "entityGroupOf"})
+
+    assert isinstance(parsed, EntityGroupOf)
+    assert parsed.signature.args == (LabelRefField(),)
+    assert parsed.signature.output == StringField()
+
+
+@pytest.mark.parametrize(
+    ("reference_type", "input_field"),
+    [("labelRef", LabelRefField()), ("textSpan", TextSpanField())],
+)
+def test_chapter_number_of_has_a_typed_reference_signature(
+    reference_type: str,
+    input_field: LabelRefField | TextSpanField,
+) -> None:
+    parsed = TypeAdapter(FunctionType).validate_python({"name": "chapterNumberOf", "type": reference_type})
+
+    assert isinstance(parsed, ChapterNumberOf)
+    assert parsed.signature.args == (input_field,)
+    assert parsed.signature.output == IntField()
+
+
 def test_if_parses_and_round_trips_with_elementary_schemas() -> None:
     definition = {
         "name": "if",
-        "inputSchema": {"obj": False, "type": "bool"},
-        "outputSchema": {"obj": False, "type": "bool"},
+        "inputSchema": {"kind": "field", "type": "bool"},
+        "outputSchema": {"kind": "field", "type": "bool"},
         "condition": {"name": "not"},
         "thenBranch": {"name": "not"},
         "elseBranch": {"name": "not"},

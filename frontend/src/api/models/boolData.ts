@@ -8,7 +8,7 @@ import type { BoolDataType } from './boolDataType';
 import type { BooleanValue } from './booleanValue';
 
 export interface BoolData {
-  obj?: false;
+  kind?: 'value';
   type: BoolDataType;
   value: BooleanValue;
 }

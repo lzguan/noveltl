@@ -11,7 +11,7 @@ from src.filters.data_types import Data, DataObj, LabelRefData, TextSpanData
 from src.filters.function_dependencies import ResolvedResourceDependency
 from src.filters.functions import ResourceName
 from src.labels.models import Label
-from src.novels.models import ChapterContent
+from src.novels.models import Chapter, ChapterContent
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,7 @@ type PythonResourceIds = dict[ResourceName, set[UUID]]
 @dataclass(frozen=True, slots=True)
 class PythonLabelResource:
     word: str
+    entity_group: str
     score: float
     start: int
     end: int
@@ -57,6 +58,10 @@ def collect_resource_ids(
                 if not isinstance(value, TextSpanData | LabelRefData):
                     raise ValueError("Chapter content dependencies must resolve to a text span or label reference.")
                 resource_ids.setdefault(dependency.resource, set()).add(value.value.chapter_content_id)
+            elif dependency.resource == "chapter_number":
+                if not isinstance(value, TextSpanData | LabelRefData):
+                    raise ValueError("Chapter number dependencies must resolve to a text span or label reference.")
+                resource_ids.setdefault(dependency.resource, set()).add(value.value.chapter_id)
             elif dependency.resource == "label":
                 if not isinstance(value, LabelRefData):
                     raise ValueError("Label dependencies must resolve to a label reference.")
@@ -74,6 +79,10 @@ class PythonExecutionContext(Protocol):
         """Get the text content of a chapter by its ID."""
         ...
 
+    def get_chapter_number(self, chapter_id: UUID) -> int:
+        """Get a chapter's number by its ID."""
+        ...
+
     def get_label(self, label_id: UUID) -> PythonLabelResource:
         """Get immutable label metadata by its ID."""
         ...
@@ -89,6 +98,7 @@ class PythonExecutionContextImpl:
     def __init__(self, session: Session) -> None:
         self.session = session
         self.chapter_content_cache: dict[UUID, str] = {}
+        self.chapter_number_cache: dict[UUID, int] = {}
         self.label_cache: dict[UUID, PythonLabelResource] = {}
 
     def get_chapter_content(self, chapter_content_id: UUID) -> str:
@@ -108,19 +118,36 @@ class PythonExecutionContextImpl:
             self.chapter_content_cache[chapter_content_id] = content
         return self.chapter_content_cache[chapter_content_id]
 
+    def get_chapter_number(self, chapter_id: UUID) -> int:
+        """Get a chapter's number by its ID."""
+        if chapter_id not in self.chapter_number_cache:
+            logger.debug("Chapter number cache miss chapter_id=%s", chapter_id)
+            chapter_number = self.session.execute(
+                select(Chapter.chapter_num).where(Chapter.chapter_id == chapter_id)
+            ).scalar_one_or_none()
+            if chapter_number is None:
+                raise ValueError(f"Chapter not found: {chapter_id}")
+            self.chapter_number_cache[chapter_id] = chapter_number
+        return self.chapter_number_cache[chapter_id]
+
     def get_label(self, label_id: UUID) -> PythonLabelResource:
         """Get immutable label metadata by its ID."""
         if label_id not in self.label_cache:
             logger.debug("Label cache miss label_id=%s", label_id)
             row = self.session.execute(
-                select(Label.label_word, Label.label_score, Label.label_start, Label.label_end).where(
-                    Label.label_id == label_id
-                )
+                select(
+                    Label.label_word,
+                    Label.label_entity_group,
+                    Label.label_score,
+                    Label.label_start,
+                    Label.label_end,
+                ).where(Label.label_id == label_id)
             ).one_or_none()
             if row is None:
                 raise ValueError(f"Label not found: {label_id}")
             self.label_cache[label_id] = PythonLabelResource(
                 word=row.label_word,
+                entity_group=row.label_entity_group,
                 score=row.label_score,
                 start=row.label_start,
                 end=row.label_end,
@@ -132,6 +159,8 @@ class PythonExecutionContextImpl:
         for resource, ids in resource_ids.items():
             if resource == "chapter_content_text":
                 self._load_chapter_contents(ids)
+            elif resource == "chapter_number":
+                self._load_chapter_numbers(ids)
             elif resource == "label":
                 self._load_labels(ids)
             else:
@@ -156,6 +185,23 @@ class PythonExecutionContextImpl:
             missing = ", ".join(sorted(str(chapter_content_id) for chapter_content_id in unresolved_ids))
             raise ValueError(f"Chapter content not found: {missing}")
 
+    def _load_chapter_numbers(self, chapter_ids: set[UUID]) -> None:
+        if not chapter_ids:
+            return
+        missing_ids = chapter_ids - self.chapter_number_cache.keys()
+        if not missing_ids:
+            return
+        rows = self.session.execute(
+            select(Chapter.chapter_id, Chapter.chapter_num).where(Chapter.chapter_id.in_(missing_ids))
+        ).all()
+        for chapter_id, chapter_number in rows:
+            self.chapter_number_cache[chapter_id] = chapter_number
+
+        unresolved_ids = missing_ids - self.chapter_number_cache.keys()
+        if unresolved_ids:
+            missing = ", ".join(sorted(str(chapter_id) for chapter_id in unresolved_ids))
+            raise ValueError(f"Chapter not found: {missing}")
+
     def _load_labels(self, label_ids: set[UUID]) -> None:
         if not label_ids:
             return
@@ -163,13 +209,19 @@ class PythonExecutionContextImpl:
         if not missing_ids:
             return
         rows = self.session.execute(
-            select(Label.label_id, Label.label_word, Label.label_score, Label.label_start, Label.label_end).where(
-                Label.label_id.in_(missing_ids)
-            )
+            select(
+                Label.label_id,
+                Label.label_word,
+                Label.label_entity_group,
+                Label.label_score,
+                Label.label_start,
+                Label.label_end,
+            ).where(Label.label_id.in_(missing_ids))
         ).all()
-        for label_id, label_word, label_score, label_start, label_end in rows:
+        for label_id, label_word, label_entity_group, label_score, label_start, label_end in rows:
             self.label_cache[label_id] = PythonLabelResource(
                 word=label_word,
+                entity_group=label_entity_group,
                 score=label_score,
                 start=label_start,
                 end=label_end,

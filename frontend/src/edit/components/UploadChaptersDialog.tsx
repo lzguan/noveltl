@@ -126,7 +126,7 @@ function UploadChaptersDialog({ novels, open, onOpenChange }: UploadChaptersDial
 		}
 	}
 
-	async function submit(event: React.FormEvent<HTMLFormElement>) {
+	async function submit(event: React.SubmitEvent<HTMLFormElement>) {
 		event.preventDefault();
 		if (file === null || summary === null || selectedNovelId === "") return;
 

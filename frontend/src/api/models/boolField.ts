@@ -7,7 +7,7 @@
 import type { BoolFieldType } from './boolFieldType';
 
 export interface BoolField {
+  kind?: 'field';
   mutable?: boolean;
-  obj?: false;
   type: BoolFieldType;
 }

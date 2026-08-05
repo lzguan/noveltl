@@ -1,6 +1,6 @@
 # Filter functions
 
-**Last updated:** 2026-07-30
+**Last updated:** 2026-08-05
 
 Filter functions are persisted descriptions of safe computations. They form a
 closed, discriminated abstract syntax tree (AST): each node has a `name` tag,
@@ -74,7 +74,9 @@ and do not perform implicit promotion. Float addition evaluates left-to-right.
 | --- | --- | --- |
 | `projectToSpan` | Resolve current offsets and return a text span | Label row |
 | `wordOf` | Read a label's current word | Label row |
+| `entityGroupOf` | Read a label's current entity group | Label row |
 | `scoreOf` | Read a label's current score | Label row |
+| `chapterNumberOf` | Read the chapter number for a label reference or text span | Chapter row |
 | `startOf` | Return a span's start offset | None |
 | `endOf` | Return a span's end offset | None |
 | `lengthOf` | Return `end - start` | None |
@@ -127,8 +129,10 @@ predicate before compiling it.
 ## External dependencies
 
 Some functions need NovelTL data that is not embedded in the instance.
-`wordOf` and `scoreOf` declare a label dependency; `textOf` and `textAround`
-declare a chapter-content dependency.
+`wordOf`, `entityGroupOf`, and `scoreOf` declare a label dependency; `chapterNumberOf`
+declares a chapter-number dependency; `textOf` and `textAround` declare a chapter-content
+dependency. Because a function has one fixed signature, `chapterNumberOf` includes a required
+`type` property whose value is either `labelRef` or `textSpan`.
 
 The dependency resolver symbolically evaluates the AST and traces each
 dependency back to a root argument and field path. It understands field access,
@@ -139,8 +143,8 @@ Before executing a batch, a runner collects all referenced IDs and asks the
 Python execution context to load them in bulk. The compiled function then reads
 from the context's per-batch caches instead of issuing one query per instance.
 
-The current context loads label words and scores and complete chapter-content
-text. It does not enforce user permissions; runners currently operate as
+The current context loads label words, entity groups, scores, chapter numbers, and complete
+chapter-content text. It does not enforce user permissions; runners currently operate as
 trusted backend code.
 
 ## Compilation

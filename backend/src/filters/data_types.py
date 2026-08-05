@@ -36,7 +36,7 @@ type BooleanValue = Annotated[bool, Field(strict=True)]
 class SchemaFieldBase(Model):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    obj: Literal[False] = False
+    kind: Literal["field"] = "field"
     type: ElementaryTypeName
     mutable: bool
 
@@ -80,11 +80,11 @@ type SchemaField = Annotated[
 class Schema(Model):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    obj: Literal[True] = True
+    kind: Literal["schema"] = "schema"
     fields: dict[FieldName, SchemaField] = Field(default_factory=dict, max_length=MAX_SCHEMA_FIELDS)
 
 
-type SObj = Annotated[Schema | SchemaField, Field(discriminator="obj")]
+type SObj = Annotated[Schema | SchemaField, Field(discriminator="kind")]
 
 schema_adapter = TypeAdapter[SObj](SObj)
 
@@ -120,7 +120,7 @@ class DTypeBase[T](Model):
 
     value: T
     type: str
-    obj: Literal[False] = False
+    kind: Literal["value"] = "value"
 
 
 class StringData(DTypeBase[StringValue]):
@@ -157,10 +157,10 @@ class DataObj(Model):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     fields: dict[FieldName, DataType] = Field(default_factory=dict, max_length=MAX_SCHEMA_FIELDS)
-    obj: Literal[True] = True
+    kind: Literal["object"] = "object"
 
 
-type Data = Annotated[DataObj | DataType, Field(discriminator="obj")]
+type Data = Annotated[DataObj | DataType, Field(discriminator="kind")]
 
 data_adapter = TypeAdapter[Data](Data)
 

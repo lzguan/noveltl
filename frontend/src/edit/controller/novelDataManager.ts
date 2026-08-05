@@ -126,6 +126,12 @@ export const buildNovelDataManager = (
 			role: () => Effect.succeed(novelData.novelRole),
 			labelGroupIds: () => labelGroupsIndex.getIds(),
 			chapterIds: () => chaptersIndex.getIds(),
+			chapterIdFromServerId: (chapterId) =>
+				idRepo.queryProvId({ kind: "chapter", servId: chapterId }),
+			chapterContentIdFromServerId: (chapterContentId) =>
+				idRepo.queryProvId({ kind: "chapterContent", servId: chapterContentId }),
+			labelIdFromServerId: (labelId) =>
+				idRepo.queryProvId({ kind: "label", servId: labelId }),
 			chapterGetterSlot: (chapterId: CProvId) =>
 				Effect.gen(function* () {
 					const slot = yield* chaptersIndex.get(chapterId);

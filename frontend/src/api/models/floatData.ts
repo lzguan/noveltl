@@ -8,7 +8,7 @@ import type { FloatDataType } from './floatDataType';
 import type { FloatValue } from './floatValue';
 
 export interface FloatData {
-  obj?: false;
+  kind?: 'value';
   type: FloatDataType;
   value: FloatValue;
 }

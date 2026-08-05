@@ -1,6 +1,6 @@
 # Filter data types
 
-**Last updated:** 2026-07-30
+**Last updated:** 2026-08-05
 
 The filter subsystem uses a small tagged type system for persisted workflow
 schemas, instance values, and function signatures. It validates data loaded
@@ -17,15 +17,15 @@ A `Schema` contains a map of field names to schema fields:
 
 ```json
 {
-  "obj": true,
+  "kind": "schema",
   "fields": {
     "label": {
-      "obj": false,
+      "kind": "field",
       "type": "labelRef",
       "mutable": false
     },
     "comment": {
-      "obj": false,
+      "kind": "field",
       "type": "string",
       "mutable": true
     }
@@ -33,7 +33,7 @@ A `Schema` contains a map of field names to schema fields:
 }
 ```
 
-The `obj` discriminator separates record schemas from elementary fields. Field
+The `kind` discriminator separates record schemas from elementary fields. Field
 names must be non-empty, contain a non-whitespace character, and be at most 128
 characters. A schema may contain at most 256 fields.
 
@@ -69,7 +69,8 @@ A `TextSpan` contains:
 The model requires `end >= start`, so an empty span is valid. It does not check
 the referenced text's existence or length during JSON parsing. Functions that
 read the text resolve the immutable chapter-content ID through an execution
-context.
+context. `chapterNumberOf` instead resolves the chapter ID to current chapter
+metadata.
 
 ### Label references
 
@@ -83,9 +84,10 @@ A `LabelRef` contains:
 
 The reference captures the label and chapter-content identities, but it does
 not snapshot the label's range, word, score, category, or dirty state. The
-implemented `wordOf`, `scoreOf`, and `projectToSpan` functions load the current
+implemented `wordOf`, `entityGroupOf`, `scoreOf`, and `projectToSpan` functions load the current
 label row by `labelId` when a runner executes. `projectToSpan` combines that
-row's current offsets with the reference's stored chapter IDs.
+row's current offsets with the reference's stored chapter IDs. `chapterNumberOf`
+accepts a label reference directly and resolves its stored chapter ID.
 
 Reference integrity, authorization, and staleness validation are not part of
 the Pydantic value model and do not yet have a separate execution preflight.
@@ -97,16 +99,19 @@ elementary value:
 
 ```json
 {
-  "obj": true,
+  "kind": "object",
   "fields": {
     "term": {
-      "obj": false,
+      "kind": "value",
       "type": "string",
       "value": "青石城"
     }
   }
 }
 ```
+
+The runtime `kind` discriminator separates record objects from elementary
+values independently of the schema-description discriminator.
 
 `Schema` and `DataObj` have the same flat field shape, but mutability belongs
 only to the schema. A mutable string and an immutable string have the same

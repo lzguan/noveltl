@@ -3,8 +3,12 @@ import type {
 	ALRProvId,
 	AProvId,
 	CCProvId,
+	CCServId,
 	CProvId,
+	CServId,
 	LGProvId,
+	LProvId,
+	LServId,
 	ProvAutoLabel,
 	ProvAutoLabelRun,
 	ProvChapter,
@@ -64,6 +68,9 @@ export interface NovelGetters {
 	role: () => Effect.Effect<Role>;
 	labelGroupIds: () => Effect.Effect<readonly LGProvId[]>;
 	chapterIds: () => Effect.Effect<readonly CProvId[]>;
+	chapterIdFromServerId: (chapterId: CServId) => Effect.Effect<CProvId | null>;
+	chapterContentIdFromServerId: (chapterContentId: CCServId) => Effect.Effect<CCProvId | null>;
+	labelIdFromServerId: (labelId: LServId) => Effect.Effect<LProvId | null>;
 	chapterGetterSlot: (chapterId: CProvId) => Effect.Effect<ChapterGetterSlot, NotFoundException>;
 	labelGroupSlot: (labelGroupId: LGProvId) => Effect.Effect<LabelGroupSlot, NotFoundException>;
 	autoLabelRunIds: () => Effect.Effect<readonly ALRProvId[]>;

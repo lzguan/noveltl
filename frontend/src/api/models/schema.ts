@@ -5,8 +5,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SchemaFields } from './schemaFields';
+import type { SchemaKind } from './schemaKind';
 
 export interface Schema {
   fields?: SchemaFields;
-  obj?: true;
+  kind: SchemaKind;
 }

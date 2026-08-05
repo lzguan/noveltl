@@ -28,11 +28,13 @@ from src.filters.functions import (
     And,
     Call,
     Ceil,
+    ChapterNumberOf,
     Compare,
     Concat,
     Construct,
     Contains,
     EndOf,
+    EntityGroupOf,
     Extend,
     Floor,
     Function,
@@ -229,7 +231,9 @@ def evaluate(
         | LengthOf
         | TextOf
         | TextAround
+        | ChapterNumberOf
         | WordOf
+        | EntityGroupOf
         | ScoreOf,
     ):
         return SymbolicScalar(origins=frozenset())

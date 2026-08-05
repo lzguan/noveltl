@@ -8,5 +8,5 @@ import type { DataObjFields } from './dataObjFields';
 
 export interface DataObj {
   fields?: DataObjFields;
-  obj?: true;
+  kind?: 'object';
 }

@@ -3887,6 +3887,53 @@
         }
       }
     },
+    "/filters/functions/validate": {
+      "post": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Validate Filter Function",
+        "description": "Validate a function draft and return its computed signature without saving it.",
+        "operationId": "validate_filter_function",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateFunctionDefinitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FunctionDefinitionValidationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/filters/runners/python/label-source": {
       "post": {
         "tags": [
@@ -4566,11 +4613,11 @@
             "title": "Type",
             "default": "bool"
           },
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "value",
+            "title": "Kind",
+            "default": "value"
           }
         },
         "additionalProperties": false,
@@ -4582,11 +4629,11 @@
       },
       "BoolField": {
         "properties": {
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "field",
+            "title": "Kind",
+            "default": "field"
           },
           "type": {
             "type": "string",
@@ -5242,11 +5289,11 @@
             "maxProperties": 256,
             "title": "Fields"
           },
-          "obj": {
-            "type": "boolean",
-            "const": true,
-            "title": "Obj",
-            "default": true
+          "kind": {
+            "type": "string",
+            "const": "object",
+            "title": "Kind",
+            "default": "object"
           }
         },
         "additionalProperties": false,
@@ -5442,11 +5489,11 @@
             "title": "Type",
             "default": "float"
           },
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "value",
+            "title": "Kind",
+            "default": "value"
           }
         },
         "additionalProperties": false,
@@ -5458,11 +5505,11 @@
       },
       "FloatField": {
         "properties": {
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "field",
+            "title": "Kind",
+            "default": "field"
           },
           "type": {
             "type": "string",
@@ -5579,6 +5626,18 @@
           "updatedAt"
         ],
         "title": "FunctionDefinitionResponse"
+      },
+      "FunctionDefinitionValidationResponse": {
+        "properties": {
+          "signature": {
+            "$ref": "#/components/schemas/Signature"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signature"
+        ],
+        "title": "FunctionDefinitionValidationResponse"
       },
       "GroupData": {
         "oneOf": [
@@ -5919,11 +5978,11 @@
             "title": "Type",
             "default": "int"
           },
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "value",
+            "title": "Kind",
+            "default": "value"
           }
         },
         "additionalProperties": false,
@@ -5935,11 +5994,11 @@
       },
       "IntField": {
         "properties": {
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "field",
+            "title": "Kind",
+            "default": "field"
           },
           "type": {
             "type": "string",
@@ -6240,11 +6299,11 @@
             "title": "Type",
             "default": "labelRef"
           },
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "value",
+            "title": "Kind",
+            "default": "value"
           }
         },
         "additionalProperties": false,
@@ -6256,11 +6315,11 @@
       },
       "LabelRefField": {
         "properties": {
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "field",
+            "title": "Kind",
+            "default": "field"
           },
           "type": {
             "type": "string",
@@ -6697,13 +6756,30 @@
         "title": "RequestConflictErrorResponse",
         "description": "HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail."
       },
+      "SObj": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Schema"
+          },
+          {
+            "$ref": "#/components/schemas/SchemaField"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "field": "#/components/schemas/SchemaField",
+            "schema": "#/components/schemas/Schema"
+          }
+        }
+      },
       "Schema": {
         "properties": {
-          "obj": {
-            "type": "boolean",
-            "const": true,
-            "title": "Obj",
-            "default": true
+          "kind": {
+            "type": "string",
+            "const": "schema",
+            "title": "Kind",
+            "default": "schema"
           },
           "fields": {
             "additionalProperties": {
@@ -6762,6 +6838,28 @@
           3
         ],
         "title": "SepPriority"
+      },
+      "Signature": {
+        "properties": {
+          "args": {
+            "items": {
+              "$ref": "#/components/schemas/SObj"
+            },
+            "type": "array",
+            "title": "Args",
+            "default": []
+          },
+          "output": {
+            "$ref": "#/components/schemas/SObj"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "output"
+        ],
+        "title": "Signature",
+        "description": "The input and output schemas of a function."
       },
       "SortDirection": {
         "type": "string",
@@ -6850,11 +6948,11 @@
             "title": "Type",
             "default": "string"
           },
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "value",
+            "title": "Kind",
+            "default": "value"
           }
         },
         "additionalProperties": false,
@@ -6866,11 +6964,11 @@
       },
       "StringField": {
         "properties": {
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "field",
+            "title": "Kind",
+            "default": "field"
           },
           "type": {
             "type": "string",
@@ -6959,11 +7057,11 @@
             "title": "Type",
             "default": "textSpan"
           },
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "value",
+            "title": "Kind",
+            "default": "value"
           }
         },
         "additionalProperties": false,
@@ -6975,11 +7073,11 @@
       },
       "TextSpanField": {
         "properties": {
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "field",
+            "title": "Kind",
+            "default": "field"
           },
           "type": {
             "type": "string",
@@ -7288,6 +7386,21 @@
         ],
         "title": "UserType",
         "description": "Enum of possible user types."
+      },
+      "ValidateFunctionDefinitionRequest": {
+        "properties": {
+          "functionDefinition": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Functiondefinition"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "functionDefinition"
+        ],
+        "title": "ValidateFunctionDefinitionRequest"
       },
       "ValidationError": {
         "properties": {

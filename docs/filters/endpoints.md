@@ -121,13 +121,13 @@ Request body:
       {
         "groupingId": "00000000-0000-0000-0000-000000000000",
         "values": [
-          { "type": "string", "value": "Alice" },
-          { "type": "string", "value": "Bob" }
+          { "kind": "value", "type": "string", "value": "Alice" },
+          { "kind": "value", "type": "string", "value": "Bob" }
         ]
       },
       {
         "groupingId": "00000000-0000-0000-0000-000000000001",
-        "values": [{ "type": "bool", "value": true }]
+        "values": [{ "kind": "value", "type": "bool", "value": true }]
       },
       {
         "groupingId": "00000000-0000-0000-0000-000000000002",
@@ -165,10 +165,11 @@ grouping ID:
   "instance": {
     "instanceId": "00000000-0000-0000-0000-000000000100",
     "workflowId": "00000000-0000-0000-0000-000000000010",
-    "value": { "obj": true, "fields": {} }
+    "value": { "kind": "object", "fields": {} }
   },
   "groupValues": {
     "00000000-0000-0000-0000-000000000002": {
+      "kind": "value",
       "type": "string",
       "value": "Alice"
     }

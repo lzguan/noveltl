@@ -8,7 +8,20 @@ import type { BoolField } from './boolField';
 import type { FloatField } from './floatField';
 import type { IntField } from './intField';
 import type { LabelRefField } from './labelRefField';
+import type { SchemaFieldKind } from './schemaFieldKind';
 import type { StringField } from './stringField';
 import type { TextSpanField } from './textSpanField';
 
-export type SchemaField = StringField | IntField | FloatField | BoolField | LabelRefField | TextSpanField;
+export type SchemaField = (StringField & {
+  kind: SchemaFieldKind;
+}) | (IntField & {
+  kind: SchemaFieldKind;
+}) | (FloatField & {
+  kind: SchemaFieldKind;
+}) | (BoolField & {
+  kind: SchemaFieldKind;
+}) | (LabelRefField & {
+  kind: SchemaFieldKind;
+}) | (TextSpanField & {
+  kind: SchemaFieldKind;
+});

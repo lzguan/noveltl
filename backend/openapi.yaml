@@ -253,11 +253,11 @@ components:
     BoolData:
       additionalProperties: false
       properties:
-        obj:
-          const: false
-          default: false
-          title: Obj
-          type: boolean
+        kind:
+          const: value
+          default: value
+          title: Kind
+          type: string
         type:
           const: bool
           default: bool
@@ -272,14 +272,14 @@ components:
     BoolField:
       additionalProperties: false
       properties:
+        kind:
+          const: field
+          default: field
+          title: Kind
+          type: string
         mutable:
           default: false
           title: Mutable
-          type: boolean
-        obj:
-          const: false
-          default: false
-          title: Obj
           type: boolean
         type:
           const: bool
@@ -773,11 +773,11 @@ components:
             $ref: '#/components/schemas/FieldName'
           title: Fields
           type: object
-        obj:
-          const: true
-          default: true
-          title: Obj
-          type: boolean
+        kind:
+          const: object
+          default: object
+          title: Kind
+          type: string
       title: DataObj
       type: object
     DataType:
@@ -913,11 +913,11 @@ components:
     FloatData:
       additionalProperties: false
       properties:
-        obj:
-          const: false
-          default: false
-          title: Obj
-          type: boolean
+        kind:
+          const: value
+          default: value
+          title: Kind
+          type: string
         type:
           const: float
           default: float
@@ -932,14 +932,14 @@ components:
     FloatField:
       additionalProperties: false
       properties:
+        kind:
+          const: field
+          default: field
+          title: Kind
+          type: string
         mutable:
           default: false
           title: Mutable
-          type: boolean
-        obj:
-          const: false
-          default: false
-          title: Obj
           type: boolean
         type:
           const: float
@@ -1023,6 +1023,14 @@ components:
       - createdAt
       - updatedAt
       title: FunctionDefinitionResponse
+      type: object
+    FunctionDefinitionValidationResponse:
+      properties:
+        signature:
+          $ref: '#/components/schemas/Signature'
+      required:
+      - signature
+      title: FunctionDefinitionValidationResponse
       type: object
     GroupData:
       discriminator:
@@ -1256,11 +1264,11 @@ components:
     IntData:
       additionalProperties: false
       properties:
-        obj:
-          const: false
-          default: false
-          title: Obj
-          type: boolean
+        kind:
+          const: value
+          default: value
+          title: Kind
+          type: string
         type:
           const: int
           default: int
@@ -1275,14 +1283,14 @@ components:
     IntField:
       additionalProperties: false
       properties:
+        kind:
+          const: field
+          default: field
+          title: Kind
+          type: string
         mutable:
           default: false
           title: Mutable
-          type: boolean
-        obj:
-          const: false
-          default: false
-          title: Obj
           type: boolean
         type:
           const: int
@@ -1518,11 +1526,11 @@ components:
     LabelRefData:
       additionalProperties: false
       properties:
-        obj:
-          const: false
-          default: false
-          title: Obj
-          type: boolean
+        kind:
+          const: value
+          default: value
+          title: Kind
+          type: string
         type:
           const: labelRef
           default: labelRef
@@ -1537,15 +1545,15 @@ components:
     LabelRefField:
       additionalProperties: false
       properties:
+        kind:
+          const: field
+          default: field
+          title: Kind
+          type: string
         mutable:
           const: false
           default: false
           title: Mutable
-          type: boolean
-        obj:
-          const: false
-          default: false
-          title: Obj
           type: boolean
         type:
           const: labelRef
@@ -1868,6 +1876,15 @@ components:
       - detail
       title: RequestConflictErrorResponse
       type: object
+    SObj:
+      discriminator:
+        mapping:
+          field: '#/components/schemas/SchemaField'
+          schema: '#/components/schemas/Schema'
+        propertyName: kind
+      oneOf:
+      - $ref: '#/components/schemas/Schema'
+      - $ref: '#/components/schemas/SchemaField'
     Schema:
       additionalProperties: false
       properties:
@@ -1879,11 +1896,11 @@ components:
             $ref: '#/components/schemas/FieldName'
           title: Fields
           type: object
-        obj:
-          const: true
-          default: true
-          title: Obj
-          type: boolean
+        kind:
+          const: schema
+          default: schema
+          title: Kind
+          type: string
       title: Schema
       type: object
     SchemaField:
@@ -1910,6 +1927,22 @@ components:
       - 3
       title: SepPriority
       type: integer
+    Signature:
+      additionalProperties: false
+      description: The input and output schemas of a function.
+      properties:
+        args:
+          default: []
+          items:
+            $ref: '#/components/schemas/SObj'
+          title: Args
+          type: array
+        output:
+          $ref: '#/components/schemas/SObj'
+      required:
+      - output
+      title: Signature
+      type: object
     SortDirection:
       enum:
       - asc
@@ -1969,11 +2002,11 @@ components:
     StringData:
       additionalProperties: false
       properties:
-        obj:
-          const: false
-          default: false
-          title: Obj
-          type: boolean
+        kind:
+          const: value
+          default: value
+          title: Kind
+          type: string
         type:
           const: string
           default: string
@@ -1988,14 +2021,14 @@ components:
     StringField:
       additionalProperties: false
       properties:
+        kind:
+          const: field
+          default: field
+          title: Kind
+          type: string
         mutable:
           default: false
           title: Mutable
-          type: boolean
-        obj:
-          const: false
-          default: false
-          title: Obj
           type: boolean
         type:
           const: string
@@ -2056,11 +2089,11 @@ components:
     TextSpanData:
       additionalProperties: false
       properties:
-        obj:
-          const: false
-          default: false
-          title: Obj
-          type: boolean
+        kind:
+          const: value
+          default: value
+          title: Kind
+          type: string
         type:
           const: textSpan
           default: textSpan
@@ -2075,15 +2108,15 @@ components:
     TextSpanField:
       additionalProperties: false
       properties:
+        kind:
+          const: field
+          default: field
+          title: Kind
+          type: string
         mutable:
           const: false
           default: false
           title: Mutable
-          type: boolean
-        obj:
-          const: false
-          default: false
-          title: Obj
           type: boolean
         type:
           const: textSpan
@@ -2297,6 +2330,17 @@ components:
       - admin
       title: UserType
       type: string
+    ValidateFunctionDefinitionRequest:
+      additionalProperties: false
+      properties:
+        functionDefinition:
+          additionalProperties: true
+          title: Functiondefinition
+          type: object
+      required:
+      - functionDefinition
+      title: ValidateFunctionDefinitionRequest
+      type: object
     ValidationError:
       properties:
         loc:
@@ -3314,6 +3358,35 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Create Filter Function
+      tags:
+      - filters
+  /filters/functions/validate:
+    post:
+      description: Validate a function draft and return its computed signature without
+        saving it.
+      operationId: validate_filter_function
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateFunctionDefinitionRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunctionDefinitionValidationResponse'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Validate Filter Function
       tags:
       - filters
   /filters/functions/{functionDefinitionId}:

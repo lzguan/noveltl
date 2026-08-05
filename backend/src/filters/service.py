@@ -20,7 +20,7 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session, aliased
 
 from src.auth.models import User
-from src.filters.data_types import BoolField, IntField, Schema, StringField, data_adapter, extends
+from src.filters.data_types import BoolField, DataObj, IntField, Schema, StringField, data_adapter, extends
 from src.filters.dispatch.dispatcher import RunnerDispatcher
 from src.filters.exceptions import (
     FunctionAlreadyExistsException,
@@ -64,6 +64,7 @@ from src.filters.schemas import (
     CreateFunctionDefinitionRequest,
     FunctionDefinitionMeta,
     FunctionDefinitionResponse,
+    FunctionDefinitionValidationResponse,
     GroupingResponse,
     GroupOperationAccepted,
     GroupValueCount,
@@ -76,6 +77,7 @@ from src.filters.schemas import (
     RenameWorkflowRequest,
     RunnerInput,
     SortDirection,
+    ValidateFunctionDefinitionRequest,
     WorkflowOperationAccepted,
     WorkflowResponse,
     validate_frame_workflow,
@@ -439,7 +441,7 @@ def query_instances_of_workflow_advanced(
                 f"Cursor with ID {request.cursor} not found in workflow {workflow_id}."
             ) from e
         data = data_adapter.validate_python(current.value)
-        if data.obj is False:
+        if not isinstance(data, DataObj):
             raise ValueError(f"Cursor with ID {request.cursor} does not contain an object value.")
         cursor_conditions = []
         equal_prefix = []
@@ -527,6 +529,14 @@ def create_function_definition(
             ) from None
         raise
     return FunctionDefinitionResponse.model_validate(definition)
+
+
+def validate_function_definition(
+    request: ValidateFunctionDefinitionRequest,
+) -> FunctionDefinitionValidationResponse:
+    """Validate a function draft without reading or writing persistent state."""
+    function = function_adapter.validate_python(request.function_definition)
+    return FunctionDefinitionValidationResponse(signature=function.signature)
 
 
 def rename_workflow(

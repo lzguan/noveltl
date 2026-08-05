@@ -176,11 +176,20 @@ describe("workflow viewer hooks", () => {
 	});
 
 	it("owns grouping activation, selection, search, and value pagination", async () => {
-		vi.mocked(readGroupingValuesFiltersGroupingsGroupingIdValuesGet).mockResolvedValue({
-			status: 200,
-			data: [{ value: { kind: "value", type: "string", value: "Lin" }, count: 4 }],
-			headers: new Headers(),
+		type GroupingValuesResponse = Awaited<
+			ReturnType<typeof readGroupingValuesFiltersGroupingsGroupingIdValuesGet>
+		>;
+		const firstPage = Array.from({ length: 50 }, (_, index) => ({
+			value: { kind: "value" as const, type: "string" as const, value: `Value ${index}` },
+			count: 4,
+		}));
+		let resolveNextPage: (response: GroupingValuesResponse) => void = () => undefined;
+		const nextPage = new Promise<GroupingValuesResponse>((resolve) => {
+			resolveNextPage = resolve;
 		});
+		vi.mocked(readGroupingValuesFiltersGroupingsGroupingIdValuesGet)
+			.mockResolvedValueOnce({ status: 200, data: firstPage, headers: new Headers() })
+			.mockReturnValueOnce(nextPage);
 		const { result } = renderHook(() =>
 			useWorkflowGroupings({ status: "ready", data: [grouping] }),
 		);
@@ -192,22 +201,39 @@ describe("workflow viewer hooks", () => {
 			),
 		);
 		act(() =>
-			result.current.setGroupingValueSelected(
-				grouping.groupingId,
-				{ kind: "value", type: "string", value: "Lin" },
-				true,
-			),
+			result.current.setGroupingValueSelected(grouping.groupingId, firstPage[0].value, true),
 		);
 		expect(result.current.activeGroupings.get(grouping.groupingId)?.selectedValues).toEqual([
-			{ kind: "value", type: "string", value: "Lin" },
+			firstPage[0].value,
 		]);
 
 		act(() => result.current.loadNextGroupingValuesPage(grouping.groupingId));
+		expect(result.current.activeGroupings.get(grouping.groupingId)?.values).toEqual({
+			status: "ready",
+			data: {
+				items: firstPage,
+				start: 1,
+				end: 50,
+				hasPrevious: false,
+				hasNext: true,
+			},
+		});
 		expect(readGroupingValuesFiltersGroupingsGroupingIdValuesGet).toHaveBeenLastCalledWith(
 			grouping.groupingId,
 			{ search: undefined, limit: 50, offset: 50 },
 			expect.objectContaining({ signal: expect.any(AbortSignal) }),
 		);
+
+		resolveNextPage({
+			status: 200,
+			data: [{ value: { kind: "value", type: "string", value: "Next" }, count: 2 }],
+			headers: new Headers(),
+		});
+		await waitFor(() => {
+			const values = result.current.activeGroupings.get(grouping.groupingId)?.values;
+			expect(values?.status).toBe("ready");
+			if (values?.status === "ready") expect(values.data.start).toBe(51);
+		});
 	});
 
 	it("exposes sort-key-specific frame draft commands", () => {

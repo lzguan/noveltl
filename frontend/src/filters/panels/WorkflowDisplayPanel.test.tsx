@@ -12,8 +12,17 @@ import type {
 	WorkflowSummary,
 } from "@/api/models";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { WorkflowDisplayPanel } from "./WorkflowDisplayPanel";
+
+beforeAll(() => {
+	Object.defineProperties(HTMLElement.prototype, {
+		hasPointerCapture: { configurable: true, value: () => false },
+		releasePointerCapture: { configurable: true, value: () => undefined },
+		scrollIntoView: { configurable: true, value: () => undefined },
+		setPointerCapture: { configurable: true, value: () => undefined },
+	});
+});
 
 const workflowSummary: WorkflowSummary = {
 	createdAt: "2026-08-01T00:00:00Z",
@@ -219,6 +228,12 @@ function createProps(overrides: PropsOverrides = {}): WorkflowDisplayPanelProps 
 }
 
 describe("WorkflowDisplayPanel", () => {
+	async function selectGrouping(groupingName: string) {
+		const trigger = screen.getByRole("combobox", { name: "Add grouping" });
+		fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: "mouse" });
+		fireEvent.click(await screen.findByRole("option", { name: groupingName }));
+	}
+
 	it("refreshes only the workflow catalog on command", () => {
 		const props = createProps();
 		render(<WorkflowDisplayPanel {...props} />);
@@ -272,6 +287,12 @@ describe("WorkflowDisplayPanel", () => {
 
 		const lin = screen.getByRole("checkbox", { name: /Lin/ });
 		expect(lin).toBeChecked();
+		const meiValue = screen.getByText("Mei");
+		const meiCount = screen.getByText("12");
+		expect(meiValue.parentElement).toHaveClass("select-text");
+		expect(meiCount).toHaveClass("select-text");
+		fireEvent.click(meiValue);
+		expect(setGroupingValueSelected).not.toHaveBeenCalled();
 		fireEvent.click(screen.getByRole("checkbox", { name: /Mei/ }));
 		expect(setGroupingValueSelected).toHaveBeenCalledWith(
 			speakerGrouping.groupingId,
@@ -280,6 +301,59 @@ describe("WorkflowDisplayPanel", () => {
 		);
 		fireEvent.click(screen.getByRole("button", { name: "Next dialogue.speaker values page" }));
 		expect(loadNextGroupingValuesPage).toHaveBeenCalledWith(speakerGrouping.groupingId);
+	});
+
+	it("allows a removed grouping to be selected again", async () => {
+		const activateGrouping = vi.fn();
+		const deactivateGrouping = vi.fn();
+		const inactiveGroupings = new Map<string, ActiveGroupingState>();
+		const speakerGroupingOnly = new Map(
+			[...activeGroupingStates()].filter(
+				([groupingId]) => groupingId === speakerGrouping.groupingId,
+			),
+		);
+		const { rerender } = render(
+			<WorkflowDisplayPanel
+				{...createProps({
+					groupingSection: {
+						activeGroupings: inactiveGroupings,
+						activateGrouping,
+						deactivateGrouping,
+					},
+				})}
+			/>,
+		);
+
+		await selectGrouping("dialogue.speaker");
+		expect(activateGrouping).toHaveBeenCalledWith(speakerGrouping.groupingId);
+
+		rerender(
+			<WorkflowDisplayPanel
+				{...createProps({
+					groupingSection: {
+						activeGroupings: speakerGroupingOnly,
+						activateGrouping,
+						deactivateGrouping,
+					},
+				})}
+			/>,
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Remove dialogue.speaker" }));
+		expect(deactivateGrouping).toHaveBeenCalledWith(speakerGrouping.groupingId);
+
+		rerender(
+			<WorkflowDisplayPanel
+				{...createProps({
+					groupingSection: {
+						activeGroupings: inactiveGroupings,
+						activateGrouping,
+						deactivateGrouping,
+					},
+				})}
+			/>,
+		);
+		await selectGrouping("dialogue.speaker");
+		expect(activateGrouping).toHaveBeenCalledTimes(2);
 	});
 
 	it("holds back grouping and result controls until a workflow completes", () => {

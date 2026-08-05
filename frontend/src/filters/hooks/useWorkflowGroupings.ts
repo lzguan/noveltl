@@ -162,11 +162,6 @@ export function useWorkflowGroupings(
 			direction === "previous"
 				? Math.max(0, state.offset - WORKFLOW_VIEWER_PAGE_SIZE)
 				: state.offset + WORKFLOW_VIEWER_PAGE_SIZE;
-		updateGrouping(groupingId, (current) => ({
-			...current,
-			offset,
-			values: { status: "loading" },
-		}));
 		loadGroupingValues(state.grouping, state.search, offset);
 	}
 

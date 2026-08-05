@@ -66,12 +66,17 @@ function GroupValueRows({
 								setGroupingValueSelected(row.value, checked === true)
 							}
 						/>
-						<FieldLabel htmlFor={id}>
-							<span className="min-w-0 flex-1 truncate">
+						<FieldLabel htmlFor={id} className="sr-only">
+							Select {String(row.value.value)}
+						</FieldLabel>
+						<div className="flex min-w-0 flex-1 items-center gap-2">
+							<span className="min-w-0 flex-1 select-text truncate">
 								<GroupDataCell value={row.value} />
 							</span>
-							<Badge variant="secondary">{row.count}</Badge>
-						</FieldLabel>
+							<Badge variant="secondary" className="select-text">
+								{row.count}
+							</Badge>
+						</div>
 					</Field>
 				);
 			})}
@@ -200,6 +205,7 @@ export function GroupingSection({
 					<FieldLabel htmlFor="add-grouping">Add grouping</FieldLabel>
 					<Select
 						disabled={availableGroupings.status !== "ready" || available.length === 0}
+						value=""
 						onValueChange={activateGrouping}
 					>
 						<SelectTrigger id="add-grouping" className="w-full">

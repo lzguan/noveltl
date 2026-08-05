@@ -33,6 +33,7 @@ import { ToolbarPanel } from "../panels/ToolbarPanel";
 import type { Role } from "@/api/models/role";
 import { LoaderCircle } from "lucide-react";
 import { ChapterTabs } from "../panels/chapters/ChapterTabs";
+import { FiltersPanel } from "../panels/filters/FiltersPanel";
 
 function makeProvChapter(chapter: Chapter, chapterId: ProvChapter["chapterId"]): ProvChapter {
 	return Prov({
@@ -252,7 +253,7 @@ export function EditNovelPage() {
 		);
 	}
 
-	if (!managers) {
+	if (!managers || !novel) {
 		return (
 			<div className="flex items-center justify-center h-full text-sm text-muted-foreground">
 				Loading...
@@ -325,6 +326,11 @@ export function EditNovelPage() {
 											activeId={trackedLabelGroups.activeLabelGroupId}
 										/>
 									),
+								},
+								{
+									value: "filters",
+									label: "Filters",
+									content: <FiltersPanel novelId={novel.novel.novelId} />,
 								},
 							]}
 						/>

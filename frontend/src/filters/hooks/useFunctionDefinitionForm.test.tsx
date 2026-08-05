@@ -1,11 +1,8 @@
-import {
-	createFilterFunction,
-	validateFilterFunction,
-} from "@/api/endpoints/filters/filters";
+import { createFilterFunction, validateFilterFunction } from "@/api/endpoints/filters/filters";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { apiErrorMessage } from "../apiErrors";
 import {
-	apiErrorMessage,
 	parseFunctionDefinitionText,
 	useFunctionDefinitionForm,
 } from "./useFunctionDefinitionForm";
@@ -28,7 +25,11 @@ describe("useFunctionDefinitionForm", () => {
 			apiErrorMessage(
 				{
 					detail: [
-						{ loc: ["body", "functionDefinition"], msg: "Invalid function", type: "value_error" },
+						{
+							loc: ["body", "functionDefinition"],
+							msg: "Invalid function",
+							type: "value_error",
+						},
 					],
 				},
 				"Fallback",
@@ -140,7 +141,9 @@ describe("useFunctionDefinitionForm", () => {
 
 		expect(result.current.formStatus.status).toBe("uploaded");
 		if (result.current.formStatus.status === "uploaded") {
-			expect(result.current.formStatus.functionDefinition.functionDefinitionId).toBe("function-1");
+			expect(result.current.formStatus.functionDefinition.functionDefinitionId).toBe(
+				"function-1",
+			);
 		}
 	});
 });

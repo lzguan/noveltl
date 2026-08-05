@@ -86,7 +86,9 @@ describe("FunctionDefinitionPanel", () => {
 	});
 
 	it("disables the editor and identifies the active request", () => {
-		render(<FunctionDefinitionPanel {...makeFormModel({ formStatus: { status: "uploading" } })} />);
+		render(
+			<FunctionDefinitionPanel {...makeFormModel({ formStatus: { status: "uploading" } })} />,
+		);
 
 		expect(screen.getByLabelText("Namespace")).toBeDisabled();
 		expect(screen.getByRole("button", { name: "Uploading…" })).toBeDisabled();

@@ -169,6 +169,7 @@ function createProps(overrides: PropsOverrides = {}): WorkflowDisplayPanelProps 
 			activeWorkflow: { status: "ready", data: workflow },
 			setWorkflowSearchText: vi.fn(),
 			selectWorkflow: vi.fn(),
+			refreshWorkflowList: vi.fn(),
 		},
 		groupingSection: {
 			availableGroupings: {
@@ -218,6 +219,16 @@ function createProps(overrides: PropsOverrides = {}): WorkflowDisplayPanelProps 
 }
 
 describe("WorkflowDisplayPanel", () => {
+	it("refreshes only the workflow catalog on command", () => {
+		const props = createProps();
+		render(<WorkflowDisplayPanel {...props} />);
+
+		fireEvent.click(screen.getByRole("button", { name: "Refresh workflows" }));
+
+		expect(props.workflowSelection.refreshWorkflowList).toHaveBeenCalledOnce();
+		expect(props.instanceResults.refreshInstanceResults).not.toHaveBeenCalled();
+	});
+
 	it("renders workflow and grouping subcolumns with semantic cells", () => {
 		render(<WorkflowDisplayPanel {...createProps()} />);
 

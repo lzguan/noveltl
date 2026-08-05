@@ -1,12 +1,6 @@
 import type { SObj } from "@/api/models";
 import { Badge } from "@/components/ui/badge";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Table,
 	TableBody,
@@ -69,7 +63,9 @@ export function SObjDisplay({ label, value }: SObjDisplayProps) {
 									<TableCell>
 										<div className="flex flex-wrap gap-2">
 											<Badge variant="outline">{field.type}</Badge>
-											{field.mutable && <Badge variant="secondary">Mutable</Badge>}
+											{field.mutable && (
+												<Badge variant="secondary">Mutable</Badge>
+											)}
 										</div>
 									</TableCell>
 								</TableRow>

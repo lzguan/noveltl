@@ -122,6 +122,57 @@ describe("workflow viewer hooks", () => {
 			expect.objectContaining({ signal: expect.any(AbortSignal) }),
 		);
 		expect(result.current.availableGroupings).toEqual({ status: "ready", data: [] });
+
+		act(() => result.current.refreshWorkflowList());
+		await waitFor(() => expect(readWorkflowsFiltersWorkflowsGet).toHaveBeenCalledTimes(2));
+		expect(result.current.activeWorkflowId).toBe(workflow.workflowId);
+		expect(readWorkflowFiltersWorkflowsWorkflowIdGet).toHaveBeenCalledOnce();
+	});
+
+	it("reloads workflow metadata when the selected workflow is selected again", async () => {
+		const processingWorkflow: WorkflowResponse = {
+			...workflow,
+			workflowStatus: "processing",
+		};
+		vi.mocked(readWorkflowsFiltersWorkflowsGet).mockResolvedValue({
+			status: 200,
+			data: [workflowSummary],
+			headers: new Headers(),
+		});
+		vi.mocked(readWorkflowFiltersWorkflowsWorkflowIdGet)
+			.mockResolvedValueOnce({
+				status: 200,
+				data: processingWorkflow,
+				headers: new Headers(),
+			})
+			.mockResolvedValueOnce({
+				status: 200,
+				data: workflow,
+				headers: new Headers(),
+			});
+		vi.mocked(readWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGet).mockResolvedValue({
+			status: 200,
+			data: [],
+			headers: new Headers(),
+		});
+
+		const { result } = renderHook(() => useWorkflowSelection("novel-1"));
+		await waitFor(() => expect(result.current.workflows.status).toBe("ready"));
+
+		act(() => result.current.selectWorkflow(workflow.workflowId));
+		await waitFor(() => {
+			expect(result.current.activeWorkflow).toEqual({
+				status: "ready",
+				data: processingWorkflow,
+			});
+		});
+
+		act(() => result.current.selectWorkflow(workflow.workflowId));
+		await waitFor(() => {
+			expect(readWorkflowFiltersWorkflowsWorkflowIdGet).toHaveBeenCalledTimes(2);
+			expect(result.current.activeWorkflow).toEqual({ status: "ready", data: workflow });
+		});
+		expect(result.current.availableGroupings).toEqual({ status: "ready", data: [] });
 	});
 
 	it("owns grouping activation, selection, search, and value pagination", async () => {

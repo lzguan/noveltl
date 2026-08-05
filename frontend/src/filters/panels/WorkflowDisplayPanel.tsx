@@ -47,6 +47,7 @@ export function WorkflowDisplayPanel(props: WorkflowDisplayPanelProps) {
 						activeWorkflowId={workflowSelection.activeWorkflowId}
 						setWorkflowSearchText={workflowSelection.setWorkflowSearchText}
 						selectWorkflow={workflowSelection.selectWorkflow}
+						refreshWorkflowList={workflowSelection.refreshWorkflowList}
 					/>
 				</CardContent>
 			</Card>

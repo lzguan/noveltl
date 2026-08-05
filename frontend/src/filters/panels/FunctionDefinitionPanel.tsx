@@ -14,7 +14,11 @@ import { FunctionSignatureDisplay } from "../components/FunctionSignatureDisplay
 import type { FunctionDefinitionFormModel } from "../types";
 
 function FunctionDefinitionStatus({ formStatus }: Pick<FunctionDefinitionFormModel, "formStatus">) {
-	if (formStatus.status === "idle" || formStatus.status === "validating" || formStatus.status === "uploading") {
+	if (
+		formStatus.status === "idle" ||
+		formStatus.status === "validating" ||
+		formStatus.status === "uploading"
+	) {
 		return null;
 	}
 	if (formStatus.status === "error") {
@@ -35,7 +39,8 @@ function FunctionDefinitionStatus({ formStatus }: Pick<FunctionDefinitionFormMod
 				<CircleCheck />
 				<AlertTitle>Function uploaded</AlertTitle>
 				<AlertDescription>
-					{definition.namespace}.{definition.functionName} · {definition.functionDefinitionId}
+					{definition.namespace}.{definition.functionName} ·{" "}
+					{definition.functionDefinitionId}
 				</AlertDescription>
 			</Alert>
 		);
@@ -46,7 +51,9 @@ function FunctionDefinitionStatus({ formStatus }: Pick<FunctionDefinitionFormMod
 			<Alert>
 				<CircleCheck />
 				<AlertTitle>Function is valid</AlertTitle>
-				<AlertDescription>Review the computed input and output types below.</AlertDescription>
+				<AlertDescription>
+					Review the computed input and output types below.
+				</AlertDescription>
 			</Alert>
 			<FunctionSignatureDisplay signature={formStatus.signature} />
 		</div>
@@ -54,7 +61,8 @@ function FunctionDefinitionStatus({ formStatus }: Pick<FunctionDefinitionFormMod
 }
 
 export function FunctionDefinitionPanel(props: FunctionDefinitionFormModel) {
-	const pending = props.formStatus.status === "validating" || props.formStatus.status === "uploading";
+	const pending =
+		props.formStatus.status === "validating" || props.formStatus.status === "uploading";
 
 	function submitFunctionDefinition(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
@@ -62,43 +70,47 @@ export function FunctionDefinitionPanel(props: FunctionDefinitionFormModel) {
 	}
 
 	return (
-		<section className="flex min-w-0 flex-col gap-4" aria-labelledby="function-definition-title">
-		<form onSubmit={submitFunctionDefinition}>
-			<Card>
-				<CardHeader>
-					<CardTitle id="function-definition-title">Function library</CardTitle>
-					<CardDescription>
-						Validate a serialized function locally on the backend, then save it to the shared library.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<FunctionDefinitionEditor
-						functionNamespace={props.functionNamespace}
-						functionName={props.functionName}
-						functionDefinitionText={props.functionDefinitionText}
-						functionDefinitionError={props.functionDefinitionError}
-						disabled={pending}
-						setFunctionNamespace={props.setFunctionNamespace}
-						setFunctionName={props.setFunctionName}
-						setFunctionDefinitionText={props.setFunctionDefinitionText}
-					/>
-				</CardContent>
-				<CardFooter className="justify-end gap-2 border-t">
-					<Button
-						type="button"
-						variant="outline"
-						disabled={pending}
-						onClick={() => void props.validateFunctionDefinition()}
-					>
-						{props.formStatus.status === "validating" ? "Validating…" : "Validate"}
-					</Button>
-					<Button type="submit" disabled={pending}>
-						{props.formStatus.status === "uploading" ? "Uploading…" : "Upload"}
-					</Button>
-				</CardFooter>
-			</Card>
-		</form>
-		<FunctionDefinitionStatus formStatus={props.formStatus} />
-	</section>
+		<section
+			className="flex min-w-0 flex-col gap-4"
+			aria-labelledby="function-definition-title"
+		>
+			<form onSubmit={submitFunctionDefinition}>
+				<Card>
+					<CardHeader>
+						<CardTitle id="function-definition-title">Function library</CardTitle>
+						<CardDescription>
+							Validate a serialized function locally on the backend, then save it to
+							the shared library.
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<FunctionDefinitionEditor
+							functionNamespace={props.functionNamespace}
+							functionName={props.functionName}
+							functionDefinitionText={props.functionDefinitionText}
+							functionDefinitionError={props.functionDefinitionError}
+							disabled={pending}
+							setFunctionNamespace={props.setFunctionNamespace}
+							setFunctionName={props.setFunctionName}
+							setFunctionDefinitionText={props.setFunctionDefinitionText}
+						/>
+					</CardContent>
+					<CardFooter className="justify-end gap-2 border-t">
+						<Button
+							type="button"
+							variant="outline"
+							disabled={pending}
+							onClick={() => void props.validateFunctionDefinition()}
+						>
+							{props.formStatus.status === "validating" ? "Validating…" : "Validate"}
+						</Button>
+						<Button type="submit" disabled={pending}>
+							{props.formStatus.status === "uploading" ? "Uploading…" : "Upload"}
+						</Button>
+					</CardFooter>
+				</Card>
+			</form>
+			<FunctionDefinitionStatus formStatus={props.formStatus} />
+		</section>
 	);
 }

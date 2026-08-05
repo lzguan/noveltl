@@ -1,4 +1,4 @@
-import type { GroupingResponse, WorkflowStatus } from "@/api/models";
+import type { GroupingResponse, WorkflowStatus, WorkflowSummary } from "@/api/models";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,6 +7,10 @@ import type { Page } from "../types";
 
 export function shortId(value: string) {
 	return value.slice(0, 8);
+}
+
+export function workflowLabel(workflow: WorkflowSummary) {
+	return workflow.workflowName?.trim() || `Untitled workflow · ${shortId(workflow.workflowId)}`;
 }
 
 export function groupingLabel(grouping: GroupingResponse) {

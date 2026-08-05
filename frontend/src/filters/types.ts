@@ -1,9 +1,11 @@
 import type {
 	GroupData,
 	FunctionDefinitionResponse,
+	FunctionDefinitionMeta,
 	GroupingResponse,
 	GroupValueCount,
 	InstanceQueryResult,
+	LabelGroup,
 	Signature,
 	SortKey,
 	SortDirection,
@@ -45,6 +47,7 @@ export interface WorkflowSelectionModel {
 	activeWorkflow: Loadable<WorkflowResponse>;
 	setWorkflowSearchText: (searchText: string) => void;
 	selectWorkflow: (workflowId: string) => void;
+	refreshWorkflowList: () => void;
 }
 
 export interface GroupingSectionModel {
@@ -102,4 +105,71 @@ export interface FunctionDefinitionFormModel {
 	setFunctionDefinitionText: (definitionText: string) => void;
 	validateFunctionDefinition: () => Promise<void>;
 	uploadFunctionDefinition: () => Promise<void>;
+}
+
+export type RunnerOperation = "labelSource" | "map" | "filter" | "group";
+
+export type RunnerFormStatus =
+	| { status: "idle" }
+	| { status: "submitting" }
+	| { status: "succeeded"; target: "workflow" | "grouping" }
+	| { status: "error"; message: string };
+
+export interface SearchOptionsModel<T> {
+	keyword: string;
+	results: Loadable<readonly T[]>;
+	setSearchKeyword: (keyword: string) => void;
+}
+
+export interface LabelSourceRunnerFormModel {
+	labelGroups: Loadable<readonly LabelGroup[]>;
+	labelGroupKeyword: string;
+	selectedLabelGroup: LabelGroup | null;
+	outputWorkflowName: string;
+	formStatus: RunnerFormStatus;
+	setLabelGroupSearchKeyword: (keyword: string) => void;
+	selectLabelGroup: (labelGroup: LabelGroup | null) => void;
+	setOutputWorkflowName: (name: string) => void;
+	submitLabelSourceRunner: () => Promise<void>;
+}
+
+export interface WorkflowFunctionRunnerOptionsModel {
+	workflows: SearchOptionsModel<WorkflowSummary>;
+	functions: SearchOptionsModel<FunctionDefinitionMeta>;
+	selectedWorkflow: WorkflowSummary | null;
+	selectedFunctionDefinition: FunctionDefinitionMeta | null;
+}
+
+export interface MapRunnerFormModel extends WorkflowFunctionRunnerOptionsModel {
+	outputWorkflowName: string;
+	formStatus: RunnerFormStatus;
+	selectSourceWorkflow: (workflow: WorkflowSummary | null) => void;
+	selectFunctionDefinition: (definition: FunctionDefinitionMeta | null) => void;
+	setOutputWorkflowName: (name: string) => void;
+	submitMapRunner: () => Promise<void>;
+}
+
+export interface FilterRunnerFormModel extends WorkflowFunctionRunnerOptionsModel {
+	outputWorkflowName: string;
+	formStatus: RunnerFormStatus;
+	selectSourceWorkflow: (workflow: WorkflowSummary | null) => void;
+	selectFunctionDefinition: (definition: FunctionDefinitionMeta | null) => void;
+	setOutputWorkflowName: (name: string) => void;
+	submitFilterRunner: () => Promise<void>;
+}
+
+export interface GroupRunnerFormModel extends WorkflowFunctionRunnerOptionsModel {
+	formStatus: RunnerFormStatus;
+	selectWorkflow: (workflow: WorkflowSummary | null) => void;
+	selectFunctionDefinition: (definition: FunctionDefinitionMeta | null) => void;
+	submitGroupRunner: () => Promise<void>;
+}
+
+export interface RunnerPanelModel {
+	activeRunnerOperation: RunnerOperation;
+	labelSourceForm: LabelSourceRunnerFormModel;
+	mapForm: MapRunnerFormModel;
+	filterForm: FilterRunnerFormModel;
+	groupForm: GroupRunnerFormModel;
+	selectRunnerOperation: (operation: RunnerOperation) => void;
 }

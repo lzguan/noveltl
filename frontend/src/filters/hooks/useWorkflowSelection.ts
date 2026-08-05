@@ -5,7 +5,7 @@ import {
 	readWorkflowsFiltersWorkflowsGet,
 } from "@/api/endpoints/filters/filters";
 import type { GroupingResponse } from "@/api/models";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Loadable, WorkflowSelectionModel } from "../types";
 import { errorMessage, requestError } from "./workflowViewerUtils";
 
@@ -19,19 +19,19 @@ export function useWorkflowSelection(novelId: string): WorkflowSelectionState {
 	});
 	const [searchText, setSearchText] = useState("");
 	const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
+	const [activeWorkflowLoadRevision, setActiveWorkflowLoadRevision] = useState(0);
 	const [activeWorkflow, setActiveWorkflow] = useState<WorkflowSelectionModel["activeWorkflow"]>({
 		status: "idle",
 	});
 	const [availableGroupings, setAvailableGroupings] = useState<
 		Loadable<readonly GroupingResponse[]>
 	>({ status: "idle" });
+	const workflowListRequest = useRef<AbortController | null>(null);
 
-	useEffect(() => {
+	const refreshWorkflowList = useCallback(() => {
+		workflowListRequest.current?.abort();
 		const controller = new AbortController();
-		setSearchText("");
-		setActiveWorkflowId(null);
-		setActiveWorkflow({ status: "idle" });
-		setAvailableGroupings({ status: "idle" });
+		workflowListRequest.current = controller;
 		setWorkflows({ status: "loading" });
 		void readWorkflowsFiltersWorkflowsGet(
 			{ novelId, limit: 100 },
@@ -51,9 +51,20 @@ export function useWorkflowSelection(novelId: string): WorkflowSelectionState {
 			.catch((error: unknown) => {
 				if (!controller.signal.aborted)
 					setWorkflows({ status: "error", message: errorMessage(error) });
+			})
+			.finally(() => {
+				if (workflowListRequest.current === controller) workflowListRequest.current = null;
 			});
-		return () => controller.abort();
 	}, [novelId]);
+
+	useEffect(() => {
+		setSearchText("");
+		setActiveWorkflowId(null);
+		setActiveWorkflow({ status: "idle" });
+		setAvailableGroupings({ status: "idle" });
+		refreshWorkflowList();
+		return () => workflowListRequest.current?.abort();
+	}, [refreshWorkflowList]);
 
 	useEffect(() => {
 		if (!activeWorkflowId) return;
@@ -104,12 +115,13 @@ export function useWorkflowSelection(novelId: string): WorkflowSelectionState {
 			setAvailableGroupings({ status: "error", message });
 		});
 		return () => controller.abort();
-	}, [activeWorkflowId]);
+	}, [activeWorkflowId, activeWorkflowLoadRevision]);
 
 	const selectWorkflow = useCallback((workflowId: string) => {
 		setActiveWorkflow({ status: "loading" });
 		setAvailableGroupings({ status: "loading" });
 		setActiveWorkflowId(workflowId);
+		setActiveWorkflowLoadRevision((revision) => revision + 1);
 	}, []);
 
 	return {
@@ -120,5 +132,6 @@ export function useWorkflowSelection(novelId: string): WorkflowSelectionState {
 		availableGroupings,
 		setWorkflowSearchText: setSearchText,
 		selectWorkflow,
+		refreshWorkflowList,
 	};
 }

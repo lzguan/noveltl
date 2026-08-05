@@ -1,8 +1,6 @@
-import {
-	createFilterFunction,
-	validateFilterFunction,
-} from "@/api/endpoints/filters/filters";
+import { createFilterFunction, validateFilterFunction } from "@/api/endpoints/filters/filters";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { apiErrorMessage, requestErrorMessage } from "../apiErrors";
 import type { FunctionDefinitionFormModel, FunctionDefinitionFormStatus } from "../types";
 
 type ParsedFunctionDefinition =
@@ -23,33 +21,10 @@ export function parseFunctionDefinitionText(definitionText: string): ParsedFunct
 	} catch (error) {
 		return {
 			ok: false,
-			message: error instanceof Error ? error.message : "Function definition is not valid JSON.",
+			message:
+				error instanceof Error ? error.message : "Function definition is not valid JSON.",
 		};
 	}
-}
-
-function isErrorDetail(value: unknown): value is { loc: (string | number)[]; msg: string } {
-	return (
-		typeof value === "object" &&
-		value !== null &&
-		"loc" in value &&
-		Array.isArray(value.loc) &&
-		"msg" in value &&
-		typeof value.msg === "string"
-	);
-}
-
-export function apiErrorMessage(error: unknown, fallback: string) {
-	if (typeof error !== "object" || error === null || !("detail" in error)) return fallback;
-	if (typeof error.detail === "string") return error.detail;
-	if (!Array.isArray(error.detail)) return fallback;
-	const details = error.detail.filter(isErrorDetail);
-	if (details.length === 0) return fallback;
-	return details.map((detail) => `${detail.loc.join(".")}: ${detail.msg}`).join("; ");
-}
-
-function requestErrorMessage(error: unknown) {
-	return error instanceof Error ? error.message : "The request could not be completed.";
 }
 
 export function useFunctionDefinitionForm(): FunctionDefinitionFormModel {
@@ -132,7 +107,11 @@ export function useFunctionDefinitionForm(): FunctionDefinitionFormModel {
 			}
 		} catch (error) {
 			if (!controller.signal.aborted) {
-				setFormStatus({ status: "error", action: "validate", message: requestErrorMessage(error) });
+				setFormStatus({
+					status: "error",
+					action: "validate",
+					message: requestErrorMessage(error),
+				});
 			}
 		} finally {
 			if (activeRequest.current === controller) activeRequest.current = null;
@@ -163,12 +142,19 @@ export function useFunctionDefinitionForm(): FunctionDefinitionFormModel {
 				setFormStatus({
 					status: "error",
 					action: "upload",
-					message: apiErrorMessage(response.data, "Function definition could not be uploaded."),
+					message: apiErrorMessage(
+						response.data,
+						"Function definition could not be uploaded.",
+					),
 				});
 			}
 		} catch (error) {
 			if (!controller.signal.aborted) {
-				setFormStatus({ status: "error", action: "upload", message: requestErrorMessage(error) });
+				setFormStatus({
+					status: "error",
+					action: "upload",
+					message: requestErrorMessage(error),
+				});
 			}
 		} finally {
 			if (activeRequest.current === controller) activeRequest.current = null;

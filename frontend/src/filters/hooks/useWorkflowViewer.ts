@@ -65,6 +65,7 @@ export function useWorkflowViewer(novelId: string): WorkflowDisplayPanelProps {
 			activeWorkflow: workflowSelection.activeWorkflow,
 			setWorkflowSearchText: workflowSelection.setWorkflowSearchText,
 			selectWorkflow,
+			refreshWorkflowList: workflowSelection.refreshWorkflowList,
 		},
 		groupingSection: {
 			availableGroupings: workflowSelection.availableGroupings,

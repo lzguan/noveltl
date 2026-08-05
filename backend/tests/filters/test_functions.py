@@ -1,7 +1,7 @@
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from src.filters.data_types import BoolField, FloatField, IntField, Schema, StringField, TextSpanField
+from src.filters.data_types import BoolField, FloatField, IntField, LabelRefField, Schema, StringField, TextSpanField
 from src.filters.functions import (
     MAX_FUNCTION_ARITY,
     MAX_LITERAL_STRING_LENGTH,
@@ -14,6 +14,7 @@ from src.filters.functions import (
     Concat,
     Construct,
     Contains,
+    EntityGroupOf,
     Extend,
     Floor,
     FunctionType,
@@ -137,6 +138,14 @@ def test_string_and_numeric_conversion_signatures() -> None:
 
 def test_project_to_span_signature() -> None:
     assert ProjectToSpan().signature.output == TextSpanField()
+
+
+def test_entity_group_of_signature() -> None:
+    parsed = TypeAdapter(FunctionType).validate_python({"name": "entityGroupOf"})
+
+    assert isinstance(parsed, EntityGroupOf)
+    assert parsed.signature.args == (LabelRefField(),)
+    assert parsed.signature.output == StringField()
 
 
 def test_if_parses_and_round_trips_with_elementary_schemas() -> None:

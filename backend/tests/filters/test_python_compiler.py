@@ -30,6 +30,7 @@ from src.filters.functions import (
     Concat,
     Construct,
     Contains,
+    EntityGroupOf,
     Extend,
     Floor,
     Get,
@@ -302,7 +303,7 @@ def test_project_to_span_drops_label_only_fields() -> None:
     class _LabelContext(_NoResourceContext):
         def get_label(self, label_id: uuid.UUID) -> PythonLabelResource:
             assert label_id == expected_label_id
-            return PythonLabelResource(word="name", score=1.0, start=1, end=4)
+            return PythonLabelResource(word="name", entity_group="PERSON", score=1.0, start=1, end=4)
 
     result = PythonCompiler().compile(ProjectToSpan())(
         (LabelRefData(value=label),),
@@ -319,3 +320,26 @@ def test_project_to_span_drops_label_only_fields() -> None:
         )
     )
     assert type(result.value) is TextSpan
+
+
+def test_compile_entity_group_of_reads_current_label_metadata() -> None:
+    expected_label_id = uuid.uuid4()
+    label = LabelRef(
+        chapter_id=uuid.uuid4(),
+        chapter_content_id=uuid.uuid4(),
+        label_id=expected_label_id,
+        label_data_id=uuid.uuid4(),
+        label_group_id=uuid.uuid4(),
+    )
+
+    class _LabelContext(_NoResourceContext):
+        def get_label(self, label_id: uuid.UUID) -> PythonLabelResource:
+            assert label_id == expected_label_id
+            return PythonLabelResource(word="name", entity_group="PERSON", score=1.0, start=1, end=4)
+
+    result = PythonCompiler().compile(EntityGroupOf())(
+        (LabelRefData(value=label),),
+        _LabelContext(),
+    )
+
+    assert result == StringData(value="PERSON")

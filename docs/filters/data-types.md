@@ -83,7 +83,7 @@ A `LabelRef` contains:
 
 The reference captures the label and chapter-content identities, but it does
 not snapshot the label's range, word, score, category, or dirty state. The
-implemented `wordOf`, `scoreOf`, and `projectToSpan` functions load the current
+implemented `wordOf`, `entityGroupOf`, `scoreOf`, and `projectToSpan` functions load the current
 label row by `labelId` when a runner executes. `projectToSpan` combines that
 row's current offsets with the reference's stored chapter IDs.
 

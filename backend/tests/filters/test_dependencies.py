@@ -7,6 +7,7 @@ from src.filters.functions import (
     Concat,
     Construct,
     Contains,
+    EntityGroupOf,
     Floor,
     Get,
     If,
@@ -50,6 +51,7 @@ def test_label_functions_resolve_label_resources() -> None:
 
     assert ScoreOf().dependencies == (expected,)
     assert WordOf().dependencies == (expected,)
+    assert EntityGroupOf().dependencies == (expected,)
     assert resolve_dependencies(word) == (
         ResolvedResourceDependency(
             resource="label",

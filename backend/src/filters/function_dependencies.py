@@ -33,6 +33,7 @@ from src.filters.functions import (
     Construct,
     Contains,
     EndOf,
+    EntityGroupOf,
     Extend,
     Floor,
     Function,
@@ -230,6 +231,7 @@ def evaluate(
         | TextOf
         | TextAround
         | WordOf
+        | EntityGroupOf
         | ScoreOf,
     ):
         return SymbolicScalar(origins=frozenset())

@@ -337,6 +337,22 @@ class WordOf(Function):
         )
 
 
+class EntityGroupOf(Function):
+    name: Literal["entityGroupOf"] = "entityGroupOf"
+
+    @property
+    def dependencies(self) -> tuple[DependencyType, ...]:
+        return (ResourceDependency(resource="label", argument_index=0),)
+
+    @computed_field
+    @property
+    def signature(self) -> Signature:
+        return Signature(
+            args=(LabelRefField(),),
+            output=StringField(),
+        )
+
+
 class ScoreOf(Function):
     name: Literal["scoreOf"] = "scoreOf"
 
@@ -699,6 +715,7 @@ type FunctionType = Annotated[
     | Round
     | ProjectToSpan
     | WordOf
+    | EntityGroupOf
     | ScoreOf
     | Rename
     | And

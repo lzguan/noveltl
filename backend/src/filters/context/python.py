@@ -21,6 +21,7 @@ type PythonResourceIds = dict[ResourceName, set[UUID]]
 @dataclass(frozen=True, slots=True)
 class PythonLabelResource:
     word: str
+    entity_group: str
     score: float
     start: int
     end: int
@@ -113,14 +114,19 @@ class PythonExecutionContextImpl:
         if label_id not in self.label_cache:
             logger.debug("Label cache miss label_id=%s", label_id)
             row = self.session.execute(
-                select(Label.label_word, Label.label_score, Label.label_start, Label.label_end).where(
-                    Label.label_id == label_id
-                )
+                select(
+                    Label.label_word,
+                    Label.label_entity_group,
+                    Label.label_score,
+                    Label.label_start,
+                    Label.label_end,
+                ).where(Label.label_id == label_id)
             ).one_or_none()
             if row is None:
                 raise ValueError(f"Label not found: {label_id}")
             self.label_cache[label_id] = PythonLabelResource(
                 word=row.label_word,
+                entity_group=row.label_entity_group,
                 score=row.label_score,
                 start=row.label_start,
                 end=row.label_end,
@@ -163,13 +169,19 @@ class PythonExecutionContextImpl:
         if not missing_ids:
             return
         rows = self.session.execute(
-            select(Label.label_id, Label.label_word, Label.label_score, Label.label_start, Label.label_end).where(
-                Label.label_id.in_(missing_ids)
-            )
+            select(
+                Label.label_id,
+                Label.label_word,
+                Label.label_entity_group,
+                Label.label_score,
+                Label.label_start,
+                Label.label_end,
+            ).where(Label.label_id.in_(missing_ids))
         ).all()
-        for label_id, label_word, label_score, label_start, label_end in rows:
+        for label_id, label_word, label_entity_group, label_score, label_start, label_end in rows:
             self.label_cache[label_id] = PythonLabelResource(
                 word=label_word,
+                entity_group=label_entity_group,
                 score=label_score,
                 start=label_start,
                 end=label_end,

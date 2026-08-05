@@ -29,6 +29,7 @@ from src.filters.functions import (
     Construct,
     Contains,
     EndOf,
+    EntityGroupOf,
     Extend,
     Floor,
     FunctionType,
@@ -303,6 +304,14 @@ class PythonCompiler:
                 return StringData(value=ctx.get_label(data.value.label_id).word)
 
             executable = word_of
+
+        elif isinstance(function, EntityGroupOf):
+
+            def entity_group_of(arguments: tuple[Data, ...], ctx: PythonExecutionContext) -> Data:
+                data = cast(LabelRefData, arguments[0])
+                return StringData(value=ctx.get_label(data.value.label_id).entity_group)
+
+            executable = entity_group_of
 
         elif isinstance(function, ScoreOf):
 

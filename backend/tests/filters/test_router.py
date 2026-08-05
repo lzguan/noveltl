@@ -150,7 +150,9 @@ def test_filter_read_endpoints_return_locked_contract(
     assert grouping_response.json()["assignmentCount"] == 3
     assert grouping_response.json()["outputType"] == "string"
     assert values_response.status_code == status.HTTP_200_OK
-    assert values_response.json() == [{"value": {"type": "string", "obj": False, "value": "Alice"}, "count": 2}]
+    assert values_response.json() == [
+        {"value": {"kind": "value", "type": "string", "value": "Alice"}, "count": 2}
+    ]
 
     assert advanced_response.status_code == status.HTTP_200_OK
     advanced_payload = advanced_response.json()

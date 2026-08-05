@@ -84,7 +84,10 @@ function instanceResult(index: number): InstanceQueryResult {
 		instance: {
 			instanceId: `instance-${index}`,
 			workflowId: workflow.workflowId,
-			value: { obj: true, fields: { rank: { type: "int", value: index } } },
+			value: {
+				kind: "object",
+				fields: { rank: { kind: "value", type: "int", value: index } },
+			},
 		},
 	};
 }
@@ -124,7 +127,7 @@ describe("workflow viewer hooks", () => {
 	it("owns grouping activation, selection, search, and value pagination", async () => {
 		vi.mocked(readGroupingValuesFiltersGroupingsGroupingIdValuesGet).mockResolvedValue({
 			status: 200,
-			data: [{ value: { type: "string", value: "Lin" }, count: 4 }],
+			data: [{ value: { kind: "value", type: "string", value: "Lin" }, count: 4 }],
 			headers: new Headers(),
 		});
 		const { result } = renderHook(() =>
@@ -140,12 +143,12 @@ describe("workflow viewer hooks", () => {
 		act(() =>
 			result.current.setGroupingValueSelected(
 				grouping.groupingId,
-				{ type: "string", value: "Lin" },
+				{ kind: "value", type: "string", value: "Lin" },
 				true,
 			),
 		);
 		expect(result.current.activeGroupings.get(grouping.groupingId)?.selectedValues).toEqual([
-			{ type: "string", value: "Lin" },
+			{ kind: "value", type: "string", value: "Lin" },
 		]);
 
 		act(() => result.current.loadNextGroupingValuesPage(grouping.groupingId));
@@ -204,7 +207,7 @@ describe("workflow viewer hooks", () => {
 				{
 					grouping,
 					search: "",
-					selectedValues: [{ type: "string", value: "Lin" }],
+					selectedValues: [{ kind: "value", type: "string", value: "Lin" }],
 					values: { status: "idle" },
 				},
 			],
@@ -219,7 +222,7 @@ describe("workflow viewer hooks", () => {
 			groupFilters: [
 				{
 					groupingId: grouping.groupingId,
-					values: [{ type: "string", value: "Lin" }],
+					values: [{ kind: "value", type: "string", value: "Lin" }],
 				},
 			],
 			sortKeys: [{ fieldName: "rank", direction: "desc" }],

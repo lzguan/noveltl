@@ -374,25 +374,25 @@ export const ReadGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryParams = 
   "offset": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryOffsetMin)), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryOffsetDefault })
 })
 
-export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneObjDefault = false;
+export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneKindDefault = `value`;
 export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneTypeDefault = `string`;
-export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueTwoObjDefault = false;
+export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueTwoKindDefault = `value`;
 export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueTwoTypeDefault = `int`;
-export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueThreeObjDefault = false;
+export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueThreeKindDefault = `value`;
 export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueThreeTypeDefault = `bool`;
 
 export const ReadGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseItem = S.Struct({
   "count": S.Number,
   "value": S.Union(S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneKindDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneTypeDefault }),
   "value": S.String
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueTwoObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueTwoKindDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueTwoTypeDefault }),
   "value": S.Number
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueThreeObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueThreeKindDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueThreeTypeDefault }),
   "value": S.Boolean
 }))
@@ -427,11 +427,11 @@ export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFilters
 
 export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesMax = 100;
 
-export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemOneObjDefault = false;
+export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemOneKindDefault = `value`;
 export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemOneTypeDefault = `string`;
-export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemTwoObjDefault = false;
+export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemTwoKindDefault = `value`;
 export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemTwoTypeDefault = `int`;
-export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemThreeObjDefault = false;
+export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemThreeKindDefault = `value`;
 export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemThreeTypeDefault = `bool`;
 export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameSortKeysMax = 3;
 
@@ -450,15 +450,15 @@ export const ReadInstancesAdvancedFiltersInstancesQueryPostBody = S.Struct({
   "groupFilters": S.Array(S.Struct({
   "groupingId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "values": S.Array(S.Union(S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemOneObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemOneKindDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemOneTypeDefault }),
   "value": S.String
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemTwoObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemTwoKindDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemTwoTypeDefault }),
   "value": S.Number
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemThreeObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemThreeKindDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemThreeTypeDefault }),
   "value": S.Boolean
 }))).pipe(S.maxItems(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesMax))
@@ -472,41 +472,41 @@ export const ReadInstancesAdvancedFiltersInstancesQueryPostBody = S.Struct({
   "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readInstancesAdvancedFiltersInstancesQueryPostBodyLimitMax)), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyLimitDefault })
 })
 
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneObjDefault = false;
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneKindDefault = `value`;
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneTypeDefault = `string`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesTwoObjDefault = false;
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesTwoKindDefault = `value`;
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesTwoTypeDefault = `int`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesThreeObjDefault = false;
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesThreeKindDefault = `value`;
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesThreeTypeDefault = `bool`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsOneObjDefault = false;
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsOneKindDefault = `value`;
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsOneTypeDefault = `string`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsTwoObjDefault = false;
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsTwoKindDefault = `value`;
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsTwoTypeDefault = `int`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsThreeObjDefault = false;
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsThreeKindDefault = `value`;
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsThreeTypeDefault = `float`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFourObjDefault = false;
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFourKindDefault = `value`;
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFourTypeDefault = `bool`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveObjDefault = false;
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveKindDefault = `value`;
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveTypeDefault = `textSpan`;
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveValueEndMin = 0;
 
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveValueStartMin = 0;
 
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsSixObjDefault = false;
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsSixKindDefault = `value`;
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsSixTypeDefault = `labelRef`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueObjDefault = true;
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueKindDefault = `object`;
 
 export const ReadInstancesAdvancedFiltersInstancesQueryPost200ResponseItem = S.Struct({
   "groupValues": S.Record({ key: S.String, value: S.Union(S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneKindDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneTypeDefault }),
   "value": S.String
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesTwoObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesTwoKindDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesTwoTypeDefault }),
   "value": S.Number
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesThreeObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesThreeKindDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesThreeTypeDefault }),
   "value": S.Boolean
 })) }),
@@ -514,23 +514,23 @@ export const ReadInstancesAdvancedFiltersInstancesQueryPost200ResponseItem = S.S
   "instanceId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "value": S.Struct({
   "fields": S.optional(S.Record({ key: S.String, value: S.Union(S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsOneObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsOneKindDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsOneTypeDefault }),
   "value": S.String
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsTwoObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsTwoKindDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsTwoTypeDefault }),
   "value": S.Number
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsThreeObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsThreeKindDefault }),
   "type": S.optionalWith(S.Literal('float'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsThreeTypeDefault }),
   "value": S.Number
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFourObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFourKindDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFourTypeDefault }),
   "value": S.Boolean
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveKindDefault }),
   "type": S.optionalWith(S.Literal('textSpan'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveTypeDefault }),
   "value": S.Struct({
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -539,7 +539,7 @@ export const ReadInstancesAdvancedFiltersInstancesQueryPost200ResponseItem = S.S
   "start": S.Number.pipe(S.greaterThanOrEqualTo(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveValueStartMin))
 })
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsSixObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsSixKindDefault }),
   "type": S.optionalWith(S.Literal('labelRef'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsSixTypeDefault }),
   "value": S.Struct({
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -549,7 +549,7 @@ export const ReadInstancesAdvancedFiltersInstancesQueryPost200ResponseItem = S.S
   "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 })) })),
-  "obj": S.optionalWith(S.Boolean, { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueObjDefault })
+  "kind": S.optionalWith(S.Literal("object"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueKindDefault })
 }),
   "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
@@ -1261,45 +1261,45 @@ export const ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGetQueryPar
   "cursor": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
 })
 
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneObjDefault = false;
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneKindDefault = `value`;
 export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneTypeDefault = `string`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsTwoObjDefault = false;
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsTwoKindDefault = `value`;
 export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsTwoTypeDefault = `int`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsThreeObjDefault = false;
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsThreeKindDefault = `value`;
 export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsThreeTypeDefault = `float`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFourObjDefault = false;
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFourKindDefault = `value`;
 export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFourTypeDefault = `bool`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveObjDefault = false;
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveKindDefault = `value`;
 export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveTypeDefault = `textSpan`;
 export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveValueEndMin = 0;
 
 export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveValueStartMin = 0;
 
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsSixObjDefault = false;
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsSixKindDefault = `value`;
 export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsSixTypeDefault = `labelRef`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueObjDefault = true;
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueKindDefault = `object`;
 
 export const ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseItem = S.Struct({
   "instanceId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "value": S.Struct({
   "fields": S.optional(S.Record({ key: S.String, value: S.Union(S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneKindDefault }),
   "type": S.optionalWith(S.Literal('string'), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneTypeDefault }),
   "value": S.String
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsTwoObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsTwoKindDefault }),
   "type": S.optionalWith(S.Literal('int'), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsTwoTypeDefault }),
   "value": S.Number
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsThreeObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsThreeKindDefault }),
   "type": S.optionalWith(S.Literal('float'), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsThreeTypeDefault }),
   "value": S.Number
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFourObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFourKindDefault }),
   "type": S.optionalWith(S.Literal('bool'), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFourTypeDefault }),
   "value": S.Boolean
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveKindDefault }),
   "type": S.optionalWith(S.Literal('textSpan'), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveTypeDefault }),
   "value": S.Struct({
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1308,7 +1308,7 @@ export const ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200Respo
   "start": S.Number.pipe(S.greaterThanOrEqualTo(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveValueStartMin))
 })
 }), S.Struct({
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsSixObjDefault }),
+  "kind": S.optionalWith(S.Literal("value"), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsSixKindDefault }),
   "type": S.optionalWith(S.Literal('labelRef'), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsSixTypeDefault }),
   "value": S.Struct({
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1318,7 +1318,7 @@ export const ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200Respo
   "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 })) })),
-  "obj": S.optionalWith(S.Boolean, { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueObjDefault })
+  "kind": S.optionalWith(S.Literal("object"), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueKindDefault })
 }),
   "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })

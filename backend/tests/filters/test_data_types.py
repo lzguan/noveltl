@@ -41,11 +41,14 @@ def test_schema_union_uses_string_kind_discriminator() -> None:
         adapter.validate_python({"obj": True, "fields": {}})
 
 
-def test_bool_data_parses_through_data_union() -> None:
-    parsed = TypeAdapter(Data).validate_python({"obj": False, "type": "bool", "value": True})
+def test_data_union_uses_string_kind_discriminator() -> None:
+    adapter = TypeAdapter(Data)
+    parsed = adapter.validate_python({"kind": "value", "type": "bool", "value": True})
 
     assert isinstance(parsed, BoolData)
     assert parsed.value is True
+    with pytest.raises(ValidationError):
+        adapter.validate_python({"obj": False, "type": "bool", "value": True})
 
 
 def test_validate_requires_exact_instance_fields() -> None:
@@ -90,10 +93,10 @@ def test_scalar_mutability_is_opt_in() -> None:
 @pytest.mark.parametrize(
     "raw",
     [
-        {"obj": False, "type": "int", "value": True},
-        {"obj": False, "type": "int", "value": "12"},
-        {"obj": False, "type": "float", "value": float("nan")},
-        {"obj": False, "type": "float", "value": float("inf")},
+        {"kind": "value", "type": "int", "value": True},
+        {"kind": "value", "type": "int", "value": "12"},
+        {"kind": "value", "type": "float", "value": float("nan")},
+        {"kind": "value", "type": "float", "value": float("inf")},
     ],
 )
 def test_elementary_numbers_reject_coercion_and_non_finite_values(raw: dict[str, object]) -> None:

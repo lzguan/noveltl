@@ -253,11 +253,11 @@ components:
     BoolData:
       additionalProperties: false
       properties:
-        obj:
-          const: false
-          default: false
-          title: Obj
-          type: boolean
+        kind:
+          const: value
+          default: value
+          title: Kind
+          type: string
         type:
           const: bool
           default: bool
@@ -773,11 +773,11 @@ components:
             $ref: '#/components/schemas/FieldName'
           title: Fields
           type: object
-        obj:
-          const: true
-          default: true
-          title: Obj
-          type: boolean
+        kind:
+          const: object
+          default: object
+          title: Kind
+          type: string
       title: DataObj
       type: object
     DataType:
@@ -913,11 +913,11 @@ components:
     FloatData:
       additionalProperties: false
       properties:
-        obj:
-          const: false
-          default: false
-          title: Obj
-          type: boolean
+        kind:
+          const: value
+          default: value
+          title: Kind
+          type: string
         type:
           const: float
           default: float
@@ -1264,11 +1264,11 @@ components:
     IntData:
       additionalProperties: false
       properties:
-        obj:
-          const: false
-          default: false
-          title: Obj
-          type: boolean
+        kind:
+          const: value
+          default: value
+          title: Kind
+          type: string
         type:
           const: int
           default: int
@@ -1526,11 +1526,11 @@ components:
     LabelRefData:
       additionalProperties: false
       properties:
-        obj:
-          const: false
-          default: false
-          title: Obj
-          type: boolean
+        kind:
+          const: value
+          default: value
+          title: Kind
+          type: string
         type:
           const: labelRef
           default: labelRef
@@ -2002,11 +2002,11 @@ components:
     StringData:
       additionalProperties: false
       properties:
-        obj:
-          const: false
-          default: false
-          title: Obj
-          type: boolean
+        kind:
+          const: value
+          default: value
+          title: Kind
+          type: string
         type:
           const: string
           default: string
@@ -2089,11 +2089,11 @@ components:
     TextSpanData:
       additionalProperties: false
       properties:
-        obj:
-          const: false
-          default: false
-          title: Obj
-          type: boolean
+        kind:
+          const: value
+          default: value
+          title: Kind
+          type: string
         type:
           const: textSpan
           default: textSpan

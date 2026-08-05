@@ -76,12 +76,13 @@ const result: InstanceQueryResult = {
 		instanceId: "instance-12345678",
 		workflowId: workflow.workflowId,
 		value: {
-			obj: true,
+			kind: "object",
 			fields: {
-				title: { type: "string", value: "A quiet promise" },
-				rank: { type: "int", value: 7 },
-				published: { type: "bool", value: true },
+				title: { kind: "value", type: "string", value: "A quiet promise" },
+				rank: { kind: "value", type: "int", value: 7 },
+				published: { kind: "value", type: "bool", value: true },
 				excerpt: {
+					kind: "value",
 					type: "textSpan",
 					value: {
 						chapterId: "chapter-abcdefgh",
@@ -91,6 +92,7 @@ const result: InstanceQueryResult = {
 					},
 				},
 				character: {
+					kind: "value",
 					type: "labelRef",
 					value: {
 						chapterId: "chapter-abcdefgh",
@@ -104,8 +106,8 @@ const result: InstanceQueryResult = {
 		},
 	},
 	groupValues: {
-		"grouping-speaker": { type: "string", value: "Lin" },
-		"grouping-chapter": { type: "int", value: 4 },
+		"grouping-speaker": { kind: "value", type: "string", value: "Lin" },
+		"grouping-chapter": { kind: "value", type: "int", value: 4 },
 	},
 };
 
@@ -113,13 +115,13 @@ function activeGroupingStates() {
 	const speaker: ActiveGroupingState = {
 		grouping: speakerGrouping,
 		search: "",
-		selectedValues: [{ type: "string", value: "Lin" }],
+		selectedValues: [{ kind: "value", type: "string", value: "Lin" }],
 		values: {
 			status: "ready",
 			data: {
 				items: [
-					{ value: { type: "string", value: "Lin" }, count: 18 },
-					{ value: { type: "string", value: "Mei" }, count: 12 },
+					{ value: { kind: "value", type: "string", value: "Lin" }, count: 18 },
+					{ value: { kind: "value", type: "string", value: "Mei" }, count: 12 },
 				],
 				start: 1,
 				end: 2,
@@ -136,7 +138,7 @@ function activeGroupingStates() {
 		values: {
 			status: "ready",
 			data: {
-				items: [{ value: { type: "int", value: 4 }, count: 30 }],
+				items: [{ value: { kind: "value", type: "int", value: 4 }, count: 30 }],
 				start: 1,
 				end: 1,
 				total: 1,
@@ -262,7 +264,7 @@ describe("WorkflowDisplayPanel", () => {
 		fireEvent.click(screen.getByRole("checkbox", { name: /Mei/ }));
 		expect(setGroupingValueSelected).toHaveBeenCalledWith(
 			speakerGrouping.groupingId,
-			{ type: "string", value: "Mei" },
+			{ kind: "value", type: "string", value: "Mei" },
 			true,
 		);
 		fireEvent.click(screen.getByRole("button", { name: "Next dialogue.speaker values page" }));

@@ -20,7 +20,7 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session, aliased
 
 from src.auth.models import User
-from src.filters.data_types import BoolField, IntField, Schema, StringField, data_adapter, extends
+from src.filters.data_types import BoolField, DataObj, IntField, Schema, StringField, data_adapter, extends
 from src.filters.dispatch.dispatcher import RunnerDispatcher
 from src.filters.exceptions import (
     FunctionAlreadyExistsException,
@@ -441,7 +441,7 @@ def query_instances_of_workflow_advanced(
                 f"Cursor with ID {request.cursor} not found in workflow {workflow_id}."
             ) from e
         data = data_adapter.validate_python(current.value)
-        if data.obj is False:
+        if not isinstance(data, DataObj):
             raise ValueError(f"Cursor with ID {request.cursor} does not contain an object value.")
         cursor_conditions = []
         equal_prefix = []

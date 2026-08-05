@@ -8,7 +8,7 @@ import type { StringDataType } from './stringDataType';
 import type { StringValue } from './stringValue';
 
 export interface StringData {
-  obj?: false;
+  kind?: 'value';
   type: StringDataType;
   value: StringValue;
 }

@@ -8,7 +8,7 @@ import type { TextSpan } from './textSpan';
 import type { TextSpanDataType } from './textSpanDataType';
 
 export interface TextSpanData {
-  obj?: false;
+  kind?: 'value';
   type: TextSpanDataType;
   value: TextSpan;
 }

@@ -4613,11 +4613,11 @@
             "title": "Type",
             "default": "bool"
           },
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "value",
+            "title": "Kind",
+            "default": "value"
           }
         },
         "additionalProperties": false,
@@ -5289,11 +5289,11 @@
             "maxProperties": 256,
             "title": "Fields"
           },
-          "obj": {
-            "type": "boolean",
-            "const": true,
-            "title": "Obj",
-            "default": true
+          "kind": {
+            "type": "string",
+            "const": "object",
+            "title": "Kind",
+            "default": "object"
           }
         },
         "additionalProperties": false,
@@ -5489,11 +5489,11 @@
             "title": "Type",
             "default": "float"
           },
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "value",
+            "title": "Kind",
+            "default": "value"
           }
         },
         "additionalProperties": false,
@@ -5978,11 +5978,11 @@
             "title": "Type",
             "default": "int"
           },
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "value",
+            "title": "Kind",
+            "default": "value"
           }
         },
         "additionalProperties": false,
@@ -6299,11 +6299,11 @@
             "title": "Type",
             "default": "labelRef"
           },
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "value",
+            "title": "Kind",
+            "default": "value"
           }
         },
         "additionalProperties": false,
@@ -6948,11 +6948,11 @@
             "title": "Type",
             "default": "string"
           },
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "value",
+            "title": "Kind",
+            "default": "value"
           }
         },
         "additionalProperties": false,
@@ -7057,11 +7057,11 @@
             "title": "Type",
             "default": "textSpan"
           },
-          "obj": {
-            "type": "boolean",
-            "const": false,
-            "title": "Obj",
-            "default": false
+          "kind": {
+            "type": "string",
+            "const": "value",
+            "title": "Kind",
+            "default": "value"
           }
         },
         "additionalProperties": false,

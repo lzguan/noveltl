@@ -120,7 +120,7 @@ class DTypeBase[T](Model):
 
     value: T
     type: str
-    obj: Literal[False] = False
+    kind: Literal["value"] = "value"
 
 
 class StringData(DTypeBase[StringValue]):
@@ -157,10 +157,10 @@ class DataObj(Model):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     fields: dict[FieldName, DataType] = Field(default_factory=dict, max_length=MAX_SCHEMA_FIELDS)
-    obj: Literal[True] = True
+    kind: Literal["object"] = "object"
 
 
-type Data = Annotated[DataObj | DataType, Field(discriminator="obj")]
+type Data = Annotated[DataObj | DataType, Field(discriminator="kind")]
 
 data_adapter = TypeAdapter[Data](Data)
 

@@ -97,16 +97,19 @@ elementary value:
 
 ```json
 {
-  "obj": true,
+  "kind": "object",
   "fields": {
     "term": {
-      "obj": false,
+      "kind": "value",
       "type": "string",
       "value": "青石城"
     }
   }
 }
 ```
+
+The runtime `kind` discriminator separates record objects from elementary
+values independently of the schema-description discriminator.
 
 `Schema` and `DataObj` have the same flat field shape, but mutability belongs
 only to the schema. A mutable string and an immutable string have the same

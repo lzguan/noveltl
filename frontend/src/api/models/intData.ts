@@ -8,7 +8,7 @@ import type { IntDataType } from './intDataType';
 import type { SrcFiltersDataTypesIntegerValue1 } from './srcFiltersDataTypesIntegerValue1';
 
 export interface IntData {
-  obj?: false;
+  kind?: 'value';
   type: IntDataType;
   value: SrcFiltersDataTypesIntegerValue1;
 }

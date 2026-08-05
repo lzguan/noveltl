@@ -1,8 +1,10 @@
 import type {
 	GroupData,
+	FunctionDefinitionResponse,
 	GroupingResponse,
 	GroupValueCount,
 	InstanceQueryResult,
+	Signature,
 	SortKey,
 	SortDirection,
 	WorkflowResponse,
@@ -79,4 +81,25 @@ export interface WorkflowDisplayPanelProps {
 	groupingSection: GroupingSectionModel;
 	querySection: QuerySectionModel;
 	instanceResults: InstanceResultsModel;
+}
+
+export type FunctionDefinitionFormStatus =
+	| { status: "idle" }
+	| { status: "validating" }
+	| { status: "validated"; signature: Signature }
+	| { status: "uploading" }
+	| { status: "uploaded"; functionDefinition: FunctionDefinitionResponse }
+	| { status: "error"; action: "validate" | "upload"; message: string };
+
+export interface FunctionDefinitionFormModel {
+	functionNamespace: string;
+	functionName: string;
+	functionDefinitionText: string;
+	functionDefinitionError: string | null;
+	formStatus: FunctionDefinitionFormStatus;
+	setFunctionNamespace: (namespace: string) => void;
+	setFunctionName: (name: string) => void;
+	setFunctionDefinitionText: (definitionText: string) => void;
+	validateFunctionDefinition: () => Promise<void>;
+	uploadFunctionDefinition: () => Promise<void>;
 }

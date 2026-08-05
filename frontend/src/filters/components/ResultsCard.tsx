@@ -21,17 +21,18 @@ import { RefreshCw } from "lucide-react";
 import { DataCell, GroupDataCell } from "./DataCells";
 import { ErrorBlock, groupingLabel, LoadingBlock, PageControls, shortId } from "./panelUi";
 import type { ActiveGroupingState, Loadable, Page } from "../types";
+import type { TextReference } from "../types";
 
 function ResultsTable({
 	workflow,
 	activeGroupings,
 	results,
-	openChapter,
+	openTextReference,
 }: {
 	workflow: WorkflowResponse;
 	activeGroupings: readonly ActiveGroupingState[];
 	results: Page<InstanceQueryResult>;
-	openChapter?: (chapterId: string) => void;
+	openTextReference?: (reference: TextReference) => void;
 }) {
 	const fields = Object.entries(workflow.schema.fields ?? {});
 	return (
@@ -65,7 +66,7 @@ function ResultsTable({
 							<TableCell key={name}>
 								<DataCell
 									value={result.instance.value.fields?.[name]}
-									openChapter={openChapter}
+									openTextReference={openTextReference}
 								/>
 							</TableCell>
 						))}
@@ -90,7 +91,7 @@ export function ResultsCard({
 	refreshInstanceResults,
 	loadPreviousInstancePage,
 	loadNextInstancePage,
-	openChapter,
+	openTextReference,
 }: {
 	workflow: WorkflowResponse;
 	activeGroupings: readonly ActiveGroupingState[];
@@ -98,7 +99,7 @@ export function ResultsCard({
 	refreshInstanceResults: () => void;
 	loadPreviousInstancePage: () => void;
 	loadNextInstancePage: () => void;
-	openChapter?: (chapterId: string) => void;
+	openTextReference?: (reference: TextReference) => void;
 }) {
 	const description =
 		results.status === "ready"
@@ -155,7 +156,7 @@ export function ResultsCard({
 							workflow={workflow}
 							activeGroupings={activeGroupings}
 							results={results.data}
-							openChapter={openChapter}
+							openTextReference={openTextReference}
 						/>
 						<PageControls
 							page={results.data}

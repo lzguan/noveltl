@@ -50,7 +50,7 @@ export function LoginPage() {
 		requestAnimationFrame(() => setCheckingToken(false));
 	}, [navigate, redirectTarget]);
 
-	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+	const handleSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		setIsSubmitting(true);
 		setErrorMessage(null);

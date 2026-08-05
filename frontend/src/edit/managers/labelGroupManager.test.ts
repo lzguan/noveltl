@@ -5,13 +5,14 @@ import type {
 	NovelUserEvent,
 	TriggerEvent,
 } from "../controller/types/controllerTypes";
-import { CProvId, LGProvId } from "../controller/types/idTypes";
+import { CCProvId, CProvId, LGProvId } from "../controller/types/idTypes";
 import { useEditorState } from "../hooks/useEditorState";
 import { useTrackedLabelGroups } from "../hooks/useTrackedLabelGroups";
 import { makeBasicSegmentManager } from "../lib/text-model/core/segmentManager";
 import { createLabelGroupManager } from "./labelGroupManager";
 
 const CHAPTER_ID = CProvId("chapter-a");
+const CHAPTER_CONTENT_ID = CCProvId("chapter-content-a");
 const LABEL_GROUP_ID = LGProvId("label-group-a");
 
 const unusedGetter = () => Effect.die("unused getter");
@@ -20,6 +21,9 @@ const getters: NovelGetters = {
 	role: unusedGetter,
 	labelGroupIds: unusedGetter,
 	chapterIds: unusedGetter,
+	chapterIdFromServerId: unusedGetter,
+	chapterContentIdFromServerId: unusedGetter,
+	labelIdFromServerId: unusedGetter,
 	chapterGetterSlot: unusedGetter,
 	labelGroupSlot: unusedGetter,
 	autoLabelRunIds: unusedGetter,
@@ -37,6 +41,7 @@ describe("createLabelGroupManager", () => {
 				empty: false,
 				loading: false,
 				chapterId: CHAPTER_ID,
+				chapterContentId: CHAPTER_CONTENT_ID,
 				segmentManager: makeBasicSegmentManager("Alice", []),
 			});
 		});

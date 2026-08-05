@@ -5,10 +5,12 @@ import type {
 	GroupingResponse,
 	GroupValueCount,
 	InstanceQueryResult,
+	LabelRef,
 	LabelGroup,
 	Signature,
 	SortKey,
 	SortDirection,
+	TextSpan,
 	WorkflowResponse,
 	WorkflowSummary,
 } from "@/api/models";
@@ -27,6 +29,10 @@ export interface Page<T> {
 	hasPrevious: boolean;
 	hasNext: boolean;
 }
+
+export type TextReference =
+	| { type: "labelRef"; value: LabelRef }
+	| { type: "textSpan"; value: TextSpan };
 
 export interface ActiveGroupingState {
 	grouping: GroupingResponse;
@@ -76,7 +82,7 @@ export interface InstanceResultsModel {
 	refreshInstanceResults: () => void;
 	loadPreviousInstancePage: () => void;
 	loadNextInstancePage: () => void;
-	openChapter?: (chapterId: string) => void;
+	openTextReference?: (reference: TextReference) => void;
 }
 
 export interface WorkflowDisplayPanelProps {

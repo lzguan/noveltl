@@ -71,19 +71,22 @@ export function createEditorManager({
 							);
 							return {
 								text: yield* chapterGetter.data.chapterGetters.text(),
+								chapterContentId:
+									yield* chapterGetter.data.chapterGetters.chapterContentId(),
 								labelData: result.labelData,
 								couldNotLoad: result.couldNotLoad,
 							};
 						}),
 					);
 					if (done._tag === "Left") break;
-					const { text, labelData, couldNotLoad } = done.right;
+					const { text, chapterContentId, labelData, couldNotLoad } = done.right;
 					const flatLabelData = Array.from(labelData.values()).flat();
 
 					setLoading({
 						loading: false,
 						segmentManager: makeBasicSegmentManager(text, flatLabelData),
 						chapterId: event.chapterId,
+						chapterContentId,
 						empty: false,
 					});
 					if (couldNotLoad.length > 0) {

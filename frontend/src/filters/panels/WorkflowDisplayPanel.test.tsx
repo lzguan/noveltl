@@ -8,6 +8,8 @@ import type {
 import type {
 	GroupingResponse,
 	InstanceQueryResult,
+	LabelRef,
+	TextSpan,
 	WorkflowResponse,
 	WorkflowSummary,
 } from "@/api/models";
@@ -80,6 +82,21 @@ const chapterGrouping: GroupingResponse = {
 	outputType: "int",
 };
 
+const textSpanValue: TextSpan = {
+	chapterId: "chapter-abcdefgh",
+	chapterContentId: "content-1",
+	start: 12,
+	end: 28,
+};
+
+const labelRefValue: LabelRef = {
+	chapterId: "chapter-abcdefgh",
+	chapterContentId: "content-1",
+	labelDataId: "label-data-1",
+	labelGroupId: "label-group-1",
+	labelId: "label-abcdefgh",
+};
+
 const result: InstanceQueryResult = {
 	instance: {
 		instanceId: "instance-12345678",
@@ -93,23 +110,12 @@ const result: InstanceQueryResult = {
 				excerpt: {
 					kind: "value",
 					type: "textSpan",
-					value: {
-						chapterId: "chapter-abcdefgh",
-						chapterContentId: "content-1",
-						start: 12,
-						end: 28,
-					},
+					value: textSpanValue,
 				},
 				character: {
 					kind: "value",
 					type: "labelRef",
-					value: {
-						chapterId: "chapter-abcdefgh",
-						chapterContentId: "content-1",
-						labelDataId: "label-data-1",
-						labelGroupId: "label-group-1",
-						labelId: "label-abcdefgh",
-					},
+					value: labelRefValue,
 				},
 			},
 		},
@@ -260,6 +266,33 @@ describe("WorkflowDisplayPanel", () => {
 		expect(screen.getByText("A quiet promise")).toBeVisible();
 		expect(screen.getByRole("button", { name: "chapter-:12–28" })).toBeVisible();
 		expect(screen.getByRole("button", { name: "Label label-ab" })).toBeVisible();
+	});
+
+	it("opens text references on double-click and keeps metadata behind info buttons", () => {
+		const openTextReference = vi.fn();
+		render(
+			<WorkflowDisplayPanel {...createProps({ instanceResults: { openTextReference } })} />,
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: "chapter-:12–28" }), {
+			detail: 1,
+		});
+		expect(openTextReference).not.toHaveBeenCalled();
+
+		fireEvent.doubleClick(screen.getByRole("button", { name: "chapter-:12–28" }));
+		expect(openTextReference).toHaveBeenCalledWith({
+			type: "textSpan",
+			value: textSpanValue,
+		});
+
+		fireEvent.doubleClick(screen.getByRole("button", { name: "Label label-ab" }));
+		expect(openTextReference).toHaveBeenLastCalledWith({
+			type: "labelRef",
+			value: labelRefValue,
+		});
+
+		fireEvent.click(screen.getByRole("button", { name: "Text span info" }));
+		expect(screen.getByText("content-1")).toBeVisible();
 	});
 
 	it("requests application through the query section command", () => {

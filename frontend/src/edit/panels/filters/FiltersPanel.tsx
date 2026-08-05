@@ -6,10 +6,17 @@ import { useWorkflowViewer } from "../../../filters/hooks/useWorkflowViewer";
 import { FunctionDefinitionPanel } from "../../../filters/panels/FunctionDefinitionPanel";
 import { RunnerPanel } from "../../../filters/panels/RunnerPanel";
 import { WorkflowDisplayPanel } from "../../../filters/panels/WorkflowDisplayPanel";
+import type { TextReference } from "../../../filters/types";
 
-export function FiltersPanel({ novelId }: { novelId: string }) {
+export function FiltersPanel({
+	novelId,
+	openTextReference,
+}: {
+	novelId: string;
+	openTextReference: (reference: TextReference) => void;
+}) {
 	const [activeSubpanel, setActiveSubpanel] = useState("viewer");
-	const viewer = useWorkflowViewer(novelId);
+	const viewer = useWorkflowViewer(novelId, openTextReference);
 	const functionDefinitionForm = useFunctionDefinitionForm();
 	const runnerPanel = useRunnerPanel(novelId, activeSubpanel === "runners");
 

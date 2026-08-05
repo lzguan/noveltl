@@ -64,7 +64,7 @@ export function FunctionDefinitionPanel(props: FunctionDefinitionFormModel) {
 	const pending =
 		props.formStatus.status === "validating" || props.formStatus.status === "uploading";
 
-	function submitFunctionDefinition(event: React.FormEvent<HTMLFormElement>) {
+	function submitFunctionDefinition(event: React.SubmitEvent<HTMLFormElement>) {
 		event.preventDefault();
 		void props.uploadFunctionDefinition();
 	}

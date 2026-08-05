@@ -34,6 +34,9 @@ import type { Role } from "@/api/models/role";
 import { LoaderCircle } from "lucide-react";
 import { ChapterTabs } from "../panels/chapters/ChapterTabs";
 import { FiltersPanel } from "../panels/filters/FiltersPanel";
+import type { NovelGetters } from "../controller/types/controllerTypes";
+import { useReferenceNavigation } from "../hooks/useReferenceNavigation";
+import { ReferenceNavigationDialog } from "../components/ReferenceNavigationDialog";
 
 function makeProvChapter(chapter: Chapter, chapterId: ProvChapter["chapterId"]): ProvChapter {
 	return Prov({
@@ -65,7 +68,15 @@ export function EditNovelPage() {
 		labelGroupMgr: ReturnType<typeof createLabelGroupManager>;
 		editorMgr: ReturnType<typeof createEditorManager>;
 		autoLabelMgr: ReturnType<typeof createAutoLabelManager>;
+		controllerGetters: NovelGetters;
 	} | null>(null);
+
+	const referenceNavigation = useReferenceNavigation({
+		chapterList: chapterState.chapterList,
+		controllerGetters: managers?.controllerGetters ?? null,
+		editorData: editorState.data,
+		switchChapter: managers?.chapterMgr.switchChapter ?? null,
+	});
 
 	const labeling = useMemo<LabelEditing>(() => {
 		const source = makeActiveGroupLabelSource({
@@ -232,7 +243,13 @@ export function EditNovelPage() {
 
 		Effect.runFork(ctrl.start());
 
-		setManagers({ chapterMgr, labelGroupMgr, editorMgr, autoLabelMgr });
+		setManagers({
+			chapterMgr,
+			labelGroupMgr,
+			editorMgr,
+			autoLabelMgr,
+			controllerGetters: ctrl.getters,
+		});
 		// oxlint-disable-next-line react-hooks/exhaustive-deps
 	}, [novel, chapters, labelGroups, autoLabelRuns]);
 
@@ -302,6 +319,8 @@ export function EditNovelPage() {
 							onTextOp={managers.editorMgr.textOp}
 							labeling={labeling}
 							preview={autoLabelPreview.preview}
+							highlight={referenceNavigation.highlight}
+							onHighlightApplied={referenceNavigation.clearHighlight}
 						/>
 					</div>
 					<div className="w-80 border-l shrink-0 flex flex-col min-h-0">
@@ -330,7 +349,14 @@ export function EditNovelPage() {
 								{
 									value: "filters",
 									label: "Filters",
-									content: <FiltersPanel novelId={novel.novel.novelId} />,
+									content: (
+										<FiltersPanel
+											novelId={novel.novel.novelId}
+											openTextReference={
+												referenceNavigation.openTextReference
+											}
+										/>
+									),
 								},
 							]}
 						/>
@@ -349,6 +375,10 @@ export function EditNovelPage() {
 					</div>
 				</div>
 			)}
+			<ReferenceNavigationDialog
+				notice={referenceNavigation.notice}
+				dismissNotice={referenceNavigation.dismissNotice}
+			/>
 		</div>
 	);
 }

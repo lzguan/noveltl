@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import type { SegmentManager } from "@/edit/lib/text-model/core/segmentManager";
 import type { StyledLabel } from "@/edit/lib/text-model/core/types";
 import type { LabelStyle, EditorMode } from "../managers/editorManager";
-import type { CProvId, LProvId } from "../controller/types/idTypes";
+import type { CCProvId, CProvId, LProvId } from "../controller/types/idTypes";
 import { useSyncState } from "../utils/useSyncState";
 
 export type Caret = {
@@ -16,12 +16,25 @@ type SM = SegmentManager<LabelStyle, StyledLabel<LabelStyle>, LProvId>;
 export type EditorData =
 	| { empty: true }
 	| { loading: true; empty: false }
-	| { loading: false; segmentManager: SM; chapterId: CProvId; caret: Caret | null; empty: false };
+	| {
+			loading: false;
+			segmentManager: SM;
+			chapterId: CProvId;
+			chapterContentId: CCProvId;
+			caret: Caret | null;
+			empty: false;
+	  };
 
 export type LoadingPayload =
 	| { empty: true }
 	| { loading: true; empty: false }
-	| { loading: false; segmentManager: SM; chapterId: CProvId; empty: false };
+	| {
+			loading: false;
+			segmentManager: SM;
+			chapterId: CProvId;
+			chapterContentId: CCProvId;
+			empty: false;
+	  };
 
 export function useEditorState() {
 	const [data, dataRef, commitData] = useSyncState<EditorData>({ empty: true });
@@ -37,6 +50,7 @@ export function useEditorState() {
 							loading: false,
 							segmentManager: val.segmentManager,
 							chapterId: val.chapterId,
+							chapterContentId: val.chapterContentId,
 							caret: null,
 							empty: false,
 						};

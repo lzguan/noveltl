@@ -60,7 +60,7 @@ export function RunnerFormShell({
 }) {
 	const submitting = formStatus.status === "submitting";
 
-	function submitForm(event: React.FormEvent<HTMLFormElement>) {
+	function submitForm(event: React.SubmitEvent<HTMLFormElement>) {
 		event.preventDefault();
 		void submitRunnerOperation();
 	}

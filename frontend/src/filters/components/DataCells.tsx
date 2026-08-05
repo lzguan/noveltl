@@ -8,6 +8,8 @@ import {
 	PopoverTitle,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { Info } from "lucide-react";
+import type { TextReference } from "../types";
 
 function shortId(value: string) {
 	return value.slice(0, 8);
@@ -28,73 +30,105 @@ function Metadata({ values }: { values: readonly [string, string | number][] }) 
 
 export function TextSpanCell({
 	value,
-	openChapter,
+	openTextReference,
 }: {
 	value: TextSpan;
-	openChapter?: (chapterId: string) => void;
+	openTextReference?: (reference: TextReference) => void;
 }) {
+	const openReference = () => openTextReference?.({ type: "textSpan", value });
 	return (
-		<Popover>
-			<PopoverTrigger asChild>
-				<Button type="button" variant="ghost" size="xs">
-					{shortId(value.chapterId)}:{value.start}–{value.end}
-				</Button>
-			</PopoverTrigger>
-			<PopoverContent align="start">
-				<PopoverHeader>
-					<PopoverTitle>Text span</PopoverTitle>
-				</PopoverHeader>
-				<Metadata
-					values={[
-						["Chapter", value.chapterId],
-						["Content", value.chapterContentId],
-						["Range", `${value.start}–${value.end}`],
-					]}
-				/>
-				{openChapter && (
-					<Button type="button" size="sm" onClick={() => openChapter(value.chapterId)}>
-						Open chapter
+		<div className="flex items-center gap-1">
+			<Button
+				type="button"
+				variant="ghost"
+				size="xs"
+				disabled={!openTextReference}
+				onDoubleClick={openReference}
+				onClick={(event) => {
+					if (event.detail === 0) openReference();
+				}}
+				title="Double-click to open this text span"
+			>
+				{shortId(value.chapterId)}:{value.start}–{value.end}
+			</Button>
+			<Popover>
+				<PopoverTrigger asChild>
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon-xs"
+						aria-label="Text span info"
+					>
+						<Info />
 					</Button>
-				)}
-			</PopoverContent>
-		</Popover>
+				</PopoverTrigger>
+				<PopoverContent align="start">
+					<PopoverHeader>
+						<PopoverTitle>Text span</PopoverTitle>
+					</PopoverHeader>
+					<Metadata
+						values={[
+							["Chapter", value.chapterId],
+							["Content", value.chapterContentId],
+							["Range", `${value.start}–${value.end}`],
+						]}
+					/>
+				</PopoverContent>
+			</Popover>
+		</div>
 	);
 }
 
 export function LabelCell({
 	value,
-	openChapter,
+	openTextReference,
 }: {
 	value: LabelRef;
-	openChapter?: (chapterId: string) => void;
+	openTextReference?: (reference: TextReference) => void;
 }) {
+	const openReference = () => openTextReference?.({ type: "labelRef", value });
 	return (
-		<Popover>
-			<PopoverTrigger asChild>
-				<Button type="button" variant="ghost" size="xs">
-					Label {shortId(value.labelId)}
-				</Button>
-			</PopoverTrigger>
-			<PopoverContent align="start">
-				<PopoverHeader>
-					<PopoverTitle>Label reference</PopoverTitle>
-				</PopoverHeader>
-				<Metadata
-					values={[
-						["Label", value.labelId],
-						["Label data", value.labelDataId],
-						["Label group", value.labelGroupId],
-						["Chapter", value.chapterId],
-						["Content", value.chapterContentId],
-					]}
-				/>
-				{openChapter && (
-					<Button type="button" size="sm" onClick={() => openChapter(value.chapterId)}>
-						Open chapter
+		<div className="flex items-center gap-1">
+			<Button
+				type="button"
+				variant="ghost"
+				size="xs"
+				disabled={!openTextReference}
+				onDoubleClick={openReference}
+				onClick={(event) => {
+					if (event.detail === 0) openReference();
+				}}
+				title="Double-click to open this label"
+			>
+				Label {shortId(value.labelId)}
+			</Button>
+			<Popover>
+				<PopoverTrigger asChild>
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon-xs"
+						aria-label="Label reference info"
+					>
+						<Info />
 					</Button>
-				)}
-			</PopoverContent>
-		</Popover>
+				</PopoverTrigger>
+				<PopoverContent align="start">
+					<PopoverHeader>
+						<PopoverTitle>Label reference</PopoverTitle>
+					</PopoverHeader>
+					<Metadata
+						values={[
+							["Label", value.labelId],
+							["Label data", value.labelDataId],
+							["Label group", value.labelGroupId],
+							["Chapter", value.chapterId],
+							["Content", value.chapterContentId],
+						]}
+					/>
+				</PopoverContent>
+			</Popover>
+		</div>
 	);
 }
 
@@ -107,10 +141,10 @@ export function GroupDataCell({ value }: { value: GroupData | undefined }) {
 
 export function DataCell({
 	value,
-	openChapter,
+	openTextReference,
 }: {
 	value: DataType | undefined;
-	openChapter?: (chapterId: string) => void;
+	openTextReference?: (reference: TextReference) => void;
 }) {
 	if (!value) return <span className="text-muted-foreground">—</span>;
 
@@ -122,8 +156,8 @@ export function DataCell({
 		case "bool":
 			return <Badge variant="outline">{value.value ? "true" : "false"}</Badge>;
 		case "textSpan":
-			return <TextSpanCell value={value.value} openChapter={openChapter} />;
+			return <TextSpanCell value={value.value} openTextReference={openTextReference} />;
 		case "labelRef":
-			return <LabelCell value={value.value} openChapter={openChapter} />;
+			return <LabelCell value={value.value} openTextReference={openTextReference} />;
 	}
 }

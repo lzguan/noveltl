@@ -516,7 +516,11 @@ def test_grouping_queries_return_metadata_and_aggregated_values(
     assert [(entry.value, entry.count) for entry in searched] == [(StringData(value="A"), 3)]
 
 
-def test_grouping_values_reject_search_for_non_strings_and_incomplete_groupings(
+@pytest.mark.parametrize("active_status", [GroupingStatus.PENDING, GroupingStatus.PROCESSING])
+@pytest.mark.parametrize("unreadable_status", [GroupingStatus.NEW, GroupingStatus.FAILED])
+def test_grouping_values_allow_active_groupings_and_reject_unreadable_groupings(
+    active_status: GroupingStatus,
+    unreadable_status: GroupingStatus,
     test_db: Session,
     sample_scenario: DatabaseScenario,
 ) -> None:
@@ -526,9 +530,13 @@ def test_grouping_values_reject_search_for_non_strings_and_incomplete_groupings(
     with pytest.raises(InvalidInstanceQueryException, match="only for string"):
         query_grouping_values(test_db, admin, data.groupings["rank"].grouping_id, "1", 10, 0)
 
-    data.groupings["category"].grouping_status = GroupingStatus.PROCESSING
+    data.groupings["category"].grouping_status = active_status
     test_db.commit()
-    with pytest.raises(GroupingNotReadyException, match="processing"):
+    assert query_grouping_values(test_db, admin, data.groupings["category"].grouping_id, None, 10, 0)
+
+    data.groupings["category"].grouping_status = unreadable_status
+    test_db.commit()
+    with pytest.raises(GroupingNotReadyException, match=unreadable_status.value):
         query_grouping_values(test_db, admin, data.groupings["category"].grouping_id, None, 10, 0)
 
 
@@ -549,15 +557,32 @@ def test_empty_simple_instance_query_distinguishes_accessible_and_inaccessible_w
         query_instances_of_workflow(test_db, sample_scenario.users["user"], workflow.workflow_id, 50, None)
 
 
-def test_instance_queries_reject_incomplete_workflow_even_when_it_has_instances(
+@pytest.mark.parametrize("active_status", [WorkflowStatus.PENDING, WorkflowStatus.PROCESSING])
+@pytest.mark.parametrize("unreadable_status", [WorkflowStatus.NEW, WorkflowStatus.FAILED])
+def test_instance_queries_allow_active_workflows_and_reject_unreadable_workflows(
+    active_status: WorkflowStatus,
+    unreadable_status: WorkflowStatus,
     test_db: Session,
     sample_scenario: DatabaseScenario,
 ) -> None:
     data = _create_advanced_query_data(test_db)
-    data.workflow.workflow_status = WorkflowStatus.PROCESSING
+    data.workflow.workflow_status = active_status
     test_db.commit()
 
-    with pytest.raises(WorkflowNotReadyException, match="processing"):
+    simple_results = query_instances_of_workflow(
+        test_db,
+        sample_scenario.users["admin"],
+        data.workflow.workflow_id,
+        50,
+        None,
+    )
+    advanced_results = _query(test_db, sample_scenario.users["admin"], data)
+    assert len(simple_results) == len(data.instances)
+    assert len(advanced_results) == len(data.instances)
+
+    data.workflow.workflow_status = unreadable_status
+    test_db.commit()
+    with pytest.raises(WorkflowNotReadyException, match=unreadable_status.value):
         query_instances_of_workflow(
             test_db,
             sample_scenario.users["admin"],
@@ -565,7 +590,7 @@ def test_instance_queries_reject_incomplete_workflow_even_when_it_has_instances(
             50,
             None,
         )
-    with pytest.raises(WorkflowNotReadyException, match="processing"):
+    with pytest.raises(WorkflowNotReadyException, match=unreadable_status.value):
         _query(test_db, sample_scenario.users["admin"], data)
 
 
@@ -768,7 +793,7 @@ def test_advanced_query_rejects_group_value_with_wrong_type(
         )
 
 
-def test_advanced_query_rejects_missing_and_incomplete_groupings(
+def test_advanced_query_rejects_missing_and_unreadable_groupings(
     test_db: Session,
     sample_scenario: DatabaseScenario,
 ) -> None:
@@ -785,7 +810,16 @@ def test_advanced_query_rejects_missing_and_incomplete_groupings(
 
     data.groupings["category"].grouping_status = GroupingStatus.PROCESSING
     test_db.commit()
-    with pytest.raises(GroupingNotReadyException, match="processing"):
+    assert _query(
+        test_db,
+        admin,
+        data,
+        group_filters=[GroupFilter(grouping_id=data.groupings["category"].grouping_id, values=[])],
+    )
+
+    data.groupings["category"].grouping_status = GroupingStatus.FAILED
+    test_db.commit()
+    with pytest.raises(GroupingNotReadyException, match="failed"):
         _query(
             test_db,
             admin,

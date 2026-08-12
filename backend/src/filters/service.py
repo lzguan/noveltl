@@ -97,6 +97,17 @@ from src.filters.schemas import (
 from src.labels.models import LabelGroup
 from src.labels.permissions import label_group_mod_access_select
 
+READABLE_WORKFLOW_STATUSES = (
+    WorkflowStatus.PENDING,
+    WorkflowStatus.PROCESSING,
+    WorkflowStatus.COMPLETE,
+)
+READABLE_GROUPING_STATUSES = (
+    GroupingStatus.PENDING,
+    GroupingStatus.PROCESSING,
+    GroupingStatus.COMPLETE,
+)
+
 
 def query_function_namespaces(db: Session, current_user: User, search: str | None) -> list[str]:
     query = select(FunctionDefinition.namespace).distinct()
@@ -301,7 +312,7 @@ def query_grouping_values(
     offset: int,
 ) -> list[GroupValueCount]:
     grouping = query_grouping(db, current_user, grouping_id)
-    if grouping.grouping_status != GroupingStatus.COMPLETE:
+    if grouping.grouping_status not in READABLE_GROUPING_STATUSES:
         raise GroupingNotReadyException(
             f"Grouping {grouping_id} is {grouping.grouping_status.value} and cannot be queried for values."
         )
@@ -333,13 +344,13 @@ def query_grouping_values(
 def query_instances_of_workflow(
     db: Session, current_user: User, workflow_id: UUID, limit: int, cursor: UUID | None
 ) -> list[Instance]:
-    complete_workflow = exists(
+    readable_workflow = exists(
         select(1)
         .select_from(Workflow)
         .where(Workflow.workflow_id == Instance.workflow_id)
-        .where(Workflow.workflow_status == WorkflowStatus.COMPLETE)
+        .where(Workflow.workflow_status.in_(READABLE_WORKFLOW_STATUSES))
     )
-    q = select(Instance).where(Instance.workflow_id == workflow_id).where(complete_workflow)
+    q = select(Instance).where(Instance.workflow_id == workflow_id).where(readable_workflow)
     q = instance_mod_access_select(q, current_user)
     if cursor is not None:
         q = q.where(Instance.instance_id > cursor)
@@ -347,7 +358,7 @@ def query_instances_of_workflow(
     instances = list(db.execute(q).scalars().all())
     if not instances:
         workflow = query_workflow(db, current_user, workflow_id)
-        if workflow.workflow_status != WorkflowStatus.COMPLETE:
+        if workflow.workflow_status not in READABLE_WORKFLOW_STATUSES:
             raise WorkflowNotReadyException(
                 f"Workflow {workflow_id} is {workflow.workflow_status.value} and cannot be queried for instances."
             )
@@ -365,7 +376,7 @@ def query_instances_of_workflow_advanced(
         ).scalar_one()
     except NoResultFound as e:
         raise WorkflowNotFoundException(f"Workflow with ID {workflow_id} not found or not accessible.") from e
-    if workflow.workflow_status != WorkflowStatus.COMPLETE:
+    if workflow.workflow_status not in READABLE_WORKFLOW_STATUSES:
         raise WorkflowNotReadyException(
             f"Workflow {workflow_id} is {workflow.workflow_status.value} and cannot be queried for instances."
         )
@@ -392,7 +403,7 @@ def query_instances_of_workflow_advanced(
     group_value_types: list[str] = []
     for index, group_filter in enumerate(request.frame.group_filters):
         grouping, function_definition = groups[group_filter.grouping_id]
-        if grouping.grouping_status != GroupingStatus.COMPLETE:
+        if grouping.grouping_status not in READABLE_GROUPING_STATUSES:
             raise GroupingNotReadyException(
                 f"Grouping {grouping.grouping_id} is {grouping.grouping_status.value} and cannot be queried."
             )

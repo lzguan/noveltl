@@ -186,11 +186,15 @@ def test_filter_router_maps_permissions_readiness_and_invalid_query_errors(
     )
     workflow.workflow_status = WorkflowStatus.PROCESSING
     test_db.commit()
+    active = client.get(f"/filters/workflows/{workflow.workflow_id}/instances", headers=admin_headers)
+    workflow.workflow_status = WorkflowStatus.FAILED
+    test_db.commit()
     not_ready = client.get(f"/filters/workflows/{workflow.workflow_id}/instances", headers=admin_headers)
     invalid_limit = client.get("/filters/workflows?limit=101", headers=admin_headers)
 
     assert hidden.status_code == status.HTTP_404_NOT_FOUND
     assert invalid_query.status_code == status.HTTP_400_BAD_REQUEST
+    assert active.status_code == status.HTTP_200_OK
     assert not_ready.status_code == status.HTTP_409_CONFLICT
     assert invalid_limit.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 

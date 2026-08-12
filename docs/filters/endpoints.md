@@ -100,8 +100,9 @@ Supported query parameters:
 
 - `limit` and `cursor`: pagination.
 
-The workflow must be complete before its instances can be queried. Each entry
-contains `instanceId`, `workflowId`, and the typed `value` object. Complex
+The workflow may be pending, processing, or complete when its instances are
+queried. Pending and processing results may be empty or partial. New and failed
+workflows are rejected. Each entry contains `instanceId`, `workflowId`, and the typed `value` object. Complex
 filtering across multiple groupings is intentionally not encoded into this GET
 endpoint. Use the instance query endpoint below for that operation.
 
@@ -147,14 +148,16 @@ Request body:
 Values within one grouping are combined with OR. Different grouping filters
 are combined with AND. An empty `groupFilters` list is equivalent to the
 unfiltered workflow instance endpoint. Each grouping must belong to the
-workflow and be complete before it can be queried. Values must match the
+workflow and be pending, processing, or complete before it can be queried.
+Active grouping results may be partial. Values must match the
 grouping's declared scalar output type. A grouping with an empty `values` list
 does not filter rows; it projects that grouping's value into each result so it
 can be displayed as a column.
 
 A frame accepts at most 10 groupings, each with at most 100 selected values,
 and at most 3 sort keys. Sort keys name scalar fields in the workflow schema
-and may use `asc` or `desc`. The workflow must be complete. The final ordering
+and may use `asc` or `desc`. The workflow may be pending, processing, or
+complete, and active results may be partial. The final ordering
 always uses ascending `instanceId` as a stable tie-breaker.
 
 Each response entry contains an `instance` and a `groupValues` object keyed by
@@ -217,8 +220,9 @@ Supported query parameters:
 
 Values retain their declared scalar type rather than being returned as display
 strings. Results are ordered by descending instance count and then by their
-typed JSON value to make offset pagination deterministic. The grouping must be
-complete before its values can be queried.
+typed JSON value to make offset pagination deterministic. The grouping may be
+pending, processing, or complete; pending and processing results may be empty
+or partial. New and failed groupings are rejected.
 
 ## Existing selector endpoints
 

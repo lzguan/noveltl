@@ -577,6 +577,125 @@ export const ReadInstancesAdvancedFiltersInstancesQueryPost422Response = S.Struc
 })
 
 /**
+ * Update mutable scalar fields on one completed workflow instance.
+ * @summary Update Filter Instance
+ */
+export const UpdateFilterInstanceParams = S.Struct({
+  "instanceId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const updateFilterInstanceBodyFieldsOneKindDefault = `value`;
+export const updateFilterInstanceBodyFieldsOneTypeDefault = `string`;
+export const updateFilterInstanceBodyFieldsTwoKindDefault = `value`;
+export const updateFilterInstanceBodyFieldsTwoTypeDefault = `int`;
+export const updateFilterInstanceBodyFieldsThreeKindDefault = `value`;
+export const updateFilterInstanceBodyFieldsThreeTypeDefault = `float`;
+export const updateFilterInstanceBodyFieldsFourKindDefault = `value`;
+export const updateFilterInstanceBodyFieldsFourTypeDefault = `bool`;
+
+export const UpdateFilterInstanceBody = S.Struct({
+  "fields": S.Record({ key: S.String, value: S.Union(S.Struct({
+  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstanceBodyFieldsOneKindDefault }),
+  "type": S.optionalWith(S.Literal('string'), { default: () => updateFilterInstanceBodyFieldsOneTypeDefault }),
+  "value": S.String
+}), S.Struct({
+  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstanceBodyFieldsTwoKindDefault }),
+  "type": S.optionalWith(S.Literal('int'), { default: () => updateFilterInstanceBodyFieldsTwoTypeDefault }),
+  "value": S.Number
+}), S.Struct({
+  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstanceBodyFieldsThreeKindDefault }),
+  "type": S.optionalWith(S.Literal('float'), { default: () => updateFilterInstanceBodyFieldsThreeTypeDefault }),
+  "value": S.Number
+}), S.Struct({
+  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstanceBodyFieldsFourKindDefault }),
+  "type": S.optionalWith(S.Literal('bool'), { default: () => updateFilterInstanceBodyFieldsFourTypeDefault }),
+  "value": S.Boolean
+})) })
+})
+
+export const updateFilterInstance200ResponseValueFieldsOneKindDefault = `value`;
+export const updateFilterInstance200ResponseValueFieldsOneTypeDefault = `string`;
+export const updateFilterInstance200ResponseValueFieldsTwoKindDefault = `value`;
+export const updateFilterInstance200ResponseValueFieldsTwoTypeDefault = `int`;
+export const updateFilterInstance200ResponseValueFieldsThreeKindDefault = `value`;
+export const updateFilterInstance200ResponseValueFieldsThreeTypeDefault = `float`;
+export const updateFilterInstance200ResponseValueFieldsFourKindDefault = `value`;
+export const updateFilterInstance200ResponseValueFieldsFourTypeDefault = `bool`;
+export const updateFilterInstance200ResponseValueFieldsFiveKindDefault = `value`;
+export const updateFilterInstance200ResponseValueFieldsFiveTypeDefault = `textSpan`;
+export const updateFilterInstance200ResponseValueFieldsFiveValueEndMin = 0;
+
+export const updateFilterInstance200ResponseValueFieldsFiveValueStartMin = 0;
+
+export const updateFilterInstance200ResponseValueFieldsSixKindDefault = `value`;
+export const updateFilterInstance200ResponseValueFieldsSixTypeDefault = `labelRef`;
+export const updateFilterInstance200ResponseValueKindDefault = `object`;
+
+export const UpdateFilterInstance200Response = S.Struct({
+  "instanceId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "value": S.Struct({
+  "fields": S.optional(S.Record({ key: S.String, value: S.Union(S.Struct({
+  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstance200ResponseValueFieldsOneKindDefault }),
+  "type": S.optionalWith(S.Literal('string'), { default: () => updateFilterInstance200ResponseValueFieldsOneTypeDefault }),
+  "value": S.String
+}), S.Struct({
+  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstance200ResponseValueFieldsTwoKindDefault }),
+  "type": S.optionalWith(S.Literal('int'), { default: () => updateFilterInstance200ResponseValueFieldsTwoTypeDefault }),
+  "value": S.Number
+}), S.Struct({
+  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstance200ResponseValueFieldsThreeKindDefault }),
+  "type": S.optionalWith(S.Literal('float'), { default: () => updateFilterInstance200ResponseValueFieldsThreeTypeDefault }),
+  "value": S.Number
+}), S.Struct({
+  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstance200ResponseValueFieldsFourKindDefault }),
+  "type": S.optionalWith(S.Literal('bool'), { default: () => updateFilterInstance200ResponseValueFieldsFourTypeDefault }),
+  "value": S.Boolean
+}), S.Struct({
+  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstance200ResponseValueFieldsFiveKindDefault }),
+  "type": S.optionalWith(S.Literal('textSpan'), { default: () => updateFilterInstance200ResponseValueFieldsFiveTypeDefault }),
+  "value": S.Struct({
+  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "end": S.Number.pipe(S.greaterThanOrEqualTo(updateFilterInstance200ResponseValueFieldsFiveValueEndMin)),
+  "start": S.Number.pipe(S.greaterThanOrEqualTo(updateFilterInstance200ResponseValueFieldsFiveValueStartMin))
+})
+}), S.Struct({
+  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstance200ResponseValueFieldsSixKindDefault }),
+  "type": S.optionalWith(S.Literal('labelRef'), { default: () => updateFilterInstance200ResponseValueFieldsSixTypeDefault }),
+  "value": S.Struct({
+  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+})) })),
+  "kind": S.optionalWith(S.Literal("object"), { default: () => updateFilterInstance200ResponseValueKindDefault })
+}),
+  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const UpdateFilterInstance400Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const UpdateFilterInstance404Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const UpdateFilterInstance409Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const UpdateFilterInstance422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * Add mutable annotation fields to an existing workflow.
  * @summary Run Python Annotation
  */

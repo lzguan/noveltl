@@ -29,6 +29,7 @@ import type {
   ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGetParams,
   ReadWorkflowsFiltersWorkflowsGetParams,
   RenameWorkflowRequest,
+  UpdateInstanceRequest,
   ValidateFunctionDefinitionRequest,
   WorkflowOperationAccepted,
   WorkflowResponse,
@@ -395,6 +396,65 @@ export const readInstancesAdvancedFiltersInstancesQueryPost = async (instanceQue
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(instanceQuery)
+  }
+);}
+
+
+export type updateFilterInstanceResponse200 = {
+  data: InstanceResponse
+  status: 200
+}
+
+export type updateFilterInstanceResponse400 = {
+  data: DetailHTTPErrorResponse
+  status: 400
+}
+
+export type updateFilterInstanceResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type updateFilterInstanceResponse409 = {
+  data: DetailHTTPErrorResponse
+  status: 409
+}
+
+export type updateFilterInstanceResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateFilterInstanceResponseSuccess = (updateFilterInstanceResponse200) & {
+  headers: Headers;
+};
+export type updateFilterInstanceResponseError = (updateFilterInstanceResponse400 | updateFilterInstanceResponse404 | updateFilterInstanceResponse409 | updateFilterInstanceResponse422) & {
+  headers: Headers;
+};
+
+export type updateFilterInstanceResponse = (updateFilterInstanceResponseSuccess | updateFilterInstanceResponseError)
+
+export const getUpdateFilterInstanceUrl = (instanceId: string,) => {
+
+
+
+
+  return `/api/filters/instances/${instanceId}`
+}
+
+/**
+ * Update mutable scalar fields on one completed workflow instance.
+ * @summary Update Filter Instance
+ */
+export const updateFilterInstance = async (instanceId: string,
+    updateInstanceRequest: UpdateInstanceRequest, options?: Parameters<typeof customFetch>[1]): Promise<updateFilterInstanceResponse> => {
+
+  return customFetch<updateFilterInstanceResponse>(getUpdateFilterInstanceUrl(instanceId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateInstanceRequest)
   }
 );}
 

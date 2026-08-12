@@ -1596,6 +1596,19 @@ components:
       - labelData
       title: LazyEntry
       type: object
+    MDataType:
+      discriminator:
+        mapping:
+          bool: '#/components/schemas/BoolData'
+          float: '#/components/schemas/FloatData'
+          int: '#/components/schemas/IntData'
+          string: '#/components/schemas/StringData'
+        propertyName: type
+      oneOf:
+      - $ref: '#/components/schemas/StringData'
+      - $ref: '#/components/schemas/IntData'
+      - $ref: '#/components/schemas/FloatData'
+      - $ref: '#/components/schemas/BoolData'
     ModifyChapterContentResponse:
       description: "Pydantic schema for the response after modifying chapter content.\n\
         \nAttributes:\n    chapter_content_version: The new version number of the\
@@ -2264,6 +2277,22 @@ components:
       - textOps
       - chapterContentId
       title: UpdateChapterContent
+      type: object
+    UpdateInstanceRequest:
+      additionalProperties: false
+      properties:
+        fields:
+          additionalProperties:
+            $ref: '#/components/schemas/MDataType'
+          maxProperties: 100
+          minProperties: 1
+          propertyNames:
+            $ref: '#/components/schemas/FieldName'
+          title: Fields
+          type: object
+      required:
+      - fields
+      title: UpdateInstanceRequest
       type: object
     UpdateLabelDataStream:
       description: "Pydantic schema for an atomic stream of label operations.\n\n\
@@ -3678,6 +3707,60 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Read Instances Advanced
+      tags:
+      - filters
+  /filters/instances/{instanceId}:
+    patch:
+      description: Update mutable scalar fields on one completed workflow instance.
+      operationId: update_filter_instance
+      parameters:
+      - in: path
+        name: instanceId
+        required: true
+        schema:
+          format: uuid
+          title: Instanceid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateInstanceRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstanceResponse'
+          description: Successful Response
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Update Filter Instance
       tags:
       - filters
   /filters/runners/python/annotation:

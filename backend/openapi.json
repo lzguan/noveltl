@@ -3517,6 +3517,95 @@
         }
       }
     },
+    "/filters/instances/{instanceId}": {
+      "patch": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Update Filter Instance",
+        "description": "Update mutable scalar fields on one completed workflow instance.",
+        "operationId": "update_filter_instance",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Instanceid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInstanceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstanceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/filters/instances/query": {
       "post": {
         "tags": [
@@ -6470,6 +6559,31 @@
         ],
         "title": "LazyEntry"
       },
+      "MDataType": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StringData"
+          },
+          {
+            "$ref": "#/components/schemas/IntData"
+          },
+          {
+            "$ref": "#/components/schemas/FloatData"
+          },
+          {
+            "$ref": "#/components/schemas/BoolData"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "bool": "#/components/schemas/BoolData",
+            "float": "#/components/schemas/FloatData",
+            "int": "#/components/schemas/IntData",
+            "string": "#/components/schemas/StringData"
+          }
+        }
+      },
       "ModifyChapterContentResponse": {
         "properties": {
           "chapterContentVersion": {
@@ -7369,6 +7483,28 @@
         ],
         "title": "UpdateChapterContent",
         "description": "Pydantic schema to validate data for updating the text content of a chapter. The chapter_id is expected to be passed via the URL path.\n\nAttributes:\n    text_ops: A list of text operations (insertions or deletions) to apply to the existing text content.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text."
+      },
+      "UpdateInstanceRequest": {
+        "properties": {
+          "fields": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MDataType"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/FieldName"
+            },
+            "type": "object",
+            "maxProperties": 100,
+            "minProperties": 1,
+            "title": "Fields"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "fields"
+        ],
+        "title": "UpdateInstanceRequest"
       },
       "UpdateLabelDataStream": {
         "properties": {

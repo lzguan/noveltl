@@ -2,7 +2,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import Field
-from sqlalchemy import func, literal_column, select, update
+from sqlalchemy import exists, func, literal_column, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.filters.data_types import (
@@ -15,7 +15,7 @@ from src.filters.data_types import (
     m_data_type_adapter,
 )
 from src.filters.lifecycle import claim_fjob, clear_fjob
-from src.filters.models import Instance, Workflow, WorkflowStatus
+from src.filters.models import Grouping, Instance, Workflow, WorkflowStatus
 from src.filters.runners.python.interfaces import PythonRunner, PythonRunnerInputBase
 from src.schemas import Model
 
@@ -69,14 +69,27 @@ class PythonAnnotationRunner(PythonRunner[PythonAnnotationInput]):
     def execute(self, job_id: UUID, input: PythonAnnotationInput) -> None:
         try:
             with self.session_factory.begin() as db:
-                if not claim_fjob(db, job_id):
-                    return
-                workflow_schema = db.scalar(
-                    select(Workflow.schema).where(Workflow.workflow_id == input.workflow_id)
-                )
-                if workflow_schema is None:
-                    return
-                schema = Schema.model_validate(workflow_schema)
+                claimed = claim_fjob(db, job_id)
+            if not claimed:
+                return
+
+            with self.session_factory() as db:
+                workflows = db.execute(
+                    select(Workflow.workflow_id, Workflow.workflow_status, Workflow.schema).where(
+                        Workflow.job_id == job_id
+                    )
+                ).all()
+                has_groupings = db.scalar(select(exists().where(Grouping.job_id == job_id)))
+
+            if (
+                len(workflows) != 1
+                or workflows[0].workflow_id != input.workflow_id
+                or workflows[0].workflow_status != WorkflowStatus.PROCESSING
+                or has_groupings
+            ):
+                raise ValueError("An annotation job must claim exactly its input workflow and no groupings.")
+            schema = Schema.model_validate(workflows[0].schema)
+
             new_fields = dict(schema.fields)
             for new_field_name in input.new_fields:
                 if new_field_name in schema.fields:
@@ -86,7 +99,14 @@ class PythonAnnotationRunner(PythonRunner[PythonAnnotationInput]):
             with self.session_factory.begin() as db:
                 db.execute(
                     update(Instance)
-                    .where(Instance.workflow_id == input.workflow_id)
+                    .where(
+                        Instance.workflow_id == input.workflow_id,
+                        exists().where(
+                            Workflow.workflow_id == input.workflow_id,
+                            Workflow.job_id == job_id,
+                            Workflow.workflow_status == WorkflowStatus.PROCESSING,
+                        ),
+                    )
                     .values(
                         value=func.jsonb_set(
                             Instance.value,
@@ -105,7 +125,7 @@ class PythonAnnotationRunner(PythonRunner[PythonAnnotationInput]):
                         )
                     )
                 )
-                db.execute(
+                updated_workflow_id = db.scalar(
                     update(Workflow)
                     .where(
                         Workflow.workflow_id == input.workflow_id,
@@ -113,8 +133,12 @@ class PythonAnnotationRunner(PythonRunner[PythonAnnotationInput]):
                         Workflow.workflow_status == WorkflowStatus.PROCESSING,
                     )
                     .values(schema=new_schema.model_dump(mode="json"))
+                    .returning(Workflow.workflow_id)
                 )
-                clear_fjob(db, job_id, WorkflowStatus.COMPLETE, None)
+                if updated_workflow_id is None:
+                    raise ValueError("The annotation workflow is no longer owned by this job.")
+                if not clear_fjob(db, job_id, WorkflowStatus.COMPLETE, None):
+                    raise ValueError("The annotation job could not be completed.")
 
         except Exception as exc:
             with self.session_factory.begin() as db:

@@ -7,6 +7,7 @@ import type {
 	InstanceQueryResult,
 	LabelRef,
 	LabelGroup,
+	MDataType,
 	Signature,
 	SortKey,
 	SortDirection,
@@ -79,6 +80,7 @@ export interface QuerySectionModel {
 
 export interface InstanceResultsModel {
 	results: Loadable<Page<InstanceQueryResult>>;
+	commitInstanceField: (instanceId: string, fieldName: string, value: MDataType) => Promise<void>;
 	refreshInstanceResults: () => void;
 	loadPreviousInstancePage: () => void;
 	loadNextInstancePage: () => void;

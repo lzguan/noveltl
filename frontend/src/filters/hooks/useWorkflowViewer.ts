@@ -91,6 +91,7 @@ export function useWorkflowViewer(
 		},
 		instanceResults: {
 			results: instanceResults.results,
+			commitInstanceField: instanceResults.commitInstanceField,
 			refreshInstanceResults: instanceResults.refreshInstanceResults,
 			loadPreviousInstancePage: instanceResults.loadPreviousInstancePage,
 			loadNextInstancePage: instanceResults.loadNextInstancePage,

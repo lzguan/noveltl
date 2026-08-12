@@ -41,6 +41,10 @@ class InvalidInstanceQueryException(Exception):
     pass
 
 
+class InvalidInstanceUpdateException(Exception):
+    pass
+
+
 class GroupingValueTypeMismatchException(InvalidInstanceQueryException):
     pass
 

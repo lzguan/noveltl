@@ -10,6 +10,7 @@ from sqlalchemy import (
     exists,
     func,
     insert,
+    literal_column,
     or_,
     select,
     type_coerce,
@@ -40,6 +41,7 @@ from src.filters.exceptions import (
     GroupingValueTypeMismatchException,
     InstanceNotFoundException,
     InvalidInstanceQueryException,
+    InvalidInstanceUpdateException,
     InvalidRunnerRequestException,
     RunnerEnqueueFailedException,
     UnsupportedSortTypeException,
@@ -81,6 +83,7 @@ from src.filters.schemas import (
     GroupValueCount,
     InstanceQuery,
     InstanceQueryResult,
+    InstanceResponse,
     PythonAnnotationRequest,
     PythonFilterRequest,
     PythonGroupRequest,
@@ -89,6 +92,7 @@ from src.filters.schemas import (
     RenameWorkflowRequest,
     RunnerInput,
     SortDirection,
+    UpdateInstanceRequest,
     ValidateFunctionDefinitionRequest,
     WorkflowOperationAccepted,
     WorkflowResponse,
@@ -363,6 +367,70 @@ def query_instances_of_workflow(
                 f"Workflow {workflow_id} is {workflow.workflow_status.value} and cannot be queried for instances."
             )
     return instances
+
+
+def update_instance(
+    db: Session,
+    current_user: User,
+    instance_id: UUID,
+    request: UpdateInstanceRequest,
+) -> InstanceResponse:
+    """Atomically update mutable scalar fields on one completed workflow instance."""
+    q = (
+        select(
+            Workflow.workflow_id,
+            Workflow.schema,
+            Workflow.workflow_status,
+        )
+        .select_from(Workflow)
+        .join(Instance, Instance.workflow_id == Workflow.workflow_id)
+        .where(Instance.instance_id == instance_id)
+        .with_for_update(of=(Workflow, Instance))
+    )
+    q = workflow_mod_access_select(q, current_user)
+    resource = db.execute(q).one_or_none()
+    if resource is None:
+        raise InstanceNotFoundException(f"Instance with ID {instance_id} not found or not accessible.")
+    if resource.workflow_status != WorkflowStatus.COMPLETE:
+        raise WorkflowNotReadyException(
+            f"Workflow {resource.workflow_id} is {resource.workflow_status.value} and cannot be modified."
+        )
+
+    schema = Schema.model_validate(resource.schema)
+    for field_name, value in request.fields.items():
+        field = schema.fields.get(field_name)
+        if field is None:
+            raise InvalidInstanceUpdateException(f"Field '{field_name}' does not exist in the workflow schema.")
+        if not field.mutable:
+            raise InvalidInstanceUpdateException(f"Field '{field_name}' is immutable.")
+        if field.type != value.type:
+            raise InvalidInstanceUpdateException(f"Field '{field_name}' requires type {field.type}, not {value.type}.")
+
+    patch = {
+        field_name: value.model_dump(mode="json", by_alias=True, exclude_computed_fields=True)
+        for field_name, value in request.fields.items()
+    }
+    updated = db.execute(
+        update(Instance)
+        .where(Instance.instance_id == instance_id, Instance.workflow_id == resource.workflow_id)
+        .values(
+            value=func.jsonb_set(
+                Instance.value,
+                literal_column("'{fields}'"),
+                Instance.value["fields"].concat(patch),
+            )
+        )
+        .returning(Instance.instance_id, Instance.workflow_id, Instance.value)
+    ).one()
+    response = InstanceResponse.model_validate(
+        {
+            "instance_id": updated.instance_id,
+            "workflow_id": updated.workflow_id,
+            "value": updated.value,
+        }
+    )
+    db.commit()
+    return response
 
 
 def query_instances_of_workflow_advanced(

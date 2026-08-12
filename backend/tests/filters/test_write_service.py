@@ -4,11 +4,13 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.filters.data_types import BoolField, Schema, StringField
+from src.filters.data_types import BoolField, DataObj, FloatData, FloatField, Schema, StringData, StringField
 from src.filters.exceptions import (
     FunctionAlreadyExistsException,
     FunctionNotFoundException,
     GroupingAlreadyExistsException,
+    InstanceNotFoundException,
+    InvalidInstanceUpdateException,
     InvalidRunnerRequestException,
     RunnerEnqueueFailedException,
     WorkflowNotFoundException,
@@ -19,6 +21,7 @@ from src.filters.models import (
     FunctionDefinition,
     Grouping,
     GroupingStatus,
+    Instance,
     Workflow,
     WorkflowLabelGroup,
     WorkflowNovel,
@@ -40,6 +43,7 @@ from src.filters.schemas import (
     PythonLabelSourceRequest,
     PythonMapRequest,
     RenameWorkflowRequest,
+    UpdateInstanceRequest,
 )
 from src.filters.service import (
     create_function_definition,
@@ -49,6 +53,7 @@ from src.filters.service import (
     run_group,
     run_label_source,
     run_map,
+    update_instance,
 )
 from src.novels.constants import Role
 from src.novels.models import NovelContributor
@@ -144,6 +149,121 @@ def test_rename_workflow_updates_only_accessible_workflow(
             workflow.workflow_id,
             RenameWorkflowRequest(workflowName="Hidden"),
         )
+
+
+def test_update_instance_merges_mutable_fields_and_preserves_other_values(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    workflow = add_scoped_workflow(
+        test_db,
+        sample_scenario,
+        Schema(
+            fields={
+                "source": StringField(),
+                "note": StringField(mutable=True),
+                "score": FloatField(mutable=True),
+            }
+        ),
+    )
+    instance = Instance(
+        workflow_id=workflow.workflow_id,
+        value=dump_model(
+            DataObj(
+                fields={
+                    "source": StringData(value="Alice"),
+                    "note": StringData(value=""),
+                    "score": FloatData(value=0.0),
+                }
+            )
+        ),
+    )
+    test_db.add(instance)
+    test_db.commit()
+
+    updated = update_instance(
+        test_db,
+        sample_scenario.users["admin"],
+        instance.instance_id,
+        UpdateInstanceRequest(
+            fields={
+                "note": StringData(value="reviewed"),
+                "score": FloatData(value=0.75),
+            }
+        ),
+    )
+
+    assert updated.value == DataObj(
+        fields={
+            "source": StringData(value="Alice"),
+            "note": StringData(value="reviewed"),
+            "score": FloatData(value=0.75),
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    ("fields", "message"),
+    [
+        ({"missing": StringData(value="x")}, "does not exist"),
+        ({"source": StringData(value="changed")}, "immutable"),
+        ({"note": FloatData(value=1.0)}, "requires type string"),
+    ],
+)
+def test_update_instance_rejects_invalid_patch_atomically(
+    fields: dict[str, StringData | FloatData],
+    message: str,
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    workflow = add_scoped_workflow(
+        test_db,
+        sample_scenario,
+        Schema(fields={"source": StringField(), "note": StringField(mutable=True)}),
+    )
+    original = DataObj(fields={"source": StringData(value="Alice"), "note": StringData(value="")})
+    instance = Instance(workflow_id=workflow.workflow_id, value=dump_model(original))
+    test_db.add(instance)
+    test_db.commit()
+
+    with pytest.raises(InvalidInstanceUpdateException, match=message):
+        update_instance(
+            test_db,
+            sample_scenario.users["admin"],
+            instance.instance_id,
+            UpdateInstanceRequest(fields={"note": StringData(value="valid"), **fields}),
+        )
+
+    test_db.expire_all()
+    stored = test_db.get(Instance, instance.instance_id)
+    assert stored is not None
+    assert DataObj.model_validate(stored.value) == original
+
+
+@pytest.mark.parametrize("workflow_status", [WorkflowStatus.PENDING, WorkflowStatus.PROCESSING])
+def test_update_instance_rejects_active_or_inaccessible_workflow(
+    workflow_status: WorkflowStatus,
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    workflow = add_scoped_workflow(
+        test_db,
+        sample_scenario,
+        Schema(fields={"note": StringField(mutable=True)}),
+        status=workflow_status,
+    )
+    instance = Instance(
+        workflow_id=workflow.workflow_id,
+        value=dump_model(DataObj(fields={"note": StringData(value="")})),
+    )
+    test_db.add(instance)
+    test_db.commit()
+    request = UpdateInstanceRequest(fields={"note": StringData(value="changed")})
+
+    with pytest.raises(WorkflowNotReadyException, match=workflow_status.value):
+        update_instance(test_db, sample_scenario.users["admin"], instance.instance_id, request)
+    with pytest.raises(InstanceNotFoundException):
+        update_instance(test_db, sample_scenario.users["user"], instance.instance_id, request)
 
 
 def test_label_source_commits_scope_before_dispatch_and_sends_exact_input(

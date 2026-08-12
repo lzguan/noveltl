@@ -8,11 +8,12 @@ from sqlalchemy.orm import Session
 
 from src.auth.models import User
 from src.auth.utils import create_access_token
-from src.filters.data_types import BoolField, Schema, StringField
+from src.filters.data_types import BoolField, DataObj, Schema, StringData, StringField
 from src.filters.exceptions import RunnerEnqueueFailedException
 from src.filters.functions import Extend, Get, LiteralString
 from src.filters.models import (
     FunctionDefinition,
+    Instance,
     Workflow,
     WorkflowLabelGroup,
     WorkflowNovel,
@@ -181,6 +182,64 @@ def test_validate_function_returns_signature_without_persisting(
         }
     }
     assert set(test_db.scalars(select(FunctionDefinition.function_definition_id))) == function_ids_before
+
+
+def test_update_instance_route_validates_permissions_fields_and_workflow_state(
+    client: TestClient,
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    workflow = add_scoped_workflow(
+        test_db,
+        sample_scenario,
+        Schema(fields={"source": StringField(), "note": StringField(mutable=True)}),
+    )
+    instance = Instance(
+        workflow_id=workflow.workflow_id,
+        value=dump_model(DataObj(fields={"source": StringData(value="Alice"), "note": StringData(value="")})),
+    )
+    test_db.add(instance)
+    test_db.commit()
+    path = f"/filters/instances/{instance.instance_id}"
+    admin_headers = auth_headers(sample_scenario.users["admin"])
+
+    updated = client.patch(
+        path,
+        headers=admin_headers,
+        json={"fields": {"note": {"type": "string", "value": "reviewed"}}},
+    )
+    immutable = client.patch(
+        path,
+        headers=admin_headers,
+        json={"fields": {"source": {"type": "string", "value": "changed"}}},
+    )
+    inaccessible = client.patch(
+        path,
+        headers=auth_headers(sample_scenario.users["user"]),
+        json={"fields": {"note": {"type": "string", "value": "hidden"}}},
+    )
+    invalid_type = client.patch(
+        path,
+        headers=admin_headers,
+        json={"fields": {"note": {"type": "labelRef", "value": {}}}},
+    )
+    workflow.workflow_status = WorkflowStatus.PROCESSING
+    test_db.commit()
+    active = client.patch(
+        path,
+        headers=admin_headers,
+        json={"fields": {"note": {"type": "string", "value": "active"}}},
+    )
+
+    assert updated.status_code == status.HTTP_200_OK
+    assert updated.json()["value"]["fields"] == {
+        "source": {"kind": "value", "type": "string", "value": "Alice"},
+        "note": {"kind": "value", "type": "string", "value": "reviewed"},
+    }
+    assert immutable.status_code == status.HTTP_400_BAD_REQUEST
+    assert inaccessible.status_code == status.HTTP_404_NOT_FOUND
+    assert invalid_type.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert active.status_code == status.HTTP_409_CONFLICT
 
 
 def test_write_routes_map_missing_resources_to_404(
@@ -361,6 +420,7 @@ def test_write_request_validation_and_openapi_contract(
         ),
         "/filters/functions": ("post", "create_filter_function", "CreateFunctionDefinitionRequest"),
         "/filters/workflows/{workflowId}": ("patch", "rename_filter_workflow", "RenameWorkflowRequest"),
+        "/filters/instances/{instanceId}": ("patch", "update_filter_instance", "UpdateInstanceRequest"),
         "/filters/runners/python/label-source": (
             "post",
             "run_python_label_source",

@@ -14,15 +14,16 @@ read endpoints are documented in [endpoints.md](endpoints.md).
 | `POST` | `/filters/functions/validate` | `200` | Validate a function draft without saving it |
 | `POST` | `/filters/functions` | `201` | Save an immutable function definition |
 | `PATCH` | `/filters/workflows/{workflowId}` | `200` | Rename or clear a workflow name |
+| `PATCH` | `/filters/instances/{instanceId}` | `200` | Update mutable fields on one instance |
 | `POST` | `/filters/runners/python/label-source` | `202` | Materialize labels as a new workflow |
 | `POST` | `/filters/runners/python/annotation` | `202` | Add mutable fields to an existing workflow |
 | `POST` | `/filters/runners/python/map` | `202` | Map a function into a new workflow |
 | `POST` | `/filters/runners/python/filter` | `202` | Filter into a new workflow |
 | `POST` | `/filters/runners/python/group` | `202` | Create grouping assignments |
 
-Function update/delete, workflow or grouping deletion, retry, direct instance
-or assignment mutation, and runner-metadata endpoints are out of scope. All
-JSON fields use the repository's camel-case aliases.
+Function update/delete, workflow or grouping deletion, retry, assignment
+mutation, and runner-metadata endpoints are out of scope. All JSON fields use
+the repository's camel-case aliases.
 
 ## Public versus internal runner models
 
@@ -116,6 +117,34 @@ Request model: `RenameWorkflowRequest`.
 the name. No other workflow field is mutable through this request. Apply
 `workflow_mod_access_update`; missing and inaccessible workflows return `404`.
 Renaming is valid in every execution status. Return `WorkflowResponse`.
+
+## Instance update
+
+### `PATCH /filters/instances/{instanceId}`
+
+Request model: `UpdateInstanceRequest`.
+
+```json
+{
+  "fields": {
+    "reviewNote": { "kind": "value", "type": "string", "value": "Needs revision" },
+    "confidence": { "kind": "value", "type": "float", "value": 0.72 }
+  }
+}
+```
+
+`fields` contains between 1 and 100 entries. Values use `MDataType`, so only
+string, integer, float, and boolean values are accepted. The service hides
+missing and inaccessible instances behind `404`, locks the workflow and
+instance together, and requires the workflow to be complete. Every requested
+field must exist in the workflow schema, be mutable, and have the same scalar
+type as the supplied value.
+
+Validation is all-or-nothing. On success, one JSONB update merges the supplied
+fields into the instance's existing `fields` object without replacing
+unspecified fields. Return the updated `InstanceResponse`. Concurrent writes to
+the same instance serialize through its row lock; queueing serializes through
+the workflow lock.
 
 ## Accepted-operation responses
 
@@ -350,6 +379,7 @@ inaccessible resource exists.
   or the internal discriminated union publicly.
 - Use stable operation IDs: `create_filter_function`,
   `validate_filter_function`, `rename_filter_workflow`,
+  `update_filter_instance`,
   `run_python_label_source`, `run_python_annotation`, `run_python_map`,
   `run_python_filter`, and `run_python_group`.
 

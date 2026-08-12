@@ -64,14 +64,16 @@ field.
 
 ## Editable values and key paths
 
-Scalar schema fields carry a `mutable` capability, and the annotation runner
-can add new mutable scalar fields with defaults. There is not yet an API for
-updating those values on individual instances. That operation would need to:
+Scalar schema fields carry a `mutable` capability. The annotation runner adds
+new mutable scalar fields with defaults, and the instance update API accepts
+partial scalar field patches. It:
 
-1. Resolve a field or nested key path against the workflow schema.
-2. Confirm that the terminal field is mutable.
-3. Validate the replacement value with strict type semantics.
-4. Record authorship and revision metadata when required.
+1. Resolves each top-level field against the workflow schema.
+2. Confirms that the field is mutable.
+3. Validates the replacement value with strict type semantics.
+4. Atomically merges the validated fields without replacing other values.
+
+Authorship and revision metadata are not currently recorded.
 
 `TextSpan`, `LabelRef`, and other NovelTL resource references must remain
 immutable.

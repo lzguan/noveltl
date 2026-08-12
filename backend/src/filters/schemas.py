@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import ConfigDict, Field, StringConstraints, TypeAdapter, field_validator, model_validator
 
-from src.filters.data_types import DataObj, FieldName, Schema
+from src.filters.data_types import DataObj, FieldName, MDataType, Schema
 from src.filters.exceptions import InvalidSortKeyException, UnsupportedSortTypeException
 from src.filters.functions import Signature, function_adapter
 from src.filters.models import GroupingStatus, WorkflowStatus, WorkflowUseCase
@@ -155,6 +155,10 @@ RegistryName = Annotated[str, StringConstraints(strip_whitespace=True, min_lengt
 
 class FilterWriteRequest(Model):
     model_config = ConfigDict(extra="forbid")
+
+
+class UpdateInstanceRequest(FilterWriteRequest):
+    fields: dict[FieldName, MDataType] = Field(min_length=1, max_length=100)
 
 
 class CreateFunctionDefinitionRequest(FilterWriteRequest):

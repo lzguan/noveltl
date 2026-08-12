@@ -20,7 +20,16 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session, aliased
 
 from src.auth.models import User
-from src.filters.data_types import BoolField, DataObj, IntField, Schema, StringField, data_adapter, extends
+from src.filters.data_types import (
+    MAX_SCHEMA_FIELDS,
+    BoolField,
+    DataObj,
+    IntField,
+    Schema,
+    StringField,
+    data_adapter,
+    extends,
+)
 from src.filters.dispatch.dispatcher import RunnerDispatcher
 from src.filters.exceptions import (
     FunctionAlreadyExistsException,
@@ -57,6 +66,7 @@ from src.filters.permissions import (
     workflow_mod_access_select,
     workflow_mod_access_update,
 )
+from src.filters.runners.python.annotation_runner import PythonAnnotationInput
 from src.filters.runners.python.filter_runner import PythonFilterInput
 from src.filters.runners.python.group_runner import PythonGroupInput
 from src.filters.runners.python.label_source_runner import LABEL_SOURCE_SCHEMA, PythonLabelSourceInput
@@ -71,6 +81,7 @@ from src.filters.schemas import (
     GroupValueCount,
     InstanceQuery,
     InstanceQueryResult,
+    PythonAnnotationRequest,
     PythonFilterRequest,
     PythonGroupRequest,
     PythonLabelSourceRequest,
@@ -676,6 +687,46 @@ def validate_object_function(function: FunctionType, operation_name: str) -> Sch
     if len(function.signature.args) != 1 or not isinstance(function.signature.args[0], Schema):
         raise InvalidRunnerRequestException(f"A {operation_name} function must accept exactly one object schema.")
     return function.signature.args[0]
+
+
+def run_annotation(
+    db: Session,
+    current_user: User,
+    dispatcher: RunnerDispatcher,
+    request: PythonAnnotationRequest,
+) -> WorkflowOperationAccepted:
+    """Add mutable fields to an existing workflow through an annotation job."""
+    workflow, schema = _parse_workflow_schema(db, current_user, request.workflow_id)
+    duplicate_fields = sorted(set(schema.fields).intersection(request.new_fields))
+    if duplicate_fields:
+        raise InvalidRunnerRequestException(
+            "Annotation fields already exist in the workflow schema: " + ", ".join(duplicate_fields)
+        )
+    if len(schema.fields) + len(request.new_fields) > MAX_SCHEMA_FIELDS:
+        raise InvalidRunnerRequestException(f"A workflow schema may contain at most {MAX_SCHEMA_FIELDS} fields.")
+
+    job_id = uuid4()
+    if not queue_fjob(
+        db,
+        job_id,
+        workflow_ids=(workflow.workflow_id,),
+        allow_failed=False,
+    ):
+        db.rollback()
+        raise WorkflowNotReadyException(f"Workflow {workflow.workflow_id} could not be queued for annotation.")
+    db.commit()
+
+    runner_input = PythonAnnotationInput(
+        runtime_name="python",
+        runner_name="annotation",
+        workflow_id=workflow.workflow_id,
+        new_fields=request.new_fields,
+    )
+    dispatch_fjob(db, dispatcher, job_id, runner_input)
+    return WorkflowOperationAccepted(
+        job_id=job_id,
+        workflow=query_workflow(db, current_user, workflow.workflow_id),
+    )
 
 
 def create_derived_workflow(

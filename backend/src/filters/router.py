@@ -35,6 +35,7 @@ from src.filters.schemas import (
     InstanceQuery,
     InstanceQueryResult,
     InstanceResponse,
+    PythonAnnotationRequest,
     PythonFilterRequest,
     PythonGroupRequest,
     PythonLabelSourceRequest,
@@ -57,6 +58,7 @@ from src.filters.service import (
     query_workflow,
     query_workflows,
     rename_workflow,
+    run_annotation,
     run_filter,
     run_group,
     run_label_source,
@@ -372,6 +374,46 @@ def run_python_label_source(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc) or "Label group not found or not accessible.",
         ) from exc
+    except RunnerEnqueueFailedException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc) or "Runner publication failed.",
+        ) from exc
+
+
+@router.post(
+    "/runners/python/annotation",
+    response_model=WorkflowOperationAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        400: {"model": DetailHTTPErrorResponse},
+        404: {"model": DetailHTTPErrorResponse},
+        409: {"model": DetailHTTPErrorResponse},
+        503: {"model": DetailHTTPErrorResponse},
+    },
+    operation_id="run_python_annotation",
+)
+def run_python_annotation(
+    request: PythonAnnotationRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    dispatcher: Annotated[RunnerDispatcher, Depends(get_dispatcher)],
+) -> WorkflowOperationAccepted:
+    """Add mutable annotation fields to an existing workflow."""
+    try:
+        return run_annotation(db, current_user, dispatcher, request)
+    except WorkflowNotFoundException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc) or "Workflow not found or not accessible.",
+        ) from exc
+    except WorkflowNotReadyException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc) or "Workflow is not ready.",
+        ) from exc
+    except InvalidRunnerRequestException as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except RunnerEnqueueFailedException as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

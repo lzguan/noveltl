@@ -64,8 +64,9 @@ field.
 
 ## Editable values and key paths
 
-Scalar schema fields already carry a `mutable` capability, but there is no
-annotation API. A future update operation would need to:
+Scalar schema fields carry a `mutable` capability, and the annotation runner
+can add new mutable scalar fields with defaults. There is not yet an API for
+updating those values on individual instances. That operation would need to:
 
 1. Resolve a field or nested key path against the workflow schema.
 2. Confirm that the terminal field is mutable.

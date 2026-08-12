@@ -42,7 +42,8 @@ checks its parent workflow.
 
 Map and filter jobs include both source and output workflows. Group jobs
 include the workflow and grouping. Label-source jobs include the output
-workflow.
+workflow. Annotation jobs include exactly the existing workflow being
+augmented and no groupings.
 
 A runner claims the same complete member set atomically. Every member must be
 `pending` and owned by the supplied job ID or the runner returns without doing
@@ -71,6 +72,14 @@ It:
 
 The source runner reads all matching labels; it does not apply user permission
 filters or a chapter-number range. An empty source completes successfully.
+
+## Annotation
+
+`PythonAnnotationRunner` adds requested mutable scalar fields to an existing
+workflow schema and writes each requested default value into every instance.
+It requires a job containing exactly the input workflow and no groupings. The
+schema and instance updates commit together with successful job completion;
+validation or update failures move the claimed workflow to failed.
 
 ## Map
 

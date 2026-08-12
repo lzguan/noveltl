@@ -15,6 +15,7 @@ read endpoints are documented in [endpoints.md](endpoints.md).
 | `POST` | `/filters/functions` | `201` | Save an immutable function definition |
 | `PATCH` | `/filters/workflows/{workflowId}` | `200` | Rename or clear a workflow name |
 | `POST` | `/filters/runners/python/label-source` | `202` | Materialize labels as a new workflow |
+| `POST` | `/filters/runners/python/annotation` | `202` | Add mutable fields to an existing workflow |
 | `POST` | `/filters/runners/python/map` | `202` | Map a function into a new workflow |
 | `POST` | `/filters/runners/python/filter` | `202` | Filter into a new workflow |
 | `POST` | `/filters/runners/python/group` | `202` | Create grouping assignments |
@@ -38,11 +39,11 @@ public request
   -> dispatcher -> Celery task -> worker
 ```
 
-The internal payloads remain `PythonLabelSourceInput(label_group_id,
-output_workflow_id)`, `PythonMapInput(source_workflow_id, output_workflow_id,
+The internal payloads are `PythonLabelSourceInput(label_group_id,
+output_workflow_id)`, `PythonAnnotationInput(workflow_id, new_fields)`,
+`PythonMapInput(source_workflow_id, output_workflow_id,
 function_definition_id)`, `PythonFilterInput(source_workflow_id,
-output_workflow_id, function_definition_id)`, and
-`PythonGroupInput(grouping_id)`.
+output_workflow_id, function_definition_id)`, and `PythonGroupInput(grouping_id)`.
 
 ## Function creation
 
@@ -118,7 +119,7 @@ Renaming is valid in every execution status. Return `WorkflowResponse`.
 
 ## Accepted-operation responses
 
-Label source, map, and filter return `WorkflowOperationAccepted`:
+Label source, annotation, map, and filter return `WorkflowOperationAccepted`:
 
 ```json
 {
@@ -193,6 +194,29 @@ Create a new workflow with a generated workflow ID and the output name,
 `WorkflowNovel` association for the label group's novel, and one
 `WorkflowLabelGroup` association for the group. Dispatch
 `PythonLabelSourceInput`; return `WorkflowOperationAccepted`.
+
+## Annotation
+
+### `POST /filters/runners/python/annotation`
+
+Request model: `PythonAnnotationRequest`.
+
+```json
+{
+  "workflowId": "00000000-0000-0000-0000-000000000020",
+  "newFields": {
+    "reviewNote": { "type": "string", "defaultValue": "" },
+    "confidence": { "type": "float", "defaultValue": 0.0 }
+  }
+}
+```
+
+The workflow must exist, be accessible, and be complete. Field names must be
+new to the workflow, and the resulting schema may not exceed the schema field
+limit. The operation reserves that existing workflow in place, dispatches
+`PythonAnnotationInput`, and returns it as pending. The runner adds every field
+to the schema as mutable and adds its requested default value to every existing
+instance.
 
 ## Map
 
@@ -322,19 +346,19 @@ inaccessible resource exists.
 - Give resource-ID fields `Field(description=...)` metadata, especially
   `sourceWorkflowId`, for generated frontend and MCP forms.
 - Declare response models and errors on each route.
-- Keep four distinct runner operations. Do not expose a generic execute route
+- Keep five distinct runner operations. Do not expose a generic execute route
   or the internal discriminated union publicly.
 - Use stable operation IDs: `create_filter_function`,
   `validate_filter_function`, `rename_filter_workflow`,
-  `run_python_label_source`, `run_python_map`, `run_python_filter`, and
-  `run_python_group`.
+  `run_python_label_source`, `run_python_annotation`, `run_python_map`,
+  `run_python_filter`, and `run_python_group`.
 
 ## Required tests
 
 Add service and HTTP tests for:
 
 - successful creation and response shape for every endpoint;
-- four distinct OpenAPI runner schemas and stable operation IDs;
+- five distinct OpenAPI runner schemas and stable operation IDs;
 - AST validation and function-name conflicts;
 - side-effect-free draft validation and its computed signature;
 - rename, clearing the name, and inaccessible workflows;

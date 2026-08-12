@@ -80,6 +80,7 @@ def test_write_routes_return_operation_specific_success_responses(
     map_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
     filter_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
     group_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
+    annotation_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
     map_function = add_function(
         test_db,
         "map",
@@ -136,17 +137,25 @@ def test_write_routes_return_operation_specific_success_responses(
             "functionDefinitionId": str(group_function.function_definition_id),
         },
     )
+    annotation_response = client.post(
+        "/filters/runners/python/annotation",
+        headers=headers,
+        json={
+            "workflowId": str(annotation_source.workflow_id),
+            "newFields": {"note": {"type": "string", "defaultValue": "review"}},
+        },
+    )
 
     assert function_response.status_code == status.HTTP_201_CREATED
     assert function_response.json()["functionName"] == "literal"
     assert rename_response.status_code == status.HTTP_200_OK
     assert rename_response.json()["workflowName"] == "Source"
-    for response in (label_response, map_response, filter_response):
+    for response in (label_response, map_response, filter_response, annotation_response):
         assert response.status_code == status.HTTP_202_ACCEPTED
         assert response.json()["jobId"] == response.json()["workflow"]["jobId"]
     assert group_response.status_code == status.HTTP_202_ACCEPTED
     assert group_response.json()["jobId"] == group_response.json()["grouping"]["jobId"]
-    assert len(recording_runner_dispatcher.jobs) == 4
+    assert len(recording_runner_dispatcher.jobs) == 5
 
 
 def test_validate_function_returns_signature_without_persisting(
@@ -356,6 +365,11 @@ def test_write_request_validation_and_openapi_contract(
             "post",
             "run_python_label_source",
             "PythonLabelSourceRequest",
+        ),
+        "/filters/runners/python/annotation": (
+            "post",
+            "run_python_annotation",
+            "PythonAnnotationRequest",
         ),
         "/filters/runners/python/map": ("post", "run_python_map", "PythonMapRequest"),
         "/filters/runners/python/filter": ("post", "run_python_filter", "PythonFilterRequest"),

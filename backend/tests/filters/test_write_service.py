@@ -24,12 +24,17 @@ from src.filters.models import (
     WorkflowNovel,
     WorkflowStatus,
 )
+from src.filters.runners.python.annotation_runner import (
+    NewStringFieldRequest,
+    PythonAnnotationInput,
+)
 from src.filters.runners.python.filter_runner import PythonFilterInput
 from src.filters.runners.python.group_runner import PythonGroupInput, PythonGroupRunner
 from src.filters.runners.python.label_source_runner import PythonLabelSourceInput
 from src.filters.runners.python.map_runner import PythonMapInput
 from src.filters.schemas import (
     CreateFunctionDefinitionRequest,
+    PythonAnnotationRequest,
     PythonFilterRequest,
     PythonGroupRequest,
     PythonLabelSourceRequest,
@@ -39,6 +44,7 @@ from src.filters.schemas import (
 from src.filters.service import (
     create_function_definition,
     rename_workflow,
+    run_annotation,
     run_filter,
     run_group,
     run_label_source,
@@ -221,6 +227,111 @@ def test_label_source_allows_novel_editor_with_label_group_view_access(
     assert result.workflow.novel_ids == [label_group.novel_id]
     assert result.workflow.label_group_ids == [label_group.label_group_id]
     assert len(dispatcher.jobs) == 1
+
+
+def test_annotation_queues_existing_workflow_and_sends_exact_input(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    workflow = add_scoped_workflow(
+        test_db,
+        sample_scenario,
+        Schema(fields={"name": StringField()}),
+    )
+
+    def observe_commit(job_id, runner_input) -> None:
+        assert isinstance(runner_input, PythonAnnotationInput)
+        with Session(test_db.get_bind()) as observer:
+            stored = observer.get(Workflow, workflow.workflow_id)
+            assert stored is not None
+            assert stored.job_id == job_id
+            assert stored.workflow_status == WorkflowStatus.PENDING
+
+    dispatcher = RecordingRunnerDispatcher(on_enqueue=observe_commit)
+    request = PythonAnnotationRequest(
+        workflowId=workflow.workflow_id,
+        newFields={"note": {"type": "string", "defaultValue": "review"}},
+    )
+
+    result = run_annotation(test_db, sample_scenario.users["admin"], dispatcher, request)
+
+    assert result.workflow.workflow_id == workflow.workflow_id
+    assert result.workflow.workflow_status == WorkflowStatus.PENDING
+    assert dispatcher.jobs == [
+        (
+            result.job_id,
+            PythonAnnotationInput(
+                runtime_name="python",
+                runner_name="annotation",
+                workflow_id=workflow.workflow_id,
+                new_fields={"note": NewStringFieldRequest(type="string", default_value="review")},
+            ),
+        )
+    ]
+
+
+def test_annotation_rejects_duplicate_field_and_inaccessible_workflow(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    workflow = add_scoped_workflow(
+        test_db,
+        sample_scenario,
+        Schema(fields={"name": StringField()}),
+    )
+    dispatcher = RecordingRunnerDispatcher()
+
+    with pytest.raises(InvalidRunnerRequestException, match="already exist"):
+        run_annotation(
+            test_db,
+            sample_scenario.users["admin"],
+            dispatcher,
+            PythonAnnotationRequest(
+                workflowId=workflow.workflow_id,
+                newFields={"name": {"type": "string"}},
+            ),
+        )
+    with pytest.raises(WorkflowNotFoundException):
+        run_annotation(
+            test_db,
+            sample_scenario.users["user"],
+            dispatcher,
+            PythonAnnotationRequest(
+                workflowId=workflow.workflow_id,
+                newFields={"note": {"type": "string"}},
+            ),
+        )
+
+    test_db.refresh(workflow)
+    assert workflow.workflow_status == WorkflowStatus.COMPLETE
+    assert dispatcher.jobs == []
+
+
+def test_annotation_publication_failure_marks_existing_workflow_failed(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    workflow = add_scoped_workflow(
+        test_db,
+        sample_scenario,
+        Schema(fields={"name": StringField()}),
+    )
+    dispatcher = RecordingRunnerDispatcher(enqueue_error=RunnerEnqueueFailedException("broker unavailable"))
+
+    with pytest.raises(RunnerEnqueueFailedException):
+        run_annotation(
+            test_db,
+            sample_scenario.users["admin"],
+            dispatcher,
+            PythonAnnotationRequest(
+                workflowId=workflow.workflow_id,
+                newFields={"note": {"type": "string"}},
+            ),
+        )
+
+    test_db.refresh(workflow)
+    assert workflow.workflow_status == WorkflowStatus.FAILED
+    assert workflow.workflow_message == "Runner publication failed."
 
 
 def test_map_filter_and_group_create_correct_targets_and_payloads(

@@ -1,9 +1,8 @@
-import logging
 from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import Field
-from sqlalchemy import exists, func, literal_column, not_, select, update
+from sqlalchemy import func, literal_column, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.filters.data_types import (
@@ -15,12 +14,10 @@ from src.filters.data_types import (
     StringField,
     m_data_type_adapter,
 )
-from src.filters.models import Grouping, GroupingStatus, Instance, Workflow, WorkflowStatus
-from src.filters.runners.python.helpers import handle_workflow_exception
+from src.filters.lifecycle import claim_fjob, clear_fjob
+from src.filters.models import Instance, Workflow, WorkflowStatus
 from src.filters.runners.python.interfaces import PythonRunner, PythonRunnerInputBase
 from src.schemas import Model
-
-logger = logging.getLogger(__name__)
 
 
 def _new_field_cons(type: Literal["string", "int", "float", "bool"]) -> SchemaField:
@@ -72,28 +69,14 @@ class PythonAnnotationRunner(PythonRunner[PythonAnnotationInput]):
     def execute(self, job_id: UUID, input: PythonAnnotationInput) -> None:
         try:
             with self.session_factory.begin() as db:
-                claim = db.execute(
-                    update(Workflow)
-                    .where(
-                        Workflow.workflow_id == input.workflow_id,
-                        Workflow.job_id == job_id,
-                        Workflow.workflow_status == WorkflowStatus.PENDING,
-                        not_(
-                            exists(select(1)).where(
-                                Grouping.workflow_id == input.workflow_id,
-                                Grouping.grouping_status.in_([GroupingStatus.PROCESSING, GroupingStatus.PENDING]),
-                            )
-                        ),
-                    )
-                    .values(
-                        workflow_status=WorkflowStatus.PROCESSING,
-                        workflow_message=None,
-                    )
-                    .returning(Workflow)
-                ).scalar_one_or_none()
-                if claim is None:
+                if not claim_fjob(db, job_id):
                     return
-                schema = Schema.model_validate(claim.schema)
+                workflow_schema = db.scalar(
+                    select(Workflow.schema).where(Workflow.workflow_id == input.workflow_id)
+                )
+                if workflow_schema is None:
+                    return
+                schema = Schema.model_validate(workflow_schema)
             new_fields = dict(schema.fields)
             for new_field_name in input.new_fields:
                 if new_field_name in schema.fields:
@@ -124,18 +107,16 @@ class PythonAnnotationRunner(PythonRunner[PythonAnnotationInput]):
                 )
                 db.execute(
                     update(Workflow)
-                    .where(Workflow.workflow_id == input.workflow_id)
-                    .values(schema=new_schema.model_dump(mode="json"), workflow_status=WorkflowStatus.COMPLETE)
+                    .where(
+                        Workflow.workflow_id == input.workflow_id,
+                        Workflow.job_id == job_id,
+                        Workflow.workflow_status == WorkflowStatus.PROCESSING,
+                    )
+                    .values(schema=new_schema.model_dump(mode="json"))
                 )
+                clear_fjob(db, job_id, WorkflowStatus.COMPLETE, None)
 
         except Exception as exc:
-            handle_workflow_exception(
-                self.session_factory,
-                input.workflow_id,
-                job_id,
-                exc,
-                logger,
-                "PythonAnnotationRunner.execute",
-                WorkflowStatus.COMPLETE,
-            )
+            with self.session_factory.begin() as db:
+                clear_fjob(db, job_id, WorkflowStatus.FAILED, str(exc) or type(exc).__name__)
             raise

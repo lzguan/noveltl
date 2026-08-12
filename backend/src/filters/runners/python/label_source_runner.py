@@ -1,19 +1,16 @@
-import logging
 import uuid
 from typing import Literal
 from uuid import UUID
 
-from sqlalchemy import and_, exists, func, insert, select, update
+from sqlalchemy import and_, exists, func, insert, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.filters.data_types import DataObj, LabelRef, LabelRefData, LabelRefField, Schema
+from src.filters.lifecycle import claim_fjob, clear_fjob
 from src.filters.models import Instance, Workflow, WorkflowStatus
-from src.filters.runners.python.helpers import handle_workflow_exception
 from src.filters.runners.python.interfaces import PythonRunner, PythonRunnerInputBase
 from src.labels.models import Label, LabelData, LabelGroup
 from src.novels.models import Chapter, ChapterContent
-
-logger = logging.getLogger(__name__)
 
 DEFAULT_LABEL_SOURCE_BATCH_SIZE = 1_000
 LABEL_SOURCE_SCHEMA = Schema(fields={"label": LabelRefField()})
@@ -42,20 +39,8 @@ class PythonLabelSourceRunner(PythonRunner[PythonLabelSourceInput]):
     def execute(self, job_id: UUID, input: PythonLabelSourceInput) -> None:
         try:
             with self.session_factory.begin() as db:
-                claim = db.execute(
-                    update(Workflow)
-                    .where(
-                        Workflow.workflow_id == input.output_workflow_id,
-                        Workflow.job_id == job_id,
-                        Workflow.workflow_status == WorkflowStatus.PENDING,
-                    )
-                    .values(
-                        workflow_status=WorkflowStatus.PROCESSING,
-                        workflow_message=None,
-                    )
-                    .returning(Workflow.workflow_id)
-                ).scalar_one_or_none()
-            if claim is None:
+                claimed = claim_fjob(db, job_id)
+            if not claimed:
                 return
 
             with self.session_factory() as db:
@@ -168,25 +153,8 @@ class PythonLabelSourceRunner(PythonRunner[PythonLabelSourceInput]):
                     has_more = len(labels) == self.batch_size
 
             with self.session_factory.begin() as db:
-                db.execute(
-                    update(Workflow)
-                    .where(
-                        Workflow.workflow_id == input.output_workflow_id,
-                        Workflow.job_id == job_id,
-                        Workflow.workflow_status == WorkflowStatus.PROCESSING,
-                    )
-                    .values(
-                        workflow_status=WorkflowStatus.COMPLETE,
-                        workflow_message=None,
-                    )
-                )
+                clear_fjob(db, job_id, WorkflowStatus.COMPLETE, None)
         except Exception as exc:
-            handle_workflow_exception(
-                self.session_factory,
-                input.output_workflow_id,
-                job_id,
-                exc,
-                logger,
-                "PythonLabelSourceRunner.execute",
-            )
+            with self.session_factory.begin() as db:
+                clear_fjob(db, job_id, WorkflowStatus.FAILED, str(exc) or type(exc).__name__)
             raise

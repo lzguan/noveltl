@@ -43,6 +43,7 @@ from src.filters.functions import (
     StartOf,
     WordOf,
 )
+from src.filters.lifecycle import queue_fjob
 from src.filters.models import (
     FunctionDefinition,
     GroupAssignment,
@@ -269,12 +270,11 @@ def _create_catalog_sort_data(
     source_workflow = Workflow(
         workflow_name="Catalog label source",
         schema=_dump(LABEL_SOURCE_SCHEMA),
-        job_id=source_job_id,
     )
     augmented_workflow = Workflow(
         workflow_name="Augmented catalog labels",
         schema=_dump(augmented_schema),
-        job_id=map_job_id,
+        workflow_status=WorkflowStatus.COMPLETE,
     )
     augment_definition = FunctionDefinition(
         namespace="catalog-sort",
@@ -298,13 +298,13 @@ def _create_catalog_sort_data(
         grouping = Grouping(
             workflow_id=augmented_workflow.workflow_id,
             function_definition_id=definition.function_definition_id,
-            grouping_status=GroupingStatus.PENDING,
-            job_id=job_id,
+            grouping_status=GroupingStatus.COMPLETE,
         )
         db.add(grouping)
         db.flush()
         groupings[field_name] = grouping
         grouping_jobs[field_name] = job_id
+    assert queue_fjob(db, source_job_id, workflow_ids=(source_workflow.workflow_id,))
     db.commit()
 
     PythonLabelSourceRunner(session_factory, batch_size=17).execute(
@@ -316,6 +316,13 @@ def _create_catalog_sort_data(
             output_workflow_id=source_workflow.workflow_id,
         ),
     )
+    db.expire_all()
+    assert queue_fjob(
+        db,
+        map_job_id,
+        workflow_ids=(source_workflow.workflow_id, augmented_workflow.workflow_id),
+    )
+    db.commit()
     PythonMapRunner(session_factory, batch_size=19).execute(
         map_job_id,
         PythonMapInput(
@@ -327,6 +334,13 @@ def _create_catalog_sort_data(
         ),
     )
     for field_name, grouping in groupings.items():
+        assert queue_fjob(
+            db,
+            grouping_jobs[field_name],
+            workflow_ids=(augmented_workflow.workflow_id,),
+            grouping_ids=(grouping.grouping_id,),
+        )
+        db.commit()
         PythonGroupRunner(session_factory, batch_size=23).execute(
             grouping_jobs[field_name],
             PythonGroupInput(
@@ -335,6 +349,7 @@ def _create_catalog_sort_data(
                 grouping_id=grouping.grouping_id,
             ),
         )
+        db.expire_all()
 
     db.expire_all()
     instances = tuple(

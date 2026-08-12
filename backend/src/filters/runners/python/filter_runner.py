@@ -1,9 +1,8 @@
-import logging
 import uuid
 from typing import Literal, cast
 from uuid import UUID
 
-from sqlalchemy import exists, func, insert, select, update
+from sqlalchemy import exists, func, insert, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.filters.compilers.python import PythonCompiler
@@ -11,11 +10,9 @@ from src.filters.context.python import PythonExecutionContextImpl, collect_resou
 from src.filters.data_types import BoolData, BoolField, DataObj, Schema, data_adapter, extends
 from src.filters.function_dependencies import resolve_dependencies
 from src.filters.functions import function_adapter
+from src.filters.lifecycle import claim_fjob, clear_fjob
 from src.filters.models import FunctionDefinition, Instance, Workflow, WorkflowStatus
-from src.filters.runners.python.helpers import handle_workflow_exception
 from src.filters.runners.python.interfaces import PythonRunner, PythonRunnerInputBase
-
-logger = logging.getLogger(__name__)
 
 DEFAULT_FILTER_BATCH_SIZE = 1_000
 
@@ -44,20 +41,8 @@ class PythonFilterRunner(PythonRunner[PythonFilterInput]):
     def execute(self, job_id: UUID, input: PythonFilterInput) -> None:
         try:
             with self.session_factory.begin() as db:
-                claim = db.execute(
-                    update(Workflow)
-                    .where(
-                        Workflow.workflow_id == input.output_workflow_id,
-                        Workflow.job_id == job_id,
-                        Workflow.workflow_status == WorkflowStatus.PENDING,
-                    )
-                    .values(
-                        workflow_status=WorkflowStatus.PROCESSING,
-                        workflow_message=None,
-                    )
-                    .returning(Workflow.workflow_id)
-                ).scalar_one_or_none()
-            if claim is None:
+                claimed = claim_fjob(db, job_id)
+            if not claimed:
                 return
 
             if input.source_workflow_id == input.output_workflow_id:
@@ -67,8 +52,6 @@ class PythonFilterRunner(PythonRunner[PythonFilterInput]):
                 source_workflow = db.execute(
                     select(Workflow).where(Workflow.workflow_id == input.source_workflow_id)
                 ).scalar_one()
-                if source_workflow.workflow_status != WorkflowStatus.COMPLETE:
-                    raise ValueError("Source workflow must be complete before filtering.")
                 source_schema = Schema.model_validate(source_workflow.schema)
 
                 output_workflow = db.execute(
@@ -166,25 +149,8 @@ class PythonFilterRunner(PythonRunner[PythonFilterInput]):
                 )
 
             with self.session_factory.begin() as db:
-                db.execute(
-                    update(Workflow)
-                    .where(
-                        Workflow.workflow_id == input.output_workflow_id,
-                        Workflow.job_id == job_id,
-                        Workflow.workflow_status == WorkflowStatus.PROCESSING,
-                    )
-                    .values(
-                        workflow_status=WorkflowStatus.COMPLETE,
-                        workflow_message=None,
-                    )
-                )
+                clear_fjob(db, job_id, WorkflowStatus.COMPLETE, None)
         except Exception as exc:
-            handle_workflow_exception(
-                self.session_factory,
-                input.output_workflow_id,
-                job_id,
-                exc,
-                logger,
-                "PythonFilterRunner.execute",
-            )
+            with self.session_factory.begin() as db:
+                clear_fjob(db, job_id, WorkflowStatus.FAILED, str(exc) or type(exc).__name__)
             raise

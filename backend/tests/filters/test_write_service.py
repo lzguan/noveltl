@@ -2,7 +2,7 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from src.filters.data_types import BoolField, Schema, StringField
 from src.filters.exceptions import (
@@ -25,7 +25,7 @@ from src.filters.models import (
     WorkflowStatus,
 )
 from src.filters.runners.python.filter_runner import PythonFilterInput
-from src.filters.runners.python.group_runner import PythonGroupInput
+from src.filters.runners.python.group_runner import PythonGroupInput, PythonGroupRunner
 from src.filters.runners.python.label_source_runner import PythonLabelSourceInput
 from src.filters.runners.python.map_runner import PythonMapInput
 from src.filters.schemas import (
@@ -228,7 +228,9 @@ def test_map_filter_and_group_create_correct_targets_and_payloads(
     sample_scenario: DatabaseScenario,
 ) -> None:
     source_schema = Schema(fields={"name": StringField(), "active": BoolField()})
-    source = add_scoped_workflow(test_db, sample_scenario, source_schema)
+    map_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
+    filter_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
+    group_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
     map_definition = add_function(
         test_db,
         "map",
@@ -247,7 +249,7 @@ def test_map_filter_and_group_create_correct_targets_and_payloads(
         admin,
         dispatcher,
         PythonMapRequest(
-            sourceWorkflowId=source.workflow_id,
+            sourceWorkflowId=map_source.workflow_id,
             functionDefinitionId=map_definition.function_definition_id,
             outputName="Mapped",
         ),
@@ -257,7 +259,7 @@ def test_map_filter_and_group_create_correct_targets_and_payloads(
         admin,
         dispatcher,
         PythonFilterRequest(
-            sourceWorkflowId=source.workflow_id,
+            sourceWorkflowId=filter_source.workflow_id,
             functionDefinitionId=filter_definition.function_definition_id,
             outputName="Filtered",
         ),
@@ -267,7 +269,7 @@ def test_map_filter_and_group_create_correct_targets_and_payloads(
         admin,
         dispatcher,
         PythonGroupRequest(
-            workflowId=source.workflow_id,
+            workflowId=group_source.workflow_id,
             functionDefinitionId=group_definition.function_definition_id,
         ),
     )
@@ -281,7 +283,7 @@ def test_map_filter_and_group_create_correct_targets_and_payloads(
     map_job, filter_job, group_job = dispatcher.jobs
     assert map_job[0] == mapped.job_id
     assert isinstance(map_job[1], PythonMapInput)
-    assert map_job[1].source_workflow_id == source.workflow_id
+    assert map_job[1].source_workflow_id == map_source.workflow_id
     assert map_job[1].output_workflow_id == mapped.workflow.workflow_id
     assert filter_job[0] == filtered.job_id
     assert isinstance(filter_job[1], PythonFilterInput)
@@ -368,6 +370,7 @@ def test_incomplete_or_missing_sources_do_not_dispatch(
 
 def test_grouping_duplicate_is_reported_as_domain_conflict(
     test_db: Session,
+    testing_session_local: sessionmaker[Session],
     sample_scenario: DatabaseScenario,
 ) -> None:
     workflow = add_scoped_workflow(
@@ -381,7 +384,16 @@ def test_grouping_duplicate_is_reported_as_domain_conflict(
         functionDefinitionId=function.function_definition_id,
     )
 
-    run_group(test_db, sample_scenario.users["admin"], RecordingRunnerDispatcher(), request)
+    first = run_group(test_db, sample_scenario.users["admin"], RecordingRunnerDispatcher(), request)
+    PythonGroupRunner(testing_session_local).execute(
+        first.job_id,
+        PythonGroupInput(
+            runtime_name="python",
+            runner_name="group",
+            grouping_id=first.grouping.grouping_id,
+        ),
+    )
+    test_db.expire_all()
     with pytest.raises(GroupingAlreadyExistsException):
         run_group(test_db, sample_scenario.users["admin"], RecordingRunnerDispatcher(), request)
 
@@ -427,3 +439,6 @@ def test_enqueue_failure_marks_committed_target_failed(
         target = test_db.execute(select(Grouping).where(Grouping.workflow_id == workflow.workflow_id)).scalar_one()
         assert target.grouping_status == GroupingStatus.FAILED
         assert target.grouping_message == "Runner publication failed."
+        test_db.refresh(workflow)
+        assert workflow.workflow_status == WorkflowStatus.FAILED
+        assert workflow.workflow_message == "Runner publication failed."

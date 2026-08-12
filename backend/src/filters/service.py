@@ -38,6 +38,7 @@ from src.filters.exceptions import (
     WorkflowNotReadyException,
 )
 from src.filters.functions import FunctionType, function_adapter
+from src.filters.lifecycle import abort_fjob, queue_fjob
 from src.filters.models import (
     FunctionDefinition,
     GroupAssignment,
@@ -593,49 +594,17 @@ def _parse_workflow_schema(
     return workflow, Schema.model_validate(workflow.schema)
 
 
-def dispatch_workflow_runner(
+def dispatch_fjob(
     db: Session,
     dispatcher: RunnerDispatcher,
-    workflow_id: UUID,
-    job_id: UUID,
-    runner_input: RunnerInput,
-    status_on_fail: WorkflowStatus = WorkflowStatus.FAILED,
-) -> None:
-    """Publish a committed workflow job and persist a definite publication failure."""
-    try:
-        dispatcher.enqueue(job_id, runner_input)
-    except RunnerEnqueueFailedException:
-        db.execute(
-            update(Workflow)
-            .where(Workflow.workflow_id == workflow_id, Workflow.job_id == job_id)
-            .values(
-                workflow_status=status_on_fail,
-                workflow_message="Runner publication failed.",
-            )
-        )
-        db.commit()
-        raise
-
-
-def dispatch_grouping_runner(
-    db: Session,
-    dispatcher: RunnerDispatcher,
-    grouping_id: UUID,
     job_id: UUID,
     runner_input: RunnerInput,
 ) -> None:
-    """Publish a committed grouping job and persist a definite publication failure."""
+    """Publish a committed filter job and abort a definite publication failure."""
     try:
         dispatcher.enqueue(job_id, runner_input)
     except RunnerEnqueueFailedException:
-        db.execute(
-            update(Grouping)
-            .where(Grouping.grouping_id == grouping_id, Grouping.job_id == job_id)
-            .values(
-                grouping_status=GroupingStatus.FAILED,
-                grouping_message="Runner publication failed.",
-            )
-        )
+        abort_fjob(db, job_id, "Runner publication failed.")
         db.commit()
         raise
 
@@ -673,8 +642,7 @@ def run_label_source(
                 by_alias=True,
                 exclude_computed_fields=True,
             ),
-            job_id=job_id,
-            workflow_status=WorkflowStatus.PENDING,
+            workflow_status=WorkflowStatus.NEW,
         )
         .returning(Workflow)
     ).scalar_one()
@@ -684,6 +652,10 @@ def run_label_source(
             WorkflowLabelGroup(workflow_id=workflow.workflow_id, label_group_id=label_group.label_group_id),
         ]
     )
+    db.flush()
+    if not queue_fjob(db, job_id, workflow_ids=(workflow.workflow_id,), allow_failed=False):
+        db.rollback()
+        raise WorkflowNotReadyException("The label-source output workflow could not be queued.")
     db.commit()
 
     runner_input = PythonLabelSourceInput(
@@ -692,7 +664,7 @@ def run_label_source(
         label_group_id=label_group.label_group_id,
         output_workflow_id=workflow.workflow_id,
     )
-    dispatch_workflow_runner(db, dispatcher, workflow.workflow_id, job_id, runner_input)
+    dispatch_fjob(db, dispatcher, job_id, runner_input)
     return WorkflowOperationAccepted(
         job_id=job_id,
         workflow=query_workflow(db, current_user, workflow.workflow_id),
@@ -711,17 +683,15 @@ def create_derived_workflow(
     source_workflow_id: UUID,
     workflow_name: str | None,
     schema: Schema,
-    job_id: UUID,
 ) -> Workflow:
-    """Create and commit a pending workflow with its inherited permission scope."""
+    """Create an at-rest workflow with its inherited permission scope."""
     workflow = db.execute(
         insert(Workflow)
         .values(
             workflow_name=workflow_name,
             use_case=WorkflowUseCase.ADVANCED,
             schema=schema.model_dump(mode="json", by_alias=True, exclude_computed_fields=True),
-            job_id=job_id,
-            workflow_status=WorkflowStatus.PENDING,
+            workflow_status=WorkflowStatus.NEW,
         )
         .returning(Workflow)
     ).scalar_one()
@@ -737,7 +707,7 @@ def create_derived_workflow(
         WorkflowLabelGroup(workflow_id=workflow.workflow_id, label_group_id=label_group_id)
         for label_group_id in label_group_ids
     )
-    db.commit()
+    db.flush()
     return workflow
 
 
@@ -763,8 +733,16 @@ def run_map(
         source.workflow_id,
         request.output_name,
         output_schema,
-        job_id,
     )
+    if not queue_fjob(
+        db,
+        job_id,
+        workflow_ids=(source.workflow_id, output.workflow_id),
+        allow_failed=False,
+    ):
+        db.rollback()
+        raise WorkflowNotReadyException(f"Workflow {source.workflow_id} could not be queued for mapping.")
+    db.commit()
     runner_input = PythonMapInput(
         runtime_name="python",
         runner_name="map",
@@ -772,7 +750,7 @@ def run_map(
         output_workflow_id=output.workflow_id,
         function_definition_id=request.function_definition_id,
     )
-    dispatch_workflow_runner(db, dispatcher, output.workflow_id, job_id, runner_input)
+    dispatch_fjob(db, dispatcher, job_id, runner_input)
     return WorkflowOperationAccepted(
         job_id=job_id,
         workflow=query_workflow(db, current_user, output.workflow_id),
@@ -800,8 +778,16 @@ def run_filter(
         source.workflow_id,
         request.output_name,
         source_schema,
-        job_id,
     )
+    if not queue_fjob(
+        db,
+        job_id,
+        workflow_ids=(source.workflow_id, output.workflow_id),
+        allow_failed=False,
+    ):
+        db.rollback()
+        raise WorkflowNotReadyException(f"Workflow {source.workflow_id} could not be queued for filtering.")
+    db.commit()
     runner_input = PythonFilterInput(
         runtime_name="python",
         runner_name="filter",
@@ -809,7 +795,7 @@ def run_filter(
         output_workflow_id=output.workflow_id,
         function_definition_id=request.function_definition_id,
     )
-    dispatch_workflow_runner(db, dispatcher, output.workflow_id, job_id, runner_input)
+    dispatch_fjob(db, dispatcher, job_id, runner_input)
     return WorkflowOperationAccepted(
         job_id=job_id,
         workflow=query_workflow(db, current_user, output.workflow_id),
@@ -846,11 +832,19 @@ def run_group(
             .values(
                 workflow_id=workflow.workflow_id,
                 function_definition_id=request.function_definition_id,
-                job_id=job_id,
-                grouping_status=GroupingStatus.PENDING,
+                grouping_status=GroupingStatus.NEW,
             )
             .returning(Grouping)
         ).scalar_one()
+        if not queue_fjob(
+            db,
+            job_id,
+            workflow_ids=(workflow.workflow_id,),
+            grouping_ids=(grouping.grouping_id,),
+            allow_failed=False,
+        ):
+            db.rollback()
+            raise WorkflowNotReadyException(f"Workflow {workflow.workflow_id} could not be queued for grouping.")
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -872,13 +866,7 @@ def run_group(
         runner_name="group",
         grouping_id=grouping.grouping_id,
     )
-    dispatch_grouping_runner(
-        db,
-        dispatcher,
-        grouping.grouping_id,
-        job_id,
-        runner_input,
-    )
+    dispatch_fjob(db, dispatcher, job_id, runner_input)
     return GroupOperationAccepted(
         job_id=job_id,
         grouping=query_grouping(db, current_user, grouping.grouping_id),

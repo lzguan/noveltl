@@ -77,7 +77,9 @@ def test_write_routes_return_operation_specific_success_responses(
 ) -> None:
     headers = auth_headers(sample_scenario.users["admin"])
     source_schema = Schema(fields={"name": StringField(), "active": BoolField()})
-    source = add_scoped_workflow(test_db, sample_scenario, source_schema)
+    map_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
+    filter_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
+    group_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
     map_function = add_function(
         test_db,
         "map",
@@ -96,7 +98,7 @@ def test_write_routes_return_operation_specific_success_responses(
         },
     )
     rename_response = client.patch(
-        f"/filters/workflows/{source.workflow_id}",
+        f"/filters/workflows/{map_source.workflow_id}",
         headers=headers,
         json={"workflowName": "Source"},
     )
@@ -112,7 +114,7 @@ def test_write_routes_return_operation_specific_success_responses(
         "/filters/runners/python/map",
         headers=headers,
         json={
-            "sourceWorkflowId": str(source.workflow_id),
+            "sourceWorkflowId": str(map_source.workflow_id),
             "functionDefinitionId": str(map_function.function_definition_id),
             "outputName": "Mapped",
         },
@@ -121,7 +123,7 @@ def test_write_routes_return_operation_specific_success_responses(
         "/filters/runners/python/filter",
         headers=headers,
         json={
-            "sourceWorkflowId": str(source.workflow_id),
+            "sourceWorkflowId": str(filter_source.workflow_id),
             "functionDefinitionId": str(filter_function.function_definition_id),
             "outputName": "Filtered",
         },
@@ -130,7 +132,7 @@ def test_write_routes_return_operation_specific_success_responses(
         "/filters/runners/python/group",
         headers=headers,
         json={
-            "workflowId": str(source.workflow_id),
+            "workflowId": str(group_source.workflow_id),
             "functionDefinitionId": str(group_function.function_definition_id),
         },
     )

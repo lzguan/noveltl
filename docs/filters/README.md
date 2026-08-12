@@ -27,8 +27,9 @@ The backend currently implements:
 
 The read and write APIs are exposed through FastAPI, but the frontend is not
 implemented yet. Alembic migrations create the filter persistence tables and
-workflow permission-scope associations. Public operation services create
-pending targets and enqueue the registered Celery runner tasks, which the
+workflow permission-scope associations. Public operation services create new
+targets, atomically reserve complete job member sets as pending, and enqueue
+the registered Celery runner tasks, which the
 `filters-worker` process consumes. See
 [workers and task queues](../project-structure.md#workers-and-task-queues) for
 how that worker is configured, built, and started.
@@ -81,8 +82,9 @@ See [functions.md](functions.md).
 
 ### Runners and persistence
 
-Runners claim pending work using a job ID, validate the source and output
-schemas, process instances in bounded batches, and update the target status.
+Runners atomically claim all pending job members using a job ID, validate the
+source and output schemas, process instances in bounded batches, and move the
+whole job uniformly to complete or failed.
 Their retry behavior differs by operation; grouping can resume from missing
 assignments, while output-producing runners require an empty target stage.
 

@@ -15,6 +15,7 @@ from src.filters.data_types import (
     TextSpanField,
 )
 from src.filters.functions import Call, Construct, FunctionType, Get, Rename, RenamePair, TextAround
+from src.filters.lifecycle import queue_fjob
 from src.filters.models import FunctionDefinition, Instance, Workflow, WorkflowStatus
 from src.filters.runners.python.map_runner import PythonMapInput, PythonMapRunner
 from src.schemas import Model
@@ -53,7 +54,7 @@ def _create_map_case(
     output = Workflow(
         workflow_name="Map output",
         schema=_dump(output_schema),
-        job_id=JOB_ID,
+        workflow_status=WorkflowStatus.COMPLETE,
     )
     function_definition = FunctionDefinition(
         namespace="test",
@@ -72,6 +73,8 @@ def _create_map_case(
         for index, word in enumerate(words, start=1)
     ]
     db.add_all(instances)
+    if source_status == WorkflowStatus.COMPLETE:
+        assert queue_fjob(db, JOB_ID, workflow_ids=(source.workflow_id, output.workflow_id))
     db.commit()
     return source, output, function_definition, instances
 
@@ -139,7 +142,7 @@ def test_map_runner_preloads_text_dependencies(
     output = Workflow(
         workflow_name="Text map output",
         schema=_dump(output_schema),
-        job_id=JOB_ID,
+        workflow_status=WorkflowStatus.COMPLETE,
     )
     function_definition = FunctionDefinition(
         namespace="test",
@@ -167,6 +170,7 @@ def test_map_runner_preloads_text_dependencies(
             ),
         )
     )
+    assert queue_fjob(test_db, JOB_ID, workflow_ids=(source.workflow_id, output.workflow_id))
     test_db.commit()
 
     PythonMapRunner(testing_session_local).execute(
@@ -221,7 +225,7 @@ def test_map_runner_ignores_stale_job(
     )
 
 
-def test_map_runner_rejects_incomplete_source(
+def test_map_runner_ignores_unqueued_source(
     test_db: Session,
     testing_session_local: sessionmaker[Session],
 ) -> None:
@@ -230,16 +234,15 @@ def test_map_runner_rejects_incomplete_source(
         source_status=WorkflowStatus.PENDING,
     )
 
-    with pytest.raises(ValueError, match="Source workflow must be complete"):
-        PythonMapRunner(testing_session_local).execute(
-            JOB_ID,
-            _map_input(source, output, function_definition),
-        )
+    PythonMapRunner(testing_session_local).execute(
+        JOB_ID,
+        _map_input(source, output, function_definition),
+    )
 
     test_db.expire_all()
     stored_output = test_db.get(Workflow, output.workflow_id)
     assert stored_output is not None
-    assert stored_output.workflow_status == WorkflowStatus.FAILED
+    assert stored_output.workflow_status == WorkflowStatus.COMPLETE
 
 
 def test_map_runner_rejects_same_source_and_output(
@@ -250,7 +253,6 @@ def test_map_runner_rejects_same_source_and_output(
     workflow = Workflow(
         workflow_name="Self map",
         schema=_dump(schema),
-        job_id=JOB_ID,
     )
     function = Rename(
         original_schema=schema,
@@ -262,6 +264,8 @@ def test_map_runner_rejects_same_source_and_output(
         function_definition=_dump(function),
     )
     test_db.add_all([workflow, function_definition])
+    test_db.flush()
+    assert queue_fjob(test_db, JOB_ID, workflow_ids=(workflow.workflow_id,))
     test_db.commit()
 
     with pytest.raises(ValueError, match="must be distinct"):
@@ -364,9 +368,13 @@ def test_map_runner_preserves_committed_batches_on_terminal_failure(
 
     test_db.expire_all()
     stored_output = test_db.get(Workflow, output.workflow_id)
+    stored_source = test_db.get(Workflow, source.workflow_id)
     assert stored_output is not None
+    assert stored_source is not None
     assert stored_output.workflow_status == WorkflowStatus.FAILED
+    assert stored_source.workflow_status == WorkflowStatus.FAILED
     assert stored_output.workflow_message is not None
+    assert stored_source.workflow_message == stored_output.workflow_message
     output_count = test_db.scalar(
         select(func.count()).select_from(Instance).where(Instance.workflow_id == output.workflow_id)
     )

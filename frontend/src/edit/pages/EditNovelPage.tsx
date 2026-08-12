@@ -323,7 +323,7 @@ export function EditNovelPage() {
 							onHighlightApplied={referenceNavigation.clearHighlight}
 						/>
 					</div>
-					<div className="w-80 border-l shrink-0 flex flex-col min-h-0">
+					<div className="shrink-0 flex flex-col min-h-0">
 						<RightPanel
 							tabs={[
 								{

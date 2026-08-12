@@ -12,9 +12,8 @@ from src.filters.data_types import BoolData, BoolField, DataObj, Schema, data_ad
 from src.filters.function_dependencies import resolve_dependencies
 from src.filters.functions import function_adapter
 from src.filters.models import FunctionDefinition, Instance, Workflow, WorkflowStatus
-from src.filters.runners.interfaces.runner import Runner
 from src.filters.runners.python.helpers import handle_workflow_exception
-from src.filters.runners.python.interfaces import PythonRunnerInputBase
+from src.filters.runners.python.interfaces import PythonRunner, PythonRunnerInputBase
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ class PythonFilterInput(PythonRunnerInputBase):
     function_definition_id: uuid.UUID
 
 
-class PythonFilterRunner(Runner[PythonFilterInput]):
+class PythonFilterRunner(PythonRunner[PythonFilterInput]):
     def __init__(
         self,
         session_factory: sessionmaker[Session],

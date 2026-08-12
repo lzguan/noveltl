@@ -599,6 +599,7 @@ def dispatch_workflow_runner(
     workflow_id: UUID,
     job_id: UUID,
     runner_input: RunnerInput,
+    status_on_fail: WorkflowStatus = WorkflowStatus.FAILED,
 ) -> None:
     """Publish a committed workflow job and persist a definite publication failure."""
     try:
@@ -608,7 +609,7 @@ def dispatch_workflow_runner(
             update(Workflow)
             .where(Workflow.workflow_id == workflow_id, Workflow.job_id == job_id)
             .values(
-                workflow_status=WorkflowStatus.FAILED,
+                workflow_status=status_on_fail,
                 workflow_message="Runner publication failed.",
             )
         )

@@ -7,5 +7,5 @@ class PythonRunnerInputBase(RunnerInputBase):
     runtime_name: Literal["python"]
 
 
-class PythonRunner[RunnerInputT: PythonRunnerInputBase](Runner[PythonRunnerInputBase]):
+class PythonRunner[RunnerInputT: PythonRunnerInputBase](Runner[RunnerInputT]):
     pass

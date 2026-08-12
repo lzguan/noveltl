@@ -4,7 +4,7 @@ from typing import Annotated, Literal, cast
 from uuid import UUID
 
 from pydantic import Field
-from sqlalchemy import and_, func, insert, select, update
+from sqlalchemy import and_, exists, func, insert, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.filters.compilers.python import PythonCompiler
@@ -30,10 +30,10 @@ from src.filters.models import (
     GroupingStatus,
     Instance,
     Workflow,
+    WorkflowStatus,
 )
-from src.filters.runners.interfaces.runner import Runner
 from src.filters.runners.python.helpers import handle_grouping_exception
-from src.filters.runners.python.interfaces import PythonRunnerInputBase
+from src.filters.runners.python.interfaces import PythonRunner, PythonRunnerInputBase
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class PythonGroupInput(PythonRunnerInputBase):
     grouping_id: uuid.UUID
 
 
-class PythonGroupRunner(Runner[PythonGroupInput]):
+class PythonGroupRunner(PythonRunner[PythonGroupInput]):
     def __init__(
         self,
         session_factory: sessionmaker[Session],
@@ -70,6 +70,10 @@ class PythonGroupRunner(Runner[PythonGroupInput]):
                         Grouping.grouping_id == input.grouping_id,
                         Grouping.job_id == job_id,
                         Grouping.grouping_status == GroupingStatus.PENDING,
+                        exists(select(1)).where(
+                            Workflow.workflow_id == Grouping.workflow_id,
+                            Workflow.workflow_status == WorkflowStatus.COMPLETE,
+                        ),
                     )
                     .values(
                         grouping_status=GroupingStatus.PROCESSING,

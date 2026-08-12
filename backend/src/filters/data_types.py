@@ -147,6 +147,12 @@ class LabelRefData(DTypeBase[LabelRef]):
     type: Literal["labelRef"] = "labelRef"
 
 
+type MDataType = Annotated[
+    StringData | IntData | FloatData | BoolData,
+    Field(discriminator="type"),
+]
+m_data_type_adapter = TypeAdapter[MDataType](MDataType)
+
 type DataType = Annotated[
     StringData | IntData | FloatData | BoolData | TextSpanData | LabelRefData,
     Field(discriminator="type"),

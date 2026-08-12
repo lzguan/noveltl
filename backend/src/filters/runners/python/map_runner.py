@@ -12,9 +12,8 @@ from src.filters.data_types import DataObj, Schema, data_adapter, extends
 from src.filters.function_dependencies import resolve_dependencies
 from src.filters.functions import function_adapter
 from src.filters.models import FunctionDefinition, Instance, Workflow, WorkflowStatus
-from src.filters.runners.interfaces.runner import Runner
 from src.filters.runners.python.helpers import handle_workflow_exception
-from src.filters.runners.python.interfaces import PythonRunnerInputBase
+from src.filters.runners.python.interfaces import PythonRunner, PythonRunnerInputBase
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ class PythonMapInput(PythonRunnerInputBase):
     function_definition_id: uuid.UUID
 
 
-class PythonMapRunner(Runner[PythonMapInput]):
+class PythonMapRunner(PythonRunner[PythonMapInput]):
     def __init__(
         self,
         session_factory: sessionmaker[Session],

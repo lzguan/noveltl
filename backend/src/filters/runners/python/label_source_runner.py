@@ -8,9 +8,8 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from src.filters.data_types import DataObj, LabelRef, LabelRefData, LabelRefField, Schema
 from src.filters.models import Instance, Workflow, WorkflowStatus
-from src.filters.runners.interfaces.runner import Runner
 from src.filters.runners.python.helpers import handle_workflow_exception
-from src.filters.runners.python.interfaces import PythonRunnerInputBase
+from src.filters.runners.python.interfaces import PythonRunner, PythonRunnerInputBase
 from src.labels.models import Label, LabelData, LabelGroup
 from src.novels.models import Chapter, ChapterContent
 
@@ -26,7 +25,7 @@ class PythonLabelSourceInput(PythonRunnerInputBase):
     output_workflow_id: uuid.UUID
 
 
-class PythonLabelSourceRunner(Runner[PythonLabelSourceInput]):
+class PythonLabelSourceRunner(PythonRunner[PythonLabelSourceInput]):
     """Initialize a workflow from a label group's current labels."""
 
     def __init__(

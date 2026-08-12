@@ -14,6 +14,7 @@ def handle_workflow_exception(
     exc: Exception,
     logger: logging.Logger,
     method: str,
+    output_state: WorkflowStatus = WorkflowStatus.FAILED,
 ) -> None:
     """Handle an exception that occurred during workflow execution."""
     try:
@@ -26,7 +27,7 @@ def handle_workflow_exception(
                     Workflow.workflow_status == WorkflowStatus.PROCESSING,
                 )
                 .values(
-                    workflow_status=WorkflowStatus.FAILED,
+                    workflow_status=output_state,
                     workflow_message=str(exc) or type(exc).__name__,
                 )
             )

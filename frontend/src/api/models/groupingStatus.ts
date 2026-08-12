@@ -9,6 +9,7 @@ export type GroupingStatus = typeof GroupingStatus[keyof typeof GroupingStatus];
 
 
 export const GroupingStatus = {
+  new: 'new',
   pending: 'pending',
   processing: 'processing',
   complete: 'complete',

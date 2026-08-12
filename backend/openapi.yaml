@@ -1143,6 +1143,7 @@ components:
       type: object
     GroupingStatus:
       enum:
+      - new
       - pending
       - processing
       - complete
@@ -1624,6 +1625,75 @@ components:
       - labelDataIdMap
       title: ModifyChapterContentResponse
       type: object
+    NewBoolFieldRequest:
+      properties:
+        defaultValue:
+          default: false
+          title: Defaultvalue
+          type: boolean
+        type:
+          const: bool
+          title: Type
+          type: string
+      required:
+      - type
+      title: NewBoolFieldRequest
+      type: object
+    NewFieldRequest:
+      discriminator:
+        mapping:
+          bool: '#/components/schemas/NewBoolFieldRequest'
+          float: '#/components/schemas/NewFloatFieldRequest'
+          int: '#/components/schemas/NewIntFieldRequest'
+          string: '#/components/schemas/NewStringFieldRequest'
+        propertyName: type
+      oneOf:
+      - $ref: '#/components/schemas/NewStringFieldRequest'
+      - $ref: '#/components/schemas/NewIntFieldRequest'
+      - $ref: '#/components/schemas/NewFloatFieldRequest'
+      - $ref: '#/components/schemas/NewBoolFieldRequest'
+    NewFloatFieldRequest:
+      properties:
+        defaultValue:
+          default: 0.0
+          title: Defaultvalue
+          type: number
+        type:
+          const: float
+          title: Type
+          type: string
+      required:
+      - type
+      title: NewFloatFieldRequest
+      type: object
+    NewIntFieldRequest:
+      properties:
+        defaultValue:
+          default: 0
+          title: Defaultvalue
+          type: integer
+        type:
+          const: int
+          title: Type
+          type: string
+      required:
+      - type
+      title: NewIntFieldRequest
+      type: object
+    NewStringFieldRequest:
+      properties:
+        defaultValue:
+          default: ''
+          title: Defaultvalue
+          type: string
+        type:
+          const: string
+          title: Type
+          type: string
+      required:
+      - type
+      title: NewStringFieldRequest
+      type: object
     Novel:
       description: "Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID\
         \ id of novel in db.\n    novel_title: String title of novel.\n    novel_description:\
@@ -1752,6 +1822,28 @@ components:
       required:
       - results
       title: OpsResult
+      type: object
+    PythonAnnotationRequest:
+      additionalProperties: false
+      properties:
+        newFields:
+          additionalProperties:
+            $ref: '#/components/schemas/NewFieldRequest'
+          maxProperties: 100
+          minProperties: 1
+          propertyNames:
+            $ref: '#/components/schemas/FieldName'
+          title: Newfields
+          type: object
+        workflowId:
+          description: Completed workflow whose instances will receive the new fields.
+          format: uuid
+          title: Workflowid
+          type: string
+      required:
+      - workflowId
+      - newFields
+      title: PythonAnnotationRequest
       type: object
     PythonFilterRequest:
       additionalProperties: false
@@ -2451,6 +2543,7 @@ components:
       type: object
     WorkflowStatus:
       enum:
+      - new
       - pending
       - processing
       - complete
@@ -3585,6 +3678,58 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Read Instances Advanced
+      tags:
+      - filters
+  /filters/runners/python/annotation:
+    post:
+      description: Add mutable annotation fields to an existing workflow.
+      operationId: run_python_annotation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PythonAnnotationRequest'
+        required: true
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowOperationAccepted'
+          description: Successful Response
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Service Unavailable
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Run Python Annotation
       tags:
       - filters
   /filters/runners/python/filter:

@@ -4001,6 +4001,93 @@
         ]
       }
     },
+    "/filters/runners/python/annotation": {
+      "post": {
+        "tags": [
+          "filters"
+        ],
+        "summary": "Run Python Annotation",
+        "description": "Add mutable annotation fields to an existing workflow.",
+        "operationId": "run_python_annotation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PythonAnnotationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowOperationAccepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/filters/runners/python/map": {
       "post": {
         "tags": [
@@ -5801,6 +5888,7 @@
       "GroupingStatus": {
         "type": "string",
         "enum": [
+          "new",
           "pending",
           "processing",
           "complete",
@@ -6414,6 +6502,107 @@
         "title": "ModifyChapterContentResponse",
         "description": "Pydantic schema for the response after modifying chapter content.\n\nAttributes:\n    chapter_content_version: The new version number of the text content after applying the modifications.\n    chapter_content_id: The UUID of the text content that was modified.\n    label_data_id_map: A mapping from label data IDs before the text modification to label data IDs after the text modification"
       },
+      "NewBoolFieldRequest": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "bool",
+            "title": "Type"
+          },
+          "defaultValue": {
+            "type": "boolean",
+            "title": "Defaultvalue",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "NewBoolFieldRequest"
+      },
+      "NewFieldRequest": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/NewStringFieldRequest"
+          },
+          {
+            "$ref": "#/components/schemas/NewIntFieldRequest"
+          },
+          {
+            "$ref": "#/components/schemas/NewFloatFieldRequest"
+          },
+          {
+            "$ref": "#/components/schemas/NewBoolFieldRequest"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "bool": "#/components/schemas/NewBoolFieldRequest",
+            "float": "#/components/schemas/NewFloatFieldRequest",
+            "int": "#/components/schemas/NewIntFieldRequest",
+            "string": "#/components/schemas/NewStringFieldRequest"
+          }
+        }
+      },
+      "NewFloatFieldRequest": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "float",
+            "title": "Type"
+          },
+          "defaultValue": {
+            "type": "number",
+            "title": "Defaultvalue",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "NewFloatFieldRequest"
+      },
+      "NewIntFieldRequest": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "int",
+            "title": "Type"
+          },
+          "defaultValue": {
+            "type": "integer",
+            "title": "Defaultvalue",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "NewIntFieldRequest"
+      },
+      "NewStringFieldRequest": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "string",
+            "title": "Type"
+          },
+          "defaultValue": {
+            "type": "string",
+            "title": "Defaultvalue",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "NewStringFieldRequest"
+      },
       "Novel": {
         "properties": {
           "novelId": {
@@ -6580,6 +6769,35 @@
         ],
         "title": "OpsResult",
         "description": "Pydantic schema for a list of label operation results.\n\nAttributes:\n    results: A list of UUIDs corresponding to the results of each label operation."
+      },
+      "PythonAnnotationRequest": {
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workflowid",
+            "description": "Completed workflow whose instances will receive the new fields."
+          },
+          "newFields": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NewFieldRequest"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/FieldName"
+            },
+            "type": "object",
+            "maxProperties": 100,
+            "minProperties": 1,
+            "title": "Newfields"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workflowId",
+          "newFields"
+        ],
+        "title": "PythonAnnotationRequest"
       },
       "PythonFilterRequest": {
         "properties": {
@@ -7564,6 +7782,7 @@
       "WorkflowStatus": {
         "type": "string",
         "enum": [
+          "new",
           "pending",
           "processing",
           "complete",

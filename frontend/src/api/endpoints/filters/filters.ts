@@ -18,6 +18,7 @@ import type {
   InstanceQuery,
   InstanceQueryResult,
   InstanceResponse,
+  PythonAnnotationRequest,
   PythonFilterRequest,
   PythonGroupRequest,
   PythonLabelSourceRequest,
@@ -394,6 +395,69 @@ export const readInstancesAdvancedFiltersInstancesQueryPost = async (instanceQue
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(instanceQuery)
+  }
+);}
+
+
+export type runPythonAnnotationResponse202 = {
+  data: WorkflowOperationAccepted
+  status: 202
+}
+
+export type runPythonAnnotationResponse400 = {
+  data: DetailHTTPErrorResponse
+  status: 400
+}
+
+export type runPythonAnnotationResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type runPythonAnnotationResponse409 = {
+  data: DetailHTTPErrorResponse
+  status: 409
+}
+
+export type runPythonAnnotationResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type runPythonAnnotationResponse503 = {
+  data: DetailHTTPErrorResponse
+  status: 503
+}
+
+export type runPythonAnnotationResponseSuccess = (runPythonAnnotationResponse202) & {
+  headers: Headers;
+};
+export type runPythonAnnotationResponseError = (runPythonAnnotationResponse400 | runPythonAnnotationResponse404 | runPythonAnnotationResponse409 | runPythonAnnotationResponse422 | runPythonAnnotationResponse503) & {
+  headers: Headers;
+};
+
+export type runPythonAnnotationResponse = (runPythonAnnotationResponseSuccess | runPythonAnnotationResponseError)
+
+export const getRunPythonAnnotationUrl = () => {
+
+
+
+
+  return `/api/filters/runners/python/annotation`
+}
+
+/**
+ * Add mutable annotation fields to an existing workflow.
+ * @summary Run Python Annotation
+ */
+export const runPythonAnnotation = async (pythonAnnotationRequest: PythonAnnotationRequest, options?: Parameters<typeof customFetch>[1]): Promise<runPythonAnnotationResponse> => {
+
+  return customFetch<runPythonAnnotationResponse>(getRunPythonAnnotationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pythonAnnotationRequest)
   }
 );}
 

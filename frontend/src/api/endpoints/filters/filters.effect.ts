@@ -333,7 +333,7 @@ export const ReadGroupingFiltersGroupingsGroupingIdGet200Response = S.Struct({
 }),
   "groupingId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "groupingMessage": S.Union(S.String, S.Null),
-  "groupingStatus": S.Literal('pending', 'processing', 'complete', 'failed'),
+  "groupingStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed'),
   "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
   "outputType": S.Literal('string', 'int', 'bool'),
   "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
@@ -577,6 +577,123 @@ export const ReadInstancesAdvancedFiltersInstancesQueryPost422Response = S.Struc
 })
 
 /**
+ * Add mutable annotation fields to an existing workflow.
+ * @summary Run Python Annotation
+ */
+export const runPythonAnnotationBodyNewFieldsOneDefaultValueDefault = ``;
+export const runPythonAnnotationBodyNewFieldsTwoDefaultValueDefault = 0;
+export const runPythonAnnotationBodyNewFieldsThreeDefaultValueDefault = 0;
+export const runPythonAnnotationBodyNewFieldsFourDefaultValueDefault = false;
+
+export const RunPythonAnnotationBody = S.Struct({
+  "newFields": S.Record({ key: S.String, value: S.Union(S.Struct({
+  "defaultValue": S.optionalWith(S.String, { default: () => runPythonAnnotationBodyNewFieldsOneDefaultValueDefault }),
+  "type": S.Literal('string')
+}), S.Struct({
+  "defaultValue": S.optionalWith(S.Number, { default: () => runPythonAnnotationBodyNewFieldsTwoDefaultValueDefault }),
+  "type": S.Literal('int')
+}), S.Struct({
+  "defaultValue": S.optionalWith(S.Number, { default: () => runPythonAnnotationBodyNewFieldsThreeDefaultValueDefault }),
+  "type": S.Literal('float')
+}), S.Struct({
+  "defaultValue": S.optionalWith(S.Boolean, { default: () => runPythonAnnotationBodyNewFieldsFourDefaultValueDefault }),
+  "type": S.Literal('bool')
+})) }),
+  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Completed workflow whose instances will receive the new fields.' })
+})
+
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsOneKindDefault = `field`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsOneMutableDefault = false;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsOneTypeDefault = `string`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoKindDefault = `field`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoMutableDefault = false;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoTypeDefault = `int`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeKindDefault = `field`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeMutableDefault = false;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeTypeDefault = `float`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFourKindDefault = `field`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFourMutableDefault = false;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFourTypeDefault = `bool`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveKindDefault = `field`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveMutableDefault = false;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveTypeDefault = `labelRef`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsSixKindDefault = `field`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsSixMutableDefault = false;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsSixTypeDefault = `textSpan`;
+export const runPythonAnnotation202ResponseWorkflowSchemaKindDefault = `schema`;
+
+export const RunPythonAnnotation202Response = S.Struct({
+  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "workflow": S.Struct({
+  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "instanceCount": S.Number,
+  "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
+  "labelGroupIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
+  "novelIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
+  "schema": S.Struct({
+  "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsOneKindDefault }),
+  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsOneMutableDefault }),
+  "type": S.optionalWith(S.Literal('string'), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsOneTypeDefault })
+}), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoKindDefault }),
+  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoMutableDefault }),
+  "type": S.optionalWith(S.Literal('int'), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoTypeDefault })
+}), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeKindDefault }),
+  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeMutableDefault }),
+  "type": S.optionalWith(S.Literal('float'), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeTypeDefault })
+}), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsFourKindDefault }),
+  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsFourMutableDefault }),
+  "type": S.optionalWith(S.Literal('bool'), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsFourTypeDefault })
+}), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveKindDefault }),
+  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveMutableDefault }),
+  "type": S.optionalWith(S.Literal('labelRef'), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveTypeDefault })
+}), S.Struct({
+  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsSixKindDefault }),
+  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsSixMutableDefault }),
+  "type": S.optionalWith(S.Literal('textSpan'), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsSixTypeDefault })
+})), S.Struct({
+  "kind": S.Literal('field')
+})) })),
+  "kind": S.optionalWith(S.Literal('schema'), { default: () => runPythonAnnotation202ResponseWorkflowSchemaKindDefault })
+}),
+  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "useCase": S.Literal('advanced', 'glossary'),
+  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "workflowMessage": S.Union(S.String, S.Null),
+  "workflowName": S.Union(S.String, S.Null),
+  "workflowStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed')
+})
+})
+
+export const RunPythonAnnotation400Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const RunPythonAnnotation404Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const RunPythonAnnotation409Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const RunPythonAnnotation422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+export const RunPythonAnnotation503Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+/**
  * Create and enqueue a filtered workflow.
  * @summary Run Python Filter
  */
@@ -653,7 +770,7 @@ export const RunPythonFilter202Response = S.Struct({
   "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "workflowMessage": S.Union(S.String, S.Null),
   "workflowName": S.Union(S.String, S.Null),
-  "workflowStatus": S.Literal('pending', 'processing', 'complete', 'failed')
+  "workflowStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed')
 })
 })
 
@@ -701,7 +818,7 @@ export const RunPythonGroup202Response = S.Struct({
 }),
   "groupingId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "groupingMessage": S.Union(S.String, S.Null),
-  "groupingStatus": S.Literal('pending', 'processing', 'complete', 'failed'),
+  "groupingStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed'),
   "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
   "outputType": S.Literal('string', 'int', 'bool'),
   "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
@@ -810,7 +927,7 @@ export const RunPythonLabelSource202Response = S.Struct({
   "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "workflowMessage": S.Union(S.String, S.Null),
   "workflowName": S.Union(S.String, S.Null),
-  "workflowStatus": S.Literal('pending', 'processing', 'complete', 'failed')
+  "workflowStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed')
 })
 })
 
@@ -907,7 +1024,7 @@ export const RunPythonMap202Response = S.Struct({
   "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "workflowMessage": S.Union(S.String, S.Null),
   "workflowName": S.Union(S.String, S.Null),
-  "workflowStatus": S.Literal('pending', 'processing', 'complete', 'failed')
+  "workflowStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed')
 })
 })
 
@@ -948,7 +1065,7 @@ export const ReadWorkflowsFiltersWorkflowsGetQueryParams = S.Struct({
   "novelId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
   "labelGroupId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
   "useCase": S.optional(S.Union(S.Literal('advanced', 'glossary'), S.Null)),
-  "status": S.optional(S.Union(S.Literal('pending', 'processing', 'complete', 'failed'), S.Null)),
+  "status": S.optional(S.Union(S.Literal('new', 'pending', 'processing', 'complete', 'failed'), S.Null)),
   "search": S.optional(S.Union(S.String, S.Null)),
   "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readWorkflowsFiltersWorkflowsGetQueryLimitMax)), { default: () => readWorkflowsFiltersWorkflowsGetQueryLimitDefault }),
   "cursor": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
@@ -1012,7 +1129,7 @@ export const ReadWorkflowsFiltersWorkflowsGet200ResponseItem = S.Struct({
   "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "workflowMessage": S.Union(S.String, S.Null),
   "workflowName": S.Union(S.String, S.Null),
-  "workflowStatus": S.Literal('pending', 'processing', 'complete', 'failed')
+  "workflowStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed')
 })
 export const ReadWorkflowsFiltersWorkflowsGet200Response = S.Array(ReadWorkflowsFiltersWorkflowsGet200ResponseItem)
 
@@ -1093,7 +1210,7 @@ export const ReadWorkflowFiltersWorkflowsWorkflowIdGet200Response = S.Struct({
   "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "workflowMessage": S.Union(S.String, S.Null),
   "workflowName": S.Union(S.String, S.Null),
-  "workflowStatus": S.Literal('pending', 'processing', 'complete', 'failed')
+  "workflowStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed')
 })
 
 export const ReadWorkflowFiltersWorkflowsWorkflowIdGet404Response = S.Struct({
@@ -1185,7 +1302,7 @@ export const RenameFilterWorkflow200Response = S.Struct({
   "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "workflowMessage": S.Union(S.String, S.Null),
   "workflowName": S.Union(S.String, S.Null),
-  "workflowStatus": S.Literal('pending', 'processing', 'complete', 'failed')
+  "workflowStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed')
 })
 
 export const RenameFilterWorkflow404Response = S.Struct({
@@ -1214,7 +1331,7 @@ export const readWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGetQueryLim
 
 
 export const ReadWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGetQueryParams = S.Struct({
-  "status": S.optional(S.Union(S.Literal('pending', 'processing', 'complete', 'failed'), S.Null)),
+  "status": S.optional(S.Union(S.Literal('new', 'pending', 'processing', 'complete', 'failed'), S.Null)),
   "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGetQueryLimitMax)), { default: () => readWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGetQueryLimitDefault }),
   "cursor": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
 })
@@ -1224,7 +1341,7 @@ export const ReadWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGet200Respo
   "functionDefinitionId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "groupingId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "groupingMessage": S.Union(S.String, S.Null),
-  "groupingStatus": S.Literal('pending', 'processing', 'complete', 'failed'),
+  "groupingStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed'),
   "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
   "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))

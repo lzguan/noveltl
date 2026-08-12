@@ -9,6 +9,7 @@ export type WorkflowStatus = typeof WorkflowStatus[keyof typeof WorkflowStatus];
 
 
 export const WorkflowStatus = {
+  new: 'new',
   pending: 'pending',
   processing: 'processing',
   complete: 'complete',

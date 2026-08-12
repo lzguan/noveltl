@@ -28,14 +28,18 @@ function RunnerOperationStatus({ formStatus }: { formStatus: RunnerFormStatus })
 		<Alert>
 			<CircleCheck />
 			<AlertTitle>
-				{formStatus.target === "workflow"
-					? "Workflow created and queued"
-					: "Grouping created and queued"}
+				{formStatus.target === "annotation"
+					? "Workflow queued for annotation"
+					: formStatus.target === "workflow"
+						? "Workflow created and queued"
+						: "Grouping created and queued"}
 			</AlertTitle>
 			<AlertDescription>
-				{formStatus.target === "workflow"
-					? "The operation was accepted. Refresh the Viewer workflow list when needed."
-					: "The operation was accepted. The grouping appears when its workflow is loaded again."}
+				{formStatus.target === "annotation"
+					? "The mutable fields will be available when the annotation job completes."
+					: formStatus.target === "workflow"
+						? "The operation was accepted. Refresh the Viewer workflow list when needed."
+						: "The operation was accepted. The grouping appears when its workflow is loaded again."}
 			</AlertDescription>
 		</Alert>
 	);

@@ -1,13 +1,20 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FilterRunnerForm } from "../components/runnerForms/FilterRunnerForm";
+import { AnnotationRunnerForm } from "../components/runnerForms/AnnotationRunnerForm";
 import { GroupRunnerForm } from "../components/runnerForms/GroupRunnerForm";
 import { LabelSourceRunnerForm } from "../components/runnerForms/LabelSourceRunnerForm";
 import { MapRunnerForm } from "../components/runnerForms/MapRunnerForm";
 import type { RunnerOperation, RunnerPanelModel } from "../types";
 
 function isRunnerOperation(value: string): value is RunnerOperation {
-	return value === "labelSource" || value === "map" || value === "filter" || value === "group";
+	return (
+		value === "labelSource" ||
+		value === "annotation" ||
+		value === "map" ||
+		value === "filter" ||
+		value === "group"
+	);
 }
 
 export function RunnerPanel(props: RunnerPanelModel) {
@@ -36,6 +43,9 @@ export function RunnerPanel(props: RunnerPanelModel) {
 						<ToggleGroupItem value="labelSource" className="min-w-28 flex-1">
 							Label source
 						</ToggleGroupItem>
+						<ToggleGroupItem value="annotation" className="min-w-28 flex-1">
+							Annotation
+						</ToggleGroupItem>
 						<ToggleGroupItem value="map" className="min-w-28 flex-1">
 							Map
 						</ToggleGroupItem>
@@ -51,6 +61,9 @@ export function RunnerPanel(props: RunnerPanelModel) {
 
 			{props.activeRunnerOperation === "labelSource" && (
 				<LabelSourceRunnerForm {...props.labelSourceForm} />
+			)}
+			{props.activeRunnerOperation === "annotation" && (
+				<AnnotationRunnerForm {...props.annotationForm} />
 			)}
 			{props.activeRunnerOperation === "map" && <MapRunnerForm {...props.mapForm} />}
 			{props.activeRunnerOperation === "filter" && <FilterRunnerForm {...props.filterForm} />}

@@ -2,6 +2,7 @@ import { readLabelGroupsLabelGroupsGet } from "@/api/endpoints/default/default";
 import {
 	readFunctionsFiltersFunctionsGet,
 	readWorkflowsFiltersWorkflowsGet,
+	runPythonAnnotation,
 	runPythonFilter,
 	runPythonGroup,
 	runPythonLabelSource,
@@ -17,6 +18,7 @@ import type {
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useLabelSourceRunnerForm } from "./useLabelSourceRunnerForm";
+import { useAnnotationRunnerForm } from "./useAnnotationRunnerForm";
 import { useMapRunnerForm } from "./useMapRunnerForm";
 import { useRunnerPanel } from "./useRunnerPanel";
 
@@ -27,6 +29,7 @@ vi.mock("@/api/endpoints/default/default", () => ({
 vi.mock("@/api/endpoints/filters/filters", () => ({
 	readFunctionsFiltersFunctionsGet: vi.fn(),
 	readWorkflowsFiltersWorkflowsGet: vi.fn(),
+	runPythonAnnotation: vi.fn(),
 	runPythonFilter: vi.fn(),
 	runPythonGroup: vi.fn(),
 	runPythonLabelSource: vi.fn(),
@@ -104,6 +107,11 @@ describe("runner form hooks", () => {
 			headers: new Headers(),
 		});
 		vi.mocked(runPythonLabelSource).mockResolvedValue({
+			status: 202,
+			data: workflowAccepted,
+			headers: new Headers(),
+		});
+		vi.mocked(runPythonAnnotation).mockResolvedValue({
 			status: 202,
 			data: workflowAccepted,
 			headers: new Headers(),
@@ -199,6 +207,69 @@ describe("runner form hooks", () => {
 			{ workflowId: "workflow-1", functionDefinitionId: "function-1" },
 			expect.objectContaining({ signal: expect.any(AbortSignal) }),
 		);
+	});
+
+	it("submits typed annotation fields for a completed workflow", async () => {
+		const { result } = renderHook(() => useAnnotationRunnerForm("novel-1", true));
+		await waitFor(() => expect(result.current.workflows.results.status).toBe("ready"));
+		act(() => {
+			result.current.selectWorkflow(workflow);
+			const firstId = result.current.fields[0].id;
+			result.current.setFieldName(firstId, "note");
+			result.current.setFieldDefaultValue(firstId, "review");
+			result.current.addField();
+		});
+		act(() => {
+			const score = result.current.fields[1];
+			result.current.setFieldName(score.id, "score");
+			result.current.setFieldType(score.id, "float");
+			result.current.setFieldDefaultValue(score.id, "0.75");
+			result.current.addField();
+		});
+		act(() => {
+			const approved = result.current.fields[2];
+			result.current.setFieldName(approved.id, "approved");
+			result.current.setFieldType(approved.id, "bool");
+			result.current.setFieldDefaultValue(approved.id, true);
+		});
+
+		await act(() => result.current.submitAnnotationRunner());
+
+		expect(runPythonAnnotation).toHaveBeenCalledWith(
+			{
+				workflowId: "workflow-1",
+				newFields: {
+					note: { type: "string", defaultValue: "review" },
+					score: { type: "float", defaultValue: 0.75 },
+					approved: { type: "bool", defaultValue: true },
+				},
+			},
+			expect.objectContaining({ signal: expect.any(AbortSignal) }),
+		);
+		expect(result.current.formStatus).toEqual({
+			status: "succeeded",
+			target: "annotation",
+		});
+	});
+
+	it("rejects duplicate and existing annotation field names before submission", async () => {
+		const workflowWithField: WorkflowSummary = {
+			...workflow,
+			schema: { kind: "schema", fields: { note: { kind: "field", type: "string" } } },
+		};
+		const { result } = renderHook(() => useAnnotationRunnerForm("novel-1", true));
+		act(() => {
+			result.current.selectWorkflow(workflowWithField);
+			result.current.setFieldName(result.current.fields[0].id, "note");
+		});
+
+		await act(() => result.current.submitAnnotationRunner());
+
+		expect(runPythonAnnotation).not.toHaveBeenCalled();
+		expect(result.current.formStatus).toEqual({
+			status: "error",
+			message: "Field 'note' already exists in the workflow.",
+		});
 	});
 
 	it("surfaces backend compatibility errors", async () => {

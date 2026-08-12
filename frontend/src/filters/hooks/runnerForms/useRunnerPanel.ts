@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { RunnerOperation, RunnerPanelModel } from "../../types";
+import { useAnnotationRunnerForm } from "./useAnnotationRunnerForm";
 import { useFilterRunnerForm } from "./useFilterRunnerForm";
 import { useGroupRunnerForm } from "./useGroupRunnerForm";
 import { useLabelSourceRunnerForm } from "./useLabelSourceRunnerForm";
@@ -12,6 +13,10 @@ export function useRunnerPanel(novelId: string, enabled: boolean): RunnerPanelMo
 		novelId,
 		enabled && activeRunnerOperation === "labelSource",
 	);
+	const annotationForm = useAnnotationRunnerForm(
+		novelId,
+		enabled && activeRunnerOperation === "annotation",
+	);
 	const mapForm = useMapRunnerForm(novelId, enabled && activeRunnerOperation === "map");
 	const filterForm = useFilterRunnerForm(novelId, enabled && activeRunnerOperation === "filter");
 	const groupForm = useGroupRunnerForm(novelId, enabled && activeRunnerOperation === "group");
@@ -19,6 +24,7 @@ export function useRunnerPanel(novelId: string, enabled: boolean): RunnerPanelMo
 	return {
 		activeRunnerOperation,
 		labelSourceForm,
+		annotationForm,
 		mapForm,
 		filterForm,
 		groupForm,

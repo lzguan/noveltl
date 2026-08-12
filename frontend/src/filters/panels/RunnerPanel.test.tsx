@@ -51,6 +51,19 @@ function createModel(): RunnerPanelModel {
 			setOutputWorkflowName: vi.fn(),
 			submitLabelSourceRunner: vi.fn(async () => {}),
 		},
+		annotationForm: {
+			workflows: searchOptions([workflow]),
+			selectedWorkflow: workflow,
+			fields: [{ id: 1, name: "note", type: "string", defaultValue: "" }],
+			formStatus: { status: "idle" },
+			selectWorkflow: vi.fn(),
+			addField: vi.fn(),
+			removeField: vi.fn(),
+			setFieldName: vi.fn(),
+			setFieldType: vi.fn(),
+			setFieldDefaultValue: vi.fn(),
+			submitAnnotationRunner: vi.fn(async () => {}),
+		},
 		mapForm: {
 			workflows: searchOptions([workflow]),
 			functions: searchOptions([functionDefinition]),
@@ -89,7 +102,7 @@ function createModel(): RunnerPanelModel {
 }
 
 describe("RunnerPanel", () => {
-	it("renders four explicit forms and selects runner operations semantically", () => {
+	it("renders runner forms and selects operations semantically", () => {
 		const model = createModel();
 		const { rerender } = render(<RunnerPanel {...model} />);
 
@@ -103,6 +116,15 @@ describe("RunnerPanel", () => {
 		expect(screen.getByLabelText("Source workflow")).toBeInTheDocument();
 		expect(screen.getByLabelText("Function")).toBeInTheDocument();
 		expect(screen.getByLabelText("Output workflow name")).toBeInTheDocument();
+
+		const annotationModel: RunnerPanelModel = {
+			...model,
+			activeRunnerOperation: "annotation",
+		};
+		rerender(<RunnerPanel {...annotationModel} />);
+		expect(screen.getByLabelText("Workflow")).toBeInTheDocument();
+		expect(screen.getByLabelText("Field name")).toBeInTheDocument();
+		expect(screen.getByLabelText("Default value")).toBeInTheDocument();
 
 		const groupModel: RunnerPanelModel = { ...model, activeRunnerOperation: "group" };
 		rerender(<RunnerPanel {...groupModel} />);

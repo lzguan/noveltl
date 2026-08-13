@@ -149,7 +149,8 @@ class PythonFilterRunner(PythonRunner[PythonFilterInput]):
                 )
 
             with self.session_factory.begin() as db:
-                clear_fjob(db, job_id, WorkflowStatus.COMPLETE, None)
+                if not clear_fjob(db, job_id, WorkflowStatus.COMPLETE, None):
+                    raise ValueError("The filter job could not be completed.")
         except Exception as exc:
             with self.session_factory.begin() as db:
                 clear_fjob(db, job_id, WorkflowStatus.FAILED, str(exc) or type(exc).__name__)

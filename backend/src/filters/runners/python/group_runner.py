@@ -169,7 +169,8 @@ class PythonGroupRunner(PythonRunner[PythonGroupInput]):
                         f"Grouping assignment count mismatch: expected {instance_count}, received {assignment_count}."
                     )
 
-                clear_fjob(db, job_id, WorkflowStatus.COMPLETE, None)
+                if not clear_fjob(db, job_id, WorkflowStatus.COMPLETE, None):
+                    raise ValueError("The grouping job could not be completed.")
         except Exception as exc:
             with self.session_factory.begin() as db:
                 clear_fjob(db, job_id, WorkflowStatus.FAILED, str(exc) or type(exc).__name__)

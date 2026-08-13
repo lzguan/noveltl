@@ -107,8 +107,8 @@ def test_create_function_definition_normalizes_and_detects_database_conflict(
 ) -> None:
     request = CreateFunctionDefinitionRequest(
         namespace="  glossary  ",
-        functionName="  constant-name  ",
-        functionDefinition={"name": "literalString", "value": "Alice"},
+        function_name="  constant-name  ",
+        function_definition={"name": "literalString", "value": "Alice"},
     )
 
     created = create_function_definition(test_db, request)
@@ -131,13 +131,13 @@ def test_rename_workflow_updates_only_accessible_workflow(
         test_db,
         admin,
         workflow.workflow_id,
-        RenameWorkflowRequest(workflowName="Review candidates"),
+        RenameWorkflowRequest(workflow_name="Review candidates"),
     )
     cleared = rename_workflow(
         test_db,
         admin,
         workflow.workflow_id,
-        RenameWorkflowRequest(workflowName=None),
+        RenameWorkflowRequest(workflow_name=None),
     )
 
     assert renamed.workflow_name == "Review candidates"
@@ -147,7 +147,7 @@ def test_rename_workflow_updates_only_accessible_workflow(
             test_db,
             sample_scenario.users["user"],
             workflow.workflow_id,
-            RenameWorkflowRequest(workflowName="Hidden"),
+            RenameWorkflowRequest(workflow_name="Hidden"),
         )
 
 
@@ -287,7 +287,7 @@ def test_label_source_commits_scope_before_dispatch_and_sends_exact_input(
         test_db,
         sample_scenario.users["admin"],
         dispatcher,
-        PythonLabelSourceRequest(labelGroupId=label_group.label_group_id, outputName="Labels"),
+        PythonLabelSourceRequest(label_group_id=label_group.label_group_id, output_name="Labels"),
     )
 
     assert observed_workflow_ids == [result.workflow.workflow_id]
@@ -316,7 +316,7 @@ def test_label_source_hides_inaccessible_group_and_does_not_dispatch(
             test_db,
             sample_scenario.users["user"],
             dispatcher,
-            PythonLabelSourceRequest(labelGroupId=sample_scenario.label_groups["official"].label_group_id),
+            PythonLabelSourceRequest(label_group_id=sample_scenario.label_groups["official"].label_group_id),
         )
     assert dispatcher.jobs == []
 
@@ -341,7 +341,7 @@ def test_label_source_allows_novel_editor_with_label_group_view_access(
         test_db,
         actor,
         dispatcher,
-        PythonLabelSourceRequest(labelGroupId=label_group.label_group_id),
+        PythonLabelSourceRequest(label_group_id=label_group.label_group_id),
     )
 
     assert result.workflow.novel_ids == [label_group.novel_id]
@@ -369,8 +369,8 @@ def test_annotation_queues_existing_workflow_and_sends_exact_input(
 
     dispatcher = RecordingRunnerDispatcher(on_enqueue=observe_commit)
     request = PythonAnnotationRequest(
-        workflowId=workflow.workflow_id,
-        newFields={"note": {"type": "string", "defaultValue": "review"}},
+        workflow_id=workflow.workflow_id,
+        new_fields={"note": {"type": "string", "defaultValue": "review"}},
     )
 
     result = run_annotation(test_db, sample_scenario.users["admin"], dispatcher, request)
@@ -407,8 +407,8 @@ def test_annotation_rejects_duplicate_field_and_inaccessible_workflow(
             sample_scenario.users["admin"],
             dispatcher,
             PythonAnnotationRequest(
-                workflowId=workflow.workflow_id,
-                newFields={"name": {"type": "string"}},
+                workflow_id=workflow.workflow_id,
+                new_fields={"name": {"type": "string"}},
             ),
         )
     with pytest.raises(WorkflowNotFoundException):
@@ -417,8 +417,8 @@ def test_annotation_rejects_duplicate_field_and_inaccessible_workflow(
             sample_scenario.users["user"],
             dispatcher,
             PythonAnnotationRequest(
-                workflowId=workflow.workflow_id,
-                newFields={"note": {"type": "string"}},
+                workflow_id=workflow.workflow_id,
+                new_fields={"note": {"type": "string"}},
             ),
         )
 
@@ -444,8 +444,8 @@ def test_annotation_publication_failure_marks_existing_workflow_failed(
             sample_scenario.users["admin"],
             dispatcher,
             PythonAnnotationRequest(
-                workflowId=workflow.workflow_id,
-                newFields={"note": {"type": "string"}},
+                workflow_id=workflow.workflow_id,
+                new_fields={"note": {"type": "string"}},
             ),
         )
 
@@ -480,9 +480,9 @@ def test_map_filter_and_group_create_correct_targets_and_payloads(
         admin,
         dispatcher,
         PythonMapRequest(
-            sourceWorkflowId=map_source.workflow_id,
-            functionDefinitionId=map_definition.function_definition_id,
-            outputName="Mapped",
+            source_workflow_id=map_source.workflow_id,
+            function_definition_id=map_definition.function_definition_id,
+            output_name="Mapped",
         ),
     )
     filtered = run_filter(
@@ -490,9 +490,9 @@ def test_map_filter_and_group_create_correct_targets_and_payloads(
         admin,
         dispatcher,
         PythonFilterRequest(
-            sourceWorkflowId=filter_source.workflow_id,
-            functionDefinitionId=filter_definition.function_definition_id,
-            outputName="Filtered",
+            source_workflow_id=filter_source.workflow_id,
+            function_definition_id=filter_definition.function_definition_id,
+            output_name="Filtered",
         ),
     )
     grouped = run_group(
@@ -500,8 +500,8 @@ def test_map_filter_and_group_create_correct_targets_and_payloads(
         admin,
         dispatcher,
         PythonGroupRequest(
-            workflowId=group_source.workflow_id,
-            functionDefinitionId=group_definition.function_definition_id,
+            workflow_id=group_source.workflow_id,
+            function_definition_id=group_definition.function_definition_id,
         ),
     )
 
@@ -545,8 +545,8 @@ def test_runner_validation_happens_before_target_creation_or_dispatch(
             sample_scenario.users["admin"],
             dispatcher,
             PythonFilterRequest(
-                sourceWorkflowId=source.workflow_id,
-                functionDefinitionId=invalid_filter.function_definition_id,
+                source_workflow_id=source.workflow_id,
+                function_definition_id=invalid_filter.function_definition_id,
             ),
         )
 
@@ -582,8 +582,8 @@ def test_incomplete_or_missing_sources_do_not_dispatch(
             admin,
             dispatcher,
             PythonMapRequest(
-                sourceWorkflowId=source.workflow_id,
-                functionDefinitionId=function.function_definition_id,
+                source_workflow_id=source.workflow_id,
+                function_definition_id=function.function_definition_id,
             ),
         )
     with pytest.raises(FunctionNotFoundException):
@@ -592,8 +592,8 @@ def test_incomplete_or_missing_sources_do_not_dispatch(
             admin,
             dispatcher,
             PythonMapRequest(
-                sourceWorkflowId=add_scoped_workflow(test_db, sample_scenario, source_schema).workflow_id,
-                functionDefinitionId=uuid4(),
+                source_workflow_id=add_scoped_workflow(test_db, sample_scenario, source_schema).workflow_id,
+                function_definition_id=uuid4(),
             ),
         )
     assert dispatcher.jobs == []
@@ -611,8 +611,8 @@ def test_grouping_duplicate_is_reported_as_domain_conflict(
     )
     function = add_function(test_db, "duplicate-group", Get(field_name="name", type="string"))
     request = PythonGroupRequest(
-        workflowId=workflow.workflow_id,
-        functionDefinitionId=function.function_definition_id,
+        workflow_id=workflow.workflow_id,
+        function_definition_id=function.function_definition_id,
     )
 
     first = run_group(test_db, sample_scenario.users["admin"], RecordingRunnerDispatcher(), request)
@@ -645,7 +645,7 @@ def test_enqueue_failure_marks_committed_target_failed(
                 test_db,
                 admin,
                 dispatcher,
-                PythonLabelSourceRequest(labelGroupId=label_group.label_group_id, outputName="Failed"),
+                PythonLabelSourceRequest(label_group_id=label_group.label_group_id, output_name="Failed"),
             )
         target = test_db.execute(select(Workflow).where(Workflow.workflow_name == "Failed")).scalar_one()
         assert target.workflow_status == WorkflowStatus.FAILED
@@ -663,8 +663,8 @@ def test_enqueue_failure_marks_committed_target_failed(
                 admin,
                 dispatcher,
                 PythonGroupRequest(
-                    workflowId=workflow.workflow_id,
-                    functionDefinitionId=function.function_definition_id,
+                    workflow_id=workflow.workflow_id,
+                    function_definition_id=function.function_definition_id,
                 ),
             )
         target = test_db.execute(select(Grouping).where(Grouping.workflow_id == workflow.workflow_id)).scalar_one()

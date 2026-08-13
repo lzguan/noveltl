@@ -1,10 +1,9 @@
-import logging
 import uuid
 from typing import Annotated, Literal, cast
 from uuid import UUID
 
 from pydantic import Field
-from sqlalchemy import and_, func, insert, select, update
+from sqlalchemy import and_, func, insert, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.filters.compilers.python import PythonCompiler
@@ -23,19 +22,16 @@ from src.filters.data_types import (
 )
 from src.filters.function_dependencies import resolve_dependencies
 from src.filters.functions import function_adapter
+from src.filters.lifecycle import claim_fjob, clear_fjob
 from src.filters.models import (
     FunctionDefinition,
     GroupAssignment,
     Grouping,
-    GroupingStatus,
     Instance,
     Workflow,
+    WorkflowStatus,
 )
-from src.filters.runners.interfaces.runner import Runner
-from src.filters.runners.python.helpers import handle_grouping_exception
-from src.filters.runners.python.interfaces import PythonRunnerInputBase
-
-logger = logging.getLogger(__name__)
+from src.filters.runners.python.interfaces import PythonRunner, PythonRunnerInputBase
 
 DEFAULT_GROUP_BATCH_SIZE = 1_000
 
@@ -47,7 +43,7 @@ class PythonGroupInput(PythonRunnerInputBase):
     grouping_id: uuid.UUID
 
 
-class PythonGroupRunner(Runner[PythonGroupInput]):
+class PythonGroupRunner(PythonRunner[PythonGroupInput]):
     def __init__(
         self,
         session_factory: sessionmaker[Session],
@@ -64,24 +60,14 @@ class PythonGroupRunner(Runner[PythonGroupInput]):
     def execute(self, job_id: UUID, input: PythonGroupInput) -> None:
         try:
             with self.session_factory.begin() as db:
+                if not claim_fjob(db, job_id):
+                    return
                 claim = db.execute(
-                    update(Grouping)
-                    .where(
+                    select(Grouping.workflow_id, Grouping.function_definition_id).where(
                         Grouping.grouping_id == input.grouping_id,
                         Grouping.job_id == job_id,
-                        Grouping.grouping_status == GroupingStatus.PENDING,
                     )
-                    .values(
-                        grouping_status=GroupingStatus.PROCESSING,
-                        grouping_message=None,
-                    )
-                    .returning(
-                        Grouping.workflow_id,
-                        Grouping.function_definition_id,
-                    )
-                ).one_or_none()
-            if claim is None:
-                return
+                ).one()
             workflow_id, function_definition_id = claim
 
             with self.session_factory() as db:
@@ -183,18 +169,9 @@ class PythonGroupRunner(Runner[PythonGroupInput]):
                         f"Grouping assignment count mismatch: expected {instance_count}, received {assignment_count}."
                     )
 
-                db.execute(
-                    update(Grouping)
-                    .where(
-                        Grouping.grouping_id == input.grouping_id,
-                        Grouping.job_id == job_id,
-                        Grouping.grouping_status == GroupingStatus.PROCESSING,
-                    )
-                    .values(
-                        grouping_status=GroupingStatus.COMPLETE,
-                        grouping_message=None,
-                    )
-                )
+                if not clear_fjob(db, job_id, WorkflowStatus.COMPLETE, None):
+                    raise ValueError("The grouping job could not be completed.")
         except Exception as exc:
-            handle_grouping_exception(self.session_factory, input.grouping_id, job_id, exc, logger)
+            with self.session_factory.begin() as db:
+                clear_fjob(db, job_id, WorkflowStatus.FAILED, str(exc) or type(exc).__name__)
             raise

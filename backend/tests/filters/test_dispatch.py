@@ -8,7 +8,12 @@ from kombu.serialization import dumps
 from src.filters.celery_app import app
 from src.filters.dispatch.celery import CeleryRunnerDispatcher, run_runner_task
 from src.filters.exceptions import RunnerEnqueueFailedException
+from src.filters.runners.python.annotation_runner import (
+    NewStringFieldRequest,
+    PythonAnnotationInput,
+)
 from src.filters.runners.python.group_runner import PythonGroupInput
+from src.filters.worker.tasks import run_runner, runners
 
 
 def _group_input() -> PythonGroupInput:
@@ -68,3 +73,18 @@ class TestCeleryRunnerDispatcher:
         assert app.conf.worker_pool == "prefork"
         assert app.conf.worker_concurrency == 2
         assert app.conf.worker_prefetch_multiplier == 1
+
+    def test_worker_routes_annotation_input(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        runner = Mock()
+        monkeypatch.setitem(runners["python"], "annotation", runner)
+        job_id = uuid.uuid4()
+        runner_input = PythonAnnotationInput(
+            runtime_name="python",
+            runner_name="annotation",
+            workflow_id=uuid.uuid4(),
+            new_fields={"note": NewStringFieldRequest(type="string")},
+        )
+
+        run_runner(job_id, runner_input)
+
+        runner.execute.assert_called_once_with(job_id, runner_input)

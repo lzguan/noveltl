@@ -18,6 +18,7 @@ import type {
   InstanceQuery,
   InstanceQueryResult,
   InstanceResponse,
+  PythonAnnotationRequest,
   PythonFilterRequest,
   PythonGroupRequest,
   PythonLabelSourceRequest,
@@ -28,6 +29,7 @@ import type {
   ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGetParams,
   ReadWorkflowsFiltersWorkflowsGetParams,
   RenameWorkflowRequest,
+  UpdateInstanceRequest,
   ValidateFunctionDefinitionRequest,
   WorkflowOperationAccepted,
   WorkflowResponse,
@@ -394,6 +396,128 @@ export const readInstancesAdvancedFiltersInstancesQueryPost = async (instanceQue
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(instanceQuery)
+  }
+);}
+
+
+export type updateFilterInstanceResponse200 = {
+  data: InstanceResponse
+  status: 200
+}
+
+export type updateFilterInstanceResponse400 = {
+  data: DetailHTTPErrorResponse
+  status: 400
+}
+
+export type updateFilterInstanceResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type updateFilterInstanceResponse409 = {
+  data: DetailHTTPErrorResponse
+  status: 409
+}
+
+export type updateFilterInstanceResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateFilterInstanceResponseSuccess = (updateFilterInstanceResponse200) & {
+  headers: Headers;
+};
+export type updateFilterInstanceResponseError = (updateFilterInstanceResponse400 | updateFilterInstanceResponse404 | updateFilterInstanceResponse409 | updateFilterInstanceResponse422) & {
+  headers: Headers;
+};
+
+export type updateFilterInstanceResponse = (updateFilterInstanceResponseSuccess | updateFilterInstanceResponseError)
+
+export const getUpdateFilterInstanceUrl = (instanceId: string,) => {
+
+
+
+
+  return `/api/filters/instances/${instanceId}`
+}
+
+/**
+ * Update mutable scalar fields on one completed workflow instance.
+ * @summary Update Filter Instance
+ */
+export const updateFilterInstance = async (instanceId: string,
+    updateInstanceRequest: UpdateInstanceRequest, options?: Parameters<typeof customFetch>[1]): Promise<updateFilterInstanceResponse> => {
+
+  return customFetch<updateFilterInstanceResponse>(getUpdateFilterInstanceUrl(instanceId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateInstanceRequest)
+  }
+);}
+
+
+export type runPythonAnnotationResponse202 = {
+  data: WorkflowOperationAccepted
+  status: 202
+}
+
+export type runPythonAnnotationResponse400 = {
+  data: DetailHTTPErrorResponse
+  status: 400
+}
+
+export type runPythonAnnotationResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type runPythonAnnotationResponse409 = {
+  data: DetailHTTPErrorResponse
+  status: 409
+}
+
+export type runPythonAnnotationResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type runPythonAnnotationResponse503 = {
+  data: DetailHTTPErrorResponse
+  status: 503
+}
+
+export type runPythonAnnotationResponseSuccess = (runPythonAnnotationResponse202) & {
+  headers: Headers;
+};
+export type runPythonAnnotationResponseError = (runPythonAnnotationResponse400 | runPythonAnnotationResponse404 | runPythonAnnotationResponse409 | runPythonAnnotationResponse422 | runPythonAnnotationResponse503) & {
+  headers: Headers;
+};
+
+export type runPythonAnnotationResponse = (runPythonAnnotationResponseSuccess | runPythonAnnotationResponseError)
+
+export const getRunPythonAnnotationUrl = () => {
+
+
+
+
+  return `/api/filters/runners/python/annotation`
+}
+
+/**
+ * Add mutable annotation fields to an existing workflow.
+ * @summary Run Python Annotation
+ */
+export const runPythonAnnotation = async (pythonAnnotationRequest: PythonAnnotationRequest, options?: Parameters<typeof customFetch>[1]): Promise<runPythonAnnotationResponse> => {
+
+  return customFetch<runPythonAnnotationResponse>(getRunPythonAnnotationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pythonAnnotationRequest)
   }
 );}
 

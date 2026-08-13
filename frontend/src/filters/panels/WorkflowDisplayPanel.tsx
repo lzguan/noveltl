@@ -140,6 +140,7 @@ export function WorkflowDisplayPanel(props: WorkflowDisplayPanelProps) {
 								workflow={workflow}
 								activeGroupings={activeGroupings}
 								results={instanceResults.results}
+								commitInstanceField={instanceResults.commitInstanceField}
 								refreshInstanceResults={instanceResults.refreshInstanceResults}
 								loadPreviousInstancePage={instanceResults.loadPreviousInstancePage}
 								loadNextInstancePage={instanceResults.loadNextInstancePage}

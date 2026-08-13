@@ -2,13 +2,15 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
-from src.filters.data_types import BoolField, Schema, StringField
+from src.filters.data_types import BoolField, DataObj, FloatData, FloatField, Schema, StringData, StringField
 from src.filters.exceptions import (
     FunctionAlreadyExistsException,
     FunctionNotFoundException,
     GroupingAlreadyExistsException,
+    InstanceNotFoundException,
+    InvalidInstanceUpdateException,
     InvalidRunnerRequestException,
     RunnerEnqueueFailedException,
     WorkflowNotFoundException,
@@ -19,30 +21,39 @@ from src.filters.models import (
     FunctionDefinition,
     Grouping,
     GroupingStatus,
+    Instance,
     Workflow,
     WorkflowLabelGroup,
     WorkflowNovel,
     WorkflowStatus,
 )
+from src.filters.runners.python.annotation_runner import (
+    NewStringFieldRequest,
+    PythonAnnotationInput,
+)
 from src.filters.runners.python.filter_runner import PythonFilterInput
-from src.filters.runners.python.group_runner import PythonGroupInput
+from src.filters.runners.python.group_runner import PythonGroupInput, PythonGroupRunner
 from src.filters.runners.python.label_source_runner import PythonLabelSourceInput
 from src.filters.runners.python.map_runner import PythonMapInput
 from src.filters.schemas import (
     CreateFunctionDefinitionRequest,
+    PythonAnnotationRequest,
     PythonFilterRequest,
     PythonGroupRequest,
     PythonLabelSourceRequest,
     PythonMapRequest,
     RenameWorkflowRequest,
+    UpdateInstanceRequest,
 )
 from src.filters.service import (
     create_function_definition,
     rename_workflow,
+    run_annotation,
     run_filter,
     run_group,
     run_label_source,
     run_map,
+    update_instance,
 )
 from src.novels.constants import Role
 from src.novels.models import NovelContributor
@@ -96,8 +107,8 @@ def test_create_function_definition_normalizes_and_detects_database_conflict(
 ) -> None:
     request = CreateFunctionDefinitionRequest(
         namespace="  glossary  ",
-        functionName="  constant-name  ",
-        functionDefinition={"name": "literalString", "value": "Alice"},
+        function_name="  constant-name  ",
+        function_definition={"name": "literalString", "value": "Alice"},
     )
 
     created = create_function_definition(test_db, request)
@@ -120,13 +131,13 @@ def test_rename_workflow_updates_only_accessible_workflow(
         test_db,
         admin,
         workflow.workflow_id,
-        RenameWorkflowRequest(workflowName="Review candidates"),
+        RenameWorkflowRequest(workflow_name="Review candidates"),
     )
     cleared = rename_workflow(
         test_db,
         admin,
         workflow.workflow_id,
-        RenameWorkflowRequest(workflowName=None),
+        RenameWorkflowRequest(workflow_name=None),
     )
 
     assert renamed.workflow_name == "Review candidates"
@@ -136,8 +147,123 @@ def test_rename_workflow_updates_only_accessible_workflow(
             test_db,
             sample_scenario.users["user"],
             workflow.workflow_id,
-            RenameWorkflowRequest(workflowName="Hidden"),
+            RenameWorkflowRequest(workflow_name="Hidden"),
         )
+
+
+def test_update_instance_merges_mutable_fields_and_preserves_other_values(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    workflow = add_scoped_workflow(
+        test_db,
+        sample_scenario,
+        Schema(
+            fields={
+                "source": StringField(),
+                "note": StringField(mutable=True),
+                "score": FloatField(mutable=True),
+            }
+        ),
+    )
+    instance = Instance(
+        workflow_id=workflow.workflow_id,
+        value=dump_model(
+            DataObj(
+                fields={
+                    "source": StringData(value="Alice"),
+                    "note": StringData(value=""),
+                    "score": FloatData(value=0.0),
+                }
+            )
+        ),
+    )
+    test_db.add(instance)
+    test_db.commit()
+
+    updated = update_instance(
+        test_db,
+        sample_scenario.users["admin"],
+        instance.instance_id,
+        UpdateInstanceRequest(
+            fields={
+                "note": StringData(value="reviewed"),
+                "score": FloatData(value=0.75),
+            }
+        ),
+    )
+
+    assert updated.value == DataObj(
+        fields={
+            "source": StringData(value="Alice"),
+            "note": StringData(value="reviewed"),
+            "score": FloatData(value=0.75),
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    ("fields", "message"),
+    [
+        ({"missing": StringData(value="x")}, "does not exist"),
+        ({"source": StringData(value="changed")}, "immutable"),
+        ({"note": FloatData(value=1.0)}, "requires type string"),
+    ],
+)
+def test_update_instance_rejects_invalid_patch_atomically(
+    fields: dict[str, StringData | FloatData],
+    message: str,
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    workflow = add_scoped_workflow(
+        test_db,
+        sample_scenario,
+        Schema(fields={"source": StringField(), "note": StringField(mutable=True)}),
+    )
+    original = DataObj(fields={"source": StringData(value="Alice"), "note": StringData(value="")})
+    instance = Instance(workflow_id=workflow.workflow_id, value=dump_model(original))
+    test_db.add(instance)
+    test_db.commit()
+
+    with pytest.raises(InvalidInstanceUpdateException, match=message):
+        update_instance(
+            test_db,
+            sample_scenario.users["admin"],
+            instance.instance_id,
+            UpdateInstanceRequest(fields={"note": StringData(value="valid"), **fields}),
+        )
+
+    test_db.expire_all()
+    stored = test_db.get(Instance, instance.instance_id)
+    assert stored is not None
+    assert DataObj.model_validate(stored.value) == original
+
+
+@pytest.mark.parametrize("workflow_status", [WorkflowStatus.PENDING, WorkflowStatus.PROCESSING])
+def test_update_instance_rejects_active_or_inaccessible_workflow(
+    workflow_status: WorkflowStatus,
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    workflow = add_scoped_workflow(
+        test_db,
+        sample_scenario,
+        Schema(fields={"note": StringField(mutable=True)}),
+        status=workflow_status,
+    )
+    instance = Instance(
+        workflow_id=workflow.workflow_id,
+        value=dump_model(DataObj(fields={"note": StringData(value="")})),
+    )
+    test_db.add(instance)
+    test_db.commit()
+    request = UpdateInstanceRequest(fields={"note": StringData(value="changed")})
+
+    with pytest.raises(WorkflowNotReadyException, match=workflow_status.value):
+        update_instance(test_db, sample_scenario.users["admin"], instance.instance_id, request)
+    with pytest.raises(InstanceNotFoundException):
+        update_instance(test_db, sample_scenario.users["user"], instance.instance_id, request)
 
 
 def test_label_source_commits_scope_before_dispatch_and_sends_exact_input(
@@ -161,7 +287,7 @@ def test_label_source_commits_scope_before_dispatch_and_sends_exact_input(
         test_db,
         sample_scenario.users["admin"],
         dispatcher,
-        PythonLabelSourceRequest(labelGroupId=label_group.label_group_id, outputName="Labels"),
+        PythonLabelSourceRequest(label_group_id=label_group.label_group_id, output_name="Labels"),
     )
 
     assert observed_workflow_ids == [result.workflow.workflow_id]
@@ -190,7 +316,7 @@ def test_label_source_hides_inaccessible_group_and_does_not_dispatch(
             test_db,
             sample_scenario.users["user"],
             dispatcher,
-            PythonLabelSourceRequest(labelGroupId=sample_scenario.label_groups["official"].label_group_id),
+            PythonLabelSourceRequest(label_group_id=sample_scenario.label_groups["official"].label_group_id),
         )
     assert dispatcher.jobs == []
 
@@ -215,7 +341,7 @@ def test_label_source_allows_novel_editor_with_label_group_view_access(
         test_db,
         actor,
         dispatcher,
-        PythonLabelSourceRequest(labelGroupId=label_group.label_group_id),
+        PythonLabelSourceRequest(label_group_id=label_group.label_group_id),
     )
 
     assert result.workflow.novel_ids == [label_group.novel_id]
@@ -223,12 +349,119 @@ def test_label_source_allows_novel_editor_with_label_group_view_access(
     assert len(dispatcher.jobs) == 1
 
 
+def test_annotation_queues_existing_workflow_and_sends_exact_input(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    workflow = add_scoped_workflow(
+        test_db,
+        sample_scenario,
+        Schema(fields={"name": StringField()}),
+    )
+
+    def observe_commit(job_id, runner_input) -> None:
+        assert isinstance(runner_input, PythonAnnotationInput)
+        with Session(test_db.get_bind()) as observer:
+            stored = observer.get(Workflow, workflow.workflow_id)
+            assert stored is not None
+            assert stored.job_id == job_id
+            assert stored.workflow_status == WorkflowStatus.PENDING
+
+    dispatcher = RecordingRunnerDispatcher(on_enqueue=observe_commit)
+    request = PythonAnnotationRequest(
+        workflow_id=workflow.workflow_id,
+        new_fields={"note": {"type": "string", "defaultValue": "review"}},
+    )
+
+    result = run_annotation(test_db, sample_scenario.users["admin"], dispatcher, request)
+
+    assert result.workflow.workflow_id == workflow.workflow_id
+    assert result.workflow.workflow_status == WorkflowStatus.PENDING
+    assert dispatcher.jobs == [
+        (
+            result.job_id,
+            PythonAnnotationInput(
+                runtime_name="python",
+                runner_name="annotation",
+                workflow_id=workflow.workflow_id,
+                new_fields={"note": NewStringFieldRequest(type="string", default_value="review")},
+            ),
+        )
+    ]
+
+
+def test_annotation_rejects_duplicate_field_and_inaccessible_workflow(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    workflow = add_scoped_workflow(
+        test_db,
+        sample_scenario,
+        Schema(fields={"name": StringField()}),
+    )
+    dispatcher = RecordingRunnerDispatcher()
+
+    with pytest.raises(InvalidRunnerRequestException, match="already exist"):
+        run_annotation(
+            test_db,
+            sample_scenario.users["admin"],
+            dispatcher,
+            PythonAnnotationRequest(
+                workflow_id=workflow.workflow_id,
+                new_fields={"name": {"type": "string"}},
+            ),
+        )
+    with pytest.raises(WorkflowNotFoundException):
+        run_annotation(
+            test_db,
+            sample_scenario.users["user"],
+            dispatcher,
+            PythonAnnotationRequest(
+                workflow_id=workflow.workflow_id,
+                new_fields={"note": {"type": "string"}},
+            ),
+        )
+
+    test_db.refresh(workflow)
+    assert workflow.workflow_status == WorkflowStatus.COMPLETE
+    assert dispatcher.jobs == []
+
+
+def test_annotation_publication_failure_marks_existing_workflow_failed(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    workflow = add_scoped_workflow(
+        test_db,
+        sample_scenario,
+        Schema(fields={"name": StringField()}),
+    )
+    dispatcher = RecordingRunnerDispatcher(enqueue_error=RunnerEnqueueFailedException("broker unavailable"))
+
+    with pytest.raises(RunnerEnqueueFailedException):
+        run_annotation(
+            test_db,
+            sample_scenario.users["admin"],
+            dispatcher,
+            PythonAnnotationRequest(
+                workflow_id=workflow.workflow_id,
+                new_fields={"note": {"type": "string"}},
+            ),
+        )
+
+    test_db.refresh(workflow)
+    assert workflow.workflow_status == WorkflowStatus.FAILED
+    assert workflow.workflow_message == "Runner publication failed."
+
+
 def test_map_filter_and_group_create_correct_targets_and_payloads(
     test_db: Session,
     sample_scenario: DatabaseScenario,
 ) -> None:
     source_schema = Schema(fields={"name": StringField(), "active": BoolField()})
-    source = add_scoped_workflow(test_db, sample_scenario, source_schema)
+    map_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
+    filter_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
+    group_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
     map_definition = add_function(
         test_db,
         "map",
@@ -247,9 +480,9 @@ def test_map_filter_and_group_create_correct_targets_and_payloads(
         admin,
         dispatcher,
         PythonMapRequest(
-            sourceWorkflowId=source.workflow_id,
-            functionDefinitionId=map_definition.function_definition_id,
-            outputName="Mapped",
+            source_workflow_id=map_source.workflow_id,
+            function_definition_id=map_definition.function_definition_id,
+            output_name="Mapped",
         ),
     )
     filtered = run_filter(
@@ -257,9 +490,9 @@ def test_map_filter_and_group_create_correct_targets_and_payloads(
         admin,
         dispatcher,
         PythonFilterRequest(
-            sourceWorkflowId=source.workflow_id,
-            functionDefinitionId=filter_definition.function_definition_id,
-            outputName="Filtered",
+            source_workflow_id=filter_source.workflow_id,
+            function_definition_id=filter_definition.function_definition_id,
+            output_name="Filtered",
         ),
     )
     grouped = run_group(
@@ -267,8 +500,8 @@ def test_map_filter_and_group_create_correct_targets_and_payloads(
         admin,
         dispatcher,
         PythonGroupRequest(
-            workflowId=source.workflow_id,
-            functionDefinitionId=group_definition.function_definition_id,
+            workflow_id=group_source.workflow_id,
+            function_definition_id=group_definition.function_definition_id,
         ),
     )
 
@@ -281,7 +514,7 @@ def test_map_filter_and_group_create_correct_targets_and_payloads(
     map_job, filter_job, group_job = dispatcher.jobs
     assert map_job[0] == mapped.job_id
     assert isinstance(map_job[1], PythonMapInput)
-    assert map_job[1].source_workflow_id == source.workflow_id
+    assert map_job[1].source_workflow_id == map_source.workflow_id
     assert map_job[1].output_workflow_id == mapped.workflow.workflow_id
     assert filter_job[0] == filtered.job_id
     assert isinstance(filter_job[1], PythonFilterInput)
@@ -312,8 +545,8 @@ def test_runner_validation_happens_before_target_creation_or_dispatch(
             sample_scenario.users["admin"],
             dispatcher,
             PythonFilterRequest(
-                sourceWorkflowId=source.workflow_id,
-                functionDefinitionId=invalid_filter.function_definition_id,
+                source_workflow_id=source.workflow_id,
+                function_definition_id=invalid_filter.function_definition_id,
             ),
         )
 
@@ -349,8 +582,8 @@ def test_incomplete_or_missing_sources_do_not_dispatch(
             admin,
             dispatcher,
             PythonMapRequest(
-                sourceWorkflowId=source.workflow_id,
-                functionDefinitionId=function.function_definition_id,
+                source_workflow_id=source.workflow_id,
+                function_definition_id=function.function_definition_id,
             ),
         )
     with pytest.raises(FunctionNotFoundException):
@@ -359,8 +592,8 @@ def test_incomplete_or_missing_sources_do_not_dispatch(
             admin,
             dispatcher,
             PythonMapRequest(
-                sourceWorkflowId=add_scoped_workflow(test_db, sample_scenario, source_schema).workflow_id,
-                functionDefinitionId=uuid4(),
+                source_workflow_id=add_scoped_workflow(test_db, sample_scenario, source_schema).workflow_id,
+                function_definition_id=uuid4(),
             ),
         )
     assert dispatcher.jobs == []
@@ -368,6 +601,7 @@ def test_incomplete_or_missing_sources_do_not_dispatch(
 
 def test_grouping_duplicate_is_reported_as_domain_conflict(
     test_db: Session,
+    testing_session_local: sessionmaker[Session],
     sample_scenario: DatabaseScenario,
 ) -> None:
     workflow = add_scoped_workflow(
@@ -377,11 +611,20 @@ def test_grouping_duplicate_is_reported_as_domain_conflict(
     )
     function = add_function(test_db, "duplicate-group", Get(field_name="name", type="string"))
     request = PythonGroupRequest(
-        workflowId=workflow.workflow_id,
-        functionDefinitionId=function.function_definition_id,
+        workflow_id=workflow.workflow_id,
+        function_definition_id=function.function_definition_id,
     )
 
-    run_group(test_db, sample_scenario.users["admin"], RecordingRunnerDispatcher(), request)
+    first = run_group(test_db, sample_scenario.users["admin"], RecordingRunnerDispatcher(), request)
+    PythonGroupRunner(testing_session_local).execute(
+        first.job_id,
+        PythonGroupInput(
+            runtime_name="python",
+            runner_name="group",
+            grouping_id=first.grouping.grouping_id,
+        ),
+    )
+    test_db.expire_all()
     with pytest.raises(GroupingAlreadyExistsException):
         run_group(test_db, sample_scenario.users["admin"], RecordingRunnerDispatcher(), request)
 
@@ -402,7 +645,7 @@ def test_enqueue_failure_marks_committed_target_failed(
                 test_db,
                 admin,
                 dispatcher,
-                PythonLabelSourceRequest(labelGroupId=label_group.label_group_id, outputName="Failed"),
+                PythonLabelSourceRequest(label_group_id=label_group.label_group_id, output_name="Failed"),
             )
         target = test_db.execute(select(Workflow).where(Workflow.workflow_name == "Failed")).scalar_one()
         assert target.workflow_status == WorkflowStatus.FAILED
@@ -420,10 +663,13 @@ def test_enqueue_failure_marks_committed_target_failed(
                 admin,
                 dispatcher,
                 PythonGroupRequest(
-                    workflowId=workflow.workflow_id,
-                    functionDefinitionId=function.function_definition_id,
+                    workflow_id=workflow.workflow_id,
+                    function_definition_id=function.function_definition_id,
                 ),
             )
         target = test_db.execute(select(Grouping).where(Grouping.workflow_id == workflow.workflow_id)).scalar_one()
         assert target.grouping_status == GroupingStatus.FAILED
         assert target.grouping_message == "Runner publication failed."
+        test_db.refresh(workflow)
+        assert workflow.workflow_status == WorkflowStatus.FAILED
+        assert workflow.workflow_message == "Runner publication failed."

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from src.filters.data_types import DataObj, FloatData, FloatField, Schema
 from src.filters.functions import Get
+from src.filters.lifecycle import queue_fjob
 from src.filters.models import FunctionDefinition, Instance, Workflow, WorkflowStatus
 from src.filters.runners.python.filter_runner import PythonFilterInput, PythonFilterRunner
 from src.schemas import Model
@@ -29,7 +30,7 @@ def test_filter_runner_rejects_non_boolean_function(
     output = Workflow(
         workflow_name="Filter output",
         schema=_dump(schema),
-        job_id=JOB_ID,
+        workflow_status=WorkflowStatus.COMPLETE,
     )
     function_definition = FunctionDefinition(
         namespace="test",
@@ -44,6 +45,7 @@ def test_filter_runner_rejects_non_boolean_function(
             value=_dump(DataObj(fields={"score": FloatData(value=0.5)})),
         )
     )
+    assert queue_fjob(test_db, JOB_ID, workflow_ids=(source.workflow_id, output.workflow_id))
     test_db.commit()
 
     with pytest.raises(ValueError, match="must return a boolean"):
@@ -60,5 +62,9 @@ def test_filter_runner_rejects_non_boolean_function(
 
     test_db.expire_all()
     stored_output = test_db.get(Workflow, output.workflow_id)
+    stored_source = test_db.get(Workflow, source.workflow_id)
     assert stored_output is not None
+    assert stored_source is not None
     assert stored_output.workflow_status == WorkflowStatus.FAILED
+    assert stored_source.workflow_status == WorkflowStatus.FAILED
+    assert stored_source.workflow_message == stored_output.workflow_message

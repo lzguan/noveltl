@@ -1,4 +1,4 @@
-import type { InstanceQueryResult, WorkflowResponse } from "@/api/models";
+import type { InstanceQueryResult, MDataType, WorkflowResponse } from "@/api/models";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -18,23 +18,36 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { RefreshCw } from "lucide-react";
-import { DataCell, GroupDataCell } from "./DataCells";
+import { useEffect, useState } from "react";
+import { DataCell, GroupDataCell, isMutableDataType, MutableDataCell } from "./DataCells";
 import { ErrorBlock, groupingLabel, LoadingBlock, PageControls, shortId } from "./panelUi";
 import type { ActiveGroupingState, Loadable, Page } from "../types";
 import type { TextReference } from "../types";
+
+export type CommitInstanceField = (
+	instanceId: string,
+	fieldName: string,
+	value: MDataType,
+) => Promise<void>;
 
 function ResultsTable({
 	workflow,
 	activeGroupings,
 	results,
 	openTextReference,
+	commitInstanceField,
 }: {
 	workflow: WorkflowResponse;
 	activeGroupings: readonly ActiveGroupingState[];
 	results: Page<InstanceQueryResult>;
 	openTextReference?: (reference: TextReference) => void;
+	commitInstanceField?: CommitInstanceField;
 }) {
 	const fields = Object.entries(workflow.schema.fields ?? {});
+	const [editingLocked, setEditingLocked] = useState(false);
+
+	useEffect(() => setEditingLocked(false), [results]);
+
 	return (
 		<Table>
 			<TableHeader>
@@ -62,14 +75,38 @@ function ResultsTable({
 						<TableCell className="font-mono">
 							{shortId(result.instance.instanceId)}
 						</TableCell>
-						{fields.map(([name]) => (
-							<TableCell key={name}>
-								<DataCell
-									value={result.instance.value.fields?.[name]}
-									openTextReference={openTextReference}
-								/>
-							</TableCell>
-						))}
+						{fields.map(([name, schemaField]) => {
+							const value = result.instance.value.fields?.[name];
+							const editable =
+								workflow.workflowStatus === "complete" &&
+								schemaField.mutable === true &&
+								commitInstanceField !== undefined &&
+								isMutableDataType(value);
+							return (
+								<TableCell key={name}>
+									{editable ? (
+										<MutableDataCell
+											value={value}
+											editLabel={`${name} for instance ${shortId(result.instance.instanceId)}`}
+											editingLocked={editingLocked}
+											setEditingLocked={setEditingLocked}
+											commit={(nextValue) =>
+												commitInstanceField(
+													result.instance.instanceId,
+													name,
+													nextValue,
+												)
+											}
+										/>
+									) : (
+										<DataCell
+											value={value}
+											openTextReference={openTextReference}
+										/>
+									)}
+								</TableCell>
+							);
+						})}
 						{activeGroupings.map((state) => (
 							<TableCell key={state.grouping.groupingId}>
 								<GroupDataCell
@@ -92,6 +129,7 @@ export function ResultsCard({
 	loadPreviousInstancePage,
 	loadNextInstancePage,
 	openTextReference,
+	commitInstanceField,
 }: {
 	workflow: WorkflowResponse;
 	activeGroupings: readonly ActiveGroupingState[];
@@ -100,6 +138,7 @@ export function ResultsCard({
 	loadPreviousInstancePage: () => void;
 	loadNextInstancePage: () => void;
 	openTextReference?: (reference: TextReference) => void;
+	commitInstanceField?: CommitInstanceField;
 }) {
 	const description =
 		results.status === "ready"
@@ -157,6 +196,7 @@ export function ResultsCard({
 							activeGroupings={activeGroupings}
 							results={results.data}
 							openTextReference={openTextReference}
+							commitInstanceField={commitInstanceField}
 						/>
 						<PageControls
 							page={results.data}

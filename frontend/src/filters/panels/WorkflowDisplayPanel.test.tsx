@@ -220,6 +220,7 @@ function createProps(overrides: PropsOverrides = {}): WorkflowDisplayPanelProps 
 					hasNext: true,
 				},
 			},
+			commitInstanceField: vi.fn(),
 			refreshInstanceResults: vi.fn(),
 			loadPreviousInstancePage: vi.fn(),
 			loadNextInstancePage: vi.fn(),

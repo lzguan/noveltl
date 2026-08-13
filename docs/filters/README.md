@@ -20,15 +20,16 @@ The backend currently implements:
 - a composable function abstract syntax tree (AST);
 - structural type checking and external-resource dependency resolution;
 - a Python compiler and execution context;
-- label-source, map, filter, and group runners;
+- label-source, annotation, map, filter, and group runners;
 - persistence models for stages, instances, function definitions, groupings,
   and group assignments;
 - bounded batch execution with job ownership and failure statuses.
 
 The read and write APIs are exposed through FastAPI, but the frontend is not
 implemented yet. Alembic migrations create the filter persistence tables and
-workflow permission-scope associations. Public operation services create
-pending targets and enqueue the registered Celery runner tasks, which the
+workflow permission-scope associations. Public operation services create new
+targets, atomically reserve complete job member sets as pending, and enqueue
+the registered Celery runner tasks, which the
 `filters-worker` process consumes. See
 [workers and task queues](../project-structure.md#workers-and-task-queues) for
 how that worker is configured, built, and started.
@@ -51,9 +52,10 @@ flowchart LR
     G --> GA[Group assignments]
 ```
 
-Source, map, and filter runners populate output workflow stages. A group runner
-does not create another workflow; it attaches a grouping definition and one
-derived key per instance to an existing stage.
+Source, map, and filter runners populate output workflow stages. The annotation
+runner adds mutable fields with defaults to an existing workflow and all of its
+instances. A group runner does not create another workflow; it attaches a
+grouping definition and one derived key per instance to an existing stage.
 
 The current code does not persist parent-stage relationships or a complete
 pipeline definition. Callers create workflows, function definitions, and
@@ -81,8 +83,9 @@ See [functions.md](functions.md).
 
 ### Runners and persistence
 
-Runners claim pending work using a job ID, validate the source and output
-schemas, process instances in bounded batches, and update the target status.
+Runners atomically claim all pending job members using a job ID, validate the
+source and output schemas, process instances in bounded batches, and move the
+whole job uniformly to complete or failed.
 Their retry behavior differs by operation; grouping can resume from missing
 assignments, while output-producing runners require an empty target stage.
 

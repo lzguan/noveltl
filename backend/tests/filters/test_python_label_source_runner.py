@@ -11,6 +11,7 @@ from src.filters.data_types import (
     Schema,
     StringField,
 )
+from src.filters.lifecycle import queue_fjob
 from src.filters.models import Instance, Workflow, WorkflowStatus
 from src.filters.runners.python.label_source_runner import (
     LABEL_SOURCE_SCHEMA,
@@ -38,9 +39,10 @@ def _create_output(
     output = Workflow(
         workflow_name="Label source output",
         schema=_dump(schema),
-        job_id=JOB_ID,
     )
     db.add(output)
+    db.flush()
+    assert queue_fjob(db, JOB_ID, workflow_ids=(output.workflow_id,))
     db.commit()
     return output
 

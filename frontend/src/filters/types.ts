@@ -7,6 +7,7 @@ import type {
 	InstanceQueryResult,
 	LabelRef,
 	LabelGroup,
+	MDataType,
 	Signature,
 	SortKey,
 	SortDirection,
@@ -79,6 +80,7 @@ export interface QuerySectionModel {
 
 export interface InstanceResultsModel {
 	results: Loadable<Page<InstanceQueryResult>>;
+	commitInstanceField: (instanceId: string, fieldName: string, value: MDataType) => Promise<void>;
 	refreshInstanceResults: () => void;
 	loadPreviousInstancePage: () => void;
 	loadNextInstancePage: () => void;
@@ -113,12 +115,12 @@ export interface FunctionDefinitionFormModel {
 	uploadFunctionDefinition: () => Promise<void>;
 }
 
-export type RunnerOperation = "labelSource" | "map" | "filter" | "group";
+export type RunnerOperation = "labelSource" | "annotation" | "map" | "filter" | "group";
 
 export type RunnerFormStatus =
 	| { status: "idle" }
 	| { status: "submitting" }
-	| { status: "succeeded"; target: "workflow" | "grouping" }
+	| { status: "succeeded"; target: "workflow" | "grouping" | "annotation" }
 	| { status: "error"; message: string };
 
 export interface SearchOptionsModel<T> {
@@ -137,6 +139,29 @@ export interface LabelSourceRunnerFormModel {
 	selectLabelGroup: (labelGroup: LabelGroup | null) => void;
 	setOutputWorkflowName: (name: string) => void;
 	submitLabelSourceRunner: () => Promise<void>;
+}
+
+export type AnnotationFieldType = "string" | "int" | "float" | "bool";
+
+export interface AnnotationFieldDraft {
+	id: number;
+	name: string;
+	type: AnnotationFieldType;
+	defaultValue: string | boolean;
+}
+
+export interface AnnotationRunnerFormModel {
+	workflows: SearchOptionsModel<WorkflowSummary>;
+	selectedWorkflow: WorkflowSummary | null;
+	fields: readonly AnnotationFieldDraft[];
+	formStatus: RunnerFormStatus;
+	selectWorkflow: (workflow: WorkflowSummary | null) => void;
+	addField: () => void;
+	removeField: (id: number) => void;
+	setFieldName: (id: number, name: string) => void;
+	setFieldType: (id: number, type: AnnotationFieldType) => void;
+	setFieldDefaultValue: (id: number, value: string | boolean) => void;
+	submitAnnotationRunner: () => Promise<void>;
 }
 
 export interface WorkflowFunctionRunnerOptionsModel {
@@ -174,6 +199,7 @@ export interface GroupRunnerFormModel extends WorkflowFunctionRunnerOptionsModel
 export interface RunnerPanelModel {
 	activeRunnerOperation: RunnerOperation;
 	labelSourceForm: LabelSourceRunnerFormModel;
+	annotationForm: AnnotationRunnerFormModel;
 	mapForm: MapRunnerFormModel;
 	filterForm: FilterRunnerFormModel;
 	groupForm: GroupRunnerFormModel;

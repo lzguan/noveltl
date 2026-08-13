@@ -5,10 +5,11 @@ from uuid import UUID
 
 from pydantic import ConfigDict, Field, StringConstraints, TypeAdapter, field_validator, model_validator
 
-from src.filters.data_types import DataObj, FieldName, Schema
+from src.filters.data_types import DataObj, FieldName, MDataType, Schema
 from src.filters.exceptions import InvalidSortKeyException, UnsupportedSortTypeException
 from src.filters.functions import Signature, function_adapter
 from src.filters.models import GroupingStatus, WorkflowStatus, WorkflowUseCase
+from src.filters.runners.python.annotation_runner import NewFieldRequest
 from src.filters.runners.python.group_runner import GroupData
 from src.filters.runners.python.types import PythonRunnerInput
 from src.schemas import Model
@@ -156,6 +157,10 @@ class FilterWriteRequest(Model):
     model_config = ConfigDict(extra="forbid")
 
 
+class UpdateInstanceRequest(FilterWriteRequest):
+    fields: dict[FieldName, MDataType] = Field(min_length=1, max_length=100)
+
+
 class CreateFunctionDefinitionRequest(FilterWriteRequest):
     namespace: RegistryName
     function_name: RegistryName
@@ -189,6 +194,11 @@ class RenameWorkflowRequest(FilterWriteRequest):
 class PythonLabelSourceRequest(FilterWriteRequest):
     label_group_id: UUID = Field(description="Label group whose current labels will seed the workflow.")
     output_name: str | None = Field(default=None, max_length=100)
+
+
+class PythonAnnotationRequest(FilterWriteRequest):
+    workflow_id: UUID = Field(description="Completed workflow whose instances will receive the new fields.")
+    new_fields: dict[FieldName, NewFieldRequest] = Field(min_length=1, max_length=100)
 
 
 class PythonMapRequest(FilterWriteRequest):

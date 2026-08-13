@@ -4,6 +4,7 @@ import {
 	readWorkflowFiltersWorkflowsWorkflowIdGet,
 	readWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGet,
 	readWorkflowsFiltersWorkflowsGet,
+	updateFilterInstance,
 } from "@/api/endpoints/filters/filters";
 import type {
 	Frame,
@@ -28,6 +29,7 @@ vi.mock("@/api/endpoints/filters/filters", () => ({
 	readWorkflowFiltersWorkflowsWorkflowIdGet: vi.fn(),
 	readWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGet: vi.fn(),
 	readWorkflowsFiltersWorkflowsGet: vi.fn(),
+	updateFilterInstance: vi.fn(),
 }));
 
 const workflowSummary: WorkflowSummary = {
@@ -275,6 +277,55 @@ describe("workflow viewer hooks", () => {
 			{ frame, cursor: "instance-49", limit: 50 },
 			expect.objectContaining({ signal: expect.any(AbortSignal) }),
 		);
+	});
+
+	it("updates one instance field and replaces the cached instance", async () => {
+		const original = instanceResult(1);
+		const updatedInstance = {
+			...original.instance,
+			value: {
+				...original.instance.value,
+				fields: {
+					...original.instance.value.fields,
+					rank: { kind: "value" as const, type: "int" as const, value: 9 },
+				},
+			},
+		};
+		vi.mocked(readInstancesAdvancedFiltersInstancesQueryPost).mockResolvedValue({
+			status: 200,
+			data: [original],
+			headers: new Headers(),
+		});
+		vi.mocked(updateFilterInstance).mockResolvedValue({
+			status: 200,
+			data: updatedInstance,
+			headers: new Headers(),
+		});
+		const { result } = renderHook(() => useInstanceResults());
+		act(() => result.current.applyFrame(frame));
+		await waitFor(() => expect(result.current.results.status).toBe("ready"));
+
+		await act(() =>
+			result.current.commitInstanceField("instance-1", "rank", {
+				kind: "value",
+				type: "int",
+				value: 9,
+			}),
+		);
+
+		expect(updateFilterInstance).toHaveBeenCalledWith("instance-1", {
+			fields: { rank: { kind: "value", type: "int", value: 9 } },
+		});
+		expect(result.current.results).toEqual({
+			status: "ready",
+			data: {
+				items: [{ ...original, instance: updatedInstance }],
+				start: 1,
+				end: 1,
+				hasPrevious: false,
+				hasNext: false,
+			},
+		});
 	});
 
 	it("builds a frame from active grouping projections and draft sort keys", () => {

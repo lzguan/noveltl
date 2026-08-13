@@ -8,11 +8,12 @@ from sqlalchemy.orm import Session
 
 from src.auth.models import User
 from src.auth.utils import create_access_token
-from src.filters.data_types import BoolField, Schema, StringField
+from src.filters.data_types import BoolField, DataObj, Schema, StringData, StringField
 from src.filters.exceptions import RunnerEnqueueFailedException
 from src.filters.functions import Extend, Get, LiteralString
 from src.filters.models import (
     FunctionDefinition,
+    Instance,
     Workflow,
     WorkflowLabelGroup,
     WorkflowNovel,
@@ -77,7 +78,10 @@ def test_write_routes_return_operation_specific_success_responses(
 ) -> None:
     headers = auth_headers(sample_scenario.users["admin"])
     source_schema = Schema(fields={"name": StringField(), "active": BoolField()})
-    source = add_scoped_workflow(test_db, sample_scenario, source_schema)
+    map_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
+    filter_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
+    group_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
+    annotation_source = add_scoped_workflow(test_db, sample_scenario, source_schema)
     map_function = add_function(
         test_db,
         "map",
@@ -96,7 +100,7 @@ def test_write_routes_return_operation_specific_success_responses(
         },
     )
     rename_response = client.patch(
-        f"/filters/workflows/{source.workflow_id}",
+        f"/filters/workflows/{map_source.workflow_id}",
         headers=headers,
         json={"workflowName": "Source"},
     )
@@ -112,7 +116,7 @@ def test_write_routes_return_operation_specific_success_responses(
         "/filters/runners/python/map",
         headers=headers,
         json={
-            "sourceWorkflowId": str(source.workflow_id),
+            "sourceWorkflowId": str(map_source.workflow_id),
             "functionDefinitionId": str(map_function.function_definition_id),
             "outputName": "Mapped",
         },
@@ -121,7 +125,7 @@ def test_write_routes_return_operation_specific_success_responses(
         "/filters/runners/python/filter",
         headers=headers,
         json={
-            "sourceWorkflowId": str(source.workflow_id),
+            "sourceWorkflowId": str(filter_source.workflow_id),
             "functionDefinitionId": str(filter_function.function_definition_id),
             "outputName": "Filtered",
         },
@@ -130,8 +134,16 @@ def test_write_routes_return_operation_specific_success_responses(
         "/filters/runners/python/group",
         headers=headers,
         json={
-            "workflowId": str(source.workflow_id),
+            "workflowId": str(group_source.workflow_id),
             "functionDefinitionId": str(group_function.function_definition_id),
+        },
+    )
+    annotation_response = client.post(
+        "/filters/runners/python/annotation",
+        headers=headers,
+        json={
+            "workflowId": str(annotation_source.workflow_id),
+            "newFields": {"note": {"type": "string", "defaultValue": "review"}},
         },
     )
 
@@ -139,12 +151,12 @@ def test_write_routes_return_operation_specific_success_responses(
     assert function_response.json()["functionName"] == "literal"
     assert rename_response.status_code == status.HTTP_200_OK
     assert rename_response.json()["workflowName"] == "Source"
-    for response in (label_response, map_response, filter_response):
+    for response in (label_response, map_response, filter_response, annotation_response):
         assert response.status_code == status.HTTP_202_ACCEPTED
         assert response.json()["jobId"] == response.json()["workflow"]["jobId"]
     assert group_response.status_code == status.HTTP_202_ACCEPTED
     assert group_response.json()["jobId"] == group_response.json()["grouping"]["jobId"]
-    assert len(recording_runner_dispatcher.jobs) == 4
+    assert len(recording_runner_dispatcher.jobs) == 5
 
 
 def test_validate_function_returns_signature_without_persisting(
@@ -170,6 +182,64 @@ def test_validate_function_returns_signature_without_persisting(
         }
     }
     assert set(test_db.scalars(select(FunctionDefinition.function_definition_id))) == function_ids_before
+
+
+def test_update_instance_route_validates_permissions_fields_and_workflow_state(
+    client: TestClient,
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+) -> None:
+    workflow = add_scoped_workflow(
+        test_db,
+        sample_scenario,
+        Schema(fields={"source": StringField(), "note": StringField(mutable=True)}),
+    )
+    instance = Instance(
+        workflow_id=workflow.workflow_id,
+        value=dump_model(DataObj(fields={"source": StringData(value="Alice"), "note": StringData(value="")})),
+    )
+    test_db.add(instance)
+    test_db.commit()
+    path = f"/filters/instances/{instance.instance_id}"
+    admin_headers = auth_headers(sample_scenario.users["admin"])
+
+    updated = client.patch(
+        path,
+        headers=admin_headers,
+        json={"fields": {"note": {"type": "string", "value": "reviewed"}}},
+    )
+    immutable = client.patch(
+        path,
+        headers=admin_headers,
+        json={"fields": {"source": {"type": "string", "value": "changed"}}},
+    )
+    inaccessible = client.patch(
+        path,
+        headers=auth_headers(sample_scenario.users["user"]),
+        json={"fields": {"note": {"type": "string", "value": "hidden"}}},
+    )
+    invalid_type = client.patch(
+        path,
+        headers=admin_headers,
+        json={"fields": {"note": {"type": "labelRef", "value": {}}}},
+    )
+    workflow.workflow_status = WorkflowStatus.PROCESSING
+    test_db.commit()
+    active = client.patch(
+        path,
+        headers=admin_headers,
+        json={"fields": {"note": {"type": "string", "value": "active"}}},
+    )
+
+    assert updated.status_code == status.HTTP_200_OK
+    assert updated.json()["value"]["fields"] == {
+        "source": {"kind": "value", "type": "string", "value": "Alice"},
+        "note": {"kind": "value", "type": "string", "value": "reviewed"},
+    }
+    assert immutable.status_code == status.HTTP_400_BAD_REQUEST
+    assert inaccessible.status_code == status.HTTP_404_NOT_FOUND
+    assert invalid_type.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert active.status_code == status.HTTP_409_CONFLICT
 
 
 def test_write_routes_map_missing_resources_to_404(
@@ -350,10 +420,16 @@ def test_write_request_validation_and_openapi_contract(
         ),
         "/filters/functions": ("post", "create_filter_function", "CreateFunctionDefinitionRequest"),
         "/filters/workflows/{workflowId}": ("patch", "rename_filter_workflow", "RenameWorkflowRequest"),
+        "/filters/instances/{instanceId}": ("patch", "update_filter_instance", "UpdateInstanceRequest"),
         "/filters/runners/python/label-source": (
             "post",
             "run_python_label_source",
             "PythonLabelSourceRequest",
+        ),
+        "/filters/runners/python/annotation": (
+            "post",
+            "run_python_annotation",
+            "PythonAnnotationRequest",
         ),
         "/filters/runners/python/map": ("post", "run_python_map", "PythonMapRequest"),
         "/filters/runners/python/filter": ("post", "run_python_filter", "PythonFilterRequest"),

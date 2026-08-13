@@ -1,6 +1,10 @@
-import { readInstancesAdvancedFiltersInstancesQueryPost } from "@/api/endpoints/filters/filters";
-import type { Frame } from "@/api/models";
+import {
+	readInstancesAdvancedFiltersInstancesQueryPost,
+	updateFilterInstance,
+} from "@/api/endpoints/filters/filters";
+import type { Frame, MDataType } from "@/api/models";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { apiErrorMessage, requestErrorMessage } from "../apiErrors";
 import type { InstanceResultsModel, QueryStatus } from "../types";
 import { errorMessage, requestError, WORKFLOW_VIEWER_PAGE_SIZE } from "./workflowViewerUtils";
 
@@ -14,6 +18,7 @@ export interface InstanceResultsState {
 	queryStatus: QueryStatus;
 	results: InstanceResultsModel["results"];
 	applyFrame: (frame: Frame) => void;
+	commitInstanceField: InstanceResultsModel["commitInstanceField"];
 	refreshInstanceResults: InstanceResultsModel["refreshInstanceResults"];
 	loadPreviousInstancePage: InstanceResultsModel["loadPreviousInstancePage"];
 	loadNextInstancePage: InstanceResultsModel["loadNextInstancePage"];
@@ -111,10 +116,40 @@ export function useInstanceResults(): InstanceResultsState {
 		runQuery(pagination.frame, cursor, pagination);
 	}
 
+	async function commitInstanceField(instanceId: string, fieldName: string, value: MDataType) {
+		let response: Awaited<ReturnType<typeof updateFilterInstance>>;
+		try {
+			response = await updateFilterInstance(instanceId, {
+				fields: { [fieldName]: value },
+			});
+		} catch (error) {
+			throw new Error(requestErrorMessage(error));
+		}
+		if (response.status !== 200) {
+			throw new Error(apiErrorMessage(response.data, "Could not update the instance."));
+		}
+
+		setResults((current) => {
+			if (current.status !== "ready") return current;
+			return {
+				...current,
+				data: {
+					...current.data,
+					items: current.data.items.map((result) =>
+						result.instance.instanceId === instanceId
+							? { ...result, instance: response.data }
+							: result,
+					),
+				},
+			};
+		});
+	}
+
 	return {
 		queryStatus,
 		results,
 		applyFrame,
+		commitInstanceField,
 		refreshInstanceResults,
 		loadPreviousInstancePage,
 		loadNextInstancePage,

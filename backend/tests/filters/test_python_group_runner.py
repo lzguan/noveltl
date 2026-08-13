@@ -13,6 +13,7 @@ from src.filters.data_types import (
     TextSpanField,
 )
 from src.filters.functions import Call, Get, TextOf
+from src.filters.lifecycle import queue_fjob
 from src.filters.models import (
     FunctionDefinition,
     GroupAssignment,
@@ -39,7 +40,11 @@ def _create_string_grouping(
     mutable: bool = False,
 ) -> tuple[Workflow, Grouping, list[Instance]]:
     schema = Schema(fields={"word": StringField(mutable=mutable)})
-    workflow = Workflow(workflow_name="Grouping test", schema=_dump(schema))
+    workflow = Workflow(
+        workflow_name="Grouping test",
+        schema=_dump(schema),
+        workflow_status=WorkflowStatus.COMPLETE,
+    )
     function = Get(field_name="word", type="string")
     function_definition = FunctionDefinition(
         namespace="test",
@@ -59,9 +64,16 @@ def _create_string_grouping(
     grouping = Grouping(
         workflow_id=workflow.workflow_id,
         function_definition_id=function_definition.function_definition_id,
-        job_id=JOB_ID,
+        grouping_status=GroupingStatus.COMPLETE,
     )
     db.add_all([*instances, grouping])
+    db.flush()
+    assert queue_fjob(
+        db,
+        JOB_ID,
+        workflow_ids=(workflow.workflow_id,),
+        grouping_ids=(grouping.grouping_id,),
+    )
     db.commit()
     return workflow, grouping, instances
 
@@ -132,9 +144,16 @@ def test_group_runner_preloads_text_dependencies(
     grouping = Grouping(
         workflow_id=workflow.workflow_id,
         function_definition_id=function_definition.function_definition_id,
-        job_id=JOB_ID,
+        grouping_status=GroupingStatus.COMPLETE,
     )
     test_db.add_all([instance, grouping])
+    test_db.flush()
+    assert queue_fjob(
+        test_db,
+        JOB_ID,
+        workflow_ids=(workflow.workflow_id,),
+        grouping_ids=(grouping.grouping_id,),
+    )
     test_db.commit()
 
     PythonGroupRunner(testing_session_local).execute(

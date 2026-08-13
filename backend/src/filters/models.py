@@ -9,6 +9,7 @@ from src.models import Base
 
 
 class GroupingStatus(StrEnum):
+    NEW = "new"
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETE = "complete"
@@ -16,6 +17,7 @@ class GroupingStatus(StrEnum):
 
 
 class WorkflowStatus(StrEnum):
+    NEW = "new"
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETE = "complete"
@@ -57,7 +59,7 @@ class Workflow(Base):
             values_callable=lambda values: [status.value for status in values],
         ),
         nullable=False,
-        default=WorkflowStatus.PENDING,
+        default=WorkflowStatus.NEW,
     )
     workflow_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -170,7 +172,7 @@ class Grouping(Base):
             values_callable=lambda values: [status.value for status in values],
         ),
         nullable=False,
-        default=GroupingStatus.PENDING,
+        default=GroupingStatus.NEW,
     )
     grouping_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 

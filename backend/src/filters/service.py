@@ -10,6 +10,7 @@ from sqlalchemy import (
     exists,
     func,
     insert,
+    literal_column,
     or_,
     select,
     type_coerce,
@@ -20,7 +21,16 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session, aliased
 
 from src.auth.models import User
-from src.filters.data_types import BoolField, DataObj, IntField, Schema, StringField, data_adapter, extends
+from src.filters.data_types import (
+    MAX_SCHEMA_FIELDS,
+    BoolField,
+    DataObj,
+    IntField,
+    Schema,
+    StringField,
+    data_adapter,
+    extends,
+)
 from src.filters.dispatch.dispatcher import RunnerDispatcher
 from src.filters.exceptions import (
     FunctionAlreadyExistsException,
@@ -31,6 +41,7 @@ from src.filters.exceptions import (
     GroupingValueTypeMismatchException,
     InstanceNotFoundException,
     InvalidInstanceQueryException,
+    InvalidInstanceUpdateException,
     InvalidRunnerRequestException,
     RunnerEnqueueFailedException,
     UnsupportedSortTypeException,
@@ -38,6 +49,7 @@ from src.filters.exceptions import (
     WorkflowNotReadyException,
 )
 from src.filters.functions import FunctionType, function_adapter
+from src.filters.lifecycle import abort_fjob, queue_fjob
 from src.filters.models import (
     FunctionDefinition,
     GroupAssignment,
@@ -56,6 +68,7 @@ from src.filters.permissions import (
     workflow_mod_access_select,
     workflow_mod_access_update,
 )
+from src.filters.runners.python.annotation_runner import PythonAnnotationInput
 from src.filters.runners.python.filter_runner import PythonFilterInput
 from src.filters.runners.python.group_runner import PythonGroupInput
 from src.filters.runners.python.label_source_runner import LABEL_SOURCE_SCHEMA, PythonLabelSourceInput
@@ -70,6 +83,8 @@ from src.filters.schemas import (
     GroupValueCount,
     InstanceQuery,
     InstanceQueryResult,
+    InstanceResponse,
+    PythonAnnotationRequest,
     PythonFilterRequest,
     PythonGroupRequest,
     PythonLabelSourceRequest,
@@ -77,6 +92,7 @@ from src.filters.schemas import (
     RenameWorkflowRequest,
     RunnerInput,
     SortDirection,
+    UpdateInstanceRequest,
     ValidateFunctionDefinitionRequest,
     WorkflowOperationAccepted,
     WorkflowResponse,
@@ -84,6 +100,17 @@ from src.filters.schemas import (
 )
 from src.labels.models import LabelGroup
 from src.labels.permissions import label_group_mod_access_select
+
+READABLE_WORKFLOW_STATUSES = (
+    WorkflowStatus.PENDING,
+    WorkflowStatus.PROCESSING,
+    WorkflowStatus.COMPLETE,
+)
+READABLE_GROUPING_STATUSES = (
+    GroupingStatus.PENDING,
+    GroupingStatus.PROCESSING,
+    GroupingStatus.COMPLETE,
+)
 
 
 def query_function_namespaces(db: Session, current_user: User, search: str | None) -> list[str]:
@@ -289,7 +316,7 @@ def query_grouping_values(
     offset: int,
 ) -> list[GroupValueCount]:
     grouping = query_grouping(db, current_user, grouping_id)
-    if grouping.grouping_status != GroupingStatus.COMPLETE:
+    if grouping.grouping_status not in READABLE_GROUPING_STATUSES:
         raise GroupingNotReadyException(
             f"Grouping {grouping_id} is {grouping.grouping_status.value} and cannot be queried for values."
         )
@@ -321,13 +348,13 @@ def query_grouping_values(
 def query_instances_of_workflow(
     db: Session, current_user: User, workflow_id: UUID, limit: int, cursor: UUID | None
 ) -> list[Instance]:
-    complete_workflow = exists(
+    readable_workflow = exists(
         select(1)
         .select_from(Workflow)
         .where(Workflow.workflow_id == Instance.workflow_id)
-        .where(Workflow.workflow_status == WorkflowStatus.COMPLETE)
+        .where(Workflow.workflow_status.in_(READABLE_WORKFLOW_STATUSES))
     )
-    q = select(Instance).where(Instance.workflow_id == workflow_id).where(complete_workflow)
+    q = select(Instance).where(Instance.workflow_id == workflow_id).where(readable_workflow)
     q = instance_mod_access_select(q, current_user)
     if cursor is not None:
         q = q.where(Instance.instance_id > cursor)
@@ -335,11 +362,75 @@ def query_instances_of_workflow(
     instances = list(db.execute(q).scalars().all())
     if not instances:
         workflow = query_workflow(db, current_user, workflow_id)
-        if workflow.workflow_status != WorkflowStatus.COMPLETE:
+        if workflow.workflow_status not in READABLE_WORKFLOW_STATUSES:
             raise WorkflowNotReadyException(
                 f"Workflow {workflow_id} is {workflow.workflow_status.value} and cannot be queried for instances."
             )
     return instances
+
+
+def update_instance(
+    db: Session,
+    current_user: User,
+    instance_id: UUID,
+    request: UpdateInstanceRequest,
+) -> InstanceResponse:
+    """Atomically update mutable scalar fields on one completed workflow instance."""
+    q = (
+        select(
+            Workflow.workflow_id,
+            Workflow.schema,
+            Workflow.workflow_status,
+        )
+        .select_from(Workflow)
+        .join(Instance, Instance.workflow_id == Workflow.workflow_id)
+        .where(Instance.instance_id == instance_id)
+        .with_for_update(of=(Workflow, Instance))
+    )
+    q = workflow_mod_access_select(q, current_user)
+    resource = db.execute(q).one_or_none()
+    if resource is None:
+        raise InstanceNotFoundException(f"Instance with ID {instance_id} not found or not accessible.")
+    if resource.workflow_status != WorkflowStatus.COMPLETE:
+        raise WorkflowNotReadyException(
+            f"Workflow {resource.workflow_id} is {resource.workflow_status.value} and cannot be modified."
+        )
+
+    schema = Schema.model_validate(resource.schema)
+    for field_name, value in request.fields.items():
+        field = schema.fields.get(field_name)
+        if field is None:
+            raise InvalidInstanceUpdateException(f"Field '{field_name}' does not exist in the workflow schema.")
+        if not field.mutable:
+            raise InvalidInstanceUpdateException(f"Field '{field_name}' is immutable.")
+        if field.type != value.type:
+            raise InvalidInstanceUpdateException(f"Field '{field_name}' requires type {field.type}, not {value.type}.")
+
+    patch = {
+        field_name: value.model_dump(mode="json", by_alias=True, exclude_computed_fields=True)
+        for field_name, value in request.fields.items()
+    }
+    updated = db.execute(
+        update(Instance)
+        .where(Instance.instance_id == instance_id, Instance.workflow_id == resource.workflow_id)
+        .values(
+            value=func.jsonb_set(
+                Instance.value,
+                literal_column("'{fields}'"),
+                Instance.value["fields"].concat(patch),
+            )
+        )
+        .returning(Instance.instance_id, Instance.workflow_id, Instance.value)
+    ).one()
+    response = InstanceResponse.model_validate(
+        {
+            "instance_id": updated.instance_id,
+            "workflow_id": updated.workflow_id,
+            "value": updated.value,
+        }
+    )
+    db.commit()
+    return response
 
 
 def query_instances_of_workflow_advanced(
@@ -353,7 +444,7 @@ def query_instances_of_workflow_advanced(
         ).scalar_one()
     except NoResultFound as e:
         raise WorkflowNotFoundException(f"Workflow with ID {workflow_id} not found or not accessible.") from e
-    if workflow.workflow_status != WorkflowStatus.COMPLETE:
+    if workflow.workflow_status not in READABLE_WORKFLOW_STATUSES:
         raise WorkflowNotReadyException(
             f"Workflow {workflow_id} is {workflow.workflow_status.value} and cannot be queried for instances."
         )
@@ -380,7 +471,7 @@ def query_instances_of_workflow_advanced(
     group_value_types: list[str] = []
     for index, group_filter in enumerate(request.frame.group_filters):
         grouping, function_definition = groups[group_filter.grouping_id]
-        if grouping.grouping_status != GroupingStatus.COMPLETE:
+        if grouping.grouping_status not in READABLE_GROUPING_STATUSES:
             raise GroupingNotReadyException(
                 f"Grouping {grouping.grouping_id} is {grouping.grouping_status.value} and cannot be queried."
             )
@@ -593,48 +684,17 @@ def _parse_workflow_schema(
     return workflow, Schema.model_validate(workflow.schema)
 
 
-def dispatch_workflow_runner(
+def dispatch_fjob(
     db: Session,
     dispatcher: RunnerDispatcher,
-    workflow_id: UUID,
     job_id: UUID,
     runner_input: RunnerInput,
 ) -> None:
-    """Publish a committed workflow job and persist a definite publication failure."""
+    """Publish a committed filter job and abort a definite publication failure."""
     try:
         dispatcher.enqueue(job_id, runner_input)
     except RunnerEnqueueFailedException:
-        db.execute(
-            update(Workflow)
-            .where(Workflow.workflow_id == workflow_id, Workflow.job_id == job_id)
-            .values(
-                workflow_status=WorkflowStatus.FAILED,
-                workflow_message="Runner publication failed.",
-            )
-        )
-        db.commit()
-        raise
-
-
-def dispatch_grouping_runner(
-    db: Session,
-    dispatcher: RunnerDispatcher,
-    grouping_id: UUID,
-    job_id: UUID,
-    runner_input: RunnerInput,
-) -> None:
-    """Publish a committed grouping job and persist a definite publication failure."""
-    try:
-        dispatcher.enqueue(job_id, runner_input)
-    except RunnerEnqueueFailedException:
-        db.execute(
-            update(Grouping)
-            .where(Grouping.grouping_id == grouping_id, Grouping.job_id == job_id)
-            .values(
-                grouping_status=GroupingStatus.FAILED,
-                grouping_message="Runner publication failed.",
-            )
-        )
+        abort_fjob(db, job_id, "Runner publication failed.")
         db.commit()
         raise
 
@@ -672,8 +732,7 @@ def run_label_source(
                 by_alias=True,
                 exclude_computed_fields=True,
             ),
-            job_id=job_id,
-            workflow_status=WorkflowStatus.PENDING,
+            workflow_status=WorkflowStatus.NEW,
         )
         .returning(Workflow)
     ).scalar_one()
@@ -683,6 +742,10 @@ def run_label_source(
             WorkflowLabelGroup(workflow_id=workflow.workflow_id, label_group_id=label_group.label_group_id),
         ]
     )
+    db.flush()
+    if not queue_fjob(db, job_id, workflow_ids=(workflow.workflow_id,), allow_failed=False):
+        db.rollback()
+        raise WorkflowNotReadyException("The label-source output workflow could not be queued.")
     db.commit()
 
     runner_input = PythonLabelSourceInput(
@@ -691,7 +754,7 @@ def run_label_source(
         label_group_id=label_group.label_group_id,
         output_workflow_id=workflow.workflow_id,
     )
-    dispatch_workflow_runner(db, dispatcher, workflow.workflow_id, job_id, runner_input)
+    dispatch_fjob(db, dispatcher, job_id, runner_input)
     return WorkflowOperationAccepted(
         job_id=job_id,
         workflow=query_workflow(db, current_user, workflow.workflow_id),
@@ -705,22 +768,60 @@ def validate_object_function(function: FunctionType, operation_name: str) -> Sch
     return function.signature.args[0]
 
 
+def run_annotation(
+    db: Session,
+    current_user: User,
+    dispatcher: RunnerDispatcher,
+    request: PythonAnnotationRequest,
+) -> WorkflowOperationAccepted:
+    """Add mutable fields to an existing workflow through an annotation job."""
+    workflow, schema = _parse_workflow_schema(db, current_user, request.workflow_id)
+    duplicate_fields = sorted(set(schema.fields).intersection(request.new_fields))
+    if duplicate_fields:
+        raise InvalidRunnerRequestException(
+            "Annotation fields already exist in the workflow schema: " + ", ".join(duplicate_fields)
+        )
+    if len(schema.fields) + len(request.new_fields) > MAX_SCHEMA_FIELDS:
+        raise InvalidRunnerRequestException(f"A workflow schema may contain at most {MAX_SCHEMA_FIELDS} fields.")
+
+    job_id = uuid4()
+    if not queue_fjob(
+        db,
+        job_id,
+        workflow_ids=(workflow.workflow_id,),
+        allow_failed=False,
+    ):
+        db.rollback()
+        raise WorkflowNotReadyException(f"Workflow {workflow.workflow_id} could not be queued for annotation.")
+    db.commit()
+
+    runner_input = PythonAnnotationInput(
+        runtime_name="python",
+        runner_name="annotation",
+        workflow_id=workflow.workflow_id,
+        new_fields=request.new_fields,
+    )
+    dispatch_fjob(db, dispatcher, job_id, runner_input)
+    return WorkflowOperationAccepted(
+        job_id=job_id,
+        workflow=query_workflow(db, current_user, workflow.workflow_id),
+    )
+
+
 def create_derived_workflow(
     db: Session,
     source_workflow_id: UUID,
     workflow_name: str | None,
     schema: Schema,
-    job_id: UUID,
 ) -> Workflow:
-    """Create and commit a pending workflow with its inherited permission scope."""
+    """Create an at-rest workflow with its inherited permission scope."""
     workflow = db.execute(
         insert(Workflow)
         .values(
             workflow_name=workflow_name,
             use_case=WorkflowUseCase.ADVANCED,
             schema=schema.model_dump(mode="json", by_alias=True, exclude_computed_fields=True),
-            job_id=job_id,
-            workflow_status=WorkflowStatus.PENDING,
+            workflow_status=WorkflowStatus.NEW,
         )
         .returning(Workflow)
     ).scalar_one()
@@ -736,7 +837,7 @@ def create_derived_workflow(
         WorkflowLabelGroup(workflow_id=workflow.workflow_id, label_group_id=label_group_id)
         for label_group_id in label_group_ids
     )
-    db.commit()
+    db.flush()
     return workflow
 
 
@@ -762,8 +863,16 @@ def run_map(
         source.workflow_id,
         request.output_name,
         output_schema,
-        job_id,
     )
+    if not queue_fjob(
+        db,
+        job_id,
+        workflow_ids=(source.workflow_id, output.workflow_id),
+        allow_failed=False,
+    ):
+        db.rollback()
+        raise WorkflowNotReadyException(f"Workflow {source.workflow_id} could not be queued for mapping.")
+    db.commit()
     runner_input = PythonMapInput(
         runtime_name="python",
         runner_name="map",
@@ -771,7 +880,7 @@ def run_map(
         output_workflow_id=output.workflow_id,
         function_definition_id=request.function_definition_id,
     )
-    dispatch_workflow_runner(db, dispatcher, output.workflow_id, job_id, runner_input)
+    dispatch_fjob(db, dispatcher, job_id, runner_input)
     return WorkflowOperationAccepted(
         job_id=job_id,
         workflow=query_workflow(db, current_user, output.workflow_id),
@@ -799,8 +908,16 @@ def run_filter(
         source.workflow_id,
         request.output_name,
         source_schema,
-        job_id,
     )
+    if not queue_fjob(
+        db,
+        job_id,
+        workflow_ids=(source.workflow_id, output.workflow_id),
+        allow_failed=False,
+    ):
+        db.rollback()
+        raise WorkflowNotReadyException(f"Workflow {source.workflow_id} could not be queued for filtering.")
+    db.commit()
     runner_input = PythonFilterInput(
         runtime_name="python",
         runner_name="filter",
@@ -808,7 +925,7 @@ def run_filter(
         output_workflow_id=output.workflow_id,
         function_definition_id=request.function_definition_id,
     )
-    dispatch_workflow_runner(db, dispatcher, output.workflow_id, job_id, runner_input)
+    dispatch_fjob(db, dispatcher, job_id, runner_input)
     return WorkflowOperationAccepted(
         job_id=job_id,
         workflow=query_workflow(db, current_user, output.workflow_id),
@@ -845,11 +962,19 @@ def run_group(
             .values(
                 workflow_id=workflow.workflow_id,
                 function_definition_id=request.function_definition_id,
-                job_id=job_id,
-                grouping_status=GroupingStatus.PENDING,
+                grouping_status=GroupingStatus.NEW,
             )
             .returning(Grouping)
         ).scalar_one()
+        if not queue_fjob(
+            db,
+            job_id,
+            workflow_ids=(workflow.workflow_id,),
+            grouping_ids=(grouping.grouping_id,),
+            allow_failed=False,
+        ):
+            db.rollback()
+            raise WorkflowNotReadyException(f"Workflow {workflow.workflow_id} could not be queued for grouping.")
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -871,13 +996,7 @@ def run_group(
         runner_name="group",
         grouping_id=grouping.grouping_id,
     )
-    dispatch_grouping_runner(
-        db,
-        dispatcher,
-        grouping.grouping_id,
-        job_id,
-        runner_input,
-    )
+    dispatch_fjob(db, dispatcher, job_id, runner_input)
     return GroupOperationAccepted(
         job_id=job_id,
         grouping=query_grouping(db, current_user, grouping.grouping_id),

@@ -1,6 +1,6 @@
 # Filter runners and persistence
 
-**Last updated:** 2026-08-04
+**Last updated:** 2026-08-12
 
 Runners materialize or organize workflow instances using persisted schemas and
 function definitions. They are synchronous backend classes with a shared
@@ -25,22 +25,36 @@ are supplied transiently through runner input models or are not implemented.
 
 ## Job claim and statuses
 
-Workflow and grouping statuses use the same four values:
+Workflow and grouping statuses use the same five values:
 
+- `new`;
 - `pending`;
 - `processing`;
 - `complete`;
 - `failed`.
 
-A runner first performs an atomic update matching the target ID, supplied job
-ID, and `pending` status. If no row matches, it returns without doing work.
-This prevents an old queued job from claiming a target after its job ID has
-been replaced.
+Newly created resources begin in `new`. Services queue a filter job by
+atomically moving every explicit member from `new`, `complete`, or—when
+explicitly allowed—`failed` to `pending` under one job ID. Immediate neighbours
+must be `complete` or `failed`; a `new` neighbour blocks queueing unless it is
+included as a member. A workflow checks attached groupings, while a grouping
+checks its parent workflow.
 
-After a successful claim, an exception normally changes the still-owned
-`processing` target to `failed` and stores the exception message. If ownership
-or status changed during execution, the guarded status update does not
-overwrite the newer state.
+Map and filter jobs include both source and output workflows. Group jobs
+include the workflow and grouping. Label-source jobs include the output
+workflow. Annotation jobs include exactly the existing workflow being
+augmented and no groupings.
+
+A runner claims the same complete member set atomically. Every member must be
+`pending` and owned by the supplied job ID or the runner returns without doing
+work. This prevents partial claims and prevents an old queued job from running
+after ownership has changed.
+
+After execution, the complete persisted member set moves uniformly from
+`processing` to either `complete` or `failed`, with one shared message. A
+definite publication failure similarly moves the whole pending set to failed.
+The job ID is retained as the last job owner. All transitions are guarded by
+job ownership and current status, so stale deliveries make no changes.
 
 ## Label source
 
@@ -59,6 +73,14 @@ It:
 The source runner reads all matching labels; it does not apply user permission
 filters or a chapter-number range. An empty source completes successfully.
 
+## Annotation
+
+`PythonAnnotationRunner` adds requested mutable scalar fields to an existing
+workflow schema and writes each requested default value into every instance.
+It requires a job containing exactly the input workflow and no groupings. The
+schema and instance updates commit together with successful job completion;
+validation or update failures move the claimed workflow to failed.
+
 ## Map
 
 `PythonMapRunner` transforms every instance from one completed workflow into a
@@ -67,7 +89,7 @@ distinct output workflow.
 Preconditions include:
 
 - source and output workflow IDs must differ;
-- the source must be complete;
+- the source and output must have been queued and claimed together;
 - the output must be empty;
 - the function must accept exactly one record argument;
 - the source schema must structurally satisfy that argument;
@@ -110,20 +132,19 @@ no separate persisted group row, count, sample, or review decision yet.
 
 Unlike the output-producing runners, grouping queries only instances missing
 an assignment. It can therefore resume after already committed batches,
-provided a caller returns the grouping to a claimable state with the intended
-job ID. The runner does not currently require the referenced workflow itself
-to be complete.
+provided a caller queues the workflow and grouping together under the intended
+job ID.
 
 ## Batching and failure behavior
 
-The default batch size is 1,000 for all four runners and can be overridden when
+The default batch size is 1,000 for the four batched runners and can be overridden when
 constructing a runner. Source, map, and filter use UUID keyset pagination.
 Grouping repeatedly selects unassigned instances.
 
 Map and filter verify that they examined the source count recorded before
 processing. Group verifies that assignment count equals workflow instance
-count. These checks detect some concurrent or incomplete execution, but the
-subsystem does not yet define a general concurrency policy.
+count. Queue and claim reservations prevent jobs that touch the same workflow
+or workflow/grouping neighbourhood from executing concurrently.
 
 Each batch commits independently. A terminal failure may therefore leave
 instances or assignments already persisted:

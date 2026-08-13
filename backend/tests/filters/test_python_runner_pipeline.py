@@ -15,6 +15,7 @@ from src.filters.functions import (
     ScoreOf,
     WordOf,
 )
+from src.filters.lifecycle import queue_fjob
 from src.filters.models import (
     FunctionDefinition,
     GroupAssignment,
@@ -22,6 +23,7 @@ from src.filters.models import (
     GroupingStatus,
     Instance,
     Workflow,
+    WorkflowStatus,
 )
 from src.filters.runners.python.filter_runner import PythonFilterInput, PythonFilterRunner
 from src.filters.runners.python.group_runner import PythonGroupInput, PythonGroupRunner
@@ -84,22 +86,21 @@ def _run_pipeline(
     source_workflow = Workflow(
         workflow_name="All labels",
         schema=_dump(LABEL_SOURCE_SCHEMA),
-        job_id=SOURCE_JOB_ID,
     )
     filtered_workflow = Workflow(
         workflow_name="Bad-score labels",
         schema=_dump(LABEL_SOURCE_SCHEMA),
-        job_id=FILTER_JOB_ID,
+        workflow_status=WorkflowStatus.COMPLETE,
     )
     word_workflow = Workflow(
         workflow_name="Labels with words",
         schema=_dump(word_schema),
-        job_id=WORD_MAP_JOB_ID,
+        workflow_status=WorkflowStatus.COMPLETE,
     )
     renamed_workflow = Workflow(
         workflow_name="Labels with terms",
         schema=_dump(renamed_schema),
-        job_id=RENAME_MAP_JOB_ID,
+        workflow_status=WorkflowStatus.COMPLETE,
     )
     score_definition = FunctionDefinition(
         namespace="pipeline",
@@ -137,9 +138,11 @@ def _run_pipeline(
     grouping = Grouping(
         workflow_id=renamed_workflow.workflow_id,
         function_definition_id=group_definition.function_definition_id,
-        job_id=GROUP_JOB_ID,
+        grouping_status=GroupingStatus.COMPLETE,
     )
     test_db.add(grouping)
+    test_db.flush()
+    assert queue_fjob(test_db, SOURCE_JOB_ID, workflow_ids=(source_workflow.workflow_id,))
     test_db.commit()
 
     PythonLabelSourceRunner(testing_session_local, batch_size=1).execute(
@@ -151,6 +154,12 @@ def _run_pipeline(
             output_workflow_id=source_workflow.workflow_id,
         ),
     )
+    with testing_session_local.begin() as db:
+        assert queue_fjob(
+            db,
+            FILTER_JOB_ID,
+            workflow_ids=(source_workflow.workflow_id, filtered_workflow.workflow_id),
+        )
     PythonFilterRunner(testing_session_local, batch_size=1).execute(
         FILTER_JOB_ID,
         PythonFilterInput(
@@ -161,6 +170,12 @@ def _run_pipeline(
             function_definition_id=score_definition.function_definition_id,
         ),
     )
+    with testing_session_local.begin() as db:
+        assert queue_fjob(
+            db,
+            WORD_MAP_JOB_ID,
+            workflow_ids=(filtered_workflow.workflow_id, word_workflow.workflow_id),
+        )
     PythonMapRunner(testing_session_local, batch_size=1).execute(
         WORD_MAP_JOB_ID,
         PythonMapInput(
@@ -171,6 +186,12 @@ def _run_pipeline(
             function_definition_id=word_definition.function_definition_id,
         ),
     )
+    with testing_session_local.begin() as db:
+        assert queue_fjob(
+            db,
+            RENAME_MAP_JOB_ID,
+            workflow_ids=(word_workflow.workflow_id, renamed_workflow.workflow_id),
+        )
     PythonMapRunner(testing_session_local, batch_size=1).execute(
         RENAME_MAP_JOB_ID,
         PythonMapInput(
@@ -181,6 +202,13 @@ def _run_pipeline(
             function_definition_id=rename_definition.function_definition_id,
         ),
     )
+    with testing_session_local.begin() as db:
+        assert queue_fjob(
+            db,
+            GROUP_JOB_ID,
+            workflow_ids=(renamed_workflow.workflow_id,),
+            grouping_ids=(grouping.grouping_id,),
+        )
     PythonGroupRunner(testing_session_local, batch_size=1).execute(
         GROUP_JOB_ID,
         PythonGroupInput(

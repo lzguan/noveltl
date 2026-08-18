@@ -25,13 +25,14 @@ COPY --chown=vscode:vscode frontend/package.json frontend/pnpm-lock.yaml fronten
 COPY --chown=vscode:vscode e2e/package.json e2e/pnpm-lock.yaml e2e/playwright.config.ts ./e2e/
 
 # populate uv/pnpm caches to speed up development container installation
-WORKDIR ${PROJECT_ROOT}/backend
-RUN uv sync --all-groups --no-install-project && rm -rf .venv
-WORKDIR ${PROJECT_ROOT}/frontend
-RUN pnpm fetch --frozen-lockfile
 WORKDIR ${PROJECT_ROOT}/e2e
 RUN pnpm install --frozen-lockfile \
     && pnpm exec playwright install --with-deps chromium \
     && rm -rf node_modules \
     && sudo rm -rf /var/lib/apt/lists/*
+WORKDIR ${PROJECT_ROOT}/backend
+RUN uv sync --all-groups --no-install-project && rm -rf .venv
+WORKDIR ${PROJECT_ROOT}/frontend
+RUN pnpm fetch --frozen-lockfile
 WORKDIR ${PROJECT_ROOT}
+

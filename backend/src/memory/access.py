@@ -15,27 +15,29 @@ RECENT_SCOPE_LENGTH = 50
 LOCAL_SCOPE_LENGTH = 1
 
 
-@dataclass
+@dataclass(frozen=True)
 class MemAccessContext:
     memory_group_id: UUID
+    chapter_id: UUID
     chapter_content_id: UUID
 
 
 def check_mem_access_ctx(db: Session, ctx: MemAccessContext) -> tuple[int, UUID]:
     try:
         row = db.execute(
-            select(Chapter.chapter_num, Novel.novel_id)
+            select(Chapter.chapter_id, Chapter.chapter_num, Novel.novel_id)
             .select_from(ChapterContent)
-            .join(Chapter, ChapterContent.chapter_id == Chapter.chapter_id)
-            .where(
-                ChapterContent.chapter_content_id == ctx.chapter_content_id,
-            )
+            .join(Chapter, Chapter.chapter_id == ChapterContent.chapter_id)
             .join(Novel, Novel.novel_id == Chapter.novel_id)
+            .where(ChapterContent.chapter_content_id == ctx.chapter_content_id)
         ).one()
     except NoResultFound as e:
         raise ChapterContentNotFoundException(f"Chapter content with id {ctx.chapter_content_id} not found") from e
 
-    cur_chap_num, novel_id = row._t
+    chapter_id, cur_chap_num, novel_id = row._t
+
+    if chapter_id != ctx.chapter_id:
+        raise ValueError(f"Chapter content {ctx.chapter_content_id} does not belong to chapter {ctx.chapter_id}")
 
     try:
         memory_group_novel_id = db.execute(
@@ -123,7 +125,7 @@ def write_memory(
         insert(Memory)
         .values(
             memory_type=mem_type,
-            memory_recorded_at=ctx.chapter_content_id,
+            memory_observed_in=ctx.chapter_content_id,
             memory_start_num=cur_chap_num,
             memory_end_num=end,
             supersedes_memory_id=supersedes_id,

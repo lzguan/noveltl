@@ -50,7 +50,7 @@ class Memory(Base):
         ),
         nullable=False,
     )
-    memory_recorded_at: Mapped[uuid.UUID] = mapped_column(
+    memory_observed_in: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("chapter_contents.chapter_content_id"), nullable=False
     )
     memory_start_num: Mapped[int] = mapped_column(types.Integer, nullable=False)

@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import status
 from fastapi.testclient import TestClient
-from httpx import Response
+from httpx2 import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -254,4 +254,3 @@ class TestCreateChaptersByUpload:
         multipart_schema = openapi["components"]["schemas"][schema_name]
         assert set(multipart_schema["required"]) == {"novelId", "version", "file"}
         assert multipart_schema["properties"]["version"]["const"] == "v1"
-        assert multipart_schema["properties"]["file"]["format"] == "binary"

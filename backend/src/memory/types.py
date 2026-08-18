@@ -30,6 +30,14 @@ class MemoryType(StrEnum):
 
 
 class Scope(StrEnum):
+    """
+    The scope of a memory (i.e. how long it should be retained).
+
+    LOCAL: Memory is only relevant to the current chapter.
+    RECENT: Memory is relevant to the current chapter and a few subsequent chapters.
+    PERSIST: Memory is relevant to all chapters and should be retained indefinitely until explicitly superseded or expired.
+    """
+
     LOCAL = "local"
     RECENT = "recent"
     PERSIST = "persist"

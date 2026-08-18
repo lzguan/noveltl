@@ -17,11 +17,11 @@
 		"format": "pnpm exec oxfmt"
 	},
 	"devDependencies": {
-		"@playwright/test": "^1.62.0",
-		"@types/node": "^26.1.2",
+		"@playwright/test": "^1.62.1",
+		"@types/node": "^26.2.0",
 		"@typescript/native-preview": "7.0.0-dev.20260702.3",
 		"oxfmt": "^0.57.0",
-		"oxlint": "^1.76.0"
+		"oxlint": "^1.78.0"
 	},
-	"packageManager": "pnpm@11.17.0"
+	"packageManager": "pnpm@11.22.0"
 }

@@ -24,7 +24,7 @@ COPY --chown=${UNAME}:${GNAME} . .
 CMD ["uv", "run", "--no-sync", "uvicorn", "src.main:app", "--host", "0.0.0.0"]
 
 FROM base AS autolabels-worker
-RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --group worker --no-group backend --no-group dev --no-install-project
+RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --group worker --no-group backend --no-group dev --no-group agent --no-install-project
 COPY --chown=${UNAME}:${GNAME} . .
 
 ARG CLUENER_REVISION=cddd8fc233e373855a8c0a7f4b7eb83acb686a2b

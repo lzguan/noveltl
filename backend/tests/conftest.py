@@ -94,9 +94,12 @@ def fake_ttl_cache_redis(monkeypatch: pytest.MonkeyPatch, ttl_cache_store: dict[
 
 
 @pytest.fixture
-def test_engine(test_url: str) -> Engine:
+def test_engine(test_url: str) -> Generator[Engine, None, None]:
     engine = create_engine(test_url)
-    return engine
+    try:
+        yield engine
+    finally:
+        engine.dispose()
 
 
 @pytest.fixture

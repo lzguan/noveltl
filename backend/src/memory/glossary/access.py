@@ -49,7 +49,7 @@ def get_terms_in_chapter(
 def inspect_terms(
     db: Session,
     ctx: MemAccessContext,
-    term_ids: list[UUID],
+    term_names: list[str],
     *,
     include_rejected: bool = False,
 ) -> list[tuple[Memory, list[GlossaryTerm]]]:
@@ -60,7 +60,7 @@ def inspect_terms(
         select(matching_association.memory_id)
         .join(matching_term, matching_term.term_id == matching_association.term_id)
         .where(
-            matching_term.term_id.in_(term_ids),
+            matching_term.term.in_(term_names),
             matching_term.memory_group_id == ctx.memory_group_id,
         )
         .distinct()
@@ -133,17 +133,17 @@ def _associate_terms(
     db: Session,
     memory_group_id: UUID,
     memory_id: UUID,
-    term_ids: list[UUID],
+    term_names: list[str],
 ) -> list[GlossaryAssociation]:
-    unique_term_ids = list(dict.fromkeys(term_ids))
-    if not unique_term_ids:
+    unique_term_names = list(dict.fromkeys(term_names))
+    if not unique_term_names:
         raise ValueError("A glossary memory must be associated with at least one term.")
 
     association_source = select(
         GlossaryTerm.term_id,
         literal(memory_id),
     ).where(
-        GlossaryTerm.term_id.in_(unique_term_ids),
+        GlossaryTerm.term.in_(unique_term_names),
         GlossaryTerm.memory_group_id == memory_group_id,
     )
     associations = (
@@ -158,7 +158,7 @@ def _associate_terms(
         .scalars()
         .all()
     )
-    if len(associations) != len(unique_term_ids):
+    if len(associations) != len(unique_term_names):
         raise ValueError("Some terms do not exist in the memory group.")
     return list(associations)
 
@@ -168,13 +168,13 @@ def create_memory(
     ctx: MemAccessContext,
     creator: Creator,
     mem_type: MemoryType,
-    term_ids: list[UUID],
+    term_names: list[str],
     content: str,
     scope: Scope | None = None,
 ) -> tuple[Memory, list[GlossaryAssociation]]:
     try:
         new_memory = write_memory(db, ctx, mem_type, content, creator, scope)
-        glossary_associations = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, term_ids)
+        glossary_associations = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, term_names)
     except Exception:
         db.rollback()
         raise
@@ -190,9 +190,9 @@ def supersede_memory(
     content: str,
     scope: Scope | None = None,
 ) -> tuple[Memory, list[GlossaryAssociation]]:
-    current_term_ids = list(
+    current_term_names = list(
         db.execute(
-            select(GlossaryTerm.term_id)
+            select(GlossaryTerm.term)
             .select_from(GlossaryAssociation)
             .where(GlossaryAssociation.memory_id == memory_id)
             .join(GlossaryTerm, GlossaryTerm.term_id == GlossaryAssociation.term_id)
@@ -205,7 +205,7 @@ def supersede_memory(
     )
     try:
         new_memory = write_memory(db, ctx, mem_type, content, creator, scope, supersedes_id=memory_id)
-        new_assocs = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, current_term_ids)
+        new_assocs = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, current_term_names)
     except Exception:
         db.rollback()
         raise

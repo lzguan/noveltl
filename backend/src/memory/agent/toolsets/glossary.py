@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic_ai import RunContext
+from pydantic_ai import FunctionToolset, RunContext
 from sqlalchemy import SQLColumnExpression
 
 from src.memory.agent.dependencies import MemAgentDeps
@@ -22,10 +22,10 @@ def terms_in_chapter(ctx: RunContext[MemAgentDeps]) -> list[GlossaryTerm]:
         return [GlossaryTerm.model_validate(term) for term in terms]
 
 
-def term_memories(ctx: RunContext[MemAgentDeps], term_ids: list[UUID]) -> list[GlossaryMemory]:
+def term_memories(ctx: RunContext[MemAgentDeps], term_names: list[str]) -> list[GlossaryMemory]:
     """See all memories associated with a list of glossary terms in the current context."""
     with ctx.deps.db_factory() as db:
-        memories = inspect_terms(db, ctx.deps.mem_access_context, term_ids)
+        memories = inspect_terms(db, ctx.deps.mem_access_context, term_names)
         return [
             GlossaryMemory(
                 memory=Memory.model_validate(memory), terms=[GlossaryTerm.model_validate(term) for term in terms]
@@ -45,14 +45,14 @@ def add_term(ctx: RunContext[MemAgentDeps], term_name: str) -> UUID:
 def new_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
-    term_ids: list[UUID],
+    term_names: list[str],
     mem_type: MemoryType,
     scope: Scope | None = None,
 ) -> UUID:
     """Create a new memory and associate it with a list of glossary terms in the current context."""
     with ctx.deps.db_factory() as db:
         new_mem, assocs = create_memory(
-            db, ctx.deps.mem_access_context, Creator.AGENT, mem_type, term_ids, content, scope
+            db, ctx.deps.mem_access_context, Creator.AGENT, mem_type, term_names, content, scope
         )
         new_id = new_mem.memory_id
         db.commit()
@@ -66,7 +66,7 @@ def rewrite_memory(
     mem_type: MemoryType,
     scope: Scope | None = None,
 ) -> UUID:
-    """Supersede an existing memory in the current context."""
+    """Supersede an existing memory in the current context. Use this to update outdated or incorrect information in a memory."""
     with ctx.deps.db_factory() as db:
         new_mem, assocs = supersede_memory(
             db, ctx.deps.mem_access_context, memory_id, Creator.AGENT, mem_type, content, scope
@@ -74,3 +74,9 @@ def rewrite_memory(
         new_id = new_mem.memory_id
         db.commit()
     return new_id
+
+
+glossary_toolset = FunctionToolset(
+    tools=[terms_in_chapter, term_memories, add_term, new_memory, rewrite_memory],
+    instructions="Use these tools to manage glossary terms and memories relating to glossary terms. You can see all glossary terms in the current chapter, inspect memories associated with specific terms, add new terms, and create or supersede memories for existing terms.",
+)

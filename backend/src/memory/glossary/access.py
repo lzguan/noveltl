@@ -137,7 +137,7 @@ def _associate_terms(
 ) -> list[GlossaryAssociation]:
     unique_term_names = list(dict.fromkeys(term_names))
     if not unique_term_names:
-        raise ValueError("A glossary memory must be associated with at least one term.")
+        raise GlossaryTermNotFoundException("A glossary memory must be associated with at least one term.")
 
     association_source = select(
         GlossaryTerm.term_id,
@@ -159,7 +159,7 @@ def _associate_terms(
         .all()
     )
     if len(associations) != len(unique_term_names):
-        raise ValueError("Some terms do not exist in the memory group.")
+        raise GlossaryTermNotFoundException("Some terms do not exist in the memory group.")
     return list(associations)
 
 

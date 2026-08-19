@@ -11,7 +11,7 @@ from src.memory.types import Creator, MemoryType, ReviewStatus, Scope
 from src.novels.exceptions import ChapterContentNotFoundException
 from src.novels.models import Chapter, ChapterContent, Novel
 
-RECENT_SCOPE_LENGTH = 50
+RECENT_SCOPE_LENGTH = 15
 LOCAL_SCOPE_LENGTH = 1
 
 

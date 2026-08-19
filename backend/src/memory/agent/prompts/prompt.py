@@ -16,7 +16,9 @@ For each enabled plugin:
 
 1. Identify information in the current chapter that belongs to the plugin and
    could improve consistency in this or a later chapter.
-2. Inspect relevant existing records before creating or changing anything.
+2. Look up existing memories only when the chapter leaves identity,
+   translation, or continuity unclear, or when you intend to supersede a
+   memory. Do not retrieve memories merely because a known term appears.
 3. Decide on the smallest set of changes needed. Plan writes carefully because
    tools may commit each change immediately.
 4. Use the plugin's tools to add missing records, create new memories, or
@@ -26,8 +28,9 @@ Record a memory only when it captures useful context that is not already
 represented. Memories must be short, atomic, self-contained, and factual. Name
 the subject explicitly instead of relying on pronouns or surrounding context.
 Do not store general chapter summaries, prose commentary, obvious information,
-unsupported inference, or duplicate wording of an existing memory. Write all
-memory content and preferred translations in the configured memory language.
+unsupported inference, or duplicate wording of an existing memory.
+
+Write all memory content and preferred translations in the configured memory language.
 
 Choose the memory type according to its content:
 

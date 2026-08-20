@@ -1,6 +1,6 @@
 """Schemas for glossary context exposed to memory agents."""
 
-import uuid
+from uuid import UUID
 
 from pydantic import ConfigDict, Field
 
@@ -14,7 +14,7 @@ class GlossaryTerm(Model):
 
     model_config = ConfigDict(from_attributes=True)
 
-    term_id: uuid.UUID = Field(
+    term_id: UUID = Field(
         description="Stable identifier to use when creating memories for or changing the review state of this term."
     )
     term: str = Field(description="Term exactly as it appears in the novel's source text.")
@@ -23,10 +23,10 @@ class GlossaryTerm(Model):
     )
 
 
-class GlossaryMemory(Model):
+class GlossaryMemory[KeyT](Model):
     """A memory together with the glossary terms it describes."""
 
-    memory: Memory = Field(description="The memory that describes the glossary terms.")
+    memory: Memory[KeyT] = Field(description="The memory that describes the glossary terms.")
     terms: list[GlossaryTerm] = Field(
         description="Glossary terms described by this memory; one memory may apply to multiple related terms."
     )

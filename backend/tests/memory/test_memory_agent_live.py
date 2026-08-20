@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic_ai import capture_run_messages
+from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_ai.usage import RunUsage
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -47,6 +49,38 @@ def _serialize_usage(usage: RunUsage) -> dict[str, Any]:
         "costUsd": str(usage.cost) if usage.cost is not None else None,
         "details": usage.details,
     }
+
+
+def _serialize_exception(exc: BaseException) -> dict[str, object]:
+    serialized: dict[str, object] = {
+        "type": type(exc).__name__,
+        "message": str(exc),
+    }
+    errors = getattr(exc, "errors", None)
+    if callable(errors):
+        try:
+            validation_errors = errors(include_input=True)
+        except TypeError:
+            validation_errors = errors()
+        serialized["errors"] = json.loads(json.dumps(validation_errors, ensure_ascii=False, default=str))
+    return serialized
+
+
+def _serialize_failure(exc: BaseException, chapter_num: int | None = None) -> dict[str, object]:
+    failure = _serialize_exception(exc)
+    if chapter_num is not None:
+        failure["chapterNum"] = chapter_num
+
+    causes: list[dict[str, object]] = []
+    seen = {id(exc)}
+    cause = exc.__cause__ if exc.__cause__ is not None else exc.__context__
+    while cause is not None and id(cause) not in seen:
+        seen.add(id(cause))
+        causes.append(_serialize_exception(cause))
+        cause = cause.__cause__ if cause.__cause__ is not None else cause.__context__
+    if causes:
+        failure["causes"] = causes
+    return failure
 
 
 def _snapshot_memory(db: Session, memory_group_id: uuid.UUID) -> dict[str, object]:
@@ -138,7 +172,7 @@ async def test_run_snake_chapters_1_through_50(
 
     completed_chapters: list[int] = []
     aggregate_usage = RunUsage()
-    failure: dict[str, str] | None = None
+    failure: dict[str, object] | None = None
 
     try:
         results = run_novel(
@@ -149,7 +183,26 @@ async def test_run_snake_chapters_1_through_50(
             start_chapter_num=1,
             end_chapter_num=51,
         )
-        async for chapter_num, result in results:
+        result_iterator = aiter(results)
+        while True:
+            with capture_run_messages() as messages:
+                try:
+                    chapter_num, result = await anext(result_iterator)
+                except StopAsyncIteration:
+                    break
+                except Exception as exc:
+                    failed_chapter_num = completed_chapters[-1] + 1 if completed_chapters else 1
+                    failure = _serialize_failure(exc, failed_chapter_num)
+                    _write_json(
+                        chapters_dir / f"chapter-{failed_chapter_num:04d}.failed.json",
+                        {
+                            "chapterNum": failed_chapter_num,
+                            "timestamp": datetime.now(UTC).isoformat(),
+                            "failure": failure,
+                            "messages": json.loads(ModelMessagesTypeAdapter.dump_json(messages)),
+                        },
+                    )
+                    raise
             aggregate_usage.incr(result.usage)
             completed_chapters.append(chapter_num)
             _write_json(
@@ -164,7 +217,8 @@ async def test_run_snake_chapters_1_through_50(
                 },
             )
     except Exception as exc:
-        failure = {"type": type(exc).__name__, "message": str(exc)}
+        if failure is None:
+            failure = _serialize_failure(exc)
         raise
     finally:
         finished_at = datetime.now(UTC)

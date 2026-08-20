@@ -50,6 +50,7 @@ def inspect_terms(
     db: Session,
     ctx: MemAccessContext,
     term_names: list[str],
+    memory_types: list[MemoryType] | None,
     *,
     include_rejected: bool = False,
 ) -> list[tuple[Memory, list[GlossaryTerm]]]:
@@ -85,6 +86,8 @@ def inspect_terms(
         query = query.where(
             Memory.memory_review_status != ReviewStatus.REJECTED, GlossaryTerm.review_status != ReviewStatus.REJECTED
         )
+    if memory_types is not None:
+        query = query.where(Memory.memory_type.in_(memory_types))
 
     memories_with_terms: dict[UUID, tuple[Memory, list[GlossaryTerm]]] = {}
     for memory, term in db.execute(query).tuples():
@@ -127,6 +130,20 @@ def reject_term(db: Session, memory_group_id: UUID, term_id: UUID) -> GlossaryTe
 
 def mark_term_pending(db: Session, memory_group_id: UUID, term_id: UUID) -> GlossaryTerm:
     return _set_term_review_status(db, memory_group_id, term_id, ReviewStatus.PENDING)
+
+
+def get_missing_term_names(db: Session, memory_group_id: UUID, term_names: list[str]) -> list[str]:
+    """Return requested glossary terms that do not exist in the memory group."""
+    unique_term_names = list(dict.fromkeys(term_names))
+    existing_term_names = set(
+        db.scalars(
+            select(GlossaryTerm.term).where(
+                GlossaryTerm.memory_group_id == memory_group_id,
+                GlossaryTerm.term.in_(unique_term_names),
+            )
+        ).all()
+    )
+    return [term_name for term_name in unique_term_names if term_name not in existing_term_names]
 
 
 def _associate_terms(
@@ -176,7 +193,6 @@ def create_memory(
         new_memory = write_memory(db, ctx, mem_type, content, creator, scope)
         glossary_associations = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, term_names)
     except Exception:
-        db.rollback()
         raise
     return new_memory, list(glossary_associations)
 
@@ -207,6 +223,5 @@ def supersede_memory(
         new_memory = write_memory(db, ctx, mem_type, content, creator, scope, supersedes_id=memory_id)
         new_assocs = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, current_term_names)
     except Exception:
-        db.rollback()
         raise
     return new_memory, new_assocs

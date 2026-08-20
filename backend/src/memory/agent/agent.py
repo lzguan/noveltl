@@ -108,11 +108,17 @@ async def run_novel(
                 chapter_id=chapter.chapter_id,
                 chapter_content_id=chapter_content.chapter_content_id,
             )
-            result = await run_agent(
-                agent,
-                MemAgentDeps(db_factory=db_factory, mem_access_context=context, job_id=uuid.uuid4()),
-                texts_dict[chapter_content.chapter_content_id],
-                chapter.chapter_num,
-                language_name,
-            )
+            with db_factory() as db:
+                try:
+                    result = await run_agent(
+                        agent,
+                        MemAgentDeps(db=db, mem_access_context=context, job_id=uuid.uuid4()),
+                        texts_dict[chapter_content.chapter_content_id],
+                        chapter.chapter_num,
+                        language_name,
+                    )
+                    db.commit()
+                except Exception:
+                    db.rollback()
+                    raise
             yield chapter.chapter_num, result

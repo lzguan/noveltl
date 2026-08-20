@@ -20,13 +20,13 @@ class MemoryType(StrEnum):
     FACT: Memory about a specific fact or piece of information.
     EVENT: Memory about a specific event or occurrence.
     DEFINITION: Long-term memory about a specific definition or concept.
-    TRANSLATION: Long-term memory about a specific translation or mapping.
+    RELATION: Long-term memory about a relationship between glossary terms.
     """
 
     FACT = "fact"
     EVENT = "event"
     DEFINITION = "def"
-    TRANSLATION = "tl"
+    RELATION = "rel"
 
 
 class Scope(StrEnum):

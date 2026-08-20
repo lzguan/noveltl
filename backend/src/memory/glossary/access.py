@@ -54,6 +54,10 @@ def inspect_terms(
     *,
     include_rejected: bool = False,
 ) -> list[tuple[Memory, list[GlossaryTerm]]]:
+    # TODO: Make retrieval alias-aware. Exact-name lookup can miss a conflicting
+    # memory stored under another alias of the same entity. This likely needs a
+    # structured alias relation or shared entity identity; expanding every free-
+    # text relation would incorrectly merge other kinds of related terms.
     chap_num, _ = check_mem_access_ctx(db, ctx)
     matching_association = aliased(GlossaryAssociation)
     matching_term = aliased(GlossaryTerm)

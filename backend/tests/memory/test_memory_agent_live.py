@@ -1,7 +1,9 @@
+import asyncio
 import json
 import os
 import uuid
-from dataclasses import replace
+from contextlib import ExitStack
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -11,19 +13,22 @@ from pydantic_ai import capture_run_messages
 from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_ai.usage import RunUsage
 from sqlalchemy import select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
 from src.languages.models import Language
 from src.memory.agent.agent import create_agent, run_novel
 from src.memory.glossary.models import GlossaryAssociation, GlossaryTerm
 from src.memory.models import Memory, MemoryGroup
 from src.novels.models import SourceWork
+from test_support.database import TemporaryPostgresDatabase, temporary_postgres_database
 from test_support.test_data import load_catalog, load_novel
+from test_support.test_data.domain import NovelDataset
 from test_support.test_data.materializer import make_novel, materialize_novel_contents
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SNAKE_CATALOG_ROOT = REPO_ROOT / "tmp" / "snake-catalog"
 RUNS_ROOT = REPO_ROOT / "tmp" / "runs" / "snake"
+BENCHMARK_RUN_COUNT = 5
 
 pytestmark = [
     pytest.mark.agent,
@@ -137,49 +142,64 @@ def _snapshot_memory(db: Session, memory_group_id: uuid.UUID) -> dict[str, objec
     }
 
 
-async def test_run_snake_chapters_1_through_50(
-    test_db: Session,
-    testing_session_local: sessionmaker[Session],
-) -> None:
-    catalog = load_catalog(SNAKE_CATALOG_ROOT)
-    complete_dataset = load_novel(catalog, "private-snake")
-    dataset = replace(complete_dataset, chapters=complete_dataset.chapters[:50])
-    assert [chapter.number for chapter in dataset.chapters] == list(range(1, 51))
+@dataclass(frozen=True)
+class _SeededRun:
+    database: TemporaryPostgresDatabase
+    novel_id: uuid.UUID
+    memory_group_id: uuid.UUID
 
-    chinese = Language(language_name="Chinese", language_code="zh")
-    english = Language(language_name="English", language_code="en")
-    source_work = SourceWork(source_work_title=dataset.title)
-    test_db.add_all([chinese, english, source_work])
-    test_db.flush()
 
-    novel = make_novel(dataset, source_work)
-    test_db.add(novel)
-    test_db.flush()
-    materialize_novel_contents(test_db, dataset, novel)
+@dataclass(frozen=True)
+class _BenchmarkResult:
+    run_index: int
+    database_name: str
+    completed_chapters: list[int]
+    usage: RunUsage
+    failure: dict[str, object] | None
 
-    memory_group = MemoryGroup(
-        memory_group_name="Snake memory-agent run",
-        novel_id=novel.novel_id,
-        memory_language="en",
-    )
-    test_db.add(memory_group)
-    test_db.commit()
 
-    started_at = datetime.now(UTC)
-    run_dir = RUNS_ROOT / started_at.strftime("%Y%m%dT%H%M%S.%fZ")
+def _seed_run(database: TemporaryPostgresDatabase, dataset: NovelDataset) -> _SeededRun:
+    with database.session_factory() as db:
+        chinese = Language(language_name="Chinese", language_code="zh")
+        english = Language(language_name="English", language_code="en")
+        source_work = SourceWork(source_work_title=dataset.title)
+        db.add_all([chinese, english, source_work])
+        db.flush()
+
+        novel = make_novel(dataset, source_work)
+        db.add(novel)
+        db.flush()
+        materialize_novel_contents(db, dataset, novel)
+
+        memory_group = MemoryGroup(
+            memory_group_name="Snake memory-agent benchmark",
+            novel_id=novel.novel_id,
+            memory_language="en",
+        )
+        db.add(memory_group)
+        db.commit()
+        return _SeededRun(
+            database=database,
+            novel_id=novel.novel_id,
+            memory_group_id=memory_group.memory_group_id,
+        )
+
+
+async def _run_benchmark_replica(seed: _SeededRun, run_index: int, run_dir: Path) -> _BenchmarkResult:
     chapters_dir = run_dir / "chapters"
     chapters_dir.mkdir(parents=True)
 
+    started_at = datetime.now(UTC)
     completed_chapters: list[int] = []
     aggregate_usage = RunUsage()
     failure: dict[str, object] | None = None
 
     try:
         results = run_novel(
-            testing_session_local,
+            seed.database.session_factory,
             create_agent("deepseek:deepseek-chat", ["glossary"]),
-            novel.novel_id,
-            memory_group.memory_group_id,
+            seed.novel_id,
+            seed.memory_group_id,
             start_chapter_num=1,
             end_chapter_num=51,
         )
@@ -219,15 +239,16 @@ async def test_run_snake_chapters_1_through_50(
     except Exception as exc:
         if failure is None:
             failure = _serialize_failure(exc)
-        raise
     finally:
         finished_at = datetime.now(UTC)
-        with testing_session_local() as snapshot_db:
-            _write_json(run_dir / "memory.json", _snapshot_memory(snapshot_db, memory_group.memory_group_id))
+        with seed.database.session_factory() as snapshot_db:
+            _write_json(run_dir / "memory.json", _snapshot_memory(snapshot_db, seed.memory_group_id))
         _write_json(
             run_dir / "metadata.json",
             {
                 "status": "failed" if failure is not None else "completed",
+                "runIndex": run_index,
+                "database": seed.database.name,
                 "startedAt": started_at.isoformat(),
                 "finishedAt": finished_at.isoformat(),
                 "model": "deepseek:deepseek-chat",
@@ -241,4 +262,70 @@ async def test_run_snake_chapters_1_through_50(
             },
         )
 
-    assert completed_chapters == list(range(1, 51))
+    return _BenchmarkResult(
+        run_index=run_index,
+        database_name=seed.database.name,
+        completed_chapters=completed_chapters,
+        usage=aggregate_usage,
+        failure=failure,
+    )
+
+
+async def test_benchmark_snake_chapters_1_through_50_in_parallel(test_url: str) -> None:
+    catalog = load_catalog(SNAKE_CATALOG_ROOT)
+    complete_dataset = load_novel(catalog, "private-snake")
+    dataset = replace(complete_dataset, chapters=complete_dataset.chapters[:50])
+    assert [chapter.number for chapter in dataset.chapters] == list(range(1, 51))
+
+    started_at = datetime.now(UTC)
+    benchmark_dir = RUNS_ROOT / "benchmarks" / started_at.strftime("%Y%m%dT%H%M%S.%fZ")
+    benchmark_dir.mkdir(parents=True)
+
+    with ExitStack() as database_stack:
+        databases = [
+            database_stack.enter_context(temporary_postgres_database(test_url, prefix="memory_bench"))
+            for _ in range(BENCHMARK_RUN_COUNT)
+        ]
+        seeds = [_seed_run(database, dataset) for database in databases]
+        results = await asyncio.gather(
+            *[
+                _run_benchmark_replica(seed, run_index, benchmark_dir / f"run-{run_index:02d}")
+                for run_index, seed in enumerate(seeds, start=1)
+            ]
+        )
+
+        aggregate_usage = RunUsage()
+        for result in results:
+            aggregate_usage.incr(result.usage)
+        finished_at = datetime.now(UTC)
+        _write_json(
+            benchmark_dir / "metadata.json",
+            {
+                "status": "failed" if any(result.failure is not None for result in results) else "completed",
+                "startedAt": started_at.isoformat(),
+                "finishedAt": finished_at.isoformat(),
+                "parallelRuns": BENCHMARK_RUN_COUNT,
+                "model": "deepseek:deepseek-chat",
+                "plugins": ["glossary"],
+                "catalog": "tmp/snake-catalog",
+                "novel": "private-snake",
+                "chapterRange": {"startInclusive": 1, "endExclusive": 51},
+                "usage": _serialize_usage(aggregate_usage),
+                "runs": [
+                    {
+                        "runIndex": result.run_index,
+                        "directory": f"run-{result.run_index:02d}",
+                        "database": result.database_name,
+                        "status": "failed" if result.failure is not None else "completed",
+                        "completedChapters": result.completed_chapters,
+                        "usage": _serialize_usage(result.usage),
+                        "failure": result.failure,
+                    }
+                    for result in results
+                ],
+            },
+        )
+
+    expected_chapters = list(range(1, 51))
+    assert all(result.failure is None for result in results)
+    assert all(result.completed_chapters == expected_chapters for result in results)

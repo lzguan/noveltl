@@ -18,9 +18,9 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.types import UUID
 
 from src.models import Base
 
@@ -42,9 +42,7 @@ class LabelGroup(Base):
     """
 
     __tablename__ = "label_groups"
-    label_group_id: Mapped[uuid.UUID] = mapped_column(
-        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
-    )
+    label_group_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
     label_group_name: Mapped[str] = mapped_column(String(MAX_LABEL_GROUP_NAME_LEN))
 
     novel_id: Mapped[uuid.UUID] = mapped_column(
@@ -102,9 +100,7 @@ class LabelData(Base):
 
     __tablename__ = "label_datas"
 
-    label_data_id: Mapped[uuid.UUID] = mapped_column(
-        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
-    )
+    label_data_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
 
     label_group_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("label_groups.label_group_id", name="fk_label_datas_label_group_id_label_groups"), nullable=False
@@ -149,9 +145,7 @@ class Label(Base):
 
     __tablename__ = "labels"
 
-    label_id: Mapped[uuid.UUID] = mapped_column(
-        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
-    )
+    label_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
     label_entity_group: Mapped[str] = mapped_column(
         String(MAX_LABEL_ENTITY_GROUP_NAME_LEN), default="MISC", nullable=True
     )

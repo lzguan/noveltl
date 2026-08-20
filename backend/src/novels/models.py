@@ -16,9 +16,8 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.types import TypeDecorator
+from sqlalchemy.types import UUID, TypeDecorator
 
 from src.models import Base
 from src.novels.constants import (
@@ -71,9 +70,7 @@ class SourceWork(Base):
 
     __tablename__ = "source_works"
 
-    source_work_id: Mapped[uuid.UUID] = mapped_column(
-        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
-    )
+    source_work_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
     source_work_title: Mapped[str] = mapped_column(String(MAX_NOVEL_TITLE_LEN), nullable=False)
     source_work_description: Mapped[str] = mapped_column(Text, nullable=True)
 
@@ -102,9 +99,7 @@ class Novel(Base):
 
     __tablename__ = "novels"
 
-    novel_id: Mapped[uuid.UUID] = mapped_column(
-        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
-    )
+    novel_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
     novel_title: Mapped[str] = mapped_column(String(MAX_NOVEL_TITLE_LEN), nullable=False)
     novel_description: Mapped[str] = mapped_column(Text, nullable=True)
     novel_author: Mapped[str] = mapped_column(String(MAX_AUTHOR_LENGTH), nullable=True)
@@ -171,9 +166,7 @@ class Chapter(Base):
 
     __tablename__ = "chapters"
 
-    chapter_id: Mapped[uuid.UUID] = mapped_column(
-        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
-    )
+    chapter_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
     chapter_num: Mapped[int] = mapped_column(Integer, nullable=False)
     chapter_title: Mapped[str] = mapped_column(String(MAX_CHAPTER_TITLE_LEN), nullable=False)
     chapter_is_public: Mapped[bool] = mapped_column(Boolean, nullable=False)
@@ -204,9 +197,7 @@ class ChapterContent(Base):
 
     __tablename__ = "chapter_contents"
 
-    chapter_content_id: Mapped[uuid.UUID] = mapped_column(
-        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
-    )
+    chapter_content_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
     chapter_content_text: Mapped[str] = mapped_column(Text, nullable=False)
     chapter_content_version: Mapped[int] = mapped_column(Integer, nullable=False)
 

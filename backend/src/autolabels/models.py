@@ -2,9 +2,9 @@ import uuid
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Enum, ForeignKey, String, Text, UniqueConstraint, func
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.types import UUID
 
 from src.autolabels.constants import MAX_MODEL_NAME_LEN, AutoLabelProgress
 from src.models import Base
@@ -30,7 +30,7 @@ class AutoLabelRun(Base):
 
     __tablename__ = "auto_label_runs"
 
-    run_id: Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
+    run_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
     novel_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("novels.novel_id", name="fk_auto_label_runs_novel_id_novels"), nullable=False
     )
@@ -66,16 +66,14 @@ class AutoLabel(Base):
 
     __tablename__ = "auto_labels"
 
-    auto_label_id: Mapped[uuid.UUID] = mapped_column(
-        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
-    )
+    auto_label_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
     auto_label_data: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True)
     auto_label_status: Mapped[AutoLabelProgress] = mapped_column(
         Enum(AutoLabelProgress, native_enum=False, length=10, values_callable=lambda x: [str(e.value) for e in x]),
         nullable=False,
         default=AutoLabelProgress.PENDING,
     )
-    auto_label_last_job_id: Mapped[uuid.UUID | None] = mapped_column(postgresql.UUID, nullable=True)
+    auto_label_last_job_id: Mapped[uuid.UUID | None] = mapped_column(UUID, nullable=True)
     auto_label_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     chapter_content_id: Mapped[uuid.UUID] = mapped_column(

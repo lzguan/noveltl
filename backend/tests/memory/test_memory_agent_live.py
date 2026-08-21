@@ -17,8 +17,8 @@ from sqlalchemy.orm import Session
 
 from src.languages.models import Language
 from src.memory.agent.agent import create_agent, run_novel
-from src.memory.glossary.models import GlossaryAssociation, GlossaryTerm
 from src.memory.models import Memory, MemoryGroup
+from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
 from src.novels.models import SourceWork
 from test_support.database import TemporaryPostgresDatabase, temporary_postgres_database
 from test_support.test_data import load_catalog, load_novel
@@ -130,14 +130,14 @@ def _snapshot_memory(db: Session, memory_group_id: uuid.UUID) -> dict[str, objec
                 "content": memory.memory_content,
                 "reviewStatus": memory.memory_review_status.value,
                 "creatorType": memory.creator_type.value,
+                "pluginName": memory.plugin_name,
                 "createdAt": memory.created_at.isoformat(),
                 "updatedAt": memory.updated_at.isoformat(),
             }
             for memory in memories
         ],
         "associations": [
-            {"termId": str(association.term_id), "memoryId": str(association.memory_id)}
-            for association in associations
+            {"termId": str(association.term_id), "memoryId": str(association.memory_id)} for association in associations
         ],
     }
 

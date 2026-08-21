@@ -13,9 +13,8 @@ from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
 from src.memory.agent.toolsets.glossary import glossary_toolset
 from src.memory.models import MemoryGroup
+from src.memory.types import PluginName
 from src.novels.models import Chapter, ChapterContent
-
-type PluginName = Literal["glossary"]
 
 plugin_toolsets: dict[PluginName, FunctionToolset[MemAgentDeps]] = {"glossary": glossary_toolset}
 

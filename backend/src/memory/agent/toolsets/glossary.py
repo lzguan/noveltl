@@ -9,8 +9,8 @@ from sqlalchemy.exc import IntegrityError
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.exceptions import GlossaryTermNotFoundException, MemoryNotFoundException
-from src.memory.glossary import access
-from src.memory.glossary.schemas import GlossaryMemory, GlossaryTerm
+from src.memory.plugins.glossary import access
+from src.memory.plugins.glossary.schemas import GlossaryMemory, GlossaryTerm
 from src.memory.schemas import Memory
 from src.memory.types import Creator, MemoryType, Scope
 

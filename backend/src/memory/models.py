@@ -76,5 +76,6 @@ class Memory(Base):
         ),
         nullable=False,
     )
+    plugin_name: Mapped[str] = mapped_column(types.String(32), nullable=False)
 
     __table_args__ = (CheckConstraint("memory_start_num < memory_end_num", name="ck_memories_start_end_num"),)

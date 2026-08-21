@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Final
 from uuid import UUID
 
 from sqlalchemy import SQLColumnExpression, insert, literal, or_, select, update
@@ -7,15 +8,17 @@ from sqlalchemy.orm import Session, aliased
 
 from src.memory.access import MemAccessContext, check_mem_access_ctx, write_memory
 from src.memory.exceptions import GlossaryTermNotFoundException
-from src.memory.glossary.models import GlossaryAssociation, GlossaryTerm
 from src.memory.models import Memory
-from src.memory.types import Creator, MemoryType, ReviewStatus, Scope
+from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
+from src.memory.types import Creator, MemoryType, PluginName, ReviewStatus, Scope
 from src.novels.models import ChapterContent
 
 type ContainsQuery = Callable[
     [SQLColumnExpression[str], SQLColumnExpression[str]],
     SQLColumnExpression[bool],
 ]
+
+GLOSSARY_PLUGIN_NAME: Final[PluginName] = "glossary"
 
 
 def get_terms_in_chapter(
@@ -83,6 +86,7 @@ def inspect_terms(
             GlossaryTerm.memory_group_id == ctx.memory_group_id,
             Memory.memory_start_num <= chap_num,
             or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chap_num),
+            Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
         )
         .order_by(Memory.memory_start_num.desc(), Memory.memory_id, GlossaryTerm.term, GlossaryTerm.term_id)
     )
@@ -194,7 +198,7 @@ def create_memory(
     scope: Scope | None = None,
 ) -> tuple[Memory, list[GlossaryAssociation]]:
     try:
-        new_memory = write_memory(db, ctx, mem_type, content, creator, scope)
+        new_memory = write_memory(db, ctx, mem_type, content, creator, GLOSSARY_PLUGIN_NAME, scope)
         glossary_associations = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, term_names)
     except Exception:
         raise
@@ -224,7 +228,9 @@ def supersede_memory(
         .all()
     )
     try:
-        new_memory = write_memory(db, ctx, mem_type, content, creator, scope, supersedes_id=memory_id)
+        new_memory = write_memory(
+            db, ctx, mem_type, content, creator, GLOSSARY_PLUGIN_NAME, scope, supersedes_id=memory_id
+        )
         new_assocs = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, current_term_names)
     except Exception:
         raise

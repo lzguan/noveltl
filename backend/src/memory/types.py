@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Literal
 
 
 class ReviewStatus(StrEnum):
@@ -41,3 +42,6 @@ class Scope(StrEnum):
     LOCAL = "local"
     RECENT = "recent"
     PERSIST = "persist"
+
+
+type PluginName = Literal["glossary"]

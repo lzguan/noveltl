@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import ConfigDict, Field
 
-from src.memory.schemas import Memory
+from src.memory.schemas import AgentMemory
 from src.memory.types import ReviewStatus
 from src.schemas import Model
 
@@ -26,7 +26,7 @@ class GlossaryTerm(Model):
 class GlossaryMemory[KeyT](Model):
     """A memory together with the glossary terms it describes."""
 
-    memory: Memory[KeyT] = Field(description="The memory that describes the glossary terms.")
+    memory: AgentMemory[KeyT] = Field(description="The memory that describes the glossary terms.")
     terms: list[GlossaryTerm] = Field(
         description="Glossary terms described by this memory; one memory may apply to multiple related terms."
     )

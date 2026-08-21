@@ -11,7 +11,7 @@ from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.exceptions import GlossaryTermNotFoundException, MemoryNotFoundException
 from src.memory.plugins.glossary import access
 from src.memory.plugins.glossary.schemas import GlossaryMemory, GlossaryTerm
-from src.memory.schemas import Memory
+from src.memory.schemas import AgentMemory
 from src.memory.types import Creator, MemoryType, Scope
 
 """
@@ -170,7 +170,7 @@ def _term_memories(
     memories = access.inspect_terms(db, ctx.deps.mem_access_context, term_names, memory_types)
     return [
         GlossaryMemory[UUID](
-            memory=Memory.model_validate(memory), terms=[GlossaryTerm.model_validate(term) for term in terms]
+            memory=AgentMemory.model_validate(memory), terms=[GlossaryTerm.model_validate(term) for term in terms]
         )
         for memory, terms in memories
     ]
@@ -268,7 +268,7 @@ def term_memories(
     memories = _term_memories(ctx, term_names, memory_types)
     return [
         GlossaryMemory[str](
-            memory=Memory[str].model_validate(
+            memory=AgentMemory[str].model_validate(
                 {**gmemory.memory.model_dump(), "memory_id": ctx.deps.uuid_cache.new(gmemory.memory.memory_id)}
             ),
             terms=gmemory.terms,

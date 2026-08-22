@@ -1,4 +1,4 @@
-from src.exceptions import NotFoundException
+from src.exceptions import DuplicateException, NotFoundException
 
 
 class MemoryNotFoundException(NotFoundException):
@@ -10,4 +10,8 @@ class MemoryGroupNotFoundException(NotFoundException):
 
 
 class GlossaryTermNotFoundException(NotFoundException):
+    pass
+
+
+class GlossaryTermAlreadyExistsException(DuplicateException):
     pass

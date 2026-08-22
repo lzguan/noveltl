@@ -1,7 +1,8 @@
 from typing import Any
 
-from sqlalchemy import Select, Update, exists, select
+from sqlalchemy import Delete, Select, Update, exists, select
 from sqlalchemy.orm import aliased
+from sqlalchemy.sql.dml import ReturningDelete
 
 from src.auth.models import User
 from src.memory.models import Memory, MemoryGroup
@@ -60,6 +61,28 @@ def memory_mod_access_update[T: Update](
     aliased_type: type[Memory] = Memory,
 ):
     """Restrict a memory update through its memory group's corresponding novel."""
+    memory_group_alias = aliased(MemoryGroup)
+    memory_group_access = (
+        select(1)
+        .select_from(memory_group_alias)
+        .where(memory_group_alias.memory_group_id == aliased_type.memory_group_id)
+        .correlate(aliased_type)
+    )
+    memory_group_access = memory_group_mod_access_select(
+        memory_group_access,
+        current_user,
+        memory_group_alias,
+        edit_only=True,
+    )
+    return stmt.where(exists(memory_group_access))
+
+
+def memory_mod_access_delete[T: Delete | ReturningDelete[Any]](
+    stmt: T,
+    current_user: User,
+    aliased_type: type[Memory] = Memory,
+) -> T:
+    """Restrict a memory delete through its memory group's corresponding novel."""
     memory_group_alias = aliased(MemoryGroup)
     memory_group_access = (
         select(1)

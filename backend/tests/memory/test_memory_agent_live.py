@@ -32,7 +32,6 @@ BENCHMARK_RUN_COUNT = 5
 
 pytestmark = [
     pytest.mark.agent,
-    pytest.mark.slow,
     pytest.mark.skipif(not SNAKE_CATALOG_ROOT.is_dir(), reason=f"private catalog not found at {SNAKE_CATALOG_ROOT}"),
     pytest.mark.skipif(not os.getenv("DEEPSEEK_API_KEY"), reason="DEEPSEEK_API_KEY is not exported"),
 ]

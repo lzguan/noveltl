@@ -67,9 +67,7 @@ class Memory(Model):
     creator_type: Creator = Field(
         description="Type of entity that created the memory: a human, an AI agent, or a workflow."
     )
-    plugin_name: PluginName = Field(
-        description="Name of the plugin that created the memory, or null when the memory was created by a human or an AI agent without a plugin."
-    )
+    plugin_name: PluginName = Field(description="Name of the plugin that owns the memory.")
 
 
 class MemoryGroup(Model):
@@ -81,3 +79,20 @@ class MemoryGroup(Model):
     memory_group_name: str = Field(description="Human-readable name of the memory group.")
     novel_id: UUID = Field(description="Identifier of the novel to which this memory group belongs.")
     memory_language: str = Field(description="Language in which memory content should be written.")
+
+
+class MemoryPage(Model):
+    count: int = Field(ge=0)
+    rows: list[Memory]
+
+
+class UpdateMemoryContent(Model):
+    memory_content: str = Field(min_length=1)
+
+
+class UpdateReviewStatus(Model):
+    review_status: ReviewStatus
+
+
+class ExpireMemory(Model):
+    chapter_id: UUID

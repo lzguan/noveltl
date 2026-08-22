@@ -48,7 +48,7 @@ class Workflow(Base):
         default=WorkflowUseCase.ADVANCED,
         server_default=WorkflowUseCase.ADVANCED.value,
     )
-    schema: Mapped[dict] = mapped_column(UUID, nullable=False)
+    schema: Mapped[dict] = mapped_column(JSONB, nullable=False)
     job_id: Mapped[uuid.UUID | None] = mapped_column(UUID, nullable=True)
     workflow_status: Mapped[WorkflowStatus] = mapped_column(
         Enum(
@@ -118,7 +118,7 @@ class Instance(Base):
     workflow_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("workflows.workflow_id", name="fk_instances_workflow_id_workflows"), nullable=False, index=True
     )
-    value: Mapped[dict] = mapped_column(UUID, nullable=False)
+    value: Mapped[dict] = mapped_column(JSONB, nullable=False)
 
 
 class FunctionDefinition(Base):
@@ -131,7 +131,7 @@ class FunctionDefinition(Base):
     )
     namespace: Mapped[str] = mapped_column(String(100), nullable=False)
     function_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    function_definition: Mapped[dict] = mapped_column(UUID, nullable=False)
+    function_definition: Mapped[dict] = mapped_column(JSONB, nullable=False)
 
     __table_args__ = (
         UniqueConstraint(

@@ -47,6 +47,7 @@ class GlossaryAssociation(Base):
         ForeignKey(
             "glossaries.term_id",
             name="fk_glossary_associations_term_id_glossaries",
+            ondelete="CASCADE",
         ),
         primary_key=True,
     )
@@ -54,6 +55,7 @@ class GlossaryAssociation(Base):
         ForeignKey(
             "memories.memory_id",
             name="fk_glossary_associations_memory_id_memories",
+            ondelete="CASCADE",
         ),
         primary_key=True,
     )

@@ -2,14 +2,19 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Select, exists, func, or_, select, update
+from sqlalchemy import Select, delete, func, or_, select, update
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
 from src.auth.models import User
 from src.memory.exceptions import MemoryNotFoundException
 from src.memory.models import Memory, MemoryGroup
-from src.memory.permissions import memory_group_mod_access_select, memory_mod_access_select, memory_mod_access_update
+from src.memory.permissions import (
+    memory_group_mod_access_select,
+    memory_mod_access_delete,
+    memory_mod_access_select,
+    memory_mod_access_update,
+)
 from src.memory.types import MemoryType, PluginName, ReviewStatus
 from src.novels.exceptions import ChapterNotFoundException
 from src.novels.models import Chapter
@@ -42,15 +47,16 @@ def query_memories_at_chapter(
 ):
     """Read all memories in a memory group that are active at the given chapter."""
     try:
-        chapter = db.execute(
+        chapter_query = (
             select(Chapter)
-            .where(Chapter.chapter_id == chapter_id)
+            .join(MemoryGroup, MemoryGroup.novel_id == Chapter.novel_id)
             .where(
-                exists(MemoryGroup).where(
-                    MemoryGroup.memory_group_id == memory_group_id, MemoryGroup.novel_id == Chapter.novel_id
-                )
+                Chapter.chapter_id == chapter_id,
+                MemoryGroup.memory_group_id == memory_group_id,
             )
-        ).scalar_one()
+        )
+        chapter_query = memory_group_mod_access_select(chapter_query, user)
+        chapter = db.execute(chapter_query).scalar_one()
     except NoResultFound as e:
         raise ChapterNotFoundException from e
 
@@ -172,6 +178,71 @@ def update_memory_content(
         updated_memory_id = db.execute(query).scalar_one()
         db.commit()
         return updated_memory_id
+    except NoResultFound as e:
+        db.rollback()
+        raise MemoryNotFoundException from e
+    except Exception:
+        db.rollback()
+        raise
+
+
+def expire_memory(
+    db: Session,
+    user: User,
+    memory_id: UUID,
+    chapter_id: UUID,
+):
+    """Expire an active memory at the start of a later chapter."""
+    try:
+        memory_query = (
+            select(MemoryGroup.novel_id)
+            .select_from(Memory)
+            .join(MemoryGroup, MemoryGroup.memory_group_id == Memory.memory_group_id)
+            .where(Memory.memory_id == memory_id)
+        )
+        memory_query = memory_mod_access_select(memory_query, user, edit_only=True)
+        novel_id = db.execute(memory_query).scalar_one()
+    except NoResultFound as e:
+        raise MemoryNotFoundException from e
+
+    try:
+        chapter_num = db.execute(
+            select(Chapter.chapter_num).where(Chapter.chapter_id == chapter_id, Chapter.novel_id == novel_id)
+        ).scalar_one()
+    except NoResultFound as e:
+        raise ChapterNotFoundException from e
+
+    query = (
+        update(Memory)
+        .where(
+            Memory.memory_id == memory_id,
+            Memory.memory_start_num < chapter_num,
+            or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chapter_num),
+        )
+        .values(memory_end_num=chapter_num)
+        .returning(Memory.memory_id)
+    )
+    query = memory_mod_access_update(query, user)
+    try:
+        expired_memory_id = db.execute(query).scalar_one()
+        db.commit()
+        return expired_memory_id
+    except NoResultFound as e:
+        db.rollback()
+        raise MemoryNotFoundException from e
+    except Exception:
+        db.rollback()
+        raise
+
+
+def delete_memory(db: Session, user: User, memory_id: UUID):
+    """Delete one memory and rely on plugin association cascades for cleanup."""
+    query = delete(Memory).where(Memory.memory_id == memory_id).returning(Memory.memory_id)
+    query = memory_mod_access_delete(query, user)
+    try:
+        deleted_memory_id = db.execute(query).scalar_one()
+        db.commit()
+        return deleted_memory_id
     except NoResultFound as e:
         db.rollback()
         raise MemoryNotFoundException from e

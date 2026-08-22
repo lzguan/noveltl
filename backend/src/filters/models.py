@@ -2,8 +2,9 @@ import uuid
 from enum import StrEnum
 
 from sqlalchemy import Enum, ForeignKey, Index, String, Text, UniqueConstraint, func
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.types import UUID
 
 from src.models import Base
 
@@ -34,9 +35,7 @@ class Workflow(Base):
 
     __tablename__ = "workflows"
 
-    workflow_id: Mapped[uuid.UUID] = mapped_column(
-        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
-    )
+    workflow_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
     workflow_name: Mapped[str] = mapped_column(String(100), nullable=True)
     use_case: Mapped[WorkflowUseCase] = mapped_column(
         Enum(
@@ -49,8 +48,8 @@ class Workflow(Base):
         default=WorkflowUseCase.ADVANCED,
         server_default=WorkflowUseCase.ADVANCED.value,
     )
-    schema: Mapped[dict] = mapped_column(postgresql.JSONB, nullable=False)
-    job_id: Mapped[uuid.UUID | None] = mapped_column(postgresql.UUID, nullable=True)
+    schema: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    job_id: Mapped[uuid.UUID | None] = mapped_column(UUID, nullable=True)
     workflow_status: Mapped[WorkflowStatus] = mapped_column(
         Enum(
             WorkflowStatus,
@@ -115,13 +114,11 @@ class Instance(Base):
 
     __tablename__ = "instances"
 
-    instance_id: Mapped[uuid.UUID] = mapped_column(
-        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
-    )
+    instance_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
     workflow_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("workflows.workflow_id", name="fk_instances_workflow_id_workflows"), nullable=False, index=True
     )
-    value: Mapped[dict] = mapped_column(postgresql.JSONB, nullable=False)
+    value: Mapped[dict] = mapped_column(JSONB, nullable=False)
 
 
 class FunctionDefinition(Base):
@@ -130,11 +127,11 @@ class FunctionDefinition(Base):
     __tablename__ = "function_definitions"
 
     function_definition_id: Mapped[uuid.UUID] = mapped_column(
-        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
+        UUID, primary_key=True, server_default=func.gen_random_uuid()
     )
     namespace: Mapped[str] = mapped_column(String(100), nullable=False)
     function_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    function_definition: Mapped[dict] = mapped_column(postgresql.JSONB, nullable=False)
+    function_definition: Mapped[dict] = mapped_column(JSONB, nullable=False)
 
     __table_args__ = (
         UniqueConstraint(
@@ -150,9 +147,7 @@ class Grouping(Base):
 
     __tablename__ = "groupings"
 
-    grouping_id: Mapped[uuid.UUID] = mapped_column(
-        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
-    )
+    grouping_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
     workflow_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("workflows.workflow_id", name="fk_groupings_workflow_id_workflows"), nullable=False, index=True
     )
@@ -163,7 +158,7 @@ class Grouping(Base):
         ),
         nullable=False,
     )
-    job_id: Mapped[uuid.UUID | None] = mapped_column(postgresql.UUID, nullable=True)
+    job_id: Mapped[uuid.UUID | None] = mapped_column(UUID, nullable=True)
     grouping_status: Mapped[GroupingStatus] = mapped_column(
         Enum(
             GroupingStatus,
@@ -191,7 +186,7 @@ class GroupAssignment(Base):
     __tablename__ = "group_assignments"
 
     group_assignment_id: Mapped[uuid.UUID] = mapped_column(
-        postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid()
+        UUID, primary_key=True, server_default=func.gen_random_uuid()
     )
     grouping_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("groupings.grouping_id", name="fk_group_assignments_grouping_id_groupings"), nullable=False
@@ -199,7 +194,7 @@ class GroupAssignment(Base):
     instance_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("instances.instance_id", name="fk_group_assignments_instance_id_instances"), nullable=False
     )
-    function_value: Mapped[str | int | bool] = mapped_column(postgresql.JSONB, nullable=False)
+    function_value: Mapped[str | int | bool] = mapped_column(JSONB, nullable=False)
 
     __table_args__ = (
         UniqueConstraint("grouping_id", "instance_id", name="uq_grouping_instance"),

@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Literal
 
 
 class ReviewStatus(StrEnum):
@@ -20,13 +21,13 @@ class MemoryType(StrEnum):
     FACT: Memory about a specific fact or piece of information.
     EVENT: Memory about a specific event or occurrence.
     DEFINITION: Long-term memory about a specific definition or concept.
-    TRANSLATION: Long-term memory about a specific translation or mapping.
+    RELATION: Long-term memory about a relationship between glossary terms.
     """
 
     FACT = "fact"
     EVENT = "event"
     DEFINITION = "def"
-    TRANSLATION = "tl"
+    RELATION = "rel"
 
 
 class Scope(StrEnum):
@@ -41,3 +42,6 @@ class Scope(StrEnum):
     LOCAL = "local"
     RECENT = "recent"
     PERSIST = "persist"
+
+
+type PluginName = Literal["glossary"]

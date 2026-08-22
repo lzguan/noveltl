@@ -5,8 +5,7 @@ Database models related to users/user authentication
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Enum, String, UniqueConstraint, func
-from sqlalchemy.dialects import postgresql
+from sqlalchemy import Enum, String, UniqueConstraint, func, types
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.auth.constants import MAX_USER_NAME_LEN, UserType
@@ -31,7 +30,7 @@ class User(Base):
 
     __tablename__ = "users"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(postgresql.UUID, primary_key=True, server_default=func.gen_random_uuid())
+    user_id: Mapped[uuid.UUID] = mapped_column(types.UUID, primary_key=True, server_default=func.gen_random_uuid())
     user_name: Mapped[str] = mapped_column(String(MAX_USER_NAME_LEN), nullable=False)
     user_hashed_password: Mapped[str] = mapped_column(String(256), nullable=False)
     user_type: Mapped[UserType] = mapped_column(

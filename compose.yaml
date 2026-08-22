@@ -22,6 +22,8 @@ services:
     environment:
       <<: [*db-env, *test-db-env, *redis-env]
       SECRET_KEY: ${SECRET_KEY}
+      HF_TOKEN: ${HF_TOKEN:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
     command: sleep infinity
 
   db:

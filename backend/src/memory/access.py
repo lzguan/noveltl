@@ -11,7 +11,7 @@ from src.memory.types import Creator, MemoryType, ReviewStatus, Scope
 from src.novels.exceptions import ChapterContentNotFoundException
 from src.novels.models import Chapter, ChapterContent, Novel
 
-RECENT_SCOPE_LENGTH = 50
+RECENT_SCOPE_LENGTH = 15
 LOCAL_SCOPE_LENGTH = 1
 
 
@@ -86,6 +86,7 @@ def write_memory(
     mem_type: MemoryType,
     content: str,
     creator_type: Creator,
+    plugin_name: str,
     scope: Scope | None = None,
     supersedes_id: UUID | None = None,
 ) -> Memory:
@@ -113,6 +114,7 @@ def write_memory(
                     or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > cur_chap_num),
                     Memory.memory_start_num < cur_chap_num,
                     Memory.memory_group_id == ctx.memory_group_id,
+                    Memory.plugin_name == plugin_name,
                 )
                 .values(memory_end_num=cur_chap_num)
                 .returning(Memory.memory_id)
@@ -132,6 +134,7 @@ def write_memory(
             memory_content=content,
             memory_group_id=ctx.memory_group_id,
             creator_type=creator_type,
+            plugin_name=plugin_name,
         )
         .returning(Memory)
     ).scalar_one()

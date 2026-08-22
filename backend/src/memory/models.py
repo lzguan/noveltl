@@ -55,7 +55,9 @@ class Memory(Base):
     )
     memory_start_num: Mapped[int] = mapped_column(types.Integer, nullable=False)
     memory_end_num: Mapped[int | None] = mapped_column(types.Integer, nullable=True)
-    supersedes_memory_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("memories.memory_id"), nullable=True)
+    supersedes_memory_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("memories.memory_id", ondelete="SET NULL"), nullable=True
+    )
     memory_content: Mapped[str] = mapped_column(types.Text, nullable=False)
     memory_review_status: Mapped[ReviewStatus] = mapped_column(
         Enum(
@@ -76,5 +78,6 @@ class Memory(Base):
         ),
         nullable=False,
     )
+    plugin_name: Mapped[str] = mapped_column(types.String(32), nullable=False)
 
     __table_args__ = (CheckConstraint("memory_start_num < memory_end_num", name="ck_memories_start_end_num"),)

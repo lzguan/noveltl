@@ -299,13 +299,57 @@ def filter_scenario(test_db: Session, no_hash: PasswordHash) -> DatabaseScenario
         version=1,
         text="Hello world. This is a test sentence. Another sentence here.",
     )
+    builder.chapter("chapter_2", novel="novel", number=2, title="Second Test Chapter", is_public=True)
+    builder.content(
+        "content_2_v1",
+        chapter="chapter_2",
+        version=1,
+        text="Moonlight guides another traveler toward the quiet city.",
+    )
+    builder.chapter("chapter_3", novel="novel", number=3, title="Crossing the World", is_public=True)
+    builder.content(
+        "content_3_v1",
+        chapter="chapter_3",
+        version=1,
+        text="A traveler crossed the world and entered the city before dawn.",
+    )
+    builder.chapter("chapter_4", novel="novel", number=4, title="Market Gates", is_public=True)
+    builder.content(
+        "content_4_v1",
+        chapter="chapter_4",
+        version=1,
+        text="The world traders greeted the traveler beside the market gates.",
+    )
+    builder.chapter("chapter_5", novel="novel", number=5, title="Leaving the City", is_public=True)
+    builder.content(
+        "content_5_v1",
+        chapter="chapter_5",
+        version=1,
+        text="The traveler left the city beneath Moonlight.",
+    )
     builder.label_group("labels", novel="novel", name="SF Test Group")
     builder.label_group("empty_labels", novel="novel", name="SF Empty Group")
     builder.label_contributor("owner", group="labels", user="owner", role=LabelRole.OWNER)
     builder.label_data("labels", group="labels", content="content_v1")
+    builder.label_data("labels_chapter_2", group="labels", content="content_2_v1")
+    builder.label_data("labels_chapter_3", group="labels", content="content_3_v1")
+    builder.label_data("labels_chapter_4", group="labels", content="content_4_v1")
+    builder.label_data("labels_chapter_5", group="labels", content="content_5_v1")
     builder.label("hello", label_data="labels", word="Hello", start=0, end=5, score=0.9)
     builder.label("world", label_data="labels", word="world", start=6, end=11, score=0.5)
     builder.label("test", label_data="labels", word="test", start=22, end=26, score=0.3)
+    builder.label("moonlight", label_data="labels_chapter_2", word="Moonlight", start=0, end=9, score=0.8)
+    builder.label("traveler", label_data="labels_chapter_2", word="traveler", start=25, end=33, score=0.4)
+    builder.label("city_2", label_data="labels_chapter_2", word="city", start=51, end=55, score=0.7)
+    builder.label("traveler_3", label_data="labels_chapter_3", word="traveler", start=2, end=10, score=0.45)
+    builder.label("world_3", label_data="labels_chapter_3", word="world", start=23, end=28, score=0.55)
+    builder.label("city_3", label_data="labels_chapter_3", word="city", start=45, end=49, score=0.65)
+    builder.label("world_4", label_data="labels_chapter_4", word="world", start=4, end=9, score=0.2)
+    builder.label("traveler_4", label_data="labels_chapter_4", word="traveler", start=30, end=38, score=0.35)
+    builder.label("market", label_data="labels_chapter_4", word="market", start=50, end=56, score=0.9)
+    builder.label("traveler_5", label_data="labels_chapter_5", word="traveler", start=4, end=12, score=0.25)
+    builder.label("city_5", label_data="labels_chapter_5", word="city", start=22, end=26, score=0.5)
+    builder.label("moonlight_5", label_data="labels_chapter_5", word="Moonlight", start=35, end=44, score=0.95)
     return builder.finish()
 
 

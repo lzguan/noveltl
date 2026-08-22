@@ -1,4 +1,5 @@
 import uuid
+from collections import Counter
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -266,9 +267,8 @@ def test_label_filter_map_rename_group_pipeline(
     )
 
     assert source_count == len(filter_scenario.labels) + 1
-    assert filtered_count == 3
-    assert sorted(assignments) == ["test", "world", "world"]
-    assert set(assignments) == {"test", "world"}
+    assert filtered_count == 10
+    assert Counter(assignments) == Counter({"traveler": 4, "world": 4, "test": 1, "city": 1})
 
 
 def test_catalog_xianxia_data_flows_through_runner_pipeline(

@@ -194,10 +194,15 @@ The filter test suite covers:
 - label-source selection from latest content versions;
 - map, filter, and group preconditions;
 - bounded batches, stale job IDs, partial commits, and grouping resumption;
-- an end-to-end label → filter → map → rename → group pipeline.
+- an end-to-end label → filter → map → rename → group pipeline;
+- Redis-backed Celery dispatch of a user workflow through label-source,
+  annotation, filter, map, and group workers, including persisted outputs.
 
 Runner tests require PostgreSQL because the persistence models use PostgreSQL
 JSONB and integrate with the existing novel and label tables.
+The Celery integration test additionally requires the configured `test_redis`
+service and is marked `integration` and `slow`, so it must be selected
+explicitly with `pytest -m integration`.
 
 ## Code guide
 

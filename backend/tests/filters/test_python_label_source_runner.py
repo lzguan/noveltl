@@ -110,10 +110,20 @@ def test_label_source_loads_only_latest_labels_in_batches(
         assert isinstance(label, LabelRefData)
         references.append(label.value)
 
-    assert {reference.label_id for reference in references} == {label.label_id for label in current_labels}
+    replaced_label_keys = {"hello", "world", "test"}
+    unchanged_label_ids = {
+        label.label_id for key, label in filter_scenario.labels.items() if key not in replaced_label_keys
+    }
+    assert {reference.label_id for reference in references} == unchanged_label_ids | {
+        label.label_id for label in current_labels
+    }
     assert not (
         {reference.label_id for reference in references}
-        & {label.label_id for label in list(filter_scenario.labels.values())}
+        & {
+            filter_scenario.labels["hello"].label_id,
+            filter_scenario.labels["world"].label_id,
+            filter_scenario.labels["test"].label_id,
+        }
     )
     assert {
         (
@@ -129,7 +139,15 @@ def test_label_source_loads_only_latest_labels_in_batches(
             current_label_data.label_data_id,
             current_content.chapter_id,
             current_content.chapter_content_id,
+        ),
+    } | {
+        (
+            filter_scenario.label_groups["labels"].label_group_id,
+            filter_scenario.label_datas[f"labels_chapter_{chapter_num}"].label_data_id,
+            filter_scenario.chapters[f"chapter_{chapter_num}"].chapter_id,
+            filter_scenario.contents[f"content_{chapter_num}_v1"].chapter_content_id,
         )
+        for chapter_num in range(2, 6)
     }
 
 

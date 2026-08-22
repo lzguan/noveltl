@@ -26,6 +26,8 @@ from test_support.test_data.scenarios import DatabaseScenario
 
 logger = logging.getLogger(__name__)
 
+pytestmark = pytest.mark.integration
+
 
 class InlineCeleryDispatcher(CeleryDispatcher):
     """Celery dispatcher that avoids a thread hop in the in-process test worker."""

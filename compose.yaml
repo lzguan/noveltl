@@ -16,11 +16,15 @@ x-redis-env: &redis-env
   REDIS_HOST: redis
   REDIS_PORT: ${REDIS_PORT}
 
+x-test-redis-env: &test-redis-env
+  TEST_REDIS_HOST: test_redis
+  TEST_REDIS_PORT: ${TEST_REDIS_PORT}
+
 services:
   dev:
     image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-devcontainer:${DEV_IMAGE_TAG:-latest}
     environment:
-      <<: [*db-env, *test-db-env, *redis-env]
+      <<: [*db-env, *test-db-env, *redis-env, *test-redis-env]
       SECRET_KEY: ${SECRET_KEY}
       HF_TOKEN: ${HF_TOKEN:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}

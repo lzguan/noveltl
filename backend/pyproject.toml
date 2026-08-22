@@ -39,6 +39,7 @@ dev = [
     "pyyaml>=6.0.3",
     "types-pyyaml>=6.0.12.20260518",
     "celery-types>=0.26.0",
+    "numpy>=2.5.2",
 ]
 agent = [
     "pydantic-ai>=2.31.0",
@@ -84,6 +85,7 @@ log_cli_format = "%(message)s"
 markers = [
     "agent: marks tests that call a live LLM provider and may incur cost",
     "implementation: marks heavy model implementation tests",
+    "integration: marks tests that exercise external service boundaries",
     "slow: marks tests that take a long time",
 ]
 addopts = "-ra -q -m 'not slow and not agent'"

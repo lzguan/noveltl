@@ -1133,6 +1133,7 @@ backend = [
 dev = [
     { name = "celery-types" },
     { name = "coverage" },
+    { name = "numpy" },
     { name = "pyrefly" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -1172,6 +1173,7 @@ backend = [
 dev = [
     { name = "celery-types", specifier = ">=0.26.0" },
     { name = "coverage", specifier = ">=7.13.4" },
+    { name = "numpy", specifier = ">=2.5.2" },
     { name = "pyrefly", specifier = ">=1.2.0" },
     { name = "pytest", specifier = ">=9.0.0" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },

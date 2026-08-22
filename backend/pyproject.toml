@@ -39,6 +39,7 @@ dev = [
     "pyyaml>=6.0.3",
     "types-pyyaml>=6.0.12.20260518",
     "celery-types>=0.26.0",
+    "numpy>=2.5.2",
 ]
 agent = [
     "pydantic-ai>=2.31.0",

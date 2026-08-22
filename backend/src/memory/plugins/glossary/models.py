@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import ForeignKey, UniqueConstraint, func, types
+from sqlalchemy import ForeignKey, Index, UniqueConstraint, func, types
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.memory.types import ReviewStatus
@@ -33,8 +33,8 @@ class GlossaryTerm(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "term",
             "memory_group_id",
+            "term",
             name="uq_glossaries_term_memory_group_id",
         ),
     )
@@ -59,3 +59,5 @@ class GlossaryAssociation(Base):
         ),
         primary_key=True,
     )
+
+    __table_args__ = (Index("ix_glossary_associations_memory_id", "memory_id"),)

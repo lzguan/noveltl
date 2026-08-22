@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, func, types
+from sqlalchemy import CheckConstraint, Enum, ForeignKey, Index, func, types
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.memory.types import Creator, MemoryType, ReviewStatus
@@ -29,6 +29,8 @@ class MemoryGroup(Base):
         nullable=False,
     )
 
+    __table_args__ = (Index("ix_memory_groups_novel_id", "novel_id"),)
+
 
 class Memory(Base):
     __tablename__ = "memories"
@@ -51,7 +53,7 @@ class Memory(Base):
         nullable=False,
     )
     memory_observed_in: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("chapter_contents.chapter_content_id"), nullable=False
+        ForeignKey("chapter_contents.chapter_content_id", ondelete="CASCADE"), nullable=False
     )
     memory_start_num: Mapped[int] = mapped_column(types.Integer, nullable=False)
     memory_end_num: Mapped[int | None] = mapped_column(types.Integer, nullable=True)
@@ -80,4 +82,9 @@ class Memory(Base):
     )
     plugin_name: Mapped[str] = mapped_column(types.String(32), nullable=False)
 
-    __table_args__ = (CheckConstraint("memory_start_num < memory_end_num", name="ck_memories_start_end_num"),)
+    __table_args__ = (
+        CheckConstraint("memory_start_num < memory_end_num", name="ck_memories_start_end_num"),
+        Index("ix_memories_memory_group_id_start_num", "memory_group_id", "memory_start_num"),
+        Index("ix_memories_memory_observed_in", "memory_observed_in"),
+        Index("ix_memories_supersedes_memory_id", "supersedes_memory_id"),
+    )

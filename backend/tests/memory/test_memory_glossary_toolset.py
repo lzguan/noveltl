@@ -56,11 +56,6 @@ def test_new_memory_skips_missing_term_query_after_success(monkeypatch: pytest.M
     get_missing_term_names.assert_not_called()
 
 
-def test_term_memories_rejects_empty_memory_types() -> None:
-    with pytest.raises(ModelRetry, match="at least one concrete candidate type"):
-        glossary.term_memories(_run_context(MagicMock(spec=Session)), ["白蛇"], [])
-
-
 def test_term_memories_forwards_multiple_memory_types(monkeypatch: pytest.MonkeyPatch) -> None:
     memory_types = [MemoryType.RELATION, MemoryType.FACT]
     term_memories = Mock(return_value=[])

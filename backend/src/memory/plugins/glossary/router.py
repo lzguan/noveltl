@@ -16,7 +16,7 @@ from src.memory.exceptions import (
 from src.memory.plugins.glossary.schemas import (
     CreateGlossaryMemory,
     CreateGlossaryTerm,
-    GlossaryMemoryDetail,
+    GlossaryMemory,
     GlossaryMemoryPage,
     GlossaryTerm,
     GlossaryTermPage,
@@ -152,7 +152,7 @@ def read_terms_for_memory(
 
 @router.post(
     "/memories",
-    response_model=GlossaryMemoryDetail,
+    response_model=GlossaryMemory,
     responses={
         400: {"model": DetailHTTPErrorResponse},
         404: {"model": DetailHTTPErrorResponse},

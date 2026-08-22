@@ -9,42 +9,57 @@ from src.memory.types import MemoryType, ReviewStatus, Scope
 from src.schemas import Model
 
 
-class GlossaryTerm(Model):
+class Page[T](Model):
+    count: int = Field(ge=0)
+    rows: list[T]
+
+
+class AgentGlossaryTerm(Model):
     """A glossary term represented as context for an agent."""
 
     model_config = ConfigDict(from_attributes=True)
 
-    term_id: UUID = Field(
-        description="Stable identifier to use when creating memories for or changing the review state of this term."
-    )
     term: str = Field(description="Term exactly as it appears in the novel's source text.")
     review_status: ReviewStatus = Field(
         description="Human-review state of the term. Pending terms are unverified; approved terms are verified."
     )
 
 
-class GlossaryMemory[KeyT](Model):
+class AgentGlossaryMemory[KeyT](Model):
     """A memory together with the glossary terms it describes."""
 
     memory: AgentMemory[KeyT] = Field(description="The memory that describes the glossary terms.")
+    terms: list[AgentGlossaryTerm] = Field(
+        description="Glossary terms described by this memory; one memory may apply to multiple related terms."
+    )
+
+
+class GlossaryTerm(Model):
+    """A glossary term represented as context for an agent."""
+
+    model_config = ConfigDict(from_attributes=True)
+    term_id: UUID = Field(description="Stable identifier for the glossary term.")
+    term: str = Field(description="Term exactly as it appears in the novel's source text.")
+    review_status: ReviewStatus = Field(
+        description="Human-review state of the term. Pending terms are unverified; approved terms are verified."
+    )
+
+
+class GlossaryMemory(Model):
+    """A memory together with the glossary terms it describes."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    memory: Memory = Field(description="The memory that describes the glossary terms.")
     terms: list[GlossaryTerm] = Field(
         description="Glossary terms described by this memory; one memory may apply to multiple related terms."
     )
 
 
-class GlossaryMemoryDetail(Model):
-    memory: Memory
-    terms: list[GlossaryTerm]
+GlossaryMemoryPage = Page[GlossaryMemory]
 
 
-class GlossaryMemoryPage(Model):
-    count: int = Field(ge=0)
-    rows: list[GlossaryMemoryDetail]
-
-
-class GlossaryTermPage(Model):
-    count: int = Field(ge=0)
-    rows: list[GlossaryTerm]
+GlossaryTermPage = Page[GlossaryTerm]
 
 
 class CreateGlossaryMemory(Model):

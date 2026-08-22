@@ -162,8 +162,7 @@ def _associate_terms(
 ) -> list[GlossaryAssociation]:
     unique_term_names = list(dict.fromkeys(term_names))
     if not unique_term_names:
-        raise GlossaryTermNotFoundException("A glossary memory must be associated with at least one term.")
-
+        return []
     association_source = select(
         GlossaryTerm.term_id,
         literal(memory_id),
@@ -197,11 +196,8 @@ def create_memory(
     content: str,
     scope: Scope | None = None,
 ) -> tuple[Memory, list[GlossaryAssociation]]:
-    try:
-        new_memory = write_memory(db, ctx, mem_type, content, creator, GLOSSARY_PLUGIN_NAME, scope)
-        glossary_associations = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, term_names)
-    except Exception:
-        raise
+    new_memory = write_memory(db, ctx, mem_type, content, creator, GLOSSARY_PLUGIN_NAME, scope)
+    glossary_associations = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, term_names)
     return new_memory, list(glossary_associations)
 
 
@@ -227,11 +223,6 @@ def supersede_memory(
         .scalars()
         .all()
     )
-    try:
-        new_memory = write_memory(
-            db, ctx, mem_type, content, creator, GLOSSARY_PLUGIN_NAME, scope, supersedes_id=memory_id
-        )
-        new_assocs = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, current_term_names)
-    except Exception:
-        raise
+    new_memory = write_memory(db, ctx, mem_type, content, creator, GLOSSARY_PLUGIN_NAME, scope, supersedes_id=memory_id)
+    new_assocs = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, current_term_names)
     return new_memory, new_assocs

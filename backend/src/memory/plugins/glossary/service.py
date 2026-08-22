@@ -24,7 +24,7 @@ from src.memory.plugins.glossary.permissions import (
     glossary_term_mod_access_update,
 )
 from src.memory.plugins.glossary.schemas import (
-    GlossaryMemoryDetail,
+    GlossaryMemory,
     GlossaryMemoryPage,
     GlossaryTermPage,
 )
@@ -59,7 +59,7 @@ def _enrich_memories(db: Session, memories: list[Memory], count: int) -> Glossar
     return GlossaryMemoryPage(
         count=count,
         rows=[
-            GlossaryMemoryDetail(
+            GlossaryMemory(
                 memory=MemorySchema.model_validate(memory),
                 terms=terms_by_memory[memory.memory_id],
             )
@@ -227,7 +227,7 @@ def create_glossary_memory(
     memory_content: str,
     term_ids: list[UUID],
     scope: Scope | None = None,
-) -> GlossaryMemoryDetail:
+) -> GlossaryMemory:
     _query_editable_group(db, user, memory_group_id)
     unique_term_ids = list(dict.fromkeys(term_ids))
     terms = list(
@@ -261,7 +261,7 @@ def create_glossary_memory(
     except Exception:
         db.rollback()
         raise
-    return GlossaryMemoryDetail(memory=MemorySchema.model_validate(memory), terms=terms)
+    return GlossaryMemory(memory=MemorySchema.model_validate(memory), terms=terms)
 
 
 def create_glossary_term(db: Session, user: User, memory_group_id: UUID, term: str) -> GlossaryTerm:

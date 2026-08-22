@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.exceptions import GlossaryTermNotFoundException, MemoryNotFoundException
 from src.memory.plugins.glossary import access
-from src.memory.plugins.glossary.schemas import GlossaryMemory, GlossaryTerm
+from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
 from src.memory.schemas import AgentMemory
 from src.memory.types import Creator, MemoryType, Scope
 
@@ -153,24 +153,24 @@ def _contains_query(chapter: SQLColumnExpression[str], term: SQLColumnExpression
     return normalized_chapter.contains(normalized_term)
 
 
-def _terms_in_chapter(ctx: RunContext[MemAgentDeps]) -> list[GlossaryTerm]:
+def _terms_in_chapter(ctx: RunContext[MemAgentDeps]) -> list[AgentGlossaryTerm]:
     """See all glossary terms occurring in the exact chapter content pinned by the context."""
     db = ctx.deps.db
     terms = access.get_terms_in_chapter(db, ctx.deps.mem_access_context, _contains_query)
-    return [GlossaryTerm.model_validate(term) for term in terms]
+    return [AgentGlossaryTerm.model_validate(term) for term in terms]
 
 
 def _term_memories(
     ctx: RunContext[MemAgentDeps],
     term_names: list[str],
     memory_types: list[MemoryType],
-) -> list[GlossaryMemory[UUID]]:
+) -> list[AgentGlossaryMemory[UUID]]:
     """See active memories of the requested types associated with exact glossary terms."""
     db = ctx.deps.db
     memories = access.inspect_terms(db, ctx.deps.mem_access_context, term_names, memory_types)
     return [
-        GlossaryMemory[UUID](
-            memory=AgentMemory.model_validate(memory), terms=[GlossaryTerm.model_validate(term) for term in terms]
+        AgentGlossaryMemory[UUID](
+            memory=AgentMemory.model_validate(memory), terms=[AgentGlossaryTerm.model_validate(term) for term in terms]
         )
         for memory, terms in memories
     ]
@@ -261,13 +261,11 @@ def term_memories(
     ctx: RunContext[MemAgentDeps],
     term_names: list[str],
     memory_types: Annotated[list[MemoryType], Field(min_length=1)],
-) -> list[GlossaryMemory[str]]:
+) -> list[AgentGlossaryMemory[str]]:
     """See active memories of requested types associated with exact glossary terms."""
-    if not memory_types:
-        raise ModelRetry("memory_types must contain at least one concrete candidate type.")
     memories = _term_memories(ctx, term_names, memory_types)
     return [
-        GlossaryMemory[str](
+        AgentGlossaryMemory[str](
             memory=AgentMemory[str].model_validate(
                 {**gmemory.memory.model_dump(), "memory_id": ctx.deps.uuid_cache.new(gmemory.memory.memory_id)}
             ),
@@ -297,7 +295,7 @@ def add_term(ctx: RunContext[MemAgentDeps], term_name: str) -> str:
 def new_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
-    term_names: list[str],
+    term_names: Annotated[list[str], Field(min_length=1)],
     mem_type: MemoryType,
     scope: Scope | None = None,
 ) -> str:

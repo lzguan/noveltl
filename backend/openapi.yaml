@@ -198,7 +198,7 @@ components:
     Body_create_chapters_by_upload_chapters_upload_post:
       properties:
         file:
-          format: binary
+          contentMediaType: application/octet-stream
           title: File
           type: string
         novelId:
@@ -584,6 +584,52 @@ components:
       - functionDefinition
       title: CreateFunctionDefinitionRequest
       type: object
+    CreateGlossaryMemory:
+      properties:
+        chapterContentId:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+        chapterId:
+          format: uuid
+          title: Chapterid
+          type: string
+        memoryContent:
+          minLength: 1
+          title: Memorycontent
+          type: string
+        memoryType:
+          $ref: '#/components/schemas/MemoryType'
+        scope:
+          anyOf:
+          - $ref: '#/components/schemas/Scope'
+          - type: 'null'
+        termIds:
+          items:
+            format: uuid
+            type: string
+          minItems: 1
+          title: Termids
+          type: array
+      required:
+      - chapterId
+      - chapterContentId
+      - memoryType
+      - memoryContent
+      - termIds
+      title: CreateGlossaryMemory
+      type: object
+    CreateGlossaryTerm:
+      properties:
+        term:
+          maxLength: 100
+          minLength: 1
+          title: Term
+          type: string
+      required:
+      - term
+      title: CreateGlossaryTerm
+      type: object
     CreateLabelData:
       description: "Pydantic schema for validating create requests for label data.\n\
         \nAttributes:\n    chapter_content_id: UUID of chapter content being labelled."
@@ -762,6 +808,13 @@ components:
       - userType
       title: CreateUser
       type: object
+    Creator:
+      enum:
+      - user
+      - workflow
+      - agent
+      title: Creator
+      type: string
     DataObj:
       additionalProperties: false
       properties:
@@ -785,14 +838,14 @@ components:
         mapping:
           bool: '#/components/schemas/BoolData'
           float: '#/components/schemas/FloatData'
-          int: '#/components/schemas/IntData'
+          int: '#/components/schemas/IntData-Output'
           labelRef: '#/components/schemas/LabelRefData'
           string: '#/components/schemas/StringData'
           textSpan: '#/components/schemas/TextSpanData'
         propertyName: type
       oneOf:
       - $ref: '#/components/schemas/StringData'
-      - $ref: '#/components/schemas/IntData'
+      - $ref: '#/components/schemas/IntData-Output'
       - $ref: '#/components/schemas/FloatData'
       - $ref: '#/components/schemas/BoolData'
       - $ref: '#/components/schemas/TextSpanData'
@@ -904,6 +957,16 @@ components:
       - lazyLabelData
       - eagerLabelData
       title: EditChapterData
+      type: object
+    ExpireMemory:
+      properties:
+        chapterId:
+          format: uuid
+          title: Chapterid
+          type: string
+      required:
+      - chapterId
+      title: ExpireMemory
       type: object
     FieldName:
       maxLength: 128
@@ -1032,16 +1095,67 @@ components:
       - signature
       title: FunctionDefinitionValidationResponse
       type: object
-    GroupData:
+    GlossaryMemory:
+      description: A memory together with the glossary terms it describes.
+      properties:
+        memory:
+          $ref: '#/components/schemas/Memory'
+          description: The memory that describes the glossary terms.
+        terms:
+          description: Glossary terms described by this memory; one memory may apply
+            to multiple related terms.
+          items:
+            $ref: '#/components/schemas/GlossaryTerm'
+          title: Terms
+          type: array
+      required:
+      - memory
+      - terms
+      title: GlossaryMemory
+      type: object
+    GlossaryTerm:
+      description: A glossary term represented as context for an agent.
+      properties:
+        reviewStatus:
+          $ref: '#/components/schemas/ReviewStatus'
+          description: Human-review state of the term. Pending terms are unverified;
+            approved terms are verified.
+        term:
+          description: Term exactly as it appears in the novel's source text.
+          title: Term
+          type: string
+        termId:
+          description: Stable identifier for the glossary term.
+          format: uuid
+          title: Termid
+          type: string
+      required:
+      - termId
+      - term
+      - reviewStatus
+      title: GlossaryTerm
+      type: object
+    GroupData-Input:
       discriminator:
         mapping:
           bool: '#/components/schemas/BoolData'
-          int: '#/components/schemas/IntData'
+          int: '#/components/schemas/IntData-Input'
           string: '#/components/schemas/StringData'
         propertyName: type
       oneOf:
       - $ref: '#/components/schemas/StringData'
-      - $ref: '#/components/schemas/IntData'
+      - $ref: '#/components/schemas/IntData-Input'
+      - $ref: '#/components/schemas/BoolData'
+    GroupData-Output:
+      discriminator:
+        mapping:
+          bool: '#/components/schemas/BoolData'
+          int: '#/components/schemas/IntData-Output'
+          string: '#/components/schemas/StringData'
+        propertyName: type
+      oneOf:
+      - $ref: '#/components/schemas/StringData'
+      - $ref: '#/components/schemas/IntData-Output'
       - $ref: '#/components/schemas/BoolData'
     GroupFilter:
       properties:
@@ -1051,7 +1165,7 @@ components:
           type: string
         values:
           items:
-            $ref: '#/components/schemas/GroupData'
+            $ref: '#/components/schemas/GroupData-Input'
           maxItems: 100
           title: Values
           type: array
@@ -1079,7 +1193,7 @@ components:
           title: Count
           type: integer
         value:
-          $ref: '#/components/schemas/GroupData'
+          $ref: '#/components/schemas/GroupData-Output'
       required:
       - value
       - count
@@ -1232,7 +1346,7 @@ components:
       properties:
         groupValues:
           additionalProperties:
-            $ref: '#/components/schemas/GroupData'
+            $ref: '#/components/schemas/GroupData-Output'
           propertyNames:
             format: uuid
           title: Groupvalues
@@ -1262,7 +1376,26 @@ components:
       - value
       title: InstanceResponse
       type: object
-    IntData:
+    IntData-Input:
+      additionalProperties: false
+      properties:
+        kind:
+          const: value
+          default: value
+          title: Kind
+          type: string
+        type:
+          const: int
+          default: int
+          title: Type
+          type: string
+        value:
+          $ref: '#/components/schemas/IntegerValue-Input'
+      required:
+      - value
+      title: IntData
+      type: object
+    IntData-Output:
       additionalProperties: false
       properties:
         kind:
@@ -1300,6 +1433,8 @@ components:
           type: string
       title: IntField
       type: object
+    IntegerValue-Input:
+      type: integer
     Label:
       description: 'Pydantic schema for a label that belongs to a LabelData.
 
@@ -1601,14 +1736,137 @@ components:
         mapping:
           bool: '#/components/schemas/BoolData'
           float: '#/components/schemas/FloatData'
-          int: '#/components/schemas/IntData'
+          int: '#/components/schemas/IntData-Input'
           string: '#/components/schemas/StringData'
         propertyName: type
       oneOf:
       - $ref: '#/components/schemas/StringData'
-      - $ref: '#/components/schemas/IntData'
+      - $ref: '#/components/schemas/IntData-Input'
       - $ref: '#/components/schemas/FloatData'
       - $ref: '#/components/schemas/BoolData'
+    Memory:
+      description: Memory schema
+      properties:
+        creatorType:
+          $ref: '#/components/schemas/Creator'
+          description: 'Type of entity that created the memory: a human, an AI agent,
+            or a workflow.'
+        memoryContent:
+          description: The contextual information that should inform glossary maintenance
+            and novel continuity.
+          title: Memorycontent
+          type: string
+        memoryEndNum:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Exclusive ending chapter number stored by the database, or
+            null when the memory does not expire.
+          title: Memoryendnum
+        memoryId:
+          description: Stable identifier to use when superseding, expiring, or otherwise
+            referring to this memory.
+          format: uuid
+          title: Memoryid
+          type: string
+        memoryReviewStatus:
+          $ref: '#/components/schemas/ReviewStatus'
+          description: Human-review state of the memory. Pending memories are unverified;
+            approved memories are verified.
+        memoryStartNum:
+          description: First chapter number for which this memory is applicable; larger
+            values indicate newer information.
+          title: Memorystartnum
+          type: integer
+        memoryType:
+          $ref: '#/components/schemas/MemoryType'
+          description: 'Kind of information stored: a fact, event, definition, or
+            relation.'
+        pluginName:
+          $ref: '#/components/schemas/PluginName'
+          description: Name of the plugin that owns the memory.
+        supersedesMemoryId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          description: Identifier of the memory that this memory supersedes, or null
+            when this memory is not a superseding memory.
+          title: Supersedesmemoryid
+      required:
+      - memoryId
+      - memoryType
+      - memoryContent
+      - memoryStartNum
+      - memoryReviewStatus
+      - memoryEndNum
+      - supersedesMemoryId
+      - creatorType
+      - pluginName
+      title: Memory
+      type: object
+    MemoryGroup:
+      description: Memory group schema
+      properties:
+        memoryGroupId:
+          description: Stable identifier to use when referring to this memory group.
+          format: uuid
+          title: Memorygroupid
+          type: string
+        memoryGroupName:
+          description: Human-readable name of the memory group.
+          title: Memorygroupname
+          type: string
+        memoryLanguage:
+          description: Language in which memory content should be written.
+          title: Memorylanguage
+          type: string
+        novelId:
+          description: Identifier of the novel to which this memory group belongs.
+          format: uuid
+          title: Novelid
+          type: string
+      required:
+      - memoryGroupId
+      - memoryGroupName
+      - novelId
+      - memoryLanguage
+      title: MemoryGroup
+      type: object
+    MemoryPage:
+      properties:
+        count:
+          minimum: 0.0
+          title: Count
+          type: integer
+        rows:
+          items:
+            $ref: '#/components/schemas/Memory'
+          title: Rows
+          type: array
+      required:
+      - count
+      - rows
+      title: MemoryPage
+      type: object
+    MemoryType:
+      description: 'The type of a memory.
+
+
+        FACT: Memory about a specific fact or piece of information.
+
+        EVENT: Memory about a specific event or occurrence.
+
+        DEFINITION: Long-term memory about a specific definition or concept.
+
+        RELATION: Long-term memory about a relationship between glossary terms.'
+      enum:
+      - fact
+      - event
+      - def
+      - rel
+      title: MemoryType
+      type: string
     ModifyChapterContentResponse:
       description: "Pydantic schema for the response after modifying chapter content.\n\
         \nAttributes:\n    chapter_content_version: The new version number of the\
@@ -1836,6 +2094,41 @@ components:
       - results
       title: OpsResult
       type: object
+    Page_GlossaryMemory_:
+      properties:
+        count:
+          minimum: 0.0
+          title: Count
+          type: integer
+        rows:
+          items:
+            $ref: '#/components/schemas/GlossaryMemory'
+          title: Rows
+          type: array
+      required:
+      - count
+      - rows
+      title: Page[GlossaryMemory]
+      type: object
+    Page_GlossaryTerm_:
+      properties:
+        count:
+          minimum: 0.0
+          title: Count
+          type: integer
+        rows:
+          items:
+            $ref: '#/components/schemas/GlossaryTerm'
+          title: Rows
+          type: array
+      required:
+      - count
+      - rows
+      title: Page[GlossaryTerm]
+      type: object
+    PluginName:
+      const: glossary
+      type: string
     PythonAnnotationRequest:
       additionalProperties: false
       properties:
@@ -1955,6 +2248,18 @@ components:
       - workflowName
       title: RenameWorkflowRequest
       type: object
+    ReplaceGlossaryAssociations:
+      properties:
+        termIds:
+          items:
+            format: uuid
+            type: string
+          title: Termids
+          type: array
+      required:
+      - termIds
+      title: ReplaceGlossaryAssociations
+      type: object
     RequestConflictDetail:
       description: "Structured detail payload used by request-key wrapped 409 responses.\n\
         \nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict:\
@@ -1981,6 +2286,13 @@ components:
       - detail
       title: RequestConflictErrorResponse
       type: object
+    ReviewStatus:
+      enum:
+      - pending
+      - approved
+      - rejected
+      title: ReviewStatus
+      type: string
     SObj:
       discriminator:
         mapping:
@@ -2025,6 +2337,22 @@ components:
       - $ref: '#/components/schemas/BoolField'
       - $ref: '#/components/schemas/LabelRefField'
       - $ref: '#/components/schemas/TextSpanField'
+    Scope:
+      description: 'The scope of a memory (i.e. how long it should be retained).
+
+
+        LOCAL: Memory is only relevant to the current chapter.
+
+        RECENT: Memory is relevant to the current chapter and a few subsequent chapters.
+
+        PERSIST: Memory is relevant to all chapters and should be retained indefinitely
+        until explicitly superseded or expired.'
+      enum:
+      - local
+      - recent
+      - persist
+      title: Scope
+      type: string
     SepPriority:
       enum:
       - 1
@@ -2278,6 +2606,17 @@ components:
       - chapterContentId
       title: UpdateChapterContent
       type: object
+    UpdateGlossaryTerm:
+      properties:
+        term:
+          maxLength: 100
+          minLength: 1
+          title: Term
+          type: string
+      required:
+      - term
+      title: UpdateGlossaryTerm
+      type: object
     UpdateInstanceRequest:
       additionalProperties: false
       properties:
@@ -2372,6 +2711,16 @@ components:
       - labelId
       title: UpdateLabelOp
       type: object
+    UpdateMemoryContent:
+      properties:
+        memoryContent:
+          minLength: 1
+          title: Memorycontent
+          type: string
+      required:
+      - memoryContent
+      title: UpdateMemoryContent
+      type: object
     UpdateNovel:
       description: "Pydantic schema to validate forms for updating a novel. The novel\
         \ id will be passed into the router endpoint.\n\nAttributes:\n    novel_title:\
@@ -2406,6 +2755,14 @@ components:
           - $ref: '#/components/schemas/Visibility'
           - type: 'null'
       title: UpdateNovel
+      type: object
+    UpdateReviewStatus:
+      properties:
+        reviewStatus:
+          $ref: '#/components/schemas/ReviewStatus'
+      required:
+      - reviewStatus
+      title: UpdateReviewStatus
       type: object
     UpdateSourceWork:
       description: "Pydantic schema to validate forms for updating a source work.\n\
@@ -2464,6 +2821,11 @@ components:
       type: object
     ValidationError:
       properties:
+        ctx:
+          title: Context
+          type: object
+        input:
+          title: Input
         loc:
           items:
             anyOf:
@@ -4846,6 +5208,923 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Read Language By Code
+  /memories/{memoryId}:
+    delete:
+      operationId: remove_memory_memories__memoryId__delete
+      parameters:
+      - in: path
+        name: memoryId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryid
+          type: string
+      responses:
+        '204':
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Remove Memory
+    get:
+      operationId: read_memory_memories__memoryId__get
+      parameters:
+      - in: path
+        name: memoryId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Memory'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Memory
+  /memories/{memoryId}/content:
+    patch:
+      operationId: edit_memory_content_memories__memoryId__content_patch
+      parameters:
+      - in: path
+        name: memoryId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMemoryContent'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Memory'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Edit Memory Content
+  /memories/{memoryId}/expiration:
+    patch:
+      operationId: edit_memory_expiration_memories__memoryId__expiration_patch
+      parameters:
+      - in: path
+        name: memoryId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpireMemory'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Memory'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Edit Memory Expiration
+  /memories/{memoryId}/review-status:
+    patch:
+      operationId: edit_memory_review_status_memories__memoryId__review_status_patch
+      parameters:
+      - in: path
+        name: memoryId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReviewStatus'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Memory'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Edit Memory Review Status
+  /memory-groups:
+    get:
+      operationId: read_memory_groups_memory_groups_get
+      parameters:
+      - in: query
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/MemoryGroup'
+                title: Response Read Memory Groups Memory Groups Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Memory Groups
+  /memory-groups/{memoryGroupId}/chapters/{chapterId}/memories:
+    get:
+      operationId: read_memories_at_chapter_memory_groups__memoryGroupId__chapters__chapterId__memories_get
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      - in: query
+        name: skip
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Skip
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: createdExactlyAtChapter
+        required: false
+        schema:
+          default: false
+          title: Createdexactlyatchapter
+          type: boolean
+      - in: query
+        name: pluginNames
+        required: false
+        schema:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/PluginName'
+            type: array
+          - type: 'null'
+          title: Pluginnames
+      - in: query
+        name: memoryTypes
+        required: false
+        schema:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/MemoryType'
+            type: array
+          - type: 'null'
+          title: Memorytypes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryPage'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Memories At Chapter
+  /memory-groups/{memoryGroupId}/glossary/chapters/{chapterId}/memories:
+    get:
+      operationId: read_glossary_memories_at_chapter_memory_groups__memoryGroupId__glossary_chapters__chapterId__memories_get
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      - in: query
+        name: skip
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Skip
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: createdExactlyAtChapter
+        required: false
+        schema:
+          default: false
+          title: Createdexactlyatchapter
+          type: boolean
+      - in: query
+        name: memoryTypes
+        required: false
+        schema:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/MemoryType'
+            type: array
+          - type: 'null'
+          title: Memorytypes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_GlossaryMemory_'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Glossary Memories At Chapter
+  /memory-groups/{memoryGroupId}/glossary/memories:
+    get:
+      operationId: read_glossary_memories_memory_groups__memoryGroupId__glossary_memories_get
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: query
+        name: skip
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Skip
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: memoryTypes
+        required: false
+        schema:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/MemoryType'
+            type: array
+          - type: 'null'
+          title: Memorytypes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_GlossaryMemory_'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Glossary Memories
+    post:
+      operationId: add_glossary_memory_memory_groups__memoryGroupId__glossary_memories_post
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGlossaryMemory'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlossaryMemory'
+          description: Successful Response
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Add Glossary Memory
+  /memory-groups/{memoryGroupId}/glossary/memories/{memoryId}/terms:
+    get:
+      operationId: read_terms_for_memory_memory_groups__memoryGroupId__glossary_memories__memoryId__terms_get
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: memoryId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/GlossaryTerm'
+                title: Response Read Terms For Memory Memory Groups  Memorygroupid  Glossary
+                  Memories  Memoryid  Terms Get
+                type: array
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Terms For Memory
+    put:
+      operationId: replace_glossary_memory_terms_memory_groups__memoryGroupId__glossary_memories__memoryId__terms_put
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: memoryId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceGlossaryAssociations'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/GlossaryTerm'
+                title: Response Replace Glossary Memory Terms Memory Groups  Memorygroupid  Glossary
+                  Memories  Memoryid  Terms Put
+                type: array
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Replace Glossary Memory Terms
+  /memory-groups/{memoryGroupId}/glossary/terms:
+    get:
+      operationId: read_glossary_terms_memory_groups__memoryGroupId__glossary_terms_get
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: query
+        name: skip
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Skip
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: search
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Search
+      - in: query
+        name: reviewStatuses
+        required: false
+        schema:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/ReviewStatus'
+            type: array
+          - type: 'null'
+          title: Reviewstatuses
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_GlossaryTerm_'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Glossary Terms
+    post:
+      operationId: add_glossary_term_memory_groups__memoryGroupId__glossary_terms_post
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGlossaryTerm'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlossaryTerm'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Add Glossary Term
+  /memory-groups/{memoryGroupId}/glossary/terms/{termId}:
+    delete:
+      operationId: remove_glossary_term_memory_groups__memoryGroupId__glossary_terms__termId__delete
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: termId
+        required: true
+        schema:
+          format: uuid
+          title: Termid
+          type: string
+      responses:
+        '204':
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Remove Glossary Term
+    patch:
+      operationId: edit_glossary_term_memory_groups__memoryGroupId__glossary_terms__termId__patch
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: termId
+        required: true
+        schema:
+          format: uuid
+          title: Termid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGlossaryTerm'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlossaryTerm'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Edit Glossary Term
+  /memory-groups/{memoryGroupId}/glossary/terms/{termId}/memories:
+    get:
+      operationId: read_memories_for_term_memory_groups__memoryGroupId__glossary_terms__termId__memories_get
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: termId
+        required: true
+        schema:
+          format: uuid
+          title: Termid
+          type: string
+      - in: query
+        name: skip
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Skip
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_GlossaryMemory_'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Memories For Term
+  /memory-groups/{memoryGroupId}/glossary/terms/{termId}/review-status:
+    patch:
+      operationId: edit_glossary_term_review_status_memory_groups__memoryGroupId__glossary_terms__termId__review_status_patch
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: termId
+        required: true
+        schema:
+          format: uuid
+          title: Termid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReviewStatus'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlossaryTerm'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Edit Glossary Term Review Status
+  /memory-groups/{memoryGroupId}/memories:
+    get:
+      operationId: read_memories_memory_groups__memoryGroupId__memories_get
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: query
+        name: skip
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Skip
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: pluginNames
+        required: false
+        schema:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/PluginName'
+            type: array
+          - type: 'null'
+          title: Pluginnames
+      - in: query
+        name: memoryTypes
+        required: false
+        schema:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/MemoryType'
+            type: array
+          - type: 'null'
+          title: Memorytypes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryPage'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Memories
   /novels:
     get:
       description: Endpoint for retrieving novels in bulk.

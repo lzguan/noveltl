@@ -4437,6 +4437,1496 @@
           }
         ]
       }
+    },
+    "/memory-groups": {
+      "get": {
+        "summary": "Read Memory Groups",
+        "operationId": "read_memory_groups_memory_groups_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemoryGroup"
+                  },
+                  "title": "Response Read Memory Groups Memory Groups Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory-groups/{memoryGroupId}/chapters/{chapterId}/memories": {
+      "get": {
+        "summary": "Read Memories At Chapter",
+        "operationId": "read_memories_at_chapter_memory_groups__memoryGroupId__chapters__chapterId__memories_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "chapterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapterid"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "createdExactlyAtChapter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Createdexactlyatchapter"
+            }
+          },
+          {
+            "name": "pluginNames",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PluginName"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Pluginnames"
+            }
+          },
+          {
+            "name": "memoryTypes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemoryType"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Memorytypes"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory-groups/{memoryGroupId}/memories": {
+      "get": {
+        "summary": "Read Memories",
+        "operationId": "read_memories_memory_groups__memoryGroupId__memories_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "pluginNames",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PluginName"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Pluginnames"
+            }
+          },
+          {
+            "name": "memoryTypes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemoryType"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Memorytypes"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/{memoryId}": {
+      "get": {
+        "summary": "Read Memory",
+        "operationId": "read_memory_memories__memoryId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memoryid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Memory"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove Memory",
+        "operationId": "remove_memory_memories__memoryId__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memoryid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/{memoryId}/content": {
+      "patch": {
+        "summary": "Edit Memory Content",
+        "operationId": "edit_memory_content_memories__memoryId__content_patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memoryid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemoryContent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Memory"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/{memoryId}/review-status": {
+      "patch": {
+        "summary": "Edit Memory Review Status",
+        "operationId": "edit_memory_review_status_memories__memoryId__review_status_patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memoryid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReviewStatus"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Memory"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/{memoryId}/expiration": {
+      "patch": {
+        "summary": "Edit Memory Expiration",
+        "operationId": "edit_memory_expiration_memories__memoryId__expiration_patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memoryid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpireMemory"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Memory"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory-groups/{memoryGroupId}/glossary/chapters/{chapterId}/memories": {
+      "get": {
+        "summary": "Read Glossary Memories At Chapter",
+        "operationId": "read_glossary_memories_at_chapter_memory_groups__memoryGroupId__glossary_chapters__chapterId__memories_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "chapterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chapterid"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "createdExactlyAtChapter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Createdexactlyatchapter"
+            }
+          },
+          {
+            "name": "memoryTypes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemoryType"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Memorytypes"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_GlossaryMemory_"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory-groups/{memoryGroupId}/glossary/memories": {
+      "get": {
+        "summary": "Read Glossary Memories",
+        "operationId": "read_glossary_memories_memory_groups__memoryGroupId__glossary_memories_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "memoryTypes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemoryType"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Memorytypes"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_GlossaryMemory_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add Glossary Memory",
+        "operationId": "add_glossary_memory_memory_groups__memoryGroupId__glossary_memories_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGlossaryMemory"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlossaryMemory"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory-groups/{memoryGroupId}/glossary/terms": {
+      "get": {
+        "summary": "Read Glossary Terms",
+        "operationId": "read_glossary_terms_memory_groups__memoryGroupId__glossary_terms_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "reviewStatuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReviewStatus"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reviewstatuses"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_GlossaryTerm_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add Glossary Term",
+        "operationId": "add_glossary_term_memory_groups__memoryGroupId__glossary_terms_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGlossaryTerm"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlossaryTerm"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory-groups/{memoryGroupId}/glossary/terms/{termId}/memories": {
+      "get": {
+        "summary": "Read Memories For Term",
+        "operationId": "read_memories_for_term_memory_groups__memoryGroupId__glossary_terms__termId__memories_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "termId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Termid"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_GlossaryMemory_"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory-groups/{memoryGroupId}/glossary/memories/{memoryId}/terms": {
+      "get": {
+        "summary": "Read Terms For Memory",
+        "operationId": "read_terms_for_memory_memory_groups__memoryGroupId__glossary_memories__memoryId__terms_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "memoryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memoryid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GlossaryTerm"
+                  },
+                  "title": "Response Read Terms For Memory Memory Groups  Memorygroupid  Glossary Memories  Memoryid  Terms Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Replace Glossary Memory Terms",
+        "operationId": "replace_glossary_memory_terms_memory_groups__memoryGroupId__glossary_memories__memoryId__terms_put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "memoryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memoryid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceGlossaryAssociations"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GlossaryTerm"
+                  },
+                  "title": "Response Replace Glossary Memory Terms Memory Groups  Memorygroupid  Glossary Memories  Memoryid  Terms Put"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory-groups/{memoryGroupId}/glossary/terms/{termId}": {
+      "patch": {
+        "summary": "Edit Glossary Term",
+        "operationId": "edit_glossary_term_memory_groups__memoryGroupId__glossary_terms__termId__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "termId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Termid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGlossaryTerm"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlossaryTerm"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove Glossary Term",
+        "operationId": "remove_glossary_term_memory_groups__memoryGroupId__glossary_terms__termId__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "termId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Termid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory-groups/{memoryGroupId}/glossary/terms/{termId}/review-status": {
+      "patch": {
+        "summary": "Edit Glossary Term Review Status",
+        "operationId": "edit_glossary_term_review_status_memory_groups__memoryGroupId__glossary_terms__termId__review_status_patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "termId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Termid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReviewStatus"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlossaryTerm"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4707,7 +6197,7 @@
           },
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File"
           }
         },
@@ -5203,6 +6693,71 @@
         ],
         "title": "CreateFunctionDefinitionRequest"
       },
+      "CreateGlossaryMemory": {
+        "properties": {
+          "chapterId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chapterid"
+          },
+          "chapterContentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chaptercontentid"
+          },
+          "memoryType": {
+            "$ref": "#/components/schemas/MemoryType"
+          },
+          "memoryContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Memorycontent"
+          },
+          "termIds": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Termids"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Scope"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterId",
+          "chapterContentId",
+          "memoryType",
+          "memoryContent",
+          "termIds"
+        ],
+        "title": "CreateGlossaryMemory"
+      },
+      "CreateGlossaryTerm": {
+        "properties": {
+          "term": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Term"
+          }
+        },
+        "type": "object",
+        "required": [
+          "term"
+        ],
+        "title": "CreateGlossaryTerm"
+      },
       "CreateLabelData": {
         "properties": {
           "chapterContentId": {
@@ -5452,6 +7007,15 @@
         "title": "CreateUser",
         "description": "Pydantic schema to validate data required to create a user.\n\nAttributes:\n    user_name: Username of user being created.\n    user_password: Unhashed password of user being create.\n    user_type: UserType type of user to be created.\nNotes:"
       },
+      "Creator": {
+        "type": "string",
+        "enum": [
+          "user",
+          "workflow",
+          "agent"
+        ],
+        "title": "Creator"
+      },
       "DataObj": {
         "properties": {
           "fields": {
@@ -5482,7 +7046,7 @@
             "$ref": "#/components/schemas/StringData"
           },
           {
-            "$ref": "#/components/schemas/IntData"
+            "$ref": "#/components/schemas/IntData-Output"
           },
           {
             "$ref": "#/components/schemas/FloatData"
@@ -5502,7 +7066,7 @@
           "mapping": {
             "bool": "#/components/schemas/BoolData",
             "float": "#/components/schemas/FloatData",
-            "int": "#/components/schemas/IntData",
+            "int": "#/components/schemas/IntData-Output",
             "labelRef": "#/components/schemas/LabelRefData",
             "string": "#/components/schemas/StringData",
             "textSpan": "#/components/schemas/TextSpanData"
@@ -5647,6 +7211,20 @@
         ],
         "title": "EditChapterData",
         "description": "Pydantic schema for the data needed to edit a chapter.\n\nAttributes:\n    chapter_content: ChapterContent being edited.\n    no_label_data: List of LabelGroup objects that have no label data associated with them."
+      },
+      "ExpireMemory": {
+        "properties": {
+          "chapterId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chapterid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterId"
+        ],
+        "title": "ExpireMemory"
       },
       "FieldName": {
         "type": "string",
@@ -5815,13 +7393,63 @@
         ],
         "title": "FunctionDefinitionValidationResponse"
       },
-      "GroupData": {
+      "GlossaryMemory": {
+        "properties": {
+          "memory": {
+            "$ref": "#/components/schemas/Memory",
+            "description": "The memory that describes the glossary terms."
+          },
+          "terms": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryTerm"
+            },
+            "type": "array",
+            "title": "Terms",
+            "description": "Glossary terms described by this memory; one memory may apply to multiple related terms."
+          }
+        },
+        "type": "object",
+        "required": [
+          "memory",
+          "terms"
+        ],
+        "title": "GlossaryMemory",
+        "description": "A memory together with the glossary terms it describes."
+      },
+      "GlossaryTerm": {
+        "properties": {
+          "termId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Termid",
+            "description": "Stable identifier for the glossary term."
+          },
+          "term": {
+            "type": "string",
+            "title": "Term",
+            "description": "Term exactly as it appears in the novel's source text."
+          },
+          "reviewStatus": {
+            "$ref": "#/components/schemas/ReviewStatus",
+            "description": "Human-review state of the term. Pending terms are unverified; approved terms are verified."
+          }
+        },
+        "type": "object",
+        "required": [
+          "termId",
+          "term",
+          "reviewStatus"
+        ],
+        "title": "GlossaryTerm",
+        "description": "A glossary term represented as context for an agent."
+      },
+      "GroupData-Input": {
         "oneOf": [
           {
             "$ref": "#/components/schemas/StringData"
           },
           {
-            "$ref": "#/components/schemas/IntData"
+            "$ref": "#/components/schemas/IntData-Input"
           },
           {
             "$ref": "#/components/schemas/BoolData"
@@ -5831,7 +7459,28 @@
           "propertyName": "type",
           "mapping": {
             "bool": "#/components/schemas/BoolData",
-            "int": "#/components/schemas/IntData",
+            "int": "#/components/schemas/IntData-Input",
+            "string": "#/components/schemas/StringData"
+          }
+        }
+      },
+      "GroupData-Output": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StringData"
+          },
+          {
+            "$ref": "#/components/schemas/IntData-Output"
+          },
+          {
+            "$ref": "#/components/schemas/BoolData"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "bool": "#/components/schemas/BoolData",
+            "int": "#/components/schemas/IntData-Output",
             "string": "#/components/schemas/StringData"
           }
         }
@@ -5845,7 +7494,7 @@
           },
           "values": {
             "items": {
-              "$ref": "#/components/schemas/GroupData"
+              "$ref": "#/components/schemas/GroupData-Input"
             },
             "type": "array",
             "maxItems": 100,
@@ -5880,7 +7529,7 @@
       "GroupValueCount": {
         "properties": {
           "value": {
-            "$ref": "#/components/schemas/GroupData"
+            "$ref": "#/components/schemas/GroupData-Output"
           },
           "count": {
             "type": "integer",
@@ -6104,7 +7753,7 @@
           },
           "groupValues": {
             "additionalProperties": {
-              "$ref": "#/components/schemas/GroupData"
+              "$ref": "#/components/schemas/GroupData-Output"
             },
             "propertyNames": {
               "format": "uuid"
@@ -6144,7 +7793,32 @@
         ],
         "title": "InstanceResponse"
       },
-      "IntData": {
+      "IntData-Input": {
+        "properties": {
+          "value": {
+            "$ref": "#/components/schemas/IntegerValue-Input"
+          },
+          "type": {
+            "type": "string",
+            "const": "int",
+            "title": "Type",
+            "default": "int"
+          },
+          "kind": {
+            "type": "string",
+            "const": "value",
+            "title": "Kind",
+            "default": "value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "IntData"
+      },
+      "IntData-Output": {
         "properties": {
           "value": {
             "$ref": "#/components/schemas/src__filters__data_types__IntegerValue__1"
@@ -6192,6 +7866,9 @@
         "additionalProperties": false,
         "type": "object",
         "title": "IntField"
+      },
+      "IntegerValue-Input": {
+        "type": "integer"
       },
       "Label": {
         "properties": {
@@ -6565,7 +8242,7 @@
             "$ref": "#/components/schemas/StringData"
           },
           {
-            "$ref": "#/components/schemas/IntData"
+            "$ref": "#/components/schemas/IntData-Input"
           },
           {
             "$ref": "#/components/schemas/FloatData"
@@ -6579,10 +8256,153 @@
           "mapping": {
             "bool": "#/components/schemas/BoolData",
             "float": "#/components/schemas/FloatData",
-            "int": "#/components/schemas/IntData",
+            "int": "#/components/schemas/IntData-Input",
             "string": "#/components/schemas/StringData"
           }
         }
+      },
+      "Memory": {
+        "properties": {
+          "memoryId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Memoryid",
+            "description": "Stable identifier to use when superseding, expiring, or otherwise referring to this memory."
+          },
+          "memoryType": {
+            "$ref": "#/components/schemas/MemoryType",
+            "description": "Kind of information stored: a fact, event, definition, or relation."
+          },
+          "memoryContent": {
+            "type": "string",
+            "title": "Memorycontent",
+            "description": "The contextual information that should inform glossary maintenance and novel continuity."
+          },
+          "memoryStartNum": {
+            "type": "integer",
+            "title": "Memorystartnum",
+            "description": "First chapter number for which this memory is applicable; larger values indicate newer information."
+          },
+          "memoryReviewStatus": {
+            "$ref": "#/components/schemas/ReviewStatus",
+            "description": "Human-review state of the memory. Pending memories are unverified; approved memories are verified."
+          },
+          "memoryEndNum": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memoryendnum",
+            "description": "Exclusive ending chapter number stored by the database, or null when the memory does not expire."
+          },
+          "supersedesMemoryId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedesmemoryid",
+            "description": "Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory."
+          },
+          "creatorType": {
+            "$ref": "#/components/schemas/Creator",
+            "description": "Type of entity that created the memory: a human, an AI agent, or a workflow."
+          },
+          "pluginName": {
+            "$ref": "#/components/schemas/PluginName",
+            "description": "Name of the plugin that owns the memory."
+          }
+        },
+        "type": "object",
+        "required": [
+          "memoryId",
+          "memoryType",
+          "memoryContent",
+          "memoryStartNum",
+          "memoryReviewStatus",
+          "memoryEndNum",
+          "supersedesMemoryId",
+          "creatorType",
+          "pluginName"
+        ],
+        "title": "Memory",
+        "description": "Memory schema"
+      },
+      "MemoryGroup": {
+        "properties": {
+          "memoryGroupId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Memorygroupid",
+            "description": "Stable identifier to use when referring to this memory group."
+          },
+          "memoryGroupName": {
+            "type": "string",
+            "title": "Memorygroupname",
+            "description": "Human-readable name of the memory group."
+          },
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid",
+            "description": "Identifier of the novel to which this memory group belongs."
+          },
+          "memoryLanguage": {
+            "type": "string",
+            "title": "Memorylanguage",
+            "description": "Language in which memory content should be written."
+          }
+        },
+        "type": "object",
+        "required": [
+          "memoryGroupId",
+          "memoryGroupName",
+          "novelId",
+          "memoryLanguage"
+        ],
+        "title": "MemoryGroup",
+        "description": "Memory group schema"
+      },
+      "MemoryPage": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Count"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/Memory"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "rows"
+        ],
+        "title": "MemoryPage"
+      },
+      "MemoryType": {
+        "type": "string",
+        "enum": [
+          "fact",
+          "event",
+          "def",
+          "rel"
+        ],
+        "title": "MemoryType",
+        "description": "The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms."
       },
       "ModifyChapterContentResponse": {
         "properties": {
@@ -6884,6 +8704,54 @@
         "title": "OpsResult",
         "description": "Pydantic schema for a list of label operation results.\n\nAttributes:\n    results: A list of UUIDs corresponding to the results of each label operation."
       },
+      "Page_GlossaryMemory_": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Count"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryMemory"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "rows"
+        ],
+        "title": "Page[GlossaryMemory]"
+      },
+      "Page_GlossaryTerm_": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Count"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryTerm"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "rows"
+        ],
+        "title": "Page[GlossaryTerm]"
+      },
+      "PluginName": {
+        "type": "string",
+        "const": "glossary"
+      },
       "PythonAnnotationRequest": {
         "properties": {
           "workflowId": {
@@ -7056,6 +8924,23 @@
         ],
         "title": "RenameWorkflowRequest"
       },
+      "ReplaceGlossaryAssociations": {
+        "properties": {
+          "termIds": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Termids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "termIds"
+        ],
+        "title": "ReplaceGlossaryAssociations"
+      },
       "RequestConflictDetail": {
         "properties": {
           "detail": {
@@ -7087,6 +8972,15 @@
         ],
         "title": "RequestConflictErrorResponse",
         "description": "HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail."
+      },
+      "ReviewStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "approved",
+          "rejected"
+        ],
+        "title": "ReviewStatus"
       },
       "SObj": {
         "oneOf": [
@@ -7161,6 +9055,16 @@
             "textSpan": "#/components/schemas/TextSpanField"
           }
         }
+      },
+      "Scope": {
+        "type": "string",
+        "enum": [
+          "local",
+          "recent",
+          "persist"
+        ],
+        "title": "Scope",
+        "description": "The scope of a memory (i.e. how long it should be retained).\n\nLOCAL: Memory is only relevant to the current chapter.\nRECENT: Memory is relevant to the current chapter and a few subsequent chapters.\nPERSIST: Memory is relevant to all chapters and should be retained indefinitely until explicitly superseded or expired."
       },
       "SepPriority": {
         "type": "integer",
@@ -7484,6 +9388,21 @@
         "title": "UpdateChapterContent",
         "description": "Pydantic schema to validate data for updating the text content of a chapter. The chapter_id is expected to be passed via the URL path.\n\nAttributes:\n    text_ops: A list of text operations (insertions or deletions) to apply to the existing text content.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text."
       },
+      "UpdateGlossaryTerm": {
+        "properties": {
+          "term": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Term"
+          }
+        },
+        "type": "object",
+        "required": [
+          "term"
+        ],
+        "title": "UpdateGlossaryTerm"
+      },
       "UpdateInstanceRequest": {
         "properties": {
           "fields": {
@@ -7619,6 +9538,20 @@
         "title": "UpdateLabelOp",
         "description": "Pydantic schema for a label update operation. Partial updates performed on label with label_id.\n\nAttributes:\n    op: The string literal 'update'.\n    label_id: ID of the label to update.\n    start_pos: Optional parameter. The new start position of the label.\n    end_pos: Optional parameter. The new end position of the label.\n    dirty: Optional parameter. Value to change the current label's dirty value to.\n    entity_group: Optional parameter. New entity group for this label.\n    score: Optional parameter. New score for the entity."
       },
+      "UpdateMemoryContent": {
+        "properties": {
+          "memoryContent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Memorycontent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memoryContent"
+        ],
+        "title": "UpdateMemoryContent"
+      },
       "UpdateNovel": {
         "properties": {
           "novelTitle": {
@@ -7678,6 +9611,18 @@
         "type": "object",
         "title": "UpdateNovel",
         "description": "Pydantic schema to validate forms for updating a novel. The novel id will be passed into the router endpoint.\n\nAttributes:\n    novel_title: Updated title to novel we are updating. If None, then do not update.\n    novel_description: Updated description of novel we are updating. If None, then do not update.\n    novel_author: Author of novel we are creating. If None, then do not update.\n    novel_visibility: Updated visibility level of novel we are updating. If None, then do not update.\n    novel_type: Updated novel type. If None, then do not update."
+      },
+      "UpdateReviewStatus": {
+        "properties": {
+          "reviewStatus": {
+            "$ref": "#/components/schemas/ReviewStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reviewStatus"
+        ],
+        "title": "UpdateReviewStatus"
       },
       "UpdateSourceWork": {
         "properties": {
@@ -7779,6 +9724,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",

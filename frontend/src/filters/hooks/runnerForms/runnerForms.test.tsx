@@ -291,21 +291,4 @@ describe("runner form hooks", () => {
 			message: "Function output must be an object schema.",
 		});
 	});
-
-	it("resets all drafts when the novel changes", async () => {
-		const { result, rerender } = renderHook(({ novelId }) => useRunnerPanel(novelId, true), {
-			initialProps: { novelId: "novel-1" },
-		});
-		act(() => {
-			result.current.labelSourceForm.selectLabelGroup(labelGroup);
-			result.current.mapForm.selectSourceWorkflow(workflow);
-			result.current.mapForm.selectFunctionDefinition(functionDefinition);
-		});
-
-		rerender({ novelId: "novel-2" });
-
-		await waitFor(() => expect(result.current.labelSourceForm.selectedLabelGroup).toBeNull());
-		expect(result.current.mapForm.selectedWorkflow).toBeNull();
-		expect(result.current.mapForm.selectedFunctionDefinition).toBeNull();
-	});
 });

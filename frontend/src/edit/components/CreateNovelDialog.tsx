@@ -1,10 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import {
-	createNovelNovelsPost,
-	readAllLanguagesLanguagesGet,
-} from "@/api/endpoints/default/default";
+import { createNovelNovelsPost } from "@/api/endpoints/default/default";
 import type { CreateNovel, Language, Novel } from "@/api/models";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -23,15 +20,22 @@ import { SourceWorkSearchField } from "./SourceWorkSearchField";
 import { createNovelDefaultValues, type CreateNovelFormValues } from "./createNovelForm";
 
 type CreateNovelDialogProps = {
+	languages: Language[];
+	languagesError: boolean;
+	loadingLanguages: boolean;
 	onCreated: (novel: Novel) => void;
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
 };
 
-function CreateNovelDialog({ open, onOpenChange, onCreated }: CreateNovelDialogProps) {
-	const [languages, setLanguages] = useState<Language[]>([]);
-	const [languagesError, setLanguagesError] = useState(false);
-	const [loadingLanguages, setLoadingLanguages] = useState(false);
+function CreateNovelDialog({
+	languages,
+	languagesError,
+	loadingLanguages,
+	open,
+	onOpenChange,
+	onCreated,
+}: CreateNovelDialogProps) {
 	const [submitError, setSubmitError] = useState(false);
 
 	const {
@@ -42,34 +46,6 @@ function CreateNovelDialog({ open, onOpenChange, onCreated }: CreateNovelDialogP
 		reset,
 		setValue,
 	} = useForm<CreateNovelFormValues>({ defaultValues: createNovelDefaultValues });
-
-	useEffect(() => {
-		if (!open || languages.length > 0) return;
-
-		let ignore = false;
-		setLanguagesError(false);
-		setLoadingLanguages(true);
-		readAllLanguagesLanguagesGet()
-			.then((response) => {
-				if (!ignore) {
-					if (response.status !== 200) {
-						setLanguagesError(true);
-						return;
-					}
-					setLanguages(response.data);
-				}
-			})
-			.catch(() => {
-				if (!ignore) setLanguagesError(true);
-			})
-			.finally(() => {
-				if (!ignore) setLoadingLanguages(false);
-			});
-
-		return () => {
-			ignore = true;
-		};
-	}, [languages.length, open]);
 
 	function clearDialog() {
 		reset(createNovelDefaultValues);

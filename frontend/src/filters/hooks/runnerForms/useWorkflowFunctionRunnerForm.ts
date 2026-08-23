@@ -1,6 +1,6 @@
 import { runPythonFilter, runPythonGroup, runPythonMap } from "@/api/endpoints/filters/filters";
 import type { FunctionDefinitionMeta, WorkflowSummary } from "@/api/models";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { apiErrorMessage, requestErrorMessage } from "../../apiErrors";
 import type { RunnerFormStatus } from "../../types";
 import { useAsyncSearch } from "../useAsyncSearch";
@@ -39,32 +39,11 @@ export function useWorkflowFunctionRunnerForm(
 	const [outputWorkflowName, setOutputWorkflowNameState] = useState("");
 	const [formStatus, setFormStatus] = useState<RunnerFormStatus>({ status: "idle" });
 	const activeRequest = useRef<AbortController | null>(null);
-	const setWorkflowSearchKeyword = workflowSearch.setSearchKeyword;
-	const setFunctionSearchKeyword = functionSearch.setSearchKeyword;
 
 	const cancelActiveRequest = useCallback(() => {
 		activeRequest.current?.abort();
 		activeRequest.current = null;
 	}, []);
-
-	useEffect(() => cancelActiveRequest, [cancelActiveRequest]);
-
-	useEffect(() => {
-		cancelActiveRequest();
-		setSelectedWorkflow(null);
-		setSelectedFunctionDefinition(null);
-		setOutputWorkflowNameState("");
-		setWorkflowSearchKeyword("");
-		setFunctionSearchKeyword("");
-		setFormStatus({ status: "idle" });
-	}, [cancelActiveRequest, novelId, setFunctionSearchKeyword, setWorkflowSearchKeyword]);
-
-	useEffect(() => {
-		if (!enabled) {
-			cancelActiveRequest();
-			setFormStatus({ status: "idle" });
-		}
-	}, [cancelActiveRequest, enabled]);
 
 	function resetRequestStatus() {
 		cancelActiveRequest();

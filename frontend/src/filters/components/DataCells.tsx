@@ -11,8 +11,8 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { Info } from "lucide-react";
-import { useEffect, useState } from "react";
 import type { TextReference } from "../types";
+import { useState } from "react";
 
 function shortId(value: string) {
 	return value.slice(0, 8);
@@ -195,14 +195,6 @@ export function MutableDataCell({
 	const [draft, setDraft] = useState<string | boolean>(() => initialDraft(value));
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-
-	useEffect(() => {
-		if (isEditing && !editingLocked) {
-			setIsEditing(false);
-			setDraft(initialDraft(value));
-			setError(null);
-		}
-	}, [editingLocked, isEditing, value]);
 
 	function beginEditing() {
 		if (editingLocked) return;

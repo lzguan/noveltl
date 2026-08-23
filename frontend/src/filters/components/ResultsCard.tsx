@@ -18,7 +18,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { RefreshCw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { DataCell, GroupDataCell, isMutableDataType, MutableDataCell } from "./DataCells";
 import { ErrorBlock, groupingLabel, LoadingBlock, PageControls, shortId } from "./panelUi";
 import type { ActiveGroupingState, Loadable, Page } from "../types";
@@ -45,8 +45,6 @@ function ResultsTable({
 }) {
 	const fields = Object.entries(workflow.schema.fields ?? {});
 	const [editingLocked, setEditingLocked] = useState(false);
-
-	useEffect(() => setEditingLocked(false), [results]);
 
 	return (
 		<Table>

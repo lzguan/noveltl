@@ -5,16 +5,15 @@ import type {
 	GroupingResponse,
 	GroupValueCount,
 	InstanceQueryResult,
-	LabelRef,
 	LabelGroup,
 	MDataType,
 	Signature,
 	SortKey,
 	SortDirection,
-	TextSpan,
 	WorkflowResponse,
 	WorkflowSummary,
 } from "@/api/models";
+import type { CCServId, CServId } from "@/edit/controller/types/idTypes";
 
 export type Loadable<T> =
 	| { status: "idle" }
@@ -30,10 +29,6 @@ export interface Page<T> {
 	hasPrevious: boolean;
 	hasNext: boolean;
 }
-
-export type TextReference =
-	| { type: "labelRef"; value: LabelRef }
-	| { type: "textSpan"; value: TextSpan };
 
 export interface ActiveGroupingState {
 	grouping: GroupingResponse;
@@ -84,7 +79,6 @@ export interface InstanceResultsModel {
 	refreshInstanceResults: () => void;
 	loadPreviousInstancePage: () => void;
 	loadNextInstancePage: () => void;
-	openTextReference?: (reference: TextReference) => void;
 }
 
 export interface WorkflowDisplayPanelProps {
@@ -92,6 +86,10 @@ export interface WorkflowDisplayPanelProps {
 	groupingSection: GroupingSectionModel;
 	querySection: QuerySectionModel;
 	instanceResults: InstanceResultsModel;
+	gotoText?: (
+		chapterId: CServId,
+		reference: { start: number; end: number; ccServId: CCServId },
+	) => void;
 }
 
 export type FunctionDefinitionFormStatus =

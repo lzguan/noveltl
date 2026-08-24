@@ -35,8 +35,6 @@ import { LoaderCircle } from "lucide-react";
 import { ChapterTabs } from "../panels/chapters/ChapterTabs";
 import { FiltersPanel } from "../panels/filters/FiltersPanel";
 import type { NovelGetters } from "../controller/types/controllerTypes";
-import { useReferenceNavigation } from "../hooks/useReferenceNavigation";
-import { ReferenceNavigationDialog } from "../components/ReferenceNavigationDialog";
 
 function makeProvChapter(chapter: Chapter, chapterId: ProvChapter["chapterId"]): ProvChapter {
 	return Prov({
@@ -70,13 +68,6 @@ export function EditNovelPage() {
 		autoLabelMgr: ReturnType<typeof createAutoLabelManager>;
 		controllerGetters: NovelGetters;
 	} | null>(null);
-
-	const referenceNavigation = useReferenceNavigation({
-		chapterList: chapterState.chapterList,
-		controllerGetters: managers?.controllerGetters ?? null,
-		editorData: editorState.data,
-		switchChapter: managers?.chapterMgr.switchChapter ?? null,
-	});
 
 	const labeling = useMemo<LabelEditing>(() => {
 		const source = makeActiveGroupLabelSource({
@@ -185,6 +176,7 @@ export function EditNovelPage() {
 			labelGroupsRef: trackedLabelGroups.labelGroupsRef,
 			activeChapterIdRef: chapterState.activeChapterIdRef,
 			activeGroupIdRef: trackedLabelGroups.activeLabelGroupIdRef,
+			viewRef: editorState.editorView,
 		});
 		const autoLabelMgr = createAutoLabelManager({
 			controllerUserEvent,
@@ -319,8 +311,7 @@ export function EditNovelPage() {
 							onTextOp={managers.editorMgr.textOp}
 							labeling={labeling}
 							preview={autoLabelPreview.preview}
-							highlight={referenceNavigation.highlight}
-							onHighlightApplied={referenceNavigation.clearHighlight}
+							viewRef={editorState.editorView}
 						/>
 					</div>
 					<div className="shrink-0 flex flex-col min-h-0">
@@ -352,9 +343,14 @@ export function EditNovelPage() {
 									content: (
 										<FiltersPanel
 											novelId={novel.novel.novelId}
-											openTextReference={
-												referenceNavigation.openTextReference
-											}
+											gotoText={(cServId, ref) => {
+												const pid = Effect.runSync(managers.controllerGetters.chapterIdFromServerId(cServId))
+												if (pid === null) {
+													console.warn(`Could not find chapter for server ID ${cServId}`);
+													return;
+												}
+												managers.chapterMgr.switchChapter(pid, ref)
+											}}
 										/>
 									),
 								},
@@ -375,10 +371,6 @@ export function EditNovelPage() {
 					</div>
 				</div>
 			)}
-			<ReferenceNavigationDialog
-				notice={referenceNavigation.notice}
-				dismissNotice={referenceNavigation.dismissNotice}
-			/>
 		</div>
 	);
 }

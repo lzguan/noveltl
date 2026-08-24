@@ -1,6 +1,6 @@
 import type { Frame, SortKey, WorkflowResponse } from "@/api/models";
 import { useEffect } from "react";
-import type { ActiveGroupingState, TextReference, WorkflowDisplayPanelProps } from "../types";
+import type { ActiveGroupingState, WorkflowDisplayPanelProps } from "../types";
 import { useFrameDraft } from "./useFrameDraft";
 import { useInstanceResults } from "./useInstanceResults";
 import { useWorkflowGroupings } from "./useWorkflowGroupings";
@@ -22,10 +22,7 @@ export function buildWorkflowFrame(
 	};
 }
 
-export function useWorkflowViewer(
-	novelId: string,
-	openTextReference?: (reference: TextReference) => void,
-): WorkflowDisplayPanelProps {
+export function useWorkflowViewer(novelId: string): WorkflowDisplayPanelProps {
 	const workflowSelection = useWorkflowSelection(novelId);
 	const groupingState = useWorkflowGroupings(workflowSelection.availableGroupings);
 	const activeWorkflow =
@@ -95,7 +92,6 @@ export function useWorkflowViewer(
 			refreshInstanceResults: instanceResults.refreshInstanceResults,
 			loadPreviousInstancePage: instanceResults.loadPreviousInstancePage,
 			loadNextInstancePage: instanceResults.loadNextInstancePage,
-			openTextReference,
 		},
 	};
 }

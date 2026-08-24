@@ -16,6 +16,7 @@ from src.labels.exceptions import (
     LabelGroupNotFoundException,
     LabelInvalidOperationException,
     LabelNotExistsInvalidOperationException,
+    LabelNotFoundException,
     LabelOutOfBoundsInvalidOperationException,
     LabelWordMismatchInvalidOperationException,
 )
@@ -39,6 +40,7 @@ from src.labels.service import (
     insert_label_group,
     modify_label_data_by_stream,
     modify_label_group,
+    query_label_by_id,
     query_label_contributors_of_label_group,
     query_label_data_by_id,
     query_label_datas,
@@ -145,6 +147,19 @@ def read_labels_by_label_data(
     """
     labels = query_labels_by_label_data_id(db, current_user, label_data_id)
     return labels
+
+
+@router.get("/labels/{labelId}", response_model=Label)
+def read_label(
+    label_id: Annotated[uuid.UUID, Path(alias="labelId")],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Gets a label by id."""
+    try:
+        return query_label_by_id(db, current_user, label_id)
+    except LabelNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Label not found.") from e
 
 
 @router.get("/label-groups/{labelGroupId}/contributors", response_model=list[LabelContributor])

@@ -2125,6 +2125,52 @@
         }
       }
     },
+    "/labels/{labelId}": {
+      "get": {
+        "summary": "Read Label",
+        "description": "Gets a label by id.",
+        "operationId": "read_label_labels__labelId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "labelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Labelid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Label"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/label-groups/{labelGroupId}/contributors": {
       "get": {
         "summary": "Read Label Contributors",

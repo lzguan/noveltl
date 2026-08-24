@@ -5166,6 +5166,34 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Create Label Datas By Auto Labels
+  /labels/{labelId}:
+    get:
+      description: Gets a label by id.
+      operationId: read_label_labels__labelId__get
+      parameters:
+      - in: path
+        name: labelId
+        required: true
+        schema:
+          format: uuid
+          title: Labelid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Label'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Label
   /languages:
     get:
       description: "Retrieves all languages in the database.\n\nArgs:\n    db: Database\

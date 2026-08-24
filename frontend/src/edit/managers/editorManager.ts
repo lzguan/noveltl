@@ -14,6 +14,7 @@ import type { EditorData, LoadingPayload } from "../hooks/useEditorState";
 import { gatherLabelData } from "./readers";
 import type { LabelGroupView } from "../hooks/useTrackedLabelGroups";
 import type { ULabelOp } from "../controller/types/dataTypes";
+import { EditorView } from "@codemirror/view";
 
 export type LabelStyle = ProductStyle<
 	[
@@ -36,6 +37,7 @@ export function createEditorManager({
 	setLoading,
 	labelGroupsRef,
 	activeChapterIdRef,
+	viewRef,
 }: {
 	controllerUserEvent: (event: NovelUserEvent) => void;
 	dataRef: { current: EditorData };
@@ -44,6 +46,7 @@ export function createEditorManager({
 	setLoading: (val: LoadingPayload) => void;
 	labelGroupsRef: { current: Map<LGProvId, LabelGroupView> };
 	activeChapterIdRef: { current: CProvId | null };
+	viewRef: React.RefObject<EditorView | null>;
 }) {
 	function handleControllerEvent(
 		novelGetters: NovelGetters,
@@ -89,6 +92,13 @@ export function createEditorManager({
 						chapterContentId,
 						empty: false,
 					});
+					const highlight = event.flags.highlight;
+					if (highlight?.validCCId) {
+						viewRef.current?.dispatch({
+							selection: { anchor: highlight.start, head: highlight.end },
+							effects: EditorView.scrollIntoView(highlight.start, { y: "center" }),
+						});
+					}
 					if (couldNotLoad.length > 0) {
 						console.warn(
 							`Failed to load label data for label groups: ${couldNotLoad.join(", ")}`,

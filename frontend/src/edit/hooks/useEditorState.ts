@@ -1,9 +1,10 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import type { SegmentManager } from "@/edit/lib/text-model/core/segmentManager";
 import type { StyledLabel } from "@/edit/lib/text-model/core/types";
 import type { LabelStyle, EditorMode } from "../managers/editorManager";
 import type { CCProvId, CProvId, LProvId } from "../controller/types/idTypes";
 import { useSyncState } from "../utils/useSyncState";
+import { EditorView } from "@codemirror/view";
 
 export type Caret = {
 	anchor: number;
@@ -79,5 +80,7 @@ export function useEditorState() {
 		[modeRef, commitModeState],
 	);
 
-	return { data, mode: modeState, dataRef, modeRef, setLoading, setCaret, setMode };
+	const editorView = useRef<EditorView | null>(null);
+
+	return { data, mode: modeState, dataRef, modeRef, setLoading, setCaret, setMode, editorView };
 }

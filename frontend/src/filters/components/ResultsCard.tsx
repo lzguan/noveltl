@@ -22,7 +22,7 @@ import { useState } from "react";
 import { DataCell, GroupDataCell, isMutableDataType, MutableDataCell } from "./DataCells";
 import { ErrorBlock, groupingLabel, LoadingBlock, PageControls, shortId } from "./panelUi";
 import type { ActiveGroupingState, Loadable, Page } from "../types";
-import type { TextReference } from "../types";
+import type { CCServId, CServId } from "@/edit/controller/types/idTypes";
 
 export type CommitInstanceField = (
 	instanceId: string,
@@ -34,13 +34,13 @@ function ResultsTable({
 	workflow,
 	activeGroupings,
 	results,
-	openTextReference,
+	gotoText,
 	commitInstanceField,
 }: {
 	workflow: WorkflowResponse;
 	activeGroupings: readonly ActiveGroupingState[];
 	results: Page<InstanceQueryResult>;
-	openTextReference?: (reference: TextReference) => void;
+	gotoText?: (chapterId: CServId, reference: { start: number; end: number; ccServId: CCServId }) => void;
 	commitInstanceField?: CommitInstanceField;
 }) {
 	const fields = Object.entries(workflow.schema.fields ?? {});
@@ -99,7 +99,7 @@ function ResultsTable({
 									) : (
 										<DataCell
 											value={value}
-											openTextReference={openTextReference}
+											gotoText={gotoText}
 										/>
 									)}
 								</TableCell>
@@ -126,7 +126,7 @@ export function ResultsCard({
 	refreshInstanceResults,
 	loadPreviousInstancePage,
 	loadNextInstancePage,
-	openTextReference,
+	gotoText,
 	commitInstanceField,
 }: {
 	workflow: WorkflowResponse;
@@ -135,7 +135,7 @@ export function ResultsCard({
 	refreshInstanceResults: () => void;
 	loadPreviousInstancePage: () => void;
 	loadNextInstancePage: () => void;
-	openTextReference?: (reference: TextReference) => void;
+	gotoText?: (chapterId: CServId, reference: { start: number; end: number; ccServId: CCServId }) => void;
 	commitInstanceField?: CommitInstanceField;
 }) {
 	const description =
@@ -193,7 +193,7 @@ export function ResultsCard({
 							workflow={workflow}
 							activeGroupings={activeGroupings}
 							results={results.data}
-							openTextReference={openTextReference}
+							gotoText={gotoText}
 							commitInstanceField={commitInstanceField}
 						/>
 						<PageControls

@@ -14,7 +14,6 @@ import { AddLabelForm } from "../../labeling/AddLabelForm";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import type { AddTarget, EditorLabel, LabelEditing } from "../../labeling/types";
 import type { AutoLabelPreview } from "../../hooks/useAutoLabelPreview";
-import type { EditorTextHighlight } from "../../hooks/useReferenceNavigation";
 
 type SM = SegmentManager<LabelStyle, StyledLabel<LabelStyle>, LProvId>;
 
@@ -24,7 +23,6 @@ type SM = SegmentManager<LabelStyle, StyledLabel<LabelStyle>, LProvId>;
  */
 const setDecorations = StateEffect.define<DecorationSet>();
 const setPreviewDecorations = StateEffect.define<DecorationSet>();
-const setReferenceHighlight = StateEffect.define<EditorTextHighlight>();
 
 function labelMark(color: number): Decoration {
 	return Decoration.mark({
@@ -57,10 +55,6 @@ function previewMark(): Decoration {
 	return Decoration.mark({ class: "cm-autolabel-preview" });
 }
 
-function referenceHighlightMark(): Decoration {
-	return Decoration.mark({ class: "cm-reference-highlight" });
-}
-
 function buildPreviewDecorations(
 	preview: AutoLabelPreview | null,
 	docLength: number,
@@ -87,10 +81,6 @@ const editorTheme = EditorView.theme({
 	".cm-autolabel-preview": {
 		backgroundColor: "color-mix(in oklab, var(--primary) 10%, transparent)",
 		borderBottom: "1px dashed var(--primary)",
-	},
-	".cm-reference-highlight": {
-		backgroundColor: "color-mix(in oklab, var(--primary) 28%, transparent)",
-		borderRadius: "0.2rem",
 	},
 });
 
@@ -119,8 +109,7 @@ export function CodeMirrorEditor({
 	onTextOp,
 	labeling,
 	preview,
-	highlight,
-	onHighlightApplied,
+	viewRef,
 }: {
 	sm: SM;
 	mode: EditorMode;
@@ -128,18 +117,14 @@ export function CodeMirrorEditor({
 	onTextOp: (op: TextOp) => void;
 	labeling: LabelEditing;
 	preview: AutoLabelPreview | null;
-	highlight: EditorTextHighlight | null;
-	onHighlightApplied: () => void;
+	viewRef: React.RefObject<EditorView | null>;
 }) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	const viewRef = useRef<EditorView | null>(null);
 
 	const onSetCaretRef = useRef(onSetCaret);
 	onSetCaretRef.current = onSetCaret;
 	const onTextOpRef = useRef(onTextOp);
 	onTextOpRef.current = onTextOp;
-	const onHighlightAppliedRef = useRef(onHighlightApplied);
-	onHighlightAppliedRef.current = onHighlightApplied;
 
 	const [menuCtx, setMenuCtx] = useState<MenuCtx>({ selection: null, labels: [] });
 	const [form, setForm] = useState<FormState | null>(null);
@@ -172,21 +157,6 @@ export function CodeMirrorEditor({
 			},
 			provide: (field) => EditorView.decorations.from(field),
 		});
-		const referenceHighlightField = StateField.define<DecorationSet>({
-			create: () => Decoration.none,
-			update(deco, tr) {
-				let next = tr.docChanged ? Decoration.none : deco;
-				for (const effect of tr.effects) {
-					if (effect.is(setReferenceHighlight)) {
-						next = Decoration.set([
-							referenceHighlightMark().range(effect.value.start, effect.value.end),
-						]);
-					}
-				}
-				return next;
-			},
-			provide: (field) => EditorView.decorations.from(field),
-		});
 
 		const view = new EditorView({
 			parent,
@@ -198,7 +168,6 @@ export function CodeMirrorEditor({
 					EditorView.lineWrapping,
 					decorationsField,
 					previewDecorationsField,
-					referenceHighlightField,
 					readOnlyCompartment.of(EditorState.readOnly.of(mode !== "edit")),
 					editorTheme,
 					EditorView.updateListener.of((update) => {
@@ -253,7 +222,7 @@ export function CodeMirrorEditor({
 		viewRef.current?.dispatch({
 			effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(mode !== "edit")),
 		});
-	}, [mode, readOnlyCompartment]);
+	}, [mode, readOnlyCompartment, viewRef]);
 
 	useEffect(() => {
 		const view = viewRef.current;
@@ -263,29 +232,17 @@ export function CodeMirrorEditor({
 				buildPreviewDecorations(preview, view.state.doc.length),
 			),
 		});
-	}, [preview]);
+	}, [preview, viewRef]);
 
 	useEffect(() => {
 		const view = viewRef.current;
-		if (!view || highlight === null) return;
-		view.dispatch({
-			selection: { anchor: highlight.start, head: highlight.end },
-			effects: [
-				setReferenceHighlight.of(highlight),
-				EditorView.scrollIntoView(highlight.start, { y: "center" }),
-			],
-		});
-		onHighlightAppliedRef.current();
-	}, [highlight]);
-
-	useEffect(() => {
 		if (!form) return;
-		const scroller = viewRef.current?.scrollDOM;
+		const scroller = view?.scrollDOM;
 		if (!scroller) return;
 		const onScroll = () => setForm(null);
 		scroller.addEventListener("scroll", onScroll, { passive: true });
 		return () => scroller.removeEventListener("scroll", onScroll);
-	}, [form]);
+	}, [form, viewRef]);
 
 	const handleContextMenu = useCallback(
 		(event: React.MouseEvent<HTMLDivElement>) => {
@@ -316,7 +273,7 @@ export function CodeMirrorEditor({
 			const labels = pos === null ? [] : labeling.source.labelsAt(pos);
 			setMenuCtx({ selection, labels });
 		},
-		[mode, labeling],
+		[mode, labeling, viewRef],
 	);
 
 	const handleAdd = useCallback(() => {
@@ -337,7 +294,7 @@ export function CodeMirrorEditor({
 				targets,
 			});
 		}, 0);
-	}, [menuCtx, labeling]);
+	}, [menuCtx, labeling, viewRef]);
 
 	const handleDelete = useCallback(
 		(label: EditorLabel) => {

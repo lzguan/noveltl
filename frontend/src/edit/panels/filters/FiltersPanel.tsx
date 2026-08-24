@@ -6,17 +6,17 @@ import { useWorkflowViewer } from "../../../filters/hooks/useWorkflowViewer";
 import { FunctionDefinitionPanel } from "../../../filters/panels/FunctionDefinitionPanel";
 import { RunnerPanel } from "../../../filters/panels/RunnerPanel";
 import { WorkflowDisplayPanel } from "../../../filters/panels/WorkflowDisplayPanel";
-import type { TextReference } from "../../../filters/types";
+import type { CCServId, CServId } from "@/edit/controller/types/idTypes";
 
 export function FiltersPanel({
 	novelId,
-	openTextReference,
+	gotoText
 }: {
 	novelId: string;
-	openTextReference: (reference: TextReference) => void;
+	gotoText?: (chapterId: CServId, reference: { start: number; end: number; ccServId: CCServId }) => void;
 }) {
 	const [activeSubpanel, setActiveSubpanel] = useState("viewer");
-	const viewer = useWorkflowViewer(novelId, openTextReference);
+	const viewer = useWorkflowViewer(novelId);
 	const functionDefinitionForm = useFunctionDefinitionForm();
 	const runnerPanel = useRunnerPanel(novelId, activeSubpanel === "runners");
 
@@ -28,7 +28,7 @@ export function FiltersPanel({
 				<TabsTrigger value="runners">Runners</TabsTrigger>
 			</TabsList>
 			<TabsContent value="viewer" className="min-h-0 overflow-y-auto p-2">
-				<WorkflowDisplayPanel {...viewer} />
+				<WorkflowDisplayPanel {...viewer} gotoText={gotoText} />
 			</TabsContent>
 			<TabsContent value="functions" className="min-h-0 overflow-y-auto p-2">
 				<FunctionDefinitionPanel {...functionDefinitionForm} />

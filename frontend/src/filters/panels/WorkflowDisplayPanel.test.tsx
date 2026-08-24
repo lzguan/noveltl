@@ -270,24 +270,24 @@ describe("WorkflowDisplayPanel", () => {
 	});
 
 	it("opens text references on double-click and keeps metadata behind info buttons", () => {
-		const openTextReference = vi.fn();
+		const gotoText = vi.fn();
 		render(
-			<WorkflowDisplayPanel {...createProps({ instanceResults: { openTextReference } })} />,
+			<WorkflowDisplayPanel {...createProps()} />,
 		);
 
 		fireEvent.click(screen.getByRole("button", { name: "chapter-:12–28" }), {
 			detail: 1,
 		});
-		expect(openTextReference).not.toHaveBeenCalled();
+		expect(gotoText).not.toHaveBeenCalled();
 
 		fireEvent.doubleClick(screen.getByRole("button", { name: "chapter-:12–28" }));
-		expect(openTextReference).toHaveBeenCalledWith({
+		expect(gotoText).toHaveBeenCalledWith({
 			type: "textSpan",
 			value: textSpanValue,
 		});
 
 		fireEvent.doubleClick(screen.getByRole("button", { name: "Label label-ab" }));
-		expect(openTextReference).toHaveBeenLastCalledWith({
+		expect(gotoText).toHaveBeenLastCalledWith({
 			type: "labelRef",
 			value: labelRefValue,
 		});

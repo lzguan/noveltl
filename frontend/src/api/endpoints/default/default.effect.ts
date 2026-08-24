@@ -62,6 +62,7 @@ export const ReadAutoLabelRunsAutoLabelRunsGet422Response = S.Struct({
 })))
 })
 
+
 /**
  * Get autolabel metadata for all autolabels in a run.
  *
@@ -1362,6 +1363,50 @@ export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLa
 }).annotations({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
 
 export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.extend(S.Struct({
+
+}), S.Record({ key: S.String, value: S.Unknown }))),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * Gets a label by id.
+ * @summary Read Label
+ */
+export const ReadLabelLabelsLabelIdGetParams = S.Struct({
+  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const readLabelLabelsLabelIdGet200ResponseLabelEndMin = 0;
+
+export const readLabelLabelsLabelIdGet200ResponseLabelEntityGroupOneMax = 64;
+
+export const readLabelLabelsLabelIdGet200ResponseLabelScoreMin = 0;
+export const readLabelLabelsLabelIdGet200ResponseLabelScoreMax = 1;
+
+export const readLabelLabelsLabelIdGet200ResponseLabelStartMin = 0;
+
+export const readLabelLabelsLabelIdGet200ResponseLabelWordMax = 128;
+
+
+
+export const ReadLabelLabelsLabelIdGet200Response = S.Struct({
+  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDirty": S.Boolean,
+  "labelEnd": S.Number.pipe(S.greaterThanOrEqualTo(readLabelLabelsLabelIdGet200ResponseLabelEndMin)),
+  "labelEntityGroup": S.Union(S.String.pipe(S.maxLength(readLabelLabelsLabelIdGet200ResponseLabelEntityGroupOneMax)), S.Null),
+  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelScore": S.Number.pipe(S.greaterThanOrEqualTo(readLabelLabelsLabelIdGet200ResponseLabelScoreMin), S.lessThanOrEqualTo(readLabelLabelsLabelIdGet200ResponseLabelScoreMax)),
+  "labelStart": S.Number.pipe(S.greaterThanOrEqualTo(readLabelLabelsLabelIdGet200ResponseLabelStartMin)),
+  "labelWord": S.String.pipe(S.maxLength(readLabelLabelsLabelIdGet200ResponseLabelWordMax))
+}).annotations({ description: 'Pydantic schema for a label that belongs to a LabelData.\nExtends LabelBase with a label_data_id foreign key and label_id pkey.' })
+
+export const ReadLabelLabelsLabelIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "ctx": S.optional(S.extend(S.Struct({
 
@@ -2847,4 +2892,3 @@ export const ReadUserUsersUserNameGet422Response = S.Struct({
   "type": S.String
 })))
 })
-

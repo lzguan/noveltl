@@ -5,7 +5,7 @@ import type { EditorData } from "../hooks/useEditorState";
 import type { TextOp } from "@/api/models";
 import type { LabelEditing } from "../labeling/types";
 import type { AutoLabelPreview } from "../hooks/useAutoLabelPreview";
-import type { EditorTextHighlight } from "../hooks/useReferenceNavigation";
+import type { EditorView } from "@codemirror/view";
 
 export function EditorPanel({
 	data,
@@ -14,8 +14,7 @@ export function EditorPanel({
 	onTextOp,
 	labeling,
 	preview,
-	highlight,
-	onHighlightApplied,
+	viewRef,
 }: {
 	data: EditorData;
 	mode: EditorMode;
@@ -23,8 +22,7 @@ export function EditorPanel({
 	onTextOp: (op: TextOp) => void;
 	labeling: LabelEditing;
 	preview: AutoLabelPreview | null;
-	highlight: EditorTextHighlight | null;
-	onHighlightApplied: () => void;
+	viewRef: React.RefObject<EditorView | null>;
 }) {
 	if (data.empty) {
 		return (
@@ -50,8 +48,7 @@ export function EditorPanel({
 				onTextOp={onTextOp}
 				labeling={labeling}
 				preview={preview}
-				highlight={highlight}
-				onHighlightApplied={onHighlightApplied}
+				viewRef={viewRef}
 			/>
 		</div>
 	);

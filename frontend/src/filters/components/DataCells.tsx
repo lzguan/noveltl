@@ -1,3 +1,4 @@
+import { readLabelLabelsLabelIdGet } from "@/api/endpoints/default/default";
 import type { DataType, GroupData, LabelRef, MDataType, TextSpan } from "@/api/models";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,8 +11,8 @@ import {
 	PopoverTitle,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { CCServId, CServId } from "@/edit/controller/types/idTypes";
 import { Info } from "lucide-react";
-import type { TextReference } from "../types";
 import { useState } from "react";
 
 function shortId(value: string) {
@@ -33,23 +34,19 @@ function Metadata({ values }: { values: readonly [string, string | number][] }) 
 
 export function TextSpanCell({
 	value,
-	openTextReference,
+	gotoText,
 }: {
 	value: TextSpan;
-	openTextReference?: (reference: TextReference) => void;
+	gotoText?: (chapterId: CServId, reference: { start: number; end: number; ccServId: CCServId }) => void;
 }) {
-	const openReference = () => openTextReference?.({ type: "textSpan", value });
 	return (
 		<div className="flex items-center gap-1">
 			<Button
 				type="button"
 				variant="ghost"
 				size="xs"
-				disabled={!openTextReference}
-				onDoubleClick={openReference}
-				onClick={(event) => {
-					if (event.detail === 0) openReference();
-				}}
+				disabled={!gotoText}
+				onDoubleClick={() => gotoText?.(CServId(value.chapterId), { start: value.start, end: value.end, ccServId: CCServId(value.chapterContentId) })}
 				title="Double-click to open this text span"
 			>
 				{shortId(value.chapterId)}:{value.start}–{value.end}
@@ -84,23 +81,33 @@ export function TextSpanCell({
 
 export function LabelCell({
 	value,
-	openTextReference,
+	gotoText,
 }: {
 	value: LabelRef;
-	openTextReference?: (reference: TextReference) => void;
+	gotoText?: (chapterId: CServId, reference: { start: number; end: number; ccServId: CCServId }) => void;
 }) {
-	const openReference = () => openTextReference?.({ type: "labelRef", value });
+	const gotoLabel = async () => {
+		if (!gotoText) return;
+		const response = await readLabelLabelsLabelIdGet(value.labelId);
+		if (response.status !== 200) {
+			console.error("Failed to read label", response.status, response.data);
+			return;
+		}
+		const label = response.data;
+		gotoText(CServId(value.chapterId), {
+			start: label.labelStart,
+			end: label.labelEnd,
+			ccServId: CCServId(value.chapterContentId),
+		});
+	}
 	return (
 		<div className="flex items-center gap-1">
 			<Button
 				type="button"
 				variant="ghost"
 				size="xs"
-				disabled={!openTextReference}
-				onDoubleClick={openReference}
-				onClick={(event) => {
-					if (event.detail === 0) openReference();
-				}}
+				disabled={!gotoText}
+				onDoubleClick={() => gotoLabel()}
 				title="Double-click to open this label"
 			>
 				Label {shortId(value.labelId)}
@@ -308,10 +315,10 @@ export function MutableDataCell({
 
 export function DataCell({
 	value,
-	openTextReference,
+	gotoText,
 }: {
 	value: DataType | undefined;
-	openTextReference?: (reference: TextReference) => void;
+	gotoText?: (chapterId: CServId, reference: { start: number; end: number; ccServId: CCServId }) => void;
 }) {
 	if (!value) return <span className="text-muted-foreground">—</span>;
 
@@ -323,8 +330,8 @@ export function DataCell({
 		case "bool":
 			return <Badge variant="outline">{value.value ? "true" : "false"}</Badge>;
 		case "textSpan":
-			return <TextSpanCell value={value.value} openTextReference={openTextReference} />;
+			return <TextSpanCell value={value.value} gotoText={gotoText} />;
 		case "labelRef":
-			return <LabelCell value={value.value} openTextReference={openTextReference} />;
+			return <LabelCell value={value.value} gotoText={gotoText} />;
 	}
 }

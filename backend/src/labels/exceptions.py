@@ -13,6 +13,10 @@ class LabelDataNotFoundException(NotFoundException):
     pass
 
 
+class LabelNotFoundException(NotFoundException):
+    pass
+
+
 class LabelDataRevisionDuplicateException(DuplicateException):
     pass
 

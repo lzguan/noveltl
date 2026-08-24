@@ -1711,6 +1711,49 @@ export const createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLa
 );}
 
 
+export type readLabelLabelsLabelIdGetResponse200 = {
+  data: Label
+  status: 200
+}
+
+export type readLabelLabelsLabelIdGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readLabelLabelsLabelIdGetResponseSuccess = (readLabelLabelsLabelIdGetResponse200) & {
+  headers: Headers;
+};
+export type readLabelLabelsLabelIdGetResponseError = (readLabelLabelsLabelIdGetResponse422) & {
+  headers: Headers;
+};
+
+export type readLabelLabelsLabelIdGetResponse = (readLabelLabelsLabelIdGetResponseSuccess | readLabelLabelsLabelIdGetResponseError)
+
+export const getReadLabelLabelsLabelIdGetUrl = (labelId: string,) => {
+
+
+
+
+  return `/api/labels/${labelId}`
+}
+
+/**
+ * Gets a label by id.
+ * @summary Read Label
+ */
+export const readLabelLabelsLabelIdGet = async (labelId: string, options?: Parameters<typeof customFetch>[1]): Promise<readLabelLabelsLabelIdGetResponse> => {
+
+  return customFetch<readLabelLabelsLabelIdGetResponse>(getReadLabelLabelsLabelIdGetUrl(labelId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
 export type readAllLanguagesLanguagesGetResponse200 = {
   data: Language[]
   status: 200

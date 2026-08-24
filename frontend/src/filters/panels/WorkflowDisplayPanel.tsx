@@ -144,7 +144,7 @@ export function WorkflowDisplayPanel(props: WorkflowDisplayPanelProps) {
 								refreshInstanceResults={instanceResults.refreshInstanceResults}
 								loadPreviousInstancePage={instanceResults.loadPreviousInstancePage}
 								loadNextInstancePage={instanceResults.loadNextInstancePage}
-								openTextReference={instanceResults.openTextReference}
+								gotoText={props.gotoText}
 							/>
 						</>
 					)}

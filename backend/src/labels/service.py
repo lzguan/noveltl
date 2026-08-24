@@ -25,6 +25,7 @@ from src.labels.exceptions import (
     LabelDataNotFoundException,
     LabelDataRevisionDuplicateException,
     LabelGroupNotFoundException,
+    LabelNotFoundException,
     LabelWordMismatchInvalidOperationException,
 )
 from src.labels.permissions import (
@@ -194,6 +195,21 @@ def query_labels_by_label_data_id(db: Session, current_user: User, label_data_id
     result = db.execute(q)
     result_rows = result.scalars().all()
     return result_rows
+
+
+def query_label_by_id(db: Session, current_user: User, label_id: uuid.UUID) -> models.Label:
+    """Return an accessible label by its ID."""
+    q = (
+        select(models.Label)
+        .select_from(models.LabelData)
+        .join(models.Label, models.LabelData.label_data_id == models.Label.label_data_id)
+        .where(models.Label.label_id == label_id)
+    )
+    q = label_data_mod_access_select(q, current_user)
+    try:
+        return db.execute(q).scalar_one()
+    except NoResultFound as e:
+        raise LabelNotFoundException from e
 
 
 def query_label_contributors_of_label_group(

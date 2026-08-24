@@ -65,10 +65,8 @@ export function useWorkflowSelection(novelId: string): WorkflowSelectionState {
 	}, [novelId]);
 
 	useEffect(() => {
-		setSearchText("");
-		setActiveWorkflowId(null);
-		setActiveWorkflow({ status: "idle" });
-		setAvailableGroupings({ status: "idle" });
+		// This starts the initial request, including its loading-state transition.
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		refreshWorkflowList();
 		return () => workflowListRequest.current?.abort();
 	}, [refreshWorkflowList]);
@@ -77,8 +75,6 @@ export function useWorkflowSelection(novelId: string): WorkflowSelectionState {
 		if (!activeWorkflowId) return;
 		const workflowId = activeWorkflowId;
 		const controller = new AbortController();
-		setActiveWorkflow({ status: "loading" });
-		setAvailableGroupings({ status: "loading" });
 
 		async function loadWorkflow() {
 			const workflowResponse = await readWorkflowFiltersWorkflowsWorkflowIdGet(workflowId, {

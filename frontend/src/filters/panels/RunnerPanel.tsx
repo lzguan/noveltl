@@ -65,21 +65,36 @@ export function RunnerPanel({ novelId, enabled }: { novelId: string; enabled: bo
 				</CardContent>
 			</Card>
 
-			{activeRunnerOperation === "labelSource" && (
-				<LabelSourceRunnerForm novelId={novelId} enabled={enabled} />
-			)}
-			{activeRunnerOperation === "annotation" && (
-				<AnnotationRunnerForm novelId={novelId} enabled={enabled} />
-			)}
-			{activeRunnerOperation === "map" && (
-				<MapRunnerForm novelId={novelId} enabled={enabled} />
-			)}
-			{activeRunnerOperation === "filter" && (
-				<FilterRunnerForm novelId={novelId} enabled={enabled} />
-			)}
-			{activeRunnerOperation === "group" && (
-				<GroupRunnerForm novelId={novelId} enabled={enabled} />
-			)}
+			<div hidden={activeRunnerOperation !== "labelSource"}>
+				<LabelSourceRunnerForm
+					novelId={novelId}
+					enabled={enabled && activeRunnerOperation === "labelSource"}
+				/>
+			</div>
+			<div hidden={activeRunnerOperation !== "annotation"}>
+				<AnnotationRunnerForm
+					novelId={novelId}
+					enabled={enabled && activeRunnerOperation === "annotation"}
+				/>
+			</div>
+			<div hidden={activeRunnerOperation !== "map"}>
+				<MapRunnerForm
+					novelId={novelId}
+					enabled={enabled && activeRunnerOperation === "map"}
+				/>
+			</div>
+			<div hidden={activeRunnerOperation !== "filter"}>
+				<FilterRunnerForm
+					novelId={novelId}
+					enabled={enabled && activeRunnerOperation === "filter"}
+				/>
+			</div>
+			<div hidden={activeRunnerOperation !== "group"}>
+				<GroupRunnerForm
+					novelId={novelId}
+					enabled={enabled && activeRunnerOperation === "group"}
+				/>
+			</div>
 		</section>
 	);
 }

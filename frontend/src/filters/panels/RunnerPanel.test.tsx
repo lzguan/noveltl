@@ -12,7 +12,7 @@ import type {
 	WorkflowOperationAccepted,
 	WorkflowSummary,
 } from "@/api/models";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAnnotationRunnerForm } from "../hooks/runnerForms/useAnnotationRunnerForm";
 import { useLabelSourceRunnerForm } from "../hooks/runnerForms/useLabelSourceRunnerForm";
@@ -174,27 +174,41 @@ describe("RunnerPanel", () => {
 		expect(screen.getByLabelText("Label group")).toBeVisible();
 
 		fireEvent.click(screen.getByRole("radio", { name: "Map" }));
-		expect(screen.getByLabelText("Source workflow")).toBeVisible();
-		expect(screen.getByLabelText("Function")).toBeVisible();
+		expect(
+			screen.getByLabelText("Source workflow", { selector: "#map-runner-workflow" }),
+		).toBeVisible();
+		expect(
+			screen.getByLabelText("Function", { selector: "#map-runner-function" }),
+		).toBeVisible();
 
 		fireEvent.click(screen.getByRole("radio", { name: "Group" }));
-		expect(screen.getByLabelText("Workflow")).toBeVisible();
-		expect(screen.queryByLabelText("Output workflow name")).not.toBeInTheDocument();
+		expect(
+			screen.getByLabelText("Workflow", { selector: "#group-runner-workflow" }),
+		).toBeVisible();
+		expect(
+			screen.getByLabelText("Output workflow name", {
+				selector: "#map-runner-output-name",
+			}),
+		).not.toBeVisible();
 	});
 
 	it("constructs each runner request in its form component", async () => {
 		render(<RunnerPanel novelId="novel-1" enabled />);
 
-		fireEvent.click(screen.getByRole("button", { name: "Create workflow" }));
-		await waitFor(() => expect(runPythonLabelSource).toHaveBeenCalled());
+		await act(async () =>
+			fireEvent.click(screen.getByRole("button", { name: "Create workflow" })),
+		);
+		expect(runPythonLabelSource).toHaveBeenCalled();
 		expect(runPythonLabelSource).toHaveBeenCalledWith({
 			labelGroupId: "label-group-1",
 			outputName: "Current labels",
 		});
 
 		fireEvent.click(screen.getByRole("radio", { name: "Map" }));
-		fireEvent.click(screen.getByRole("button", { name: "Create workflow" }));
-		await waitFor(() => expect(runPythonMap).toHaveBeenCalled());
+		await act(async () =>
+			fireEvent.click(screen.getByRole("button", { name: "Create workflow" })),
+		);
+		expect(runPythonMap).toHaveBeenCalled();
 		expect(runPythonMap).toHaveBeenCalledWith({
 			sourceWorkflowId: "workflow-1",
 			functionDefinitionId: "function-1",
@@ -203,17 +217,23 @@ describe("RunnerPanel", () => {
 
 		vi.mocked(useWorkflowFunctionRunnerForm).mockReturnValue(workflowFunctionForm());
 		fireEvent.click(screen.getByRole("radio", { name: "Filter" }));
-		fireEvent.click(screen.getByRole("button", { name: "Create workflow" }));
-		await waitFor(() => expect(runPythonFilter).toHaveBeenCalled());
+		await act(async () =>
+			fireEvent.click(screen.getByRole("button", { name: "Create workflow" })),
+		);
+		expect(runPythonFilter).toHaveBeenCalled();
 
 		vi.mocked(useWorkflowFunctionRunnerForm).mockReturnValue(workflowFunctionForm());
 		fireEvent.click(screen.getByRole("radio", { name: "Group" }));
-		fireEvent.click(screen.getByRole("button", { name: "Create grouping" }));
-		await waitFor(() => expect(runPythonGroup).toHaveBeenCalled());
+		await act(async () =>
+			fireEvent.click(screen.getByRole("button", { name: "Create grouping" })),
+		);
+		expect(runPythonGroup).toHaveBeenCalled();
 
 		fireEvent.click(screen.getByRole("radio", { name: "Annotation" }));
-		fireEvent.click(screen.getByRole("button", { name: "Add annotation fields" }));
-		await waitFor(() => expect(runPythonAnnotation).toHaveBeenCalled());
+		await act(async () =>
+			fireEvent.click(screen.getByRole("button", { name: "Add annotation fields" })),
+		);
+		expect(runPythonAnnotation).toHaveBeenCalled();
 		expect(runPythonAnnotation).toHaveBeenCalledWith({
 			workflowId: "workflow-1",
 			newFields: { note: { type: "string", defaultValue: "" } },

@@ -340,6 +340,7 @@ export function EditNovelPage() {
 									label: "Filters",
 									content: (
 										<FiltersPanel
+											key={novel.novel.novelId}
 											novelId={novel.novel.novelId}
 											gotoText={(cServId, ref) => {
 												const pid = Effect.runSync(

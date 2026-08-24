@@ -1,6 +1,6 @@
 # Filters
 
-**Last updated:** 2026-08-04
+**Last updated:** 2026-08-24
 
 The filter subsystem builds typed, repeatable data-processing pipelines over
 NovelTL data. Its first implemented pipeline starts with the current labels in
@@ -25,14 +25,31 @@ The backend currently implements:
   and group assignments;
 - bounded batch execution with job ownership and failure statuses.
 
-The read and write APIs are exposed through FastAPI, but the frontend is not
-implemented yet. Alembic migrations create the filter persistence tables and
-workflow permission-scope associations. Public operation services create new
-targets, atomically reserve complete job member sets as pending, and enqueue
-the registered Celery runner tasks, which the
-`filters-worker` process consumes. See
+The read and write APIs are exposed through FastAPI. Alembic migrations create
+the filter persistence tables and workflow permission-scope associations.
+Public operation services create new targets, atomically reserve complete job
+member sets as pending, and enqueue the registered Celery runner tasks, which
+the `filters-worker` process consumes. See
 [workers and task queues](../project-structure.md#workers-and-task-queues) for
 how that worker is configured, built, and started.
+
+The frontend is implemented as a Filters tab in the novel editor's right-hand
+panel. It currently provides:
+
+- a workflow viewer with workflow search and selection, status display,
+  grouping-value filters, multi-field sorting, pagination, and editable
+  mutable instance fields;
+- navigation from a text or label reference in a result back to its chapter
+  and source range in the editor;
+- a function library panel for validating serialized function definitions,
+  inspecting their computed signatures, and uploading them;
+- forms for configuring and enqueueing label-source, annotation, map, filter,
+  and group operations.
+
+The frontend uses the generated API client directly and manages each panel's
+server and draft state with focused React hooks. It does not use the editor
+controller's synchronization protocol; the editor integration supplies only
+the active novel and reference-navigation callback.
 
 The read API contract is documented in [endpoints.md](endpoints.md). The
 mutation and runner API is specified in
@@ -91,6 +108,26 @@ assignments, while output-producing runners require an empty target stage.
 
 See [runners.md](runners.md).
 
+### Frontend
+
+The editor mounts `FiltersPanel` beside the autolabel tooling. The panel has
+three subpanels:
+
+- **Viewer:** selects a materialized workflow, builds a query frame from
+  grouping filters and sort keys, displays paginated instances, and persists
+  edits to mutable fields.
+- **Functions:** accepts a serialized function AST, asks the backend to
+  validate and compute its signature, and can save the definition to the
+  shared function library.
+- **Runners:** gathers the resources and options required by one of the five
+  runner types, creates any required target records, and dispatches the
+  operation to the filters worker.
+
+Switching novels resets workflow selection, grouping choices, frame drafts,
+and instance results. Runner forms remain mounted while switching operation
+tabs so partially entered values are preserved; only the active form loads
+remote selector data.
+
 ## Implemented example
 
 The integration tests exercise this sequence:
@@ -121,6 +158,14 @@ and applying decisions back to NovelTL are future work.
   runners
 - [`backend/tests/filters/`](../../backend/tests/filters/): unit and pipeline
   tests
+- [`frontend/src/edit/panels/filters/FiltersPanel.tsx`](../../frontend/src/edit/panels/filters/FiltersPanel.tsx):
+  editor integration and frontend subpanel navigation
+- [`frontend/src/filters/panels/`](../../frontend/src/filters/panels/): workflow
+  viewer, function library, and runner panels
+- [`frontend/src/filters/hooks/`](../../frontend/src/filters/hooks/): frontend
+  query, form, selection, and asynchronous state
+- [`frontend/src/filters/components/`](../../frontend/src/filters/components/):
+  filter-specific display and form components
 - [API endpoint design](endpoints.md): draft public routes, pagination, and
   permission behavior
 

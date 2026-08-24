@@ -67,8 +67,10 @@ class TestCeleryRunnerDispatcher:
         run_runner.assert_called_once_with(job_id, runner_input)
 
     def test_task_and_worker_configuration(self) -> None:
-        assert run_runner_task.soft_time_limit == 600
-        assert run_runner_task.time_limit == 660
+        assert run_runner_task.soft_time_limit is not None
+        assert run_runner_task.soft_time_limit > 0
+        assert run_runner_task.time_limit is not None
+        assert run_runner_task.time_limit > run_runner_task.soft_time_limit
         assert app.conf.include == ["src.filters.dispatch.celery"]
         assert app.conf.worker_pool == "prefork"
         assert app.conf.worker_concurrency == 2

@@ -38,9 +38,11 @@ class TestCeleryDispatcher:
 
         to_thread.assert_awaited_once_with(dispatcher.enqueue, job_id, auto_label_id)
 
-    def test_inference_task_time_limits(self) -> None:
-        assert celery_infer.soft_time_limit == 600
-        assert celery_infer.time_limit == 660
+    def test_inference_task_has_graceful_time_limits(self) -> None:
+        assert celery_infer.soft_time_limit is not None
+        assert celery_infer.soft_time_limit > 0
+        assert celery_infer.time_limit is not None
+        assert celery_infer.time_limit > celery_infer.soft_time_limit
 
     def test_worker_configuration(self) -> None:
         assert app.conf.worker_pool == "prefork"

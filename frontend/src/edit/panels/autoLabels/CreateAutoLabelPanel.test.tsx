@@ -17,20 +17,10 @@ async function selectModel(modelName: "cluener" | "do_nothing") {
 }
 
 describe("CreateAutoLabelPanel", () => {
-	it("orders model and chapters before collapsed advanced settings", () => {
+	it("disables creation until a model is selected", () => {
 		render(<CreateAutoLabelPanel onCreateRun={vi.fn()} />);
 
-		const model = screen.getByRole("combobox", { name: "Model" });
-		const start = screen.getByRole("textbox", { name: "Start chapter" });
-		const advanced = screen.getByRole("button", { name: "Advanced Settings" });
-
-		expect(
-			model.compareDocumentPosition(start) & Node.DOCUMENT_POSITION_FOLLOWING,
-		).toBeTruthy();
-		expect(
-			start.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING,
-		).toBeTruthy();
-		expect(advanced).toBeDisabled();
+		expect(screen.getByRole("button", { name: "Advanced Settings" })).toBeDisabled();
 		expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();
 	});
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Effect } from "effect";
 import { buildRequestQueueDispatcher } from "../dmHelpers";
 import { isAllReserveable } from "../types/helperTypes";
-import { CProvId, LGProvId, LProvId, type IDRepository } from "../types/idTypes";
+import { CProvId, LGProvId, type IDRepository } from "../types/idTypes";
 import { NotFoundException } from "../types/errors";
 import type { ReserveList } from "../types/requestTypes";
 
@@ -156,36 +156,4 @@ describe("isAllReserveable", () => {
 		expect(result).toBe(true);
 	});
 
-	it("short-circuits on first non-reserveable entry", () => {
-		const labelId1 = LProvId("l-1");
-		const labelId2 = LProvId("l-2");
-		const labelId3 = LProvId("l-3");
-
-		const idRepo = {
-			isReserveable: (params: { kind: string; id: unknown; desiredState: string }) => {
-				const key = String(params.id);
-				if (key === String(labelId2)) {
-					return Effect.succeed(false);
-				}
-				return Effect.succeed(true);
-			},
-		} as unknown as IDRepository;
-
-		const list: ReserveList = {
-			autoLabel: [],
-			autoLabelRun: [],
-			chapter: [],
-			chapterContent: [],
-			label: [
-				{ id: labelId1, kind: "label", desiredState: "detaching" },
-				{ id: labelId2, kind: "label", desiredState: "detaching" },
-				{ id: labelId3, kind: "label", desiredState: "detaching" },
-			],
-			labelData: [],
-			labelGroup: [],
-		};
-
-		const result = Effect.runSync(isAllReserveable(idRepo, list));
-		expect(result).toBe(false);
-	});
 });

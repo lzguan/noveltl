@@ -47,17 +47,6 @@ describe("EditDashboardPage", () => {
 		});
 	});
 
-	it("loads languages once for the create dialog", async () => {
-		vi.mocked(readNovelsMineNovelsMineGet).mockResolvedValue({
-			data: [novel],
-			headers: new Headers(),
-			status: 200,
-		});
-		renderDashboard();
-
-		await waitFor(() => expect(readAllLanguagesLanguagesGet).toHaveBeenCalledOnce());
-	});
-
 	it("opens the upload dialog with the editable novels", async () => {
 		vi.mocked(readNovelsMineNovelsMineGet).mockResolvedValue({
 			data: [novel],

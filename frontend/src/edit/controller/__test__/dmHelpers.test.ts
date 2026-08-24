@@ -155,5 +155,4 @@ describe("isAllReserveable", () => {
 		const result = Effect.runSync(isAllReserveable(idRepo, list));
 		expect(result).toBe(true);
 	});
-
 });

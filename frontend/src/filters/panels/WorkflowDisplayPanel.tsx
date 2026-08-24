@@ -163,4 +163,4 @@ export function WorkflowDisplayPanel(
 }
 
 export type { ActiveGroupingState } from "../hooks/useWorkflowGroupings";
-export type { Loadable } from "../loadable";
+export type { Loadable } from "../../lib/loadable";

@@ -4,8 +4,8 @@ import {
 } from "@/api/endpoints/filters/filters";
 import type { Frame, InstanceQueryResult, MDataType } from "@/api/models";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { apiErrorMessage, requestErrorMessage } from "../apiErrors";
-import type { Loadable, Page } from "../loadable";
+import { apiErrorMessage, requestErrorMessage } from "../../lib/apiErrors";
+import type { Loadable, Page } from "../../lib/loadable";
 import { errorMessage, requestError, WORKFLOW_VIEWER_PAGE_SIZE } from "./workflowViewerUtils";
 
 interface ResultPagination {

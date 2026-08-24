@@ -9,7 +9,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { CircleCheck, TriangleAlert } from "lucide-react";
-import { apiErrorMessage, requestErrorMessage } from "../apiErrors";
+import { apiErrorMessage, requestErrorMessage } from "../../lib/apiErrors";
 import { FunctionDefinitionEditor } from "../components/FunctionDefinitionEditor";
 import { FunctionSignatureDisplay } from "../components/FunctionSignatureDisplay";
 import {

@@ -22,7 +22,7 @@ import { useState } from "react";
 import { DataCell, GroupDataCell, isMutableDataType, MutableDataCell } from "./DataCells";
 import { ErrorBlock, groupingLabel, LoadingBlock, PageControls, shortId } from "./panelUi";
 import type { ActiveGroupingState } from "../hooks/useWorkflowGroupings";
-import type { Loadable, Page } from "../loadable";
+import type { Loadable, Page } from "../../lib/loadable";
 import type { CCServId, CServId } from "@/edit/controller/types/idTypes";
 
 export type CommitInstanceField = (

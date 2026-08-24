@@ -2,6 +2,9 @@
 
 This folder documents the memory feature.
 
+- [data-model.md](data-model.md): Memory and plugin data models
+- [ui-overview.md](ui-overview.md): Proposed memory-panel hierarchy and wireframes
+
 ## Motivation
 
 The end goal of this project is to make an automated translation agent. To motivate our approach to solving this problem, we will consider how a human reads a novel. In the most abstract sense possible, a reader will read the novel *sequentially* and remember more recent events with greater emphasis. They will also remember different terms across the novel with greater emphasis on often-occurring characters. We can model this very abstractly by saying that at the time of reading a certain chapter, the reader should have a list of active memories associated with this chapter. 

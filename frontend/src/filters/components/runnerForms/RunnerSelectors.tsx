@@ -1,6 +1,6 @@
 import type { FunctionDefinitionMeta, LabelGroup, WorkflowSummary } from "@/api/models";
-import type { AsyncSearchState } from "../../hooks/useAsyncSearch";
-import type { Loadable } from "../../loadable";
+import type { AsyncSearchState } from "../../../lib/hooks/useAsyncSearch";
+import type { Loadable } from "../../../lib/loadable";
 import { workflowLabel } from "../panelUi";
 import { SearchSelector } from "../SearchSelector";
 

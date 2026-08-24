@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/combobox";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import type { ReactNode } from "react";
-import type { Loadable } from "../types";
+import type { Loadable } from "../loadable";
 
 export interface SearchSelectorProps<T> {
 	id: string;

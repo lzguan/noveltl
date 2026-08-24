@@ -81,12 +81,16 @@ export function createEditorManager({
 					if (done._tag === "Left") break;
 					const { text, chapterContentId, labelData, couldNotLoad } = done.right;
 					const flatLabelData = Array.from(labelData.values()).flat();
+					const highlight = event.flags.highlight;
 
 					setLoading({
 						loading: false,
 						segmentManager: makeBasicSegmentManager(text, flatLabelData),
 						chapterId: event.chapterId,
 						chapterContentId,
+						initialSelection: highlight?.validCCId
+							? { start: highlight.start, end: highlight.end }
+							: undefined,
 						empty: false,
 					});
 					if (couldNotLoad.length > 0) {

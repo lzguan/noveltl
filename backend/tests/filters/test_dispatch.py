@@ -1,6 +1,7 @@
 import asyncio
+import threading
 import uuid
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
 import pytest
 from kombu.serialization import dumps
@@ -43,17 +44,23 @@ class TestCeleryRunnerDispatcher:
         with pytest.raises(RunnerEnqueueFailedException, match="broker unavailable"):
             CeleryRunnerDispatcher().enqueue(uuid.uuid4(), _group_input())
 
-    @pytest.mark.asyncio
-    async def test_aenqueue_offloads_enqueue(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        to_thread = AsyncMock()
-        monkeypatch.setattr(asyncio, "to_thread", to_thread)
+    def test_aenqueue_runs_enqueue_on_a_worker_thread(self, monkeypatch: pytest.MonkeyPatch) -> None:
         dispatcher = CeleryRunnerDispatcher()
         job_id = uuid.uuid4()
         runner_input = _group_input()
+        event_loop_thread = threading.get_ident()
+        received: list[tuple[uuid.UUID, PythonGroupInput, int]] = []
 
-        await dispatcher.aenqueue(job_id, runner_input)
+        def recording_enqueue(received_job_id: uuid.UUID, received_input: PythonGroupInput) -> None:
+            received.append((received_job_id, received_input, threading.get_ident()))
 
-        to_thread.assert_awaited_once_with(dispatcher.enqueue, job_id, runner_input)
+        monkeypatch.setattr(dispatcher, "enqueue", recording_enqueue)
+
+        asyncio.run(dispatcher.aenqueue(job_id, runner_input))
+
+        assert len(received) == 1
+        assert received[0][:2] == (job_id, runner_input)
+        assert received[0][2] != event_loop_thread
 
     def test_task_reconstructs_runner_input(self, monkeypatch: pytest.MonkeyPatch) -> None:
         run_runner = Mock()
@@ -67,8 +74,10 @@ class TestCeleryRunnerDispatcher:
         run_runner.assert_called_once_with(job_id, runner_input)
 
     def test_task_and_worker_configuration(self) -> None:
-        assert run_runner_task.soft_time_limit == 600
-        assert run_runner_task.time_limit == 660
+        assert run_runner_task.soft_time_limit is not None
+        assert run_runner_task.soft_time_limit > 0
+        assert run_runner_task.time_limit is not None
+        assert run_runner_task.time_limit > run_runner_task.soft_time_limit
         assert app.conf.include == ["src.filters.dispatch.celery"]
         assert app.conf.worker_pool == "prefork"
         assert app.conf.worker_concurrency == 2

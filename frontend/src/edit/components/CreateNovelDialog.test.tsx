@@ -3,10 +3,9 @@ import { MemoryRouter } from "react-router-dom";
 
 import {
 	createNovelNovelsPost,
-	readAllLanguagesLanguagesGet,
 	readSourceWorksSourceWorksGet,
 } from "@/api/endpoints/default/default";
-import { NovelType, Visibility, type Novel } from "@/api/models";
+import { NovelType, Visibility, type Language, type Novel } from "@/api/models";
 import { CreateNovelDialog } from "./CreateNovelDialog";
 
 vi.mock("@/api/endpoints/default/default", async (importOriginal) => {
@@ -14,7 +13,6 @@ vi.mock("@/api/endpoints/default/default", async (importOriginal) => {
 	return {
 		...original,
 		createNovelNovelsPost: vi.fn(),
-		readAllLanguagesLanguagesGet: vi.fn(),
 		readSourceWorksSourceWorksGet: vi.fn(),
 	};
 });
@@ -37,10 +35,22 @@ const createdNovel: Novel = {
 	sourceWorkId: "source-created-by-server",
 };
 
+const languages: Language[] = [
+	{ languageCode: "en", languageName: "English" },
+	{ languageCode: "ja", languageName: "Japanese" },
+];
+
 function renderDialog(onCreated = vi.fn()) {
 	return render(
 		<MemoryRouter>
-			<CreateNovelDialog open onOpenChange={vi.fn()} onCreated={onCreated} />
+			<CreateNovelDialog
+				languages={languages}
+				languagesError={false}
+				loadingLanguages={false}
+				onCreated={onCreated}
+				onOpenChange={vi.fn()}
+				open
+			/>
 		</MemoryRouter>,
 	);
 }
@@ -54,14 +64,6 @@ async function openSelect(name: string) {
 describe("CreateNovelDialog", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(readAllLanguagesLanguagesGet).mockResolvedValue({
-			data: [
-				{ languageCode: "en", languageName: "English" },
-				{ languageCode: "ja", languageName: "Japanese" },
-			],
-			headers: new Headers(),
-			status: 200,
-		});
 		vi.mocked(readSourceWorksSourceWorksGet).mockResolvedValue({
 			data: [
 				{
@@ -86,7 +88,6 @@ describe("CreateNovelDialog", () => {
 		renderDialog();
 
 		expect(await screen.findByRole("dialog", { name: "Create novel" })).toBeVisible();
-		expect(readAllLanguagesLanguagesGet).toHaveBeenCalledOnce();
 		expect(readSourceWorksSourceWorksGet).not.toHaveBeenCalled();
 
 		fireEvent.change(screen.getByPlaceholderText("Search source works..."), {

@@ -1,7 +1,5 @@
-import { createFilterFunction, validateFilterFunction } from "@/api/endpoints/filters/filters";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { apiErrorMessage, requestErrorMessage } from "../apiErrors";
-import type { FunctionDefinitionFormModel, FunctionDefinitionFormStatus } from "../types";
+import { useState } from "react";
+import type { FunctionDefinitionResponse, Signature } from "@/api/models";
 
 type ParsedFunctionDefinition =
 	| { ok: true; definition: Record<string, unknown> }
@@ -27,139 +25,67 @@ export function parseFunctionDefinitionText(definitionText: string): ParsedFunct
 	}
 }
 
-export function useFunctionDefinitionForm(): FunctionDefinitionFormModel {
+export function useFunctionDefinitionForm() {
 	const [functionNamespace, setFunctionNamespaceState] = useState("");
 	const [functionName, setFunctionNameState] = useState("");
 	const [functionDefinitionText, setFunctionDefinitionTextState] = useState("");
 	const [functionDefinitionError, setFunctionDefinitionError] = useState<string | null>(null);
-	const [formStatus, setFormStatus] = useState<FunctionDefinitionFormStatus>({ status: "idle" });
-	const activeRequest = useRef<AbortController | null>(null);
+	const [formStatus, setFormStatus] = useState<
+		| { status: "idle" }
+		| { status: "validating" }
+		| { status: "validated"; signature: Signature }
+		| { status: "uploading" }
+		| { status: "uploaded"; functionDefinition: FunctionDefinitionResponse }
+		| { status: "error"; action: "validate" | "upload"; message: string }
+	>({ status: "idle" });
 
-	const cancelActiveRequest = useCallback(() => {
-		activeRequest.current?.abort();
-		activeRequest.current = null;
-	}, []);
-
-	useEffect(() => cancelActiveRequest, [cancelActiveRequest]);
-
-	const resetRequestState = useCallback(() => {
-		cancelActiveRequest();
+	function resetRequestState() {
 		setFormStatus({ status: "idle" });
-	}, [cancelActiveRequest]);
+	}
 
-	const setFunctionNamespace = useCallback(
-		(namespace: string) => {
-			setFunctionNamespaceState(namespace);
-			resetRequestState();
-		},
-		[resetRequestState],
-	);
+	function setFunctionNamespace(namespace: string) {
+		setFunctionNamespaceState(namespace);
+		resetRequestState();
+	}
 
-	const setFunctionName = useCallback(
-		(name: string) => {
-			setFunctionNameState(name);
-			resetRequestState();
-		},
-		[resetRequestState],
-	);
+	function setFunctionName(name: string) {
+		setFunctionNameState(name);
+		resetRequestState();
+	}
 
-	const setFunctionDefinitionText = useCallback(
-		(definitionText: string) => {
-			setFunctionDefinitionTextState(definitionText);
-			setFunctionDefinitionError(null);
-			resetRequestState();
-		},
-		[resetRequestState],
-	);
-
-	const readFunctionDefinition = useCallback(() => {
-		const parsed = parseFunctionDefinitionText(functionDefinitionText);
-		if (!parsed.ok) {
-			setFunctionDefinitionError(parsed.message);
-			return null;
-		}
+	function setFunctionDefinitionText(definitionText: string) {
+		setFunctionDefinitionTextState(definitionText);
 		setFunctionDefinitionError(null);
-		return parsed.definition;
-	}, [functionDefinitionText]);
+		resetRequestState();
+	}
 
-	const validateFunctionDefinition = useCallback(async () => {
-		const definition = readFunctionDefinition();
-		if (definition === null) return;
+	function preSend(action: "validate" | "upload") {
+		setFormStatus({ status: action === "validate" ? "validating" : "uploading" });
+	}
 
-		cancelActiveRequest();
-		const controller = new AbortController();
-		activeRequest.current = controller;
-		setFormStatus({ status: "validating" });
-		try {
-			const response = await validateFilterFunction(
-				{ functionDefinition: definition },
-				{ signal: controller.signal },
-			);
-			if (controller.signal.aborted) return;
-			if (response.status === 200) {
-				setFormStatus({ status: "validated", signature: response.data.signature });
-			} else {
-				setFormStatus({
-					status: "error",
-					action: "validate",
-					message: apiErrorMessage(response.data, "Function definition is invalid."),
-				});
-			}
-		} catch (error) {
-			if (!controller.signal.aborted) {
-				setFormStatus({
-					status: "error",
-					action: "validate",
-					message: requestErrorMessage(error),
-				});
-			}
-		} finally {
-			if (activeRequest.current === controller) activeRequest.current = null;
+	function onSendError(action: "validate" | "upload", message: string) {
+		setFormStatus({ status: "error", action, message });
+	}
+
+	function onSendSuccess(
+		result:
+			| { action: "validate"; signature: Signature }
+			| { action: "upload"; functionDefinition: FunctionDefinitionResponse },
+	) {
+		if (result.action === "validate") {
+			setFormStatus({ status: "validated", signature: result.signature });
+		} else {
+			setFormStatus({ status: "uploaded", functionDefinition: result.functionDefinition });
 		}
-	}, [cancelActiveRequest, readFunctionDefinition]);
+	}
 
-	const uploadFunctionDefinition = useCallback(async () => {
-		const definition = readFunctionDefinition();
-		if (definition === null) return;
-
-		cancelActiveRequest();
-		const controller = new AbortController();
-		activeRequest.current = controller;
-		setFormStatus({ status: "uploading" });
-		try {
-			const response = await createFilterFunction(
-				{
-					functionDefinition: definition,
-					functionName: functionName.trim(),
-					namespace: functionNamespace.trim(),
-				},
-				{ signal: controller.signal },
-			);
-			if (controller.signal.aborted) return;
-			if (response.status === 201) {
-				setFormStatus({ status: "uploaded", functionDefinition: response.data });
-			} else {
-				setFormStatus({
-					status: "error",
-					action: "upload",
-					message: apiErrorMessage(
-						response.data,
-						"Function definition could not be uploaded.",
-					),
-				});
-			}
-		} catch (error) {
-			if (!controller.signal.aborted) {
-				setFormStatus({
-					status: "error",
-					action: "upload",
-					message: requestErrorMessage(error),
-				});
-			}
-		} finally {
-			if (activeRequest.current === controller) activeRequest.current = null;
-		}
-	}, [cancelActiveRequest, functionName, functionNamespace, readFunctionDefinition]);
+	function resetForm() {
+		setFunctionNamespaceState("");
+		setFunctionNameState("");
+		setFunctionDefinitionTextState("");
+		setFunctionDefinitionError(null);
+		setFormStatus({ status: "idle" });
+	}
 
 	return {
 		functionNamespace,
@@ -170,7 +96,10 @@ export function useFunctionDefinitionForm(): FunctionDefinitionFormModel {
 		setFunctionNamespace,
 		setFunctionName,
 		setFunctionDefinitionText,
-		validateFunctionDefinition,
-		uploadFunctionDefinition,
+		setFunctionDefinitionError,
+		preSend,
+		onSendError,
+		onSendSuccess,
+		resetForm,
 	};
 }

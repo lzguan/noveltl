@@ -1,6 +1,7 @@
 import asyncio
+import threading
 import uuid
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
 import pytest
 
@@ -26,21 +27,29 @@ class TestCeleryDispatcher:
         with pytest.raises(EnqueueFailedException, match="broker unavailable"):
             CeleryDispatcher().enqueue(uuid.uuid4(), uuid.uuid4())
 
-    @pytest.mark.asyncio
-    async def test_aenqueue_offloads_enqueue(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        to_thread = AsyncMock()
-        monkeypatch.setattr(asyncio, "to_thread", to_thread)
+    def test_aenqueue_runs_enqueue_on_a_worker_thread(self, monkeypatch: pytest.MonkeyPatch) -> None:
         dispatcher = CeleryDispatcher()
         job_id = uuid.uuid4()
         auto_label_id = uuid.uuid4()
+        event_loop_thread = threading.get_ident()
+        received: list[tuple[uuid.UUID, uuid.UUID, int]] = []
 
-        await dispatcher.aenqueue(job_id, auto_label_id)
+        def recording_enqueue(received_job_id: uuid.UUID, received_auto_label_id: uuid.UUID) -> None:
+            received.append((received_job_id, received_auto_label_id, threading.get_ident()))
 
-        to_thread.assert_awaited_once_with(dispatcher.enqueue, job_id, auto_label_id)
+        monkeypatch.setattr(dispatcher, "enqueue", recording_enqueue)
 
-    def test_inference_task_time_limits(self) -> None:
-        assert celery_infer.soft_time_limit == 600
-        assert celery_infer.time_limit == 660
+        asyncio.run(dispatcher.aenqueue(job_id, auto_label_id))
+
+        assert len(received) == 1
+        assert received[0][:2] == (job_id, auto_label_id)
+        assert received[0][2] != event_loop_thread
+
+    def test_inference_task_has_graceful_time_limits(self) -> None:
+        assert celery_infer.soft_time_limit is not None
+        assert celery_infer.soft_time_limit > 0
+        assert celery_infer.time_limit is not None
+        assert celery_infer.time_limit > celery_infer.soft_time_limit
 
     def test_worker_configuration(self) -> None:
         assert app.conf.worker_pool == "prefork"

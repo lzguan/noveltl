@@ -1,4 +1,4 @@
-import { useRef, useState, type ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { SepPriority } from "@/api/models";
 import { Button } from "@/components/ui/button";
@@ -44,19 +44,23 @@ function readPriority(value: string): SepPriority {
 	return 3;
 }
 
-function readSeparatorRows(value: unknown, nextId: React.RefObject<number>): SeparatorRow[] {
+function readSeparatorRows(value: unknown): SeparatorRow[] {
 	if (typeof value !== "object" || value === null) return [];
 
 	const rows: SeparatorRow[] = [];
 	for (const [key, priority] of Object.entries(value)) {
 		if (priority !== 1 && priority !== 2 && priority !== 3) continue;
 		rows.push({
-			id: nextId.current++,
+			id: rows.length,
 			key,
 			priority,
 		});
 	}
 	return rows;
+}
+
+function nextSeparatorRowId(rows: SeparatorRow[]) {
+	return rows.reduce((nextId, row) => Math.max(nextId, row.id + 1), 0);
 }
 
 function validateRows(rows: SeparatorRow[]) {
@@ -78,8 +82,7 @@ function SeparatorRecordField({
 	onValidityChange,
 	disabled,
 }: AutoLabelCustomParamFieldProps) {
-	const nextId = useRef(0);
-	const [rows, setRows] = useState<SeparatorRow[]>(() => readSeparatorRows(value, nextId));
+	const [rows, setRows] = useState<SeparatorRow[]>(() => readSeparatorRows(value));
 	const errors = validateRows(rows);
 
 	const updateRows = (nextRows: SeparatorRow[]) => {
@@ -173,7 +176,7 @@ function SeparatorRecordField({
 						updateRows([
 							...rows,
 							{
-								id: nextId.current++,
+								id: nextSeparatorRowId(rows),
 								key: "",
 								priority: 3,
 							},

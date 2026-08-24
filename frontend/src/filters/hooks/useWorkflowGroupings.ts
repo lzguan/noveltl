@@ -1,27 +1,21 @@
 import { readGroupingValuesFiltersGroupingsGroupingIdValuesGet } from "@/api/endpoints/filters/filters";
-import type { GroupData, GroupingResponse } from "@/api/models";
+import type { GroupData, GroupingResponse, GroupValueCount } from "@/api/models";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ActiveGroupingState, GroupingSectionModel, Loadable } from "../types";
+import type { Loadable, Page } from "../loadable";
 import { errorMessage, requestError, WORKFLOW_VIEWER_PAGE_SIZE } from "./workflowViewerUtils";
+
+export interface ActiveGroupingState {
+	grouping: GroupingResponse;
+	values: Loadable<Page<GroupValueCount>>;
+	selectedValues: readonly GroupData[];
+	search: string;
+}
 
 interface GroupingViewState extends ActiveGroupingState {
 	offset: number;
 }
 
-export interface WorkflowGroupingsState {
-	activeGroupings: ReadonlyMap<string, GroupingViewState>;
-	activateGrouping: GroupingSectionModel["activateGrouping"];
-	deactivateGrouping: GroupingSectionModel["deactivateGrouping"];
-	setGroupingValueSearchText: GroupingSectionModel["setGroupingValueSearchText"];
-	setGroupingValueSelected: GroupingSectionModel["setGroupingValueSelected"];
-	loadPreviousGroupingValuesPage: GroupingSectionModel["loadPreviousGroupingValuesPage"];
-	loadNextGroupingValuesPage: GroupingSectionModel["loadNextGroupingValuesPage"];
-	resetGroupings: () => void;
-}
-
-export function useWorkflowGroupings(
-	availableGroupings: Loadable<readonly GroupingResponse[]>,
-): WorkflowGroupingsState {
+export function useWorkflowGroupings(availableGroupings: Loadable<readonly GroupingResponse[]>) {
 	const [activeGroupings, setActiveGroupings] = useState<ReadonlyMap<string, GroupingViewState>>(
 		new Map(),
 	);
@@ -171,9 +165,10 @@ export function useWorkflowGroupings(
 		deactivateGrouping,
 		setGroupingValueSearchText,
 		setGroupingValueSelected,
-		loadPreviousGroupingValuesPage: (groupingId) =>
+		loadPreviousGroupingValuesPage: (groupingId: string) =>
 			loadGroupingValuesPage(groupingId, "previous"),
-		loadNextGroupingValuesPage: (groupingId) => loadGroupingValuesPage(groupingId, "next"),
+		loadNextGroupingValuesPage: (groupingId: string) =>
+			loadGroupingValuesPage(groupingId, "next"),
 		resetGroupings,
 	};
 }

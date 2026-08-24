@@ -18,8 +18,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
+import type { useInstanceResults } from "../hooks/useInstanceResults";
 import { ErrorBlock } from "./panelUi";
-import type { QueryStatus } from "../types";
 
 function sortableFields(workflow: WorkflowResponse) {
 	return Object.entries(workflow.schema.fields ?? {}).filter((entry) => {
@@ -123,7 +123,7 @@ export function QueryCard({
 }: {
 	workflow: WorkflowResponse;
 	sortKeys: readonly SortKey[];
-	queryStatus: QueryStatus;
+	queryStatus: ReturnType<typeof useInstanceResults>["queryStatus"];
 	addSortKey: () => void;
 	removeSortKey: (index: number) => void;
 	setSortKeyField: (index: number, fieldName: string) => void;

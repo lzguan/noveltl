@@ -18,6 +18,7 @@ import { TimeoutException, UnknownException } from "effect/Cause";
 import type { NovelGetters, TriggerEvent } from "./types/controllerTypes";
 import {
 	ALRProvId,
+	CCServId,
 	CProvId,
 	CServId,
 	type IDRepository,
@@ -376,6 +377,7 @@ export const buildNovelDataManager = (
 			chapterId: CProvId,
 			eager: LGProvId[],
 			forEditor: boolean,
+			highlight?: { start: number; end: number; desiredCCId?: CCServId },
 		): Effect.Effect<
 			RequestEvent[],
 			AlreadyOpenException | NotFoundException | LoadingException | UnknownException
@@ -499,10 +501,26 @@ export const buildNovelDataManager = (
 									.pipe(
 										Effect.mapError((err) => new FatalException({ orig: err })),
 									);
+								const valid =
+									highlight &&
+									(highlight.desiredCCId === undefined ||
+										validated.chapterContent.chapterContentId ===
+											highlight.desiredCCId);
 								yield* raiseTriggerEvent(getters, {
 									eventType: "chapterOpened",
 									chapterId,
-									flags: { forEditor },
+									flags: {
+										forEditor,
+										highlight: valid
+											? {
+													start: highlight.start,
+													end: highlight.end,
+													validCCId: true,
+												}
+											: highlight
+												? { validCCId: false }
+												: undefined, // slightly cursed but ok
+									},
 								});
 							}),
 					},
@@ -511,12 +529,26 @@ export const buildNovelDataManager = (
 		const openChapter = (
 			chapterId: CProvId,
 			eager: LGProvId[],
-			flags: ({ now: boolean; forEditor: false } | { now: true; forEditor: true }) & {
+			flags: (
+				| { now: boolean; forEditor: false }
+				| {
+						now: true;
+						forEditor: true;
+						highlight?: { start: number; end: number; desiredCCId?: CCServId };
+				  }
+			) & {
 				fromCached: boolean;
 			},
 		) => {
 			const noCachedEffect = Effect.gen(function* () {
-				const reqEvents = yield* decorate(_openChapter)(chapterId, eager, flags.forEditor);
+				const reqEvents = flags.forEditor
+					? yield* decorate(_openChapter)(
+							chapterId,
+							eager,
+							flags.forEditor,
+							flags.highlight,
+						)
+					: yield* decorate(_openChapter)(chapterId, eager, flags.forEditor);
 				if (flags.now) {
 					const flushEvents = yield* flush();
 					reqEvents.push(...flushEvents);
@@ -534,11 +566,44 @@ export const buildNovelDataManager = (
 				}),
 				{
 					onTrue: () =>
-						raiseTriggerEvent(getters, {
-							eventType: "chapterOpened",
-							chapterId,
-							flags,
-						}).pipe(Effect.andThen(() => Effect.succeed<RequestEvent[]>([]))),
+						Effect.gen(function* () {
+							const chapterSlot = yield* chaptersIndex.get(chapterId);
+							let validHighlight: boolean;
+							if (chapterSlot.status !== "ready") {
+								validHighlight = false;
+							} else {
+								const ccId =
+									yield* chapterSlot.data.chapterData.getters.chapterContentId();
+								const servId = yield* idRepo.getServerId({
+									kind: "chapterContent",
+									provId: ccId,
+								});
+								validHighlight =
+									flags.forEditor &&
+									flags.highlight !== undefined &&
+									(flags.highlight.desiredCCId === undefined ||
+										flags.highlight.desiredCCId === servId);
+							}
+
+							return yield* raiseTriggerEvent(getters, {
+								eventType: "chapterOpened",
+								chapterId,
+								flags: flags.forEditor
+									? {
+											forEditor: true,
+											highlight: validHighlight
+												? {
+														start: flags.highlight!.start,
+														end: flags.highlight!.end,
+														validCCId: true,
+													}
+												: flags.highlight
+													? { validCCId: false }
+													: undefined,
+										}
+									: { forEditor: false },
+							}).pipe(Effect.andThen(() => Effect.succeed<RequestEvent[]>([])));
+						}),
 					onFalse: () => noCachedEffect,
 				},
 			);

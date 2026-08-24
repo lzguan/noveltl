@@ -1,5 +1,5 @@
 import type { FunctionDefinitionMeta, WorkflowSummary } from "@/api/models";
-import type { SearchOptionsModel } from "../../types";
+import type { AsyncSearchState } from "../../hooks/useAsyncSearch";
 import { FunctionSearchSelector, WorkflowSearchSelector } from "./RunnerSelectors";
 
 export function WorkflowFunctionFields({
@@ -15,8 +15,8 @@ export function WorkflowFunctionFields({
 }: {
 	idPrefix: string;
 	workflowLabel: string;
-	workflows: SearchOptionsModel<WorkflowSummary>;
-	functions: SearchOptionsModel<FunctionDefinitionMeta>;
+	workflows: AsyncSearchState<WorkflowSummary>;
+	functions: AsyncSearchState<FunctionDefinitionMeta>;
 	selectedWorkflow: WorkflowSummary | null;
 	selectedFunctionDefinition: FunctionDefinitionMeta | null;
 	disabled: boolean;

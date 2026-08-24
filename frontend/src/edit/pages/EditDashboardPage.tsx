@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { readNovelsMineNovelsMineGet } from "@/api/endpoints/default/default";
-import type { Novel } from "@/api/models";
+import {
+	readAllLanguagesLanguagesGet,
+	readNovelsMineNovelsMineGet,
+} from "@/api/endpoints/default/default";
+import type { Language, Novel } from "@/api/models";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,6 +87,9 @@ function EditDashboardPage() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<unknown>(null);
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
+	const [languages, setLanguages] = useState<Language[]>([]);
+	const [languagesError, setLanguagesError] = useState(false);
+	const [loadingLanguages, setLoadingLanguages] = useState(true);
 	const [newNovelId, setNewNovelId] = useState<string | null>(null);
 	const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
@@ -104,6 +110,30 @@ function EditDashboardPage() {
 			})
 			.finally(() => {
 				if (!ignore) setLoading(false);
+			});
+
+		return () => {
+			ignore = true;
+		};
+	}, []);
+
+	useEffect(() => {
+		let ignore = false;
+
+		readAllLanguagesLanguagesGet()
+			.then((response) => {
+				if (ignore) return;
+				if (response.status === 200) {
+					setLanguages(response.data);
+				} else {
+					setLanguagesError(true);
+				}
+			})
+			.catch(() => {
+				if (!ignore) setLanguagesError(true);
+			})
+			.finally(() => {
+				if (!ignore) setLoadingLanguages(false);
 			});
 
 		return () => {
@@ -200,6 +230,9 @@ function EditDashboardPage() {
 				</Button>
 
 				<CreateNovelDialog
+					languages={languages}
+					languagesError={languagesError}
+					loadingLanguages={loadingLanguages}
 					onCreated={(novel) => {
 						setNovels((current) => [
 							novel,

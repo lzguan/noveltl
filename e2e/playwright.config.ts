@@ -66,7 +66,7 @@ export default defineConfig({
 	webServer: [
 		{
 			command:
-				"uv --directory ../backend run uvicorn src.main:app --host 0.0.0.0 --port 8001",
+				"uv --directory ../backend run --no-sync uvicorn src.main:app --host 0.0.0.0 --port 8001",
 			env: {
 				...process.env,
 				DB_URL: dbUrl,

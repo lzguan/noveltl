@@ -13,6 +13,11 @@ export type Caret = {
 
 type SM = SegmentManager<LabelStyle, StyledLabel<LabelStyle>, LProvId>;
 
+export type InitialSelection = {
+	start: number;
+	end: number;
+};
+
 export type EditorData =
 	| { empty: true }
 	| { loading: true; empty: false }
@@ -21,6 +26,7 @@ export type EditorData =
 			segmentManager: SM;
 			chapterId: CProvId;
 			chapterContentId: CCProvId;
+			initialSelection?: InitialSelection;
 			caret: Caret | null;
 			empty: false;
 	  };
@@ -33,6 +39,7 @@ export type LoadingPayload =
 			segmentManager: SM;
 			chapterId: CProvId;
 			chapterContentId: CCProvId;
+			initialSelection?: InitialSelection;
 			empty: false;
 	  };
 
@@ -51,6 +58,7 @@ export function useEditorState() {
 							segmentManager: val.segmentManager,
 							chapterId: val.chapterId,
 							chapterContentId: val.chapterContentId,
+							initialSelection: val.initialSelection,
 							caret: null,
 							empty: false,
 						};

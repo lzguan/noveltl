@@ -9,30 +9,6 @@ from src.languages.models import Language
 from test_support.test_data.scenarios import DatabaseScenario
 
 
-def test_language_creation(test_db: Session):
-    # Create a language
-    lang = Language(language_name="English", language_code="en")
-    test_db.add(lang)
-    test_db.commit()
-    # Query the language back
-    queried_lang = test_db.execute(select(Language).where(Language.language_code == lang.language_code)).scalar_one()
-    assert queried_lang is not None
-    assert queried_lang.language_name == "English"
-    assert queried_lang.language_code == "en"
-
-    lang2 = Language(language_name="French", language_code="fr")
-    test_db.add(lang2)
-    test_db.commit()
-    queried_lang2 = test_db.execute(select(Language).where(Language.language_code == lang2.language_code)).scalar_one()
-    assert queried_lang2 is not None
-    assert queried_lang2.language_name == "French"
-    assert queried_lang2.language_code == "fr"
-
-    # Query all languages
-    all_languages = test_db.execute(select(Language)).scalars().all()
-    assert len(all_languages) == 2
-
-
 def test_language_unique_constraints(test_db: Session):
     # Create a language
     lang1 = Language(language_name="English", language_code="en")

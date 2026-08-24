@@ -1,5 +1,6 @@
 import type { FunctionDefinitionMeta, LabelGroup, WorkflowSummary } from "@/api/models";
-import type { Loadable, SearchOptionsModel } from "../../types";
+import type { AsyncSearchState } from "../../hooks/useAsyncSearch";
+import type { Loadable } from "../../loadable";
 import { workflowLabel } from "../panelUi";
 import { SearchSelector } from "../SearchSelector";
 
@@ -50,7 +51,7 @@ export function WorkflowSearchSelector({
 }: {
 	id: string;
 	label: string;
-	search: SearchOptionsModel<WorkflowSummary>;
+	search: AsyncSearchState<WorkflowSummary>;
 	selectedWorkflow: WorkflowSummary | null;
 	disabled: boolean;
 	selectWorkflow: (workflow: WorkflowSummary | null) => void;
@@ -81,7 +82,7 @@ export function FunctionSearchSelector({
 	selectFunctionDefinition,
 }: {
 	id: string;
-	search: SearchOptionsModel<FunctionDefinitionMeta>;
+	search: AsyncSearchState<FunctionDefinitionMeta>;
 	selectedFunctionDefinition: FunctionDefinitionMeta | null;
 	disabled: boolean;
 	selectFunctionDefinition: (definition: FunctionDefinitionMeta | null) => void;

@@ -64,6 +64,7 @@ Backend:
 uv --directory backend run ruff check
 uv --directory backend run pyrefly check
 uv --directory backend run pytest
+uv --directory backend run pytest -m integration
 ```
 
 Frontend:
@@ -75,9 +76,11 @@ pnpm --dir frontend format:check
 pnpm --dir frontend test:ci
 ```
 
-The backend test suite requires the configured test PostgreSQL and Redis
-services. The devcontainer receives their connection settings from
-`compose.yaml`.
+The default backend test selection excludes slow, live-agent, and external-service
+integration tests. Run the integration selection separately to exercise Redis,
+Celery workers, and other real service boundaries. The backend tests require the
+configured test PostgreSQL and Redis services; the devcontainer receives their
+connection settings from `compose.yaml`.
 
 The Playwright project starts its own backend and frontend processes, but uses
 the test database and Redis services:

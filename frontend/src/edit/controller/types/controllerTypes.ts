@@ -109,7 +109,11 @@ export type NovelUserEvent =
 						now: boolean;
 						forEditor: false;
 				  }
-				| { now: true; forEditor: true }
+				| {
+						now: true;
+						forEditor: true;
+						highlight?: { start: number; end: number; desiredCCId?: CCServId }; // start + end for highlight location, desiredCCId for desired chapter content id (will fail to highlight and display popup if not matched)
+				  }
 			) & { fromCached: boolean };
 	  }
 	| { eventType: "closeChapter"; chapterId: CProvId }
@@ -165,7 +169,18 @@ export type TriggerEvent =
 			data: { error: Error; request: KeyedRequestEvent }[];
 	  }
 	| { eventType: "errorOccured"; from: "dataManager"; error: Error }
-	| { eventType: "chapterOpened"; chapterId: CProvId; flags: { forEditor: boolean } }
+	| {
+			eventType: "chapterOpened";
+			chapterId: CProvId;
+			flags:
+				| { forEditor: false }
+				| {
+						forEditor: true;
+						highlight?:
+							| { validCCId: true; start: number; end: number }
+							| { validCCId: false };
+				  };
+	  }
 	| { eventType: "chapterClosed"; chapterId: CProvId }
 	| { eventType: "chapterOpenFailed"; chapterId: CProvId }
 	| { eventType: "labelDataReloading"; chapterId: CProvId; labelGroupId: LGProvId }

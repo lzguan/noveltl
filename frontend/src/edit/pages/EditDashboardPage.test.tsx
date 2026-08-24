@@ -1,7 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-import { readNovelsMineNovelsMineGet } from "@/api/endpoints/default/default";
+import {
+	readAllLanguagesLanguagesGet,
+	readNovelsMineNovelsMineGet,
+} from "@/api/endpoints/default/default";
 import { NovelType, Visibility, type Novel } from "@/api/models";
 import { EditDashboardPage } from "./EditDashboardPage";
 
@@ -9,6 +12,7 @@ vi.mock("@/api/endpoints/default/default", async (importOriginal) => {
 	const original = await importOriginal<typeof import("@/api/endpoints/default/default")>();
 	return {
 		...original,
+		readAllLanguagesLanguagesGet: vi.fn(),
 		readNovelsMineNovelsMineGet: vi.fn(),
 	};
 });
@@ -30,9 +34,17 @@ function renderDashboard() {
 	);
 }
 
-describe("EditDashboardPage chapter uploads", () => {
+describe("EditDashboardPage", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.mocked(readAllLanguagesLanguagesGet).mockResolvedValue({
+			data: [
+				{ languageCode: "en", languageName: "English" },
+				{ languageCode: "ja", languageName: "Japanese" },
+			],
+			headers: new Headers(),
+			status: 200,
+		});
 	});
 
 	it("opens the upload dialog with the editable novels", async () => {

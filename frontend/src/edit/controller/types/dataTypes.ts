@@ -1,4 +1,4 @@
-import type { CProvId, LGProvId, LProvId, ALRProvId, AProvId } from "./idTypes";
+import type { CProvId, LGProvId, LProvId, ALRProvId, AProvId, CCServId } from "./idTypes";
 import type { RequestEvent } from "./requestTypes";
 import type { AddLabelOp, DeleteLabelOp, UpdateLabelOp } from "@/api/models";
 import type { Effect } from "effect";
@@ -72,7 +72,14 @@ export type NovelDataManager = DataManager<
 		openChapter: (
 			chapterId: CProvId,
 			eager: LGProvId[],
-			flags: ({ now: boolean; forEditor: false } | { now: true; forEditor: true }) & {
+			flags: (
+				| { now: boolean; forEditor: false }
+				| {
+						now: true;
+						forEditor: true;
+						highlight?: { start: number; end: number; desiredCCId?: CCServId };
+				  }
+			) & {
 				fromCached: boolean;
 			},
 		) => Effect.Effect<

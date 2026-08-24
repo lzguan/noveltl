@@ -6,7 +6,7 @@ import {
 import type { FunctionDefinitionMeta, LabelGroup, WorkflowSummary } from "@/api/models";
 import { useEffect, useState } from "react";
 import { apiErrorMessage, requestErrorMessage } from "../../apiErrors";
-import type { Loadable } from "../../types";
+import type { Loadable } from "../../loadable";
 
 export async function fetchCompletedWorkflowOptions(
 	novelId: string,
@@ -43,12 +43,11 @@ export function useLabelGroupOptions(novelId: string, enabled: boolean) {
 	});
 
 	useEffect(() => {
-		if (!enabled) {
-			setLabelGroups({ status: "idle" });
-			return;
-		}
+		if (!enabled) return;
 
 		const controller = new AbortController();
+		// This state transition intentionally coincides with starting the request.
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setLabelGroups({ status: "loading" });
 		void readLabelGroupsLabelGroupsGet({ novelId }, { signal: controller.signal })
 			.then((response) => {

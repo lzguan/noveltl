@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Loadable } from "../types";
+import type { Loadable } from "../loadable";
 import { requestErrorMessage } from "../apiErrors";
 
 export const ASYNC_SEARCH_DEBOUNCE_MS = 250;
@@ -17,24 +17,36 @@ export function useAsyncSearch<T>(
 	enabled: boolean,
 ): AsyncSearchState<T> {
 	const [keyword, setKeyword] = useState("");
-	const [results, setResults] = useState<Loadable<readonly T[]>>({ status: "idle" });
+	const normalizedKeyword = keyword.trim();
+	const [completedSearch, setCompletedSearch] = useState<{
+		fetchResults: AsyncSearchFetcher<T>;
+		keyword: string;
+		result: { status: "ready"; data: readonly T[] } | { status: "error"; message: string };
+	} | null>(null);
 
 	useEffect(() => {
-		if (!enabled) {
-			setResults({ status: "idle" });
-			return;
-		}
+		if (!enabled) return;
 
 		const controller = new AbortController();
-		setResults({ status: "loading" });
 		const timeout = window.setTimeout(() => {
-			void fetchResults(keyword.trim(), controller.signal)
+			void fetchResults(normalizedKeyword, controller.signal)
 				.then((items) => {
-					if (!controller.signal.aborted) setResults({ status: "ready", data: items });
+					if (!controller.signal.aborted) {
+						setCompletedSearch({
+							fetchResults,
+							keyword: normalizedKeyword,
+							result: { status: "ready", data: items },
+						});
+					}
 				})
 				.catch((error: unknown) => {
-					if (!controller.signal.aborted)
-						setResults({ status: "error", message: requestErrorMessage(error) });
+					if (!controller.signal.aborted) {
+						setCompletedSearch({
+							fetchResults,
+							keyword: normalizedKeyword,
+							result: { status: "error", message: requestErrorMessage(error) },
+						});
+					}
 				});
 		}, ASYNC_SEARCH_DEBOUNCE_MS);
 
@@ -42,7 +54,14 @@ export function useAsyncSearch<T>(
 			window.clearTimeout(timeout);
 			controller.abort();
 		};
-	}, [enabled, fetchResults, keyword]);
+	}, [enabled, fetchResults, normalizedKeyword]);
+
+	const results: Loadable<readonly T[]> = !enabled
+		? { status: "idle" }
+		: completedSearch?.fetchResults === fetchResults &&
+			  completedSearch.keyword === normalizedKeyword
+			? completedSearch.result
+			: { status: "loading" };
 
 	return { keyword, results, setSearchKeyword: setKeyword };
 }

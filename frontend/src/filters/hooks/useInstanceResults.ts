@@ -2,10 +2,10 @@ import {
 	readInstancesAdvancedFiltersInstancesQueryPost,
 	updateFilterInstance,
 } from "@/api/endpoints/filters/filters";
-import type { Frame, MDataType } from "@/api/models";
+import type { Frame, InstanceQueryResult, MDataType } from "@/api/models";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiErrorMessage, requestErrorMessage } from "../apiErrors";
-import type { InstanceResultsModel, QueryStatus } from "../types";
+import type { Loadable, Page } from "../loadable";
 import { errorMessage, requestError, WORKFLOW_VIEWER_PAGE_SIZE } from "./workflowViewerUtils";
 
 interface ResultPagination {
@@ -14,20 +14,11 @@ interface ResultPagination {
 	pageIndex: number;
 }
 
-export interface InstanceResultsState {
-	queryStatus: QueryStatus;
-	results: InstanceResultsModel["results"];
-	applyFrame: (frame: Frame) => void;
-	commitInstanceField: InstanceResultsModel["commitInstanceField"];
-	refreshInstanceResults: InstanceResultsModel["refreshInstanceResults"];
-	loadPreviousInstancePage: InstanceResultsModel["loadPreviousInstancePage"];
-	loadNextInstancePage: InstanceResultsModel["loadNextInstancePage"];
-	resetInstanceResults: () => void;
-}
-
-export function useInstanceResults(): InstanceResultsState {
-	const [queryStatus, setQueryStatus] = useState<QueryStatus>({ status: "idle" });
-	const [results, setResults] = useState<InstanceResultsModel["results"]>({ status: "idle" });
+export function useInstanceResults() {
+	const [queryStatus, setQueryStatus] = useState<
+		{ status: "idle" } | { status: "submitting" } | { status: "error"; message: string }
+	>({ status: "idle" });
+	const [results, setResults] = useState<Loadable<Page<InstanceQueryResult>>>({ status: "idle" });
 	const [pagination, setPagination] = useState<ResultPagination | null>(null);
 	const activeRequest = useRef<AbortController | null>(null);
 

@@ -4,7 +4,7 @@ import type {
 	NovelUserEvent,
 	TriggerEvent,
 } from "../controller/types/controllerTypes";
-import type { CProvId, LGProvId } from "../controller/types/idTypes";
+import type { CCServId, CProvId, LGProvId } from "../controller/types/idTypes";
 import type { LoadingPayload } from "../hooks/useEditorState";
 import type { useChapters } from "../hooks/useChapters";
 
@@ -45,7 +45,10 @@ export function createChapterManager({
 		return Effect.succeed(void 0);
 	}
 
-	function openChapter(chapterId: CProvId) {
+	function openChapter(
+		chapterId: CProvId,
+		highlight?: { start: number; end: number; desiredCCId?: CCServId },
+	) {
 		if (chapters.activeChapterIdRef.current === chapterId) {
 			setLoading({ loading: true, empty: false });
 		}
@@ -53,11 +56,14 @@ export function createChapterManager({
 			eventType: "openChapter",
 			chapterId,
 			eagerLabelGroupIds: Array.from(labelGroupsRef.current.keys()),
-			flags: { now: true, forEditor: true, fromCached: true },
+			flags: { now: true, forEditor: true, fromCached: true, highlight },
 		});
 	}
 
-	function switchChapter(chapterId: CProvId | null) {
+	function switchChapter(
+		chapterId: CProvId | null,
+		highlight?: { start: number; end: number; desiredCCId?: CCServId },
+	) {
 		if (chapterId === null) {
 			setLoading({ empty: true });
 			return;
@@ -72,7 +78,7 @@ export function createChapterManager({
 			return;
 		}
 		if (existing?.status === "loading") return;
-		openChapter(chapterId);
+		openChapter(chapterId, highlight);
 	}
 
 	function closeChapter(chapterId: CProvId) {

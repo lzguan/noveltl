@@ -1,11 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Compartment, EditorState, type Range, StateEffect, StateField } from "@codemirror/state";
-import { Decoration, type DecorationSet, EditorView, keymap } from "@codemirror/view";
+import {
+	Compartment,
+	EditorSelection,
+	EditorState,
+	type Range,
+	StateEffect,
+	StateField,
+} from "@codemirror/state";
+import {
+	Decoration,
+	type DecorationSet,
+	drawSelection,
+	EditorView,
+	keymap,
+} from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import type { SegmentManager } from "@/edit/lib/text-model/core/segmentManager";
 import type { StyledLabel } from "@/edit/lib/text-model/core/types";
 import { blue, green, red, toHex } from "@/edit/lib/text-model/builtin/colors";
-import type { Caret } from "../../hooks/useEditorState";
+import type { Caret, InitialSelection } from "../../hooks/useEditorState";
 import type { EditorMode, LabelStyle } from "../../managers/editorManager";
 import type { LProvId } from "../../controller/types/idTypes";
 import type { TextOp } from "@/api/models";
@@ -109,7 +122,7 @@ export function CodeMirrorEditor({
 	onTextOp,
 	labeling,
 	preview,
-	viewRef,
+	initialSelection,
 }: {
 	sm: SM;
 	mode: EditorMode;
@@ -117,9 +130,10 @@ export function CodeMirrorEditor({
 	onTextOp: (op: TextOp) => void;
 	labeling: LabelEditing;
 	preview: AutoLabelPreview | null;
-	viewRef: React.RefObject<EditorView | null>;
+	initialSelection?: InitialSelection;
 }) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
+	const viewRef = useRef<EditorView | null>(null);
 
 	const onSetCaretRef = useRef(onSetCaret);
 	onSetCaretRef.current = onSetCaret;
@@ -162,9 +176,13 @@ export function CodeMirrorEditor({
 			parent,
 			state: EditorState.create({
 				doc: sm.getText(),
+				selection: initialSelection
+					? { anchor: initialSelection.start, head: initialSelection.end }
+					: undefined,
 				extensions: [
 					history(),
 					keymap.of([...defaultKeymap, ...historyKeymap]),
+					drawSelection(),
 					EditorView.lineWrapping,
 					decorationsField,
 					previewDecorationsField,
@@ -201,6 +219,12 @@ export function CodeMirrorEditor({
 					}),
 				],
 			}),
+			scrollTo: initialSelection
+				? EditorView.scrollIntoView(
+						EditorSelection.range(initialSelection.start, initialSelection.end),
+						{ y: "center" },
+					)
+				: undefined,
 		});
 		viewRef.current = view;
 
@@ -216,13 +240,13 @@ export function CodeMirrorEditor({
 		// `mode` is intentionally only used for the initial editable state; live
 		// changes are handled by the reconfigure effect below.
 		// oxlint-disable-next-line react-hooks/exhaustive-deps
-	}, [sm, readOnlyCompartment]);
+	}, [sm, readOnlyCompartment, initialSelection]);
 
 	useEffect(() => {
 		viewRef.current?.dispatch({
 			effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(mode !== "edit")),
 		});
-	}, [mode, readOnlyCompartment, viewRef]);
+	}, [mode, readOnlyCompartment]);
 
 	useEffect(() => {
 		const view = viewRef.current;
@@ -232,7 +256,7 @@ export function CodeMirrorEditor({
 				buildPreviewDecorations(preview, view.state.doc.length),
 			),
 		});
-	}, [preview, viewRef]);
+	}, [preview]);
 
 	useEffect(() => {
 		const view = viewRef.current;
@@ -242,7 +266,7 @@ export function CodeMirrorEditor({
 		const onScroll = () => setForm(null);
 		scroller.addEventListener("scroll", onScroll, { passive: true });
 		return () => scroller.removeEventListener("scroll", onScroll);
-	}, [form, viewRef]);
+	}, [form]);
 
 	const handleContextMenu = useCallback(
 		(event: React.MouseEvent<HTMLDivElement>) => {
@@ -273,7 +297,7 @@ export function CodeMirrorEditor({
 			const labels = pos === null ? [] : labeling.source.labelsAt(pos);
 			setMenuCtx({ selection, labels });
 		},
-		[mode, labeling, viewRef],
+		[mode, labeling],
 	);
 
 	const handleAdd = useCallback(() => {
@@ -294,7 +318,7 @@ export function CodeMirrorEditor({
 				targets,
 			});
 		}, 0);
-	}, [menuCtx, labeling, viewRef]);
+	}, [menuCtx, labeling]);
 
 	const handleDelete = useCallback(
 		(label: EditorLabel) => {

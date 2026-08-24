@@ -5,7 +5,6 @@ import type { EditorData } from "../hooks/useEditorState";
 import type { TextOp } from "@/api/models";
 import type { LabelEditing } from "../labeling/types";
 import type { AutoLabelPreview } from "../hooks/useAutoLabelPreview";
-import type { EditorView } from "@codemirror/view";
 
 export function EditorPanel({
 	data,
@@ -14,7 +13,6 @@ export function EditorPanel({
 	onTextOp,
 	labeling,
 	preview,
-	viewRef,
 }: {
 	data: EditorData;
 	mode: EditorMode;
@@ -22,7 +20,6 @@ export function EditorPanel({
 	onTextOp: (op: TextOp) => void;
 	labeling: LabelEditing;
 	preview: AutoLabelPreview | null;
-	viewRef: React.RefObject<EditorView | null>;
 }) {
 	if (data.empty) {
 		return (
@@ -48,7 +45,7 @@ export function EditorPanel({
 				onTextOp={onTextOp}
 				labeling={labeling}
 				preview={preview}
-				viewRef={viewRef}
+				initialSelection={data.initialSelection}
 			/>
 		</div>
 	);

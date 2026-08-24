@@ -13,9 +13,18 @@ import type {
 	WorkflowResponse,
 	WorkflowSummary,
 } from "@/api/models";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { WorkflowDisplayPanel } from "./WorkflowDisplayPanel";
+import { readLabelLabelsLabelIdGet } from "@/api/endpoints/default/default";
+import { CCServId, CServId } from "@/edit/controller/types/idTypes";
+
+vi.mock("@/api/endpoints/default/default", async (importOriginal) => ({
+	...(await importOriginal()),
+	readLabelLabelsLabelIdGet: vi.fn(),
+}));
+
+const readLabel = vi.mocked(readLabelLabelsLabelIdGet);
 
 beforeAll(() => {
 	Object.defineProperties(HTMLElement.prototype, {
@@ -269,11 +278,23 @@ describe("WorkflowDisplayPanel", () => {
 		expect(screen.getByRole("button", { name: "Label label-ab" })).toBeVisible();
 	});
 
-	it("opens text references on double-click and keeps metadata behind info buttons", () => {
+	it("opens text references on double-click and keeps metadata behind info buttons", async () => {
 		const gotoText = vi.fn();
-		render(
-			<WorkflowDisplayPanel {...createProps()} />,
-		);
+		readLabel.mockResolvedValue({
+			status: 200,
+			data: {
+				labelDataId: labelRefValue.labelDataId,
+				labelDirty: false,
+				labelEnd: 7,
+				labelEntityGroup: "person",
+				labelId: labelRefValue.labelId,
+				labelScore: 1,
+				labelStart: 4,
+				labelWord: "Lin",
+			},
+			headers: new Headers(),
+		});
+		render(<WorkflowDisplayPanel {...createProps()} gotoText={gotoText} />);
 
 		fireEvent.click(screen.getByRole("button", { name: "chapter-:12–28" }), {
 			detail: 1,
@@ -281,15 +302,20 @@ describe("WorkflowDisplayPanel", () => {
 		expect(gotoText).not.toHaveBeenCalled();
 
 		fireEvent.doubleClick(screen.getByRole("button", { name: "chapter-:12–28" }));
-		expect(gotoText).toHaveBeenCalledWith({
-			type: "textSpan",
-			value: textSpanValue,
+		expect(gotoText).toHaveBeenCalledWith(CServId(textSpanValue.chapterId), {
+			start: textSpanValue.start,
+			end: textSpanValue.end,
+			ccServId: CCServId(textSpanValue.chapterContentId),
 		});
 
 		fireEvent.doubleClick(screen.getByRole("button", { name: "Label label-ab" }));
-		expect(gotoText).toHaveBeenLastCalledWith({
-			type: "labelRef",
-			value: labelRefValue,
+		expect(readLabel).toHaveBeenCalledWith(labelRefValue.labelId);
+		await waitFor(() => {
+			expect(gotoText).toHaveBeenLastCalledWith(CServId(labelRefValue.chapterId), {
+				start: 4,
+				end: 7,
+				ccServId: CCServId(labelRefValue.chapterContentId),
+			});
 		});
 
 		fireEvent.click(screen.getByRole("button", { name: "Text span info" }));

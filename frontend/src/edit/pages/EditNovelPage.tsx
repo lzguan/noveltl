@@ -176,7 +176,6 @@ export function EditNovelPage() {
 			labelGroupsRef: trackedLabelGroups.labelGroupsRef,
 			activeChapterIdRef: chapterState.activeChapterIdRef,
 			activeGroupIdRef: trackedLabelGroups.activeLabelGroupIdRef,
-			viewRef: editorState.editorView,
 		});
 		const autoLabelMgr = createAutoLabelManager({
 			controllerUserEvent,
@@ -311,7 +310,6 @@ export function EditNovelPage() {
 							onTextOp={managers.editorMgr.textOp}
 							labeling={labeling}
 							preview={autoLabelPreview.preview}
-							viewRef={editorState.editorView}
 						/>
 					</div>
 					<div className="shrink-0 flex flex-col min-h-0">

@@ -1,10 +1,9 @@
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import type { SegmentManager } from "@/edit/lib/text-model/core/segmentManager";
 import type { StyledLabel } from "@/edit/lib/text-model/core/types";
 import type { LabelStyle, EditorMode } from "../managers/editorManager";
 import type { CCProvId, CProvId, LProvId } from "../controller/types/idTypes";
 import { useSyncState } from "../utils/useSyncState";
-import { EditorView } from "@codemirror/view";
 
 export type Caret = {
 	anchor: number;
@@ -14,6 +13,11 @@ export type Caret = {
 
 type SM = SegmentManager<LabelStyle, StyledLabel<LabelStyle>, LProvId>;
 
+export type InitialSelection = {
+	start: number;
+	end: number;
+};
+
 export type EditorData =
 	| { empty: true }
 	| { loading: true; empty: false }
@@ -22,6 +26,7 @@ export type EditorData =
 			segmentManager: SM;
 			chapterId: CProvId;
 			chapterContentId: CCProvId;
+			initialSelection?: InitialSelection;
 			caret: Caret | null;
 			empty: false;
 	  };
@@ -34,6 +39,7 @@ export type LoadingPayload =
 			segmentManager: SM;
 			chapterId: CProvId;
 			chapterContentId: CCProvId;
+			initialSelection?: InitialSelection;
 			empty: false;
 	  };
 
@@ -52,6 +58,7 @@ export function useEditorState() {
 							segmentManager: val.segmentManager,
 							chapterId: val.chapterId,
 							chapterContentId: val.chapterContentId,
+							initialSelection: val.initialSelection,
 							caret: null,
 							empty: false,
 						};
@@ -80,7 +87,5 @@ export function useEditorState() {
 		[modeRef, commitModeState],
 	);
 
-	const editorView = useRef<EditorView | null>(null);
-
-	return { data, mode: modeState, dataRef, modeRef, setLoading, setCaret, setMode, editorView };
+	return { data, mode: modeState, dataRef, modeRef, setLoading, setCaret, setMode };
 }

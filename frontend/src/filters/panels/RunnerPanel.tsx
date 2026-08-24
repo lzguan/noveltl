@@ -5,9 +5,11 @@ import { AnnotationRunnerForm } from "../components/runnerForms/AnnotationRunner
 import { GroupRunnerForm } from "../components/runnerForms/GroupRunnerForm";
 import { LabelSourceRunnerForm } from "../components/runnerForms/LabelSourceRunnerForm";
 import { MapRunnerForm } from "../components/runnerForms/MapRunnerForm";
-import type { RunnerOperation, RunnerPanelModel } from "../types";
+import { useState } from "react";
 
-function isRunnerOperation(value: string): value is RunnerOperation {
+function isRunnerOperation(
+	value: string,
+): value is "labelSource" | "annotation" | "map" | "filter" | "group" {
 	return (
 		value === "labelSource" ||
 		value === "annotation" ||
@@ -17,7 +19,11 @@ function isRunnerOperation(value: string): value is RunnerOperation {
 	);
 }
 
-export function RunnerPanel(props: RunnerPanelModel) {
+export function RunnerPanel({ novelId, enabled }: { novelId: string; enabled: boolean }) {
+	const [activeRunnerOperation, setActiveRunnerOperation] = useState<
+		"labelSource" | "annotation" | "map" | "filter" | "group"
+	>("labelSource");
+
 	return (
 		<section className="flex min-w-0 flex-col gap-4" aria-labelledby="runner-panel-title">
 			<Card>
@@ -33,9 +39,9 @@ export function RunnerPanel(props: RunnerPanelModel) {
 						type="single"
 						variant="outline"
 						spacing={0}
-						value={props.activeRunnerOperation}
+						value={activeRunnerOperation}
 						onValueChange={(value) => {
-							if (isRunnerOperation(value)) props.selectRunnerOperation(value);
+							if (isRunnerOperation(value)) setActiveRunnerOperation(value);
 						}}
 						className="w-full flex-wrap"
 						aria-label="Runner operation"
@@ -59,15 +65,21 @@ export function RunnerPanel(props: RunnerPanelModel) {
 				</CardContent>
 			</Card>
 
-			{props.activeRunnerOperation === "labelSource" && (
-				<LabelSourceRunnerForm {...props.labelSourceForm} />
+			{activeRunnerOperation === "labelSource" && (
+				<LabelSourceRunnerForm novelId={novelId} enabled={enabled} />
 			)}
-			{props.activeRunnerOperation === "annotation" && (
-				<AnnotationRunnerForm {...props.annotationForm} />
+			{activeRunnerOperation === "annotation" && (
+				<AnnotationRunnerForm novelId={novelId} enabled={enabled} />
 			)}
-			{props.activeRunnerOperation === "map" && <MapRunnerForm {...props.mapForm} />}
-			{props.activeRunnerOperation === "filter" && <FilterRunnerForm {...props.filterForm} />}
-			{props.activeRunnerOperation === "group" && <GroupRunnerForm {...props.groupForm} />}
+			{activeRunnerOperation === "map" && (
+				<MapRunnerForm novelId={novelId} enabled={enabled} />
+			)}
+			{activeRunnerOperation === "filter" && (
+				<FilterRunnerForm novelId={novelId} enabled={enabled} />
+			)}
+			{activeRunnerOperation === "group" && (
+				<GroupRunnerForm novelId={novelId} enabled={enabled} />
+			)}
 		</section>
 	);
 }

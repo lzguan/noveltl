@@ -20,10 +20,18 @@ import { GroupingSection } from "../components/GroupingSection";
 import { ErrorBlock, LoadingBlock, shortId, statusVariant } from "../components/panelUi";
 import { QueryCard } from "../components/QueryCard";
 import { ResultsCard } from "../components/ResultsCard";
-import type { WorkflowDisplayPanelProps } from "../types";
+import type { useWorkflowViewer } from "../hooks/useWorkflowViewer";
 import { WorkflowPicker } from "../components/WorkflowPicker";
+import type { CCServId, CServId } from "@/edit/controller/types/idTypes";
 
-export function WorkflowDisplayPanel(props: WorkflowDisplayPanelProps) {
+export function WorkflowDisplayPanel(
+	props: ReturnType<typeof useWorkflowViewer> & {
+		gotoText?: (
+			chapterId: CServId,
+			reference: { start: number; end: number; ccServId: CCServId },
+		) => void;
+	},
+) {
 	const { workflowSelection, groupingSection, querySection, instanceResults } = props;
 	const activeGroupings = [...groupingSection.activeGroupings.values()];
 	const workflow =
@@ -154,4 +162,5 @@ export function WorkflowDisplayPanel(props: WorkflowDisplayPanelProps) {
 	);
 }
 
-export type { ActiveGroupingState, Loadable, WorkflowDisplayPanelProps } from "../types";
+export type { ActiveGroupingState } from "../hooks/useWorkflowGroupings";
+export type { Loadable } from "../loadable";

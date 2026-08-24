@@ -1,6 +1,5 @@
 import type { SortDirection, SortKey, WorkflowResponse } from "@/api/models";
 import { useCallback, useState } from "react";
-import type { QuerySectionModel } from "../types";
 
 function sortableFieldNames(workflow: WorkflowResponse | null) {
 	if (!workflow) return [];
@@ -12,16 +11,7 @@ function sortableFieldNames(workflow: WorkflowResponse | null) {
 		.map(([fieldName]) => fieldName);
 }
 
-export interface FrameDraftState {
-	sortKeys: readonly SortKey[];
-	addSortKey: QuerySectionModel["addSortKey"];
-	removeSortKey: QuerySectionModel["removeSortKey"];
-	setSortKeyField: QuerySectionModel["setSortKeyField"];
-	setSortKeyDirection: QuerySectionModel["setSortKeyDirection"];
-	resetFrameDraft: () => void;
-}
-
-export function useFrameDraft(workflow: WorkflowResponse | null): FrameDraftState {
+export function useFrameDraft(workflow: WorkflowResponse | null) {
 	const [sortKeys, setSortKeys] = useState<readonly SortKey[]>([]);
 
 	const resetFrameDraft = useCallback(() => setSortKeys([]), []);

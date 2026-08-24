@@ -20,7 +20,7 @@ import { useInstanceResults } from "./useInstanceResults";
 import { useWorkflowGroupings } from "./useWorkflowGroupings";
 import { useWorkflowSelection } from "./useWorkflowSelection";
 import { buildWorkflowFrame } from "./useWorkflowViewer";
-import type { ActiveGroupingState } from "../types";
+import type { ActiveGroupingState } from "./useWorkflowGroupings";
 
 vi.mock("@/api/endpoints/filters/filters", () => ({
 	readGroupingFiltersGroupingsGroupingIdGet: vi.fn(),

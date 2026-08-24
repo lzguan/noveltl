@@ -342,12 +342,18 @@ export function EditNovelPage() {
 										<FiltersPanel
 											novelId={novel.novel.novelId}
 											gotoText={(cServId, ref) => {
-												const pid = Effect.runSync(managers.controllerGetters.chapterIdFromServerId(cServId))
+												const pid = Effect.runSync(
+													managers.controllerGetters.chapterIdFromServerId(
+														cServId,
+													),
+												);
 												if (pid === null) {
-													console.warn(`Could not find chapter for server ID ${cServId}`);
+													console.warn(
+														`Could not find chapter for server ID ${cServId}`,
+													);
 													return;
 												}
-												managers.chapterMgr.switchChapter(pid, ref)
+												managers.chapterMgr.switchChapter(pid, ref);
 											}}
 										/>
 									),

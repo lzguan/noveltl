@@ -11,9 +11,16 @@ import {
 import { FieldGroup } from "@/components/ui/field";
 import { CircleCheck, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
-import type { RunnerFormStatus } from "../../types";
 
-function RunnerOperationStatus({ formStatus }: { formStatus: RunnerFormStatus }) {
+function RunnerOperationStatus({
+	formStatus,
+}: {
+	formStatus:
+		| { status: "idle" }
+		| { status: "submitting" }
+		| { status: "succeeded"; target: "workflow" | "grouping" | "annotation" }
+		| { status: "error"; message: string };
+}) {
 	if (formStatus.status === "idle" || formStatus.status === "submitting") return null;
 	if (formStatus.status === "error") {
 		return (
@@ -57,7 +64,11 @@ export function RunnerFormShell({
 	title: string;
 	description: string;
 	submitLabel: string;
-	formStatus: RunnerFormStatus;
+	formStatus:
+		| { status: "idle" }
+		| { status: "submitting" }
+		| { status: "succeeded"; target: "workflow" | "grouping" | "annotation" }
+		| { status: "error"; message: string };
 	canSubmit: boolean;
 	submitRunnerOperation: () => Promise<void>;
 	children: ReactNode;

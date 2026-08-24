@@ -9,11 +9,19 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { CircleCheck, TriangleAlert } from "lucide-react";
+import { apiErrorMessage, requestErrorMessage } from "../apiErrors";
 import { FunctionDefinitionEditor } from "../components/FunctionDefinitionEditor";
 import { FunctionSignatureDisplay } from "../components/FunctionSignatureDisplay";
-import type { FunctionDefinitionFormModel } from "../types";
+import {
+	parseFunctionDefinitionText,
+	useFunctionDefinitionForm,
+} from "../hooks/useFunctionDefinitionForm";
 
-function FunctionDefinitionStatus({ formStatus }: Pick<FunctionDefinitionFormModel, "formStatus">) {
+function FunctionDefinitionStatus({
+	formStatus,
+}: {
+	formStatus: ReturnType<typeof useFunctionDefinitionForm>["formStatus"];
+}) {
 	if (
 		formStatus.status === "idle" ||
 		formStatus.status === "validating" ||
@@ -60,13 +68,66 @@ function FunctionDefinitionStatus({ formStatus }: Pick<FunctionDefinitionFormMod
 	);
 }
 
-export function FunctionDefinitionPanel(props: FunctionDefinitionFormModel) {
+export function FunctionDefinitionPanel() {
+	const props = useFunctionDefinitionForm();
 	const pending =
 		props.formStatus.status === "validating" || props.formStatus.status === "uploading";
 
+	function readFunctionDefinition() {
+		const parsed = parseFunctionDefinitionText(props.functionDefinitionText);
+		if (!parsed.ok) {
+			props.setFunctionDefinitionError(parsed.message);
+			return null;
+		}
+		props.setFunctionDefinitionError(null);
+		return parsed.definition;
+	}
+
+	async function validateFunctionDefinition() {
+		const definition = readFunctionDefinition();
+		if (definition === null) return;
+		props.preSend("validate");
+		try {
+			const response = await validateFilterFunction({ functionDefinition: definition });
+			if (response.status === 200) {
+				props.onSendSuccess({ action: "validate", signature: response.data.signature });
+			} else {
+				props.onSendError(
+					"validate",
+					apiErrorMessage(response.data, "Function definition is invalid."),
+				);
+			}
+		} catch (error) {
+			props.onSendError("validate", requestErrorMessage(error));
+		}
+	}
+
+	async function uploadFunctionDefinition() {
+		const definition = readFunctionDefinition();
+		if (definition === null) return;
+		props.preSend("upload");
+		try {
+			const response = await createFilterFunction({
+				functionDefinition: definition,
+				functionName: props.functionName.trim(),
+				namespace: props.functionNamespace.trim(),
+			});
+			if (response.status === 201) {
+				props.onSendSuccess({ action: "upload", functionDefinition: response.data });
+			} else {
+				props.onSendError(
+					"upload",
+					apiErrorMessage(response.data, "Function definition could not be uploaded."),
+				);
+			}
+		} catch (error) {
+			props.onSendError("upload", requestErrorMessage(error));
+		}
+	}
+
 	function submitFunctionDefinition(event: React.SubmitEvent<HTMLFormElement>) {
 		event.preventDefault();
-		void props.uploadFunctionDefinition();
+		void uploadFunctionDefinition();
 	}
 
 	return (
@@ -100,7 +161,7 @@ export function FunctionDefinitionPanel(props: FunctionDefinitionFormModel) {
 							type="button"
 							variant="outline"
 							disabled={pending}
-							onClick={() => void props.validateFunctionDefinition()}
+							onClick={() => void validateFunctionDefinition()}
 						>
 							{props.formStatus.status === "validating" ? "Validating…" : "Validate"}
 						</Button>
@@ -114,3 +175,4 @@ export function FunctionDefinitionPanel(props: FunctionDefinitionFormModel) {
 		</section>
 	);
 }
+import { createFilterFunction, validateFilterFunction } from "@/api/endpoints/filters/filters";

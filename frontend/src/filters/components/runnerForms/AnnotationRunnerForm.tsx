@@ -1,3 +1,5 @@
+import { runPythonAnnotation } from "@/api/endpoints/filters/filters";
+import type { NewFieldRequest } from "@/api/models";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -18,16 +20,85 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
-import type { AnnotationFieldType, AnnotationRunnerFormModel } from "../../types";
+import { apiErrorMessage, requestErrorMessage } from "../../apiErrors";
+import { useAnnotationRunnerForm } from "../../hooks/runnerForms/useAnnotationRunnerForm";
 import { WorkflowSearchSelector } from "./RunnerSelectors";
 import { RunnerFormShell } from "./RunnerFormShell";
 
-function isAnnotationFieldType(value: string): value is AnnotationFieldType {
-	return value === "string" || value === "int" || value === "float" || value === "bool";
-}
-
-export function AnnotationRunnerForm(props: AnnotationRunnerFormModel) {
+export function AnnotationRunnerForm({ novelId, enabled }: { novelId: string; enabled: boolean }) {
+	const props = useAnnotationRunnerForm(novelId, enabled);
 	const submitting = props.formStatus.status === "submitting";
+
+	function buildNewFields() {
+		if (!props.selectedWorkflow) throw new Error("Select a workflow.");
+		if (props.fields.length === 0) throw new Error("Add at least one annotation field.");
+		const newFields: Record<string, NewFieldRequest> = {};
+		for (const field of props.fields) {
+			const name = field.name.trim();
+			if (!name) throw new Error("Every annotation field needs a name.");
+			if (name.length > 128) throw new Error(`Field '${name}' exceeds 128 characters.`);
+			if (name in newFields) throw new Error(`Annotation field '${name}' is duplicated.`);
+			if (name in (props.selectedWorkflow.schema.fields ?? {})) {
+				throw new Error(`Field '${name}' already exists in the workflow.`);
+			}
+
+			if (field.type === "string") {
+				newFields[name] = {
+					type: "string",
+					defaultValue: typeof field.defaultValue === "string" ? field.defaultValue : "",
+				};
+			} else if (field.type === "bool") {
+				newFields[name] = { type: "bool", defaultValue: field.defaultValue === true };
+			} else {
+				const text = typeof field.defaultValue === "string" ? field.defaultValue : "";
+				if (text.trim() === "") {
+					throw new Error(`Enter a default value for '${name}'.`);
+				}
+				const parsed = Number(text);
+				if (field.type === "int") {
+					if (!Number.isInteger(parsed)) {
+						throw new Error(`The default for '${name}' must be a whole number.`);
+					}
+					newFields[name] = { type: "int", defaultValue: parsed };
+				} else {
+					if (!Number.isFinite(parsed)) {
+						throw new Error(`The default for '${name}' must be a finite number.`);
+					}
+					newFields[name] = { type: "float", defaultValue: parsed };
+				}
+			}
+		}
+		return newFields;
+	}
+
+	async function submitAnnotationRunner() {
+		if (!props.selectedWorkflow) return;
+		let newFields: Record<string, NewFieldRequest>;
+		try {
+			newFields = buildNewFields();
+		} catch (error) {
+			props.onSendError(requestErrorMessage(error));
+			return;
+		}
+
+		props.preSend();
+		try {
+			const response = await runPythonAnnotation({
+				workflowId: props.selectedWorkflow.workflowId,
+				newFields,
+			});
+			if (response.status === 202) {
+				props.onSendSuccess();
+			} else {
+				props.onSendError(
+					apiErrorMessage(response.data, "Could not queue the annotation workflow."),
+				);
+			}
+		} catch (error) {
+			props.onSendError(requestErrorMessage(error));
+		}
+	}
+
 	return (
 		<RunnerFormShell
 			title="Annotate workflow"
@@ -35,7 +106,7 @@ export function AnnotationRunnerForm(props: AnnotationRunnerFormModel) {
 			submitLabel="Add annotation fields"
 			formStatus={props.formStatus}
 			canSubmit={props.selectedWorkflow !== null && props.fields.length > 0}
-			submitRunnerOperation={props.submitAnnotationRunner}
+			submitRunnerOperation={submitAnnotationRunner}
 		>
 			<WorkflowSearchSelector
 				id="annotation-runner-workflow"
@@ -73,7 +144,12 @@ export function AnnotationRunnerForm(props: AnnotationRunnerFormModel) {
 									value={field.type}
 									disabled={submitting}
 									onValueChange={(value) => {
-										if (isAnnotationFieldType(value))
+										if (
+											value === "string" ||
+											value === "int" ||
+											value === "float" ||
+											value === "bool"
+										)
 											props.setFieldType(field.id, value);
 									}}
 								>

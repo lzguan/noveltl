@@ -37,7 +37,10 @@ export function TextSpanCell({
 	gotoText,
 }: {
 	value: TextSpan;
-	gotoText?: (chapterId: CServId, reference: { start: number; end: number; ccServId: CCServId }) => void;
+	gotoText?: (
+		chapterId: CServId,
+		reference: { start: number; end: number; ccServId: CCServId },
+	) => void;
 }) {
 	return (
 		<div className="flex items-center gap-1">
@@ -46,7 +49,13 @@ export function TextSpanCell({
 				variant="ghost"
 				size="xs"
 				disabled={!gotoText}
-				onDoubleClick={() => gotoText?.(CServId(value.chapterId), { start: value.start, end: value.end, ccServId: CCServId(value.chapterContentId) })}
+				onDoubleClick={() =>
+					gotoText?.(CServId(value.chapterId), {
+						start: value.start,
+						end: value.end,
+						ccServId: CCServId(value.chapterContentId),
+					})
+				}
 				title="Double-click to open this text span"
 			>
 				{shortId(value.chapterId)}:{value.start}–{value.end}
@@ -84,7 +93,10 @@ export function LabelCell({
 	gotoText,
 }: {
 	value: LabelRef;
-	gotoText?: (chapterId: CServId, reference: { start: number; end: number; ccServId: CCServId }) => void;
+	gotoText?: (
+		chapterId: CServId,
+		reference: { start: number; end: number; ccServId: CCServId },
+	) => void;
 }) {
 	const gotoLabel = async () => {
 		if (!gotoText) return;
@@ -99,7 +111,7 @@ export function LabelCell({
 			end: label.labelEnd,
 			ccServId: CCServId(value.chapterContentId),
 		});
-	}
+	};
 	return (
 		<div className="flex items-center gap-1">
 			<Button
@@ -318,7 +330,10 @@ export function DataCell({
 	gotoText,
 }: {
 	value: DataType | undefined;
-	gotoText?: (chapterId: CServId, reference: { start: number; end: number; ccServId: CCServId }) => void;
+	gotoText?: (
+		chapterId: CServId,
+		reference: { start: number; end: number; ccServId: CCServId },
+	) => void;
 }) {
 	if (!value) return <span className="text-muted-foreground">—</span>;
 

@@ -6,7 +6,7 @@ import {
 import type { FunctionDefinitionMeta, LabelGroup, WorkflowSummary } from "@/api/models";
 import { useEffect, useState } from "react";
 import { apiErrorMessage, requestErrorMessage } from "../../apiErrors";
-import type { Loadable } from "../../types";
+import type { Loadable } from "../../loadable";
 
 export async function fetchCompletedWorkflowOptions(
 	novelId: string,

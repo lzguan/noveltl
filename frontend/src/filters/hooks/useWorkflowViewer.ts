@@ -1,9 +1,8 @@
 import type { Frame, SortKey, WorkflowResponse } from "@/api/models";
 import { useEffect } from "react";
-import type { ActiveGroupingState, WorkflowDisplayPanelProps } from "../types";
 import { useFrameDraft } from "./useFrameDraft";
 import { useInstanceResults } from "./useInstanceResults";
-import { useWorkflowGroupings } from "./useWorkflowGroupings";
+import { type ActiveGroupingState, useWorkflowGroupings } from "./useWorkflowGroupings";
 import { useWorkflowSelection } from "./useWorkflowSelection";
 
 export function buildWorkflowFrame(
@@ -22,7 +21,7 @@ export function buildWorkflowFrame(
 	};
 }
 
-export function useWorkflowViewer(novelId: string): WorkflowDisplayPanelProps {
+export function useWorkflowViewer(novelId: string) {
 	const workflowSelection = useWorkflowSelection(novelId);
 	const groupingState = useWorkflowGroupings(workflowSelection.availableGroupings);
 	const activeWorkflow =
@@ -31,6 +30,7 @@ export function useWorkflowViewer(novelId: string): WorkflowDisplayPanelProps {
 			: null;
 	const frameDraft = useFrameDraft(activeWorkflow);
 	const instanceResults = useInstanceResults();
+	const activeGroupings: ReadonlyMap<string, ActiveGroupingState> = groupingState.activeGroupings;
 	const { resetGroupings } = groupingState;
 	const { resetFrameDraft } = frameDraft;
 	const { resetInstanceResults } = instanceResults;
@@ -49,11 +49,7 @@ export function useWorkflowViewer(novelId: string): WorkflowDisplayPanelProps {
 	}
 
 	function applyFrame() {
-		const frame = buildWorkflowFrame(
-			activeWorkflow,
-			groupingState.activeGroupings,
-			frameDraft.sortKeys,
-		);
+		const frame = buildWorkflowFrame(activeWorkflow, activeGroupings, frameDraft.sortKeys);
 		if (frame) instanceResults.applyFrame(frame);
 	}
 
@@ -69,7 +65,7 @@ export function useWorkflowViewer(novelId: string): WorkflowDisplayPanelProps {
 		},
 		groupingSection: {
 			availableGroupings: workflowSelection.availableGroupings,
-			activeGroupings: groupingState.activeGroupings,
+			activeGroupings,
 			activateGrouping: groupingState.activateGrouping,
 			deactivateGrouping: groupingState.deactivateGrouping,
 			setGroupingValueSearchText: groupingState.setGroupingValueSearchText,

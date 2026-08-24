@@ -21,7 +21,8 @@ import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { DataCell, GroupDataCell, isMutableDataType, MutableDataCell } from "./DataCells";
 import { ErrorBlock, groupingLabel, LoadingBlock, PageControls, shortId } from "./panelUi";
-import type { ActiveGroupingState, Loadable, Page } from "../types";
+import type { ActiveGroupingState } from "../hooks/useWorkflowGroupings";
+import type { Loadable, Page } from "../loadable";
 import type { CCServId, CServId } from "@/edit/controller/types/idTypes";
 
 export type CommitInstanceField = (
@@ -40,7 +41,10 @@ function ResultsTable({
 	workflow: WorkflowResponse;
 	activeGroupings: readonly ActiveGroupingState[];
 	results: Page<InstanceQueryResult>;
-	gotoText?: (chapterId: CServId, reference: { start: number; end: number; ccServId: CCServId }) => void;
+	gotoText?: (
+		chapterId: CServId,
+		reference: { start: number; end: number; ccServId: CCServId },
+	) => void;
 	commitInstanceField?: CommitInstanceField;
 }) {
 	const fields = Object.entries(workflow.schema.fields ?? {});
@@ -97,10 +101,7 @@ function ResultsTable({
 											}
 										/>
 									) : (
-										<DataCell
-											value={value}
-											gotoText={gotoText}
-										/>
+										<DataCell value={value} gotoText={gotoText} />
 									)}
 								</TableCell>
 							);
@@ -135,7 +136,10 @@ export function ResultsCard({
 	refreshInstanceResults: () => void;
 	loadPreviousInstancePage: () => void;
 	loadNextInstancePage: () => void;
-	gotoText?: (chapterId: CServId, reference: { start: number; end: number; ccServId: CCServId }) => void;
+	gotoText?: (
+		chapterId: CServId,
+		reference: { start: number; end: number; ccServId: CCServId },
+	) => void;
 	commitInstanceField?: CommitInstanceField;
 }) {
 	const description =
@@ -189,6 +193,12 @@ export function ResultsCard({
 				)}
 				{results.status === "ready" && results.data.items.length > 0 && (
 					<>
+						<PageControls
+							page={results.data}
+							label="instances"
+							loadPreviousPage={loadPreviousInstancePage}
+							loadNextPage={loadNextInstancePage}
+						/>
 						<ResultsTable
 							workflow={workflow}
 							activeGroupings={activeGroupings}

@@ -4,23 +4,30 @@ import {
 	readWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGet,
 	readWorkflowsFiltersWorkflowsGet,
 } from "@/api/endpoints/filters/filters";
-import type { GroupingResponse } from "@/api/models";
+import type { GroupingResponse, WorkflowResponse, WorkflowSummary } from "@/api/models";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Loadable, WorkflowSelectionModel } from "../types";
+import type { Loadable } from "../loadable";
 import { errorMessage, requestError } from "./workflowViewerUtils";
 
-export interface WorkflowSelectionState extends WorkflowSelectionModel {
+export interface WorkflowSelectionState {
+	workflows: Loadable<readonly WorkflowSummary[]>;
+	searchText: string;
+	activeWorkflowId: string | null;
+	activeWorkflow: Loadable<WorkflowResponse>;
 	availableGroupings: Loadable<readonly GroupingResponse[]>;
+	setWorkflowSearchText: (searchText: string) => void;
+	selectWorkflow: (workflowId: string) => void;
+	refreshWorkflowList: () => void;
 }
 
 export function useWorkflowSelection(novelId: string): WorkflowSelectionState {
-	const [workflows, setWorkflows] = useState<WorkflowSelectionModel["workflows"]>({
+	const [workflows, setWorkflows] = useState<Loadable<readonly WorkflowSummary[]>>({
 		status: "loading",
 	});
 	const [searchText, setSearchText] = useState("");
 	const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
 	const [activeWorkflowLoadRevision, setActiveWorkflowLoadRevision] = useState(0);
-	const [activeWorkflow, setActiveWorkflow] = useState<WorkflowSelectionModel["activeWorkflow"]>({
+	const [activeWorkflow, setActiveWorkflow] = useState<Loadable<WorkflowResponse>>({
 		status: "idle",
 	});
 	const [availableGroupings, setAvailableGroupings] = useState<

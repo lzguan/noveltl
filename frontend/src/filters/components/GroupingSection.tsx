@@ -24,7 +24,8 @@ import {
 import { Search, Trash2 } from "lucide-react";
 import { GroupDataCell } from "./DataCells";
 import { ErrorBlock, groupingLabel, LoadingBlock, PageControls, statusVariant } from "./panelUi";
-import type { ActiveGroupingState, Loadable } from "../types";
+import type { ActiveGroupingState } from "../hooks/useWorkflowGroupings";
+import type { Loadable } from "../loadable";
 
 function dataKey(value: GroupData) {
 	return `${value.type}:${String(value.value)}`;

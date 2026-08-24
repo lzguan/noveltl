@@ -1,7 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
-import { useFunctionDefinitionForm } from "../../../filters/hooks/useFunctionDefinitionForm";
-import { useRunnerPanel } from "../../../filters/hooks/runnerForms/useRunnerPanel";
 import { useWorkflowViewer } from "../../../filters/hooks/useWorkflowViewer";
 import { FunctionDefinitionPanel } from "../../../filters/panels/FunctionDefinitionPanel";
 import { RunnerPanel } from "../../../filters/panels/RunnerPanel";
@@ -10,15 +8,16 @@ import type { CCServId, CServId } from "@/edit/controller/types/idTypes";
 
 export function FiltersPanel({
 	novelId,
-	gotoText
+	gotoText,
 }: {
 	novelId: string;
-	gotoText?: (chapterId: CServId, reference: { start: number; end: number; ccServId: CCServId }) => void;
+	gotoText?: (
+		chapterId: CServId,
+		reference: { start: number; end: number; ccServId: CCServId },
+	) => void;
 }) {
 	const [activeSubpanel, setActiveSubpanel] = useState("viewer");
 	const viewer = useWorkflowViewer(novelId);
-	const functionDefinitionForm = useFunctionDefinitionForm();
-	const runnerPanel = useRunnerPanel(novelId, activeSubpanel === "runners");
 
 	return (
 		<Tabs value={activeSubpanel} onValueChange={setActiveSubpanel} className="h-full min-h-0">
@@ -31,10 +30,10 @@ export function FiltersPanel({
 				<WorkflowDisplayPanel {...viewer} gotoText={gotoText} />
 			</TabsContent>
 			<TabsContent value="functions" className="min-h-0 overflow-y-auto p-2">
-				<FunctionDefinitionPanel {...functionDefinitionForm} />
+				<FunctionDefinitionPanel />
 			</TabsContent>
 			<TabsContent value="runners" className="min-h-0 overflow-y-auto p-2">
-				<RunnerPanel {...runnerPanel} />
+				<RunnerPanel novelId={novelId} enabled={activeSubpanel === "runners"} />
 			</TabsContent>
 		</Tabs>
 	);

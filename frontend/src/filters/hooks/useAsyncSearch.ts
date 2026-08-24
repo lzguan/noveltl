@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Loadable } from "../types";
+import type { Loadable } from "../loadable";
 import { requestErrorMessage } from "../apiErrors";
 
 export const ASYNC_SEARCH_DEBOUNCE_MS = 250;

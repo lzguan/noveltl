@@ -13,7 +13,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { ErrorBlock, statusVariant, workflowLabel } from "./panelUi";
-import type { Loadable } from "../types";
+import type { Loadable } from "../loadable";
 
 export function WorkflowPicker({
 	workflows,

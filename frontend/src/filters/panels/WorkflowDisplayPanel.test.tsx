@@ -1,10 +1,5 @@
-import type { ActiveGroupingState, WorkflowDisplayPanelProps } from "./WorkflowDisplayPanel";
-import type {
-	GroupingSectionModel,
-	InstanceResultsModel,
-	QuerySectionModel,
-	WorkflowSelectionModel,
-} from "../types";
+import type { ActiveGroupingState } from "./WorkflowDisplayPanel";
+import type { useWorkflowViewer } from "../hooks/useWorkflowViewer";
 import type {
 	GroupingResponse,
 	InstanceQueryResult,
@@ -18,6 +13,17 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { WorkflowDisplayPanel } from "./WorkflowDisplayPanel";
 import { readLabelLabelsLabelIdGet } from "@/api/endpoints/default/default";
 import { CCServId, CServId } from "@/edit/controller/types/idTypes";
+
+type WorkflowDisplayPanelProps = ReturnType<typeof useWorkflowViewer> & {
+	gotoText?: (
+		chapterId: CServId,
+		reference: { start: number; end: number; ccServId: CCServId },
+	) => void;
+};
+type WorkflowSelectionModel = WorkflowDisplayPanelProps["workflowSelection"];
+type GroupingSectionModel = WorkflowDisplayPanelProps["groupingSection"];
+type QuerySectionModel = WorkflowDisplayPanelProps["querySection"];
+type InstanceResultsModel = WorkflowDisplayPanelProps["instanceResults"];
 
 vi.mock("@/api/endpoints/default/default", async (importOriginal) => ({
 	...(await importOriginal()),

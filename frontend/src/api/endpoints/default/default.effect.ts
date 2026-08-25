@@ -1666,6 +1666,45 @@ export const ReadMemoryGroupsMemoryGroupsGet422Response = S.Struct({
 })
 
 /**
+ * @summary Add Memory Group
+ */
+export const addMemoryGroupMemoryGroupsPostBodyMemoryGroupNameMax = 100;
+
+export const addMemoryGroupMemoryGroupsPostBodyMemoryLanguageMin = 2;
+export const addMemoryGroupMemoryGroupsPostBodyMemoryLanguageMax = 2;
+
+
+
+export const AddMemoryGroupMemoryGroupsPostBody = S.Struct({
+  "memoryGroupName": S.String.pipe(S.minLength(1), S.maxLength(addMemoryGroupMemoryGroupsPostBodyMemoryGroupNameMax)),
+  "memoryLanguage": S.String.pipe(S.minLength(addMemoryGroupMemoryGroupsPostBodyMemoryLanguageMin), S.maxLength(addMemoryGroupMemoryGroupsPostBodyMemoryLanguageMax)),
+  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const AddMemoryGroupMemoryGroupsPost200Response = S.Struct({
+  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when referring to this memory group.' }),
+  "memoryGroupName": S.String.annotations({ description: 'Human-readable name of the memory group.' }),
+  "memoryLanguage": S.String.annotations({ description: 'Language in which memory content should be written.' }),
+  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Identifier of the novel to which this memory group belongs.' })
+}).annotations({ description: 'Memory group schema' })
+
+export const AddMemoryGroupMemoryGroupsPost404Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const AddMemoryGroupMemoryGroupsPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.extend(S.Struct({
+
+}), S.Record({ key: S.String, value: S.Unknown }))),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * @summary Read Memories At Chapter
  */
 export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetParams = S.Struct({

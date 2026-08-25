@@ -81,6 +81,12 @@ class MemoryGroup(Model):
     memory_language: str = Field(description="Language in which memory content should be written.")
 
 
+class CreateMemoryGroup(Model):
+    memory_group_name: str = Field(min_length=1, max_length=100)
+    novel_id: UUID
+    memory_language: str = Field(min_length=2, max_length=2)
+
+
 class MemoryPage(Model):
     count: int = Field(ge=0)
     rows: list[Memory]

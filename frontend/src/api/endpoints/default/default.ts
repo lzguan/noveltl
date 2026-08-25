@@ -28,6 +28,7 @@ import type {
   CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostParams,
   CreateLabelGroup,
   CreateLabelGroupLabelGroupsPostParams,
+  CreateMemoryGroup,
   CreateNovel,
   CreateSourceWork,
   CreateUser,
@@ -2123,6 +2124,53 @@ export const readMemoryGroupsMemoryGroupsGet = async (params: ReadMemoryGroupsMe
     method: 'GET'
 
 
+  }
+);}
+
+
+export type addMemoryGroupMemoryGroupsPostResponse200 = {
+  data: MemoryGroup
+  status: 200
+}
+
+export type addMemoryGroupMemoryGroupsPostResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type addMemoryGroupMemoryGroupsPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type addMemoryGroupMemoryGroupsPostResponseSuccess = (addMemoryGroupMemoryGroupsPostResponse200) & {
+  headers: Headers;
+};
+export type addMemoryGroupMemoryGroupsPostResponseError = (addMemoryGroupMemoryGroupsPostResponse404 | addMemoryGroupMemoryGroupsPostResponse422) & {
+  headers: Headers;
+};
+
+export type addMemoryGroupMemoryGroupsPostResponse = (addMemoryGroupMemoryGroupsPostResponseSuccess | addMemoryGroupMemoryGroupsPostResponseError)
+
+export const getAddMemoryGroupMemoryGroupsPostUrl = () => {
+
+
+
+
+  return `/api/memory-groups`
+}
+
+/**
+ * @summary Add Memory Group
+ */
+export const addMemoryGroupMemoryGroupsPost = async (createMemoryGroup: CreateMemoryGroup, options?: Parameters<typeof customFetch>[1]): Promise<addMemoryGroupMemoryGroupsPostResponse> => {
+
+  return customFetch<addMemoryGroupMemoryGroupsPostResponse>(getAddMemoryGroupMemoryGroupsPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createMemoryGroup)
   }
 );}
 

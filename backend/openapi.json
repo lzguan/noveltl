@@ -4485,6 +4485,57 @@
       }
     },
     "/memory-groups": {
+      "post": {
+        "summary": "Add Memory Group",
+        "operationId": "add_memory_group_memory_groups_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMemoryGroup"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryGroup"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "summary": "Read Memory Groups",
         "operationId": "read_memory_groups_memory_groups_get",
@@ -6970,6 +7021,34 @@
         ],
         "title": "CreateLabelGroup",
         "description": "Pydantic schema for validating forms for creating a label group.\n\nAttributes:\n    label_group_name: Name of label group to create.\n    novel_id: UUID of novel this label group belongs to."
+      },
+      "CreateMemoryGroup": {
+        "properties": {
+          "memoryGroupName": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Memorygroupname"
+          },
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "memoryLanguage": {
+            "type": "string",
+            "maxLength": 2,
+            "minLength": 2,
+            "title": "Memorylanguage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memoryGroupName",
+          "novelId",
+          "memoryLanguage"
+        ],
+        "title": "CreateMemoryGroup"
       },
       "CreateNovel": {
         "properties": {

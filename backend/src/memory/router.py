@@ -7,8 +7,10 @@ from sqlalchemy.orm import Session
 from src.auth.dependencies import get_current_user, get_optional_user
 from src.auth.models import User
 from src.database import get_db
+from src.languages.exceptions import LanguageNotFoundException
 from src.memory.exceptions import MemoryNotFoundException
 from src.memory.schemas import (
+    CreateMemoryGroup,
     ExpireMemory,
     Memory,
     MemoryGroup,
@@ -18,6 +20,7 @@ from src.memory.schemas import (
 )
 from src.memory.service import (
     change_review_status,
+    create_memory_group,
     delete_memory,
     expire_memory,
     query_memories,
@@ -27,10 +30,34 @@ from src.memory.service import (
     update_memory_content,
 )
 from src.memory.types import MemoryType, PluginName
-from src.novels.exceptions import ChapterNotFoundException
+from src.novels.exceptions import ChapterNotFoundException, NovelNotFoundException
 from src.schemas import DetailHTTPErrorResponse
 
 router = APIRouter()
+
+
+@router.post(
+    "/memory-groups",
+    response_model=MemoryGroup,
+    responses={404: {"model": DetailHTTPErrorResponse}},
+)
+def add_memory_group(
+    request: CreateMemoryGroup,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    try:
+        return create_memory_group(
+            db,
+            current_user,
+            request.memory_group_name,
+            request.novel_id,
+            request.memory_language,
+        )
+    except NovelNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Novel not found.") from e
+    except LanguageNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Language not found.") from e
 
 
 @router.get("/memory-groups", response_model=list[MemoryGroup])

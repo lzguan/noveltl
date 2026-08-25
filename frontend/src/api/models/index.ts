@@ -44,6 +44,7 @@ export * from './createLabelDataLabelGroupsLabelGroupIdLabelDatasPostParams';
 export * from './createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostParams';
 export * from './createLabelGroup';
 export * from './createLabelGroupLabelGroupsPostParams';
+export * from './createMemoryGroup';
 export * from './createNovel';
 export * from './createSourceWork';
 export * from './createUser';

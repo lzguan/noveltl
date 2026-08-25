@@ -15,6 +15,7 @@ export type RightPanelTab = Readonly<{
 	value: string;
 	label: ReactNode;
 	content: ReactNode;
+	keepMounted?: boolean;
 }>;
 
 export function RightPanel({
@@ -26,6 +27,7 @@ export function RightPanel({
 }) {
 	const dragStart = useRef<{ pointerX: number; panelWidth: number } | null>(null);
 	const [panelWidth, setPanelWidth] = useState(DEFAULT_RIGHT_PANEL_WIDTH);
+	const [activeTab, setActiveTab] = useState(defaultValue);
 
 	function resizePanel(width: number) {
 		setPanelWidth(clampRightPanelWidth(width));
@@ -79,7 +81,7 @@ export function RightPanel({
 				onPointerCancel={stopResize}
 				onKeyDown={resizeWithKeyboard}
 			/>
-			<Tabs defaultValue={defaultValue} className="h-full flex flex-col">
+			<Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
 				<TabsList variant="line" className="w-full px-1 pt-1">
 					{tabs.map((tab) => (
 						<TabsTrigger key={tab.value} value={tab.value}>
@@ -91,6 +93,8 @@ export function RightPanel({
 					<TabsContent
 						key={tab.value}
 						value={tab.value}
+						forceMount={tab.keepMounted}
+						hidden={activeTab !== tab.value}
 						className="min-h-0 flex-1 overflow-hidden p-0"
 					>
 						{tab.content}

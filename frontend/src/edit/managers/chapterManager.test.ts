@@ -20,6 +20,7 @@ const getters: NovelGetters = {
 	labelGroupIds: unusedGetter,
 	chapterIds: unusedGetter,
 	chapterIdFromServerId: unusedGetter,
+	chapterServerId: unusedGetter,
 	chapterContentIdFromServerId: unusedGetter,
 	labelIdFromServerId: unusedGetter,
 	chapterGetterSlot: unusedGetter,

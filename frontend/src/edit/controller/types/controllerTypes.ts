@@ -69,6 +69,7 @@ export interface NovelGetters {
 	labelGroupIds: () => Effect.Effect<readonly LGProvId[]>;
 	chapterIds: () => Effect.Effect<readonly CProvId[]>;
 	chapterIdFromServerId: (chapterId: CServId) => Effect.Effect<CProvId | null>;
+	chapterServerId: (chapterId: CProvId) => Effect.Effect<CServId | null>;
 	chapterContentIdFromServerId: (chapterContentId: CCServId) => Effect.Effect<CCProvId | null>;
 	labelIdFromServerId: (labelId: LServId) => Effect.Effect<LProvId | null>;
 	chapterGetterSlot: (chapterId: CProvId) => Effect.Effect<ChapterGetterSlot, NotFoundException>;

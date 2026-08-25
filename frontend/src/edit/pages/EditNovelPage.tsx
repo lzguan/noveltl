@@ -34,6 +34,7 @@ import type { Role } from "@/api/models/role";
 import { LoaderCircle } from "lucide-react";
 import { ChapterTabs } from "../panels/chapters/ChapterTabs";
 import { FiltersPanel } from "../panels/filters/FiltersPanel";
+import { MemoryPanel } from "../panels/memory/MemoryPanel";
 import type { NovelGetters } from "../controller/types/controllerTypes";
 
 function makeProvChapter(chapter: Chapter, chapterId: ProvChapter["chapterId"]): ProvChapter {
@@ -270,6 +271,10 @@ export function EditNovelPage() {
 	}
 
 	const currentChapterId = chapterState.activeChapterId;
+	const activeChapterServerId =
+		currentChapterId === null
+			? null
+			: Effect.runSync(managers.controllerGetters.chapterServerId(currentChapterId));
 
 	return (
 		<div className="relative h-full min-h-0">
@@ -318,6 +323,7 @@ export function EditNovelPage() {
 								{
 									value: "auto-labels",
 									label: "Auto Labels",
+									keepMounted: true,
 									content: (
 										<AutoLabelPanel
 											autoLabels={autoLabels}
@@ -338,6 +344,7 @@ export function EditNovelPage() {
 								{
 									value: "filters",
 									label: "Filters",
+									keepMounted: true,
 									content: (
 										<FiltersPanel
 											key={novel.novel.novelId}
@@ -356,6 +363,18 @@ export function EditNovelPage() {
 												}
 												managers.chapterMgr.switchChapter(pid, ref);
 											}}
+										/>
+									),
+								},
+								{
+									value: "memories",
+									label: "Memories",
+									keepMounted: true,
+									content: (
+										<MemoryPanel
+											key={novel.novel.novelId}
+											novelId={novel.novel.novelId}
+											chapterId={activeChapterServerId}
 										/>
 									),
 								},

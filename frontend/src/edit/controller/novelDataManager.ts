@@ -129,6 +129,10 @@ export const buildNovelDataManager = (
 			chapterIds: () => chaptersIndex.getIds(),
 			chapterIdFromServerId: (chapterId) =>
 				idRepo.queryProvId({ kind: "chapter", servId: chapterId }),
+			chapterServerId: (chapterId) =>
+				idRepo
+					.getServerId({ kind: "chapter", provId: chapterId })
+					.pipe(Effect.catchAll(() => Effect.succeed(null))),
 			chapterContentIdFromServerId: (chapterContentId) =>
 				idRepo.queryProvId({ kind: "chapterContent", servId: chapterContentId }),
 			labelIdFromServerId: (labelId) =>

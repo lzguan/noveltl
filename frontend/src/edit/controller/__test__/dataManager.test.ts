@@ -1168,6 +1168,19 @@ describe("buildChapterDataManager", () => {
 });
 
 describe("buildNovelDataManager chapter eviction", () => {
+	it("exposes the server id for a tracked chapter", () => {
+		const novelDM = Effect.runSync(
+			buildNovelDataManager(
+				() => Effect.succeed(makeNovelDataWithoutLabelGroups()),
+				() => Effect.succeed(void 0),
+				buildIdRepository(),
+			),
+		);
+		const chapterId = Effect.runSync(novelDM.getters.chapterIds())[0];
+
+		expect(Effect.runSync(novelDM.getters.chapterServerId(chapterId))).toBe(UUID1);
+	});
+
 	it("evicts a ready chapter and allows a fresh reopen", async () => {
 		const triggerEvents: TriggerEvent[] = [];
 		const novelDM = Effect.runSync(

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -9,7 +10,7 @@ from src.memory.access import MemAccessContext, write_memory
 from src.memory.models import MemoryGroup
 from src.memory.plugins.glossary.access import contains_query, create_memory, create_term
 from src.memory.plugins.glossary.models import GlossaryAssociation
-from src.memory.plugins.glossary.service import query_glossary_terms
+from src.memory.plugins.glossary.service import query_glossary_terms, query_memories_for_term
 from src.memory.types import Creator, MemoryType, Scope
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, ChapterContent, Novel, SourceWork
@@ -20,6 +21,7 @@ class GlossaryQueryScenario:
     admin: User
     chapter: Chapter
     memory_group: MemoryGroup
+    alpha_term_id: UUID
 
 
 def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
@@ -133,7 +135,12 @@ def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
     )
     db.add(GlossaryAssociation(term_id=terms["Alpha"].term_id, memory_id=other_plugin_memory.memory_id))
     db.commit()
-    return GlossaryQueryScenario(admin=admin, chapter=current_chapter, memory_group=memory_group)
+    return GlossaryQueryScenario(
+        admin=admin,
+        chapter=current_chapter,
+        memory_group=memory_group,
+        alpha_term_id=terms["Alpha"].term_id,
+    )
 
 
 def test_glossary_terms_are_ordered_by_all_associated_glossary_memories(test_db: Session) -> None:
@@ -194,4 +201,30 @@ def test_glossary_term_search_and_pagination_apply_after_count_ordering(test_db:
     assert [(row.term, row.associated_memory_count) for row in page.rows] == [
         ("Alpha", 2),
         ("Beta", 0),
+    ]
+
+
+def test_memories_for_term_can_be_scoped_to_active_memories_at_a_chapter(
+    test_db: Session,
+) -> None:
+    scenario = _seed_glossary_query_scenario(test_db)
+
+    all_memories = query_memories_for_term(
+        test_db,
+        scenario.admin,
+        scenario.memory_group.memory_group_id,
+        scenario.alpha_term_id,
+    )
+    active_memories = query_memories_for_term(
+        test_db,
+        scenario.admin,
+        scenario.memory_group.memory_group_id,
+        scenario.alpha_term_id,
+        chapter_id=scenario.chapter.chapter_id,
+    )
+
+    assert all_memories.count == 2
+    assert active_memories.count == 1
+    assert [row.memory.memory_content for row in active_memories.rows] == [
+        "Alpha has one persistent memory."
     ]

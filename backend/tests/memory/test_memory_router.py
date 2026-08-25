@@ -106,3 +106,14 @@ def test_memory_delete_contract_has_no_response_body() -> None:
 
     assert set(operation["responses"]) == {"204", "404", "422"}
     assert "content" not in operation["responses"]["204"]
+
+
+def test_memories_for_term_contract_supports_chapter_scope() -> None:
+    operation = app.openapi()["paths"][
+        "/memory-groups/{memoryGroupId}/glossary/terms/{termId}/memories"
+    ]["get"]
+
+    query_parameters = {
+        parameter["name"] for parameter in operation["parameters"] if parameter["in"] == "query"
+    }
+    assert query_parameters == {"skip", "limit", "chapterId"}

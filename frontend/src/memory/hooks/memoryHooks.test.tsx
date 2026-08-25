@@ -254,7 +254,9 @@ describe("memory hooks", () => {
 				data: { count: 11, rows: [glossaryMemory("memory-11")] },
 				headers: new Headers(),
 			});
-		const { result } = renderHook(() => useTermMemories("group-1", "term-1"));
+		const { result } = renderHook(() =>
+			useTermMemories("group-1", "term-1", "chapter-1"),
+		);
 
 		expect(
 			readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet,
@@ -272,7 +274,11 @@ describe("memory hooks", () => {
 		).toHaveBeenLastCalledWith(
 			"group-1",
 			"term-1",
-			{ skip: TERM_MEMORY_PAGE_SIZE, limit: TERM_MEMORY_PAGE_SIZE },
+			{
+				skip: TERM_MEMORY_PAGE_SIZE,
+				limit: TERM_MEMORY_PAGE_SIZE,
+				chapterId: "chapter-1",
+			},
 			expect.objectContaining({ signal: expect.any(AbortSignal) }),
 		);
 	});

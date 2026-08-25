@@ -219,7 +219,21 @@ def query_memories_for_term(
     term_id: UUID,
     skip: int = 0,
     limit: int = 100,
+    *,
+    chapter_id: UUID | None = None,
 ) -> GlossaryMemoryPage:
+    chapter_num: int | None = None
+    if chapter_id is not None:
+        chapter_query = (
+            select(Chapter.chapter_num)
+            .join(MemoryGroup, MemoryGroup.novel_id == Chapter.novel_id)
+            .where(Chapter.chapter_id == chapter_id, MemoryGroup.memory_group_id == memory_group_id)
+        )
+        chapter_query = memory_group_mod_access_select(chapter_query, user)
+        try:
+            chapter_num = db.execute(chapter_query).scalar_one()
+        except NoResultFound as e:
+            raise ChapterNotFoundException from e
     term_query = glossary_term_mod_access_select(
         select(GlossaryTerm).where(
             GlossaryTerm.term_id == term_id,
@@ -242,6 +256,11 @@ def query_memories_for_term(
                 Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
             )
         )
+        if chapter_num is not None:
+            query = query.where(
+                Memory.memory_start_num <= chapter_num,
+                or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chapter_num),
+            )
         return memory_mod_access_select(query, user)
 
     count = db.execute(apply_filters(select(func.count(Memory.memory_id)))).scalar_one()

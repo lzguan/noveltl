@@ -30,7 +30,7 @@ export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneChunkSize
 
 export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneForceChunkDefault = false;
 export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneModelNameDefault = `cluener`;
-export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 } as const;
+export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 };
 export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsTwoModelNameDefault = `do_nothing`;
 
 export const ReadAutoLabelRunsAutoLabelRunsGet200ResponseItem = S.Struct({
@@ -61,8 +61,6 @@ export const ReadAutoLabelRunsAutoLabelRunsGet422Response = S.Struct({
   "type": S.String
 })))
 })
-
-
 /**
  * Get autolabel metadata for all autolabels in a run.
  *
@@ -123,7 +121,7 @@ export const createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeMax = 512;
 
 export const createAutolabelsAutoLabelsPostBodyParamsOneForceChunkDefault = false;
 export const createAutolabelsAutoLabelsPostBodyParamsOneModelNameDefault = `cluener`;
-export const createAutolabelsAutoLabelsPostBodyParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 } as const;
+export const createAutolabelsAutoLabelsPostBodyParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 };
 export const createAutolabelsAutoLabelsPostBodyParamsTwoModelNameDefault = `do_nothing`;
 
 export const CreateAutolabelsAutoLabelsPostBody = S.Struct({
@@ -148,7 +146,7 @@ export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneChunkSize
 
 export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneForceChunkDefault = false;
 export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneModelNameDefault = `cluener`;
-export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 } as const;
+export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneSeparatorsDefault = { "\n": 1, "!": 2, ",": 3, ".": 2, ":": 3, ";": 3, "?": 2, "。": 2, "！": 2, "，": 3, "：": 3, "；": 3, "？": 2 };
 export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsTwoModelNameDefault = `do_nothing`;
 
 export const CreateAutolabelsAutoLabelsPost200Response = S.Struct({
@@ -2192,7 +2190,8 @@ export const readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemo
 
 export const ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryParams = S.Struct({
   "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQuerySkipMin)), { default: () => readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQuerySkipDefault }),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryLimitMax)), { default: () => readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryLimitDefault })
+  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryLimitMax)), { default: () => readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryLimitDefault }),
+  "chapterId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
 })
 
 export const readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet200ResponseCountMin = 0;

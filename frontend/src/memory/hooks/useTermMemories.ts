@@ -7,7 +7,7 @@ import { useCallback, useRef, useState } from "react";
 export const TERM_MEMORY_PAGE_SIZE = 10;
 
 /** Owns lazy loading and pagination for the memories expanded beneath one glossary term. */
-export function useTermMemories(memoryGroupId: string, termId: string) {
+export function useTermMemories(memoryGroupId: string, termId: string, chapterId: string | null) {
 	const [skip, setSkip] = useState(0);
 	const [memories, setMemories] = useState<Loadable<Page<GlossaryMemory>>>({ status: "idle" });
 	const activeRequest = useRef<AbortController | null>(null);
@@ -23,7 +23,11 @@ export function useTermMemories(memoryGroupId: string, termId: string) {
 			void readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet(
 				memoryGroupId,
 				termId,
-				{ skip: nextSkip, limit: TERM_MEMORY_PAGE_SIZE },
+				{
+					skip: nextSkip,
+					limit: TERM_MEMORY_PAGE_SIZE,
+					chapterId: chapterId ?? undefined,
+				},
 				{ signal: controller.signal },
 			)
 				.then((response) => {
@@ -52,7 +56,7 @@ export function useTermMemories(memoryGroupId: string, termId: string) {
 					if (activeRequest.current === controller) activeRequest.current = null;
 				});
 		},
-		[memoryGroupId, termId],
+		[chapterId, memoryGroupId, termId],
 	);
 
 	const loadMemories = useCallback(() => loadPage(skip), [loadPage, skip]);

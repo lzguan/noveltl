@@ -6116,6 +6116,15 @@ paths:
           minimum: 1
           title: Limit
           type: integer
+      - in: query
+        name: chapterId
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Chapterid
       responses:
         '200':
           content:

@@ -139,11 +139,22 @@ def read_memories_for_term(
     current_user: Annotated[User | None, Depends(get_optional_user)],
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
+    chapter_id: Annotated[UUID | None, Query(alias="chapterId")] = None,
 ):
     try:
-        return query_memories_for_term(db, current_user, memory_group_id, term_id, skip, limit)
+        return query_memories_for_term(
+            db,
+            current_user,
+            memory_group_id,
+            term_id,
+            skip,
+            limit,
+            chapter_id=chapter_id,
+        )
     except GlossaryTermNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Glossary term not found.") from e
+    except ChapterNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found.") from e
 
 
 @router.get(

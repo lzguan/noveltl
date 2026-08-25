@@ -265,11 +265,17 @@ export const getCreateAutolabelsAutoLabelsPostUrl = (params?: CreateAutolabelsAu
 export const createAutolabelsAutoLabelsPost = async (createAutoLabels: CreateAutoLabels,
     params?: CreateAutolabelsAutoLabelsPostParams, options?: Parameters<typeof customFetch>[1]): Promise<createAutolabelsAutoLabelsPostResponse> => {
 
-  return customFetch<createAutolabelsAutoLabelsPostResponse>(getCreateAutolabelsAutoLabelsPostUrl(params),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createAutolabelsAutoLabelsPostResponse>(getCreateAutolabelsAutoLabelsPostUrl(params),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createAutoLabels)
   }
 );}
@@ -673,11 +679,17 @@ export const getUpdateChapterChaptersChapterIdPatchUrl = (chapterId: string,) =>
 export const updateChapterChaptersChapterIdPatch = async (chapterId: string,
     updateChapter: UpdateChapter, options?: Parameters<typeof customFetch>[1]): Promise<updateChapterChaptersChapterIdPatchResponse> => {
 
-  return customFetch<updateChapterChaptersChapterIdPatchResponse>(getUpdateChapterChaptersChapterIdPatchUrl(chapterId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateChapterChaptersChapterIdPatchResponse>(getUpdateChapterChaptersChapterIdPatchUrl(chapterId),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateChapter)
   }
 );}
@@ -794,11 +806,17 @@ export const updateChapterContentChaptersChapterIdContentPatch = async (chapterI
     updateChapterContent: UpdateChapterContent,
     params?: UpdateChapterContentChaptersChapterIdContentPatchParams, options?: Parameters<typeof customFetch>[1]): Promise<updateChapterContentChaptersChapterIdContentPatchResponse> => {
 
-  return customFetch<updateChapterContentChaptersChapterIdContentPatchResponse>(getUpdateChapterContentChaptersChapterIdContentPatchUrl(chapterId,params),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateChapterContentChaptersChapterIdContentPatchResponse>(getUpdateChapterContentChaptersChapterIdContentPatchUrl(chapterId,params),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateChapterContent)
   }
 );}
@@ -995,11 +1013,17 @@ export const readEditChapterDataEditChapterDataChapterIdPost = async (chapterId:
     readEditChapterDataEditChapterDataChapterIdPostBody: string[],
     params?: ReadEditChapterDataEditChapterDataChapterIdPostParams, options?: Parameters<typeof customFetch>[1]): Promise<readEditChapterDataEditChapterDataChapterIdPostResponse> => {
 
-  return customFetch<readEditChapterDataEditChapterDataChapterIdPostResponse>(getReadEditChapterDataEditChapterDataChapterIdPostUrl(chapterId,params),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<readEditChapterDataEditChapterDataChapterIdPostResponse>(getReadEditChapterDataEditChapterDataChapterIdPostUrl(chapterId,params),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(readEditChapterDataEditChapterDataChapterIdPostBody)
   }
 );}
@@ -1053,11 +1077,17 @@ export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost = asy
     readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostBody: string[],
     params?: ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostParams, options?: Parameters<typeof customFetch>[1]): Promise<readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse> => {
 
-  return customFetch<readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse>(getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostUrl(chapterId,params),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse>(getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostUrl(chapterId,params),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostBody)
   }
 );}
@@ -1222,11 +1252,17 @@ export const updateLabelDataStreamLabelDatasLabelDataIdPatch = async (labelDataI
     updateLabelDataStream: UpdateLabelDataStream,
     params?: UpdateLabelDataStreamLabelDatasLabelDataIdPatchParams, options?: Parameters<typeof customFetch>[1]): Promise<updateLabelDataStreamLabelDatasLabelDataIdPatchResponse> => {
 
-  return customFetch<updateLabelDataStreamLabelDatasLabelDataIdPatchResponse>(getUpdateLabelDataStreamLabelDatasLabelDataIdPatchUrl(labelDataId,params),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateLabelDataStreamLabelDatasLabelDataIdPatchResponse>(getUpdateLabelDataStreamLabelDatasLabelDataIdPatchUrl(labelDataId,params),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateLabelDataStream)
   }
 );}
@@ -1385,11 +1421,17 @@ export const getCreateLabelGroupLabelGroupsPostUrl = (params?: CreateLabelGroupL
 export const createLabelGroupLabelGroupsPost = async (createLabelGroup: CreateLabelGroup,
     params?: CreateLabelGroupLabelGroupsPostParams, options?: Parameters<typeof customFetch>[1]): Promise<createLabelGroupLabelGroupsPostResponse> => {
 
-  return customFetch<createLabelGroupLabelGroupsPostResponse>(getCreateLabelGroupLabelGroupsPostUrl(params),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createLabelGroupLabelGroupsPostResponse>(getCreateLabelGroupLabelGroupsPostUrl(params),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createLabelGroup)
   }
 );}
@@ -1529,11 +1571,17 @@ export const getUpdateLabelGroupLabelGroupsLabelGroupIdPatchUrl = (labelGroupId:
 export const updateLabelGroupLabelGroupsLabelGroupIdPatch = async (labelGroupId: string,
     updateLabelGroup: UpdateLabelGroup, options?: Parameters<typeof customFetch>[1]): Promise<updateLabelGroupLabelGroupsLabelGroupIdPatchResponse> => {
 
-  return customFetch<updateLabelGroupLabelGroupsLabelGroupIdPatchResponse>(getUpdateLabelGroupLabelGroupsLabelGroupIdPatchUrl(labelGroupId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateLabelGroupLabelGroupsLabelGroupIdPatchResponse>(getUpdateLabelGroupLabelGroupsLabelGroupIdPatchUrl(labelGroupId),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateLabelGroup)
   }
 );}
@@ -1639,11 +1687,17 @@ export const createLabelDataLabelGroupsLabelGroupIdLabelDatasPost = async (label
     createLabelData: CreateLabelData,
     params?: CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostParams, options?: Parameters<typeof customFetch>[1]): Promise<createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse> => {
 
-  return customFetch<createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse>(getCreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostUrl(labelGroupId,params),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse>(getCreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostUrl(labelGroupId,params),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createLabelData)
   }
 );}
@@ -1702,11 +1756,17 @@ export const createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLa
     createLabelDataByAutoLabel: CreateLabelDataByAutoLabel,
     params?: CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostParams, options?: Parameters<typeof customFetch>[1]): Promise<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse> => {
 
-  return customFetch<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse>(getCreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostUrl(labelGroupId,params),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse>(getCreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostUrl(labelGroupId,params),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createLabelDataByAutoLabel)
   }
 );}
@@ -1973,11 +2033,17 @@ export const getEditMemoryContentMemoriesMemoryIdContentPatchUrl = (memoryId: st
 export const editMemoryContentMemoriesMemoryIdContentPatch = async (memoryId: string,
     updateMemoryContent: UpdateMemoryContent, options?: Parameters<typeof customFetch>[1]): Promise<editMemoryContentMemoriesMemoryIdContentPatchResponse> => {
 
-  return customFetch<editMemoryContentMemoriesMemoryIdContentPatchResponse>(getEditMemoryContentMemoriesMemoryIdContentPatchUrl(memoryId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<editMemoryContentMemoriesMemoryIdContentPatchResponse>(getEditMemoryContentMemoriesMemoryIdContentPatchUrl(memoryId),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateMemoryContent)
   }
 );}
@@ -2021,11 +2087,17 @@ export const getEditMemoryExpirationMemoriesMemoryIdExpirationPatchUrl = (memory
 export const editMemoryExpirationMemoriesMemoryIdExpirationPatch = async (memoryId: string,
     expireMemory: ExpireMemory, options?: Parameters<typeof customFetch>[1]): Promise<editMemoryExpirationMemoriesMemoryIdExpirationPatchResponse> => {
 
-  return customFetch<editMemoryExpirationMemoriesMemoryIdExpirationPatchResponse>(getEditMemoryExpirationMemoriesMemoryIdExpirationPatchUrl(memoryId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<editMemoryExpirationMemoriesMemoryIdExpirationPatchResponse>(getEditMemoryExpirationMemoriesMemoryIdExpirationPatchUrl(memoryId),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(expireMemory)
   }
 );}
@@ -2069,11 +2141,17 @@ export const getEditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchUrl = (me
 export const editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch = async (memoryId: string,
     updateReviewStatus: UpdateReviewStatus, options?: Parameters<typeof customFetch>[1]): Promise<editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchResponse> => {
 
-  return customFetch<editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchResponse>(getEditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchUrl(memoryId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchResponse>(getEditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchUrl(memoryId),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateReviewStatus)
   }
 );}
@@ -2165,11 +2243,17 @@ export const getAddMemoryGroupMemoryGroupsPostUrl = () => {
  */
 export const addMemoryGroupMemoryGroupsPost = async (createMemoryGroup: CreateMemoryGroup, options?: Parameters<typeof customFetch>[1]): Promise<addMemoryGroupMemoryGroupsPostResponse> => {
 
-  return customFetch<addMemoryGroupMemoryGroupsPostResponse>(getAddMemoryGroupMemoryGroupsPostUrl(),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<addMemoryGroupMemoryGroupsPostResponse>(getAddMemoryGroupMemoryGroupsPostUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createMemoryGroup)
   }
 );}
@@ -2409,11 +2493,17 @@ export const getAddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostUr
 export const addGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost = async (memoryGroupId: string,
     createGlossaryMemory: CreateGlossaryMemory, options?: Parameters<typeof customFetch>[1]): Promise<addGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostResponse> => {
 
-  return customFetch<addGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostResponse>(getAddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostUrl(memoryGroupId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<addGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostResponse>(getAddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostUrl(memoryGroupId),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createGlossaryMemory)
   }
 );}
@@ -2508,11 +2598,17 @@ export const replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemories
     memoryId: string,
     replaceGlossaryAssociations: ReplaceGlossaryAssociations, options?: Parameters<typeof customFetch>[1]): Promise<replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPutResponse> => {
 
-  return customFetch<replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPutResponse>(getReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPutUrl(memoryGroupId,memoryId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPutResponse>(getReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPutUrl(memoryGroupId,memoryId),
   {
     ...options,
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(replaceGlossaryAssociations)
   }
 );}
@@ -2625,11 +2721,17 @@ export const getAddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostUrl = (
 export const addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost = async (memoryGroupId: string,
     createGlossaryTerm: CreateGlossaryTerm, options?: Parameters<typeof customFetch>[1]): Promise<addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostResponse> => {
 
-  return customFetch<addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostResponse>(getAddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostUrl(memoryGroupId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostResponse>(getAddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostUrl(memoryGroupId),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createGlossaryTerm)
   }
 );}
@@ -2729,11 +2831,17 @@ export const editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch =
     termId: string,
     updateGlossaryTerm: UpdateGlossaryTerm, options?: Parameters<typeof customFetch>[1]): Promise<editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchResponse> => {
 
-  return customFetch<editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchResponse>(getEditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchUrl(memoryGroupId,termId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchResponse>(getEditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchUrl(memoryGroupId,termId),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateGlossaryTerm)
   }
 );}
@@ -2837,11 +2945,17 @@ export const editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsT
     termId: string,
     updateReviewStatus: UpdateReviewStatus, options?: Parameters<typeof customFetch>[1]): Promise<editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatchResponse> => {
 
-  return customFetch<editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatchResponse>(getEditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatchUrl(memoryGroupId,termId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatchResponse>(getEditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatchUrl(memoryGroupId,termId),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateReviewStatus)
   }
 );}
@@ -2993,11 +3107,17 @@ export const getCreateNovelNovelsPostUrl = () => {
  */
 export const createNovelNovelsPost = async (createNovel: CreateNovel, options?: Parameters<typeof customFetch>[1]): Promise<createNovelNovelsPostResponse> => {
 
-  return customFetch<createNovelNovelsPostResponse>(getCreateNovelNovelsPostUrl(),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createNovelNovelsPostResponse>(getCreateNovelNovelsPostUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createNovel)
   }
 );}
@@ -3138,11 +3258,17 @@ export const getUpdateNovelNovelsNovelIdPatchUrl = (novelId: string,) => {
 export const updateNovelNovelsNovelIdPatch = async (novelId: string,
     updateNovel: UpdateNovel, options?: Parameters<typeof customFetch>[1]): Promise<updateNovelNovelsNovelIdPatchResponse> => {
 
-  return customFetch<updateNovelNovelsNovelIdPatchResponse>(getUpdateNovelNovelsNovelIdPatchUrl(novelId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateNovelNovelsNovelIdPatchResponse>(getUpdateNovelNovelsNovelIdPatchUrl(novelId),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateNovel)
   }
 );}
@@ -3187,11 +3313,17 @@ export const getCreateChapterNovelsNovelIdChaptersPostUrl = (novelId: string,) =
 export const createChapterNovelsNovelIdChaptersPost = async (novelId: string,
     createChapter: CreateChapter, options?: Parameters<typeof customFetch>[1]): Promise<createChapterNovelsNovelIdChaptersPostResponse> => {
 
-  return customFetch<createChapterNovelsNovelIdChaptersPostResponse>(getCreateChapterNovelsNovelIdChaptersPostUrl(novelId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createChapterNovelsNovelIdChaptersPostResponse>(getCreateChapterNovelsNovelIdChaptersPostUrl(novelId),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createChapter)
   }
 );}
@@ -3281,11 +3413,17 @@ export const getRegisterUserRegisterPostUrl = () => {
  */
 export const registerUserRegisterPost = async (createUser: CreateUser, options?: Parameters<typeof customFetch>[1]): Promise<registerUserRegisterPostResponse> => {
 
-  return customFetch<registerUserRegisterPostResponse>(getRegisterUserRegisterPostUrl(),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<registerUserRegisterPostResponse>(getRegisterUserRegisterPostUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createUser)
   }
 );}
@@ -3377,11 +3515,17 @@ export const getCreateSourceWorkSourceWorksPostUrl = () => {
  */
 export const createSourceWorkSourceWorksPost = async (createSourceWork: CreateSourceWork, options?: Parameters<typeof customFetch>[1]): Promise<createSourceWorkSourceWorksPostResponse> => {
 
-  return customFetch<createSourceWorkSourceWorksPostResponse>(getCreateSourceWorkSourceWorksPostUrl(),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createSourceWorkSourceWorksPostResponse>(getCreateSourceWorkSourceWorksPostUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createSourceWork)
   }
 );}
@@ -3472,11 +3616,17 @@ export const getUpdateSourceWorkSourceWorksSourceWorkIdPatchUrl = (sourceWorkId:
 export const updateSourceWorkSourceWorksSourceWorkIdPatch = async (sourceWorkId: string,
     updateSourceWork: UpdateSourceWork, options?: Parameters<typeof customFetch>[1]): Promise<updateSourceWorkSourceWorksSourceWorkIdPatchResponse> => {
 
-  return customFetch<updateSourceWorkSourceWorksSourceWorkIdPatchResponse>(getUpdateSourceWorkSourceWorksSourceWorkIdPatchUrl(sourceWorkId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateSourceWorkSourceWorksSourceWorkIdPatchResponse>(getUpdateSourceWorkSourceWorksSourceWorkIdPatchUrl(sourceWorkId),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateSourceWork)
   }
 );}
@@ -3585,11 +3735,17 @@ if(bodyLoginForAccessTokenTokenPost.scope !== undefined) {
  }
 formUrlEncoded.append(`username`, bodyLoginForAccessTokenTokenPost.username);
 
-  return customFetch<loginForAccessTokenTokenPostResponse>(getLoginForAccessTokenTokenPostUrl(),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<loginForAccessTokenTokenPostResponse>(getLoginForAccessTokenTokenPostUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...options?.headers },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...getHeaders(options?.headers) },
     body: formUrlEncoded
   }
 );}
@@ -3633,11 +3789,17 @@ export const getCreateUserUsersPostUrl = () => {
  */
 export const createUserUsersPost = async (createUser: CreateUser, options?: Parameters<typeof customFetch>[1]): Promise<createUserUsersPostResponse> => {
 
-  return customFetch<createUserUsersPostResponse>(getCreateUserUsersPostUrl(),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createUserUsersPostResponse>(getCreateUserUsersPostUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createUser)
   }
 );}

@@ -5392,6 +5392,23 @@
             }
           },
           {
+            "name": "chapterId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Chapterid"
+            }
+          },
+          {
             "name": "search",
             "in": "query",
             "required": false,
@@ -5433,10 +5450,20 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_GlossaryTerm_"
+                  "$ref": "#/components/schemas/Page_GlossaryTermSummary_"
                 }
               }
             }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
           },
           "422": {
             "description": "Validation Error",
@@ -7489,6 +7516,39 @@
         "title": "GlossaryTerm",
         "description": "A glossary term represented as context for an agent."
       },
+      "GlossaryTermSummary": {
+        "properties": {
+          "termId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Termid",
+            "description": "Stable identifier for the glossary term."
+          },
+          "term": {
+            "type": "string",
+            "title": "Term",
+            "description": "Term exactly as it appears in the novel's source text."
+          },
+          "reviewStatus": {
+            "$ref": "#/components/schemas/ReviewStatus",
+            "description": "Human-review state of the term. Pending terms are unverified; approved terms are verified."
+          },
+          "associatedMemoryCount": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Associatedmemorycount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "termId",
+          "term",
+          "reviewStatus",
+          "associatedMemoryCount"
+        ],
+        "title": "GlossaryTermSummary",
+        "description": "A glossary term together with its associated-memory count in the requested scope."
+      },
       "GroupData-Input": {
         "oneOf": [
           {
@@ -8772,7 +8832,7 @@
         ],
         "title": "Page[GlossaryMemory]"
       },
-      "Page_GlossaryTerm_": {
+      "Page_GlossaryTermSummary_": {
         "properties": {
           "count": {
             "type": "integer",
@@ -8781,7 +8841,7 @@
           },
           "rows": {
             "items": {
-              "$ref": "#/components/schemas/GlossaryTerm"
+              "$ref": "#/components/schemas/GlossaryTermSummary"
             },
             "type": "array",
             "title": "Rows"
@@ -8792,7 +8852,7 @@
           "count",
           "rows"
         ],
-        "title": "Page[GlossaryTerm]"
+        "title": "Page[GlossaryTermSummary]"
       },
       "PluginName": {
         "type": "string",

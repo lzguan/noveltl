@@ -54,7 +54,7 @@ import type {
   OperationStatus,
   OpsResult,
   PageGlossaryMemory,
-  PageGlossaryTerm,
+  PageGlossaryTermSummary,
   ReadAutoLabelRunsAutoLabelRunsGetParams,
   ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetParams,
   ReadChaptersByNovelChaptersGetParams,
@@ -2471,8 +2471,13 @@ export const replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemories
 
 
 export type readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetResponse200 = {
-  data: PageGlossaryTerm
+  data: PageGlossaryTermSummary
   status: 200
+}
+
+export type readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
 }
 
 export type readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetResponse422 = {
@@ -2483,7 +2488,7 @@ export type readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetResponse42
 export type readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetResponseSuccess = (readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetResponse200) & {
   headers: Headers;
 };
-export type readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetResponseError = (readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetResponse422) & {
+export type readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetResponseError = (readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetResponse404 | readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetResponse422) & {
   headers: Headers;
 };
 

@@ -127,7 +127,7 @@ The Glossary view presents terms as a searchable, paginated accordion.
 
 `Show all terms` is off by default.
 
-- Off: show terms associated with memories active in the currently open
+- Off: show terms occurring in the most recent content of the currently open
   chapter.
 - On: show every term in the selected memory group.
 

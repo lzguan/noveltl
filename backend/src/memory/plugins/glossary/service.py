@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
@@ -16,7 +16,7 @@ from src.memory.exceptions import (
 from src.memory.models import Memory, MemoryGroup
 from src.memory.permissions import memory_group_mod_access_select, memory_mod_access_select
 from src.memory.plugins.glossary import access
-from src.memory.plugins.glossary.access import GLOSSARY_PLUGIN_NAME
+from src.memory.plugins.glossary.access import GLOSSARY_PLUGIN_NAME, ContainsQuery
 from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
 from src.memory.plugins.glossary.permissions import (
     glossary_term_mod_access_delete,
@@ -27,9 +27,13 @@ from src.memory.plugins.glossary.schemas import (
     GlossaryMemory,
     GlossaryMemoryPage,
     GlossaryTermPage,
+    GlossaryTermSummary,
 )
 from src.memory.schemas import Memory as MemorySchema
 from src.memory.types import Creator, MemoryType, ReviewStatus, Scope
+from src.novels.exceptions import ChapterNotFoundException
+from src.novels.models import Chapter, ChapterContent
+from src.novels.service import query_chapter_content_by_most_recent
 
 
 def _query_editable_group(db: Session, user: User, memory_group_id: UUID) -> MemoryGroup:
@@ -118,15 +122,44 @@ def query_glossary_terms(
     db: Session,
     user: User | None,
     memory_group_id: UUID,
+    contains_query: ContainsQuery,
     skip: int = 0,
     limit: int = 100,
     *,
+    chapter_id: UUID | None = None,
     search: str | None = None,
     review_statuses: list[ReviewStatus] | None = None,
 ) -> GlossaryTermPage:
+    chapter_num: int | None = None
+    chapter_content_id: UUID | None = None
+    if chapter_id is not None:
+        chapter_query = (
+            select(Chapter.chapter_num)
+            .join(MemoryGroup, MemoryGroup.novel_id == Chapter.novel_id)
+            .where(Chapter.chapter_id == chapter_id, MemoryGroup.memory_group_id == memory_group_id)
+        )
+        chapter_query = memory_group_mod_access_select(chapter_query, user)
+        try:
+            chapter_num = db.execute(chapter_query).scalar_one()
+        except NoResultFound as e:
+            raise ChapterNotFoundException from e
+        chapter_content_id = query_chapter_content_by_most_recent(db, user, chapter_id).chapter_content_id
+
     def apply_filters(query):
         query = query.where(GlossaryTerm.memory_group_id == memory_group_id)
         query = glossary_term_mod_access_select(query, user)
+        if chapter_content_id is not None:
+            term_occurs_in_chapter = (
+                select(1)
+                .select_from(ChapterContent)
+                .where(
+                    ChapterContent.chapter_content_id == chapter_content_id,
+                    contains_query(ChapterContent.chapter_content_text, GlossaryTerm.term),
+                )
+                .correlate(GlossaryTerm)
+                .exists()
+            )
+            query = query.where(term_occurs_in_chapter)
         if search is not None:
             query = query.where(GlossaryTerm.term.contains(search))
         if review_statuses is not None:
@@ -134,15 +167,49 @@ def query_glossary_terms(
         return query
 
     count = db.execute(apply_filters(select(func.count(GlossaryTerm.term_id)))).scalar_one()
-    terms = list(
-        db.scalars(
-            apply_filters(select(GlossaryTerm))
-            .order_by(GlossaryTerm.term, GlossaryTerm.term_id)
-            .offset(skip)
-            .limit(limit)
-        ).all()
+
+    memory_count = func.count(Memory.memory_id).label("associated_memory_count")
+    memory_counts_query = (
+        select(GlossaryAssociation.term_id.label("term_id"), memory_count)
+        .join(Memory, Memory.memory_id == GlossaryAssociation.memory_id)
+        .where(
+            Memory.memory_group_id == memory_group_id,
+            Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
+        )
+        .group_by(GlossaryAssociation.term_id)
     )
-    return GlossaryTermPage(count=count, rows=terms)
+    memory_counts_query = memory_mod_access_select(memory_counts_query, user)
+    if chapter_num is not None:
+        memory_counts_query = memory_counts_query.where(
+            Memory.memory_start_num <= chapter_num,
+            or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chapter_num),
+        )
+    memory_counts = memory_counts_query.subquery()
+    associated_memory_count = func.coalesce(memory_counts.c.associated_memory_count, 0).label(
+        "associated_memory_count"
+    )
+    rows = db.execute(
+        apply_filters(
+            select(GlossaryTerm, associated_memory_count).outerjoin(
+                memory_counts, memory_counts.c.term_id == GlossaryTerm.term_id
+            )
+        )
+        .order_by(associated_memory_count.desc(), GlossaryTerm.term, GlossaryTerm.term_id)
+        .offset(skip)
+        .limit(limit)
+    ).all()
+    return GlossaryTermPage(
+        count=count,
+        rows=[
+            GlossaryTermSummary(
+                term_id=term.term_id,
+                term=term.term,
+                review_status=term.review_status,
+                associated_memory_count=associated_count,
+            )
+            for term, associated_count in rows
+        ],
+    )
 
 
 def query_memories_for_term(

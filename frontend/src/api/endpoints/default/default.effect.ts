@@ -1991,22 +1991,30 @@ export const readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQueryLimi
 export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQueryParams = S.Struct({
   "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQuerySkipMin)), { default: () => readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQuerySkipDefault }),
   "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQueryLimitMax)), { default: () => readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQueryLimitDefault }),
+  "chapterId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
   "search": S.optional(S.Union(S.String, S.Null)),
   "reviewStatuses": S.optional(S.Union(S.Array(S.Literal('pending', 'approved', 'rejected')), S.Null))
 })
 
 export const readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseCountMin = 0;
 
+export const readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseRowsItemAssociatedMemoryCountMin = 0;
+
 
 
 export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200Response = S.Struct({
   "count": S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseCountMin)),
   "rows": S.Array(S.Struct({
+  "associatedMemoryCount": S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseRowsItemAssociatedMemoryCountMin)),
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
   "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
-}).annotations({ description: 'A glossary term represented as context for an agent.' }))
+}).annotations({ description: 'A glossary term together with its associated-memory count in the requested scope.' }))
 })
+
+export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet404Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({

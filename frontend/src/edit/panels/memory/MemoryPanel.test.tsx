@@ -139,6 +139,16 @@ describe("MemoryPanel", () => {
 				expect.objectContaining({ signal: expect.any(AbortSignal) }),
 			),
 		);
+
+		fireEvent.click(screen.getByRole("button", { name: "Refresh memories" }));
+		await waitFor(() =>
+			expect(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet).toHaveBeenCalledTimes(3),
+		);
+		expect(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet).toHaveBeenLastCalledWith(
+			"group-1",
+			{ skip: 0, limit: 20, memoryTypes: ["event"] },
+			expect.objectContaining({ signal: expect.any(AbortSignal) }),
+		);
 	});
 
 	it("searches scoped terms and loads an expanded term independently", async () => {
@@ -177,6 +187,13 @@ describe("MemoryPanel", () => {
 			expect.objectContaining({ signal: expect.any(AbortSignal) }),
 		);
 
+		fireEvent.click(screen.getByRole("button", { name: "Refresh memories for 林凡" }));
+		await waitFor(() =>
+			expect(
+				readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet,
+			).toHaveBeenCalledTimes(2),
+		);
+
 		fireEvent.click(screen.getByRole("switch", { name: "Show all terms" }));
 		await waitFor(() =>
 			expect(
@@ -186,6 +203,17 @@ describe("MemoryPanel", () => {
 				{ skip: 0, limit: 20, chapterId: undefined, search: "Lin" },
 				expect.objectContaining({ signal: expect.any(AbortSignal) }),
 			),
+		);
+		expect(await screen.findByRole("button", { name: /林凡/ })).toHaveAttribute(
+			"aria-expanded",
+			"false",
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: "Refresh glossary terms" }));
+		await waitFor(() =>
+			expect(
+				readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
+			).toHaveBeenCalledTimes(4),
 		);
 	});
 });

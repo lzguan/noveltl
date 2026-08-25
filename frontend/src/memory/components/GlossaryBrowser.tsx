@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useGlossaryTerms } from "@/memory/hooks/useGlossaryTerms";
-import { useEffect } from "react";
+import { RefreshCwIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 import { GlossaryTermList } from "./GlossaryTermList";
 import { PageNavigation } from "./PageNavigation";
 
@@ -16,6 +17,7 @@ export function GlossaryBrowser({
 	chapterId: string | null;
 }) {
 	const glossary = useGlossaryTerms(memoryGroupId, chapterId);
+	const [openTermId, setOpenTermId] = useState<string | null>(null);
 
 	useEffect(() => {
 		// Mounting this keyed browser establishes a new group/chapter query context.
@@ -25,6 +27,11 @@ export function GlossaryBrowser({
 	}, []);
 
 	const nestedChapterId = glossary.showAllTerms ? null : chapterId;
+
+	function runOuterQuery(runQuery: () => void) {
+		setOpenTermId(null);
+		runQuery();
+	}
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
@@ -37,18 +44,33 @@ export function GlossaryBrowser({
 						id="glossary-term-search"
 						value={glossary.search}
 						placeholder="Search glossary terms"
-						onChange={(event) => glossary.setSearch(event.target.value)}
+						onChange={(event) =>
+							runOuterQuery(() => glossary.setSearch(event.target.value))
+						}
 					/>
 				</div>
 				<div className="flex items-center gap-2">
 					<Switch
 						id="glossary-show-all-terms"
 						checked={glossary.showAllTerms}
-						onCheckedChange={glossary.setShowAllTerms}
+						onCheckedChange={(showAllTerms) =>
+							runOuterQuery(() => glossary.setShowAllTerms(showAllTerms))
+						}
 					/>
 					<Label htmlFor="glossary-show-all-terms" className="text-xs">
 						Show all terms
 					</Label>
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						className="ml-auto"
+						aria-label="Refresh glossary terms"
+						title="Refresh glossary terms"
+						disabled={glossary.terms.status === "loading"}
+						onClick={() => runOuterQuery(glossary.reloadTerms)}
+					>
+						<RefreshCwIcon />
+					</Button>
 				</div>
 			</div>
 
@@ -64,7 +86,11 @@ export function GlossaryBrowser({
 			) : glossary.terms.status === "error" ? (
 				<div className="flex flex-col items-start gap-2 p-3 text-sm text-destructive">
 					<p>{glossary.terms.message}</p>
-					<Button variant="outline" size="sm" onClick={glossary.reloadTerms}>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => runOuterQuery(glossary.reloadTerms)}
+					>
 						Retry
 					</Button>
 				</div>
@@ -74,6 +100,8 @@ export function GlossaryBrowser({
 						terms={glossary.terms}
 						memoryGroupId={memoryGroupId}
 						chapterId={nestedChapterId}
+						openTermId={openTermId}
+						onOpenTermIdChange={setOpenTermId}
 					/>
 					{glossary.terms.status === "ready" && glossary.terms.data.items.length > 0 && (
 						<PageNavigation
@@ -82,8 +110,8 @@ export function GlossaryBrowser({
 							total={glossary.terms.data.total}
 							hasPrevious={glossary.terms.data.hasPrevious}
 							hasNext={glossary.terms.data.hasNext}
-							onPrevious={glossary.loadPreviousPage}
-							onNext={glossary.loadNextPage}
+							onPrevious={() => runOuterQuery(glossary.loadPreviousPage)}
+							onNext={() => runOuterQuery(glossary.loadNextPage)}
 						/>
 					)}
 				</>

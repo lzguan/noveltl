@@ -7,8 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Loadable, Page } from "@/lib/loadable";
 import { cn } from "@/lib/utils";
 import { useTermMemories } from "@/memory/hooks/useTermMemories";
-import { ChevronDownIcon } from "lucide-react";
-import { useState } from "react";
+import { ChevronDownIcon, RefreshCwIcon } from "lucide-react";
 import { MemoryRow } from "./MemoryRow";
 import { PageNavigation } from "./PageNavigation";
 
@@ -36,17 +35,32 @@ function GlossaryTermRow({
 
 	return (
 		<Collapsible open={open} onOpenChange={changeOpen} className="border-b">
-			<CollapsibleTrigger className="flex w-full items-center gap-2 px-2 py-2 text-left text-sm hover:bg-muted/50">
-				<ChevronDownIcon
-					className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")}
-				/>
-				<span className="min-w-0 flex-1 truncate font-medium">{term.term}</span>
-				<span className="whitespace-nowrap text-xs text-muted-foreground">
-					{term.associatedMemoryCount}{" "}
-					{term.associatedMemoryCount === 1 ? "memory" : "memories"}
-				</span>
-				<Badge variant="outline">{term.reviewStatus}</Badge>
-			</CollapsibleTrigger>
+			<div className="flex items-center hover:bg-muted/50">
+				<CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-left text-sm">
+					<ChevronDownIcon
+						className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")}
+					/>
+					<span className="min-w-0 flex-1 truncate font-medium">{term.term}</span>
+					<span className="whitespace-nowrap text-xs text-muted-foreground">
+						{term.associatedMemoryCount}{" "}
+						{term.associatedMemoryCount === 1 ? "memory" : "memories"}
+					</span>
+					<Badge variant="outline">{term.reviewStatus}</Badge>
+				</CollapsibleTrigger>
+				{open && (
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						className="mr-1 shrink-0"
+						aria-label={`Refresh memories for ${term.term}`}
+						title="Refresh associated memories"
+						disabled={termMemories.memories.status === "loading"}
+						onClick={termMemories.reloadMemories}
+					>
+						<RefreshCwIcon />
+					</Button>
+				)}
+			</div>
 			<CollapsibleContent className="border-t bg-muted/20">
 				{termMemories.memories.status === "idle" ||
 				termMemories.memories.status === "loading" ? (
@@ -88,13 +102,15 @@ export function GlossaryTermList({
 	terms,
 	memoryGroupId,
 	chapterId,
+	openTermId,
+	onOpenTermIdChange,
 }: {
 	terms: Loadable<Page<GlossaryTermSummary>>;
 	memoryGroupId: string;
 	chapterId: string | null;
+	openTermId: string | null;
+	onOpenTermIdChange: (termId: string | null) => void;
 }) {
-	const [openTermId, setOpenTermId] = useState<string | null>(null);
-
 	if (terms.status === "idle" || terms.status === "loading") {
 		return (
 			<div aria-busy="true" className="flex flex-col gap-2 p-2">
@@ -127,7 +143,7 @@ export function GlossaryTermList({
 					term={term}
 					chapterId={chapterId}
 					open={openTermId === term.termId}
-					onExpandedChange={(open) => setOpenTermId(open ? term.termId : null)}
+					onExpandedChange={(open) => onOpenTermIdChange(open ? term.termId : null)}
 				/>
 			))}
 		</div>

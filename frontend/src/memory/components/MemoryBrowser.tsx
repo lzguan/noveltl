@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemoryBrowser } from "@/memory/hooks/useMemoryBrowser";
+import { RefreshCwIcon } from "lucide-react";
 import { useEffect } from "react";
 import { MemoryRow } from "./MemoryRow";
 import { PageNavigation } from "./PageNavigation";
@@ -73,6 +74,16 @@ export function MemoryBrowser({
 							<SelectItem value={MemoryType.rel}>Relation</SelectItem>
 						</SelectContent>
 					</Select>
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						aria-label="Refresh memories"
+						title="Refresh memories"
+						disabled={browser.memories.status === "loading"}
+						onClick={browser.reloadMemories}
+					>
+						<RefreshCwIcon />
+					</Button>
 				</div>
 			</div>
 

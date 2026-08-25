@@ -1,4 +1,5 @@
 import {
+	readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
 	readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet,
 	readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet,
 	readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet,
@@ -11,17 +12,20 @@ import {
 	Scope,
 	type GlossaryMemory,
 	type GlossaryTerm,
+	type GlossaryTermSummary,
 	type Memory,
 	type MemoryGroup,
 } from "@/api/models";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useGlossaryMemoryForm } from "./useGlossaryMemoryForm";
+import { GLOSSARY_TERM_PAGE_SIZE, useGlossaryTerms } from "./useGlossaryTerms";
 import { MEMORY_PAGE_SIZE, useMemoryBrowser } from "./useMemoryBrowser";
 import { useMemoryGroups } from "./useMemoryGroups";
 import { TERM_MEMORY_PAGE_SIZE, useTermMemories } from "./useTermMemories";
 
 vi.mock("@/api/endpoints/default/default", () => ({
+	readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet: vi.fn(),
 	readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet: vi.fn(),
 	readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet: vi.fn(),
 	readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet: vi.fn(),
@@ -70,6 +74,15 @@ function memory(memoryId: string): Memory {
 
 function glossaryMemory(memoryId: string): GlossaryMemory {
 	return { memory: memory(memoryId), terms: [termOne] };
+}
+
+function glossaryTermSummary(termId: string): GlossaryTermSummary {
+	return {
+		associatedMemoryCount: 1,
+		reviewStatus: ReviewStatus.pending,
+		term: `Term ${termId}`,
+		termId,
+	};
 }
 
 describe("memory hooks", () => {
@@ -242,6 +255,129 @@ describe("memory hooks", () => {
 		});
 	});
 
+	it("loads and paginates glossary terms from explicit commands", async () => {
+		vi.mocked(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet)
+			.mockResolvedValueOnce({
+				status: 200,
+				data: { count: 21, rows: [glossaryTermSummary("term-1")] },
+				headers: new Headers(),
+			})
+			.mockResolvedValueOnce({
+				status: 200,
+				data: { count: 21, rows: [glossaryTermSummary("term-21")] },
+				headers: new Headers(),
+			});
+		const { result } = renderHook(() => useGlossaryTerms("group-1", "chapter-1"));
+
+		expect(result.current.terms).toEqual({ status: "idle" });
+		expect(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet).not.toHaveBeenCalled();
+
+		act(() => result.current.loadTerms());
+		await waitFor(() => expect(result.current.terms.status).toBe("ready"));
+		act(() => result.current.loadNextPage());
+		await waitFor(() => {
+			if (result.current.terms.status !== "ready") return false;
+			return result.current.terms.data.start === 21;
+		});
+
+		expect(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet).toHaveBeenLastCalledWith(
+			"group-1",
+			{
+				skip: GLOSSARY_TERM_PAGE_SIZE,
+				limit: GLOSSARY_TERM_PAGE_SIZE,
+				chapterId: "chapter-1",
+				search: undefined,
+			},
+			expect.objectContaining({ signal: expect.any(AbortSignal) }),
+		);
+	});
+
+	it("applies glossary scope and search changes directly and resets pagination", async () => {
+		vi.mocked(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet).mockResolvedValue({
+			status: 200,
+			data: { count: 1, rows: [glossaryTermSummary("term-1")] },
+			headers: new Headers(),
+		});
+		const { result } = renderHook(() => useGlossaryTerms("group-1", "chapter-1"));
+
+		act(() => result.current.setSearch("Lin"));
+		await waitFor(() => expect(result.current.terms.status).toBe("ready"));
+		expect(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet).toHaveBeenLastCalledWith(
+			"group-1",
+			{
+				skip: 0,
+				limit: GLOSSARY_TERM_PAGE_SIZE,
+				chapterId: "chapter-1",
+				search: "Lin",
+			},
+			expect.objectContaining({ signal: expect.any(AbortSignal) }),
+		);
+
+		act(() => result.current.setShowAllTerms(true));
+		await waitFor(() =>
+			expect(
+				readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
+			).toHaveBeenCalledTimes(2),
+		);
+		expect(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet).toHaveBeenLastCalledWith(
+			"group-1",
+			{
+				skip: 0,
+				limit: GLOSSARY_TERM_PAGE_SIZE,
+				chapterId: undefined,
+				search: "Lin",
+			},
+			expect.objectContaining({ signal: expect.any(AbortSignal) }),
+		);
+	});
+
+	it("does not display a superseded glossary term request", async () => {
+		type TermsResponse = Awaited<
+			ReturnType<typeof readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet>
+		>;
+		let resolveChapterRequest: (response: TermsResponse) => void = () => undefined;
+		const chapterRequest = new Promise<TermsResponse>((resolve) => {
+			resolveChapterRequest = resolve;
+		});
+		vi.mocked(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet)
+			.mockReturnValueOnce(chapterRequest)
+			.mockResolvedValueOnce({
+				status: 200,
+				data: { count: 1, rows: [glossaryTermSummary("all-terms")] },
+				headers: new Headers(),
+			});
+		const { result } = renderHook(() => useGlossaryTerms("group-1", "chapter-1"));
+
+		act(() => result.current.loadTerms());
+		act(() => result.current.setShowAllTerms(true));
+		await waitFor(() => expect(result.current.terms.status).toBe("ready"));
+		const chapterRequestOptions = vi.mocked(
+			readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
+		).mock.calls[0]?.[2];
+		expect(chapterRequestOptions?.signal).toHaveProperty("aborted", true);
+
+		await act(async () => {
+			resolveChapterRequest({
+				status: 200,
+				data: { count: 1, rows: [glossaryTermSummary("stale-term")] },
+				headers: new Headers(),
+			});
+			await chapterRequest;
+		});
+
+		expect(result.current.terms).toEqual({
+			status: "ready",
+			data: {
+				items: [glossaryTermSummary("all-terms")],
+				start: 1,
+				end: 1,
+				total: 1,
+				hasPrevious: false,
+				hasNext: false,
+			},
+		});
+	});
+
 	it("loads term memories on expansion and paginates independently", async () => {
 		vi.mocked(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet)
 			.mockResolvedValueOnce({
@@ -254,9 +390,7 @@ describe("memory hooks", () => {
 				data: { count: 11, rows: [glossaryMemory("memory-11")] },
 				headers: new Headers(),
 			});
-		const { result } = renderHook(() =>
-			useTermMemories("group-1", "term-1", "chapter-1"),
-		);
+		const { result } = renderHook(() => useTermMemories("group-1", "term-1", "chapter-1"));
 
 		expect(
 			readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet,

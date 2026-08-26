@@ -169,10 +169,12 @@ describe("memory hooks", () => {
 		});
 
 		act(() => result.current.loadNextPage());
-		await waitFor(() => {
-			if (result.current.memories.status !== "ready") return false;
-			return result.current.memories.data.start === 21;
-		});
+		await waitFor(() =>
+			expect(result.current.memories).toMatchObject({
+				status: "ready",
+				data: { start: 21 },
+			}),
+		);
 		expect(
 			readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet,
 		).toHaveBeenLastCalledWith(
@@ -300,10 +302,12 @@ describe("memory hooks", () => {
 		act(() => result.current.loadTerms());
 		await waitFor(() => expect(result.current.terms.status).toBe("ready"));
 		act(() => result.current.loadNextPage());
-		await waitFor(() => {
-			if (result.current.terms.status !== "ready") return false;
-			return result.current.terms.data.start === 21;
-		});
+		await waitFor(() =>
+			expect(result.current.terms).toMatchObject({
+				status: "ready",
+				data: { start: 21 },
+			}),
+		);
 
 		expect(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet).toHaveBeenLastCalledWith(
 			"group-1",
@@ -445,10 +449,12 @@ describe("memory hooks", () => {
 		act(() => result.current.loadMemories());
 		await waitFor(() => expect(result.current.memories.status).toBe("ready"));
 		act(() => result.current.loadNextPage());
-		await waitFor(() => {
-			if (result.current.memories.status !== "ready") return false;
-			return result.current.memories.data.start === 11;
-		});
+		await waitFor(() =>
+			expect(result.current.memories).toMatchObject({
+				status: "ready",
+				data: { start: 11 },
+			}),
+		);
 
 		expect(
 			readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet,

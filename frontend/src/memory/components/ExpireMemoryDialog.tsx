@@ -19,13 +19,13 @@ export function ExpireMemoryDialog({
 	chapterId,
 	closeDialog,
 	reloadMemories,
-	reloadTerms,
+	reloadAdditionalData,
 }: {
 	memory: Memory;
 	chapterId: string;
 	closeDialog: () => void;
 	reloadMemories: () => void;
-	reloadTerms?: () => void;
+	reloadAdditionalData?: () => void;
 }) {
 	const [submitting, setSubmitting] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
@@ -47,7 +47,7 @@ export function ExpireMemoryDialog({
 				return;
 			}
 			reloadMemories();
-			reloadTerms?.();
+			reloadAdditionalData?.();
 			closeDialog();
 		} catch (error) {
 			setSubmitError(requestErrorMessage(error));

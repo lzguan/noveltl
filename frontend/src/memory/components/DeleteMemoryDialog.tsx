@@ -18,12 +18,12 @@ export function DeleteMemoryDialog({
 	memory,
 	closeDialog,
 	reloadMemoriesAfterDelete,
-	reloadTerms,
+	reloadAdditionalData,
 }: {
 	memory: Memory;
 	closeDialog: () => void;
 	reloadMemoriesAfterDelete: () => void;
-	reloadTerms?: () => void;
+	reloadAdditionalData?: () => void;
 }) {
 	const [submitting, setSubmitting] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
@@ -42,7 +42,7 @@ export function DeleteMemoryDialog({
 				return;
 			}
 			reloadMemoriesAfterDelete();
-			reloadTerms?.();
+			reloadAdditionalData?.();
 			closeDialog();
 		} catch (error) {
 			setSubmitError(requestErrorMessage(error));

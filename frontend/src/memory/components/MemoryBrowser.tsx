@@ -1,4 +1,5 @@
 import { MemoryType } from "@/api/models";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
@@ -130,6 +131,10 @@ export function MemoryBrowser({
 								key={memory.memoryId}
 								memoryGroupId={memoryGroupId}
 								memory={memory}
+								additionalData={memory.pluginName}
+								renderAdditionalHeader={(pluginName) => (
+									<Badge variant="outline">{pluginName}</Badge>
+								)}
 								chapterId={chapterId}
 								chapterNum={chapterNum}
 								reloadMemories={browser.reloadMemories}

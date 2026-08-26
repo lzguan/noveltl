@@ -1,5 +1,5 @@
 import { editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch } from "@/api/endpoints/default/default";
-import { ReviewStatus, type GlossaryTerm, type Memory } from "@/api/models";
+import { ReviewStatus, type Memory } from "@/api/models";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,11 +15,10 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { apiErrorMessage, requestErrorMessage } from "@/lib/apiErrors";
-import { CalendarX2Icon, EllipsisIcon, LinkIcon, PencilIcon, Trash2Icon } from "lucide-react";
-import { useState } from "react";
+import { CalendarX2Icon, EllipsisIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { Fragment, useState, type ReactNode } from "react";
 import { DeleteMemoryDialog } from "./DeleteMemoryDialog";
 import { EditMemoryContentDialog } from "./EditMemoryContentDialog";
-import { EditMemoryTermsDialog } from "./EditMemoryTermsDialog";
 import { ExpireMemoryDialog } from "./ExpireMemoryDialog";
 
 const REVIEW_STATUS_LABELS: Record<ReviewStatus, string> = {
@@ -49,28 +48,48 @@ function chapterRangeLabel(memory: Memory) {
 		: `Ch. ${memory.memoryStartNum}–${lastInclusive}`;
 }
 
-export function MemoryRow({
+export function MemoryRow<DataT = undefined>({
 	memoryGroupId,
 	memory,
-	terms,
+	additionalData,
+	renderAdditionalHeader,
+	renderAdditionalContent,
+	additionalDropdownOptions,
+	reloadAdditionalData,
 	chapterId,
 	chapterNum,
 	reloadMemories,
 	reloadMemoriesAfterDelete,
-	reloadTerms,
 }: {
 	memoryGroupId: string;
 	memory: Memory;
-	terms?: readonly GlossaryTerm[];
+	additionalData: DataT;
+	renderAdditionalHeader?: (data: DataT) => ReactNode;
+	renderAdditionalContent?: (data: DataT) => ReactNode;
+	additionalDropdownOptions?: readonly {
+		key: string;
+		renderDropdownItem: (openDialog: () => void) => ReactNode;
+		renderDialog: (context: {
+			memoryGroupId: string;
+			memory: Memory;
+			chapterId: string | null;
+			chapterNum: number | null;
+			additionalData: DataT;
+			closeDialog: () => void;
+			reloadMemories: () => void;
+			reloadMemoriesAfterDelete: () => void;
+		}) => ReactNode;
+	}[];
+	reloadAdditionalData?: () => void;
 	chapterId: string | null;
 	chapterNum: number | null;
 	reloadMemories: () => void;
 	reloadMemoriesAfterDelete: () => void;
-	reloadTerms?: () => void;
 }) {
-	const associatedTerms = terms ?? [];
+	const additionalHeader = renderAdditionalHeader?.(additionalData);
+	const additionalContent = renderAdditionalContent?.(additionalData);
 	const [editContentOpen, setEditContentOpen] = useState(false);
-	const [editTermsOpen, setEditTermsOpen] = useState(false);
+	const [additionalDialogKey, setAdditionalDialogKey] = useState<string | null>(null);
 	const [expireOpen, setExpireOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [reviewSubmitting, setReviewSubmitting] = useState(false);
@@ -106,6 +125,7 @@ export function MemoryRow({
 					{REVIEW_STATUS_LABELS[memory.memoryReviewStatus]}
 				</Badge>
 				<Badge variant="secondary">{MEMORY_TYPE_LABELS[memory.memoryType]}</Badge>
+				{additionalHeader}
 				<span className="text-xs text-muted-foreground">
 					{chapterRangeLabel(memory)} · {memory.creatorType}
 				</span>
@@ -125,11 +145,13 @@ export function MemoryRow({
 						<DropdownMenuItem onSelect={() => setEditContentOpen(true)}>
 							<PencilIcon /> Edit content
 						</DropdownMenuItem>
-						{terms !== undefined && (
-							<DropdownMenuItem onSelect={() => setEditTermsOpen(true)}>
-								<LinkIcon /> Edit associated terms
-							</DropdownMenuItem>
-						)}
+						{additionalDropdownOptions?.map((option) => (
+							<Fragment key={option.key}>
+								{option.renderDropdownItem(() =>
+									setAdditionalDialogKey(option.key),
+								)}
+							</Fragment>
+						))}
 						<DropdownMenuSub>
 							<DropdownMenuSubTrigger>Review status</DropdownMenuSubTrigger>
 							<DropdownMenuSubContent>
@@ -183,24 +205,13 @@ export function MemoryRow({
 			)}
 			<div
 				className={
-					associatedTerms.length === 0
+					additionalContent === null || additionalContent === undefined
 						? "mt-1"
 						: "mt-2 grid gap-2 sm:grid-cols-[1fr_auto]"
 				}
 			>
 				<p className="whitespace-pre-wrap">{memory.memoryContent}</p>
-				{associatedTerms.length > 0 && (
-					<div
-						className="flex max-w-32 flex-wrap content-start gap-1"
-						aria-label="Associated terms"
-					>
-						{associatedTerms.map((term) => (
-							<Badge key={term.termId} variant="outline">
-								{term.term}
-							</Badge>
-						))}
-					</div>
-				)}
+				{additionalContent}
 			</div>
 			{editContentOpen && (
 				<EditMemoryContentDialog
@@ -209,23 +220,25 @@ export function MemoryRow({
 					reloadMemories={reloadMemories}
 				/>
 			)}
-			{editTermsOpen && terms !== undefined && (
-				<EditMemoryTermsDialog
-					memoryGroupId={memoryGroupId}
-					memory={memory}
-					terms={terms}
-					closeDialog={() => setEditTermsOpen(false)}
-					reloadMemories={reloadMemories}
-					reloadTerms={reloadTerms}
-				/>
-			)}
+			{additionalDropdownOptions
+				?.find((option) => option.key === additionalDialogKey)
+				?.renderDialog({
+					memoryGroupId,
+					memory,
+					chapterId,
+					chapterNum,
+					additionalData,
+					closeDialog: () => setAdditionalDialogKey(null),
+					reloadMemories,
+					reloadMemoriesAfterDelete,
+				})}
 			{expireOpen && chapterId !== null && (
 				<ExpireMemoryDialog
 					memory={memory}
 					chapterId={chapterId}
 					closeDialog={() => setExpireOpen(false)}
 					reloadMemories={reloadMemories}
-					reloadTerms={reloadTerms}
+					reloadAdditionalData={reloadAdditionalData}
 				/>
 			)}
 			{deleteOpen && (
@@ -233,7 +246,7 @@ export function MemoryRow({
 					memory={memory}
 					closeDialog={() => setDeleteOpen(false)}
 					reloadMemoriesAfterDelete={reloadMemoriesAfterDelete}
-					reloadTerms={reloadTerms}
+					reloadAdditionalData={reloadAdditionalData}
 				/>
 			)}
 		</article>

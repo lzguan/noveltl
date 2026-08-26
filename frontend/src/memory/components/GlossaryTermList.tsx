@@ -32,7 +32,7 @@ import {
 import { useState } from "react";
 import { DeleteGlossaryTermDialog } from "./DeleteGlossaryTermDialog";
 import { EditGlossaryTermDialog } from "./EditGlossaryTermDialog";
-import { MemoryRow } from "./MemoryRow";
+import { GlossaryMemoryRow } from "./GlossaryMemoryRow";
 import { PageNavigation } from "./PageNavigation";
 
 function GlossaryTermRow({
@@ -212,12 +212,11 @@ function GlossaryTermRow({
 					<p className="p-3 text-sm text-muted-foreground">No associated memories.</p>
 				) : (
 					<div>
-						{termMemories.memories.data.items.map(({ memory, terms }) => (
-							<MemoryRow
-								key={memory.memoryId}
+						{termMemories.memories.data.items.map((glossaryMemory) => (
+							<GlossaryMemoryRow
+								key={glossaryMemory.memory.memoryId}
 								memoryGroupId={memoryGroupId}
-								memory={memory}
-								terms={terms}
+								glossaryMemory={glossaryMemory}
 								chapterId={chapterId}
 								chapterNum={chapterNum}
 								reloadMemories={termMemories.reloadMemories}

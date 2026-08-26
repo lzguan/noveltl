@@ -729,6 +729,28 @@ components:
       - novelId
       title: CreateLabelGroup
       type: object
+    CreateMemoryGroup:
+      properties:
+        memoryGroupName:
+          maxLength: 100
+          minLength: 1
+          title: Memorygroupname
+          type: string
+        memoryLanguage:
+          maxLength: 2
+          minLength: 2
+          title: Memorylanguage
+          type: string
+        novelId:
+          format: uuid
+          title: Novelid
+          type: string
+      required:
+      - memoryGroupName
+      - novelId
+      - memoryLanguage
+      title: CreateMemoryGroup
+      type: object
     CreateNovel:
       description: "Pydantic schema to validate forms for creating a novel.\n\nAttributes:\n\
         \    novel_title: Novel title to create.\n    novel_description: Description\
@@ -1134,6 +1156,34 @@ components:
       - term
       - reviewStatus
       title: GlossaryTerm
+      type: object
+    GlossaryTermSummary:
+      description: A glossary term together with its associated-memory count in the
+        requested scope.
+      properties:
+        associatedMemoryCount:
+          minimum: 0.0
+          title: Associatedmemorycount
+          type: integer
+        reviewStatus:
+          $ref: '#/components/schemas/ReviewStatus'
+          description: Human-review state of the term. Pending terms are unverified;
+            approved terms are verified.
+        term:
+          description: Term exactly as it appears in the novel's source text.
+          title: Term
+          type: string
+        termId:
+          description: Stable identifier for the glossary term.
+          format: uuid
+          title: Termid
+          type: string
+      required:
+      - termId
+      - term
+      - reviewStatus
+      - associatedMemoryCount
+      title: GlossaryTermSummary
       type: object
     GroupData-Input:
       discriminator:
@@ -2110,7 +2160,7 @@ components:
       - rows
       title: Page[GlossaryMemory]
       type: object
-    Page_GlossaryTerm_:
+    Page_GlossaryTermSummary_:
       properties:
         count:
           minimum: 0.0
@@ -2118,13 +2168,13 @@ components:
           type: integer
         rows:
           items:
-            $ref: '#/components/schemas/GlossaryTerm'
+            $ref: '#/components/schemas/GlossaryTermSummary'
           title: Rows
           type: array
       required:
       - count
       - rows
-      title: Page[GlossaryTerm]
+      title: Page[GlossaryTermSummary]
       type: object
     PluginName:
       const: glossary
@@ -5444,6 +5494,36 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Read Memory Groups
+    post:
+      operationId: add_memory_group_memory_groups_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMemoryGroup'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryGroup'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Add Memory Group
   /memory-groups/{memoryGroupId}/chapters/{chapterId}/memories:
     get:
       operationId: read_memories_at_chapter_memory_groups__memoryGroupId__chapters__chapterId__memories_get
@@ -5822,6 +5902,15 @@ paths:
           title: Limit
           type: integer
       - in: query
+        name: chapterId
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Chapterid
+      - in: query
         name: search
         required: false
         schema:
@@ -5844,8 +5933,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Page_GlossaryTerm_'
+                $ref: '#/components/schemas/Page_GlossaryTermSummary_'
           description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
         '422':
           content:
             application/json:
@@ -6021,6 +6116,15 @@ paths:
           minimum: 1
           title: Limit
           type: integer
+      - in: query
+        name: chapterId
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Chapterid
       responses:
         '200':
           content:

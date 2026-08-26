@@ -7,6 +7,8 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
 from src.auth.models import User
+from src.languages.exceptions import LanguageNotFoundException
+from src.languages.models import Language
 from src.memory.exceptions import MemoryNotFoundException
 from src.memory.models import Memory, MemoryGroup
 from src.memory.permissions import (
@@ -16,8 +18,9 @@ from src.memory.permissions import (
     memory_mod_access_update,
 )
 from src.memory.types import MemoryType, PluginName, ReviewStatus
-from src.novels.exceptions import ChapterNotFoundException
-from src.novels.models import Chapter
+from src.novels.exceptions import ChapterNotFoundException, NovelNotFoundException
+from src.novels.models import Chapter, Novel
+from src.novels.permissions import novel_mod_access_select
 
 
 @dataclass(frozen=True)
@@ -31,6 +34,37 @@ def query_memory_groups(db: Session, user: User | None, novel_id: UUID):
     query = select(MemoryGroup).where(MemoryGroup.novel_id == novel_id)
     query = memory_group_mod_access_select(query, user)
     return db.execute(query).scalars().all()
+
+
+def create_memory_group(
+    db: Session,
+    user: User,
+    memory_group_name: str,
+    novel_id: UUID,
+    memory_language: str,
+) -> MemoryGroup:
+    """Create a memory group for a novel the user may edit."""
+    novel_query = select(Novel.novel_id).where(Novel.novel_id == novel_id)
+    novel_query = novel_mod_access_select(novel_query, user, edit_only=True)
+    if db.execute(novel_query).scalar_one_or_none() is None:
+        raise NovelNotFoundException
+
+    if db.get(Language, memory_language) is None:
+        raise LanguageNotFoundException
+
+    memory_group = MemoryGroup(
+        memory_group_name=memory_group_name,
+        novel_id=novel_id,
+        memory_language=memory_language,
+    )
+    try:
+        db.add(memory_group)
+        db.commit()
+        db.refresh(memory_group)
+    except Exception:
+        db.rollback()
+        raise
+    return memory_group
 
 
 def query_memories_at_chapter(

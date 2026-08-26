@@ -1,5 +1,5 @@
 import type { FunctionDefinitionMeta, WorkflowSummary } from "@/api/models";
-import type { AsyncSearchState } from "../../hooks/useAsyncSearch";
+import type { AsyncSearchState } from "../../../lib/hooks/useAsyncSearch";
 import { FunctionSearchSelector, WorkflowSearchSelector } from "./RunnerSelectors";
 
 export function WorkflowFunctionFields({

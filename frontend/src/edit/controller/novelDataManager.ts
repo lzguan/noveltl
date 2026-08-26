@@ -129,6 +129,23 @@ export const buildNovelDataManager = (
 			chapterIds: () => chaptersIndex.getIds(),
 			chapterIdFromServerId: (chapterId) =>
 				idRepo.queryProvId({ kind: "chapter", servId: chapterId }),
+			chapterServerId: (chapterId) =>
+				idRepo
+					.getServerId({ kind: "chapter", provId: chapterId })
+					.pipe(Effect.catchAll(() => Effect.succeed(null))),
+			chapterContentServerId: (chapterId) =>
+				Effect.gen(function* () {
+					const slot = yield* chaptersIndex.get(chapterId);
+					if (slot.status !== "ready" || slot.data.chapterData.getters.isDestroyed()) {
+						return null;
+					}
+					const chapterContentId =
+						yield* slot.data.chapterData.getters.chapterContentId();
+					return yield* idRepo.getServerId({
+						kind: "chapterContent",
+						provId: chapterContentId,
+					});
+				}).pipe(Effect.catchAll(() => Effect.succeed(null))),
 			chapterContentIdFromServerId: (chapterContentId) =>
 				idRepo.queryProvId({ kind: "chapterContent", servId: chapterContentId }),
 			labelIdFromServerId: (labelId) =>

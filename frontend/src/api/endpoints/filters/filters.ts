@@ -126,11 +126,17 @@ export const getCreateFilterFunctionUrl = () => {
  */
 export const createFilterFunction = async (createFunctionDefinitionRequest: CreateFunctionDefinitionRequest, options?: Parameters<typeof customFetch>[1]): Promise<createFilterFunctionResponse> => {
 
-  return customFetch<createFilterFunctionResponse>(getCreateFilterFunctionUrl(),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createFilterFunctionResponse>(getCreateFilterFunctionUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createFunctionDefinitionRequest)
   }
 );}
@@ -169,11 +175,17 @@ export const getValidateFilterFunctionUrl = () => {
  */
 export const validateFilterFunction = async (validateFunctionDefinitionRequest: ValidateFunctionDefinitionRequest, options?: Parameters<typeof customFetch>[1]): Promise<validateFilterFunctionResponse> => {
 
-  return customFetch<validateFilterFunctionResponse>(getValidateFilterFunctionUrl(),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<validateFilterFunctionResponse>(getValidateFilterFunctionUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(validateFunctionDefinitionRequest)
   }
 );}
@@ -390,11 +402,17 @@ export const getReadInstancesAdvancedFiltersInstancesQueryPostUrl = () => {
  */
 export const readInstancesAdvancedFiltersInstancesQueryPost = async (instanceQuery: InstanceQuery, options?: Parameters<typeof customFetch>[1]): Promise<readInstancesAdvancedFiltersInstancesQueryPostResponse> => {
 
-  return customFetch<readInstancesAdvancedFiltersInstancesQueryPostResponse>(getReadInstancesAdvancedFiltersInstancesQueryPostUrl(),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<readInstancesAdvancedFiltersInstancesQueryPostResponse>(getReadInstancesAdvancedFiltersInstancesQueryPostUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(instanceQuery)
   }
 );}
@@ -449,11 +467,17 @@ export const getUpdateFilterInstanceUrl = (instanceId: string,) => {
 export const updateFilterInstance = async (instanceId: string,
     updateInstanceRequest: UpdateInstanceRequest, options?: Parameters<typeof customFetch>[1]): Promise<updateFilterInstanceResponse> => {
 
-  return customFetch<updateFilterInstanceResponse>(getUpdateFilterInstanceUrl(instanceId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateFilterInstanceResponse>(getUpdateFilterInstanceUrl(instanceId),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateInstanceRequest)
   }
 );}
@@ -512,11 +536,17 @@ export const getRunPythonAnnotationUrl = () => {
  */
 export const runPythonAnnotation = async (pythonAnnotationRequest: PythonAnnotationRequest, options?: Parameters<typeof customFetch>[1]): Promise<runPythonAnnotationResponse> => {
 
-  return customFetch<runPythonAnnotationResponse>(getRunPythonAnnotationUrl(),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<runPythonAnnotationResponse>(getRunPythonAnnotationUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(pythonAnnotationRequest)
   }
 );}
@@ -575,11 +605,17 @@ export const getRunPythonFilterUrl = () => {
  */
 export const runPythonFilter = async (pythonFilterRequest: PythonFilterRequest, options?: Parameters<typeof customFetch>[1]): Promise<runPythonFilterResponse> => {
 
-  return customFetch<runPythonFilterResponse>(getRunPythonFilterUrl(),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<runPythonFilterResponse>(getRunPythonFilterUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(pythonFilterRequest)
   }
 );}
@@ -638,11 +674,17 @@ export const getRunPythonGroupUrl = () => {
  */
 export const runPythonGroup = async (pythonGroupRequest: PythonGroupRequest, options?: Parameters<typeof customFetch>[1]): Promise<runPythonGroupResponse> => {
 
-  return customFetch<runPythonGroupResponse>(getRunPythonGroupUrl(),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<runPythonGroupResponse>(getRunPythonGroupUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(pythonGroupRequest)
   }
 );}
@@ -691,11 +733,17 @@ export const getRunPythonLabelSourceUrl = () => {
  */
 export const runPythonLabelSource = async (pythonLabelSourceRequest: PythonLabelSourceRequest, options?: Parameters<typeof customFetch>[1]): Promise<runPythonLabelSourceResponse> => {
 
-  return customFetch<runPythonLabelSourceResponse>(getRunPythonLabelSourceUrl(),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<runPythonLabelSourceResponse>(getRunPythonLabelSourceUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(pythonLabelSourceRequest)
   }
 );}
@@ -754,11 +802,17 @@ export const getRunPythonMapUrl = () => {
  */
 export const runPythonMap = async (pythonMapRequest: PythonMapRequest, options?: Parameters<typeof customFetch>[1]): Promise<runPythonMapResponse> => {
 
-  return customFetch<runPythonMapResponse>(getRunPythonMapUrl(),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<runPythonMapResponse>(getRunPythonMapUrl(),
   {
     ...options,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(pythonMapRequest)
   }
 );}
@@ -901,11 +955,17 @@ export const getRenameFilterWorkflowUrl = (workflowId: string,) => {
 export const renameFilterWorkflow = async (workflowId: string,
     renameWorkflowRequest: RenameWorkflowRequest, options?: Parameters<typeof customFetch>[1]): Promise<renameFilterWorkflowResponse> => {
 
-  return customFetch<renameFilterWorkflowResponse>(getRenameFilterWorkflowUrl(workflowId),
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<renameFilterWorkflowResponse>(getRenameFilterWorkflowUrl(workflowId),
   {
     ...options,
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(renameWorkflowRequest)
   }
 );}

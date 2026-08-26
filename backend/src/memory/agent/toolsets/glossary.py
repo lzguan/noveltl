@@ -4,7 +4,6 @@ from uuid import UUID
 
 from pydantic import Field
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
-from sqlalchemy import SQLColumnExpression, func
 from sqlalchemy.exc import IntegrityError
 
 from src.memory.agent.dependencies import MemAgentDeps
@@ -146,17 +145,10 @@ If the current context already represents the information, make no write.
 """.strip()
 
 
-def _contains_query(chapter: SQLColumnExpression[str], term: SQLColumnExpression[str]) -> SQLColumnExpression[bool]:
-    """Match terms after removing known source-text obfuscation marks."""
-    normalized_chapter = func.translate(chapter, "『』《》【】", "")
-    normalized_term = func.translate(term, "『』《》【】", "")
-    return normalized_chapter.contains(normalized_term)
-
-
 def _terms_in_chapter(ctx: RunContext[MemAgentDeps]) -> list[AgentGlossaryTerm]:
     """See all glossary terms occurring in the exact chapter content pinned by the context."""
     db = ctx.deps.db
-    terms = access.get_terms_in_chapter(db, ctx.deps.mem_access_context, _contains_query)
+    terms = access.get_terms_in_chapter(db, ctx.deps.mem_access_context, access.contains_query)
     return [AgentGlossaryTerm.model_validate(term) for term in terms]
 
 

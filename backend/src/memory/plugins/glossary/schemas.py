@@ -45,6 +45,12 @@ class GlossaryTerm(Model):
     )
 
 
+class GlossaryTermSummary(GlossaryTerm):
+    """A glossary term together with its associated-memory count in the requested scope."""
+
+    associated_memory_count: int = Field(ge=0)
+
+
 class GlossaryMemory(Model):
     """A memory together with the glossary terms it describes."""
 
@@ -59,7 +65,7 @@ class GlossaryMemory(Model):
 GlossaryMemoryPage = Page[GlossaryMemory]
 
 
-GlossaryTermPage = Page[GlossaryTerm]
+GlossaryTermPage = Page[GlossaryTermSummary]
 
 
 class CreateGlossaryMemory(Model):

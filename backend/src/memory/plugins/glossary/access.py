@@ -2,7 +2,7 @@ from collections.abc import Callable
 from typing import Final
 from uuid import UUID
 
-from sqlalchemy import SQLColumnExpression, insert, literal, or_, select, update
+from sqlalchemy import SQLColumnExpression, func, insert, literal, or_, select, update
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session, aliased
 
@@ -19,6 +19,15 @@ type ContainsQuery = Callable[
 ]
 
 GLOSSARY_PLUGIN_NAME: Final[PluginName] = "glossary"
+
+
+def contains_query(
+    chapter: SQLColumnExpression[str], term: SQLColumnExpression[str]
+) -> SQLColumnExpression[bool]:
+    """Match terms after removing known source-text obfuscation marks."""
+    normalized_chapter = func.translate(chapter, "『』《》【】", "")
+    normalized_term = func.translate(term, "『』《》【】", "")
+    return normalized_chapter.contains(normalized_term)
 
 
 def get_terms_in_chapter(

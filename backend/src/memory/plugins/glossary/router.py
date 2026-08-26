@@ -13,6 +13,7 @@ from src.memory.exceptions import (
     MemoryGroupNotFoundException,
     MemoryNotFoundException,
 )
+from src.memory.plugins.glossary.access import contains_query
 from src.memory.plugins.glossary.schemas import (
     CreateGlossaryMemory,
     CreateGlossaryTerm,
@@ -93,25 +94,37 @@ def read_glossary_memories(
     )
 
 
-@router.get("/terms", response_model=GlossaryTermPage)
+@router.get(
+    "/terms",
+    response_model=GlossaryTermPage,
+    responses={404: {"model": DetailHTTPErrorResponse}},
+)
 def read_glossary_terms(
     memory_group_id: Annotated[UUID, Path(alias="memoryGroupId")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
+    chapter_id: Annotated[UUID | None, Query(alias="chapterId")] = None,
     search: str | None = None,
     review_statuses: Annotated[list[ReviewStatus] | None, Query(alias="reviewStatuses")] = None,
 ):
-    return query_glossary_terms(
-        db,
-        current_user,
-        memory_group_id,
-        skip,
-        limit,
-        search=search,
-        review_statuses=review_statuses,
-    )
+    try:
+        return query_glossary_terms(
+            db,
+            current_user,
+            memory_group_id,
+            contains_query,
+            skip,
+            limit,
+            chapter_id=chapter_id,
+            search=search,
+            review_statuses=review_statuses,
+        )
+    except ChapterNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found.") from e
+    except ChapterContentNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter content not found.") from e
 
 
 @router.get(
@@ -126,11 +139,22 @@ def read_memories_for_term(
     current_user: Annotated[User | None, Depends(get_optional_user)],
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
+    chapter_id: Annotated[UUID | None, Query(alias="chapterId")] = None,
 ):
     try:
-        return query_memories_for_term(db, current_user, memory_group_id, term_id, skip, limit)
+        return query_memories_for_term(
+            db,
+            current_user,
+            memory_group_id,
+            term_id,
+            skip,
+            limit,
+            chapter_id=chapter_id,
+        )
     except GlossaryTermNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Glossary term not found.") from e
+    except ChapterNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found.") from e
 
 
 @router.get(

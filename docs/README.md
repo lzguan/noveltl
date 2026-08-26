@@ -16,5 +16,6 @@ This folder contains the documentation for this project. Documentation is primar
 - [novels.md](novels.md): Source works, novels, chapters, and content versioning
 - [labels.md](labels.md): Label groups, versioned label data, and text annotations
 - [autolabels.md](autolabels.md): Automated labeling jobs and review
+- [memory/](memory/README.md): Memory architecture, glossary data, and UI design
 - [editor/](editor/README.md): Editor synchronization, controller, managers, and rendering
 - [filters/](filters/README.md): Current filter implementation and future workflow design

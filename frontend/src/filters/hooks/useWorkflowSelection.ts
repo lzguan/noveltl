@@ -6,7 +6,7 @@ import {
 } from "@/api/endpoints/filters/filters";
 import type { GroupingResponse, WorkflowResponse, WorkflowSummary } from "@/api/models";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Loadable } from "../loadable";
+import type { Loadable } from "../../lib/loadable";
 import { errorMessage, requestError } from "./workflowViewerUtils";
 
 export interface WorkflowSelectionState {

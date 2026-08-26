@@ -4485,6 +4485,57 @@
       }
     },
     "/memory-groups": {
+      "post": {
+        "summary": "Add Memory Group",
+        "operationId": "add_memory_group_memory_groups_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMemoryGroup"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryGroup"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "summary": "Read Memory Groups",
         "operationId": "read_memory_groups_memory_groups_get",
@@ -5392,6 +5443,23 @@
             }
           },
           {
+            "name": "chapterId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Chapterid"
+            }
+          },
+          {
             "name": "search",
             "in": "query",
             "required": false,
@@ -5433,10 +5501,20 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_GlossaryTerm_"
+                  "$ref": "#/components/schemas/Page_GlossaryTermSummary_"
                 }
               }
             }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
           },
           "422": {
             "description": "Validation Error",
@@ -5575,6 +5653,23 @@
               "minimum": 1,
               "default": 100,
               "title": "Limit"
+            }
+          },
+          {
+            "name": "chapterId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Chapterid"
             }
           }
         ],
@@ -6944,6 +7039,34 @@
         "title": "CreateLabelGroup",
         "description": "Pydantic schema for validating forms for creating a label group.\n\nAttributes:\n    label_group_name: Name of label group to create.\n    novel_id: UUID of novel this label group belongs to."
       },
+      "CreateMemoryGroup": {
+        "properties": {
+          "memoryGroupName": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Memorygroupname"
+          },
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "memoryLanguage": {
+            "type": "string",
+            "maxLength": 2,
+            "minLength": 2,
+            "title": "Memorylanguage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "memoryGroupName",
+          "novelId",
+          "memoryLanguage"
+        ],
+        "title": "CreateMemoryGroup"
+      },
       "CreateNovel": {
         "properties": {
           "novelTitle": {
@@ -7488,6 +7611,39 @@
         ],
         "title": "GlossaryTerm",
         "description": "A glossary term represented as context for an agent."
+      },
+      "GlossaryTermSummary": {
+        "properties": {
+          "termId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Termid",
+            "description": "Stable identifier for the glossary term."
+          },
+          "term": {
+            "type": "string",
+            "title": "Term",
+            "description": "Term exactly as it appears in the novel's source text."
+          },
+          "reviewStatus": {
+            "$ref": "#/components/schemas/ReviewStatus",
+            "description": "Human-review state of the term. Pending terms are unverified; approved terms are verified."
+          },
+          "associatedMemoryCount": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Associatedmemorycount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "termId",
+          "term",
+          "reviewStatus",
+          "associatedMemoryCount"
+        ],
+        "title": "GlossaryTermSummary",
+        "description": "A glossary term together with its associated-memory count in the requested scope."
       },
       "GroupData-Input": {
         "oneOf": [
@@ -8772,7 +8928,7 @@
         ],
         "title": "Page[GlossaryMemory]"
       },
-      "Page_GlossaryTerm_": {
+      "Page_GlossaryTermSummary_": {
         "properties": {
           "count": {
             "type": "integer",
@@ -8781,7 +8937,7 @@
           },
           "rows": {
             "items": {
-              "$ref": "#/components/schemas/GlossaryTerm"
+              "$ref": "#/components/schemas/GlossaryTermSummary"
             },
             "type": "array",
             "title": "Rows"
@@ -8792,7 +8948,7 @@
           "count",
           "rows"
         ],
-        "title": "Page[GlossaryTerm]"
+        "title": "Page[GlossaryTermSummary]"
       },
       "PluginName": {
         "type": "string",

@@ -1,5 +1,5 @@
 import { runPythonGroup } from "@/api/endpoints/filters/filters";
-import { apiErrorMessage, requestErrorMessage } from "../../apiErrors";
+import { apiErrorMessage, requestErrorMessage } from "../../../lib/apiErrors";
 import { useWorkflowFunctionRunnerForm } from "../../hooks/runnerForms/useWorkflowFunctionRunnerForm";
 import { RunnerFormShell } from "./RunnerFormShell";
 import { WorkflowFunctionFields } from "./WorkflowFunctionFields";

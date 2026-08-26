@@ -1,6 +1,12 @@
 import { expect, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { RightPanel, type RightPanelTab } from "./RightPanel";
+
+function StatefulContent() {
+	const [count, setCount] = useState(0);
+	return <button onClick={() => setCount((current) => current + 1)}>Count {count}</button>;
+}
 
 describe("RightPanel", () => {
 	const tabs: readonly [RightPanelTab, RightPanelTab] = [
@@ -53,6 +59,36 @@ describe("RightPanel", () => {
 			"true",
 		);
 		expect(screen.getByText("Second content")).toBeVisible();
+	});
+
+	it("preserves state for content configured to stay mounted", () => {
+		render(
+			<RightPanel
+				tabs={[
+					{
+						value: "persistent",
+						label: "Persistent tab",
+						content: <StatefulContent />,
+						keepMounted: true,
+					},
+					{ value: "other", label: "Other tab", content: <div>Other content</div> },
+				]}
+			/>,
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: "Count 0" }));
+		fireEvent.mouseDown(screen.getByRole("tab", { name: "Other tab" }), {
+			button: 0,
+			ctrlKey: false,
+		});
+		expect(screen.getByText("Other content")).toBeVisible();
+		expect(screen.getByText("Count 1")).not.toBeVisible();
+		fireEvent.mouseDown(screen.getByRole("tab", { name: "Persistent tab" }), {
+			button: 0,
+			ctrlKey: false,
+		});
+
+		expect(screen.getByRole("button", { name: "Count 1" })).toBeVisible();
 	});
 
 	it("defaults to a wider panel and resizes with the keyboard", () => {

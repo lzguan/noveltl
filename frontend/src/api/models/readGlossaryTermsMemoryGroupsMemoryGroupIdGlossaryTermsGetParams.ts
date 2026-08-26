@@ -16,6 +16,7 @@ skip?: number;
  * @maximum 100
  */
 limit?: number;
+chapterId?: string | null;
 search?: string | null;
 reviewStatuses?: ReviewStatus[] | null;
 };

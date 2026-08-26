@@ -1,6 +1,6 @@
 import type { FunctionDefinitionMeta, WorkflowSummary } from "@/api/models";
 import { useCallback, useState } from "react";
-import { useAsyncSearch } from "../useAsyncSearch";
+import { useAsyncSearch } from "../../../lib/hooks/useAsyncSearch";
 import { fetchCompletedWorkflowOptions, fetchFunctionDefinitionOptions } from "./useRunnerOptions";
 
 export function useWorkflowFunctionRunnerForm(

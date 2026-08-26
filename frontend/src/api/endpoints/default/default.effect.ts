@@ -61,8 +61,6 @@ export const ReadAutoLabelRunsAutoLabelRunsGet422Response = S.Struct({
   "type": S.String
 })))
 })
-
-
 /**
  * Get autolabel metadata for all autolabels in a run.
  *
@@ -1666,6 +1664,45 @@ export const ReadMemoryGroupsMemoryGroupsGet422Response = S.Struct({
 })
 
 /**
+ * @summary Add Memory Group
+ */
+export const addMemoryGroupMemoryGroupsPostBodyMemoryGroupNameMax = 100;
+
+export const addMemoryGroupMemoryGroupsPostBodyMemoryLanguageMin = 2;
+export const addMemoryGroupMemoryGroupsPostBodyMemoryLanguageMax = 2;
+
+
+
+export const AddMemoryGroupMemoryGroupsPostBody = S.Struct({
+  "memoryGroupName": S.String.pipe(S.minLength(1), S.maxLength(addMemoryGroupMemoryGroupsPostBodyMemoryGroupNameMax)),
+  "memoryLanguage": S.String.pipe(S.minLength(addMemoryGroupMemoryGroupsPostBodyMemoryLanguageMin), S.maxLength(addMemoryGroupMemoryGroupsPostBodyMemoryLanguageMax)),
+  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const AddMemoryGroupMemoryGroupsPost200Response = S.Struct({
+  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when referring to this memory group.' }),
+  "memoryGroupName": S.String.annotations({ description: 'Human-readable name of the memory group.' }),
+  "memoryLanguage": S.String.annotations({ description: 'Language in which memory content should be written.' }),
+  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Identifier of the novel to which this memory group belongs.' })
+}).annotations({ description: 'Memory group schema' })
+
+export const AddMemoryGroupMemoryGroupsPost404Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const AddMemoryGroupMemoryGroupsPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.extend(S.Struct({
+
+}), S.Record({ key: S.String, value: S.Unknown }))),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * @summary Read Memories At Chapter
  */
 export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetParams = S.Struct({
@@ -1991,22 +2028,30 @@ export const readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQueryLimi
 export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQueryParams = S.Struct({
   "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQuerySkipMin)), { default: () => readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQuerySkipDefault }),
   "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQueryLimitMax)), { default: () => readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQueryLimitDefault }),
+  "chapterId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
   "search": S.optional(S.Union(S.String, S.Null)),
   "reviewStatuses": S.optional(S.Union(S.Array(S.Literal('pending', 'approved', 'rejected')), S.Null))
 })
 
 export const readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseCountMin = 0;
 
+export const readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseRowsItemAssociatedMemoryCountMin = 0;
+
 
 
 export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200Response = S.Struct({
   "count": S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseCountMin)),
   "rows": S.Array(S.Struct({
+  "associatedMemoryCount": S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseRowsItemAssociatedMemoryCountMin)),
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
   "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
-}).annotations({ description: 'A glossary term represented as context for an agent.' }))
+}).annotations({ description: 'A glossary term together with its associated-memory count in the requested scope.' }))
 })
+
+export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet404Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
@@ -2145,7 +2190,8 @@ export const readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemo
 
 export const ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryParams = S.Struct({
   "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQuerySkipMin)), { default: () => readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQuerySkipDefault }),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryLimitMax)), { default: () => readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryLimitDefault })
+  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryLimitMax)), { default: () => readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryLimitDefault }),
+  "chapterId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
 })
 
 export const readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet200ResponseCountMin = 0;

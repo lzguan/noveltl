@@ -1,6 +1,6 @@
 import type { WorkflowSummary } from "@/api/models";
 import { useCallback, useState } from "react";
-import { useAsyncSearch } from "../useAsyncSearch";
+import { useAsyncSearch } from "../../../lib/hooks/useAsyncSearch";
 import { fetchCompletedWorkflowOptions } from "./useRunnerOptions";
 
 type AnnotationFieldType = "string" | "int" | "float" | "bool";

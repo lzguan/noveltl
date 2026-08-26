@@ -23,10 +23,13 @@ export function useGlossaryTerms(memoryGroupId: string, chapterId: string | null
 	const [query, setQuery] = useState<GlossaryTermQuery>(INITIAL_QUERY);
 	const [terms, setTerms] = useState<Loadable<Page<GlossaryTermSummary>>>({ status: "idle" });
 	const activeRequest = useRef<AbortController | null>(null);
+	const latestQueryRef = useRef<GlossaryTermQuery>(INITIAL_QUERY);
+	const lastPageRef = useRef<{ itemsLength: number; hasPrevious: boolean } | null>(null);
 
 	const runQuery = useCallback(
 		(nextQuery: GlossaryTermQuery) => {
 			activeRequest.current?.abort();
+			latestQueryRef.current = nextQuery;
 			setQuery(nextQuery);
 
 			if (!nextQuery.showAllTerms && chapterId === null) {
@@ -61,14 +64,16 @@ export function useGlossaryTerms(memoryGroupId: string, chapterId: string | null
 						});
 						return;
 					}
-					setTerms({
-						status: "ready",
-						data: pageFromOffset(
-							response.data,
-							nextQuery.skip,
-							GLOSSARY_TERM_PAGE_SIZE,
-						),
-					});
+					const data = pageFromOffset(
+						response.data,
+						nextQuery.skip,
+						GLOSSARY_TERM_PAGE_SIZE,
+					);
+					lastPageRef.current = {
+						itemsLength: data.items.length,
+						hasPrevious: data.hasPrevious,
+					};
+					setTerms({ status: "ready", data });
 				})
 				.catch((error: unknown) => {
 					if (!controller.signal.aborted) {
@@ -109,12 +114,14 @@ export function useGlossaryTerms(memoryGroupId: string, chapterId: string | null
 	}, [query, runQuery, terms]);
 
 	const reloadTermsAfterDelete = useCallback(() => {
+		const latestQuery = latestQueryRef.current;
+		const lastPage = lastPageRef.current;
 		const nextSkip =
-			terms.status === "ready" && terms.data.items.length === 1 && terms.data.hasPrevious
-				? Math.max(0, query.skip - GLOSSARY_TERM_PAGE_SIZE)
-				: query.skip;
-		runQuery({ ...query, skip: nextSkip });
-	}, [query, runQuery, terms]);
+			lastPage !== null && lastPage.itemsLength === 1 && lastPage.hasPrevious
+				? Math.max(0, latestQuery.skip - GLOSSARY_TERM_PAGE_SIZE)
+				: latestQuery.skip;
+		runQuery({ ...latestQuery, skip: nextSkip });
+	}, [runQuery]);
 
 	return {
 		showAllTerms: query.showAllTerms,

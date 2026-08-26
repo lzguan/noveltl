@@ -26,10 +26,13 @@ export function useMemoryBrowser(memoryGroupId: string, chapterId: string | null
 	const [query, setQuery] = useState<MemoryQuery>(INITIAL_QUERY);
 	const [memories, setMemories] = useState<Loadable<Page<Memory>>>({ status: "idle" });
 	const activeRequest = useRef<AbortController | null>(null);
+	const latestQueryRef = useRef<MemoryQuery>(INITIAL_QUERY);
+	const lastPageRef = useRef<{ itemsLength: number; hasPrevious: boolean } | null>(null);
 
 	const runQuery = useCallback(
 		(nextQuery: MemoryQuery) => {
 			activeRequest.current?.abort();
+			latestQueryRef.current = nextQuery;
 			setQuery(nextQuery);
 
 			const controller = new AbortController();
@@ -71,10 +74,12 @@ export function useMemoryBrowser(memoryGroupId: string, chapterId: string | null
 						});
 						return;
 					}
-					setMemories({
-						status: "ready",
-						data: pageFromOffset(response.data, nextQuery.skip, MEMORY_PAGE_SIZE),
-					});
+					const data = pageFromOffset(response.data, nextQuery.skip, MEMORY_PAGE_SIZE);
+					lastPageRef.current = {
+						itemsLength: data.items.length,
+						hasPrevious: data.hasPrevious,
+					};
+					setMemories({ status: "ready", data });
 				})
 				.catch((error: unknown) => {
 					if (!controller.signal.aborted) {
@@ -115,14 +120,14 @@ export function useMemoryBrowser(memoryGroupId: string, chapterId: string | null
 	}, [memories, query, runQuery]);
 
 	const reloadMemoriesAfterDelete = useCallback(() => {
+		const latestQuery = latestQueryRef.current;
+		const lastPage = lastPageRef.current;
 		const nextSkip =
-			memories.status === "ready" &&
-			memories.data.items.length === 1 &&
-			memories.data.hasPrevious
-				? Math.max(0, query.skip - MEMORY_PAGE_SIZE)
-				: query.skip;
-		runQuery({ ...query, skip: nextSkip });
-	}, [memories, query, runQuery]);
+			lastPage !== null && lastPage.itemsLength === 1 && lastPage.hasPrevious
+				? Math.max(0, latestQuery.skip - MEMORY_PAGE_SIZE)
+				: latestQuery.skip;
+		runQuery({ ...latestQuery, skip: nextSkip });
+	}, [runQuery]);
 
 	return {
 		fromAllChapters: query.fromAllChapters,

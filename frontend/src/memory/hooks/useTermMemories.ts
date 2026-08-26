@@ -11,12 +11,15 @@ export function useTermMemories(memoryGroupId: string, termId: string, chapterId
 	const [skip, setSkip] = useState(0);
 	const [memories, setMemories] = useState<Loadable<Page<GlossaryMemory>>>({ status: "idle" });
 	const activeRequest = useRef<AbortController | null>(null);
+	const skipRef = useRef(0);
+	const lastPageRef = useRef<{ itemsLength: number; hasPrevious: boolean } | null>(null);
 
 	const loadPage = useCallback(
 		(nextSkip: number) => {
 			activeRequest.current?.abort();
 			const controller = new AbortController();
 			activeRequest.current = controller;
+			skipRef.current = nextSkip;
 			setSkip(nextSkip);
 			setMemories({ status: "loading" });
 
@@ -42,10 +45,12 @@ export function useTermMemories(memoryGroupId: string, termId: string, chapterId
 						});
 						return;
 					}
-					setMemories({
-						status: "ready",
-						data: pageFromOffset(response.data, nextSkip, TERM_MEMORY_PAGE_SIZE),
-					});
+					const data = pageFromOffset(response.data, nextSkip, TERM_MEMORY_PAGE_SIZE);
+					lastPageRef.current = {
+						itemsLength: data.items.length,
+						hasPrevious: data.hasPrevious,
+					};
+					setMemories({ status: "ready", data });
 				})
 				.catch((error: unknown) => {
 					if (!controller.signal.aborted) {
@@ -72,14 +77,14 @@ export function useTermMemories(memoryGroupId: string, termId: string, chapterId
 	}, [loadPage, memories, skip]);
 
 	const reloadMemoriesAfterDelete = useCallback(() => {
+		const lastPage = lastPageRef.current;
+		const currentSkip = skipRef.current;
 		const nextSkip =
-			memories.status === "ready" &&
-			memories.data.items.length === 1 &&
-			memories.data.hasPrevious
-				? Math.max(0, skip - TERM_MEMORY_PAGE_SIZE)
-				: skip;
+			lastPage !== null && lastPage.itemsLength === 1 && lastPage.hasPrevious
+				? Math.max(0, currentSkip - TERM_MEMORY_PAGE_SIZE)
+				: currentSkip;
 		loadPage(nextSkip);
-	}, [loadPage, memories, skip]);
+	}, [loadPage]);
 
 	return {
 		memories,

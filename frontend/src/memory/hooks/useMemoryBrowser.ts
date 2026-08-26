@@ -114,12 +114,23 @@ export function useMemoryBrowser(memoryGroupId: string, chapterId: string | null
 		runQuery({ ...query, skip: query.skip + MEMORY_PAGE_SIZE });
 	}, [memories, query, runQuery]);
 
+	const reloadMemoriesAfterDelete = useCallback(() => {
+		const nextSkip =
+			memories.status === "ready" &&
+			memories.data.items.length === 1 &&
+			memories.data.hasPrevious
+				? Math.max(0, query.skip - MEMORY_PAGE_SIZE)
+				: query.skip;
+		runQuery({ ...query, skip: nextSkip });
+	}, [memories, query, runQuery]);
+
 	return {
 		fromAllChapters: query.fromAllChapters,
 		memoryType: query.memoryType,
 		memories,
 		loadMemories,
 		reloadMemories: loadMemories,
+		reloadMemoriesAfterDelete,
 		setFromAllChapters,
 		setMemoryType,
 		loadPreviousPage,

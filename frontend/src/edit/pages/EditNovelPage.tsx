@@ -271,6 +271,11 @@ export function EditNovelPage() {
 	}
 
 	const currentChapterId = chapterState.activeChapterId;
+	const activeChapterNum =
+		currentChapterId === null
+			? null
+			: (chapterState.chapterList.find((chapter) => chapter.chapterId === currentChapterId)
+					?.chapterNum ?? null);
 	const activeChapterServerId =
 		currentChapterId === null
 			? null
@@ -379,6 +384,7 @@ export function EditNovelPage() {
 											key={novel.novel.novelId}
 											novelId={novel.novel.novelId}
 											chapterId={activeChapterServerId}
+											chapterNum={activeChapterNum}
 											chapterContentId={activeChapterContentServerId}
 										/>
 									),

@@ -108,12 +108,21 @@ export function useGlossaryTerms(memoryGroupId: string, chapterId: string | null
 		runQuery({ ...query, skip: query.skip + GLOSSARY_TERM_PAGE_SIZE });
 	}, [query, runQuery, terms]);
 
+	const reloadTermsAfterDelete = useCallback(() => {
+		const nextSkip =
+			terms.status === "ready" && terms.data.items.length === 1 && terms.data.hasPrevious
+				? Math.max(0, query.skip - GLOSSARY_TERM_PAGE_SIZE)
+				: query.skip;
+		runQuery({ ...query, skip: nextSkip });
+	}, [query, runQuery, terms]);
+
 	return {
 		showAllTerms: query.showAllTerms,
 		search: query.search,
 		terms,
 		loadTerms,
 		reloadTerms: loadTerms,
+		reloadTermsAfterDelete,
 		setShowAllTerms,
 		setSearch,
 		loadPreviousPage,

@@ -71,10 +71,21 @@ export function useTermMemories(memoryGroupId: string, termId: string, chapterId
 		loadPage(skip + TERM_MEMORY_PAGE_SIZE);
 	}, [loadPage, memories, skip]);
 
+	const reloadMemoriesAfterDelete = useCallback(() => {
+		const nextSkip =
+			memories.status === "ready" &&
+			memories.data.items.length === 1 &&
+			memories.data.hasPrevious
+				? Math.max(0, skip - TERM_MEMORY_PAGE_SIZE)
+				: skip;
+		loadPage(nextSkip);
+	}, [loadPage, memories, skip]);
+
 	return {
 		memories,
 		loadMemories,
 		reloadMemories: loadMemories,
+		reloadMemoriesAfterDelete,
 		loadPreviousPage,
 		loadNextPage,
 	};

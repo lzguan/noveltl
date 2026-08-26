@@ -141,6 +141,11 @@ describe("memory hooks", () => {
 				status: 200,
 				data: { count: 21, rows: [memory("memory-21")] },
 				headers: new Headers(),
+			})
+			.mockResolvedValueOnce({
+				status: 200,
+				data: { count: 20, rows: [memory("memory-1")] },
+				headers: new Headers(),
 			});
 		const { result } = renderHook(() => useMemoryBrowser("group-1", "chapter-1"));
 
@@ -174,6 +179,21 @@ describe("memory hooks", () => {
 			"group-1",
 			"chapter-1",
 			{ skip: MEMORY_PAGE_SIZE, limit: MEMORY_PAGE_SIZE, memoryTypes: undefined },
+			expect.objectContaining({ signal: expect.any(AbortSignal) }),
+		);
+
+		act(() => result.current.reloadMemoriesAfterDelete());
+		await waitFor(() =>
+			expect(
+				readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet,
+			).toHaveBeenCalledTimes(3),
+		);
+		expect(
+			readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet,
+		).toHaveBeenLastCalledWith(
+			"group-1",
+			"chapter-1",
+			{ skip: 0, limit: MEMORY_PAGE_SIZE, memoryTypes: undefined },
 			expect.objectContaining({ signal: expect.any(AbortSignal) }),
 		);
 	});
@@ -266,6 +286,11 @@ describe("memory hooks", () => {
 				status: 200,
 				data: { count: 21, rows: [glossaryTermSummary("term-21")] },
 				headers: new Headers(),
+			})
+			.mockResolvedValueOnce({
+				status: 200,
+				data: { count: 20, rows: [glossaryTermSummary("term-1")] },
+				headers: new Headers(),
 			});
 		const { result } = renderHook(() => useGlossaryTerms("group-1", "chapter-1"));
 
@@ -284,6 +309,23 @@ describe("memory hooks", () => {
 			"group-1",
 			{
 				skip: GLOSSARY_TERM_PAGE_SIZE,
+				limit: GLOSSARY_TERM_PAGE_SIZE,
+				chapterId: "chapter-1",
+				search: undefined,
+			},
+			expect.objectContaining({ signal: expect.any(AbortSignal) }),
+		);
+
+		act(() => result.current.reloadTermsAfterDelete());
+		await waitFor(() =>
+			expect(
+				readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
+			).toHaveBeenCalledTimes(3),
+		);
+		expect(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet).toHaveBeenLastCalledWith(
+			"group-1",
+			{
+				skip: 0,
 				limit: GLOSSARY_TERM_PAGE_SIZE,
 				chapterId: "chapter-1",
 				search: undefined,
@@ -389,6 +431,11 @@ describe("memory hooks", () => {
 				status: 200,
 				data: { count: 11, rows: [glossaryMemory("memory-11")] },
 				headers: new Headers(),
+			})
+			.mockResolvedValueOnce({
+				status: 200,
+				data: { count: 10, rows: [glossaryMemory("memory-1")] },
+				headers: new Headers(),
 			});
 		const { result } = renderHook(() => useTermMemories("group-1", "term-1", "chapter-1"));
 
@@ -410,6 +457,25 @@ describe("memory hooks", () => {
 			"term-1",
 			{
 				skip: TERM_MEMORY_PAGE_SIZE,
+				limit: TERM_MEMORY_PAGE_SIZE,
+				chapterId: "chapter-1",
+			},
+			expect.objectContaining({ signal: expect.any(AbortSignal) }),
+		);
+
+		act(() => result.current.reloadMemoriesAfterDelete());
+		await waitFor(() =>
+			expect(
+				readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet,
+			).toHaveBeenCalledTimes(3),
+		);
+		expect(
+			readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet,
+		).toHaveBeenLastCalledWith(
+			"group-1",
+			"term-1",
+			{
+				skip: 0,
 				limit: TERM_MEMORY_PAGE_SIZE,
 				chapterId: "chapter-1",
 			},

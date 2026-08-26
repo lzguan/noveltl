@@ -15,10 +15,12 @@ import { PageNavigation } from "./PageNavigation";
 export function GlossaryBrowser({
 	memoryGroupId,
 	chapterId,
+	chapterNum,
 	chapterContentId,
 }: {
 	memoryGroupId: string;
 	chapterId: string | null;
+	chapterNum: number | null;
 	chapterContentId: string | null;
 }) {
 	const glossary = useGlossaryTerms(memoryGroupId, chapterId);
@@ -119,10 +121,13 @@ export function GlossaryBrowser({
 						terms={glossary.terms}
 						memoryGroupId={memoryGroupId}
 						chapterId={nestedChapterId}
+						chapterNum={chapterNum}
 						openTermId={openTermId}
 						onOpenTermIdChange={setOpenTermId}
 						onAddMemory={setMemorySeedTerm}
 						memoryCreationDisabled={chapterId === null || chapterContentId === null}
+						reloadTerms={reloadTerms}
+						reloadTermsAfterDelete={glossary.reloadTermsAfterDelete}
 					/>
 					{glossary.terms.status === "ready" && glossary.terms.data.items.length > 0 && (
 						<PageNavigation

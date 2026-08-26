@@ -12,11 +12,14 @@ import { useEffect, useState } from "react";
 export function MemoryPanel({
 	novelId,
 	chapterId,
+	chapterNum,
 	chapterContentId,
 }: {
 	novelId: string;
 	/** Server id of the currently open chapter, or null when no chapter is open. */
 	chapterId: string | null;
+	/** Number of the currently open chapter, or null when no chapter is open. */
+	chapterNum: number | null;
 	/** Server id of the active saved chapter content, or null while unavailable. */
 	chapterContentId: string | null;
 }) {
@@ -78,12 +81,14 @@ export function MemoryPanel({
 							key={browserKey}
 							memoryGroupId={selectedGroupId}
 							chapterId={chapterId}
+							chapterNum={chapterNum}
 						/>
 					) : (
 						<GlossaryBrowser
 							key={browserKey}
 							memoryGroupId={selectedGroupId}
 							chapterId={chapterId}
+							chapterNum={chapterNum}
 							chapterContentId={chapterContentId}
 						/>
 					)}

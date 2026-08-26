@@ -26,9 +26,11 @@ function isMemoryType(value: string): value is MemoryType {
 export function MemoryBrowser({
 	memoryGroupId,
 	chapterId,
+	chapterNum,
 }: {
 	memoryGroupId: string;
 	chapterId: string | null;
+	chapterNum: number | null;
 }) {
 	const browser = useMemoryBrowser(memoryGroupId, chapterId);
 
@@ -124,7 +126,15 @@ export function MemoryBrowser({
 				<div className="flex min-h-0 flex-1 flex-col">
 					<div className="min-h-0 flex-1 overflow-y-auto">
 						{browser.memories.data.items.map((memory) => (
-							<MemoryRow key={memory.memoryId} memory={memory} />
+							<MemoryRow
+								key={memory.memoryId}
+								memoryGroupId={memoryGroupId}
+								memory={memory}
+								chapterId={chapterId}
+								chapterNum={chapterNum}
+								reloadMemories={browser.reloadMemories}
+								reloadMemoriesAfterDelete={browser.reloadMemoriesAfterDelete}
+							/>
 						))}
 					</div>
 					<PageNavigation

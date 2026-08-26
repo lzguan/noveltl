@@ -1,13 +1,37 @@
-import type { GlossaryTermSummary } from "@/api/models";
+import { editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch } from "@/api/endpoints/default/default";
+import { ReviewStatus, type GlossaryTermSummary } from "@/api/models";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Loadable, Page } from "@/lib/loadable";
+import { apiErrorMessage, requestErrorMessage } from "@/lib/apiErrors";
 import { cn } from "@/lib/utils";
 import { useTermMemories } from "@/memory/hooks/useTermMemories";
-import { ChevronDownIcon, PlusIcon, RefreshCwIcon } from "lucide-react";
+import {
+	ChevronDownIcon,
+	EllipsisIcon,
+	PencilIcon,
+	PlusIcon,
+	RefreshCwIcon,
+	Trash2Icon,
+} from "lucide-react";
+import { useState } from "react";
+import { DeleteGlossaryTermDialog } from "./DeleteGlossaryTermDialog";
+import { EditGlossaryTermDialog } from "./EditGlossaryTermDialog";
 import { MemoryRow } from "./MemoryRow";
 import { PageNavigation } from "./PageNavigation";
 
@@ -15,25 +39,60 @@ function GlossaryTermRow({
 	memoryGroupId,
 	term,
 	chapterId,
+	chapterNum,
 	open,
 	onExpandedChange,
 	onAddMemory,
 	memoryCreationDisabled,
+	reloadTerms,
+	reloadTermsAfterDelete,
 }: {
 	memoryGroupId: string;
 	term: GlossaryTermSummary;
 	chapterId: string | null;
+	chapterNum: number | null;
 	open: boolean;
 	onExpandedChange: (open: boolean) => void;
 	onAddMemory: (term: GlossaryTermSummary) => void;
 	memoryCreationDisabled: boolean;
+	reloadTerms: () => void;
+	reloadTermsAfterDelete: () => void;
 }) {
 	const termMemories = useTermMemories(memoryGroupId, term.termId, chapterId);
+	const [editOpen, setEditOpen] = useState(false);
+	const [deleteOpen, setDeleteOpen] = useState(false);
+	const [reviewSubmitting, setReviewSubmitting] = useState(false);
+	const [reviewError, setReviewError] = useState<string | null>(null);
 
 	function changeOpen(nextOpen: boolean) {
 		onExpandedChange(nextOpen);
 		if (nextOpen && termMemories.memories.status === "idle") {
 			termMemories.loadMemories();
+		}
+	}
+
+	async function setReviewStatus(reviewStatus: ReviewStatus) {
+		if (reviewStatus === term.reviewStatus) return;
+		setReviewSubmitting(true);
+		setReviewError(null);
+		try {
+			const response =
+				await editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch(
+					memoryGroupId,
+					term.termId,
+					{ reviewStatus },
+				);
+			if (response.status !== 200) {
+				setReviewError(
+					apiErrorMessage(response.data, "Could not change the term review status."),
+				);
+				return;
+			}
+			reloadTerms();
+		} catch (error) {
+			setReviewError(requestErrorMessage(error));
+		} finally {
+			setReviewSubmitting(false);
 		}
 	}
 
@@ -79,7 +138,62 @@ function GlossaryTermRow({
 				>
 					<PlusIcon />
 				</Button>
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							className="mr-1 shrink-0"
+							aria-label={`Actions for ${term.term}`}
+							disabled={reviewSubmitting}
+						>
+							<EllipsisIcon />
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						<DropdownMenuItem onSelect={() => setEditOpen(true)}>
+							<PencilIcon /> Rename
+						</DropdownMenuItem>
+						<DropdownMenuSub>
+							<DropdownMenuSubTrigger>Review status</DropdownMenuSubTrigger>
+							<DropdownMenuSubContent>
+								<DropdownMenuRadioGroup value={term.reviewStatus}>
+									<DropdownMenuRadioItem
+										value={ReviewStatus.pending}
+										onSelect={() => void setReviewStatus(ReviewStatus.pending)}
+									>
+										Pending
+									</DropdownMenuRadioItem>
+									<DropdownMenuRadioItem
+										value={ReviewStatus.approved}
+										onSelect={() => void setReviewStatus(ReviewStatus.approved)}
+									>
+										Approved
+									</DropdownMenuRadioItem>
+									<DropdownMenuRadioItem
+										value={ReviewStatus.rejected}
+										onSelect={() => void setReviewStatus(ReviewStatus.rejected)}
+									>
+										Rejected
+									</DropdownMenuRadioItem>
+								</DropdownMenuRadioGroup>
+							</DropdownMenuSubContent>
+						</DropdownMenuSub>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem
+							variant="destructive"
+							onSelect={() => setDeleteOpen(true)}
+						>
+							<Trash2Icon /> Delete
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</div>
+			{reviewError !== null && (
+				<p role="alert" className="border-t px-2 py-1.5 text-xs text-destructive">
+					{reviewError}
+				</p>
+			)}
 			<CollapsibleContent className="border-t bg-muted/20">
 				{termMemories.memories.status === "idle" ||
 				termMemories.memories.status === "loading" ? (
@@ -99,7 +213,17 @@ function GlossaryTermRow({
 				) : (
 					<div>
 						{termMemories.memories.data.items.map(({ memory, terms }) => (
-							<MemoryRow key={memory.memoryId} memory={memory} terms={terms} />
+							<MemoryRow
+								key={memory.memoryId}
+								memoryGroupId={memoryGroupId}
+								memory={memory}
+								terms={terms}
+								chapterId={chapterId}
+								chapterNum={chapterNum}
+								reloadMemories={termMemories.reloadMemories}
+								reloadMemoriesAfterDelete={termMemories.reloadMemoriesAfterDelete}
+								reloadTerms={reloadTerms}
+							/>
 						))}
 						<PageNavigation
 							start={termMemories.memories.data.start}
@@ -113,6 +237,22 @@ function GlossaryTermRow({
 					</div>
 				)}
 			</CollapsibleContent>
+			{editOpen && (
+				<EditGlossaryTermDialog
+					memoryGroupId={memoryGroupId}
+					term={term}
+					closeDialog={() => setEditOpen(false)}
+					reloadTerms={reloadTerms}
+				/>
+			)}
+			{deleteOpen && (
+				<DeleteGlossaryTermDialog
+					memoryGroupId={memoryGroupId}
+					term={term}
+					closeDialog={() => setDeleteOpen(false)}
+					reloadTermsAfterDelete={reloadTermsAfterDelete}
+				/>
+			)}
 		</Collapsible>
 	);
 }
@@ -121,18 +261,24 @@ export function GlossaryTermList({
 	terms,
 	memoryGroupId,
 	chapterId,
+	chapterNum,
 	openTermId,
 	onOpenTermIdChange,
 	onAddMemory,
 	memoryCreationDisabled,
+	reloadTerms,
+	reloadTermsAfterDelete,
 }: {
 	terms: Loadable<Page<GlossaryTermSummary>>;
 	memoryGroupId: string;
 	chapterId: string | null;
+	chapterNum: number | null;
 	openTermId: string | null;
 	onOpenTermIdChange: (termId: string | null) => void;
 	onAddMemory: (term: GlossaryTermSummary) => void;
 	memoryCreationDisabled: boolean;
+	reloadTerms: () => void;
+	reloadTermsAfterDelete: () => void;
 }) {
 	if (terms.status === "idle" || terms.status === "loading") {
 		return (
@@ -165,10 +311,13 @@ export function GlossaryTermList({
 					memoryGroupId={memoryGroupId}
 					term={term}
 					chapterId={chapterId}
+					chapterNum={chapterNum}
 					open={openTermId === term.termId}
 					onExpandedChange={(open) => onOpenTermIdChange(open ? term.termId : null)}
 					onAddMemory={onAddMemory}
 					memoryCreationDisabled={memoryCreationDisabled}
+					reloadTerms={reloadTerms}
+					reloadTermsAfterDelete={reloadTermsAfterDelete}
 				/>
 			))}
 		</div>

@@ -3,8 +3,11 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import type { GlossaryTermSummary } from "@/api/models";
+import { CreateGlossaryMemoryDialog } from "./CreateGlossaryMemoryDialog";
+import { CreateGlossaryTermDialog } from "./CreateGlossaryTermDialog";
 import { useGlossaryTerms } from "@/memory/hooks/useGlossaryTerms";
-import { RefreshCwIcon } from "lucide-react";
+import { PlusIcon, RefreshCwIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { GlossaryTermList } from "./GlossaryTermList";
 import { PageNavigation } from "./PageNavigation";
@@ -12,12 +15,16 @@ import { PageNavigation } from "./PageNavigation";
 export function GlossaryBrowser({
 	memoryGroupId,
 	chapterId,
+	chapterContentId,
 }: {
 	memoryGroupId: string;
 	chapterId: string | null;
+	chapterContentId: string | null;
 }) {
 	const glossary = useGlossaryTerms(memoryGroupId, chapterId);
 	const [openTermId, setOpenTermId] = useState<string | null>(null);
+	const [createTermOpen, setCreateTermOpen] = useState(false);
+	const [memorySeedTerm, setMemorySeedTerm] = useState<GlossaryTermSummary | null>(null);
 
 	useEffect(() => {
 		// Mounting this keyed browser establishes a new group/chapter query context.
@@ -31,6 +38,11 @@ export function GlossaryBrowser({
 	function runOuterQuery(runQuery: () => void) {
 		setOpenTermId(null);
 		runQuery();
+	}
+
+	function reloadTerms() {
+		setMemorySeedTerm(null);
+		runOuterQuery(glossary.reloadTerms);
 	}
 
 	return (
@@ -62,8 +74,15 @@ export function GlossaryBrowser({
 					</Label>
 					<Button
 						variant="ghost"
-						size="icon-sm"
+						size="sm"
 						className="ml-auto"
+						onClick={() => setCreateTermOpen(true)}
+					>
+						<PlusIcon /> New term
+					</Button>
+					<Button
+						variant="ghost"
+						size="icon-sm"
 						aria-label="Refresh glossary terms"
 						title="Refresh glossary terms"
 						disabled={glossary.terms.status === "loading"}
@@ -102,6 +121,8 @@ export function GlossaryBrowser({
 						chapterId={nestedChapterId}
 						openTermId={openTermId}
 						onOpenTermIdChange={setOpenTermId}
+						onAddMemory={setMemorySeedTerm}
+						memoryCreationDisabled={chapterId === null || chapterContentId === null}
 					/>
 					{glossary.terms.status === "ready" && glossary.terms.data.items.length > 0 && (
 						<PageNavigation
@@ -115,6 +136,23 @@ export function GlossaryBrowser({
 						/>
 					)}
 				</>
+			)}
+			{createTermOpen && (
+				<CreateGlossaryTermDialog
+					memoryGroupId={memoryGroupId}
+					closeDialog={() => setCreateTermOpen(false)}
+					reloadTerms={reloadTerms}
+				/>
+			)}
+			{memorySeedTerm !== null && chapterId !== null && chapterContentId !== null && (
+				<CreateGlossaryMemoryDialog
+					memoryGroupId={memoryGroupId}
+					chapterId={chapterId}
+					chapterContentId={chapterContentId}
+					initialTerm={memorySeedTerm}
+					closeDialog={() => setMemorySeedTerm(null)}
+					reloadTerms={reloadTerms}
+				/>
 			)}
 		</div>
 	);

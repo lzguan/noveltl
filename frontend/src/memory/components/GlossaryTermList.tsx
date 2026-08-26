@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Loadable, Page } from "@/lib/loadable";
 import { cn } from "@/lib/utils";
 import { useTermMemories } from "@/memory/hooks/useTermMemories";
-import { ChevronDownIcon, RefreshCwIcon } from "lucide-react";
+import { ChevronDownIcon, PlusIcon, RefreshCwIcon } from "lucide-react";
 import { MemoryRow } from "./MemoryRow";
 import { PageNavigation } from "./PageNavigation";
 
@@ -17,12 +17,16 @@ function GlossaryTermRow({
 	chapterId,
 	open,
 	onExpandedChange,
+	onAddMemory,
+	memoryCreationDisabled,
 }: {
 	memoryGroupId: string;
 	term: GlossaryTermSummary;
 	chapterId: string | null;
 	open: boolean;
 	onExpandedChange: (open: boolean) => void;
+	onAddMemory: (term: GlossaryTermSummary) => void;
+	memoryCreationDisabled: boolean;
 }) {
 	const termMemories = useTermMemories(memoryGroupId, term.termId, chapterId);
 
@@ -60,6 +64,21 @@ function GlossaryTermRow({
 						<RefreshCwIcon />
 					</Button>
 				)}
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					className="mr-1 shrink-0"
+					aria-label={`Add memory for ${term.term}`}
+					title={
+						memoryCreationDisabled
+							? "Open and save a chapter before creating a memory"
+							: "Add memory"
+					}
+					disabled={memoryCreationDisabled}
+					onClick={() => onAddMemory(term)}
+				>
+					<PlusIcon />
+				</Button>
 			</div>
 			<CollapsibleContent className="border-t bg-muted/20">
 				{termMemories.memories.status === "idle" ||
@@ -104,12 +123,16 @@ export function GlossaryTermList({
 	chapterId,
 	openTermId,
 	onOpenTermIdChange,
+	onAddMemory,
+	memoryCreationDisabled,
 }: {
 	terms: Loadable<Page<GlossaryTermSummary>>;
 	memoryGroupId: string;
 	chapterId: string | null;
 	openTermId: string | null;
 	onOpenTermIdChange: (termId: string | null) => void;
+	onAddMemory: (term: GlossaryTermSummary) => void;
+	memoryCreationDisabled: boolean;
 }) {
 	if (terms.status === "idle" || terms.status === "loading") {
 		return (
@@ -144,6 +167,8 @@ export function GlossaryTermList({
 					chapterId={chapterId}
 					open={openTermId === term.termId}
 					onExpandedChange={(open) => onOpenTermIdChange(open ? term.termId : null)}
+					onAddMemory={onAddMemory}
+					memoryCreationDisabled={memoryCreationDisabled}
 				/>
 			))}
 		</div>

@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CreateMemoryGroupDialog } from "@/memory/components/CreateMemoryGroupDialog";
 import { GlossaryBrowser } from "@/memory/components/GlossaryBrowser";
 import { MemoryBrowser } from "@/memory/components/MemoryBrowser";
 import { MemoryGroupSelector } from "@/memory/components/MemoryGroupSelector";
@@ -11,14 +12,18 @@ import { useEffect, useState } from "react";
 export function MemoryPanel({
 	novelId,
 	chapterId,
+	chapterContentId,
 }: {
 	novelId: string;
 	/** Server id of the currently open chapter, or null when no chapter is open. */
 	chapterId: string | null;
+	/** Server id of the active saved chapter content, or null while unavailable. */
+	chapterContentId: string | null;
 }) {
-	const { groups, selectedGroupId, loadGroups, reloadGroups, selectGroup } =
+	const { groups, selectedGroupId, loadGroups, reloadGroups, selectGroup, addAndSelectGroup } =
 		useMemoryGroups(novelId);
 	const [view, setView] = useState<MemoryView>("memories");
+	const [createGroupOpen, setCreateGroupOpen] = useState(false);
 
 	useEffect(() => {
 		loadGroups();
@@ -45,38 +50,50 @@ export function MemoryPanel({
 		);
 	}
 
-	if (groups.data.length === 0 || selectedGroupId === null) {
-		return (
-			<Empty>
-				<EmptyHeader>
-					<EmptyTitle>No memory groups</EmptyTitle>
-					<EmptyDescription>This novel has no memory groups yet.</EmptyDescription>
-				</EmptyHeader>
-			</Empty>
-		);
-	}
-
-	const browserKey = `${selectedGroupId}:${chapterId ?? "no-chapter"}`;
+	const browserKey = `${selectedGroupId ?? "no-group"}:${chapterId ?? "no-chapter"}`;
 
 	return (
 		<div className="flex h-full min-h-0 flex-col">
-			<MemoryGroupSelector
-				groups={groups.data}
-				selectedGroupId={selectedGroupId}
-				onSelect={selectGroup}
-			/>
-			<PluginSelector value={view} onChange={setView} />
-			{view === "memories" ? (
-				<MemoryBrowser
-					key={browserKey}
-					memoryGroupId={selectedGroupId}
-					chapterId={chapterId}
-				/>
+			{groups.data.length === 0 || selectedGroupId === null ? (
+				<Empty>
+					<EmptyHeader>
+						<EmptyTitle>No memory groups</EmptyTitle>
+						<EmptyDescription>This novel has no memory groups yet.</EmptyDescription>
+					</EmptyHeader>
+					<Button size="sm" onClick={() => setCreateGroupOpen(true)}>
+						Create memory group
+					</Button>
+				</Empty>
 			) : (
-				<GlossaryBrowser
-					key={browserKey}
-					memoryGroupId={selectedGroupId}
-					chapterId={chapterId}
+				<>
+					<MemoryGroupSelector
+						groups={groups.data}
+						selectedGroupId={selectedGroupId}
+						onSelect={selectGroup}
+						onCreate={() => setCreateGroupOpen(true)}
+					/>
+					<PluginSelector value={view} onChange={setView} />
+					{view === "memories" ? (
+						<MemoryBrowser
+							key={browserKey}
+							memoryGroupId={selectedGroupId}
+							chapterId={chapterId}
+						/>
+					) : (
+						<GlossaryBrowser
+							key={browserKey}
+							memoryGroupId={selectedGroupId}
+							chapterId={chapterId}
+							chapterContentId={chapterContentId}
+						/>
+					)}
+				</>
+			)}
+			{createGroupOpen && (
+				<CreateMemoryGroupDialog
+					novelId={novelId}
+					closeDialog={() => setCreateGroupOpen(false)}
+					addMemoryGroup={addAndSelectGroup}
 				/>
 			)}
 		</div>

@@ -121,10 +121,10 @@ describe("memory hooks", () => {
 		expect(result.current.selectedGroupId).toBe(groupTwo.memoryGroupId);
 	});
 
-	it("adds a newly created group to the loaded options and selects it", () => {
+	it("adds a group to the loaded options and selects it", () => {
 		const { result } = renderHook(() => useMemoryGroups("novel-1"));
 
-		act(() => result.current.groupCreated(groupTwo));
+		act(() => result.current.addAndSelectGroup(groupTwo));
 
 		expect(result.current.groups).toEqual({ status: "ready", data: [groupTwo] });
 		expect(result.current.selectedGroupId).toBe(groupTwo.memoryGroupId);

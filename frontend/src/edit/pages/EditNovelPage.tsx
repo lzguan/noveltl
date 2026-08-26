@@ -275,6 +275,10 @@ export function EditNovelPage() {
 		currentChapterId === null
 			? null
 			: Effect.runSync(managers.controllerGetters.chapterServerId(currentChapterId));
+	const activeChapterContentServerId =
+		currentChapterId === null
+			? null
+			: Effect.runSync(managers.controllerGetters.chapterContentServerId(currentChapterId));
 
 	return (
 		<div className="relative h-full min-h-0">
@@ -375,6 +379,7 @@ export function EditNovelPage() {
 											key={novel.novel.novelId}
 											novelId={novel.novel.novelId}
 											chapterId={activeChapterServerId}
+											chapterContentId={activeChapterContentServerId}
 										/>
 									),
 								},

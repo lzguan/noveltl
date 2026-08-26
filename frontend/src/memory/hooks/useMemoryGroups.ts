@@ -4,7 +4,7 @@ import { apiErrorMessage, requestErrorMessage } from "@/lib/apiErrors";
 import type { Loadable } from "@/lib/loadable";
 import { useCallback, useRef, useState } from "react";
 
-/** Owns lazy loading, selection, and post-creation insertion for a novel's memory groups. */
+/** Owns lazy loading, selection, and insertion for a novel's memory groups. */
 export function useMemoryGroups(novelId: string) {
 	const [groups, setGroups] = useState<Loadable<readonly MemoryGroup[]>>({ status: "idle" });
 	const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export function useMemoryGroups(novelId: string) {
 		setSelectedGroupId(memoryGroupId);
 	}, []);
 
-	const groupCreated = useCallback((group: MemoryGroup) => {
+	const addAndSelectGroup = useCallback((group: MemoryGroup) => {
 		setGroups((current) => ({
 			status: "ready",
 			data:
@@ -71,6 +71,6 @@ export function useMemoryGroups(novelId: string) {
 		loadGroups,
 		reloadGroups: loadGroups,
 		selectGroup,
-		groupCreated,
+		addAndSelectGroup,
 	};
 }

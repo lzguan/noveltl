@@ -1,4 +1,5 @@
 import type { MemoryGroup } from "@/api/models";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
 	Select,
@@ -7,34 +8,50 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { PlusIcon } from "lucide-react";
 
 export function MemoryGroupSelector({
 	groups,
 	selectedGroupId,
 	onSelect,
+	onCreate,
 }: {
 	groups: readonly MemoryGroup[];
 	selectedGroupId: string;
 	onSelect: (memoryGroupId: string) => void;
+	onCreate: () => void;
 }) {
 	return (
 		<div className="flex flex-col gap-1 border-b p-2">
 			<Label htmlFor="memory-group-selector" className="text-xs text-muted-foreground">
 				Memory group
 			</Label>
-			<Select value={selectedGroupId} onValueChange={onSelect}>
-				<SelectTrigger id="memory-group-selector" size="sm" className="w-full">
-					<SelectValue />
-				</SelectTrigger>
-				<SelectContent>
-					{groups.map((group) => (
-						<SelectItem key={group.memoryGroupId} value={group.memoryGroupId}>
-							{group.memoryGroupName}
-							<span className="text-muted-foreground">· {group.memoryLanguage}</span>
-						</SelectItem>
-					))}
-				</SelectContent>
-			</Select>
+			<div className="flex items-center gap-1.5">
+				<Select value={selectedGroupId} onValueChange={onSelect}>
+					<SelectTrigger id="memory-group-selector" size="sm" className="min-w-0 flex-1">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{groups.map((group) => (
+							<SelectItem key={group.memoryGroupId} value={group.memoryGroupId}>
+								{group.memoryGroupName}
+								<span className="text-muted-foreground">
+									· {group.memoryLanguage}
+								</span>
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				<Button
+					variant="outline"
+					size="icon-sm"
+					aria-label="Create memory group"
+					title="Create memory group"
+					onClick={onCreate}
+				>
+					<PlusIcon />
+				</Button>
+			</div>
 		</div>
 	);
 }

@@ -93,7 +93,7 @@ export function RightPanel({
 					<TabsContent
 						key={tab.value}
 						value={tab.value}
-						forceMount={tab.keepMounted}
+						forceMount={tab.keepMounted ? true : undefined}
 						hidden={activeTab !== tab.value}
 						className="min-h-0 flex-1 overflow-hidden p-0"
 					>

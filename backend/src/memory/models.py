@@ -1,9 +1,10 @@
 import uuid
+from datetime import datetime
 
 from sqlalchemy import CheckConstraint, Enum, ForeignKey, Index, func, types
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.memory.types import Creator, MemoryType, ReviewStatus
+from src.memory.types import Creator, JobStatus, MemoryType, ReviewStatus
 from src.models import Base
 
 
@@ -88,3 +89,59 @@ class Memory(Base):
         Index("ix_memories_memory_observed_in", "memory_observed_in"),
         Index("ix_memories_supersedes_memory_id", "supersedes_memory_id"),
     )
+
+
+class MemoryJob(Base):
+    __tablename__ = "memory_jobs"
+
+    memory_job_id: Mapped[uuid.UUID] = mapped_column(
+        types.UUID, primary_key=True, server_default=func.gen_random_uuid()
+    )
+    memory_group_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(
+            "memory_groups.memory_group_id",
+            name="fk_memory_jobs_memory_group_id_memory_groups",
+        ),
+        nullable=False,
+    )
+    claim_token: Mapped[uuid.UUID | None] = mapped_column(types.UUID, nullable=True, unique=True)
+    claim_expires_at: Mapped[datetime | None] = mapped_column(types.DateTime, nullable=True)
+
+    __table_args__ = (
+        CheckConstraint(
+            "(claim_token IS NULL AND claim_expires_at IS NULL) OR "
+            "(claim_token IS NOT NULL AND claim_expires_at IS NOT NULL)",
+            name="ck_memory_jobs_claim_token_expiration",
+        ),
+    )
+
+
+class MemoryChapterTask(Base):
+    __tablename__ = "memory_chapter_tasks"
+
+    memory_job_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(
+            "memory_jobs.memory_job_id",
+            name="fk_memory_job_tasks_memory_job_id_memory_jobs",
+        ),
+        primary_key=True,
+    )
+    chapter_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(
+            "chapters.chapter_id",
+            name="fk_memory_job_tasks_chapter_id_chapters",
+            ondelete="CASCADE",
+        ),
+        primary_key=True,
+    )
+    task_status: Mapped[JobStatus] = mapped_column(
+        Enum(
+            JobStatus,
+            native_enum=False,
+            length=15,
+            values_callable=lambda values: [use_case.value for use_case in values],
+        ),
+        nullable=False,
+        server_default="pending",
+    )
+    attempt_count: Mapped[int] = mapped_column(types.Integer, nullable=False, server_default="0")

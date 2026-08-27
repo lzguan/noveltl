@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import CheckConstraint, Enum, ForeignKey, Index, func, types
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.memory.types import Creator, JobStatus, MemoryType, ReviewStatus
@@ -104,6 +106,7 @@ class MemoryJob(Base):
         ),
         nullable=False,
     )
+    job_params: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     claim_token: Mapped[uuid.UUID | None] = mapped_column(types.UUID, nullable=True, unique=True)
     claim_expires_at: Mapped[datetime | None] = mapped_column(types.DateTime, nullable=True)
 

@@ -111,7 +111,7 @@ async def run_novel(
                 try:
                     result = await run_agent(
                         agent,
-                        MemAgentDeps(db=db, mem_access_context=context, job_id=uuid.uuid4()),
+                        MemAgentDeps(db=db, mem_access_context=context),
                         texts_dict[chapter_content.chapter_content_id],
                         chapter.chapter_num,
                         language_name,

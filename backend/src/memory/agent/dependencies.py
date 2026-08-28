@@ -44,6 +44,5 @@ class UUIDCache:
 class MemAgentDeps:
     db: Session
     mem_access_context: MemAccessContext
-    job_id: UUID
     initial_plugin_contexts: dict[str, str] = field(default_factory=dict)
     uuid_cache: UUIDCache = field(default_factory=UUIDCache)

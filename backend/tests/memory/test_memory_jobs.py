@@ -5,16 +5,18 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from src.languages.models import Language
-from src.memory.models import MemoryChapterTask, MemoryGroup, MemoryJob
-from src.memory.tasks.jobs import (
+from src.memory.agent.tasks.jobs import (
     JobParams,
+    abort_job,
     claim_job,
     claim_next_task,
     claim_task,
     make_job,
+    refresh_job,
     release_job,
     release_task,
 )
+from src.memory.models import MemoryChapterTask, MemoryGroup, MemoryJob
 from src.memory.types import JobStatus
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, Novel, SourceWork
@@ -120,6 +122,20 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
     claimed_again = claim_job(test_db, memory_job_id, third_token, timedelta(minutes=5))
     assert claimed_again is not None
     assert claimed_again.claim_token == third_token
+    assert refresh_job(test_db, memory_job_id, uuid.uuid4(), timedelta(minutes=5)) is False
+    assert refresh_job(test_db, memory_job_id, third_token, timedelta(minutes=5)) is True
+
+    assert abort_job(test_db, uuid.uuid4()) is False
+    assert abort_job(test_db, memory_job_id) is True
+    assert abort_job(test_db, memory_job_id) is True
+    test_db.refresh(claimed_again)
+    assert claimed_again.claim_token is None
+    assert claimed_again.claim_expires_at is None
+    assert release_job(test_db, memory_job_id, third_token) is False
+
+    third_token = uuid.uuid4()
+    claimed_again = claim_job(test_db, memory_job_id, third_token, timedelta(minutes=5))
+    assert claimed_again is not None
 
     assert claim_next_task(test_db, memory_job_id, uuid.uuid4()) is None
 
@@ -129,22 +145,28 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
     assert second_task.task_status == JobStatus.PROCESSING
     assert second_task.attempt_count == 1
     assert claim_task(test_db, memory_job_id, chapters[2].chapter_id, third_token) is None
-    assert release_task(
-        test_db,
-        memory_job_id,
-        second_task.chapter_id,
-        second_token,
-        JobStatus.COMPLETED,
-    ) is False
+    assert (
+        release_task(
+            test_db,
+            memory_job_id,
+            second_task.chapter_id,
+            second_token,
+            JobStatus.COMPLETED,
+        )
+        is False
+    )
     test_db.refresh(second_task)
     assert second_task.task_status == JobStatus.PROCESSING
-    assert release_task(
-        test_db,
-        memory_job_id,
-        second_task.chapter_id,
-        third_token,
-        JobStatus.COMPLETED,
-    ) is True
+    assert (
+        release_task(
+            test_db,
+            memory_job_id,
+            second_task.chapter_id,
+            third_token,
+            JobStatus.COMPLETED,
+        )
+        is True
+    )
 
     first_task = claim_next_task(test_db, memory_job_id, third_token)
     assert first_task is not None
@@ -156,13 +178,16 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
     test_db.refresh(first_task)
     assert first_task.task_status == JobStatus.PROCESSING
 
-    assert release_task(
-        test_db,
-        memory_job_id,
-        first_task.chapter_id,
-        third_token,
-        JobStatus.FAILED,
-    ) is True
+    assert (
+        release_task(
+            test_db,
+            memory_job_id,
+            first_task.chapter_id,
+            third_token,
+            JobStatus.FAILED,
+        )
+        is True
+    )
     assert claim_next_task(test_db, memory_job_id, third_token) is None
 
     test_db.execute(
@@ -171,4 +196,5 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
         .values(claim_expires_at=func.now() - timedelta(seconds=1))
     )
     test_db.commit()
+    assert refresh_job(test_db, memory_job_id, third_token, timedelta(minutes=5)) is False
     assert claim_job(test_db, memory_job_id, uuid.uuid4(), timedelta(minutes=5)) is None

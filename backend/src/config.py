@@ -40,6 +40,7 @@ class RedisSettings(BaseConfig):
     FILTERS_DATABASE: int = Field(default=0, ge=0)
     AUTOLABELS_DATABASE: int = Field(default=1, ge=0)
     REQUESTS_DATABASE: int = Field(default=2, ge=0)
+    AGENT_DATABASE: int = Field(default=3, ge=0)
 
 
 class LogSettings(BaseConfig):

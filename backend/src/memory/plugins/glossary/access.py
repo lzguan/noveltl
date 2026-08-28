@@ -21,9 +21,7 @@ type ContainsQuery = Callable[
 GLOSSARY_PLUGIN_NAME: Final[PluginName] = "glossary"
 
 
-def contains_query(
-    chapter: SQLColumnExpression[str], term: SQLColumnExpression[str]
-) -> SQLColumnExpression[bool]:
+def contains_query(chapter: SQLColumnExpression[str], term: SQLColumnExpression[str]) -> SQLColumnExpression[bool]:
     """Match terms after removing known source-text obfuscation marks."""
     normalized_chapter = func.translate(chapter, "『』《》【】", "")
     normalized_term = func.translate(term, "『』《》【】", "")

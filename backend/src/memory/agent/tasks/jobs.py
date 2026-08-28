@@ -1,5 +1,6 @@
 import uuid
 from datetime import timedelta
+from typing import Literal
 
 from sqlalchemy import func, insert, literal, or_, select, update
 from sqlalchemy.orm import Session
@@ -91,6 +92,60 @@ def release_job(
     try:
         released_job_id = db.scalar(release_stmt)
         if released_job_id is None:
+            db.rollback()
+            return False
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return True
+
+
+def abort_job(db: Session, memory_job_id: uuid.UUID) -> bool:
+    """Clear a job claim regardless of which worker currently owns it."""
+    abort_stmt = (
+        update(MemoryJob)
+        .where(MemoryJob.memory_job_id == memory_job_id)
+        .values(claim_token=None, claim_expires_at=None)
+        .returning(MemoryJob.memory_job_id)
+    )
+
+    try:
+        aborted_job_id = db.scalar(abort_stmt)
+        if aborted_job_id is None:
+            db.rollback()
+            return False
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return True
+
+
+def refresh_job(
+    db: Session,
+    memory_job_id: uuid.UUID,
+    claim_token: uuid.UUID,
+    claim_duration: timedelta,
+) -> bool:
+    """Extend an unexpired job claim owned by the caller."""
+    if claim_duration <= timedelta(0):
+        raise ValueError("claim_duration must be positive")
+
+    refresh_stmt = (
+        update(MemoryJob)
+        .where(
+            MemoryJob.memory_job_id == memory_job_id,
+            MemoryJob.claim_token == claim_token,
+            MemoryJob.claim_expires_at >= func.now(),
+        )
+        .values(claim_expires_at=func.now() + claim_duration)
+        .returning(MemoryJob.memory_job_id)
+    )
+
+    try:
+        refreshed_job_id = db.scalar(refresh_stmt)
+        if refreshed_job_id is None:
             db.rollback()
             return False
         db.commit()
@@ -241,11 +296,9 @@ def release_task(
     memory_job_id: uuid.UUID,
     chapter_id: uuid.UUID,
     claim_token: uuid.UUID,
-    task_status: JobStatus,
+    task_status: Literal[JobStatus.COMPLETED, JobStatus.FAILED],
 ) -> bool:
     """Finish a processing task and commit if the caller still owns the job claim."""
-    if task_status not in (JobStatus.COMPLETED, JobStatus.FAILED):
-        raise ValueError("task_status must be completed or failed")
 
     release_stmt = (
         update(MemoryChapterTask)

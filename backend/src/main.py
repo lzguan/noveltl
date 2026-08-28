@@ -13,6 +13,7 @@ from src.editing.router import router as editing_router
 from src.filters.router import router as filter_router
 from src.labels.router import router as label_router
 from src.languages.router import router as language_router
+from src.memory.agent.router import router as memory_agent_router
 from src.memory.plugins.glossary.router import router as glossary_memory_router
 from src.memory.router import router as memory_router
 from src.novels.router import router as novel_router
@@ -55,6 +56,7 @@ app.include_router(requests_router)
 app.include_router(filter_router)
 app.include_router(memory_router)
 app.include_router(glossary_memory_router)
+app.include_router(memory_agent_router)
 
 if __name__ == "__main__":
     import uvicorn

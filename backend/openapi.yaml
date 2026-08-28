@@ -751,6 +751,31 @@ components:
       - memoryLanguage
       title: CreateMemoryGroup
       type: object
+    CreateMemoryJob:
+      properties:
+        endChapterNum:
+          anyOf:
+          - minimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Endchapternum
+        memoryGroupId:
+          format: uuid
+          title: Memorygroupid
+          type: string
+        params:
+          $ref: '#/components/schemas/JobParams'
+        startChapterNum:
+          anyOf:
+          - minimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Startchapternum
+      required:
+      - memoryGroupId
+      - params
+      title: CreateMemoryJob
+      type: object
     CreateNovel:
       description: "Pydantic schema to validate forms for creating a novel.\n\nAttributes:\n\
         \    novel_title: Novel title to create.\n    novel_description: Description\
@@ -1485,6 +1510,28 @@ components:
       type: object
     IntegerValue-Input:
       type: integer
+    JobParams:
+      properties:
+        modelName:
+          $ref: '#/components/schemas/ModelName'
+        plugins:
+          items:
+            $ref: '#/components/schemas/PluginName'
+          title: Plugins
+          type: array
+      required:
+      - modelName
+      - plugins
+      title: JobParams
+      type: object
+    JobStatus:
+      enum:
+      - pending
+      - processing
+      - completed
+      - failed
+      title: JobStatus
+      type: string
     Label:
       description: 'Pydantic schema for a label that belongs to a LabelData.
 
@@ -1855,6 +1902,42 @@ components:
       - pluginName
       title: Memory
       type: object
+    MemoryChapterTask:
+      properties:
+        attemptCount:
+          title: Attemptcount
+          type: integer
+        chapterId:
+          format: uuid
+          title: Chapterid
+          type: string
+        chapterNum:
+          title: Chapternum
+          type: integer
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        memoryJobId:
+          format: uuid
+          title: Memoryjobid
+          type: string
+        taskStatus:
+          $ref: '#/components/schemas/JobStatus'
+        updatedAt:
+          format: date-time
+          title: Updatedat
+          type: string
+      required:
+      - memoryJobId
+      - chapterId
+      - chapterNum
+      - taskStatus
+      - attemptCount
+      - createdAt
+      - updatedAt
+      title: MemoryChapterTask
+      type: object
     MemoryGroup:
       description: Memory group schema
       properties:
@@ -1883,21 +1966,40 @@ components:
       - memoryLanguage
       title: MemoryGroup
       type: object
-    MemoryPage:
+    MemoryJob:
       properties:
-        count:
-          minimum: 0.0
-          title: Count
-          type: integer
-        rows:
-          items:
-            $ref: '#/components/schemas/Memory'
-          title: Rows
-          type: array
+        claimExpiresAt:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Claimexpiresat
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        jobParams:
+          $ref: '#/components/schemas/JobParams'
+        memoryGroupId:
+          format: uuid
+          title: Memorygroupid
+          type: string
+        memoryJobId:
+          format: uuid
+          title: Memoryjobid
+          type: string
+        updatedAt:
+          format: date-time
+          title: Updatedat
+          type: string
       required:
-      - count
-      - rows
-      title: MemoryPage
+      - memoryJobId
+      - memoryGroupId
+      - jobParams
+      - claimExpiresAt
+      - createdAt
+      - updatedAt
+      title: MemoryJob
       type: object
     MemoryType:
       description: 'The type of a memory.
@@ -1916,6 +2018,9 @@ components:
       - def
       - rel
       title: MemoryType
+      type: string
+    ModelName:
+      const: deepseek:deepseek-chat
       type: string
     ModifyChapterContentResponse:
       description: "Pydantic schema for the response after modifying chapter content.\n\
@@ -2175,6 +2280,38 @@ components:
       - count
       - rows
       title: Page[GlossaryTermSummary]
+      type: object
+    Page_MemoryChapterTask_:
+      properties:
+        count:
+          minimum: 0.0
+          title: Count
+          type: integer
+        rows:
+          items:
+            $ref: '#/components/schemas/MemoryChapterTask'
+          title: Rows
+          type: array
+      required:
+      - count
+      - rows
+      title: Page[MemoryChapterTask]
+      type: object
+    Page_Memory_:
+      properties:
+        count:
+          minimum: 0.0
+          title: Count
+          type: integer
+        rows:
+          items:
+            $ref: '#/components/schemas/Memory'
+          title: Rows
+          type: array
+      required:
+      - count
+      - rows
+      title: Page[Memory]
       type: object
     PluginName:
       const: glossary
@@ -5464,6 +5601,452 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Edit Memory Review Status
+  /memory-agent/jobs:
+    get:
+      operationId: read_memory_jobs_memory_agent_jobs_get
+      parameters:
+      - in: query
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/MemoryJob'
+                title: Response Read Memory Jobs Memory Agent Jobs Get
+                type: array
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Memory Jobs
+    post:
+      operationId: add_memory_job_memory_agent_jobs_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMemoryJob'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryJob'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Add Memory Job
+  /memory-agent/jobs/{memoryJobId}:
+    delete:
+      operationId: remove_memory_job_memory_agent_jobs__memoryJobId__delete
+      parameters:
+      - in: path
+        name: memoryJobId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryjobid
+          type: string
+      responses:
+        '204':
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Remove Memory Job
+    get:
+      operationId: read_memory_job_memory_agent_jobs__memoryJobId__get
+      parameters:
+      - in: path
+        name: memoryJobId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryjobid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryJob'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Memory Job
+  /memory-agent/jobs/{memoryJobId}/abort:
+    post:
+      operationId: abort_memory_job_memory_agent_jobs__memoryJobId__abort_post
+      parameters:
+      - in: path
+        name: memoryJobId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryjobid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryJob'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Abort Memory Job
+  /memory-agent/jobs/{memoryJobId}/start:
+    post:
+      operationId: start_memory_job_memory_agent_jobs__memoryJobId__start_post
+      parameters:
+      - in: path
+        name: memoryJobId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryjobid
+          type: string
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryJob'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Service Unavailable
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Start Memory Job
+  /memory-agent/jobs/{memoryJobId}/tasks:
+    get:
+      operationId: read_memory_tasks_memory_agent_jobs__memoryJobId__tasks_get
+      parameters:
+      - in: path
+        name: memoryJobId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryjobid
+          type: string
+      - in: query
+        name: skip
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Skip
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_MemoryChapterTask_'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Memory Tasks
+  /memory-agent/jobs/{memoryJobId}/tasks/{chapterId}:
+    delete:
+      operationId: remove_memory_task_memory_agent_jobs__memoryJobId__tasks__chapterId__delete
+      parameters:
+      - in: path
+        name: memoryJobId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryjobid
+          type: string
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      responses:
+        '204':
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Remove Memory Task
+    get:
+      operationId: read_memory_task_memory_agent_jobs__memoryJobId__tasks__chapterId__get
+      parameters:
+      - in: path
+        name: memoryJobId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryjobid
+          type: string
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryChapterTask'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Memory Task
+  /memory-agent/jobs/{memoryJobId}/tasks/{chapterId}/retry:
+    post:
+      operationId: retry_memory_task_memory_agent_jobs__memoryJobId__tasks__chapterId__retry_post
+      parameters:
+      - in: path
+        name: memoryJobId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryjobid
+          type: string
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryChapterTask'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Service Unavailable
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Retry Memory Task
+  /memory-agent/jobs/{memoryJobId}/tasks/{chapterId}/start:
+    post:
+      operationId: start_memory_task_memory_agent_jobs__memoryJobId__tasks__chapterId__start_post
+      parameters:
+      - in: path
+        name: memoryJobId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryjobid
+          type: string
+      - in: path
+        name: chapterId
+        required: true
+        schema:
+          format: uuid
+          title: Chapterid
+          type: string
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryChapterTask'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Service Unavailable
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Start Memory Task
   /memory-groups:
     get:
       operationId: read_memory_groups_memory_groups_get
@@ -5591,7 +6174,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MemoryPage'
+                $ref: '#/components/schemas/Page_Memory_'
           description: Successful Response
         '404':
           content:
@@ -6246,7 +6829,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MemoryPage'
+                $ref: '#/components/schemas/Page_Memory_'
           description: Successful Response
         '422':
           content:

@@ -21,7 +21,6 @@ def _run_context(db: Session) -> RunContext[MemAgentDeps]:
             chapter_id=uuid4(),
             chapter_content_id=uuid4(),
         ),
-        job_id=uuid4(),
     )
     return RunContext(deps=deps, model=TestModel(), usage=RunUsage())
 

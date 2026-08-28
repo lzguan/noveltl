@@ -103,6 +103,7 @@ class MemoryJob(Base):
         ForeignKey(
             "memory_groups.memory_group_id",
             name="fk_memory_jobs_memory_group_id_memory_groups",
+            ondelete="CASCADE",
         ),
         nullable=False,
     )
@@ -126,6 +127,7 @@ class MemoryChapterTask(Base):
         ForeignKey(
             "memory_jobs.memory_job_id",
             name="fk_memory_job_tasks_memory_job_id_memory_jobs",
+            ondelete="CASCADE",
         ),
         primary_key=True,
     )

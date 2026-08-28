@@ -13,6 +13,26 @@ class MemoryJobClaimLostException(RuntimeError):
     pass
 
 
+class MemoryJobNotFoundException(NotFoundException):
+    pass
+
+
+class MemoryChapterTaskNotFoundException(NotFoundException):
+    pass
+
+
+class MemoryJobStateException(RuntimeError):
+    pass
+
+
+class MemoryChapterTaskStateException(RuntimeError):
+    pass
+
+
+class MemoryAgentEnqueueFailedException(RuntimeError):
+    pass
+
+
 class GlossaryTermNotFoundException(NotFoundException):
     pass
 

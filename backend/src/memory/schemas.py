@@ -5,7 +5,7 @@ from uuid import UUID
 from pydantic import ConfigDict, Field
 
 from src.memory.types import Creator, MemoryType, PluginName, ReviewStatus
-from src.schemas import Model
+from src.schemas import Model, Page
 
 
 class MemoryGroupContext(Model):
@@ -87,9 +87,7 @@ class CreateMemoryGroup(Model):
     memory_language: str = Field(min_length=2, max_length=2)
 
 
-class MemoryPage(Model):
-    count: int = Field(ge=0)
-    rows: list[Memory]
+MemoryPage = Page[Memory]
 
 
 class UpdateMemoryContent(Model):

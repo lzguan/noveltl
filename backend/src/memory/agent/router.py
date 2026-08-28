@@ -9,13 +9,21 @@ from src.auth.models import User
 from src.database import get_db
 from src.memory.agent.dispatch.dependencies import get_dispatcher
 from src.memory.agent.dispatch.dispatcher import MemoryAgentDispatcher
-from src.memory.agent.schemas import CreateMemoryJob, MemoryChapterTask, MemoryChapterTaskPage, MemoryJob
+from src.memory.agent.schemas import (
+    CreateMemoryJob,
+    MemoryChapterTask,
+    MemoryChapterTaskPage,
+    MemoryJob,
+    MemoryJobSummary,
+)
 from src.memory.agent.service import (
     abort_job,
     create_job,
     delete_job,
     delete_task,
     query_job,
+    query_job_summaries,
+    query_job_summary,
     query_jobs,
     query_task,
     query_tasks,
@@ -88,6 +96,38 @@ def read_memory_job(
 ) -> MemoryJob:
     try:
         return query_job(db, current_user, memory_job_id)
+    except MemoryJobNotFoundException as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.get(
+    "/job-summaries",
+    response_model=list[MemoryJobSummary],
+    responses={404: {"model": DetailHTTPErrorResponse}},
+)
+def read_memory_job_summaries(
+    memory_group_id: Annotated[UUID, Query(alias="memoryGroupId")],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> list[MemoryJobSummary]:
+    try:
+        return query_job_summaries(db, current_user, memory_group_id)
+    except MemoryGroupNotFoundException as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.get(
+    "/job-summaries/{memoryJobId}",
+    response_model=MemoryJobSummary,
+    responses={404: {"model": DetailHTTPErrorResponse}},
+)
+def read_memory_job_summary(
+    memory_job_id: Annotated[UUID, Path(alias="memoryJobId")],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> MemoryJobSummary:
+    try:
+        return query_job_summary(db, current_user, memory_job_id)
     except MemoryJobNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 

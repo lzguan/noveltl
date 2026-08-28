@@ -1938,6 +1938,31 @@ components:
       - updatedAt
       title: MemoryChapterTask
       type: object
+    MemoryChapterTaskCounts:
+      properties:
+        completed:
+          minimum: 0.0
+          title: Completed
+          type: integer
+        failed:
+          minimum: 0.0
+          title: Failed
+          type: integer
+        pending:
+          minimum: 0.0
+          title: Pending
+          type: integer
+        processing:
+          minimum: 0.0
+          title: Processing
+          type: integer
+      required:
+      - pending
+      - processing
+      - completed
+      - failed
+      title: MemoryChapterTaskCounts
+      type: object
     MemoryGroup:
       description: Memory group schema
       properties:
@@ -2000,6 +2025,17 @@ components:
       - createdAt
       - updatedAt
       title: MemoryJob
+      type: object
+    MemoryJobSummary:
+      properties:
+        job:
+          $ref: '#/components/schemas/MemoryJob'
+        taskCounts:
+          $ref: '#/components/schemas/MemoryChapterTaskCounts'
+      required:
+      - job
+      - taskCounts
+      title: MemoryJobSummary
       type: object
     MemoryType:
       description: 'The type of a memory.
@@ -5601,6 +5637,76 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Edit Memory Review Status
+  /memory-agent/job-summaries:
+    get:
+      operationId: read_memory_job_summaries_memory_agent_job_summaries_get
+      parameters:
+      - in: query
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/MemoryJobSummary'
+                title: Response Read Memory Job Summaries Memory Agent Job Summaries
+                  Get
+                type: array
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Memory Job Summaries
+  /memory-agent/job-summaries/{memoryJobId}:
+    get:
+      operationId: read_memory_job_summary_memory_agent_job_summaries__memoryJobId__get
+      parameters:
+      - in: path
+        name: memoryJobId
+        required: true
+        schema:
+          format: uuid
+          title: Memoryjobid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryJobSummary'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Memory Job Summary
   /memory-agent/jobs:
     get:
       operationId: read_memory_jobs_memory_agent_jobs_get

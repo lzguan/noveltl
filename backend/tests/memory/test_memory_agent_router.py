@@ -69,6 +69,30 @@ def test_memory_agent_router_exposes_authenticated_job_progress_and_dispatch(
     assert jobs_response.status_code == status.HTTP_200_OK
     assert [item["memoryJobId"] for item in jobs_response.json()] == [str(memory_job_id)]
 
+    summaries_response = client.get(
+        "/memory-agent/job-summaries",
+        params={"memoryGroupId": str(group.memory_group_id)},
+        headers=headers,
+    )
+    assert summaries_response.status_code == status.HTTP_200_OK
+    assert summaries_response.json() == [
+        {
+            "job": job,
+            "taskCounts": {
+                "pending": 1,
+                "processing": 0,
+                "completed": 0,
+                "failed": 0,
+            },
+        }
+    ]
+    summary_response = client.get(
+        f"/memory-agent/job-summaries/{memory_job_id}",
+        headers=headers,
+    )
+    assert summary_response.status_code == status.HTTP_200_OK
+    assert summary_response.json() == summaries_response.json()[0]
+
     tasks_response = client.get(f"/memory-agent/jobs/{memory_job_id}/tasks", headers=headers)
     assert tasks_response.status_code == status.HTTP_200_OK
     task_page = tasks_response.json()

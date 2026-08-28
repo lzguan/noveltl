@@ -120,8 +120,10 @@ export * from './lazyEntry';
 export * from './mDataType';
 export * from './memory';
 export * from './memoryChapterTask';
+export * from './memoryChapterTaskCounts';
 export * from './memoryGroup';
 export * from './memoryJob';
+export * from './memoryJobSummary';
 export * from './memoryPage';
 export * from './memoryType';
 export * from './modelName';
@@ -174,6 +176,7 @@ export * from './readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermId
 export * from './readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetParams';
 export * from './readMemoryGroupsMemoryGroupsGetParams';
 export * from './readMemoryJobsMemoryAgentJobsGetParams';
+export * from './readMemoryJobSummariesMemoryAgentJobSummariesGetParams';
 export * from './readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetParams';
 export * from './readNovelsMineNovelsMineGetParams';
 export * from './readNovelsNovelsGetParams';

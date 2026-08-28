@@ -1638,6 +1638,113 @@ export const EditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch422Response 
 })
 
 /**
+ * @summary Read Memory Job Summaries
+ */
+export const ReadMemoryJobSummariesMemoryAgentJobSummariesGetQueryParams = S.Struct({
+  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseTaskCountsCompletedMin = 0;
+
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseTaskCountsFailedMin = 0;
+
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseTaskCountsPendingMin = 0;
+
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseTaskCountsProcessingMin = 0;
+
+
+
+export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseItem = S.Struct({
+  "job": S.Struct({
+  "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
+  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "jobParams": S.Struct({
+  "modelName": S.Literal("deepseek:deepseek-chat"),
+  "plugins": S.Array(S.Literal("glossary"))
+}),
+  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+}),
+  "taskCounts": S.Struct({
+  "completed": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseTaskCountsCompletedMin)),
+  "failed": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseTaskCountsFailedMin)),
+  "pending": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseTaskCountsPendingMin)),
+  "processing": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseTaskCountsProcessingMin))
+})
+})
+export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet200Response = S.Array(ReadMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseItem)
+
+export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet404Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.extend(S.Struct({
+
+}), S.Record({ key: S.String, value: S.Unknown }))),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Read Memory Job Summary
+ */
+export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetParams = S.Struct({
+  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseTaskCountsCompletedMin = 0;
+
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseTaskCountsFailedMin = 0;
+
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseTaskCountsPendingMin = 0;
+
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseTaskCountsProcessingMin = 0;
+
+
+
+export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200Response = S.Struct({
+  "job": S.Struct({
+  "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
+  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "jobParams": S.Struct({
+  "modelName": S.Literal("deepseek:deepseek-chat"),
+  "plugins": S.Array(S.Literal("glossary"))
+}),
+  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+}),
+  "taskCounts": S.Struct({
+  "completed": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseTaskCountsCompletedMin)),
+  "failed": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseTaskCountsFailedMin)),
+  "pending": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseTaskCountsPendingMin)),
+  "processing": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseTaskCountsProcessingMin))
+})
+})
+
+export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet404Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.extend(S.Struct({
+
+}), S.Record({ key: S.String, value: S.Unknown }))),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * @summary Read Memory Jobs
  */
 export const ReadMemoryJobsMemoryAgentJobsGetQueryParams = S.Struct({

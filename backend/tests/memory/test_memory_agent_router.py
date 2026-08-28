@@ -76,7 +76,10 @@ def test_memory_agent_router_exposes_authenticated_job_progress_and_dispatch(
     assert task_page["rows"][0]["taskStatus"] == "pending"
     chapter_id = UUID(task_page["rows"][0]["chapterId"])
 
-    assert client.post(f"/memory-agent/jobs/{memory_job_id}/start", headers=headers).status_code == status.HTTP_202_ACCEPTED
+    assert (
+        client.post(f"/memory-agent/jobs/{memory_job_id}/start", headers=headers).status_code
+        == status.HTTP_202_ACCEPTED
+    )
     assert (
         client.post(
             f"/memory-agent/jobs/{memory_job_id}/tasks/{chapter_id}/start",

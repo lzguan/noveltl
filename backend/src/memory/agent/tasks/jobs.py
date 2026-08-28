@@ -2,7 +2,7 @@ import uuid
 from datetime import timedelta
 from typing import Literal
 
-from sqlalchemy import func, insert, literal, or_, select, update
+from sqlalchemy import and_, func, insert, literal, or_, select, update
 from sqlalchemy.orm import Session
 
 from src.memory.agent.agent import ModelName
@@ -35,7 +35,7 @@ def claim_job(
     claim_token: uuid.UUID,
     claim_duration: timedelta,
 ) -> MemoryJob | None:
-    """Claim a job that has pending work and return its persisted configuration."""
+    """Claim a job that has pending or abandoned processing work."""
     if claim_duration <= timedelta(0):
         raise ValueError("claim_duration must be positive")
 
@@ -47,14 +47,21 @@ def claim_job(
         )
         .exists()
     )
+    has_runnable_task = (
+        select(MemoryChapterTask.memory_job_id)
+        .where(
+            MemoryChapterTask.memory_job_id == MemoryJob.memory_job_id,
+            MemoryChapterTask.task_status.in_((JobStatus.PENDING, JobStatus.PROCESSING)),
+        )
+        .exists()
+    )
     claim_stmt = (
         update(MemoryJob)
         .where(
             MemoryJob.memory_job_id == memory_job_id,
-            has_pending_task,
             or_(
-                MemoryJob.claim_token.is_(None),
-                MemoryJob.claim_expires_at < func.now(),
+                and_(MemoryJob.claim_token.is_(None), has_pending_task),
+                and_(MemoryJob.claim_expires_at < func.now(), has_runnable_task),
             ),
         )
         .values(
@@ -66,6 +73,17 @@ def claim_job(
 
     try:
         job = db.execute(claim_stmt).scalar_one_or_none()
+        if job is not None:
+            # A successfully replaced lease is the ownership boundary. Any
+            # processing task predates this token and is safe to retry.
+            db.execute(
+                update(MemoryChapterTask)
+                .where(
+                    MemoryChapterTask.memory_job_id == memory_job_id,
+                    MemoryChapterTask.task_status == JobStatus.PROCESSING,
+                )
+                .values(task_status=JobStatus.PENDING)
+            )
         db.commit()
     except Exception:
         db.rollback()
@@ -102,7 +120,7 @@ def release_job(
 
 
 def abort_job(db: Session, memory_job_id: uuid.UUID) -> bool:
-    """Clear a job claim regardless of which worker currently owns it."""
+    """Fail active tasks and clear the job claim, invalidating the current worker."""
     abort_stmt = (
         update(MemoryJob)
         .where(MemoryJob.memory_job_id == memory_job_id)
@@ -115,6 +133,14 @@ def abort_job(db: Session, memory_job_id: uuid.UUID) -> bool:
         if aborted_job_id is None:
             db.rollback()
             return False
+        db.execute(
+            update(MemoryChapterTask)
+            .where(
+                MemoryChapterTask.memory_job_id == memory_job_id,
+                MemoryChapterTask.task_status == JobStatus.PROCESSING,
+            )
+            .values(task_status=JobStatus.FAILED)
+        )
         db.commit()
     except Exception:
         db.rollback()
@@ -217,6 +243,9 @@ def claim_next_task(
     """
     Mark and return the next pending task while the caller owns the job claim.
 
+    ``claim_job`` returns abandoned processing work to pending when ownership
+    changes, so task claiming remains idempotent for the current worker.
+
     Args:
         db: The database session.
         memory_job_id: The ID of the job.
@@ -266,7 +295,7 @@ def claim_task(
     chapter_id: uuid.UUID,
     claim_token: uuid.UUID,
 ) -> MemoryChapterTask | None:
-    """Mark a specified pending task as processing while the caller owns the job claim."""
+    """Mark a specified pending task as processing while owning the job claim."""
     claim_stmt = (
         update(MemoryChapterTask)
         .where(

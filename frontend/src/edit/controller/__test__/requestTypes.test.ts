@@ -28,6 +28,8 @@ describe("request key generation", () => {
 	it("explains when UUID generation is unavailable", () => {
 		vi.stubGlobal("crypto", {});
 
-		expect(() => generateRequestKey()).toThrow("UUID generation is unavailable in this browser.");
+		expect(() => generateRequestKey()).toThrow(
+			"UUID generation is unavailable in this browser.",
+		);
 	});
 });

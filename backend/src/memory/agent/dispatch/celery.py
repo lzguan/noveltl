@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 @app.task
 def run_memory_job(memory_job_id: str) -> None:
     """Celery entry point for processing every pending task in a memory job."""
+
     async def consume_job() -> None:
         # Agent results are transient; durable progress is recorded by each task.
         async for _ in run_all_tasks(SessionLocal, UUID(memory_job_id)):

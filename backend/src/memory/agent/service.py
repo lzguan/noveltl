@@ -114,9 +114,9 @@ def query_tasks(
         .limit(limit)
     ).mappings()
     count = db.scalar(
-        select(func.count()).select_from(MemoryChapterTaskModel).where(
-            MemoryChapterTaskModel.memory_job_id == memory_job_id
-        )
+        select(func.count())
+        .select_from(MemoryChapterTaskModel)
+        .where(MemoryChapterTaskModel.memory_job_id == memory_job_id)
     )
     return schemas.MemoryChapterTaskPage(
         count=count or 0,
@@ -164,7 +164,7 @@ def start_job(
     dispatcher: MemoryAgentDispatcher,
     memory_job_id: UUID,
 ) -> schemas.MemoryJob:
-    """Publish a job containing pending work after checking edit access."""
+    """Publish a job containing pending or abandoned processing work."""
     statement = (
         select(MemoryJobModel)
         .join(MemoryGroup, MemoryGroup.memory_group_id == MemoryJobModel.memory_group_id)
@@ -176,16 +176,16 @@ def start_job(
     except NoResultFound as exc:
         raise MemoryJobNotFoundException(f"Memory job {memory_job_id} not found or not accessible.") from exc
 
-    has_pending_task = db.scalar(
+    has_runnable_task = db.scalar(
         select(MemoryChapterTaskModel.chapter_id)
         .where(
             MemoryChapterTaskModel.memory_job_id == memory_job_id,
-            MemoryChapterTaskModel.task_status == JobStatus.PENDING,
+            MemoryChapterTaskModel.task_status.in_((JobStatus.PENDING, JobStatus.PROCESSING)),
         )
         .limit(1)
     )
-    if has_pending_task is None:
-        raise MemoryJobStateException(f"Memory job {memory_job_id} has no pending tasks.")
+    if has_runnable_task is None:
+        raise MemoryJobStateException(f"Memory job {memory_job_id} has no runnable tasks.")
     dispatcher.enqueue_job(memory_job_id)
     return schemas.MemoryJob.model_validate(job)
 
@@ -288,7 +288,7 @@ def retry_task(
 
 
 def abort_job(db: Session, user: User, memory_job_id: UUID) -> schemas.MemoryJob:
-    """Clear the claim on an accessible memory job without changing its tasks."""
+    """Fail active tasks and clear the claim on an accessible memory job."""
     statement = (
         select(MemoryJobModel.memory_job_id)
         .join(MemoryGroup, MemoryGroup.memory_group_id == MemoryJobModel.memory_group_id)

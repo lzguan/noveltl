@@ -126,12 +126,7 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
     assert refresh_job(test_db, memory_job_id, third_token, timedelta(minutes=5)) is True
 
     assert abort_job(test_db, uuid.uuid4()) is False
-    assert abort_job(test_db, memory_job_id) is True
-    assert abort_job(test_db, memory_job_id) is True
-    test_db.refresh(claimed_again)
-    assert claimed_again.claim_token is None
-    assert claimed_again.claim_expires_at is None
-    assert release_job(test_db, memory_job_id, third_token) is False
+    assert release_job(test_db, memory_job_id, third_token) is True
 
     third_token = uuid.uuid4()
     claimed_again = claim_job(test_db, memory_job_id, third_token, timedelta(minutes=5))
@@ -174,27 +169,44 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
     assert first_task.task_status == JobStatus.PROCESSING
     assert first_task.attempt_count == 1
 
-    assert release_job(test_db, memory_job_id, second_token) is False
-    test_db.refresh(first_task)
-    assert first_task.task_status == JobStatus.PROCESSING
+    # Processing work is recoverable from an expired lease, but an unclaimed
+    # processing task is an invalid state and must not be silently adopted.
+    assert release_job(test_db, memory_job_id, third_token) is True
+    replacement_token = uuid.uuid4()
+    assert claim_job(test_db, memory_job_id, replacement_token, timedelta(minutes=5)) is None
 
+    stale_token = uuid.uuid4()
+    test_db.execute(
+        update(MemoryJob)
+        .where(MemoryJob.memory_job_id == memory_job_id)
+        .values(
+            claim_token=stale_token,
+            claim_expires_at=func.now() - timedelta(seconds=1),
+        )
+    )
+    test_db.commit()
+
+    assert claim_job(test_db, memory_job_id, replacement_token, timedelta(minutes=5)) is not None
+    reclaimed_task = claim_next_task(test_db, memory_job_id, replacement_token)
+    assert reclaimed_task is not None
+    assert reclaimed_task.chapter_id == first_task.chapter_id
+    assert reclaimed_task.task_status == JobStatus.PROCESSING
+    assert reclaimed_task.attempt_count == 2
+
+    assert abort_job(test_db, memory_job_id) is True
+    test_db.refresh(reclaimed_task)
+    test_db.refresh(claimed_again)
+    assert reclaimed_task.task_status == JobStatus.FAILED
+    assert claimed_again.claim_token is None
+    assert claimed_again.claim_expires_at is None
     assert (
         release_task(
             test_db,
             memory_job_id,
-            first_task.chapter_id,
-            third_token,
-            JobStatus.FAILED,
+            reclaimed_task.chapter_id,
+            replacement_token,
+            JobStatus.COMPLETED,
         )
-        is True
+        is False
     )
-    assert claim_next_task(test_db, memory_job_id, third_token) is None
-
-    test_db.execute(
-        update(MemoryJob)
-        .where(MemoryJob.memory_job_id == memory_job_id)
-        .values(claim_expires_at=func.now() - timedelta(seconds=1))
-    )
-    test_db.commit()
-    assert refresh_job(test_db, memory_job_id, third_token, timedelta(minutes=5)) is False
     assert claim_job(test_db, memory_job_id, uuid.uuid4(), timedelta(minutes=5)) is None

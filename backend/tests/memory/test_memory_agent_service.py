@@ -115,9 +115,7 @@ def test_retry_restores_failed_status_when_publication_fails(
         .values(task_status=JobStatus.FAILED)
     )
     test_db.commit()
-    dispatcher = RecordingMemoryAgentDispatcher(
-        enqueue_error=MemoryAgentEnqueueFailedException("broker unavailable")
-    )
+    dispatcher = RecordingMemoryAgentDispatcher(enqueue_error=MemoryAgentEnqueueFailedException("broker unavailable"))
 
     with pytest.raises(MemoryAgentEnqueueFailedException, match="broker unavailable"):
         retry_task(test_db, editor, dispatcher, job.memory_job_id, chapter_id)
@@ -156,9 +154,10 @@ def test_delete_operations_reject_active_work_and_job_delete_cascades_tasks(
     delete_job(test_db, editor, job.memory_job_id)
 
     assert test_db.get(MemoryJob, job.memory_job_id) is None
-    assert test_db.scalars(
-        select(MemoryChapterTask).where(MemoryChapterTask.memory_job_id == job.memory_job_id)
-    ).all() == []
+    assert (
+        test_db.scalars(select(MemoryChapterTask).where(MemoryChapterTask.memory_job_id == job.memory_job_id)).all()
+        == []
+    )
 
 
 def test_deleting_memory_group_cascades_jobs_and_tasks(
@@ -173,6 +172,7 @@ def test_deleting_memory_group_cascades_jobs_and_tasks(
     test_db.commit()
 
     assert test_db.get(MemoryJob, job.memory_job_id) is None
-    assert test_db.scalars(
-        select(MemoryChapterTask).where(MemoryChapterTask.memory_job_id == job.memory_job_id)
-    ).all() == []
+    assert (
+        test_db.scalars(select(MemoryChapterTask).where(MemoryChapterTask.memory_job_id == job.memory_job_id)).all()
+        == []
+    )

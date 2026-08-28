@@ -95,6 +95,24 @@ services:
     profiles:
       - manual
 
+  memory-agent-worker:
+    image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-memory-agent-worker:${IMAGE_TAG:-latest}
+    pull_policy: always
+    depends_on:
+      - db
+      - redis
+    environment:
+      <<: [*db-env, *redis-env]
+      UV_COMPILE_BYTECODE: false
+      SECRET_KEY: ${SECRET_KEY} # purely to not crash on startup
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    volumes:
+      - ./backend:/home/newuser/backend
+      - /home/newuser/backend/.venv
+      - /home/newuser/backend/logs
+    profiles:
+      - manual
+
   backend:
     image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-backend-dev:${DEV_IMAGE_TAG:-latest}
     pull_policy: always

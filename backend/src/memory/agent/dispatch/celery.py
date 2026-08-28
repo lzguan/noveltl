@@ -1,14 +1,49 @@
 import asyncio
+import json
 import logging
 from uuid import UUID
 
 from src.database import SessionLocal
 from src.memory.agent.celery_app import app
 from src.memory.agent.dispatch.dispatcher import MemoryAgentDispatcher
-from src.memory.agent.tasks.tasks import run_all_tasks, run_task
+from src.memory.agent.tasks.tasks import CompletedMemoryTask, run_all_tasks, run_task
 from src.memory.exceptions import MemoryAgentEnqueueFailedException
 
 logger = logging.getLogger(__name__)
+AGENT_RESULT_LOG_MARKER = "MEMORY_AGENT_RESULT "
+
+
+def _log_agent_result(completed_task: CompletedMemoryTask) -> None:
+    result = completed_task.result
+    usage = result.usage
+    payload = {
+        "event": "memoryAgent.result",
+        "memoryJobId": str(completed_task.memory_job_id),
+        "memoryGroupId": str(completed_task.memory_group_id),
+        "chapterId": str(completed_task.chapter_id),
+        "chapterContentId": str(completed_task.chapter_content_id),
+        "chapterNum": completed_task.chapter_num,
+        "runId": result.run_id,
+        "timestamp": result.timestamp.isoformat(),
+        "output": result.output,
+        "usage": {
+            "requests": usage.requests,
+            "toolCalls": usage.tool_calls,
+            "inputTokens": usage.input_tokens,
+            "outputTokens": usage.output_tokens,
+            "cacheWriteTokens": usage.cache_write_tokens,
+            "cacheReadTokens": usage.cache_read_tokens,
+            "totalTokens": usage.total_tokens,
+            "costUsd": str(usage.cost) if usage.cost is not None else None,
+            "details": usage.details,
+        },
+        "messages": json.loads(result.all_messages_json()),
+    }
+    logger.info(
+        "%s%s",
+        AGENT_RESULT_LOG_MARKER,
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+    )
 
 
 @app.task
@@ -16,9 +51,8 @@ def run_memory_job(memory_job_id: str) -> None:
     """Celery entry point for processing every pending task in a memory job."""
 
     async def consume_job() -> None:
-        # Agent results are transient; durable progress is recorded by each task.
-        async for _ in run_all_tasks(SessionLocal, UUID(memory_job_id)):
-            pass
+        async for completed_task in run_all_tasks(SessionLocal, UUID(memory_job_id)):
+            _log_agent_result(completed_task)
 
     asyncio.run(consume_job())
 
@@ -26,7 +60,9 @@ def run_memory_job(memory_job_id: str) -> None:
 @app.task
 def run_memory_task(memory_job_id: str, chapter_id: str) -> None:
     """Celery entry point for processing one pending chapter task."""
-    asyncio.run(run_task(SessionLocal, UUID(memory_job_id), UUID(chapter_id)))
+    completed_task = asyncio.run(run_task(SessionLocal, UUID(memory_job_id), UUID(chapter_id)))
+    if completed_task is not None:
+        _log_agent_result(completed_task)
 
 
 class CeleryMemoryAgentDispatcher(MemoryAgentDispatcher):

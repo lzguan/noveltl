@@ -36,6 +36,16 @@ class ClaimedTask:
     chapter_id: uuid.UUID
 
 
+@dataclass(frozen=True)
+class CompletedMemoryTask:
+    memory_job_id: uuid.UUID
+    memory_group_id: uuid.UUID
+    chapter_id: uuid.UUID
+    chapter_content_id: uuid.UUID
+    chapter_num: int
+    result: AgentRunResult[str]
+
+
 async def aiterate_tasks(
     db_factory: sessionmaker[Session],
     claim_token: uuid.UUID,
@@ -110,7 +120,7 @@ async def _run_single_task(
     memory_group_id: uuid.UUID,
     task: ClaimedTask,
     lang_name: str,
-) -> AgentRunResult[str]:
+) -> CompletedMemoryTask:
     # fetch chapter content and language
     cc_alias = aliased(ChapterContent)
     q = (
@@ -130,7 +140,15 @@ async def _run_single_task(
     ccid, cctext, cnum = db.execute(q).one()._t
     context = MemAccessContext(memory_group_id, task.chapter_id, ccid)
     deps = MemAgentDeps(db, context)
-    return await run_agent(agent, deps, cctext, cnum, lang_name)
+    result = await run_agent(agent, deps, cctext, cnum, lang_name)
+    return CompletedMemoryTask(
+        memory_job_id=task.memory_job_id,
+        memory_group_id=memory_group_id,
+        chapter_id=task.chapter_id,
+        chapter_content_id=ccid,
+        chapter_num=cnum,
+        result=result,
+    )
 
 
 async def run_tasks(
@@ -139,7 +157,7 @@ async def run_tasks(
     claim_next_task: Callable[[Session, uuid.UUID], MemoryChapterTask | None],
     *,
     claim_duration: timedelta = DEFAULT_CLAIM_DURATION,
-) -> AsyncIterator[AgentRunResult[str]]:
+) -> AsyncIterator[CompletedMemoryTask]:
     """
     Claim a memory job and run tasks supplied by ``claim_next_task``.
 
@@ -176,7 +194,7 @@ async def run_tasks(
 
         agent = create_agent(params.model_name, params.plugins)
         async with agent:
-            async for result in arun_tasks(
+            async for completed_task in arun_tasks(
                 db_factory,
                 claim_token,
                 claim_next_task,
@@ -185,7 +203,7 @@ async def run_tasks(
                 with db_factory() as db:
                     if not refresh_job(db, memory_job_id, claim_token, claim_duration):
                         raise MemoryJobClaimLostException(f"Lost claim while refreshing memory job {memory_job_id}")
-                yield result
+                yield completed_task
     finally:
         if owns_claim:
             with db_factory() as db:
@@ -203,7 +221,7 @@ async def run_task(
     chapter_id: uuid.UUID,
     *,
     claim_duration: timedelta = DEFAULT_CLAIM_DURATION,
-) -> AgentRunResult[str] | None:
+) -> CompletedMemoryTask | None:
     """Run one pending chapter task, returning ``None`` when it cannot be claimed."""
     result = None
     async for task_result in run_tasks(
@@ -221,7 +239,7 @@ async def run_all_tasks(
     memory_job_id: uuid.UUID,
     *,
     claim_duration: timedelta = DEFAULT_CLAIM_DURATION,
-) -> AsyncIterator[AgentRunResult[str]]:
+) -> AsyncIterator[CompletedMemoryTask]:
     """Run every pending chapter task in a job in chapter order."""
     async for result in run_tasks(
         db_factory,

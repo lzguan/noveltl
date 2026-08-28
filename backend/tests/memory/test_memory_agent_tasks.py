@@ -174,14 +174,18 @@ def test_run_all_tasks_completes_tasks_refreshes_and_releases_job(
 
     async def consume_tasks():
         return [
-            result.output
-            async for result in agent_tasks.run_all_tasks(
+            completed_task
+            async for completed_task in agent_tasks.run_all_tasks(
                 testing_session_local,
                 memory_job_id,
             )
         ]
 
-    assert asyncio.run(consume_tasks()) == ["recorded", "recorded"]
+    completed_tasks = asyncio.run(consume_tasks())
+    assert [completed_task.result.output for completed_task in completed_tasks] == ["recorded", "recorded"]
+    assert {completed_task.chapter_id for completed_task in completed_tasks} == set(chapter_ids)
+    assert [completed_task.chapter_num for completed_task in completed_tasks] == [1, 2]
+    assert all(completed_task.memory_job_id == memory_job_id for completed_task in completed_tasks)
 
     test_db.expire_all()
     tasks = test_db.scalars(select(MemoryChapterTask).where(MemoryChapterTask.memory_job_id == memory_job_id)).all()

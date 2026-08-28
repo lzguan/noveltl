@@ -11,17 +11,22 @@ import { PlusIcon, RefreshCwIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { GlossaryTermList } from "./GlossaryTermList";
 import { PageNavigation } from "./PageNavigation";
+import { PluginSelector, type MemoryView } from "./PluginSelector";
 
 export function GlossaryBrowser({
 	memoryGroupId,
 	chapterId,
 	chapterNum,
 	chapterContentId,
+	view,
+	onViewChange,
 }: {
 	memoryGroupId: string;
 	chapterId: string | null;
 	chapterNum: number | null;
 	chapterContentId: string | null;
+	view: MemoryView;
+	onViewChange: (view: MemoryView) => void;
 }) {
 	const glossary = useGlossaryTerms(memoryGroupId, chapterId);
 	const [openTermId, setOpenTermId] = useState<string | null>(null);
@@ -50,18 +55,24 @@ export function GlossaryBrowser({
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
 			<div className="flex flex-col gap-3 border-b p-2">
-				<div className="flex flex-col gap-1">
-					<Label htmlFor="glossary-term-search" className="text-xs text-muted-foreground">
-						Search terms
-					</Label>
-					<Input
-						id="glossary-term-search"
-						value={glossary.search}
-						placeholder="Search glossary terms"
-						onChange={(event) =>
-							runOuterQuery(() => glossary.setSearch(event.target.value))
-						}
-					/>
+				<div className="flex items-end gap-2">
+					<PluginSelector value={view} onChange={onViewChange} compact />
+					<div className="flex min-w-0 flex-1 flex-col gap-1">
+						<Label
+							htmlFor="glossary-term-search"
+							className="text-xs text-muted-foreground"
+						>
+							Search terms
+						</Label>
+						<Input
+							id="glossary-term-search"
+							value={glossary.search}
+							placeholder="Search glossary terms"
+							onChange={(event) =>
+								runOuterQuery(() => glossary.setSearch(event.target.value))
+							}
+						/>
+					</div>
 				</div>
 				<div className="flex items-center gap-2">
 					<Switch

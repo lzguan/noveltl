@@ -110,6 +110,7 @@ def query_job_summaries(
             func.coalesce(memory_job_task_counts.c.processing, 0),
             func.coalesce(memory_job_task_counts.c.completed, 0),
             func.coalesce(memory_job_task_counts.c.failed, 0),
+            func.coalesce(MemoryJobModel.claim_expires_at >= func.now(), False),
         )
         .outerjoin(
             memory_job_task_counts,
@@ -130,9 +131,9 @@ def query_job_summaries(
                     completed=completed,
                     failed=failed,
                 ),
-                is_claimed=job.claim_expires_at is not None and job.claim_expires_at >= server_time,
+                is_claimed=is_claimed,
             )
-            for job, pending, processing, completed, failed in db.execute(statement).all()
+            for job, pending, processing, completed, failed, is_claimed in db.execute(statement).all()
         ],
     )
 
@@ -146,6 +147,7 @@ def query_job_summary(db: Session, user: User, memory_job_id: UUID) -> schemas.M
             func.coalesce(memory_job_task_counts.c.processing, 0),
             func.coalesce(memory_job_task_counts.c.completed, 0),
             func.coalesce(memory_job_task_counts.c.failed, 0),
+            func.coalesce(MemoryJobModel.claim_expires_at >= func.now(), False),
         )
         .outerjoin(
             memory_job_task_counts,
@@ -156,7 +158,7 @@ def query_job_summary(db: Session, user: User, memory_job_id: UUID) -> schemas.M
     )
     statement = memory_group_mod_access_select(statement, user)
     try:
-        job, pending, processing, completed, failed = db.execute(statement).one()._t
+        job, pending, processing, completed, failed, is_claimed = db.execute(statement).one()._t
     except NoResultFound as exc:
         raise MemoryJobNotFoundException(f"Memory job {memory_job_id} not found or not accessible.") from exc
     server_time = db.execute(select(func.now())).scalar_one()
@@ -170,7 +172,7 @@ def query_job_summary(db: Session, user: User, memory_job_id: UUID) -> schemas.M
                 completed=completed,
                 failed=failed,
             ),
-            is_claimed=job.claim_expires_at is not None and job.claim_expires_at >= server_time,
+            is_claimed=is_claimed,
         ),
     )
 

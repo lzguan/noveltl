@@ -11,12 +11,15 @@ from src.languages.models import Language
 from src.memory.access import MemAccessContext
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
-from src.memory.agent.toolsets.glossary import glossary_toolset
+from src.memory.agent.toolsets.glossary_events import glossary_event_toolset
+from src.memory.agent.toolsets.glossary_terms import glossary_term_toolset
 from src.memory.models import MemoryGroup
 from src.memory.types import PluginName
 from src.novels.models import Chapter, ChapterContent
 
-plugin_toolsets: dict[PluginName, FunctionToolset[MemAgentDeps]] = {"glossary": glossary_toolset}
+plugin_toolsets: dict[PluginName, list[FunctionToolset[MemAgentDeps]]] = {
+    "glossary": [glossary_term_toolset, glossary_event_toolset]
+}
 
 type ModelName = Literal["deepseek:deepseek-chat"]
 
@@ -25,7 +28,7 @@ def create_agent(model_name: ModelName, plugins: list[PluginName]) -> Agent[MemA
     """Create a Pydantic AI agent with the specified model and plugins."""
     return Agent(
         model=model_name,
-        toolsets=[plugin_toolsets[plugin] for plugin in plugins],
+        toolsets=[toolset for plugin in plugins for toolset in plugin_toolsets[plugin]],
         instructions=MEMORY_AGENT_PROMPT,
         deps_type=MemAgentDeps,
     )

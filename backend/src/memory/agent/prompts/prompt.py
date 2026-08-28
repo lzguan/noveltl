@@ -38,10 +38,10 @@ a memory type unless you have a candidate or continuity question of that type.
 Never use an empty type list to request generic history.
 
 Finalize a memory's content, type, scope, and term associations before calling
-`new_memory`. Memories cannot be superseded in the chapter where they are
-created. Do not create a draft and then attempt to correct it with
-`supersede_memory`; continue without changing it if you notice a non-critical
-mistake after writing it.
+a creation tool. Memories cannot be superseded in the chapter where they are
+created. Do not create a draft and then attempt to correct it with a supersede
+tool; continue without changing it if you notice a non-critical mistake after
+writing it.
 
 Record a memory only when it captures useful context that is not already
 represented. Memories must be short, atomic, self-contained, and factual. Name

@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Final
 from uuid import UUID
 
@@ -10,8 +10,11 @@ from src.memory.access import MemAccessContext, check_mem_access_ctx, write_memo
 from src.memory.exceptions import GlossaryTermNotFoundException
 from src.memory.models import Memory
 from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
+from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
+from src.memory.schemas import AgentMemory
 from src.memory.types import Creator, MemoryType, PluginName, ReviewStatus, Scope
 from src.novels.models import ChapterContent
+from src.schemas import Page
 
 type ContainsQuery = Callable[
     [SQLColumnExpression[str], SQLColumnExpression[str]],
@@ -60,10 +63,13 @@ def inspect_terms(
     db: Session,
     ctx: MemAccessContext,
     term_names: list[str],
-    memory_types: list[MemoryType] | None,
+    memory_types: Sequence[MemoryType] | None,
+    skip: int = 0,
+    limit: int = 100,
     *,
+    active_only: bool = True,
     include_rejected: bool = False,
-) -> list[tuple[Memory, list[GlossaryTerm]]]:
+) -> Page[AgentGlossaryMemory[UUID]]:
     # TODO: Make retrieval alias-aware. Exact-name lookup can miss a conflicting
     # memory stored under another alias of the same entity. This likely needs a
     # structured alias relation or shared entity identity; expanding every free-
@@ -82,34 +88,57 @@ def inspect_terms(
     )
     if not include_rejected:
         matching_memory_ids = matching_memory_ids.where(matching_term.review_status != ReviewStatus.REJECTED)
-    query = (
-        select(Memory, GlossaryTerm)
-        .select_from(Memory)
-        .join(GlossaryAssociation, GlossaryAssociation.memory_id == Memory.memory_id)
-        .join(GlossaryTerm, GlossaryTerm.term_id == GlossaryAssociation.term_id)
-        .where(
+    def build_memory_query():
+        query = select(Memory).where(
             Memory.memory_id.in_(matching_memory_ids),
             Memory.memory_group_id == ctx.memory_group_id,
-            GlossaryTerm.memory_group_id == ctx.memory_group_id,
             Memory.memory_start_num <= chap_num,
-            or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chap_num),
             Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
         )
-        .order_by(Memory.memory_start_num.desc(), Memory.memory_id, GlossaryTerm.term, GlossaryTerm.term_id)
+        if active_only:
+            query = query.where(or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chap_num))
+        if not include_rejected:
+            query = query.where(Memory.memory_review_status != ReviewStatus.REJECTED)
+        if memory_types is not None:
+            query = query.where(Memory.memory_type.in_(memory_types))
+        return query
+
+    count = db.scalar(select(func.count()).select_from(build_memory_query().subquery())) or 0
+    memories = list(
+        db.scalars(
+            build_memory_query()
+            .order_by(Memory.memory_start_num.desc(), Memory.memory_id)
+            .offset(skip)
+            .limit(limit)
+        ).all()
+    )
+    memory_ids = [memory.memory_id for memory in memories]
+    terms_query = (
+        select(GlossaryAssociation.memory_id, GlossaryTerm)
+        .select_from(GlossaryAssociation)
+        .join(GlossaryTerm, GlossaryTerm.term_id == GlossaryAssociation.term_id)
+        .where(
+            GlossaryAssociation.memory_id.in_(memory_ids),
+            GlossaryTerm.memory_group_id == ctx.memory_group_id,
+        )
+        .order_by(GlossaryAssociation.memory_id, GlossaryTerm.term, GlossaryTerm.term_id)
     )
     if not include_rejected:
-        query = query.where(
-            Memory.memory_review_status != ReviewStatus.REJECTED, GlossaryTerm.review_status != ReviewStatus.REJECTED
-        )
-    if memory_types is not None:
-        query = query.where(Memory.memory_type.in_(memory_types))
+        terms_query = terms_query.where(GlossaryTerm.review_status != ReviewStatus.REJECTED)
 
-    memories_with_terms: dict[UUID, tuple[Memory, list[GlossaryTerm]]] = {}
-    for memory, term in db.execute(query).tuples():
-        if memory.memory_id not in memories_with_terms:
-            memories_with_terms[memory.memory_id] = (memory, [])
-        memories_with_terms[memory.memory_id][1].append(term)
-    return list(memories_with_terms.values())
+    terms_by_memory: dict[UUID, list[AgentGlossaryTerm]] = {memory_id: [] for memory_id in memory_ids}
+    for memory_id, term in db.execute(terms_query).tuples():
+        terms_by_memory[memory_id].append(AgentGlossaryTerm.model_validate(term))
+    return Page[AgentGlossaryMemory[UUID]](
+        count=count,
+        rows=[
+            AgentGlossaryMemory[UUID](
+                memory=AgentMemory.model_validate(memory),
+                terms=terms_by_memory[memory.memory_id],
+            )
+            for memory in memories
+        ],
+    )
 
 
 def create_term(db: Session, memory_group_id: UUID, term_name: str) -> GlossaryTerm:

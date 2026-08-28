@@ -18,7 +18,7 @@ from src.memory.plugins.glossary.access import (
 from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
 from src.memory.plugins.glossary.service import delete_glossary_term
 from src.memory.service import delete_memory, expire_memory
-from src.memory.types import Creator, MemoryType
+from src.memory.types import Creator, MemoryType, Scope
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, ChapterContent, Novel, SourceWork
 
@@ -89,6 +89,15 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
         ["Alpha", "Beta"],
         "Alpha is related to Beta.",
     )
+    event, _ = create_memory(
+        test_db,
+        context,
+        Creator.AGENT,
+        MemoryType.EVENT,
+        ["Alpha", "Beta"],
+        "Alpha briefly encountered Beta.",
+        Scope.LOCAL,
+    )
     other_plugin_memory = write_memory(
         test_db,
         context,
@@ -103,23 +112,50 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
     assert fact.plugin_name == GLOSSARY_PLUGIN_NAME
     assert relation.plugin_name == GLOSSARY_PLUGIN_NAME
 
-    assert [memory.memory_id for memory, _ in inspect_terms(test_db, context, ["Alpha"], [MemoryType.FACT])] == [
+    fact_page = inspect_terms(test_db, context, ["Alpha"], [MemoryType.FACT])
+    assert fact_page.count == 1
+    assert [item.memory.memory_id for item in fact_page.rows] == [
         fact.memory_id
     ]
-    assert [memory.memory_id for memory, _ in inspect_terms(test_db, context, ["Alpha"], [MemoryType.RELATION])] == [
+    relation_page = inspect_terms(test_db, context, ["Alpha"], [MemoryType.RELATION])
+    assert relation_page.count == 1
+    assert [item.memory.memory_id for item in relation_page.rows] == [
         relation.memory_id
     ]
-    assert {memory.memory_id for memory, _ in inspect_terms(test_db, context, ["Alpha"], None)} == {
-        fact.memory_id,
-        relation.memory_id,
-    }
-    assert inspect_terms(test_db, context, ["Alpha"], []) == []
+    first_page = inspect_terms(test_db, context, ["Alpha"], None, limit=1)
+    second_page = inspect_terms(test_db, context, ["Alpha"], None, skip=1, limit=1)
+    assert first_page.count == 3
+    assert second_page.count == 3
+    assert len(first_page.rows) == len(second_page.rows) == 1
+    assert first_page.rows[0].memory.memory_id != second_page.rows[0].memory.memory_id
+    assert inspect_terms(test_db, context, ["Alpha"], []).model_dump() == {"count": 0, "rows": []}
+
+    event_page = inspect_terms(test_db, context, ["Alpha"], [MemoryType.EVENT])
+    assert event_page.count == 1
+    assert len(event_page.rows[0].terms) == 2
 
     next_context = MemAccessContext(
         memory_group_id=memory_group.memory_group_id,
         chapter_id=next_chapter.chapter_id,
         chapter_content_id=next_chapter_content.chapter_content_id,
     )
+    assert inspect_terms(test_db, next_context, ["Alpha"], [MemoryType.EVENT]).count == 0
+    historical_events = inspect_terms(
+        test_db,
+        next_context,
+        ["Alpha"],
+        [MemoryType.EVENT],
+        active_only=False,
+    )
+    assert historical_events.count == 1
+    assert [item.memory.memory_id for item in historical_events.rows] == [event.memory_id]
+
+    all_memories = inspect_terms(test_db, context, ["Alpha"], None)
+    assert {item.memory.memory_id for item in all_memories.rows} == {
+        fact.memory_id,
+        relation.memory_id,
+        event.memory_id,
+    }
     with pytest.raises(MemoryNotFoundException):
         supersede_memory(
             test_db,

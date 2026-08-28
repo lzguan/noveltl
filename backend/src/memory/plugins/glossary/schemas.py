@@ -6,12 +6,7 @@ from pydantic import ConfigDict, Field
 
 from src.memory.schemas import AgentMemory, Memory
 from src.memory.types import MemoryType, ReviewStatus, Scope
-from src.schemas import Model
-
-
-class Page[T](Model):
-    count: int = Field(ge=0)
-    rows: list[T]
+from src.schemas import Model, Page
 
 
 class AgentGlossaryTerm(Model):

@@ -86,8 +86,7 @@ def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
     db.flush()
 
     terms = {
-        term: create_term(db, memory_group.memory_group_id, term)
-        for term in ["Alpha", "Beta", "Gamma", "OldOnly"]
+        term: create_term(db, memory_group.memory_group_id, term) for term in ["Alpha", "Beta", "Gamma", "OldOnly"]
     }
 
     first_context = MemAccessContext(
@@ -225,6 +224,4 @@ def test_memories_for_term_can_be_scoped_to_active_memories_at_a_chapter(
 
     assert all_memories.count == 2
     assert active_memories.count == 1
-    assert [row.memory.memory_content for row in active_memories.rows] == [
-        "Alpha has one persistent memory."
-    ]
+    assert [row.memory.memory_content for row in active_memories.rows] == ["Alpha has one persistent memory."]

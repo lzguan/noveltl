@@ -44,3 +44,9 @@ FROM base AS filters-worker
 COPY --chown=${UNAME}:${GNAME} . .
 
 CMD ["uv", "run", "--no-sync", "celery", "-A", "src.filters.celery_app", "worker", "--loglevel=info"]
+
+FROM base AS memory-agent-worker
+RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --group agent --no-group backend --no-group worker --no-group dev --no-install-project
+COPY --chown=${UNAME}:${GNAME} . .
+
+CMD ["uv", "run", "--no-sync", "celery", "-A", "src.memory.agent.celery_app", "worker", "--loglevel=info"]

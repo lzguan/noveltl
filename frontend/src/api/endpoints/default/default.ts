@@ -29,6 +29,7 @@ import type {
   CreateLabelGroup,
   CreateLabelGroupLabelGroupsPostParams,
   CreateMemoryGroup,
+  CreateMemoryJob,
   CreateNovel,
   CreateSourceWork,
   CreateUser,
@@ -47,8 +48,9 @@ import type {
   LabelGroupWithRole,
   Language,
   Memory,
+  MemoryChapterTask,
   MemoryGroup,
-  MemoryPage,
+  MemoryJob,
   ModifyChapterContentResponse,
   Novel,
   NovelAndUsers,
@@ -56,6 +58,8 @@ import type {
   OpsResult,
   PageGlossaryMemory,
   PageGlossaryTermSummary,
+  PageMemory,
+  PageMemoryChapterTask,
   ReadAutoLabelRunsAutoLabelRunsGetParams,
   ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetParams,
   ReadChaptersByNovelChaptersGetParams,
@@ -71,6 +75,8 @@ import type {
   ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetParams,
   ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGetParams,
   ReadMemoryGroupsMemoryGroupsGetParams,
+  ReadMemoryJobsMemoryAgentJobsGetParams,
+  ReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetParams,
   ReadNovelsMineNovelsMineGetParams,
   ReadNovelsNovelsGetParams,
   ReadSourceWorksSourceWorksGetParams,
@@ -2157,6 +2163,593 @@ return customFetch<editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchRespon
 );}
 
 
+export type readMemoryJobsMemoryAgentJobsGetResponse200 = {
+  data: MemoryJob[]
+  status: 200
+}
+
+export type readMemoryJobsMemoryAgentJobsGetResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type readMemoryJobsMemoryAgentJobsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readMemoryJobsMemoryAgentJobsGetResponseSuccess = (readMemoryJobsMemoryAgentJobsGetResponse200) & {
+  headers: Headers;
+};
+export type readMemoryJobsMemoryAgentJobsGetResponseError = (readMemoryJobsMemoryAgentJobsGetResponse404 | readMemoryJobsMemoryAgentJobsGetResponse422) & {
+  headers: Headers;
+};
+
+export type readMemoryJobsMemoryAgentJobsGetResponse = (readMemoryJobsMemoryAgentJobsGetResponseSuccess | readMemoryJobsMemoryAgentJobsGetResponseError)
+
+export const getReadMemoryJobsMemoryAgentJobsGetUrl = (params: ReadMemoryJobsMemoryAgentJobsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/memory-agent/jobs?${stringifiedParams}` : `/api/memory-agent/jobs`
+}
+
+/**
+ * @summary Read Memory Jobs
+ */
+export const readMemoryJobsMemoryAgentJobsGet = async (params: ReadMemoryJobsMemoryAgentJobsGetParams, options?: Parameters<typeof customFetch>[1]): Promise<readMemoryJobsMemoryAgentJobsGetResponse> => {
+
+  return customFetch<readMemoryJobsMemoryAgentJobsGetResponse>(getReadMemoryJobsMemoryAgentJobsGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+export type addMemoryJobMemoryAgentJobsPostResponse201 = {
+  data: MemoryJob
+  status: 201
+}
+
+export type addMemoryJobMemoryAgentJobsPostResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type addMemoryJobMemoryAgentJobsPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type addMemoryJobMemoryAgentJobsPostResponseSuccess = (addMemoryJobMemoryAgentJobsPostResponse201) & {
+  headers: Headers;
+};
+export type addMemoryJobMemoryAgentJobsPostResponseError = (addMemoryJobMemoryAgentJobsPostResponse404 | addMemoryJobMemoryAgentJobsPostResponse422) & {
+  headers: Headers;
+};
+
+export type addMemoryJobMemoryAgentJobsPostResponse = (addMemoryJobMemoryAgentJobsPostResponseSuccess | addMemoryJobMemoryAgentJobsPostResponseError)
+
+export const getAddMemoryJobMemoryAgentJobsPostUrl = () => {
+
+
+
+
+  return `/api/memory-agent/jobs`
+}
+
+/**
+ * @summary Add Memory Job
+ */
+export const addMemoryJobMemoryAgentJobsPost = async (createMemoryJob: CreateMemoryJob, options?: Parameters<typeof customFetch>[1]): Promise<addMemoryJobMemoryAgentJobsPostResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<addMemoryJobMemoryAgentJobsPostResponse>(getAddMemoryJobMemoryAgentJobsPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createMemoryJob)
+  }
+);}
+
+
+export type removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponse204 = {
+  data: void
+  status: 204
+}
+
+export type removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponse409 = {
+  data: DetailHTTPErrorResponse
+  status: 409
+}
+
+export type removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponseSuccess = (removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponse204) & {
+  headers: Headers;
+};
+export type removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponseError = (removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponse404 | removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponse409 | removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponse422) & {
+  headers: Headers;
+};
+
+export type removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponse = (removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponseSuccess | removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponseError)
+
+export const getRemoveMemoryJobMemoryAgentJobsMemoryJobIdDeleteUrl = (memoryJobId: string,) => {
+
+
+
+
+  return `/api/memory-agent/jobs/${memoryJobId}`
+}
+
+/**
+ * @summary Remove Memory Job
+ */
+export const removeMemoryJobMemoryAgentJobsMemoryJobIdDelete = async (memoryJobId: string, options?: Parameters<typeof customFetch>[1]): Promise<removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponse> => {
+
+  return customFetch<removeMemoryJobMemoryAgentJobsMemoryJobIdDeleteResponse>(getRemoveMemoryJobMemoryAgentJobsMemoryJobIdDeleteUrl(memoryJobId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+export type readMemoryJobMemoryAgentJobsMemoryJobIdGetResponse200 = {
+  data: MemoryJob
+  status: 200
+}
+
+export type readMemoryJobMemoryAgentJobsMemoryJobIdGetResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type readMemoryJobMemoryAgentJobsMemoryJobIdGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readMemoryJobMemoryAgentJobsMemoryJobIdGetResponseSuccess = (readMemoryJobMemoryAgentJobsMemoryJobIdGetResponse200) & {
+  headers: Headers;
+};
+export type readMemoryJobMemoryAgentJobsMemoryJobIdGetResponseError = (readMemoryJobMemoryAgentJobsMemoryJobIdGetResponse404 | readMemoryJobMemoryAgentJobsMemoryJobIdGetResponse422) & {
+  headers: Headers;
+};
+
+export type readMemoryJobMemoryAgentJobsMemoryJobIdGetResponse = (readMemoryJobMemoryAgentJobsMemoryJobIdGetResponseSuccess | readMemoryJobMemoryAgentJobsMemoryJobIdGetResponseError)
+
+export const getReadMemoryJobMemoryAgentJobsMemoryJobIdGetUrl = (memoryJobId: string,) => {
+
+
+
+
+  return `/api/memory-agent/jobs/${memoryJobId}`
+}
+
+/**
+ * @summary Read Memory Job
+ */
+export const readMemoryJobMemoryAgentJobsMemoryJobIdGet = async (memoryJobId: string, options?: Parameters<typeof customFetch>[1]): Promise<readMemoryJobMemoryAgentJobsMemoryJobIdGetResponse> => {
+
+  return customFetch<readMemoryJobMemoryAgentJobsMemoryJobIdGetResponse>(getReadMemoryJobMemoryAgentJobsMemoryJobIdGetUrl(memoryJobId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+export type abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostResponse200 = {
+  data: MemoryJob
+  status: 200
+}
+
+export type abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostResponseSuccess = (abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostResponse200) & {
+  headers: Headers;
+};
+export type abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostResponseError = (abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostResponse404 | abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostResponse422) & {
+  headers: Headers;
+};
+
+export type abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostResponse = (abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostResponseSuccess | abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostResponseError)
+
+export const getAbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostUrl = (memoryJobId: string,) => {
+
+
+
+
+  return `/api/memory-agent/jobs/${memoryJobId}/abort`
+}
+
+/**
+ * @summary Abort Memory Job
+ */
+export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost = async (memoryJobId: string, options?: Parameters<typeof customFetch>[1]): Promise<abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostResponse> => {
+
+  return customFetch<abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostResponse>(getAbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostUrl(memoryJobId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+export type startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponse202 = {
+  data: MemoryJob
+  status: 202
+}
+
+export type startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponse409 = {
+  data: DetailHTTPErrorResponse
+  status: 409
+}
+
+export type startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponse503 = {
+  data: DetailHTTPErrorResponse
+  status: 503
+}
+
+export type startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponseSuccess = (startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponse202) & {
+  headers: Headers;
+};
+export type startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponseError = (startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponse404 | startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponse409 | startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponse422 | startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponse503) & {
+  headers: Headers;
+};
+
+export type startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponse = (startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponseSuccess | startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponseError)
+
+export const getStartMemoryJobMemoryAgentJobsMemoryJobIdStartPostUrl = (memoryJobId: string,) => {
+
+
+
+
+  return `/api/memory-agent/jobs/${memoryJobId}/start`
+}
+
+/**
+ * @summary Start Memory Job
+ */
+export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost = async (memoryJobId: string, options?: Parameters<typeof customFetch>[1]): Promise<startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponse> => {
+
+  return customFetch<startMemoryJobMemoryAgentJobsMemoryJobIdStartPostResponse>(getStartMemoryJobMemoryAgentJobsMemoryJobIdStartPostUrl(memoryJobId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+export type readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetResponse200 = {
+  data: PageMemoryChapterTask
+  status: 200
+}
+
+export type readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetResponseSuccess = (readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetResponse200) & {
+  headers: Headers;
+};
+export type readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetResponseError = (readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetResponse404 | readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetResponse422) & {
+  headers: Headers;
+};
+
+export type readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetResponse = (readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetResponseSuccess | readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetResponseError)
+
+export const getReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetUrl = (memoryJobId: string,
+    params?: ReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/memory-agent/jobs/${memoryJobId}/tasks?${stringifiedParams}` : `/api/memory-agent/jobs/${memoryJobId}/tasks`
+}
+
+/**
+ * @summary Read Memory Tasks
+ */
+export const readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGet = async (memoryJobId: string,
+    params?: ReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetParams, options?: Parameters<typeof customFetch>[1]): Promise<readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetResponse> => {
+
+  return customFetch<readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetResponse>(getReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetUrl(memoryJobId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+export type removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse204 = {
+  data: void
+  status: 204
+}
+
+export type removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse409 = {
+  data: DetailHTTPErrorResponse
+  status: 409
+}
+
+export type removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponseSuccess = (removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse204) & {
+  headers: Headers;
+};
+export type removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponseError = (removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse404 | removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse409 | removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse422) & {
+  headers: Headers;
+};
+
+export type removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse = (removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponseSuccess | removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponseError)
+
+export const getRemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteUrl = (memoryJobId: string,
+    chapterId: string,) => {
+
+
+
+
+  return `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}`
+}
+
+/**
+ * @summary Remove Memory Task
+ */
+export const removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDelete = async (memoryJobId: string,
+    chapterId: string, options?: Parameters<typeof customFetch>[1]): Promise<removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse> => {
+
+  return customFetch<removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse>(getRemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteUrl(memoryJobId,chapterId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+export type readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponse200 = {
+  data: MemoryChapterTask
+  status: 200
+}
+
+export type readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponseSuccess = (readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponse200) & {
+  headers: Headers;
+};
+export type readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponseError = (readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponse404 | readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponse422) & {
+  headers: Headers;
+};
+
+export type readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponse = (readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponseSuccess | readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponseError)
+
+export const getReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetUrl = (memoryJobId: string,
+    chapterId: string,) => {
+
+
+
+
+  return `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}`
+}
+
+/**
+ * @summary Read Memory Task
+ */
+export const readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGet = async (memoryJobId: string,
+    chapterId: string, options?: Parameters<typeof customFetch>[1]): Promise<readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponse> => {
+
+  return customFetch<readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponse>(getReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetUrl(memoryJobId,chapterId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+export type retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse202 = {
+  data: MemoryChapterTask
+  status: 202
+}
+
+export type retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse409 = {
+  data: DetailHTTPErrorResponse
+  status: 409
+}
+
+export type retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse503 = {
+  data: DetailHTTPErrorResponse
+  status: 503
+}
+
+export type retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponseSuccess = (retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse202) & {
+  headers: Headers;
+};
+export type retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponseError = (retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse404 | retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse409 | retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse422 | retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse503) & {
+  headers: Headers;
+};
+
+export type retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse = (retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponseSuccess | retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponseError)
+
+export const getRetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostUrl = (memoryJobId: string,
+    chapterId: string,) => {
+
+
+
+
+  return `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}/retry`
+}
+
+/**
+ * @summary Retry Memory Task
+ */
+export const retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPost = async (memoryJobId: string,
+    chapterId: string, options?: Parameters<typeof customFetch>[1]): Promise<retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse> => {
+
+  return customFetch<retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse>(getRetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostUrl(memoryJobId,chapterId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+export type startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse202 = {
+  data: MemoryChapterTask
+  status: 202
+}
+
+export type startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse409 = {
+  data: DetailHTTPErrorResponse
+  status: 409
+}
+
+export type startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse503 = {
+  data: DetailHTTPErrorResponse
+  status: 503
+}
+
+export type startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponseSuccess = (startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse202) & {
+  headers: Headers;
+};
+export type startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponseError = (startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse404 | startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse409 | startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse422 | startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse503) & {
+  headers: Headers;
+};
+
+export type startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse = (startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponseSuccess | startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponseError)
+
+export const getStartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostUrl = (memoryJobId: string,
+    chapterId: string,) => {
+
+
+
+
+  return `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}/start`
+}
+
+/**
+ * @summary Start Memory Task
+ */
+export const startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPost = async (memoryJobId: string,
+    chapterId: string, options?: Parameters<typeof customFetch>[1]): Promise<startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse> => {
+
+  return customFetch<startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse>(getStartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostUrl(memoryJobId,chapterId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
 export type readMemoryGroupsMemoryGroupsGetResponse200 = {
   data: MemoryGroup[]
   status: 200
@@ -2260,7 +2853,7 @@ return customFetch<addMemoryGroupMemoryGroupsPostResponse>(getAddMemoryGroupMemo
 
 
 export type readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetResponse200 = {
-  data: MemoryPage
+  data: PageMemory
   status: 200
 }
 
@@ -2962,7 +3555,7 @@ return customFetch<editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossary
 
 
 export type readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetResponse200 = {
-  data: MemoryPage
+  data: PageMemory
   status: 200
 }
 

@@ -242,6 +242,4 @@ def test_user_pipeline_dispatches_every_runner_through_redis(
 
 
 def _instance_count(test_db: Session, workflow_id: UUID) -> int:
-    return (
-        test_db.scalar(select(func.count()).select_from(Instance).where(Instance.workflow_id == workflow_id)) or 0
-    )
+    return test_db.scalar(select(func.count()).select_from(Instance).where(Instance.workflow_id == workflow_id)) or 0

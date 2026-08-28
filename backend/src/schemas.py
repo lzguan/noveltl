@@ -4,7 +4,7 @@ Top level schemas for the codebase. These are used across multiple modules, and 
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, ValidationInfo, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, model_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -14,6 +14,11 @@ class Model(BaseModel):
     """
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class Page[T](Model):
+    count: int = Field(ge=0)
+    rows: list[T]
 
 
 class SkipDefaultModel(Model):

@@ -14,11 +14,22 @@ describe("request key generation", () => {
 		expect(randomUUID).toHaveBeenCalledOnce();
 	});
 
-	it("explains the HTTPS requirement when randomUUID is unavailable", () => {
+	it("generates a UUID v4 with getRandomValues when randomUUID is unavailable", () => {
+		const getRandomValues = vi.fn((bytes: Uint8Array) => {
+			bytes.set(Array.from({ length: 16 }, (_, index) => index));
+			return bytes;
+		});
+		vi.stubGlobal("crypto", { getRandomValues });
+
+		expect(generateRequestKey()).toBe("00010203-0405-4607-8809-0a0b0c0d0e0f");
+		expect(getRandomValues).toHaveBeenCalledOnce();
+	});
+
+	it("explains when UUID generation is unavailable", () => {
 		vi.stubGlobal("crypto", {});
 
 		expect(() => generateRequestKey()).toThrow(
-			"Secure request key generation is unavailable. Open the editor over HTTPS or localhost.",
+			"UUID generation is unavailable in this browser.",
 		);
 	});
 });

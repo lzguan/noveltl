@@ -45,3 +45,10 @@ class Scope(StrEnum):
 
 
 type PluginName = Literal["glossary"]
+
+
+class JobStatus(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"

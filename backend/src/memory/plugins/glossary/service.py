@@ -185,9 +185,7 @@ def query_glossary_terms(
             or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chapter_num),
         )
     memory_counts = memory_counts_query.subquery()
-    associated_memory_count = func.coalesce(memory_counts.c.associated_memory_count, 0).label(
-        "associated_memory_count"
-    )
+    associated_memory_count = func.coalesce(memory_counts.c.associated_memory_count, 0).label("associated_memory_count")
     rows = db.execute(
         apply_filters(
             select(GlossaryTerm, associated_memory_count).outerjoin(

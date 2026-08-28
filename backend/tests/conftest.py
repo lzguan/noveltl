@@ -12,9 +12,11 @@ from src.autolabels.dependencies import get_dispatcher
 from src.database import get_db
 from src.filters.dependencies import get_dispatcher as get_filter_dispatcher
 from src.main import app
+from src.memory.agent.dispatch.dependencies import get_dispatcher as get_memory_agent_dispatcher
 from src.models import Base
 from test_support.autolabels import RecordingDispatcher
 from test_support.filters import RecordingRunnerDispatcher
+from test_support.memory import RecordingMemoryAgentDispatcher
 from test_support.test_data import Catalog, NovelDataset, load_catalog, load_config, load_novel
 
 SYNTHETIC_DATA_ROOT = Path(__file__).parent / "test_data" / "datasets" / "synthetic-smoke"
@@ -135,10 +137,16 @@ def recording_runner_dispatcher() -> RecordingRunnerDispatcher:
 
 
 @pytest.fixture
+def recording_memory_agent_dispatcher() -> RecordingMemoryAgentDispatcher:
+    return RecordingMemoryAgentDispatcher()
+
+
+@pytest.fixture
 def client(
     test_db: Session,
     recording_dispatcher: RecordingDispatcher,
     recording_runner_dispatcher: RecordingRunnerDispatcher,
+    recording_memory_agent_dispatcher: RecordingMemoryAgentDispatcher,
 ):
     def override_get_db():
         yield test_db
@@ -146,6 +154,7 @@ def client(
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_dispatcher] = lambda: recording_dispatcher
     app.dependency_overrides[get_filter_dispatcher] = lambda: recording_runner_dispatcher
+    app.dependency_overrides[get_memory_agent_dispatcher] = lambda: recording_memory_agent_dispatcher
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

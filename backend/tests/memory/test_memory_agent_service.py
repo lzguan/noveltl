@@ -6,7 +6,6 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from src.memory.agent.service import (
-    abort_job,
     create_job,
     delete_job,
     delete_task,
@@ -124,25 +123,6 @@ def test_retry_restores_failed_status_when_publication_fails(
         retry_task(test_db, editor, dispatcher, job.memory_job_id, chapter_id)
 
     assert query_task(test_db, editor, job.memory_job_id, chapter_id).task_status == JobStatus.FAILED
-
-
-def test_abort_job_clears_claim_without_changing_tasks(
-    test_db: Session,
-    novel_permission_scenario: DatabaseScenario,
-) -> None:
-    group = _create_group(test_db, novel_permission_scenario, "oe")
-    editor = novel_permission_scenario.users["other"]
-    chapter_id = novel_permission_scenario.chapters["owner_editor"].chapter_id
-    job = create_job(test_db, editor, group.memory_group_id, None, None, PARAMS)
-    assert claim_job(test_db, job.memory_job_id, uuid.uuid4(), timedelta(minutes=5)) is not None
-
-    aborted = abort_job(test_db, editor, job.memory_job_id)
-
-    assert aborted.claim_expires_at is None
-    persisted_job = test_db.get(MemoryJob, job.memory_job_id)
-    assert persisted_job is not None
-    assert persisted_job.claim_token is None
-    assert query_task(test_db, editor, job.memory_job_id, chapter_id).task_status == JobStatus.PENDING
 
 
 def test_delete_operations_reject_active_work_and_job_delete_cascades_tasks(

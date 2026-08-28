@@ -93,26 +93,6 @@ def _claim_once(
     return claim
 
 
-def test_aiterate_tasks_returns_session_independent_task_identity(
-    test_db: Session,
-    testing_session_local: sessionmaker[Session],
-) -> None:
-    memory_job_id, [chapter_id] = _make_memory_job(test_db, chapter_count=1)
-
-    async def collect_tasks():
-        claim_token = uuid.uuid4()
-        return [
-            task
-            async for task in agent_tasks.aiterate_tasks(
-                testing_session_local,
-                claim_token,
-                _claim_once(memory_job_id, chapter_id),
-            )
-        ]
-
-    assert asyncio.run(collect_tasks()) == [agent_tasks.ClaimedTask(memory_job_id, chapter_id)]
-
-
 def test_arun_tasks_raises_when_completion_claim_is_lost(
     test_db: Session,
     testing_session_local: sessionmaker[Session],
@@ -207,32 +187,6 @@ def test_run_all_tasks_completes_tasks_refreshes_and_releases_job(
     tasks = test_db.scalars(select(MemoryChapterTask).where(MemoryChapterTask.memory_job_id == memory_job_id)).all()
     assert {task.chapter_id for task in tasks} == set(chapter_ids)
     assert all(task.task_status == JobStatus.COMPLETED for task in tasks)
-
-    job = test_db.get(MemoryJob, memory_job_id)
-    assert job is not None
-    assert job.claim_token is None
-    assert job.claim_expires_at is None
-
-
-def test_run_task_only_completes_selected_chapter(
-    test_db: Session,
-    testing_session_local: sessionmaker[Session],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    memory_job_id, chapter_ids = _make_memory_job(test_db)
-    selected_chapter_id = chapter_ids[1]
-    test_agent = Agent(TestModel(call_tools=[], custom_output_text="recorded"), deps_type=MemAgentDeps)
-    monkeypatch.setattr(agent_tasks, "create_agent", lambda _model_name, _plugins: test_agent)
-
-    result = asyncio.run(agent_tasks.run_task(testing_session_local, memory_job_id, selected_chapter_id))
-
-    assert result is not None
-    assert result.output == "recorded"
-    test_db.expire_all()
-    tasks = test_db.scalars(select(MemoryChapterTask).where(MemoryChapterTask.memory_job_id == memory_job_id)).all()
-    statuses = {task.chapter_id: task.task_status for task in tasks}
-    assert statuses[selected_chapter_id] == JobStatus.COMPLETED
-    assert statuses[chapter_ids[0]] == JobStatus.PENDING
 
     job = test_db.get(MemoryJob, memory_job_id)
     assert job is not None

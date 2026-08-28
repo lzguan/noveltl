@@ -22,3 +22,4 @@ playwright-mcp-output
 .playwright-mcp
 tsconfig.tsbuildinfo
 tmp
+logs/

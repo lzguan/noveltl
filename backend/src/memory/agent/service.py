@@ -94,7 +94,7 @@ def query_job_summaries(
     db: Session,
     user: User,
     memory_group_id: UUID,
-) -> list[schemas.MemoryJobSummary]:
+) -> schemas.MemoryJobSummaryList:
     """Return aggregate task progress for jobs in an accessible memory group."""
     group_statement = select(MemoryGroup).where(MemoryGroup.memory_group_id == memory_group_id)
     group_statement = memory_group_mod_access_select(group_statement, user)
@@ -118,21 +118,26 @@ def query_job_summaries(
         .where(MemoryJobModel.memory_group_id == memory_group_id)
         .order_by(MemoryJobModel.created_at.desc(), MemoryJobModel.memory_job_id)
     )
-    return [
-        schemas.MemoryJobSummary(
-            job=schemas.MemoryJob.model_validate(job),
-            task_counts=schemas.MemoryChapterTaskCounts(
-                pending=pending,
-                processing=processing,
-                completed=completed,
-                failed=failed,
-            ),
-        )
-        for job, pending, processing, completed, failed in db.execute(statement).all()
-    ]
+    server_time = db.execute(select(func.now())).scalar_one()
+    return schemas.MemoryJobSummaryList(
+        server_time=server_time,
+        summaries=[
+            schemas.MemoryJobSummary(
+                job=schemas.MemoryJob.model_validate(job),
+                task_counts=schemas.MemoryChapterTaskCounts(
+                    pending=pending,
+                    processing=processing,
+                    completed=completed,
+                    failed=failed,
+                ),
+                is_claimed=job.claim_expires_at is not None and job.claim_expires_at >= server_time,
+            )
+            for job, pending, processing, completed, failed in db.execute(statement).all()
+        ],
+    )
 
 
-def query_job_summary(db: Session, user: User, memory_job_id: UUID) -> schemas.MemoryJobSummary:
+def query_job_summary(db: Session, user: User, memory_job_id: UUID) -> schemas.MemoryJobSummarySnapshot:
     """Return aggregate task progress for one accessible memory-agent job."""
     statement = (
         select(
@@ -154,13 +159,18 @@ def query_job_summary(db: Session, user: User, memory_job_id: UUID) -> schemas.M
         job, pending, processing, completed, failed = db.execute(statement).one()._t
     except NoResultFound as exc:
         raise MemoryJobNotFoundException(f"Memory job {memory_job_id} not found or not accessible.") from exc
-    return schemas.MemoryJobSummary(
-        job=schemas.MemoryJob.model_validate(job),
-        task_counts=schemas.MemoryChapterTaskCounts(
-            pending=pending,
-            processing=processing,
-            completed=completed,
-            failed=failed,
+    server_time = db.execute(select(func.now())).scalar_one()
+    return schemas.MemoryJobSummarySnapshot(
+        server_time=server_time,
+        summary=schemas.MemoryJobSummary(
+            job=schemas.MemoryJob.model_validate(job),
+            task_counts=schemas.MemoryChapterTaskCounts(
+                pending=pending,
+                processing=processing,
+                completed=completed,
+                failed=failed,
+            ),
+            is_claimed=job.claim_expires_at is not None and job.claim_expires_at >= server_time,
         ),
     )
 

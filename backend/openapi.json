@@ -6317,11 +6317,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/MemoryJobSummary"
-                  },
-                  "title": "Response Read Memory Job Summaries Memory Agent Job Summaries Get"
+                  "$ref": "#/components/schemas/MemoryJobSummaryList"
                 }
               }
             }
@@ -6376,7 +6372,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MemoryJobSummary"
+                  "$ref": "#/components/schemas/MemoryJobSummarySnapshot"
                 }
               }
             }
@@ -9623,14 +9619,59 @@
           },
           "taskCounts": {
             "$ref": "#/components/schemas/MemoryChapterTaskCounts"
+          },
+          "isClaimed": {
+            "type": "boolean",
+            "title": "Isclaimed"
           }
         },
         "type": "object",
         "required": [
           "job",
-          "taskCounts"
+          "taskCounts",
+          "isClaimed"
         ],
         "title": "MemoryJobSummary"
+      },
+      "MemoryJobSummaryList": {
+        "properties": {
+          "serverTime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Servertime"
+          },
+          "summaries": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryJobSummary"
+            },
+            "type": "array",
+            "title": "Summaries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "serverTime",
+          "summaries"
+        ],
+        "title": "MemoryJobSummaryList"
+      },
+      "MemoryJobSummarySnapshot": {
+        "properties": {
+          "serverTime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Servertime"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/MemoryJobSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "serverTime",
+          "summary"
+        ],
+        "title": "MemoryJobSummarySnapshot"
       },
       "MemoryType": {
         "type": "string",

@@ -2028,6 +2028,9 @@ components:
       type: object
     MemoryJobSummary:
       properties:
+        isClaimed:
+          title: Isclaimed
+          type: boolean
         job:
           $ref: '#/components/schemas/MemoryJob'
         taskCounts:
@@ -2035,7 +2038,37 @@ components:
       required:
       - job
       - taskCounts
+      - isClaimed
       title: MemoryJobSummary
+      type: object
+    MemoryJobSummaryList:
+      properties:
+        serverTime:
+          format: date-time
+          title: Servertime
+          type: string
+        summaries:
+          items:
+            $ref: '#/components/schemas/MemoryJobSummary'
+          title: Summaries
+          type: array
+      required:
+      - serverTime
+      - summaries
+      title: MemoryJobSummaryList
+      type: object
+    MemoryJobSummarySnapshot:
+      properties:
+        serverTime:
+          format: date-time
+          title: Servertime
+          type: string
+        summary:
+          $ref: '#/components/schemas/MemoryJobSummary'
+      required:
+      - serverTime
+      - summary
+      title: MemoryJobSummarySnapshot
       type: object
     MemoryType:
       description: 'The type of a memory.
@@ -5653,11 +5686,7 @@ paths:
           content:
             application/json:
               schema:
-                items:
-                  $ref: '#/components/schemas/MemoryJobSummary'
-                title: Response Read Memory Job Summaries Memory Agent Job Summaries
-                  Get
-                type: array
+                $ref: '#/components/schemas/MemoryJobSummaryList'
           description: Successful Response
         '404':
           content:
@@ -5690,7 +5719,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MemoryJobSummary'
+                $ref: '#/components/schemas/MemoryJobSummarySnapshot'
           description: Successful Response
         '404':
           content:

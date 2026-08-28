@@ -14,7 +14,8 @@ from src.memory.agent.schemas import (
     MemoryChapterTask,
     MemoryChapterTaskPage,
     MemoryJob,
-    MemoryJobSummary,
+    MemoryJobSummaryList,
+    MemoryJobSummarySnapshot,
 )
 from src.memory.agent.service import (
     abort_job,
@@ -102,14 +103,14 @@ def read_memory_job(
 
 @router.get(
     "/job-summaries",
-    response_model=list[MemoryJobSummary],
+    response_model=MemoryJobSummaryList,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
 def read_memory_job_summaries(
     memory_group_id: Annotated[UUID, Query(alias="memoryGroupId")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-) -> list[MemoryJobSummary]:
+) -> MemoryJobSummaryList:
     try:
         return query_job_summaries(db, current_user, memory_group_id)
     except MemoryGroupNotFoundException as exc:
@@ -118,14 +119,14 @@ def read_memory_job_summaries(
 
 @router.get(
     "/job-summaries/{memoryJobId}",
-    response_model=MemoryJobSummary,
+    response_model=MemoryJobSummarySnapshot,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
 def read_memory_job_summary(
     memory_job_id: Annotated[UUID, Path(alias="memoryJobId")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-) -> MemoryJobSummary:
+) -> MemoryJobSummarySnapshot:
     try:
         return query_job_summary(db, current_user, memory_job_id)
     except MemoryJobNotFoundException as exc:

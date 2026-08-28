@@ -51,7 +51,8 @@ import type {
   MemoryChapterTask,
   MemoryGroup,
   MemoryJob,
-  MemoryJobSummary,
+  MemoryJobSummaryList,
+  MemoryJobSummarySnapshot,
   ModifyChapterContentResponse,
   Novel,
   NovelAndUsers,
@@ -2166,7 +2167,7 @@ return customFetch<editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchRespon
 
 
 export type readMemoryJobSummariesMemoryAgentJobSummariesGetResponse200 = {
-  data: MemoryJobSummary[]
+  data: MemoryJobSummaryList
   status: 200
 }
 
@@ -2220,7 +2221,7 @@ export const readMemoryJobSummariesMemoryAgentJobSummariesGet = async (params: R
 
 
 export type readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetResponse200 = {
-  data: MemoryJobSummary
+  data: MemoryJobSummarySnapshot
   status: 200
 }
 

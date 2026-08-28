@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from fastapi import status
@@ -75,7 +75,9 @@ def test_memory_agent_router_exposes_authenticated_job_progress_and_dispatch(
         headers=headers,
     )
     assert summaries_response.status_code == status.HTTP_200_OK
-    assert summaries_response.json() == [
+    summaries = summaries_response.json()
+    datetime.fromisoformat(summaries["serverTime"])
+    assert summaries["summaries"] == [
         {
             "job": job,
             "taskCounts": {
@@ -84,6 +86,7 @@ def test_memory_agent_router_exposes_authenticated_job_progress_and_dispatch(
                 "completed": 0,
                 "failed": 0,
             },
+            "isClaimed": False,
         }
     ]
     summary_response = client.get(
@@ -91,7 +94,9 @@ def test_memory_agent_router_exposes_authenticated_job_progress_and_dispatch(
         headers=headers,
     )
     assert summary_response.status_code == status.HTTP_200_OK
-    assert summary_response.json() == summaries_response.json()[0]
+    summary = summary_response.json()
+    datetime.fromisoformat(summary["serverTime"])
+    assert summary["summary"] == summaries["summaries"][0]
 
     tasks_response = client.get(f"/memory-agent/jobs/{memory_job_id}/tasks", headers=headers)
     assert tasks_response.status_code == status.HTTP_200_OK

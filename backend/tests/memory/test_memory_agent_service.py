@@ -60,13 +60,13 @@ def test_create_and_query_job_respect_memory_group_permissions(
 
     assert query_job(test_db, viewer, job.memory_job_id) == job
     assert query_jobs(test_db, viewer, group.memory_group_id) == [job]
-    summary = query_job_summary(test_db, viewer, job.memory_job_id)
+    summary = query_job_summary(test_db, viewer, job.memory_job_id).summary
     assert summary.job == job
     assert summary.task_counts.pending == 1
     assert summary.task_counts.processing == 0
     assert summary.task_counts.completed == 0
     assert summary.task_counts.failed == 0
-    assert query_job_summaries(test_db, viewer, group.memory_group_id) == [summary]
+    assert query_job_summaries(test_db, viewer, group.memory_group_id).summaries == [summary]
     page = query_tasks(test_db, viewer, job.memory_job_id)
     assert page.count == 1
     assert page.rows[0].chapter_num == 1
@@ -78,7 +78,7 @@ def test_create_and_query_job_respect_memory_group_permissions(
         .values(task_status=JobStatus.FAILED)
     )
     test_db.commit()
-    failed_summary = query_job_summary(test_db, viewer, job.memory_job_id)
+    failed_summary = query_job_summary(test_db, viewer, job.memory_job_id).summary
     assert failed_summary.task_counts.pending == 0
     assert failed_summary.task_counts.failed == 1
 

@@ -8,6 +8,7 @@ import type { MemoryChapterTaskCounts } from './memoryChapterTaskCounts';
 import type { MemoryJob } from './memoryJob';
 
 export interface MemoryJobSummary {
+  isClaimed: boolean;
   job: MemoryJob;
   taskCounts: MemoryChapterTaskCounts;
 }

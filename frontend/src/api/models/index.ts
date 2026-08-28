@@ -124,6 +124,8 @@ export * from './memoryChapterTaskCounts';
 export * from './memoryGroup';
 export * from './memoryJob';
 export * from './memoryJobSummary';
+export * from './memoryJobSummaryList';
+export * from './memoryJobSummarySnapshot';
 export * from './memoryPage';
 export * from './memoryType';
 export * from './modelName';

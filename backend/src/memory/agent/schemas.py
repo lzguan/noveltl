@@ -36,6 +36,17 @@ class MemoryChapterTaskCounts(Model):
 class MemoryJobSummary(Model):
     job: MemoryJob
     task_counts: MemoryChapterTaskCounts
+    is_claimed: bool
+
+
+class MemoryJobSummaryList(Model):
+    server_time: datetime
+    summaries: list[MemoryJobSummary]
+
+
+class MemoryJobSummarySnapshot(Model):
+    server_time: datetime
+    summary: MemoryJobSummary
 
 
 class MemoryChapterTask(Model):

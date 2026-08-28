@@ -1,37 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MemoryJobBrowser } from "@/memory/agent/components/MemoryJobBrowser";
 import { CreateMemoryGroupDialog } from "@/memory/components/CreateMemoryGroupDialog";
-import { GlossaryBrowser } from "@/memory/components/GlossaryBrowser";
-import { MemoryBrowser } from "@/memory/components/MemoryBrowser";
 import { MemoryGroupSelector } from "@/memory/components/MemoryGroupSelector";
-import { PluginSelector, type MemoryView } from "@/memory/components/PluginSelector";
 import { useMemoryGroupsContext } from "@/memory/context/MemoryGroupsContext";
 import { useState } from "react";
 
-export function MemoryPanel({
-	novelId,
-	chapterId,
-	chapterNum,
-	chapterContentId,
-}: {
-	novelId: string;
-	/** Server id of the currently open chapter, or null when no chapter is open. */
-	chapterId: string | null;
-	/** Number of the currently open chapter, or null when no chapter is open. */
-	chapterNum: number | null;
-	/** Server id of the active saved chapter content, or null while unavailable. */
-	chapterContentId: string | null;
-}) {
+export function MemoryAgentPanel({ novelId }: { novelId: string }) {
 	const { groups, selectedGroupId, reloadGroups, selectGroup, addAndSelectGroup } =
 		useMemoryGroupsContext();
-	const [view, setView] = useState<MemoryView>("memories");
 	const [createGroupOpen, setCreateGroupOpen] = useState(false);
 
 	if (groups.status === "idle" || groups.status === "loading") {
 		return (
 			<div aria-busy="true" className="flex h-full flex-col gap-2 p-2">
-				<Skeleton className="h-12 w-full" />
 				<Skeleton className="h-12 w-full" />
 				<Skeleton className="h-24 w-full" />
 			</div>
@@ -49,15 +32,15 @@ export function MemoryPanel({
 		);
 	}
 
-	const browserKey = `${selectedGroupId ?? "no-group"}:${chapterId ?? "no-chapter"}`;
-
 	return (
 		<div className="flex h-full min-h-0 flex-col">
 			{groups.data.length === 0 || selectedGroupId === null ? (
 				<Empty>
 					<EmptyHeader>
 						<EmptyTitle>No memory groups</EmptyTitle>
-						<EmptyDescription>This novel has no memory groups yet.</EmptyDescription>
+						<EmptyDescription>
+							Create a memory group before creating agent jobs.
+						</EmptyDescription>
 					</EmptyHeader>
 					<Button size="sm" onClick={() => setCreateGroupOpen(true)}>
 						Create memory group
@@ -71,27 +54,7 @@ export function MemoryPanel({
 						onSelect={selectGroup}
 						onCreate={() => setCreateGroupOpen(true)}
 					/>
-					{view === "memories" ? (
-						<>
-							<PluginSelector value={view} onChange={setView} />
-							<MemoryBrowser
-								key={browserKey}
-								memoryGroupId={selectedGroupId}
-								chapterId={chapterId}
-								chapterNum={chapterNum}
-							/>
-						</>
-					) : (
-						<GlossaryBrowser
-							key={browserKey}
-							memoryGroupId={selectedGroupId}
-							chapterId={chapterId}
-							chapterNum={chapterNum}
-							chapterContentId={chapterContentId}
-							view={view}
-							onViewChange={setView}
-						/>
-					)}
+					<MemoryJobBrowser key={selectedGroupId} memoryGroupId={selectedGroupId} />
 				</>
 			)}
 			{createGroupOpen && (

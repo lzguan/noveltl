@@ -26,6 +26,18 @@ from src.memory.permissions import memory_group_mod_access_select
 from src.memory.types import JobStatus
 from src.novels.models import Chapter
 
+memory_job_task_counts = (
+    select(
+        MemoryChapterTaskModel.memory_job_id,
+        func.count().filter(MemoryChapterTaskModel.task_status == JobStatus.PENDING).label("pending"),
+        func.count().filter(MemoryChapterTaskModel.task_status == JobStatus.PROCESSING).label("processing"),
+        func.count().filter(MemoryChapterTaskModel.task_status == JobStatus.COMPLETED).label("completed"),
+        func.count().filter(MemoryChapterTaskModel.task_status == JobStatus.FAILED).label("failed"),
+    )
+    .group_by(MemoryChapterTaskModel.memory_job_id)
+    .subquery()
+)
+
 
 def create_job(
     db: Session,
@@ -76,6 +88,93 @@ def query_job(db: Session, user: User, memory_job_id: UUID) -> schemas.MemoryJob
         return schemas.MemoryJob.model_validate(db.execute(statement).scalar_one())
     except NoResultFound as exc:
         raise MemoryJobNotFoundException(f"Memory job {memory_job_id} not found or not accessible.") from exc
+
+
+def query_job_summaries(
+    db: Session,
+    user: User,
+    memory_group_id: UUID,
+) -> schemas.MemoryJobSummaryList:
+    """Return aggregate task progress for jobs in an accessible memory group."""
+    group_statement = select(MemoryGroup).where(MemoryGroup.memory_group_id == memory_group_id)
+    group_statement = memory_group_mod_access_select(group_statement, user)
+    try:
+        db.execute(group_statement).scalar_one()
+    except NoResultFound as exc:
+        raise MemoryGroupNotFoundException(f"Memory group {memory_group_id} not found or not accessible.") from exc
+
+    statement = (
+        select(
+            MemoryJobModel,
+            func.coalesce(memory_job_task_counts.c.pending, 0),
+            func.coalesce(memory_job_task_counts.c.processing, 0),
+            func.coalesce(memory_job_task_counts.c.completed, 0),
+            func.coalesce(memory_job_task_counts.c.failed, 0),
+            func.coalesce(MemoryJobModel.claim_expires_at >= func.now(), False),
+        )
+        .outerjoin(
+            memory_job_task_counts,
+            memory_job_task_counts.c.memory_job_id == MemoryJobModel.memory_job_id,
+        )
+        .where(MemoryJobModel.memory_group_id == memory_group_id)
+        .order_by(MemoryJobModel.created_at.desc(), MemoryJobModel.memory_job_id)
+    )
+    server_time = db.execute(select(func.now())).scalar_one()
+    return schemas.MemoryJobSummaryList(
+        server_time=server_time,
+        summaries=[
+            schemas.MemoryJobSummary(
+                job=schemas.MemoryJob.model_validate(job),
+                task_counts=schemas.MemoryChapterTaskCounts(
+                    pending=pending,
+                    processing=processing,
+                    completed=completed,
+                    failed=failed,
+                ),
+                is_claimed=is_claimed,
+            )
+            for job, pending, processing, completed, failed, is_claimed in db.execute(statement).all()
+        ],
+    )
+
+
+def query_job_summary(db: Session, user: User, memory_job_id: UUID) -> schemas.MemoryJobSummarySnapshot:
+    """Return aggregate task progress for one accessible memory-agent job."""
+    statement = (
+        select(
+            MemoryJobModel,
+            func.coalesce(memory_job_task_counts.c.pending, 0),
+            func.coalesce(memory_job_task_counts.c.processing, 0),
+            func.coalesce(memory_job_task_counts.c.completed, 0),
+            func.coalesce(memory_job_task_counts.c.failed, 0),
+            func.coalesce(MemoryJobModel.claim_expires_at >= func.now(), False),
+        )
+        .outerjoin(
+            memory_job_task_counts,
+            memory_job_task_counts.c.memory_job_id == MemoryJobModel.memory_job_id,
+        )
+        .join(MemoryGroup, MemoryGroup.memory_group_id == MemoryJobModel.memory_group_id)
+        .where(MemoryJobModel.memory_job_id == memory_job_id)
+    )
+    statement = memory_group_mod_access_select(statement, user)
+    try:
+        job, pending, processing, completed, failed, is_claimed = db.execute(statement).one()._t
+    except NoResultFound as exc:
+        raise MemoryJobNotFoundException(f"Memory job {memory_job_id} not found or not accessible.") from exc
+    server_time = db.execute(select(func.now())).scalar_one()
+    return schemas.MemoryJobSummarySnapshot(
+        server_time=server_time,
+        summary=schemas.MemoryJobSummary(
+            job=schemas.MemoryJob.model_validate(job),
+            task_counts=schemas.MemoryChapterTaskCounts(
+                pending=pending,
+                processing=processing,
+                completed=completed,
+                failed=failed,
+            ),
+            is_claimed=is_claimed,
+        ),
+    )
 
 
 def query_tasks(

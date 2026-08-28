@@ -1638,6 +1638,120 @@ export const EditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch422Response 
 })
 
 /**
+ * @summary Read Memory Job Summaries
+ */
+export const ReadMemoryJobSummariesMemoryAgentJobSummariesGetQueryParams = S.Struct({
+  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsCompletedMin = 0;
+
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsFailedMin = 0;
+
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsPendingMin = 0;
+
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsProcessingMin = 0;
+
+
+
+export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet200Response = S.Struct({
+  "serverTime": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "summaries": S.Array(S.Struct({
+  "isClaimed": S.Boolean,
+  "job": S.Struct({
+  "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
+  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "jobParams": S.Struct({
+  "modelName": S.Literal("deepseek:deepseek-chat"),
+  "plugins": S.Array(S.Literal("glossary"))
+}),
+  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+}),
+  "taskCounts": S.Struct({
+  "completed": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsCompletedMin)),
+  "failed": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsFailedMin)),
+  "pending": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsPendingMin)),
+  "processing": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsProcessingMin))
+})
+}))
+})
+
+export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet404Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.extend(S.Struct({
+
+}), S.Record({ key: S.String, value: S.Unknown }))),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Read Memory Job Summary
+ */
+export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetParams = S.Struct({
+  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsCompletedMin = 0;
+
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsFailedMin = 0;
+
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsPendingMin = 0;
+
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsProcessingMin = 0;
+
+
+
+export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200Response = S.Struct({
+  "serverTime": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "summary": S.Struct({
+  "isClaimed": S.Boolean,
+  "job": S.Struct({
+  "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
+  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "jobParams": S.Struct({
+  "modelName": S.Literal("deepseek:deepseek-chat"),
+  "plugins": S.Array(S.Literal("glossary"))
+}),
+  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+}),
+  "taskCounts": S.Struct({
+  "completed": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsCompletedMin)),
+  "failed": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsFailedMin)),
+  "pending": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsPendingMin)),
+  "processing": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsProcessingMin))
+})
+})
+})
+
+export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet404Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.extend(S.Struct({
+
+}), S.Record({ key: S.String, value: S.Unknown }))),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * @summary Read Memory Jobs
  */
 export const ReadMemoryJobsMemoryAgentJobsGetQueryParams = S.Struct({

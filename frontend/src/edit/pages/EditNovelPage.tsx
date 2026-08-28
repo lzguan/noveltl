@@ -35,6 +35,8 @@ import { LoaderCircle } from "lucide-react";
 import { ChapterTabs } from "../panels/chapters/ChapterTabs";
 import { FiltersPanel } from "../panels/filters/FiltersPanel";
 import { MemoryPanel } from "../panels/memory/MemoryPanel";
+import { MemoryGroupsProvider } from "@/memory/context/MemoryGroupsContext";
+import { MemoryAgentPanel } from "../panels/memoryAgent/MemoryAgentPanel";
 import type { NovelGetters } from "../controller/types/controllerTypes";
 
 function makeProvChapter(chapter: Chapter, chapterId: ProvChapter["chapterId"]): ProvChapter {
@@ -327,70 +329,80 @@ export function EditNovelPage() {
 						/>
 					</div>
 					<div className="shrink-0 flex flex-col min-h-0">
-						<RightPanel
-							tabs={[
-								{
-									value: "auto-labels",
-									label: "Auto Labels",
-									keepMounted: true,
-									content: (
-										<AutoLabelPanel
-											autoLabels={autoLabels}
-											autoLabelManager={managers.autoLabelMgr}
-											chapters={chapterState.chapterList}
-											currentChapterId={currentChapterId}
-											labelGroups={trackedLabelGroups.labelGroups}
-											setActive={managers.labelGroupMgr.setActive}
-											previewEnabled={autoLabelPreview.enabled}
-											previewLoading={autoLabelPreview.loading}
-											onSetPreviewEnabled={
-												managers.autoLabelMgr.setPreviewEnabled
-											}
-											activeId={trackedLabelGroups.activeLabelGroupId}
-										/>
-									),
-								},
-								{
-									value: "filters",
-									label: "Filters",
-									keepMounted: true,
-									content: (
-										<FiltersPanel
-											key={novel.novel.novelId}
-											novelId={novel.novel.novelId}
-											gotoText={(cServId, ref) => {
-												const pid = Effect.runSync(
-													managers.controllerGetters.chapterIdFromServerId(
-														cServId,
-													),
-												);
-												if (pid === null) {
-													console.warn(
-														`Could not find chapter for server ID ${cServId}`,
-													);
-													return;
+						<MemoryGroupsProvider
+							key={novel.novel.novelId}
+							novelId={novel.novel.novelId}
+						>
+							<RightPanel
+								tabs={[
+									{
+										value: "auto-labels",
+										label: "Auto Labels",
+										keepMounted: true,
+										content: (
+											<AutoLabelPanel
+												autoLabels={autoLabels}
+												autoLabelManager={managers.autoLabelMgr}
+												chapters={chapterState.chapterList}
+												currentChapterId={currentChapterId}
+												labelGroups={trackedLabelGroups.labelGroups}
+												setActive={managers.labelGroupMgr.setActive}
+												previewEnabled={autoLabelPreview.enabled}
+												previewLoading={autoLabelPreview.loading}
+												onSetPreviewEnabled={
+													managers.autoLabelMgr.setPreviewEnabled
 												}
-												managers.chapterMgr.switchChapter(pid, ref);
-											}}
-										/>
-									),
-								},
-								{
-									value: "memories",
-									label: "Memories",
-									keepMounted: true,
-									content: (
-										<MemoryPanel
-											key={novel.novel.novelId}
-											novelId={novel.novel.novelId}
-											chapterId={activeChapterServerId}
-											chapterNum={activeChapterNum}
-											chapterContentId={activeChapterContentServerId}
-										/>
-									),
-								},
-							]}
-						/>
+												activeId={trackedLabelGroups.activeLabelGroupId}
+											/>
+										),
+									},
+									{
+										value: "filters",
+										label: "Filters",
+										keepMounted: true,
+										content: (
+											<FiltersPanel
+												key={novel.novel.novelId}
+												novelId={novel.novel.novelId}
+												gotoText={(cServId, ref) => {
+													const pid = Effect.runSync(
+														managers.controllerGetters.chapterIdFromServerId(
+															cServId,
+														),
+													);
+													if (pid === null) {
+														console.warn(
+															`Could not find chapter for server ID ${cServId}`,
+														);
+														return;
+													}
+													managers.chapterMgr.switchChapter(pid, ref);
+												}}
+											/>
+										),
+									},
+									{
+										value: "memories",
+										label: "Memories",
+										keepMounted: true,
+										content: (
+											<MemoryPanel
+												key={novel.novel.novelId}
+												novelId={novel.novel.novelId}
+												chapterId={activeChapterServerId}
+												chapterNum={activeChapterNum}
+												chapterContentId={activeChapterContentServerId}
+											/>
+										),
+									},
+									{
+										value: "memory-agent",
+										label: "Agent Jobs",
+										content: <MemoryAgentPanel novelId={novel.novel.novelId} />,
+									},
+								]}
+							/>
+						</MemoryGroupsProvider>
 					</div>
 				</div>
 			</div>

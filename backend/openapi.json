@@ -6290,6 +6290,116 @@
         }
       }
     },
+    "/memory-agent/job-summaries": {
+      "get": {
+        "summary": "Read Memory Job Summaries",
+        "operationId": "read_memory_job_summaries_memory_agent_job_summaries_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryJobSummaryList"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory-agent/job-summaries/{memoryJobId}": {
+      "get": {
+        "summary": "Read Memory Job Summary",
+        "operationId": "read_memory_job_summary_memory_agent_job_summaries__memoryJobId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryJobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memoryjobid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryJobSummarySnapshot"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/memory-agent/jobs/{memoryJobId}/tasks": {
       "get": {
         "summary": "Read Memory Tasks",
@@ -9386,6 +9496,38 @@
         ],
         "title": "MemoryChapterTask"
       },
+      "MemoryChapterTaskCounts": {
+        "properties": {
+          "pending": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pending"
+          },
+          "processing": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Processing"
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Completed"
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pending",
+          "processing",
+          "completed",
+          "failed"
+        ],
+        "title": "MemoryChapterTaskCounts"
+      },
       "MemoryGroup": {
         "properties": {
           "memoryGroupId": {
@@ -9469,6 +9611,67 @@
           "updatedAt"
         ],
         "title": "MemoryJob"
+      },
+      "MemoryJobSummary": {
+        "properties": {
+          "job": {
+            "$ref": "#/components/schemas/MemoryJob"
+          },
+          "taskCounts": {
+            "$ref": "#/components/schemas/MemoryChapterTaskCounts"
+          },
+          "isClaimed": {
+            "type": "boolean",
+            "title": "Isclaimed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job",
+          "taskCounts",
+          "isClaimed"
+        ],
+        "title": "MemoryJobSummary"
+      },
+      "MemoryJobSummaryList": {
+        "properties": {
+          "serverTime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Servertime"
+          },
+          "summaries": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryJobSummary"
+            },
+            "type": "array",
+            "title": "Summaries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "serverTime",
+          "summaries"
+        ],
+        "title": "MemoryJobSummaryList"
+      },
+      "MemoryJobSummarySnapshot": {
+        "properties": {
+          "serverTime": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Servertime"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/MemoryJobSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "serverTime",
+          "summary"
+        ],
+        "title": "MemoryJobSummarySnapshot"
       },
       "MemoryType": {
         "type": "string",

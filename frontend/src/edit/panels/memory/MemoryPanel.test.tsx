@@ -18,7 +18,15 @@ import {
 	replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut,
 } from "@/api/endpoints/default/default";
 import type { GlossaryMemory, GlossaryTermSummary, Memory, MemoryGroup } from "@/api/models";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryGroupsProvider } from "@/memory/context/MemoryGroupsContext";
+import {
+	fireEvent,
+	render as renderWithTestingLibrary,
+	screen,
+	waitFor,
+	within,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryPanel } from "./MemoryPanel";
 
@@ -101,6 +109,12 @@ function selectOption(label: string, optionName: string) {
 function openMenu(label: string) {
 	const trigger = screen.getByRole("button", { name: label });
 	fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: "mouse" });
+}
+
+function render(element: ReactElement) {
+	return renderWithTestingLibrary(
+		<MemoryGroupsProvider novelId="novel-1">{element}</MemoryGroupsProvider>,
+	);
 }
 
 describe("MemoryPanel", () => {
@@ -319,9 +333,9 @@ describe("MemoryPanel", () => {
 				novelId: "novel-1",
 			}),
 		);
-		expect(await screen.findByRole("combobox", { name: "Memory group" })).toHaveTextContent(
-			"Japanese glossary",
-		);
+		expect(
+			await screen.findByRole("button", { name: /Memory group.*Japanese glossary/ }),
+		).toBeVisible();
 	});
 
 	it("creates a glossary term and refreshes the current term query", async () => {

@@ -51,6 +51,8 @@ import type {
   MemoryChapterTask,
   MemoryGroup,
   MemoryJob,
+  MemoryJobSummaryList,
+  MemoryJobSummarySnapshot,
   ModifyChapterContentResponse,
   Novel,
   NovelAndUsers,
@@ -75,6 +77,7 @@ import type {
   ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetParams,
   ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGetParams,
   ReadMemoryGroupsMemoryGroupsGetParams,
+  ReadMemoryJobSummariesMemoryAgentJobSummariesGetParams,
   ReadMemoryJobsMemoryAgentJobsGetParams,
   ReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetParams,
   ReadNovelsMineNovelsMineGetParams,
@@ -2159,6 +2162,107 @@ return customFetch<editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchRespon
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateReviewStatus)
+  }
+);}
+
+
+export type readMemoryJobSummariesMemoryAgentJobSummariesGetResponse200 = {
+  data: MemoryJobSummaryList
+  status: 200
+}
+
+export type readMemoryJobSummariesMemoryAgentJobSummariesGetResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type readMemoryJobSummariesMemoryAgentJobSummariesGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readMemoryJobSummariesMemoryAgentJobSummariesGetResponseSuccess = (readMemoryJobSummariesMemoryAgentJobSummariesGetResponse200) & {
+  headers: Headers;
+};
+export type readMemoryJobSummariesMemoryAgentJobSummariesGetResponseError = (readMemoryJobSummariesMemoryAgentJobSummariesGetResponse404 | readMemoryJobSummariesMemoryAgentJobSummariesGetResponse422) & {
+  headers: Headers;
+};
+
+export type readMemoryJobSummariesMemoryAgentJobSummariesGetResponse = (readMemoryJobSummariesMemoryAgentJobSummariesGetResponseSuccess | readMemoryJobSummariesMemoryAgentJobSummariesGetResponseError)
+
+export const getReadMemoryJobSummariesMemoryAgentJobSummariesGetUrl = (params: ReadMemoryJobSummariesMemoryAgentJobSummariesGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/memory-agent/job-summaries?${stringifiedParams}` : `/api/memory-agent/job-summaries`
+}
+
+/**
+ * @summary Read Memory Job Summaries
+ */
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet = async (params: ReadMemoryJobSummariesMemoryAgentJobSummariesGetParams, options?: Parameters<typeof customFetch>[1]): Promise<readMemoryJobSummariesMemoryAgentJobSummariesGetResponse> => {
+
+  return customFetch<readMemoryJobSummariesMemoryAgentJobSummariesGetResponse>(getReadMemoryJobSummariesMemoryAgentJobSummariesGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+export type readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetResponse200 = {
+  data: MemoryJobSummarySnapshot
+  status: 200
+}
+
+export type readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetResponseSuccess = (readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetResponse200) & {
+  headers: Headers;
+};
+export type readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetResponseError = (readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetResponse404 | readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetResponse422) & {
+  headers: Headers;
+};
+
+export type readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetResponse = (readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetResponseSuccess | readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetResponseError)
+
+export const getReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetUrl = (memoryJobId: string,) => {
+
+
+
+
+  return `/api/memory-agent/job-summaries/${memoryJobId}`
+}
+
+/**
+ * @summary Read Memory Job Summary
+ */
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet = async (memoryJobId: string, options?: Parameters<typeof customFetch>[1]): Promise<readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetResponse> => {
+
+  return customFetch<readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetResponse>(getReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetUrl(memoryJobId),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 

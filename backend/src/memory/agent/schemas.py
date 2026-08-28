@@ -26,6 +26,29 @@ class MemoryJob(Model):
     updated_at: datetime
 
 
+class MemoryChapterTaskCounts(Model):
+    pending: int = Field(ge=0)
+    processing: int = Field(ge=0)
+    completed: int = Field(ge=0)
+    failed: int = Field(ge=0)
+
+
+class MemoryJobSummary(Model):
+    job: MemoryJob
+    task_counts: MemoryChapterTaskCounts
+    is_claimed: bool
+
+
+class MemoryJobSummaryList(Model):
+    server_time: datetime
+    summaries: list[MemoryJobSummary]
+
+
+class MemoryJobSummarySnapshot(Model):
+    server_time: datetime
+    summary: MemoryJobSummary
+
+
 class MemoryChapterTask(Model):
     memory_job_id: UUID
     chapter_id: UUID

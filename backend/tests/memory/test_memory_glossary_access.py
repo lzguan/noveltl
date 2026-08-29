@@ -15,8 +15,12 @@ from src.memory.plugins.glossary.access import (
     inspect_terms,
     supersede_memory,
 )
+from src.memory.plugins.glossary.access import (
+    expire_memory as expire_glossary_memory,
+)
 from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
 from src.memory.plugins.glossary.service import delete_glossary_term
+from src.memory.plugins.glossary.types import TermKind
 from src.memory.service import delete_memory, expire_memory
 from src.memory.types import Creator, MemoryType, Scope
 from src.novels.constants import NovelType, Visibility
@@ -66,8 +70,9 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
     test_db.add_all([chapter_content, next_chapter_content, memory_group])
     test_db.flush()
 
-    alpha = create_term(test_db, memory_group.memory_group_id, "Alpha")
+    alpha = create_term(test_db, memory_group.memory_group_id, "Alpha", TermKind.PERSON)
     create_term(test_db, memory_group.memory_group_id, "Beta")
+    assert alpha.term_kind == TermKind.PERSON
     context = MemAccessContext(
         memory_group_id=memory_group.memory_group_id,
         chapter_id=chapter.chapter_id,
@@ -165,9 +170,20 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
             MemoryType.FACT,
             "Glossary must not supersede this memory.",
         )
+    with pytest.raises(MemoryNotFoundException):
+        expire_glossary_memory(
+            test_db,
+            next_context,
+            other_plugin_memory.memory_id,
+            [MemoryType.FACT],
+        )
 
     test_db.refresh(other_plugin_memory)
     assert other_plugin_memory.memory_end_num is None
+
+    expire_glossary_memory(test_db, next_context, relation.memory_id, [MemoryType.RELATION])
+    test_db.refresh(relation)
+    assert relation.memory_end_num == next_chapter.chapter_num
 
 
 def test_memory_and_glossary_deletion_preserve_independent_records(test_db: Session) -> None:

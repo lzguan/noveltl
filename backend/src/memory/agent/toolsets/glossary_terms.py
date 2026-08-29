@@ -9,10 +9,12 @@ from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets import glossary_common
 from src.memory.plugins.glossary import access
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
+from src.memory.plugins.glossary.types import FactCategory, TermKind
 from src.memory.types import MemoryType, Scope
 from src.schemas import Page
 
 type TermMemoryType = Literal[MemoryType.DEFINITION, MemoryType.RELATION, MemoryType.FACT]
+TERM_MEMORY_TYPES = [MemoryType.DEFINITION, MemoryType.RELATION, MemoryType.FACT]
 
 """
 TODO: Add decorator instead of manual uuid translation.
@@ -28,110 +30,75 @@ The initial glossary context contains terms detected in the current chapter.
 Review it before making changes. It is a snapshot taken before this run's
 writes; memories are deliberately omitted to keep the context focused.
 
-Use the tools as follows:
+Create terms selectively. A term must be likely to recur and its rendering or
+identity must matter to later translation. Avoid ordinary vocabulary,
+disposable descriptions, unnamed one-off roles, and terms with no useful memory
+to attach. Classify every agent-created term as `person`, `place`,
+`organization`, `technique`, `item`, `concept`, `title`, `species`, or `other`.
+Use `other` only when a translation-relevant recurring term fits none of the
+specific kinds. Never add a term already present in the initial context.
 
-- `term_memories`: inspect active memories for specific exact source terms. Use
-  it after forming a candidate memory whose associated terms existed before the
-  current run. Pass one or more concrete candidate types as `memory_types` and
-  only their associated exact source terms as `term_names`. When candidates
-  share the same terms, combine their required types into one call. The type
-  list must not be empty, and every requested type must correspond to a concrete
-  candidate or continuity question; never use it as a generic all-types lookup.
-  Compare each candidate with results of its type to avoid duplicates and decide
-  whether to create or supersede. Results may include memories associated with
-  only some requested terms; do not combine separate results or infer an
-  unstated relationship between the requested terms. Skip retrieval when all
-  associated terms were added in the current run. Do not call the tool merely
-  because a term appears, and do not fetch every detected term's history.
-- `add_term`: register a missing exact source term. Do not pass a translation,
-  explanation, normalized alias, or surrounding prose as the term. If the tool
-  reports that the term already exists, inspect it instead of retrying the add.
-- `new_term_memory`: attach a short, atomic `def`, `rel`, or `fact` memory to
-  one or more terms that already exist. Pass exact source terms in `term_names`;
-  write `content` in the memory language.
-- `supersede_term_memory`: supersede an active `def`, `rel`, or `fact` memory
-  from an earlier chapter only when the current chapter corrects, replaces, or
-  ends it. It preserves the old memory's term associations. Do not use it on a
-  memory created in the current chapter or merely to rephrase, expand, or append
-  compatible information.
+`term_memories` retrieves active `def`, `rel`, and `fact` memories for exact
+terms. Form concrete candidates first, then request only their terms and types.
+Multiple types may be combined when they all correspond to real candidates.
+Results are newest-first and may match only some requested terms. Start with the
+default page and request another page only when the count shows it is necessary.
+Never retrieve merely because a known term appears, request generic history, or
+fetch every detected term. Skip retrieval when every associated term was added
+in the current run.
 
-Memory-type workflow:
+`def` is the intrinsic identity or meaning of exactly one term. Maintain at most
+one active canonical definition per term and supersede it when the current
+chapter materially corrects or completes that meaning. Do not define an obvious
+proper name merely because it is new. A definition is not a biography, plot
+history, relationship, ownership record, or current state.
 
-`rel` records an explicit, continuity-relevant relationship between two or more
-glossary terms.
+`rel` is an explicit, continuity-relevant relationship between two or more
+terms. Associate every participant. Prioritize aliases, family, mentorship,
+rank, membership, ownership, alliance, rivalry, and organizational hierarchy.
+Do not record co-occurrence, temporary cooperation, transactions, actions, or
+shared participation in an occurrence as relations. Query `rel` for the exact
+candidate participants before writing unless every participant is new.
 
-1. Explicitly check whether the chapter establishes alternate names for the
-   same entity. These include affectionate or childhood names using `儿`,
-   nicknames, courtesy names, titles, surnames used alone, and aliases. When two
-   glossary terms identify the same entity, record a persistent relation; for
-   example, `沐儿` and `杨沐` are the same person, as are `灵儿` and `徐灵`.
-2. Identify other related term tuples whose relationship will matter later.
-   Relevant relationships include character-location connections, relationships
-   among several characters, character-organization membership,
-   organization-location connections, family, mentorship, rank, ownership,
-   alliance, rivalry, and organizational hierarchy. Record a
-   character-technique relationship only when it is special, such as creator,
-   exclusive inheritor, signature practitioner, or defining cultivation path;
-   ordinary learning or temporary practice is a `fact`.
-3. Ensure every endpoint is an existing glossary term, adding missing terms
-   first.
-4. If any endpoint existed before the current run, query `rel` memories for the
-   exact candidate terms. Consider the relationship already recorded only when
-   one returned relation explicitly states the same relationship and is
-   associated with every candidate endpoint. Related memories for individual
-   endpoints, separate memories that collectively mention them, and mere
-   co-occurrence do not count.
-5. If no such relation exists, record one short relation describing only the
-   connection and include every participating term in `term_names`.
+`fact` is an explicitly stated, continuity-critical attribute of one primary
+term. Facts must be extremely rare; most chapters need no new facts. Record no
+more than two new facts in an ordinary chapter. A fact is allowed only when it
+belongs to one of these categories and forgetting it could cause a later
+translation or continuity error:
 
-Do not use `rel` merely because terms occur in the same scene. Do not include
-appearance, history, actions, or unrelated properties.
+- `gender`: explicit gender or pronoun identity.
+- `age_stage`: explicit age or a meaningful life stage.
+- `species`: human, demon, spirit, beast, or another species identity.
+- `appearance`: stable identifying appearance, scars, or disabilities.
+- `cultivation_level`: the current canonical realm or stage, never experience,
+  progress rate, estimate, or training activity.
+- `trait`: an enduring constitution, bloodline, spiritual root, or comparable
+  inherent characteristic.
+- `ability`: an enduring unusual capability, not ordinary technique use or a
+  one-off feat.
+- `limitation`: an enduring restriction, not fatigue, pain, or a temporary
+  injury or condition.
 
-`def` records the intrinsic meaning or identity of exactly one glossary term.
+Multiple independent facts may share a category. Associate a fact only with its
+primary subject. Pass the matching `fact_category` on every fact creation or
+supersession and omit it for definitions and relations. Never store actions,
+occurrences, history, personality,
+emotions, intentions, discoveries, knowledge, location, inventory, wealth,
+occupation, affiliation, ownership, routines, temporary state, or unsupported
+inference as facts. If information belongs outside `def`, `rel`, or the allowed
+fact categories, do not force it into this toolset.
 
-1. Identify a term whose meaning is not obvious from its surface form and whose
-   stable meaning will help later translation. Candidates include cultivation
-   concepts, titles, ranks, techniques, artifacts, organizations, places, and
-   named entities that genuinely require a standalone identity.
-2. Ask whether the term can be explained without primarily describing its
-   connection to another glossary term. If its important meaning is affiliation,
-   ownership, location, kinship, mentorship, or aliasing, use `rel` instead.
-3. Record one short, stable explanation and include exactly that one term in
-   `term_names`.
+Use `supersede_term_memory` when the same definition or attribute receives a
+replacement current value. It preserves the old term associations. Use
+`expire_term_memory` when an older memory explicitly stops being true and no
+replacement memory is needed. Absence from the chapter is never evidence for
+expiry. Never supersede or expire a memory created in the current chapter, and
+change an approved memory only on clear textual evidence. Complementary
+independent facts remain separate; do not rewrite memories merely to improve
+wording.
 
-Do not define a proper name merely because it is new, and do not turn a
-definition into a biography. For example, "`缚妖网` is a magical net designed
-to restrain demons" is a definition; "`缚妖网` is owned by `燕峰`" is a separate
-relation.
-
-`fact` records a durable, continuity-critical attribute of one primary glossary
-term. Facts should be rare: most chapter information is not a fact worth
-retaining.
-
-1. Identify an attribute expected to remain true across many chapters unless
-   the text explicitly changes it. Good candidates include gender, physical
-   description, cultivation level, a stable ability or limitation, species,
-   and an object's durable material or function.
-2. Choose one primary glossary term as the subject.
-3. Record one atomic statement about that subject. Do not associate every term
-   merely mentioned in the statement.
-4. Choose an appropriate lifetime and supersede an earlier fact only when the
-   durable attribute changes.
-
-Do not record actions, emotions, intentions, discoveries, current location,
-temporary injuries or conditions, inventory changes, ordinary technique use or
-learning, what a character currently knows, or other chapter-local state as
-facts. Use an event when a consequential occurrence must be retained. Do not
-use `fact` to encode aliases, membership, ownership, or another meaningful
-relationship between glossary terms.
-
-Record each piece of information once, under the type that best represents it.
-
-Create terms selectively. Prioritize recurring names, titles, places,
-organizations, techniques, objects, concepts, and expressions whose rendering
-or identity must remain consistent. Avoid ordinary vocabulary, disposable
-descriptions, unnamed one-off roles, and terms with no useful memory to attach.
-If the current context already represents the information, make no write.
+If the chapter does not justify a selective change under these rules, make no
+writes.
 """.strip()
 
 
@@ -167,18 +134,32 @@ def term_memories(
     ctx: RunContext[MemAgentDeps],
     term_names: Annotated[list[str], Field(min_length=1)],
     memory_types: Annotated[list[TermMemoryType], Field(min_length=1)],
+    skip: Annotated[int, Field(ge=0)] = 0,
+    limit: Annotated[int, Field(ge=1, le=20)] = 10,
 ) -> Page[AgentGlossaryMemory[str]]:
-    """See active definitions, relations, and facts associated with exact glossary terms."""
-    page = access.inspect_terms(ctx.deps.db, ctx.deps.mem_access_context, term_names, memory_types)
+    """See a page of active definitions, relations, and facts for exact glossary terms."""
+    page = access.inspect_terms(
+        ctx.deps.db,
+        ctx.deps.mem_access_context,
+        term_names,
+        memory_types,
+        skip,
+        limit,
+    )
     return glossary_common.to_agent_memory_page(ctx, page)
 
 
-def add_term(ctx: RunContext[MemAgentDeps], term_name: str) -> str:
+def add_term(ctx: RunContext[MemAgentDeps], term_name: str, term_kind: TermKind) -> str:
     """Add a new glossary term to the current memory group."""
     db = ctx.deps.db
     try:
         with db.begin_nested():
-            new_term = access.create_term(db, ctx.deps.mem_access_context.memory_group_id, term_name)
+            new_term = access.create_term(
+                db,
+                ctx.deps.mem_access_context.memory_group_id,
+                term_name,
+                term_kind,
+            )
             result = f"Term {new_term.term} added successfully."
     except IntegrityError as exc:
         diagnostic = getattr(exc.orig, "diag", None)
@@ -196,8 +177,10 @@ def new_term_memory(
     term_names: Annotated[list[str], Field(min_length=1)],
     mem_type: TermMemoryType,
     scope: Scope | None = None,
+    fact_category: FactCategory | None = None,
 ) -> str:
-    """Create a definition, relation, or fact associated with exact glossary terms."""
+    """Create a definition, relation, or categorized fact for exact glossary terms."""
+    _validate_fact_category(mem_type, fact_category)
     return glossary_common.create_memory(ctx, content, term_names, mem_type, scope, "new_term_memory")
 
 
@@ -207,13 +190,27 @@ def supersede_term_memory(
     content: str,
     mem_type: TermMemoryType,
     scope: Scope | None = None,
+    fact_category: FactCategory | None = None,
 ) -> str:
-    """Supersede an active definition, relation, or fact from an earlier chapter."""
+    """Supersede an active definition, relation, or categorized fact from an earlier chapter."""
+    _validate_fact_category(mem_type, fact_category)
     return glossary_common.supersede_memory(ctx, memory_id, content, mem_type, scope)
 
 
+def expire_term_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
+    """Expire an active definition, relation, or fact that stopped being true."""
+    return glossary_common.expire_memory(ctx, memory_id, TERM_MEMORY_TYPES)
+
+
+def _validate_fact_category(mem_type: TermMemoryType, fact_category: FactCategory | None) -> None:
+    if mem_type == MemoryType.FACT and fact_category is None:
+        raise ModelRetry("A fact_category is required when mem_type is fact.")
+    if mem_type != MemoryType.FACT and fact_category is not None:
+        raise ModelRetry("fact_category must be omitted unless mem_type is fact.")
+
+
 glossary_term_toolset = FunctionToolset(
-    tools=[term_memories, add_term, new_term_memory, supersede_term_memory],
+    tools=[term_memories, add_term, new_term_memory, supersede_term_memory, expire_term_memory],
     instructions=[GLOSSARY_TERM_INSTRUCTIONS, _initial_glossary_context],
     sequential=True,
 )

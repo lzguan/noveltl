@@ -143,7 +143,8 @@ alphabetically.
 
 ### Term accordion
 
-Each term row displays its associated-memory count and an `Add memory` action.
+Each term row displays its semantic kind when categorized, associated-memory
+count, and an `Add memory` action.
 Expanding a row loads a separately paginated list of memories associated with
 that term.
 
@@ -155,7 +156,8 @@ memories associated with the term.
 
 ## Adding a glossary memory
 
-Selecting `Add memory` beside a term opens the memory form with that term
+Creating or editing a glossary term allows its semantic kind to be selected or
+left uncategorized. Selecting `Add memory` beside a term opens the memory form with that term
 selected by default. The user may search for and select additional terms, or
 remove selected terms before submitting.
 

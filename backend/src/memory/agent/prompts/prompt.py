@@ -16,26 +16,17 @@ For each enabled toolset:
 
 1. Identify information in the current chapter that belongs to the toolset and
    could improve consistency in this or a later chapter. Form a preliminary
-   candidate with its memory type, content, scope, and associations before
-   retrieving anything.
+   candidate with the details required by that toolset before retrieving
+   anything.
 2. For each candidate associated with records that existed before the current
-   run, use the toolset's retrieval tools to inspect existing memories of the
-   required types for only the candidate's associations. When candidates share
-   the same associations, combine their required types into one retrieval. A
-   clearly new standalone event may skip retrieval; retrieve events that
-   continue, conclude, or may duplicate an earlier occurrence.
+   run, follow the toolset's retrieval instructions to inspect only the context
+   needed to evaluate that candidate.
 3. Compare the candidate with the retrieved memories. Make no write when it is
-   already represented, supersede a memory when the chapter replaces or
-   corrects it, or create a memory when it is complementary and independently
-   useful. Skip retrieval when all associated records were created in the
-   current run because they cannot have prior memories.
+   already represented. Use only the lifecycle operations supplied and defined
+   by that toolset. Skip retrieval when all associated records were created in
+   the current run because they cannot have prior memories.
 4. Decide on the smallest set of changes needed, then use the toolset's tools to
-   add missing records, create new memories, or supersede memories that the
-   current chapter clearly makes obsolete.
-
-Do not retrieve memories merely because a known record appears. Do not retrieve
-a memory type unless you have a candidate or continuity question of that type.
-Never use an empty type list to request generic history.
+   apply those changes.
 
 Finalize a memory's content, type, scope, and term associations before calling
 a creation tool. Memories cannot be superseded in the chapter where they are
@@ -51,25 +42,6 @@ unsupported inference, or duplicate wording of an existing memory.
 
 Write all memory content in the configured memory language. For example, if the novel is written in Chinese but the memory language is configured as English, write the memory content in English. You may leave novel terms in the original language.
 
-Choose the memory type according to its content:
-
-- `fact`: a durable, continuity-critical attribute of a term that is expected to
-  remain true across many chapters unless explicitly changed. Examples include
-  gender, physical description, cultivation level, a stable ability or
-  limitation, an object's material or function, and a place's enduring
-  characteristics. State the fact about the subject; do not use `fact` merely
-  to introduce or identify a term or to connect multiple terms. Do not record
-  chapter-local actions, emotions, intentions, discoveries, possessions,
-  knowledge, location, injuries, or other transient state as facts.
-- `event`: an occurrence or change whose relevance may diminish over time.
-- `def`: the meaning or identity that introduces one glossary term, concept,
-  title, place, or entity. A definition must be associated with exactly that one
-  term and must not describe its relationship to another glossary term.
-- `rel`: only the relationship between two or more glossary terms, such as an
-  alias, membership, family relationship, ownership, or organizational
-  connection. Associate the memory with every term participating in the
-  relationship; never use `rel` for a single term.
-
 Choose scope according to how long the information remains useful:
 
 - `local`: only the current chapter.
@@ -82,15 +54,13 @@ Omit an explicit scope when the tool's default matches the intended lifetime.
 Do not use a longer scope merely because information might be mentioned again.
 
 Existing memories are chronological context, not a license to overwrite them.
-Create a separate memory when new information complements an old memory. Only
-supersede a memory when the new chapter clearly replaces, corrects, or ends the
-old information. Treat approved memories as authoritative and supersede them
-only on clear textual evidence; pending memories are useful but unverified.
+Treat approved memories as authoritative and change them only on clear textual
+evidence; pending memories are useful but unverified.
 
-When toolsets overlap, prefer one precise shared fact over several near-duplicate
+When toolsets overlap, prefer one precise shared memory over several near-duplicate
 memories. Use toolset-specific associations and tools to preserve the relevant
 domain context. If no enabled toolset needs a change, make no writes.
 
 After checking every enabled toolset, finish with a concise account of the
-records you created or superseded, or state that no memory changes were needed.
+records you changed, or state that no memory changes were needed.
 """.strip()

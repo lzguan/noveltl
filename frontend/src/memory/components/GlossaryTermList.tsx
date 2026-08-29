@@ -34,6 +34,7 @@ import { DeleteGlossaryTermDialog } from "./DeleteGlossaryTermDialog";
 import { EditGlossaryTermDialog } from "./EditGlossaryTermDialog";
 import { GlossaryMemoryRow } from "./GlossaryMemoryRow";
 import { PageNavigation } from "./PageNavigation";
+import { termKindLabel } from "@/memory/termKinds";
 
 function GlossaryTermRow({
 	memoryGroupId,
@@ -108,6 +109,7 @@ function GlossaryTermRow({
 						{term.associatedMemoryCount}{" "}
 						{term.associatedMemoryCount === 1 ? "memory" : "memories"}
 					</span>
+					<Badge variant="secondary">{termKindLabel(term.termKind)}</Badge>
 					<Badge variant="outline">{term.reviewStatus}</Badge>
 				</CollapsibleTrigger>
 				{open && (

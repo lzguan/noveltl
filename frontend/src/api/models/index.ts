@@ -211,6 +211,7 @@ export * from './stringDataType';
 export * from './stringField';
 export * from './stringFieldType';
 export * from './stringValue';
+export * from './termKind';
 export * from './textOp';
 export * from './textOpOp';
 export * from './textSpan';

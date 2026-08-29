@@ -10,8 +10,9 @@ from src.memory.access import MemAccessContext
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets import glossary_common
 from src.memory.agent.toolsets.glossary_events import glossary_event_toolset
-from src.memory.agent.toolsets.glossary_terms import glossary_term_toolset
+from src.memory.agent.toolsets.glossary_terms import glossary_term_toolset, new_term_memory
 from src.memory.exceptions import GlossaryTermNotFoundException
+from src.memory.plugins.glossary.types import FactCategory
 from src.memory.types import MemoryType
 
 
@@ -72,6 +73,7 @@ def test_create_memory_skips_missing_term_query_after_success(monkeypatch: pytes
 def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
     assert set(glossary_term_toolset.tools) == {
         "add_term",
+        "expire_term_memory",
         "term_memories",
         "new_term_memory",
         "supersede_term_memory",
@@ -95,3 +97,54 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
         "type": "integer",
     }
     assert event_schema["properties"]["active_only"] == {"default": True, "type": "boolean"}
+
+    term_schema = glossary_term_toolset.tools["term_memories"].function_schema.json_schema
+    assert term_schema["properties"]["skip"] == {"default": 0, "minimum": 0, "type": "integer"}
+    assert term_schema["properties"]["limit"] == {
+        "default": 10,
+        "maximum": 20,
+        "minimum": 1,
+        "type": "integer",
+    }
+
+    add_term_schema = glossary_term_toolset.tools["add_term"].function_schema.json_schema
+    assert add_term_schema["required"] == ["term_name", "term_kind"]
+    assert add_term_schema["$defs"]["TermKind"]["enum"] == [
+        "person",
+        "place",
+        "organization",
+        "technique",
+        "item",
+        "concept",
+        "title",
+        "species",
+        "other",
+    ]
+    assert glossary_term_toolset.tools["new_term_memory"].function_schema.json_schema["$defs"]["FactCategory"][
+        "enum"
+    ] == [
+        "gender",
+        "age_stage",
+        "species",
+        "appearance",
+        "cultivation_level",
+        "trait",
+        "ability",
+        "limitation",
+    ]
+
+
+def test_fact_writes_require_a_category_and_non_facts_reject_one() -> None:
+    ctx = _run_context(MagicMock(spec=Session))
+
+    with pytest.raises(ModelRetry, match="fact_category is required"):
+        new_term_memory(ctx, "Alpha is human.", ["Alpha"], MemoryType.FACT)
+
+    with pytest.raises(ModelRetry, match="must be omitted"):
+        new_term_memory(
+            ctx,
+            "Alpha is a name.",
+            ["Alpha"],
+            MemoryType.DEFINITION,
+            fact_category=FactCategory.SPECIES,
+        )

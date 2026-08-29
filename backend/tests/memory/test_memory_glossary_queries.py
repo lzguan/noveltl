@@ -10,7 +10,13 @@ from src.memory.access import MemAccessContext, write_memory
 from src.memory.models import MemoryGroup
 from src.memory.plugins.glossary.access import contains_query, create_memory, create_term
 from src.memory.plugins.glossary.models import GlossaryAssociation
-from src.memory.plugins.glossary.service import query_glossary_terms, query_memories_for_term
+from src.memory.plugins.glossary.service import (
+    create_glossary_term,
+    query_glossary_terms,
+    query_memories_for_term,
+    update_glossary_term,
+)
+from src.memory.plugins.glossary.types import TermKind
 from src.memory.types import Creator, MemoryType, Scope
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, ChapterContent, Novel, SourceWork
@@ -86,7 +92,13 @@ def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
     db.flush()
 
     terms = {
-        term: create_term(db, memory_group.memory_group_id, term) for term in ["Alpha", "Beta", "Gamma", "OldOnly"]
+        term: create_term(
+            db,
+            memory_group.memory_group_id,
+            term,
+            TermKind.PERSON if term == "Alpha" else None,
+        )
+        for term in ["Alpha", "Beta", "Gamma", "OldOnly"]
     }
 
     first_context = MemAccessContext(
@@ -161,6 +173,12 @@ def test_glossary_terms_are_ordered_by_all_associated_glossary_memories(test_db:
         ("Beta", 0),
         ("OldOnly", 0),
     ]
+    assert {row.term: row.term_kind for row in page.rows} == {
+        "Alpha": TermKind.PERSON,
+        "Beta": None,
+        "Gamma": None,
+        "OldOnly": None,
+    }
 
 
 def test_chapter_scoped_terms_use_latest_content_and_active_memory_counts(test_db: Session) -> None:
@@ -225,3 +243,27 @@ def test_memories_for_term_can_be_scoped_to_active_memories_at_a_chapter(
     assert all_memories.count == 2
     assert active_memories.count == 1
     assert [row.memory.memory_content for row in active_memories.rows] == ["Alpha has one persistent memory."]
+
+
+def test_human_glossary_term_kind_can_be_set_and_cleared(test_db: Session) -> None:
+    scenario = _seed_glossary_query_scenario(test_db)
+
+    created = create_glossary_term(
+        test_db,
+        scenario.admin,
+        scenario.memory_group.memory_group_id,
+        "Delta",
+        TermKind.CONCEPT,
+    )
+    assert created.term_kind == TermKind.CONCEPT
+
+    updated = update_glossary_term(
+        test_db,
+        scenario.admin,
+        scenario.memory_group.memory_group_id,
+        created.term_id,
+        "Delta renamed",
+        None,
+    )
+    assert updated.term == "Delta renamed"
+    assert updated.term_kind is None

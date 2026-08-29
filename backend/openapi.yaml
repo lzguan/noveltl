@@ -626,6 +626,10 @@ components:
           minLength: 1
           title: Term
           type: string
+        termKind:
+          anyOf:
+          - $ref: '#/components/schemas/TermKind'
+          - type: 'null'
       required:
       - term
       title: CreateGlossaryTerm
@@ -1176,9 +1180,16 @@ components:
           format: uuid
           title: Termid
           type: string
+        termKind:
+          anyOf:
+          - $ref: '#/components/schemas/TermKind'
+          - type: 'null'
+          description: Semantic kind of the glossary term, or null when it has not
+            been categorized.
       required:
       - termId
       - term
+      - termKind
       - reviewStatus
       title: GlossaryTerm
       type: object
@@ -1203,9 +1214,16 @@ components:
           format: uuid
           title: Termid
           type: string
+        termKind:
+          anyOf:
+          - $ref: '#/components/schemas/TermKind'
+          - type: 'null'
+          description: Semantic kind of the glossary term, or null when it has not
+            been categorized.
       required:
       - termId
       - term
+      - termKind
       - reviewStatus
       - associatedMemoryCount
       title: GlossaryTermSummary
@@ -2730,6 +2748,19 @@ components:
       type: object
     StringValue:
       type: string
+    TermKind:
+      enum:
+      - person
+      - place
+      - organization
+      - technique
+      - item
+      - concept
+      - title
+      - species
+      - other
+      title: TermKind
+      type: string
     TextOp:
       description: "Pydantic schema to update text content of a chapter.\n\nAttributes:\n\
         \    op: The text operation, either \"insert\" or \"delete\".\n    start:\
@@ -2876,6 +2907,10 @@ components:
           minLength: 1
           title: Term
           type: string
+        termKind:
+          anyOf:
+          - $ref: '#/components/schemas/TermKind'
+          - type: 'null'
       required:
       - term
       title: UpdateGlossaryTerm

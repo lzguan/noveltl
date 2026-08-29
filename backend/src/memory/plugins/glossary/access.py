@@ -7,10 +7,11 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session, aliased
 
 from src.memory.access import MemAccessContext, check_mem_access_ctx, write_memory
-from src.memory.exceptions import GlossaryTermNotFoundException
+from src.memory.exceptions import GlossaryTermNotFoundException, MemoryNotFoundException
 from src.memory.models import Memory
 from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
+from src.memory.plugins.glossary.types import TermKind
 from src.memory.schemas import AgentMemory
 from src.memory.types import Creator, MemoryType, PluginName, ReviewStatus, Scope
 from src.novels.models import ChapterContent
@@ -141,9 +142,16 @@ def inspect_terms(
     )
 
 
-def create_term(db: Session, memory_group_id: UUID, term_name: str) -> GlossaryTerm:
+def create_term(
+    db: Session,
+    memory_group_id: UUID,
+    term_name: str,
+    term_kind: TermKind | None = None,
+) -> GlossaryTerm:
     return db.execute(
-        insert(GlossaryTerm).values(memory_group_id=memory_group_id, term=term_name).returning(GlossaryTerm)
+        insert(GlossaryTerm)
+        .values(memory_group_id=memory_group_id, term=term_name, term_kind=term_kind)
+        .returning(GlossaryTerm)
     ).scalar_one()
 
 
@@ -262,3 +270,29 @@ def supersede_memory(
     new_memory = write_memory(db, ctx, mem_type, content, creator, GLOSSARY_PLUGIN_NAME, scope, supersedes_id=memory_id)
     new_assocs = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, current_term_names)
     return new_memory, new_assocs
+
+
+def expire_memory(
+    db: Session,
+    ctx: MemAccessContext,
+    memory_id: UUID,
+    memory_types: Sequence[MemoryType],
+) -> None:
+    """End an older active glossary memory without creating a replacement."""
+    chapter_num, _ = check_mem_access_ctx(db, ctx)
+    try:
+        db.execute(
+            update(Memory)
+            .where(
+                Memory.memory_id == memory_id,
+                Memory.memory_group_id == ctx.memory_group_id,
+                Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
+                Memory.memory_type.in_(memory_types),
+                Memory.memory_start_num < chapter_num,
+                or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chapter_num),
+            )
+            .values(memory_end_num=chapter_num)
+            .returning(Memory.memory_id)
+        ).scalar_one()
+    except NoResultFound as exc:
+        raise MemoryNotFoundException(f"Glossary memory with id {memory_id} not found or already ended") from exc

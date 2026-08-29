@@ -51,6 +51,10 @@ that appear in the source text:
 
 - `term_id`
 - `term`
+- `term_kind` - optional semantic classification such as person, place,
+  organization, technique, item, concept, title, species, or other. Existing and
+  human-created terms may remain uncategorized, while the agent must classify
+  every term it creates.
 - `memory_group_id`
 - `review_status`
 
@@ -97,12 +101,14 @@ glossary terms that occur in that chapter. Memories are retrieved separately
 and only when the agent has identified a concrete piece of information that
 may duplicate, continue, or supersede existing context.
 
-The plugin exposes four tools to the agent:
+The glossary term toolset exposes five tools to the agent:
 
-- `term_memories` retrieves active memories associated with specified terms.
-- `add_term` records a new source-language term.
+- `term_memories` retrieves a page of active definitions, relations, and facts
+  associated with specified terms.
+- `add_term` records and classifies a new source-language term.
 - `new_memory` records a memory and associates it with one or more terms.
 - `supersede_memory` ends an older memory and creates its replacement.
+- `expire_memory` ends an older memory without creating a replacement.
 
 The term itself remains in the source language, while memory content is written
 in the language configured by the memory group. The agent processes chapters

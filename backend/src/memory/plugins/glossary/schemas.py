@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import ConfigDict, Field
 
+from src.memory.plugins.glossary.types import TermKind
 from src.memory.schemas import AgentMemory, Memory
 from src.memory.types import MemoryType, ReviewStatus, Scope
 from src.schemas import Model, Page
@@ -15,6 +16,9 @@ class AgentGlossaryTerm(Model):
     model_config = ConfigDict(from_attributes=True)
 
     term: str = Field(description="Term exactly as it appears in the novel's source text.")
+    term_kind: TermKind | None = Field(
+        description="Semantic kind of the glossary term, or null when it has not been categorized."
+    )
     review_status: ReviewStatus = Field(
         description="Human-review state of the term. Pending terms are unverified; approved terms are verified."
     )
@@ -35,6 +39,9 @@ class GlossaryTerm(Model):
     model_config = ConfigDict(from_attributes=True)
     term_id: UUID = Field(description="Stable identifier for the glossary term.")
     term: str = Field(description="Term exactly as it appears in the novel's source text.")
+    term_kind: TermKind | None = Field(
+        description="Semantic kind of the glossary term, or null when it has not been categorized."
+    )
     review_status: ReviewStatus = Field(
         description="Human-review state of the term. Pending terms are unverified; approved terms are verified."
     )
@@ -74,10 +81,12 @@ class CreateGlossaryMemory(Model):
 
 class CreateGlossaryTerm(Model):
     term: str = Field(min_length=1, max_length=100)
+    term_kind: TermKind | None = None
 
 
 class UpdateGlossaryTerm(Model):
     term: str = Field(min_length=1, max_length=100)
+    term_kind: TermKind | None = None
 
 
 class ReplaceGlossaryAssociations(Model):

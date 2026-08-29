@@ -87,6 +87,34 @@ def supersede_memory(
     return ctx.deps.uuid_cache.new(new_memory.memory_id)
 
 
+def expire_memory(
+    ctx: RunContext[MemAgentDeps],
+    memory_id: str,
+    memory_types: list[MemoryType],
+) -> str:
+    """Expire a glossary memory without creating a replacement."""
+    try:
+        current_id = ctx.deps.uuid_cache.get_uuid(memory_id)
+    except KeyError as exc:
+        raise ModelRetry(f"Memory {memory_id} not found.") from exc
+
+    try:
+        with ctx.deps.db.begin_nested():
+            access.expire_memory(
+                ctx.deps.db,
+                ctx.deps.mem_access_context,
+                current_id,
+                memory_types,
+            )
+    except MemoryNotFoundException as exc:
+        raise ModelRetry(
+            f"Memory {memory_id} does not exist, has already ended, has a type outside this toolset, or cannot "
+            "be expired in this chapter. Do not retry this memory handle. A memory created in the current "
+            "chapter cannot be expired; continue without changing it."
+        ) from exc
+    return f"Memory {memory_id} expired successfully."
+
+
 def to_agent_memory_page(
     ctx: RunContext[MemAgentDeps],
     page: Page[AgentGlossaryMemory[UUID]],

@@ -49,12 +49,14 @@ const groupTwo: MemoryGroup = {
 const termOne: GlossaryTerm = {
 	termId: "term-1",
 	term: "林凡",
+	termKind: "person",
 	reviewStatus: ReviewStatus.pending,
 };
 
 const termTwo: GlossaryTerm = {
 	termId: "term-2",
 	term: "林家",
+	termKind: "organization",
 	reviewStatus: ReviewStatus.approved,
 };
 
@@ -82,6 +84,7 @@ function glossaryTermSummary(termId: string): GlossaryTermSummary {
 		reviewStatus: ReviewStatus.pending,
 		term: `Term ${termId}`,
 		termId,
+		termKind: null,
 	};
 }
 

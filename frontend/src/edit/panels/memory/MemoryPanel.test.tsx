@@ -90,13 +90,14 @@ const term: GlossaryTermSummary = {
 	reviewStatus: "approved",
 	term: "林凡",
 	termId: "term-1",
+	termKind: "person",
 };
 
 const glossaryMemory: GlossaryMemory = {
 	memory,
 	terms: [
-		{ reviewStatus: "approved", term: "林凡", termId: "term-1" },
-		{ reviewStatus: "pending", term: "青阳镇", termId: "term-2" },
+		{ reviewStatus: "approved", term: "林凡", termId: "term-1", termKind: "person" },
+		{ reviewStatus: "pending", term: "青阳镇", termId: "term-2", termKind: "place" },
 	],
 };
 
@@ -341,7 +342,12 @@ describe("MemoryPanel", () => {
 	it("creates a glossary term and refreshes the current term query", async () => {
 		vi.mocked(addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost).mockResolvedValueOnce({
 			status: 200,
-			data: { reviewStatus: "pending", term: "周明瑞", termId: "term-created" },
+			data: {
+				reviewStatus: "pending",
+				term: "周明瑞",
+				termId: "term-created",
+				termKind: "person",
+			},
 			headers: new Headers(),
 		});
 		render(
@@ -360,12 +366,13 @@ describe("MemoryPanel", () => {
 		fireEvent.change(screen.getByRole("textbox", { name: "Term" }), {
 			target: { value: "  周明瑞  " },
 		});
+		selectOption("Kind", "Person");
 		fireEvent.click(screen.getByRole("button", { name: "Create term" }));
 
 		await waitFor(() =>
 			expect(addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost).toHaveBeenCalledWith(
 				"group-1",
-				{ term: "周明瑞" },
+				{ term: "周明瑞", termKind: "person" },
 			),
 		);
 		await waitFor(() =>
@@ -460,7 +467,12 @@ describe("MemoryPanel", () => {
 			editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch,
 		).mockResolvedValueOnce({
 			status: 200,
-			data: { reviewStatus: "approved", term: "林凡更新", termId: "term-1" },
+			data: {
+				reviewStatus: "approved",
+				term: "林凡更新",
+				termId: "term-1",
+				termKind: "place",
+			},
 			headers: new Headers(),
 		});
 		render(
@@ -480,12 +492,16 @@ describe("MemoryPanel", () => {
 		fireEvent.change(screen.getByRole("textbox", { name: "Term" }), {
 			target: { value: "  林凡更新  " },
 		});
+		selectOption("Kind", "Place");
 		fireEvent.click(screen.getByRole("button", { name: "Save term" }));
 
 		await waitFor(() =>
 			expect(
 				editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch,
-			).toHaveBeenCalledWith("group-1", "term-1", { term: "林凡更新" }),
+			).toHaveBeenCalledWith("group-1", "term-1", {
+				term: "林凡更新",
+				termKind: "place",
+			}),
 		);
 		await waitFor(() =>
 			expect(
@@ -564,7 +580,12 @@ describe("MemoryPanel", () => {
 			editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch,
 		).mockResolvedValueOnce({
 			status: 200,
-			data: { reviewStatus: "pending", term: "林凡", termId: "term-1" },
+			data: {
+				reviewStatus: "pending",
+				term: "林凡",
+				termId: "term-1",
+				termKind: "person",
+			},
 			headers: new Headers(),
 		});
 		render(
@@ -676,7 +697,14 @@ describe("MemoryPanel", () => {
 			replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut,
 		).mockResolvedValueOnce({
 			status: 200,
-			data: [{ reviewStatus: "approved", term: "林凡", termId: "term-1" }],
+			data: [
+				{
+					reviewStatus: "approved",
+					term: "林凡",
+					termId: "term-1",
+					termKind: "person",
+				},
+			],
 			headers: new Headers(),
 		});
 		render(

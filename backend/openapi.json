@@ -7731,6 +7731,16 @@
             "maxLength": 100,
             "minLength": 1,
             "title": "Term"
+          },
+          "termKind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TermKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -8480,6 +8490,17 @@
             "title": "Term",
             "description": "Term exactly as it appears in the novel's source text."
           },
+          "termKind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TermKind"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Semantic kind of the glossary term, or null when it has not been categorized."
+          },
           "reviewStatus": {
             "$ref": "#/components/schemas/ReviewStatus",
             "description": "Human-review state of the term. Pending terms are unverified; approved terms are verified."
@@ -8489,6 +8510,7 @@
         "required": [
           "termId",
           "term",
+          "termKind",
           "reviewStatus"
         ],
         "title": "GlossaryTerm",
@@ -8507,6 +8529,17 @@
             "title": "Term",
             "description": "Term exactly as it appears in the novel's source text."
           },
+          "termKind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TermKind"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Semantic kind of the glossary term, or null when it has not been categorized."
+          },
           "reviewStatus": {
             "$ref": "#/components/schemas/ReviewStatus",
             "description": "Human-review state of the term. Pending terms are unverified; approved terms are verified."
@@ -8521,6 +8554,7 @@
         "required": [
           "termId",
           "term",
+          "termKind",
           "reviewStatus",
           "associatedMemoryCount"
         ],
@@ -10556,6 +10590,21 @@
       "StringValue": {
         "type": "string"
       },
+      "TermKind": {
+        "type": "string",
+        "enum": [
+          "person",
+          "place",
+          "organization",
+          "technique",
+          "item",
+          "concept",
+          "title",
+          "species",
+          "other"
+        ],
+        "title": "TermKind"
+      },
       "TextOp": {
         "properties": {
           "op": {
@@ -10733,6 +10782,16 @@
             "maxLength": 100,
             "minLength": 1,
             "title": "Term"
+          },
+          "termKind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TermKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

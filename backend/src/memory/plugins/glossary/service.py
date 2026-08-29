@@ -29,6 +29,7 @@ from src.memory.plugins.glossary.schemas import (
     GlossaryTermPage,
     GlossaryTermSummary,
 )
+from src.memory.plugins.glossary.types import TermKind
 from src.memory.schemas import Memory as MemorySchema
 from src.memory.types import Creator, MemoryType, ReviewStatus, Scope
 from src.novels.exceptions import ChapterNotFoundException
@@ -202,6 +203,7 @@ def query_glossary_terms(
             GlossaryTermSummary(
                 term_id=term.term_id,
                 term=term.term,
+                term_kind=term.term_kind,
                 review_status=term.review_status,
                 associated_memory_count=associated_count,
             )
@@ -348,10 +350,16 @@ def create_glossary_memory(
     return GlossaryMemory(memory=MemorySchema.model_validate(memory), terms=terms)
 
 
-def create_glossary_term(db: Session, user: User, memory_group_id: UUID, term: str) -> GlossaryTerm:
+def create_glossary_term(
+    db: Session,
+    user: User,
+    memory_group_id: UUID,
+    term: str,
+    term_kind: TermKind | None = None,
+) -> GlossaryTerm:
     _query_editable_group(db, user, memory_group_id)
     try:
-        glossary_term = access.create_term(db, memory_group_id, term)
+        glossary_term = access.create_term(db, memory_group_id, term, term_kind)
         db.commit()
         return glossary_term
     except IntegrityError as e:
@@ -368,11 +376,12 @@ def update_glossary_term(
     memory_group_id: UUID,
     term_id: UUID,
     term: str,
+    term_kind: TermKind | None,
 ) -> GlossaryTerm:
     query = (
         update(GlossaryTerm)
         .where(GlossaryTerm.term_id == term_id, GlossaryTerm.memory_group_id == memory_group_id)
-        .values(term=term)
+        .values(term=term, term_kind=term_kind)
         .returning(GlossaryTerm)
     )
     query = glossary_term_mod_access_update(query, user)

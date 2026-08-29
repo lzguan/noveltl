@@ -2342,7 +2342,8 @@ export const ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChapt
   "terms": S.Array(S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })).annotations({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
 }).annotations({ description: 'A memory together with the glossary terms it describes.' }))
 })
@@ -2405,7 +2406,8 @@ export const ReadGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGet200
   "terms": S.Array(S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })).annotations({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
 }).annotations({ description: 'A memory together with the glossary terms it describes.' }))
 })
@@ -2457,7 +2459,8 @@ export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost200Re
   "terms": S.Array(S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })).annotations({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
 }).annotations({ description: 'A memory together with the glossary terms it describes.' })
 
@@ -2492,7 +2495,8 @@ export const ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryId
 export const ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsGet200ResponseItem = S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })
 export const ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsGet200Response = S.Array(ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsGet200ResponseItem)
 
@@ -2527,7 +2531,8 @@ export const ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemories
 export const ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut200ResponseItem = S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })
 export const ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut200Response = S.Array(ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut200ResponseItem)
 
@@ -2582,7 +2587,8 @@ export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200Respon
   "associatedMemoryCount": S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseRowsItemAssociatedMemoryCountMin)),
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term together with its associated-memory count in the requested scope.' }))
 })
 
@@ -2614,13 +2620,15 @@ export const addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostBodyTermMa
 
 
 export const AddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostBody = S.Struct({
-  "term": S.String.pipe(S.minLength(1), S.maxLength(addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostBodyTermMax))
+  "term": S.String.pipe(S.minLength(1), S.maxLength(addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostBodyTermMax)),
+  "termKind": S.optional(S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null))
 })
 
 export const AddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost200Response = S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })
 
 export const AddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost404Response = S.Struct({
@@ -2680,13 +2688,15 @@ export const editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchBo
 
 
 export const EditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchBody = S.Struct({
-  "term": S.String.pipe(S.minLength(1), S.maxLength(editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchBodyTermMax))
+  "term": S.String.pipe(S.minLength(1), S.maxLength(editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchBodyTermMax)),
+  "termKind": S.optional(S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null))
 })
 
 export const EditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch200Response = S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })
 
 export const EditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch404Response = S.Struct({
@@ -2752,7 +2762,8 @@ export const ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemo
   "terms": S.Array(S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })).annotations({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
 }).annotations({ description: 'A memory together with the glossary terms it describes.' }))
 })
@@ -2788,7 +2799,8 @@ export const EditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsT
 export const EditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch200Response = S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })
 
 export const EditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch404Response = S.Struct({

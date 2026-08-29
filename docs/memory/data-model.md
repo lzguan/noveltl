@@ -103,8 +103,8 @@ may duplicate, continue, or supersede existing context.
 
 The glossary term toolset exposes five tools to the agent:
 
-- `term_memories` retrieves a page of active definitions, relations, and facts
-  associated with specified terms.
+- `term_memories` retrieves up to five active definitions, relations, and facts
+  associated with one specified term.
 - `add_term` records and classifies a new source-language term.
 - `new_memory` records a memory and associates it with one or more terms.
 - `supersede_memory` ends an older memory and creates its replacement.

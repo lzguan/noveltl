@@ -46,39 +46,55 @@ is the exact source-language text that later translation agents may encounter.
 Keep the term itself in the source language, but write every memory in the
 configured memory language.
 
+THIS TOOLSET MUST NOT RECORD EVENTS. Never use its tools to store actions,
+occurrences, scene history, or a narrative account of a change. Leave those to
+an event-oriented toolset when one is available; otherwise omit them. An event
+may justify updating an eligible durable fact, but write only the resulting
+current attribute and only when it fits one of the allowed fact categories
+below.
+
 The initial glossary context contains terms detected in the current chapter.
 Review it before making changes. It is a snapshot taken before this run's
 writes; memories are deliberately omitted to keep the context focused.
 
 Create terms selectively. A term must be likely to recur and its rendering or
 identity must matter to later translation. Avoid ordinary vocabulary,
-disposable descriptions, unnamed one-off roles, and terms with no useful memory
-to attach. Classify every agent-created term as `person`, `place`,
-`organization`, `technique`, `item`, `concept`, `title`, `species`, or `other`.
-Use `other` only when a translation-relevant recurring term fits none of the
-specific kinds. Never add a term already present in the initial context.
+disposable descriptions, and unnamed one-off roles. Classify every
+agent-created term as `person`, `place`, `organization`, `technique`, `item`,
+`concept`, `title`, `species`, or `other`. Use `other` only when a
+translation-relevant recurring term fits none of the specific kinds. Adding a
+term does not require creating any memory for it. Never invent a definition or
+another memory merely to accompany a new term. Never add a term already present
+in the initial context.
 
-`term_memories` retrieves active `def`, `rel`, and `fact` memories for exact
-terms. Form concrete candidates first, then request only their terms and types.
-Multiple types may be combined when they all correspond to real candidates.
-Results are newest-first and may match only some requested terms. Start with the
-default page and request another page only when the count shows it is necessary.
-Never retrieve merely because a known term appears, request generic history, or
-fetch every detected term. Skip retrieval when every associated term was added
-in the current run.
+`term_memories` retrieves active `def`, `rel`, and `fact` memories for one exact
+term. Form concrete candidates first, then request only one candidate term and
+the types needed for those candidates. Multiple types may be combined when they
+all correspond to real candidates for that same term. Results are newest-first.
+Start with the default page. Request another page only when its count shows it
+is necessary, repeating exactly the same `term_name` and `memory_types` and
+changing only `skip`. Never retrieve merely because a known term appears,
+request generic history, or fetch every detected term. Skip retrieval when the
+associated term was added in the current run.
 
-`def` is the intrinsic identity or meaning of exactly one term. Maintain at most
-one active canonical definition per term and supersede it when the current
-chapter materially corrects or completes that meaning. Do not define an obvious
-proper name merely because it is new. A definition is not a biography, plot
-history, relationship, ownership record, or current state.
+`def` is the intrinsic identity or meaning of exactly one term. Definitions are
+normally appropriate only for a `technique`, `item`, `concept`, `title`, or
+`species` when the chapter states stable intrinsic meaning that will help later
+translation. An `organization`, `place`, or `other` term may receive a
+definition only when its stable nature or function is not evident from the term
+itself. Never define a `person`. Maintain at most one active canonical
+definition per term and supersede it when the current chapter materially
+corrects or completes that meaning. A definition is not a biography, plot
+history, relationship, ownership record, current state, or a default companion
+to term creation.
 
 `rel` is an explicit, continuity-relevant relationship between two or more
 terms. Associate every participant. Prioritize aliases, family, mentorship,
 rank, membership, ownership, alliance, rivalry, and organizational hierarchy.
 Do not record co-occurrence, temporary cooperation, transactions, actions, or
-shared participation in an occurrence as relations. Query `rel` for the exact
-candidate participants before writing unless every participant is new.
+shared participation in an occurrence as relations. Before writing, query
+`rel` on one existing participant most likely to reveal the candidate relation.
+Skip retrieval only when every participant is new.
 
 `fact` is an explicitly stated, continuity-critical attribute of one primary
 term. Facts must be extremely rare; most chapters need no new facts. Record no
@@ -101,8 +117,9 @@ translation or continuity error:
 
 Multiple independent facts may share a category. Associate a fact only with its
 primary subject. For `memory_kind`, select `def` or `rel` directly, or select
-`fact` together with its required category. Write only the statement in
-`content`; the tool adds the fact category marker itself. Never store actions,
+`fact` together with its required category. The category is write-time
+classification and is not part of the memory text. Write only the plain
+statement in `content` and never add a category marker. Never store actions,
 occurrences, history, personality, emotions, intentions, discoveries,
 knowledge, location, inventory, wealth, occupation, affiliation, ownership,
 routines, temporary state, or unsupported inference as facts. If information
@@ -153,16 +170,16 @@ def _initial_glossary_context(ctx: RunContext[MemAgentDeps]) -> str:
 
 def term_memories(
     ctx: RunContext[MemAgentDeps],
-    term_names: Annotated[list[str], Field(min_length=1)],
+    term_name: Annotated[str, Field(min_length=1)],
     memory_types: Annotated[list[TermMemoryType], Field(min_length=1)],
     skip: Annotated[int, Field(ge=0)] = 0,
-    limit: Annotated[int, Field(ge=1, le=20)] = 10,
+    limit: Annotated[int, Field(ge=1, le=20)] = 5,
 ) -> Page[AgentGlossaryMemory[str]]:
-    """See a page of active definitions, relations, and facts for exact glossary terms."""
+    """See a page of active definitions, relations, and facts for one exact glossary term."""
     page = access.inspect_terms(
         ctx.deps.db,
         ctx.deps.mem_access_context,
-        term_names,
+        [term_name],
         memory_types,
         skip,
         limit,
@@ -223,7 +240,9 @@ def expire_term_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
 
 def _prepare_memory(memory_kind: TermMemoryKind, content: str) -> tuple[TermMemoryType, str]:
     if isinstance(memory_kind, FactMemoryKind):
-        return memory_kind.memory_type, f"[{memory_kind.category.value}] {content}"
+        marker = f"[{memory_kind.category.value}]"
+        while content.startswith(marker):
+            content = content.removeprefix(marker).lstrip()
     return memory_kind.memory_type, content
 
 

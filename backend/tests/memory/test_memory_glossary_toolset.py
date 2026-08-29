@@ -107,9 +107,12 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
     assert event_schema["properties"]["active_only"] == {"default": True, "type": "boolean"}
 
     term_schema = glossary_term_toolset.tools["term_memories"].function_schema.json_schema
+    assert term_schema["required"] == ["term_name", "memory_types"]
+    assert term_schema["properties"]["term_name"] == {"minLength": 1, "type": "string"}
+    assert "term_names" not in term_schema["properties"]
     assert term_schema["properties"]["skip"] == {"default": 0, "minimum": 0, "type": "integer"}
     assert term_schema["properties"]["limit"] == {
-        "default": 10,
+        "default": 5,
         "maximum": 20,
         "minimum": 1,
         "type": "integer",
@@ -159,7 +162,7 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
     ]
 
 
-def test_fact_write_persists_category_marker_and_definition_content_is_unchanged(
+def test_fact_write_strips_category_markers_and_definition_content_is_unchanged(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     db = MagicMock(spec=Session)
@@ -169,7 +172,7 @@ def test_fact_write_persists_category_marker_and_definition_content_is_unchanged
 
     new_term_memory(
         ctx,
-        "Alpha is human.",
+        "[species] [species] Alpha is human.",
         ["Alpha"],
         FactMemoryKind(memory_type=MemoryType.FACT, category=FactCategory.SPECIES),
     )
@@ -180,7 +183,7 @@ def test_fact_write_persists_category_marker_and_definition_content_is_unchanged
         DefinitionMemoryKind(memory_type=MemoryType.DEFINITION),
     )
 
-    assert create_memory.call_args_list[0].args[5] == "[species] Alpha is human."
+    assert create_memory.call_args_list[0].args[5] == "Alpha is human."
     assert create_memory.call_args_list[1].args[5] == "A personal name."
 
 
@@ -192,7 +195,7 @@ def test_retrieval_tool_result_serializes_agent_models_with_snake_case() -> None
                 memory=AgentMemory[str](
                     memory_id="m1",
                     memory_type=MemoryType.FACT,
-                    memory_content="[species] Alpha is human.",
+                    memory_content="Alpha is human.",
                     memory_start_num=1,
                     memory_review_status=ReviewStatus.PENDING,
                     memory_end_num=None,
@@ -221,7 +224,7 @@ def test_retrieval_tool_result_serializes_agent_models_with_snake_case() -> None
                 "memory": {
                     "memory_id": "m1",
                     "memory_type": "fact",
-                    "memory_content": "[species] Alpha is human.",
+                    "memory_content": "Alpha is human.",
                     "memory_start_num": 1,
                     "memory_review_status": "pending",
                     "memory_end_num": None,

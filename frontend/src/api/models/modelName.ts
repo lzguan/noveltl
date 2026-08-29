@@ -9,6 +9,6 @@ export type ModelName = typeof ModelName[keyof typeof ModelName];
 
 
 export const ModelName = {
-  'deepseek:deepseek-v4-flash': 'deepseek:deepseek-v4-flash',
-  'deepseek:deepseek-v4-pro': 'deepseek:deepseek-v4-pro',
+  'deepseek:deepseek-v4-flash-none': 'deepseek:deepseek-v4-flash-none',
+  'deepseek:deepseek-v4-flash-low': 'deepseek:deepseek-v4-flash-low',
 } as const;

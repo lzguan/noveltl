@@ -2108,8 +2108,8 @@ components:
       type: string
     ModelName:
       enum:
-      - deepseek:deepseek-v4-flash
-      - deepseek:deepseek-v4-pro
+      - deepseek:deepseek-v4-flash-none
+      - deepseek:deepseek-v4-flash-low
       type: string
     ModifyChapterContentResponse:
       description: "Pydantic schema for the response after modifying chapter content.\n\

@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator
 from itertools import batched
 
 from pydantic_ai import Agent, AgentRunResult, FunctionToolset
+from pydantic_ai.models.openai import OpenAIChatModelSettings
 from sqlalchemy import select
 from sqlalchemy.orm import Session, aliased, defer, sessionmaker
 
@@ -23,10 +24,22 @@ toolsets_by_name: dict[ToolsetName, FunctionToolset[MemAgentDeps]] = {
 
 
 def create_agent(model_name: ModelName, toolsets: list[ToolsetName]) -> Agent[MemAgentDeps, str]:
-    """Create a Pydantic AI agent with the specified model and toolsets."""
+    """Create a Pydantic AI agent with the specified model and toolsets.
+
+    The model name's suffix selects the reasoning level. DeepSeek V4 does not
+    accept `reasoning_effort="none"` (it 400s); non-thinking mode is requested
+    via its native `thinking: {"type": "disabled"}` body flag instead. So the
+    "-none" variant passes that through `extra_body` and leaves `thinking`
+    unset, rather than using pydantic-ai's `thinking=False` (which would map to
+    the rejected `reasoning_effort="none"`).
+    """
+    if model_name == "deepseek:deepseek-v4-flash-none":
+        model_settings: OpenAIChatModelSettings = {"extra_body": {"thinking": {"type": "disabled"}}}
+    else:  # deepseek:deepseek-v4-flash-low
+        model_settings = {"thinking": "low"}
     return Agent(
-        model=model_name,
-        model_settings={"thinking": "low"},
+        model="deepseek:deepseek-v4-flash",
+        model_settings=model_settings,
         toolsets=[toolsets_by_name[toolset] for toolset in toolsets],
         instructions=MEMORY_AGENT_PROMPT,
         deps_type=MemAgentDeps,

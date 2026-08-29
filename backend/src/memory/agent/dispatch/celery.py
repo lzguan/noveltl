@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from pathlib import Path
 from uuid import UUID
 
 from src.database import SessionLocal
@@ -11,12 +12,16 @@ from src.memory.exceptions import MemoryAgentEnqueueFailedException
 
 logger = logging.getLogger(__name__)
 AGENT_RESULT_LOG_MARKER = "MEMORY_AGENT_RESULT "
+# Hardcoded for now: append-only JSONL sink capturing each completed task's full
+# LLM output (messages) alongside its job id, usage, and identifiers. One JSON
+# object per line.
+AGENT_RESULT_JSONL_PATH = Path("logs/memory-agent-output.jsonl")
 
 
-def _log_agent_result(completed_task: CompletedMemoryTask) -> None:
+def _build_agent_result_payload(completed_task: CompletedMemoryTask) -> dict:
     result = completed_task.result
     usage = result.usage
-    payload = {
+    return {
         "event": "memoryAgent.result",
         "memoryJobId": str(completed_task.memory_job_id),
         "memoryGroupId": str(completed_task.memory_group_id),
@@ -39,6 +44,26 @@ def _log_agent_result(completed_task: CompletedMemoryTask) -> None:
         },
         "messages": json.loads(result.all_messages_json()),
     }
+
+
+def _append_agent_result_jsonl(payload: dict) -> None:
+    line = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    try:
+        AGENT_RESULT_JSONL_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with AGENT_RESULT_JSONL_PATH.open("a", encoding="utf-8") as jsonl_file:
+            jsonl_file.write(line + "\n")
+    except OSError:
+        # Never let a logging-sink failure interrupt the job.
+        logger.exception(
+            "Failed to append memory-agent result to %s job_id=%s",
+            AGENT_RESULT_JSONL_PATH,
+            payload.get("memoryJobId"),
+        )
+
+
+def _log_agent_result(completed_task: CompletedMemoryTask) -> None:
+    payload = _build_agent_result_payload(completed_task)
+    _append_agent_result_jsonl(payload)
     logger.info(
         "%s%s",
         AGENT_RESULT_LOG_MARKER,

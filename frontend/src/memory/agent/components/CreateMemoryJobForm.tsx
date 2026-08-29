@@ -52,7 +52,7 @@ export function CreateMemoryJobForm({
 		defaultValues: {
 			startChapterNum: "",
 			endChapterNum: "",
-			modelName: "deepseek:deepseek-v4-flash",
+			modelName: "deepseek:deepseek-v4-flash-none",
 			includeGlossaryTerms: true,
 			includeGlossaryEvents: true,
 		},
@@ -176,11 +176,11 @@ export function CreateMemoryJobForm({
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="deepseek:deepseek-v4-flash">
-												DeepSeek V4 Flash
+											<SelectItem value="deepseek:deepseek-v4-flash-none">
+												DeepSeek V4 Flash (None)
 											</SelectItem>
-											<SelectItem value="deepseek:deepseek-v4-pro">
-												DeepSeek V4 Pro
+											<SelectItem value="deepseek:deepseek-v4-flash-low">
+												DeepSeek V4 Flash (Low)
 											</SelectItem>
 										</SelectContent>
 									</Select>

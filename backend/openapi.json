@@ -9721,8 +9721,8 @@
       "ModelName": {
         "type": "string",
         "enum": [
-          "deepseek:deepseek-v4-flash",
-          "deepseek:deepseek-v4-pro"
+          "deepseek:deepseek-v4-flash-none",
+          "deepseek:deepseek-v4-flash-low"
         ]
       },
       "ModifyChapterContentResponse": {

@@ -10,11 +10,31 @@ from src.memory.agent.toolsets import glossary_common
 from src.memory.plugins.glossary import access
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
 from src.memory.plugins.glossary.types import FactCategory, TermKind
+from src.memory.schemas import AgentModel
 from src.memory.types import MemoryType, Scope
 from src.schemas import Page
 
 type TermMemoryType = Literal[MemoryType.DEFINITION, MemoryType.RELATION, MemoryType.FACT]
 TERM_MEMORY_TYPES = [MemoryType.DEFINITION, MemoryType.RELATION, MemoryType.FACT]
+
+
+class DefinitionMemoryKind(AgentModel):
+    memory_type: Literal[MemoryType.DEFINITION]
+
+
+class RelationMemoryKind(AgentModel):
+    memory_type: Literal[MemoryType.RELATION]
+
+
+class FactMemoryKind(AgentModel):
+    memory_type: Literal[MemoryType.FACT]
+    category: FactCategory
+
+
+type TermMemoryKind = Annotated[
+    DefinitionMemoryKind | RelationMemoryKind | FactMemoryKind,
+    Field(discriminator="memory_type"),
+]
 
 """
 TODO: Add decorator instead of manual uuid translation.
@@ -80,13 +100,14 @@ translation or continuity error:
   injury or condition.
 
 Multiple independent facts may share a category. Associate a fact only with its
-primary subject. Pass the matching `fact_category` on every fact creation or
-supersession and omit it for definitions and relations. Never store actions,
-occurrences, history, personality,
-emotions, intentions, discoveries, knowledge, location, inventory, wealth,
-occupation, affiliation, ownership, routines, temporary state, or unsupported
-inference as facts. If information belongs outside `def`, `rel`, or the allowed
-fact categories, do not force it into this toolset.
+primary subject. For `memory_kind`, select `def` or `rel` directly, or select
+`fact` together with its required category. Write only the statement in
+`content`; the tool adds the fact category marker itself. Never store actions,
+occurrences, history, personality, emotions, intentions, discoveries,
+knowledge, location, inventory, wealth, occupation, affiliation, ownership,
+routines, temporary state, or unsupported inference as facts. If information
+belongs outside `def`, `rel`, or the allowed fact categories, do not force it
+into this toolset.
 
 Use `supersede_term_memory` when the same definition or attribute receives a
 replacement current value. It preserves the old term associations. Use
@@ -175,12 +196,11 @@ def new_term_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
     term_names: Annotated[list[str], Field(min_length=1)],
-    mem_type: TermMemoryType,
+    memory_kind: TermMemoryKind,
     scope: Scope | None = None,
-    fact_category: FactCategory | None = None,
 ) -> str:
     """Create a definition, relation, or categorized fact for exact glossary terms."""
-    _validate_fact_category(mem_type, fact_category)
+    mem_type, content = _prepare_memory(memory_kind, content)
     return glossary_common.create_memory(ctx, content, term_names, mem_type, scope, "new_term_memory")
 
 
@@ -188,12 +208,11 @@ def supersede_term_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     content: str,
-    mem_type: TermMemoryType,
+    memory_kind: TermMemoryKind,
     scope: Scope | None = None,
-    fact_category: FactCategory | None = None,
 ) -> str:
     """Supersede an active definition, relation, or categorized fact from an earlier chapter."""
-    _validate_fact_category(mem_type, fact_category)
+    mem_type, content = _prepare_memory(memory_kind, content)
     return glossary_common.supersede_memory(ctx, memory_id, content, mem_type, scope)
 
 
@@ -202,11 +221,10 @@ def expire_term_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     return glossary_common.expire_memory(ctx, memory_id, TERM_MEMORY_TYPES)
 
 
-def _validate_fact_category(mem_type: TermMemoryType, fact_category: FactCategory | None) -> None:
-    if mem_type == MemoryType.FACT and fact_category is None:
-        raise ModelRetry("A fact_category is required when mem_type is fact.")
-    if mem_type != MemoryType.FACT and fact_category is not None:
-        raise ModelRetry("fact_category must be omitted unless mem_type is fact.")
+def _prepare_memory(memory_kind: TermMemoryKind, content: str) -> tuple[TermMemoryType, str]:
+    if isinstance(memory_kind, FactMemoryKind):
+        return memory_kind.memory_type, f"[{memory_kind.category.value}] {content}"
+    return memory_kind.memory_type, content
 
 
 glossary_term_toolset = FunctionToolset(

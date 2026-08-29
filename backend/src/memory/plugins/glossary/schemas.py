@@ -5,12 +5,12 @@ from uuid import UUID
 from pydantic import ConfigDict, Field
 
 from src.memory.plugins.glossary.types import TermKind
-from src.memory.schemas import AgentMemory, Memory
+from src.memory.schemas import AgentMemory, AgentModel, Memory
 from src.memory.types import MemoryType, ReviewStatus, Scope
 from src.schemas import Model, Page
 
 
-class AgentGlossaryTerm(Model):
+class AgentGlossaryTerm(AgentModel):
     """A glossary term represented as context for an agent."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -24,7 +24,7 @@ class AgentGlossaryTerm(Model):
     )
 
 
-class AgentGlossaryMemory[KeyT](Model):
+class AgentGlossaryMemory[KeyT](AgentModel):
     """A memory together with the glossary terms it describes."""
 
     memory: AgentMemory[KeyT] = Field(description="The memory that describes the glossary terms.")

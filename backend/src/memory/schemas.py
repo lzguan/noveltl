@@ -8,13 +8,19 @@ from src.memory.types import Creator, MemoryType, PluginName, ReviewStatus
 from src.schemas import Model, Page
 
 
-class MemoryGroupContext(Model):
+class AgentModel(Model):
+    """Base for agent-facing schemas, which use Python field names on the wire."""
+
+    model_config = ConfigDict(alias_generator=None)
+
+
+class MemoryGroupContext(AgentModel):
     """Memory-group metadata relevant to an agent run."""
 
     memory_language: str = Field(description="Language in which memory content should be written.")
 
 
-class AgentMemory[KeyT](Model):
+class AgentMemory[KeyT](AgentModel):
     """A memory represented as context for an agent."""
 
     model_config = ConfigDict(from_attributes=True)

@@ -3,6 +3,7 @@ from uuid import uuid4
 
 import pytest
 from pydantic_ai import ModelRetry, RunContext, RunUsage
+from pydantic_ai.messages import ToolReturnPart
 from pydantic_ai.models.test import TestModel
 from sqlalchemy.orm import Session
 
@@ -10,10 +11,18 @@ from src.memory.access import MemAccessContext
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets import glossary_common
 from src.memory.agent.toolsets.glossary_events import glossary_event_toolset
-from src.memory.agent.toolsets.glossary_terms import glossary_term_toolset, new_term_memory
+from src.memory.agent.toolsets.glossary_terms import (
+    DefinitionMemoryKind,
+    FactMemoryKind,
+    glossary_term_toolset,
+    new_term_memory,
+)
 from src.memory.exceptions import GlossaryTermNotFoundException
-from src.memory.plugins.glossary.types import FactCategory
-from src.memory.types import MemoryType
+from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
+from src.memory.plugins.glossary.types import FactCategory, TermKind
+from src.memory.schemas import AgentMemory
+from src.memory.types import MemoryType, ReviewStatus
+from src.schemas import Page
 
 
 def _run_context(db: Session) -> RunContext[MemAgentDeps]:
@@ -84,9 +93,8 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
         "supersede_term_event_memory",
     }
 
-    for tool_name in ("term_memories", "new_term_memory", "supersede_term_memory"):
-        schema = glossary_term_toolset.tools[tool_name].function_schema.json_schema
-        assert schema["$defs"]["TermMemoryType"]["enum"] == ["def", "rel", "fact"]
+    term_memories_schema = glossary_term_toolset.tools["term_memories"].function_schema.json_schema
+    assert term_memories_schema["$defs"]["TermMemoryType"]["enum"] == ["def", "rel", "fact"]
 
     event_schema = glossary_event_toolset.tools["term_event_memories"].function_schema.json_schema
     assert event_schema["properties"]["skip"] == {"default": 0, "minimum": 0, "type": "integer"}
@@ -120,9 +128,26 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
         "species",
         "other",
     ]
-    assert glossary_term_toolset.tools["new_term_memory"].function_schema.json_schema["$defs"]["FactCategory"][
-        "enum"
-    ] == [
+    for tool_name, required in (
+        ("new_term_memory", ["content", "term_names", "memory_kind"]),
+        ("supersede_term_memory", ["memory_id", "content", "memory_kind"]),
+    ):
+        write_schema = glossary_term_toolset.tools[tool_name].function_schema.json_schema
+        assert write_schema["required"] == required
+        assert write_schema["$defs"]["TermMemoryKind"]["discriminator"] == {
+            "mapping": {
+                "def": "#/$defs/DefinitionMemoryKind",
+                "fact": "#/$defs/FactMemoryKind",
+                "rel": "#/$defs/RelationMemoryKind",
+            },
+            "propertyName": "memory_type",
+        }
+        assert write_schema["$defs"]["DefinitionMemoryKind"]["required"] == ["memory_type"]
+        assert write_schema["$defs"]["RelationMemoryKind"]["required"] == ["memory_type"]
+        assert write_schema["$defs"]["FactMemoryKind"]["required"] == ["memory_type", "category"]
+
+    new_memory_schema = glossary_term_toolset.tools["new_term_memory"].function_schema.json_schema
+    assert new_memory_schema["$defs"]["FactCategory"]["enum"] == [
         "gender",
         "age_stage",
         "species",
@@ -134,17 +159,80 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
     ]
 
 
-def test_fact_writes_require_a_category_and_non_facts_reject_one() -> None:
-    ctx = _run_context(MagicMock(spec=Session))
+def test_fact_write_persists_category_marker_and_definition_content_is_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = MagicMock(spec=Session)
+    create_memory = Mock(return_value=(Mock(memory_id=uuid4()), []))
+    monkeypatch.setattr(glossary_common.access, "create_memory", create_memory)
+    ctx = _run_context(db)
 
-    with pytest.raises(ModelRetry, match="fact_category is required"):
-        new_term_memory(ctx, "Alpha is human.", ["Alpha"], MemoryType.FACT)
+    new_term_memory(
+        ctx,
+        "Alpha is human.",
+        ["Alpha"],
+        FactMemoryKind(memory_type=MemoryType.FACT, category=FactCategory.SPECIES),
+    )
+    new_term_memory(
+        ctx,
+        "A personal name.",
+        ["Alpha"],
+        DefinitionMemoryKind(memory_type=MemoryType.DEFINITION),
+    )
 
-    with pytest.raises(ModelRetry, match="must be omitted"):
-        new_term_memory(
-            ctx,
-            "Alpha is a name.",
-            ["Alpha"],
-            MemoryType.DEFINITION,
-            fact_category=FactCategory.SPECIES,
-        )
+    assert create_memory.call_args_list[0].args[5] == "[species] Alpha is human."
+    assert create_memory.call_args_list[1].args[5] == "A personal name."
+
+
+def test_retrieval_tool_result_serializes_agent_models_with_snake_case() -> None:
+    result = Page[AgentGlossaryMemory[str]](
+        count=1,
+        rows=[
+            AgentGlossaryMemory[str](
+                memory=AgentMemory[str](
+                    memory_id="m1",
+                    memory_type=MemoryType.FACT,
+                    memory_content="[species] Alpha is human.",
+                    memory_start_num=1,
+                    memory_review_status=ReviewStatus.PENDING,
+                    memory_end_num=None,
+                ),
+                terms=[
+                    AgentGlossaryTerm(
+                        term="Alpha",
+                        term_kind=TermKind.PERSON,
+                        review_status=ReviewStatus.PENDING,
+                    )
+                ],
+            )
+        ],
+    )
+
+    serialized = ToolReturnPart(
+        tool_name="term_memories",
+        content=result,
+        tool_call_id="call-1",
+    ).model_response_object()
+
+    assert serialized == {
+        "count": 1,
+        "rows": [
+            {
+                "memory": {
+                    "memory_id": "m1",
+                    "memory_type": "fact",
+                    "memory_content": "[species] Alpha is human.",
+                    "memory_start_num": 1,
+                    "memory_review_status": "pending",
+                    "memory_end_num": None,
+                },
+                "terms": [
+                    {
+                        "term": "Alpha",
+                        "term_kind": "person",
+                        "review_status": "pending",
+                    }
+                ],
+            }
+        ],
+    }

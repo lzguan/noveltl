@@ -5,4 +5,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ModelName = 'deepseek:deepseek-chat';
+export type ModelName = typeof ModelName[keyof typeof ModelName];
+
+
+export const ModelName = {
+  'deepseek:deepseek-v4-flash': 'deepseek:deepseek-v4-flash',
+  'deepseek:deepseek-v4-pro': 'deepseek:deepseek-v4-pro',
+} as const;

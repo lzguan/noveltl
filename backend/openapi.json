@@ -8959,18 +8959,18 @@
           "modelName": {
             "$ref": "#/components/schemas/ModelName"
           },
-          "plugins": {
+          "toolsets": {
             "items": {
-              "$ref": "#/components/schemas/PluginName"
+              "$ref": "#/components/schemas/ToolsetName"
             },
             "type": "array",
-            "title": "Plugins"
+            "title": "Toolsets"
           }
         },
         "type": "object",
         "required": [
           "modelName",
-          "plugins"
+          "toolsets"
         ],
         "title": "JobParams"
       },
@@ -9686,7 +9686,10 @@
       },
       "ModelName": {
         "type": "string",
-        "const": "deepseek:deepseek-chat"
+        "enum": [
+          "deepseek:deepseek-v4-flash",
+          "deepseek:deepseek-v4-pro"
+        ]
       },
       "ModifyChapterContentResponse": {
         "properties": {
@@ -10678,6 +10681,13 @@
         ],
         "title": "Token",
         "description": "Pydantic schema for a JWT\n\nAttributes:\n    access_token: Payload.\n    token_type: Type of token."
+      },
+      "ToolsetName": {
+        "type": "string",
+        "enum": [
+          "glossary_terms",
+          "glossary_events"
+        ]
       },
       "UpdateChapter": {
         "properties": {

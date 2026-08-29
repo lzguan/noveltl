@@ -1514,14 +1514,14 @@ components:
       properties:
         modelName:
           $ref: '#/components/schemas/ModelName'
-        plugins:
+        toolsets:
           items:
-            $ref: '#/components/schemas/PluginName'
-          title: Plugins
+            $ref: '#/components/schemas/ToolsetName'
+          title: Toolsets
           type: array
       required:
       - modelName
-      - plugins
+      - toolsets
       title: JobParams
       type: object
     JobStatus:
@@ -2089,7 +2089,9 @@ components:
       title: MemoryType
       type: string
     ModelName:
-      const: deepseek:deepseek-chat
+      enum:
+      - deepseek:deepseek-v4-flash
+      - deepseek:deepseek-v4-pro
       type: string
     ModifyChapterContentResponse:
       description: "Pydantic schema for the response after modifying chapter content.\n\
@@ -2829,6 +2831,11 @@ components:
       - token_type
       title: Token
       type: object
+    ToolsetName:
+      enum:
+      - glossary_terms
+      - glossary_events
+      type: string
     UpdateChapter:
       description: "Pydantic schema to validate data for updating chapter metadata.\n\
         \nAttributes:\n    chapter_title: The new title for the chapter."

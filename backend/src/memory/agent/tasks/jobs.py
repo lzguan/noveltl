@@ -5,16 +5,16 @@ from typing import Literal
 from sqlalchemy import and_, func, insert, literal, or_, select, update
 from sqlalchemy.orm import Session
 
-from src.memory.agent.agent import ModelName
+from src.memory.agent.types import ModelName, ToolsetName
 from src.memory.models import MemoryChapterTask, MemoryGroup, MemoryJob
-from src.memory.types import JobStatus, PluginName
+from src.memory.types import JobStatus
 from src.novels.models import Chapter
 from src.schemas import Model
 
 
 class JobParams(Model):
     model_name: ModelName
-    plugins: list[PluginName]
+    toolsets: list[ToolsetName]
 
 
 def _owns_job_claim(memory_job_id: uuid.UUID, claim_token: uuid.UUID):

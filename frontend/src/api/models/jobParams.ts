@@ -5,9 +5,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ModelName } from './modelName';
-import type { PluginName } from './pluginName';
+import type { ToolsetName } from './toolsetName';
 
 export interface JobParams {
   modelName: ModelName;
-  plugins: PluginName[];
+  toolsets: ToolsetName[];
 }

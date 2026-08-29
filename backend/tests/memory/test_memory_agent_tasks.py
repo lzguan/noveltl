@@ -70,7 +70,7 @@ def _make_memory_job(test_db: Session, chapter_count: int = 2) -> tuple[uuid.UUI
         memory_group.memory_group_id,
         None,
         None,
-        JobParams(model_name="deepseek:deepseek-chat", plugins=[]),
+        JobParams(model_name="deepseek:deepseek-v4-flash", toolsets=[]),
     )
     return memory_job_id, [chapter.chapter_id for chapter in chapters]
 
@@ -170,7 +170,7 @@ def test_run_all_tasks_completes_tasks_refreshes_and_releases_job(
 ) -> None:
     memory_job_id, chapter_ids = _make_memory_job(test_db)
     test_agent = Agent(TestModel(call_tools=[], custom_output_text="recorded"), deps_type=MemAgentDeps)
-    monkeypatch.setattr(agent_tasks, "create_agent", lambda _model_name, _plugins: test_agent)
+    monkeypatch.setattr(agent_tasks, "create_agent", lambda _model_name, _toolsets: test_agent)
 
     async def consume_tasks():
         return [

@@ -1,7 +1,6 @@
 import uuid
 from collections.abc import AsyncIterator
 from itertools import batched
-from typing import Literal
 
 from pydantic_ai import Agent, AgentRunResult, FunctionToolset
 from sqlalchemy import select
@@ -13,22 +12,21 @@ from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
 from src.memory.agent.toolsets.glossary_events import glossary_event_toolset
 from src.memory.agent.toolsets.glossary_terms import glossary_term_toolset
+from src.memory.agent.types import ModelName, ToolsetName
 from src.memory.models import MemoryGroup
-from src.memory.types import PluginName
 from src.novels.models import Chapter, ChapterContent
 
-plugin_toolsets: dict[PluginName, list[FunctionToolset[MemAgentDeps]]] = {
-    "glossary": [glossary_term_toolset, glossary_event_toolset]
+toolsets_by_name: dict[ToolsetName, FunctionToolset[MemAgentDeps]] = {
+    "glossary_terms": glossary_term_toolset,
+    "glossary_events": glossary_event_toolset,
 }
 
-type ModelName = Literal["deepseek:deepseek-chat"]
 
-
-def create_agent(model_name: ModelName, plugins: list[PluginName]) -> Agent[MemAgentDeps, str]:
-    """Create a Pydantic AI agent with the specified model and plugins."""
+def create_agent(model_name: ModelName, toolsets: list[ToolsetName]) -> Agent[MemAgentDeps, str]:
+    """Create a Pydantic AI agent with the specified model and toolsets."""
     return Agent(
         model=model_name,
-        toolsets=[toolset for plugin in plugins for toolset in plugin_toolsets[plugin]],
+        toolsets=[toolsets_by_name[toolset] for toolset in toolsets],
         instructions=MEMORY_AGENT_PROMPT,
         deps_type=MemAgentDeps,
     )

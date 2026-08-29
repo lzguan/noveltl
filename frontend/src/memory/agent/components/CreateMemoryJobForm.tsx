@@ -1,5 +1,5 @@
 import { addMemoryJobMemoryAgentJobsPost } from "@/api/endpoints/default/default";
-import type { CreateMemoryJob, ModelName } from "@/api/models";
+import type { CreateMemoryJob, ModelName, ToolsetName } from "@/api/models";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,12 +13,17 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { apiErrorMessage, requestErrorMessage } from "@/lib/apiErrors";
 import { LoaderCircleIcon, PlaySquareIcon } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-
-const DEFAULT_MODEL: ModelName = "deepseek:deepseek-chat";
 
 export function CreateMemoryJobForm({
 	memoryGroupId,
@@ -40,24 +45,37 @@ export function CreateMemoryJobForm({
 	} = useForm<{
 		startChapterNum: string;
 		endChapterNum: string;
-		includeGlossary: boolean;
+		modelName: ModelName;
+		includeGlossaryTerms: boolean;
+		includeGlossaryEvents: boolean;
 	}>({
-		defaultValues: { startChapterNum: "", endChapterNum: "", includeGlossary: true },
+		defaultValues: {
+			startChapterNum: "",
+			endChapterNum: "",
+			modelName: "deepseek:deepseek-v4-flash",
+			includeGlossaryTerms: true,
+			includeGlossaryEvents: true,
+		},
 	});
 
 	async function submit(values: {
 		startChapterNum: string;
 		endChapterNum: string;
-		includeGlossary: boolean;
+		modelName: ModelName;
+		includeGlossaryTerms: boolean;
+		includeGlossaryEvents: boolean;
 	}) {
 		setSubmitError(null);
+		const toolsets: ToolsetName[] = [];
+		if (values.includeGlossaryTerms) toolsets.push("glossary_terms");
+		if (values.includeGlossaryEvents) toolsets.push("glossary_events");
 		const payload: CreateMemoryJob = {
 			memoryGroupId,
 			startChapterNum: values.startChapterNum === "" ? null : Number(values.startChapterNum),
 			endChapterNum: values.endChapterNum === "" ? null : Number(values.endChapterNum),
 			params: {
-				modelName: DEFAULT_MODEL,
-				plugins: values.includeGlossary ? ["glossary"] : [],
+				modelName: values.modelName,
+				toolsets,
 			},
 		};
 
@@ -85,8 +103,8 @@ export function CreateMemoryJobForm({
 				<DialogHeader>
 					<DialogTitle>Create memory-agent job</DialogTitle>
 					<DialogDescription>
-						Choose the chapter range and plugins. The job will not start until you run
-						it.
+						Choose the chapter range, model, and toolsets. The job will not start until
+						you run it.
 					</DialogDescription>
 				</DialogHeader>
 				<form className="flex flex-col gap-4" onSubmit={handleSubmit(submit)}>
@@ -143,13 +161,39 @@ export function CreateMemoryJobForm({
 								<FieldError errors={[errors.endChapterNum]} />
 							</Field>
 						</div>
+						<Field>
+							<FieldLabel htmlFor="memory-job-model">Model</FieldLabel>
+							<Controller
+								control={control}
+								name="modelName"
+								render={({ field }) => (
+									<Select
+										value={field.value}
+										disabled={isSubmitting}
+										onValueChange={field.onChange}
+									>
+										<SelectTrigger id="memory-job-model" className="w-full">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="deepseek:deepseek-v4-flash">
+												DeepSeek V4 Flash
+											</SelectItem>
+											<SelectItem value="deepseek:deepseek-v4-pro">
+												DeepSeek V4 Pro
+											</SelectItem>
+										</SelectContent>
+									</Select>
+								)}
+							/>
+						</Field>
 						<div className="flex items-center gap-2">
 							<Controller
 								control={control}
-								name="includeGlossary"
+								name="includeGlossaryTerms"
 								render={({ field }) => (
 									<Checkbox
-										id="memory-job-glossary-plugin"
+										id="memory-job-glossary-terms-toolset"
 										checked={field.value}
 										disabled={isSubmitting}
 										onCheckedChange={(checked) =>
@@ -158,12 +202,34 @@ export function CreateMemoryJobForm({
 									/>
 								)}
 							/>
-							<FieldLabel htmlFor="memory-job-glossary-plugin">
-								Glossary plugin
+							<FieldLabel htmlFor="memory-job-glossary-terms-toolset">
+								Glossary terms
 							</FieldLabel>
-							<span className="ml-auto text-xs text-muted-foreground">
-								DeepSeek Chat
-							</span>
+						</div>
+						<div className="flex items-center gap-2">
+							<Controller
+								control={control}
+								name="includeGlossaryEvents"
+								render={({ field }) => (
+									<Checkbox
+										id="memory-job-glossary-events-toolset"
+										checked={field.value}
+										disabled={isSubmitting}
+										onCheckedChange={(checked) =>
+											field.onChange(checked === true)
+										}
+									/>
+								)}
+							/>
+							<div>
+								<FieldLabel htmlFor="memory-job-glossary-events-toolset">
+									Glossary events
+								</FieldLabel>
+								<p className="text-xs text-muted-foreground">
+									Without glossary terms, events can only reference existing
+									terms.
+								</p>
+							</div>
 						</div>
 					</FieldGroup>
 					<DialogFooter>

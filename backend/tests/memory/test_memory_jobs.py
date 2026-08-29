@@ -72,7 +72,10 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
     test_db.add_all([*chapters, other_chapter, memory_group])
     test_db.commit()
 
-    params = JobParams(model_name="deepseek:deepseek-chat", plugins=["glossary"])
+    params = JobParams(
+        model_name="deepseek:deepseek-v4-flash",
+        toolsets=["glossary_terms", "glossary_events"],
+    )
     memory_job_id = make_job(test_db, memory_group.memory_group_id, 2, 4, params)
 
     job = test_db.get(MemoryJob, memory_job_id)

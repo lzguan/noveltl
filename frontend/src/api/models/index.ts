@@ -219,6 +219,7 @@ export * from './textSpanDataType';
 export * from './textSpanField';
 export * from './textSpanFieldType';
 export * from './token';
+export * from './toolsetName';
 export * from './updateChapter';
 export * from './updateChapterContent';
 export * from './updateChapterContentChaptersChapterIdContentPatchParams';

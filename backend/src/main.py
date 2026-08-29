@@ -32,7 +32,8 @@ elif log_settings.LOG_LEVEL == "ERROR":
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 if log_settings.LOG_OUTPUT in ["FILE", "BOTH"]:
-    fh = logging.FileHandler(log_settings.LOG_OUTPUT_FILE)
+    log_settings.BACKEND_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    fh = logging.FileHandler(log_settings.BACKEND_LOG_DIR / "backend.log")
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(formatter)
     logger.addHandler(fh)

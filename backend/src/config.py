@@ -1,6 +1,7 @@
 """This module provides global config variables."""
 
 import logging
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
@@ -48,7 +49,8 @@ class LogSettings(BaseConfig):
 
     LOG_LEVEL: Literal["INFO", "WARNING", "ERROR", "DEBUG"] = Field(default="INFO", min_length=1)
     LOG_OUTPUT: Literal["FILE", "STREAM", "BOTH"] = Field(default="BOTH", min_length=1)
-    LOG_OUTPUT_FILE: str = Field(default="logs/backend.log", min_length=1)
+    BACKEND_LOG_DIR: Path = Path("logs")
+    MEMORY_AGENT_LOG_DIR: Path = Path("logs")
 
 
 database_settings = DatabaseSettings()

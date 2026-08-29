@@ -1,9 +1,9 @@
 import asyncio
 import json
 import logging
-from pathlib import Path
 from uuid import UUID
 
+from src.config import log_settings
 from src.database import SessionLocal
 from src.memory.agent.celery_app import app
 from src.memory.agent.dispatch.dispatcher import MemoryAgentDispatcher
@@ -12,10 +12,10 @@ from src.memory.exceptions import MemoryAgentEnqueueFailedException
 
 logger = logging.getLogger(__name__)
 AGENT_RESULT_LOG_MARKER = "MEMORY_AGENT_RESULT "
-# Hardcoded for now: append-only JSONL sink capturing each completed task's full
-# LLM output (messages) alongside its job id, usage, and identifiers. One JSON
-# object per line.
-AGENT_RESULT_JSONL_PATH = Path("logs/memory-agent-output.jsonl")
+# Append-only JSONL sink capturing each completed task's full LLM output
+# (messages) alongside its job id, usage, and identifiers. One JSON object per
+# line; the directory is configurable while the application owns the filename.
+AGENT_RESULT_JSONL_PATH = log_settings.MEMORY_AGENT_LOG_DIR / "memory-agent-output.jsonl"
 
 
 def _build_agent_result_payload(completed_task: CompletedMemoryTask) -> dict:

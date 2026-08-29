@@ -26,6 +26,7 @@ def create_agent(model_name: ModelName, toolsets: list[ToolsetName]) -> Agent[Me
     """Create a Pydantic AI agent with the specified model and toolsets."""
     return Agent(
         model=model_name,
+        model_settings={"thinking": "low"},
         toolsets=[toolsets_by_name[toolset] for toolset in toolsets],
         instructions=MEMORY_AGENT_PROMPT,
         deps_type=MemAgentDeps,

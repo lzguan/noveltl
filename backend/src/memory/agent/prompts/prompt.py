@@ -53,10 +53,14 @@ Write all memory content in the configured memory language. For example, if the 
 
 Choose the memory type according to its content:
 
-- `fact`: a concrete property or state of a term, such as a person's appearance,
-  an object's material or function, a place's characteristics, or an entity's
-  current condition. State the fact about the subject; do not use `fact` merely
-  to introduce or identify a term or to connect multiple terms.
+- `fact`: a durable, continuity-critical attribute of a term that is expected to
+  remain true across many chapters unless explicitly changed. Examples include
+  gender, physical description, cultivation level, a stable ability or
+  limitation, an object's material or function, and a place's enduring
+  characteristics. State the fact about the subject; do not use `fact` merely
+  to introduce or identify a term or to connect multiple terms. Do not record
+  chapter-local actions, emotions, intentions, discoveries, possessions,
+  knowledge, location, injuries, or other transient state as facts.
 - `event`: an occurrence or change whose relevance may diminish over time.
 - `def`: the meaning or identity that introduces one glossary term, concept,
   title, place, or entity. A definition must be associated with exactly that one

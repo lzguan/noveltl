@@ -104,19 +104,25 @@ definition into a biography. For example, "`缚妖网` is a magical net designed
 to restrain demons" is a definition; "`缚妖网` is owned by `燕峰`" is a separate
 relation.
 
-`fact` records a concrete property or state of one primary glossary term.
+`fact` records a durable, continuity-critical attribute of one primary glossary
+term. Facts should be rare: most chapter information is not a fact worth
+retaining.
 
-1. Identify a continuity-relevant property or state, such as appearance,
-   gender, temperament, ability, limitation, condition, inventory, knowledge,
-   cultivation level, or behavioral rule.
+1. Identify an attribute expected to remain true across many chapters unless
+   the text explicitly changes it. Good candidates include gender, physical
+   description, cultivation level, a stable ability or limitation, species,
+   and an object's durable material or function.
 2. Choose one primary glossary term as the subject.
 3. Record one atomic statement about that subject. Do not associate every term
    merely mentioned in the statement.
 4. Choose an appropriate lifetime and supersede an earlier fact only when the
-   property or state changes.
+   durable attribute changes.
 
-Use `fact`, not `rel`, for ordinary technique learning or temporary practice.
-Do not use `fact` to encode aliases, membership, ownership, or another meaningful
+Do not record actions, emotions, intentions, discoveries, current location,
+temporary injuries or conditions, inventory changes, ordinary technique use or
+learning, what a character currently knows, or other chapter-local state as
+facts. Use an event when a consequential occurrence must be retained. Do not
+use `fact` to encode aliases, membership, ownership, or another meaningful
 relationship between glossary terms.
 
 Record each piece of information once, under the type that best represents it.

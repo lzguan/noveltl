@@ -70,7 +70,7 @@ def _make_memory_job(test_db: Session, chapter_count: int = 2) -> tuple[uuid.UUI
         memory_group.memory_group_id,
         None,
         None,
-        JobParams(model_name="deepseek:deepseek-v4-flash", toolsets=[]),
+        JobParams(model_name="deepseek:deepseek-v4-flash-low", toolsets=[]),
     )
     return memory_job_id, [chapter.chapter_id for chapter in chapters]
 

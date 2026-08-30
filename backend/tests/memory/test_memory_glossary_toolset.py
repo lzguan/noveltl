@@ -23,7 +23,7 @@ from src.memory.agent.toolsets.glossary_terms import (
 )
 from src.memory.exceptions import GlossaryTermNotFoundException
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
-from src.memory.plugins.glossary.types import FactCategory, RelationCategory, TermKind
+from src.memory.plugins.glossary.types import TermKind
 from src.memory.schemas import AgentMemory
 from src.memory.types import MemoryType, ReviewStatus
 from src.schemas import Page
@@ -111,9 +111,6 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
         "supersede_term_event_memory",
     }
 
-    term_memories_schema = glossary_term_toolset.tools["term_memories"].function_schema.json_schema
-    assert term_memories_schema["$defs"]["TermMemoryType"]["enum"] == ["def", "rel", "fact"]
-
     event_schema = glossary_event_toolset.tools["term_event_memories"].function_schema.json_schema
     assert event_schema["properties"]["skip"] == {"default": 0, "minimum": 0, "type": "integer"}
     assert event_schema["properties"]["limit"] == {
@@ -125,10 +122,11 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
     assert event_schema["properties"]["active_only"] == {"default": True, "type": "boolean"}
 
     term_schema = glossary_term_toolset.tools["term_memories"].function_schema.json_schema
-    assert term_schema["required"] == ["term_name", "memory_type", "mark"]
+    assert term_schema["required"] == ["term_name", "memory_kind"]
     assert term_schema["properties"]["term_name"] == {"minLength": 1, "type": "string"}
     assert "term_names" not in term_schema["properties"]
-    assert term_schema["properties"]["memory_type"] == {"$ref": "#/$defs/TermMemoryType"}
+    assert term_schema["properties"]["memory_kind"] == {"$ref": "#/$defs/TermMemoryKind"}
+    assert "memory_type" not in term_schema["properties"]
     assert "memory_types" not in term_schema["properties"]
     assert term_schema["properties"]["skip"] == {"default": 0, "minimum": 0, "type": "integer"}
     assert term_schema["properties"]["limit"] == {
@@ -137,7 +135,7 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
         "minimum": 1,
         "type": "integer",
     }
-    assert term_schema["properties"]["mark"]["anyOf"][0] == {"$ref": "#/$defs/TermMemoryMark"}
+    assert "mark" not in term_schema["properties"]
     assert "marks" not in term_schema["properties"]
     assert term_schema["properties"]["term_search"]["anyOf"][0] == {
         "minLength": 1,
@@ -176,7 +174,7 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
         assert write_schema["$defs"]["FactMemoryKind"]["required"] == ["memory_type", "category"]
 
     new_memory_schema = glossary_term_toolset.tools["new_term_memory"].function_schema.json_schema
-    assert new_memory_schema["$defs"]["FactCategory"]["enum"] == [
+    assert new_memory_schema["$defs"]["FactMemoryKind"]["properties"]["category"]["enum"] == [
         "gender",
         "age_stage",
         "species",
@@ -186,7 +184,7 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
         "ability",
         "limitation",
     ]
-    assert new_memory_schema["$defs"]["RelationCategory"]["enum"] == [
+    assert new_memory_schema["$defs"]["RelationMemoryKind"]["properties"]["category"]["enum"] == [
         "alias",
         "kinship",
         "friendship",
@@ -215,19 +213,19 @@ def test_term_write_persists_categories_without_leaking_markers_into_content(
         ctx,
         "[species] [species] Alpha is human.",
         ["Alpha"],
-        FactMemoryKind(memory_type=MemoryType.FACT, category=FactCategory.SPECIES),
+        FactMemoryKind(memory_type="fact", category="species"),
     )
     new_term_memory(
         ctx,
         "A personal name.",
         ["Alpha"],
-        DefinitionMemoryKind(memory_type=MemoryType.DEFINITION),
+        DefinitionMemoryKind(memory_type="def"),
     )
     new_term_memory(
         ctx,
         "[friendship] [friendship] Alpha is friends with Beta.",
         ["Alpha", "Beta"],
-        RelationMemoryKind(memory_type=MemoryType.RELATION, category=RelationCategory.FRIENDSHIP),
+        RelationMemoryKind(memory_type="rel", category="friendship"),
     )
 
     assert create_memory.call_args_list[0].args[5] == "Alpha is human."
@@ -302,8 +300,7 @@ def test_term_memories_forwards_one_type_and_one_mark(monkeypatch: pytest.Monkey
     result = term_memories(
         _run_context(db),
         "Alpha",
-        MemoryType.FACT,
-        mark=FactCategory.SPECIES,
+        FactMemoryKind(memory_type="fact", category="species"),
         term_search="human",
     )
 
@@ -311,5 +308,5 @@ def test_term_memories_forwards_one_type_and_one_mark(monkeypatch: pytest.Monkey
     assert inspect_terms.call_args.args[3] == [MemoryType.FACT]
     assert inspect_terms.call_args.kwargs == {"marks": ["species"], "term_search": "human"}
 
-    term_memories(_run_context(db), "Alpha", MemoryType.DEFINITION, None)
+    term_memories(_run_context(db), "Alpha", DefinitionMemoryKind(memory_type="def"))
     assert inspect_terms.call_args.kwargs == {"marks": [None], "term_search": None}

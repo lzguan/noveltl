@@ -9,34 +9,55 @@ from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets import glossary_common
 from src.memory.plugins.glossary import access
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
-from src.memory.plugins.glossary.types import FactCategory, RelationCategory, TermKind
+from src.memory.plugins.glossary.types import TermKind
 from src.memory.schemas import AgentModel
 from src.memory.types import MemoryType, Scope
 from src.schemas import Page
 
-type TermMemoryType = Literal[MemoryType.DEFINITION, MemoryType.RELATION, MemoryType.FACT]
 TERM_MEMORY_TYPES = [MemoryType.DEFINITION, MemoryType.RELATION, MemoryType.FACT]
 
 
 class DefinitionMemoryKind(AgentModel):
-    memory_type: Literal[MemoryType.DEFINITION]
+    memory_type: Literal["def"]
 
 
 class RelationMemoryKind(AgentModel):
-    memory_type: Literal[MemoryType.RELATION]
-    category: RelationCategory
+    memory_type: Literal["rel"]
+    category: Literal[
+        "alias",
+        "kinship",
+        "friendship",
+        "romance",
+        "mentorship",
+        "rank",
+        "membership",
+        "service",
+        "ownership",
+        "alliance",
+        "rivalry",
+        "organizational_hierarchy",
+        "commercial_partnership",
+    ]
 
 
 class FactMemoryKind(AgentModel):
-    memory_type: Literal[MemoryType.FACT]
-    category: FactCategory
+    memory_type: Literal["fact"]
+    category: Literal[
+        "gender",
+        "age_stage",
+        "species",
+        "appearance",
+        "cultivation_level",
+        "trait",
+        "ability",
+        "limitation",
+    ]
 
 
 type TermMemoryKind = Annotated[
     DefinitionMemoryKind | RelationMemoryKind | FactMemoryKind,
     Field(discriminator="memory_type"),
 ]
-type TermMemoryMark = FactCategory | RelationCategory
 
 """
 TODO: Add decorator instead of manual uuid translation.
@@ -75,9 +96,10 @@ in the initial context.
 `term_memories` retrieves active `def`, `rel`, or `fact` memories for one exact
 term and one memory type. Form one concrete candidate first, then request only
 the type needed to evaluate that candidate. Never combine tentative candidates
-into a generic lookup. A fact or relation candidate must have a category before
-retrieval; provide its matching `mark` whenever querying `fact` or `rel`. Omit
-`mark` for definitions. Use `term_search` for a literal, case-insensitive
+into a generic lookup. For `memory_kind`, select `def` directly, or select
+`fact` or `rel` with exactly one matching category. The category becomes the
+single mark used for retrieval; definitions retrieve only unmarked memories.
+Use `term_search` for a literal, case-insensitive
 substring that should occur in the memory text. When `mark` and `term_search`
 are both provided, a memory must match both. Filters apply before pagination,
 so prefer a justified filter over paging through unrelated memories. Results
@@ -200,8 +222,7 @@ def _initial_glossary_context(ctx: RunContext[MemAgentDeps]) -> str:
 def term_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
-    memory_type: TermMemoryType,
-    mark: TermMemoryMark | None,
+    memory_kind: TermMemoryKind,
     skip: Annotated[int, Field(ge=0)] = 0,
     limit: Annotated[int, Field(ge=1, le=20)] = 5,
     term_search: Annotated[str | None, Field(min_length=1)] = None,
@@ -211,10 +232,10 @@ def term_memories(
         ctx.deps.db,
         ctx.deps.mem_access_context,
         [term_name],
-        [memory_type],
+        [MemoryType(memory_kind.memory_type)],
         skip,
         limit,
-        marks=[None if mark is None else mark.value],
+        marks=[_memory_mark(memory_kind)],
         term_search=term_search,
     )
     return glossary_common.to_agent_memory_page(ctx, page)
@@ -271,14 +292,19 @@ def expire_term_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     return glossary_common.expire_memory(ctx, memory_id, TERM_MEMORY_TYPES)
 
 
-def _prepare_memory(memory_kind: TermMemoryKind, content: str) -> tuple[TermMemoryType, str, str | None]:
-    mark = None
-    if isinstance(memory_kind, (FactMemoryKind, RelationMemoryKind)):
-        mark = memory_kind.category.value
+def _prepare_memory(memory_kind: TermMemoryKind, content: str) -> tuple[MemoryType, str, str | None]:
+    mark = _memory_mark(memory_kind)
+    if mark is not None:
         marker = f"[{mark}]"
         while content.startswith(marker):
             content = content.removeprefix(marker).lstrip()
-    return memory_kind.memory_type, content, mark
+    return MemoryType(memory_kind.memory_type), content, mark
+
+
+def _memory_mark(memory_kind: TermMemoryKind) -> str | None:
+    if isinstance(memory_kind, (FactMemoryKind, RelationMemoryKind)):
+        return memory_kind.category
+    return None
 
 
 glossary_term_toolset = FunctionToolset(

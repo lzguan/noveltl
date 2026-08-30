@@ -31,7 +31,7 @@ from src.memory.types import JobStatus
 from test_support.memory import RecordingMemoryAgentDispatcher
 from test_support.test_data.scenarios import DatabaseScenario
 
-PARAMS = JobParams(model_name="deepseek:deepseek-v4-flash", toolsets=[])
+PARAMS = JobParams(model_name="deepseek:deepseek-v4-flash-low", toolsets=[])
 
 
 def _create_group(db: Session, scenario: DatabaseScenario, novel_key: str) -> MemoryGroup:

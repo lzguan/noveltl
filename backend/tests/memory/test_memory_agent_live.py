@@ -196,7 +196,7 @@ async def _run_benchmark_replica(seed: _SeededRun, run_index: int, run_dir: Path
     try:
         results = run_novel(
             seed.database.session_factory,
-            create_agent("deepseek:deepseek-v4-flash", ["glossary_terms", "glossary_events"]),
+            create_agent("deepseek:deepseek-v4-flash-low", ["glossary_terms", "glossary_events"]),
             seed.novel_id,
             seed.memory_group_id,
             start_chapter_num=1,
@@ -250,7 +250,7 @@ async def _run_benchmark_replica(seed: _SeededRun, run_index: int, run_dir: Path
                 "database": seed.database.name,
                 "startedAt": started_at.isoformat(),
                 "finishedAt": finished_at.isoformat(),
-                "model": "deepseek:deepseek-v4-flash",
+                "model": "deepseek:deepseek-v4-flash-low",
                 "toolsets": ["glossary_terms", "glossary_events"],
                 "catalog": "tmp/snake-catalog",
                 "novel": "private-snake",
@@ -304,7 +304,7 @@ async def test_benchmark_snake_chapters_1_through_50_in_parallel(test_url: str) 
                 "startedAt": started_at.isoformat(),
                 "finishedAt": finished_at.isoformat(),
                 "parallelRuns": BENCHMARK_RUN_COUNT,
-                "model": "deepseek:deepseek-v4-flash",
+                "model": "deepseek:deepseek-v4-flash-low",
                 "toolsets": ["glossary_terms", "glossary_events"],
                 "catalog": "tmp/snake-catalog",
                 "novel": "private-snake",

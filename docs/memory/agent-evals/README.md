@@ -67,6 +67,8 @@ Prefer context actually exposed to the model over cumulative database writes:
 
 - input, output, reasoning, and cached tokens;
 - provider-reported cost;
+- wall-clock run duration and per-chapter latency or throughput, stating
+  whether the measurement includes queue time and retries;
 - unique memory rows and serialized memory text returned per chapter;
 - retrieval pagination and repeated exposure;
 - successful writes, retries, and failures by tool and memory category;

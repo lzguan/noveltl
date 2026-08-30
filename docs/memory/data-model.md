@@ -102,19 +102,19 @@ glossary terms that occur in that chapter. Memories are retrieved separately
 and only when the agent has identified a concrete piece of information that
 may duplicate, continue, or supersede existing context.
 
-The glossary term toolset exposes five tools to the agent:
+The glossary term toolset exposes type-specific tools to the agent:
 
-- `term_memories` retrieves a page of active definitions, relations, or facts
-  for one exact term and one memory type. Its discriminated `memory_kind`
-  accepts a definition without a category, or a fact or relation with exactly
-  one literal category. The category becomes the retrieval mark; definitions
-  retrieve only unmarked memories. It can also filter by a literal,
+- `definition_memories`, `relation_memories`, and `fact_memories` each retrieve
+  a page of one memory type for one exact term. Relation and fact retrieval
+  requires one literal category, which becomes the retrieval mark; definitions
+  retrieve only unmarked memories. Each tool can also filter by a literal,
   case-insensitive piece of memory text. All supplied filters apply before
   pagination.
 - `add_term` records and classifies a new source-language term.
-- `new_term_memory` records a definition, categorized fact, or categorized
-  relation and associates it with one or more terms.
-- `supersede_term_memory` ends an older term memory and creates its replacement.
+- `new_definition_memory`, `new_relation_memory`, and `new_fact_memory` record
+  one memory of the corresponding type and associate it with exact terms.
+- `supersede_definition_memory`, `supersede_relation_memory`, and
+  `supersede_fact_memory` end an older memory and create its replacement.
 - `expire_term_memory` ends an older term memory without creating a replacement.
 
 Facts and relations receive a separate `mark` chosen from the categories

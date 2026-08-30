@@ -10,53 +10,37 @@ from src.memory.agent.toolsets import glossary_common
 from src.memory.plugins.glossary import access
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
 from src.memory.plugins.glossary.types import TermKind
-from src.memory.schemas import AgentModel
 from src.memory.types import MemoryType, Scope
 from src.schemas import Page
 
 TERM_MEMORY_TYPES = [MemoryType.DEFINITION, MemoryType.RELATION, MemoryType.FACT]
 
 
-class DefinitionMemoryKind(AgentModel):
-    memory_type: Literal["def"]
+type RelationCategory = Literal[
+    "alias",
+    "kinship",
+    "friendship",
+    "romance",
+    "mentorship",
+    "rank",
+    "membership",
+    "service",
+    "ownership",
+    "alliance",
+    "rivalry",
+    "organizational_hierarchy",
+    "commercial_partnership",
+]
 
-
-class RelationMemoryKind(AgentModel):
-    memory_type: Literal["rel"]
-    category: Literal[
-        "alias",
-        "kinship",
-        "friendship",
-        "romance",
-        "mentorship",
-        "rank",
-        "membership",
-        "service",
-        "ownership",
-        "alliance",
-        "rivalry",
-        "organizational_hierarchy",
-        "commercial_partnership",
-    ]
-
-
-class FactMemoryKind(AgentModel):
-    memory_type: Literal["fact"]
-    category: Literal[
-        "gender",
-        "age_stage",
-        "species",
-        "appearance",
-        "cultivation_level",
-        "trait",
-        "ability",
-        "limitation",
-    ]
-
-
-type TermMemoryKind = Annotated[
-    DefinitionMemoryKind | RelationMemoryKind | FactMemoryKind,
-    Field(discriminator="memory_type"),
+type FactCategory = Literal[
+    "gender",
+    "age_stage",
+    "species",
+    "appearance",
+    "cultivation_level",
+    "trait",
+    "ability",
+    "limitation",
 ]
 
 """
@@ -93,21 +77,20 @@ term does not require creating any memory for it. Never invent a definition or
 another memory merely to accompany a new term. Never add a term already present
 in the initial context.
 
-`term_memories` retrieves active `def`, `rel`, or `fact` memories for one exact
-term and one memory type. Form one concrete candidate first, then request only
-the type needed to evaluate that candidate. Never combine tentative candidates
-into a generic lookup. For `memory_kind`, select `def` directly, or select
-`fact` or `rel` with exactly one matching category. The category becomes the
-single mark used for retrieval; definitions retrieve only unmarked memories.
-Use `term_search` for a literal, case-insensitive
-substring that should occur in the memory text. When `mark` and `term_search`
-are both provided, a memory must match both. Filters apply before pagination,
-so prefer a justified filter over paging through unrelated memories. Results
-are newest-first. Request another page only when the filtered count shows it is
-necessary, repeating the same filters and changing only `skip`. Never retrieve
-merely because a known term appears, request generic history, or fetch every
-detected term. Skip retrieval when the associated term was added in the current
-run.
+`definition_memories`, `relation_memories`, and `fact_memories` each retrieve
+one type of active memory for one exact term. Form one concrete candidate first,
+then call only the matching retrieval tool. Never combine tentative candidates
+into a generic lookup. `relation_memories` and `fact_memories` require exactly
+one matching category, which becomes the single mark used for retrieval;
+`definition_memories` retrieves only unmarked memories. Use `term_search` for a
+literal, case-insensitive substring that should occur in the memory text. For
+relations and facts, a memory must match both `category` and `term_search` when
+both are provided. Filters apply before pagination, so prefer a justified
+filter over paging through unrelated memories. Results are newest-first.
+Request another page only when the filtered count shows it is necessary,
+repeating the same filters and changing only `skip`. Never retrieve merely
+because a known term appears, request generic history, or fetch every detected
+term. Skip retrieval when the associated term was added in the current run.
 
 `def` is the intrinsic identity or meaning of exactly one term. Definitions are
 normally appropriate only for a `technique`, `item`, `concept`, `title`, or
@@ -143,8 +126,8 @@ Friendship and romance may coexist; do not replace one with the other unless
 the source explicitly ends the older relationship. Do not record co-occurrence,
 temporary cooperation, ordinary transactions, actions, location, vague
 enmity, or shared participation in an occurrence as relations. Before writing,
-query `rel` on one existing participant most likely to reveal the candidate
-relation, using its category mark when known. Skip retrieval only when every
+call `relation_memories` on one existing participant most likely to reveal the
+candidate relation, using its category. Skip retrieval only when every
 participant is new.
 
 `fact` is an explicitly stated, continuity-critical attribute of one primary
@@ -167,18 +150,19 @@ translation or continuity error:
   injury or condition.
 
 Multiple independent facts may share a category. Associate a fact only with its
-primary subject. For `memory_kind`, select `def` or `rel` directly, or select
-`fact` together with its required category. The category is write-time
-classification and is not part of the memory text. Write only the plain
-statement in `content` and never add a category marker. Never store actions,
+primary subject. Choose the fact-specific tool and provide exactly one required
+category. The category is write-time classification and is not part of the
+memory text. Write only the plain statement in `content` and never add a
+category marker. Never store actions,
 occurrences, history, personality, emotions, intentions, discoveries,
 knowledge, location, inventory, wealth, occupation, affiliation, ownership,
 routines, temporary state, or unsupported inference as facts. If information
 belongs outside `def`, `rel`, or the allowed fact categories, do not force it
 into this toolset.
 
-Use `supersede_term_memory` when the same definition or attribute receives a
-replacement current value. It preserves the old term associations. Use
+Use the matching `supersede_definition_memory`, `supersede_relation_memory`, or
+`supersede_fact_memory` tool when the same definition or attribute receives a
+replacement current value. These tools preserve the old term associations. Use
 `expire_term_memory` when an older memory explicitly stops being true and no
 replacement memory is needed. Absence from the chapter is never evidence for
 expiry. Never supersede or expire a memory created in the current chapter, and
@@ -219,26 +203,61 @@ def _initial_glossary_context(ctx: RunContext[MemAgentDeps]) -> str:
     return context
 
 
-def term_memories(
+def _term_memories(
     ctx: RunContext[MemAgentDeps],
-    term_name: Annotated[str, Field(min_length=1)],
-    memory_kind: TermMemoryKind,
-    skip: Annotated[int, Field(ge=0)] = 0,
-    limit: Annotated[int, Field(ge=1, le=20)] = 5,
-    term_search: Annotated[str | None, Field(min_length=1)] = None,
+    term_name: str,
+    memory_type: MemoryType,
+    mark: str | None,
+    skip: int,
+    limit: int,
+    term_search: str | None,
 ) -> Page[AgentGlossaryMemory[str]]:
-    """See filtered active definitions, relations, and facts for one exact glossary term."""
     page = access.inspect_terms(
         ctx.deps.db,
         ctx.deps.mem_access_context,
         [term_name],
-        [MemoryType(memory_kind.memory_type)],
+        [memory_type],
         skip,
         limit,
-        marks=[_memory_mark(memory_kind)],
+        marks=[mark],
         term_search=term_search,
     )
     return glossary_common.to_agent_memory_page(ctx, page)
+
+
+def definition_memories(
+    ctx: RunContext[MemAgentDeps],
+    term_name: Annotated[str, Field(min_length=1)],
+    skip: Annotated[int, Field(ge=0)] = 0,
+    limit: Annotated[int, Field(ge=1, le=20)] = 5,
+    term_search: Annotated[str | None, Field(min_length=1)] = None,
+) -> Page[AgentGlossaryMemory[str]]:
+    """Retrieve active definitions for one exact glossary term."""
+    return _term_memories(ctx, term_name, MemoryType.DEFINITION, None, skip, limit, term_search)
+
+
+def relation_memories(
+    ctx: RunContext[MemAgentDeps],
+    term_name: Annotated[str, Field(min_length=1)],
+    category: RelationCategory,
+    skip: Annotated[int, Field(ge=0)] = 0,
+    limit: Annotated[int, Field(ge=1, le=20)] = 5,
+    term_search: Annotated[str | None, Field(min_length=1)] = None,
+) -> Page[AgentGlossaryMemory[str]]:
+    """Retrieve active relations in one category for one exact glossary term."""
+    return _term_memories(ctx, term_name, MemoryType.RELATION, category, skip, limit, term_search)
+
+
+def fact_memories(
+    ctx: RunContext[MemAgentDeps],
+    term_name: Annotated[str, Field(min_length=1)],
+    category: FactCategory,
+    skip: Annotated[int, Field(ge=0)] = 0,
+    limit: Annotated[int, Field(ge=1, le=20)] = 5,
+    term_search: Annotated[str | None, Field(min_length=1)] = None,
+) -> Page[AgentGlossaryMemory[str]]:
+    """Retrieve active facts in one category for one exact glossary term."""
+    return _term_memories(ctx, term_name, MemoryType.FACT, category, skip, limit, term_search)
 
 
 def add_term(ctx: RunContext[MemAgentDeps], term_name: str, term_kind: TermKind) -> str:
@@ -263,28 +282,105 @@ def add_term(ctx: RunContext[MemAgentDeps], term_name: str, term_kind: TermKind)
     return result
 
 
-def new_term_memory(
+def new_definition_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
-    term_names: Annotated[list[str], Field(min_length=1)],
-    memory_kind: TermMemoryKind,
+    term_names: Annotated[list[str], Field(min_length=1, max_length=1)],
     scope: Scope | None = None,
 ) -> str:
-    """Create a definition, relation, or categorized fact for exact glossary terms."""
-    mem_type, content, mark = _prepare_memory(memory_kind, content)
-    return glossary_common.create_memory(ctx, content, term_names, mem_type, scope, "new_term_memory", mark)
+    """Create an unmarked definition for one exact glossary term."""
+    return glossary_common.create_memory(
+        ctx,
+        content,
+        term_names,
+        MemoryType.DEFINITION,
+        scope,
+        "new_definition_memory",
+    )
 
 
-def supersede_term_memory(
+def new_relation_memory(
+    ctx: RunContext[MemAgentDeps],
+    content: str,
+    term_names: Annotated[list[str], Field(min_length=2)],
+    category: RelationCategory,
+    scope: Scope | None = None,
+) -> str:
+    """Create a relation in one category between exact glossary terms."""
+    return glossary_common.create_memory(
+        ctx,
+        _strip_marker(content, category),
+        term_names,
+        MemoryType.RELATION,
+        scope,
+        "new_relation_memory",
+        category,
+    )
+
+
+def new_fact_memory(
+    ctx: RunContext[MemAgentDeps],
+    content: str,
+    term_names: Annotated[list[str], Field(min_length=1, max_length=1)],
+    category: FactCategory,
+    scope: Scope | None = None,
+) -> str:
+    """Create a fact in one category for its primary glossary term."""
+    return glossary_common.create_memory(
+        ctx,
+        _strip_marker(content, category),
+        term_names,
+        MemoryType.FACT,
+        scope,
+        "new_fact_memory",
+        category,
+    )
+
+
+def supersede_definition_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     content: str,
-    memory_kind: TermMemoryKind,
     scope: Scope | None = None,
 ) -> str:
-    """Supersede an active definition, relation, or categorized fact from an earlier chapter."""
-    mem_type, content, mark = _prepare_memory(memory_kind, content)
-    return glossary_common.supersede_memory(ctx, memory_id, content, mem_type, scope, mark)
+    """Supersede an active definition from an earlier chapter."""
+    return glossary_common.supersede_memory(ctx, memory_id, content, MemoryType.DEFINITION, scope, None)
+
+
+def supersede_relation_memory(
+    ctx: RunContext[MemAgentDeps],
+    memory_id: str,
+    content: str,
+    category: RelationCategory,
+    scope: Scope | None = None,
+) -> str:
+    """Supersede an active relation with one categorized replacement."""
+    return glossary_common.supersede_memory(
+        ctx,
+        memory_id,
+        _strip_marker(content, category),
+        MemoryType.RELATION,
+        scope,
+        category,
+    )
+
+
+def supersede_fact_memory(
+    ctx: RunContext[MemAgentDeps],
+    memory_id: str,
+    content: str,
+    category: FactCategory,
+    scope: Scope | None = None,
+) -> str:
+    """Supersede an active fact with one categorized replacement."""
+    return glossary_common.supersede_memory(
+        ctx,
+        memory_id,
+        _strip_marker(content, category),
+        MemoryType.FACT,
+        scope,
+        category,
+    )
 
 
 def expire_term_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
@@ -292,23 +388,27 @@ def expire_term_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     return glossary_common.expire_memory(ctx, memory_id, TERM_MEMORY_TYPES)
 
 
-def _prepare_memory(memory_kind: TermMemoryKind, content: str) -> tuple[MemoryType, str, str | None]:
-    mark = _memory_mark(memory_kind)
-    if mark is not None:
-        marker = f"[{mark}]"
-        while content.startswith(marker):
-            content = content.removeprefix(marker).lstrip()
-    return MemoryType(memory_kind.memory_type), content, mark
-
-
-def _memory_mark(memory_kind: TermMemoryKind) -> str | None:
-    if isinstance(memory_kind, (FactMemoryKind, RelationMemoryKind)):
-        return memory_kind.category
-    return None
+def _strip_marker(content: str, category: str) -> str:
+    marker = f"[{category}]"
+    while content.startswith(marker):
+        content = content.removeprefix(marker).lstrip()
+    return content
 
 
 glossary_term_toolset = FunctionToolset(
-    tools=[term_memories, add_term, new_term_memory, supersede_term_memory, expire_term_memory],
+    tools=[
+        definition_memories,
+        relation_memories,
+        fact_memories,
+        add_term,
+        new_definition_memory,
+        new_relation_memory,
+        new_fact_memory,
+        supersede_definition_memory,
+        supersede_relation_memory,
+        supersede_fact_memory,
+        expire_term_memory,
+    ],
     instructions=[GLOSSARY_TERM_INSTRUCTIONS, _initial_glossary_context],
     sequential=True,
 )

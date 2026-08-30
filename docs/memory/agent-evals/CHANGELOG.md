@@ -12,7 +12,8 @@ evaluation has completed.
 - **Change:** save a category mark on facts and relations instead of discarding
   it after the tool call. Let the agent narrow one term's memories by category
   or by text contained in the memory. Apply these filters before splitting the
-  results into pages.
+  results into pages. Expose separate definition, relation, and fact tools
+  instead of asking the model to construct a nested memory-type object.
 - **Objectives:**
 
   - Reduce duplicate writes and several active memories that disagree about
@@ -151,13 +152,22 @@ evaluation has completed.
   `47b06aaf-413c-4044-9cb7-8c2948713a8b`, after both finish and the logs are
   complete.
 - **Result:** pending
-- **Observed shortcomings:** pending
+- **Observed shortcomings:** three pilot jobs using the discarded nested
+  memory-type schema (`8ae3374c-c04c-4418-a967-de0b52b977aa`,
+  `b0138ad8-559e-41f3-b537-c96004b3e1d3`, and
+  `cfd4e126-2d2f-40c3-80b4-07deac34a6ad`) produced 35 rejected tool calls
+  across 9 of their first 16 logged chapters. The model commonly flattened the
+  category beside `memory_kind`, encoded the nested object as a string, or
+  emitted an unquoted memory type. These jobs do not test the replacement
+  split-tool interface.
 - **Decision:** pending. The 20-chapter run is only a smoke test. Acceptance
   requires both longer comparisons. A broader claim also requires the third
   corpus. Lower context growth is not established unless the agent actually
   retrieves terms with more than one page of memories.
 - **Reports and local artifact references:** baseline log
   `docs/memory/agent-evals/logs/dsv4-flash-low-baseline-mys-long.jsonl`;
+  pre-split pilot log
+  `docs/memory/agent-evals/logs/dsv4-flash-low-marks-v1.jsonl`; split-tool
   changed-run artifact pending
 
 ## 2026-08-30 — Exact `DONE` terminal output

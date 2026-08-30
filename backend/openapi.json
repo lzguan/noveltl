@@ -7689,6 +7689,18 @@
           "memoryType": {
             "$ref": "#/components/schemas/MemoryType"
           },
+          "mark": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mark"
+          },
           "memoryContent": {
             "type": "string",
             "minLength": 1,
@@ -9421,6 +9433,18 @@
             "$ref": "#/components/schemas/MemoryType",
             "description": "Kind of information stored: a fact, event, definition, or relation."
           },
+          "mark": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mark",
+            "description": "Optional application-defined category used to narrow memory retrieval."
+          },
           "memoryContent": {
             "type": "string",
             "title": "Memorycontent",
@@ -9473,6 +9497,7 @@
         "required": [
           "memoryId",
           "memoryType",
+          "mark",
           "memoryContent",
           "memoryStartNum",
           "memoryReviewStatus",

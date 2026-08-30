@@ -70,6 +70,8 @@ def inspect_terms(
     *,
     active_only: bool = True,
     include_rejected: bool = False,
+    marks: Sequence[str] | None = None,
+    term_search: str | None = None,
 ) -> Page[AgentGlossaryMemory[UUID]]:
     # TODO: Make retrieval alias-aware. Exact-name lookup can miss a conflicting
     # memory stored under another alias of the same entity. This likely needs a
@@ -102,6 +104,10 @@ def inspect_terms(
             query = query.where(Memory.memory_review_status != ReviewStatus.REJECTED)
         if memory_types is not None:
             query = query.where(Memory.memory_type.in_(memory_types))
+        if marks is not None:
+            query = query.where(Memory.mark.in_(marks))
+        if term_search is not None:
+            query = query.where(Memory.memory_content.icontains(term_search, autoescape=True))
         return query
 
     count = db.scalar(select(func.count()).select_from(build_memory_query().subquery())) or 0
@@ -239,8 +245,18 @@ def create_memory(
     term_names: list[str],
     content: str,
     scope: Scope | None = None,
+    mark: str | None = None,
 ) -> tuple[Memory, list[GlossaryAssociation]]:
-    new_memory = write_memory(db, ctx, mem_type, content, creator, GLOSSARY_PLUGIN_NAME, scope)
+    new_memory = write_memory(
+        db,
+        ctx,
+        mem_type,
+        content,
+        creator,
+        GLOSSARY_PLUGIN_NAME,
+        scope,
+        mark=mark,
+    )
     glossary_associations = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, term_names)
     return new_memory, list(glossary_associations)
 
@@ -253,6 +269,7 @@ def supersede_memory(
     mem_type: MemoryType,
     content: str,
     scope: Scope | None = None,
+    mark: str | None = None,
 ) -> tuple[Memory, list[GlossaryAssociation]]:
     current_term_names = list(
         db.execute(
@@ -267,7 +284,17 @@ def supersede_memory(
         .scalars()
         .all()
     )
-    new_memory = write_memory(db, ctx, mem_type, content, creator, GLOSSARY_PLUGIN_NAME, scope, supersedes_id=memory_id)
+    new_memory = write_memory(
+        db,
+        ctx,
+        mem_type,
+        content,
+        creator,
+        GLOSSARY_PLUGIN_NAME,
+        scope,
+        supersedes_id=memory_id,
+        mark=mark,
+    )
     new_assocs = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, current_term_names)
     return new_memory, new_assocs
 

@@ -14,12 +14,13 @@ from src.memory.agent.toolsets.glossary_events import glossary_event_toolset
 from src.memory.agent.toolsets.glossary_terms import (
     DefinitionMemoryKind,
     FactMemoryKind,
+    RelationMemoryKind,
     glossary_term_toolset,
     new_term_memory,
 )
 from src.memory.exceptions import GlossaryTermNotFoundException
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
-from src.memory.plugins.glossary.types import FactCategory, TermKind
+from src.memory.plugins.glossary.types import FactCategory, RelationCategory, TermKind
 from src.memory.schemas import AgentMemory
 from src.memory.types import MemoryType, ReviewStatus
 from src.schemas import Page
@@ -117,6 +118,15 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
         "minimum": 1,
         "type": "integer",
     }
+    assert term_schema["properties"]["marks"]["anyOf"][0] == {
+        "items": {"$ref": "#/$defs/TermMemoryMark"},
+        "minItems": 1,
+        "type": "array",
+    }
+    assert term_schema["properties"]["term_search"]["anyOf"][0] == {
+        "minLength": 1,
+        "type": "string",
+    }
 
     add_term_schema = glossary_term_toolset.tools["add_term"].function_schema.json_schema
     assert add_term_schema["required"] == ["term_name", "term_kind"]
@@ -146,7 +156,7 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
             "propertyName": "memory_type",
         }
         assert write_schema["$defs"]["DefinitionMemoryKind"]["required"] == ["memory_type"]
-        assert write_schema["$defs"]["RelationMemoryKind"]["required"] == ["memory_type"]
+        assert write_schema["$defs"]["RelationMemoryKind"]["required"] == ["memory_type", "category"]
         assert write_schema["$defs"]["FactMemoryKind"]["required"] == ["memory_type", "category"]
 
     new_memory_schema = glossary_term_toolset.tools["new_term_memory"].function_schema.json_schema
@@ -160,9 +170,24 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
         "ability",
         "limitation",
     ]
+    assert new_memory_schema["$defs"]["RelationCategory"]["enum"] == [
+        "alias",
+        "kinship",
+        "friendship",
+        "romance",
+        "mentorship",
+        "rank",
+        "membership",
+        "service",
+        "ownership",
+        "alliance",
+        "rivalry",
+        "organizational_hierarchy",
+        "commercial_partnership",
+    ]
 
 
-def test_fact_write_strips_category_markers_and_definition_content_is_unchanged(
+def test_term_write_persists_categories_without_leaking_markers_into_content(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     db = MagicMock(spec=Session)
@@ -182,9 +207,19 @@ def test_fact_write_strips_category_markers_and_definition_content_is_unchanged(
         ["Alpha"],
         DefinitionMemoryKind(memory_type=MemoryType.DEFINITION),
     )
+    new_term_memory(
+        ctx,
+        "[friendship] [friendship] Alpha is friends with Beta.",
+        ["Alpha", "Beta"],
+        RelationMemoryKind(memory_type=MemoryType.RELATION, category=RelationCategory.FRIENDSHIP),
+    )
 
     assert create_memory.call_args_list[0].args[5] == "Alpha is human."
+    assert create_memory.call_args_list[0].args[7] == "species"
     assert create_memory.call_args_list[1].args[5] == "A personal name."
+    assert create_memory.call_args_list[1].args[7] is None
+    assert create_memory.call_args_list[2].args[5] == "Alpha is friends with Beta."
+    assert create_memory.call_args_list[2].args[7] == "friendship"
 
 
 def test_retrieval_tool_result_serializes_agent_models_with_snake_case() -> None:
@@ -195,6 +230,7 @@ def test_retrieval_tool_result_serializes_agent_models_with_snake_case() -> None
                 memory=AgentMemory[str](
                     memory_id="m1",
                     memory_type=MemoryType.FACT,
+                    mark="species",
                     memory_content="Alpha is human.",
                     memory_start_num=1,
                     memory_review_status=ReviewStatus.PENDING,
@@ -224,6 +260,7 @@ def test_retrieval_tool_result_serializes_agent_models_with_snake_case() -> None
                 "memory": {
                     "memory_id": "m1",
                     "memory_type": "fact",
+                    "mark": "species",
                     "memory_content": "Alpha is human.",
                     "memory_start_num": 1,
                     "memory_review_status": "pending",

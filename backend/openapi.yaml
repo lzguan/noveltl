@@ -594,6 +594,12 @@ components:
           format: uuid
           title: Chapterid
           type: string
+        mark:
+          anyOf:
+          - minLength: 1
+            type: string
+          - type: 'null'
+          title: Mark
         memoryContent:
           minLength: 1
           title: Memorycontent
@@ -1866,6 +1872,13 @@ components:
           $ref: '#/components/schemas/Creator'
           description: 'Type of entity that created the memory: a human, an AI agent,
             or a workflow.'
+        mark:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Optional application-defined category used to narrow memory
+            retrieval.
+          title: Mark
         memoryContent:
           description: The contextual information that should inform glossary maintenance
             and novel continuity.
@@ -1911,6 +1924,7 @@ components:
       required:
       - memoryId
       - memoryType
+      - mark
       - memoryContent
       - memoryStartNum
       - memoryReviewStatus

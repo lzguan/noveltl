@@ -89,6 +89,8 @@ def write_memory(
     plugin_name: str,
     scope: Scope | None = None,
     supersedes_id: UUID | None = None,
+    *,
+    mark: str | None = None,
 ) -> Memory:
     cur_chap_num, _ = check_mem_access_ctx(db, ctx)
 
@@ -127,6 +129,7 @@ def write_memory(
         insert(Memory)
         .values(
             memory_type=mem_type,
+            mark=mark,
             memory_observed_in=ctx.chapter_content_id,
             memory_start_num=cur_chap_num,
             memory_end_num=end,

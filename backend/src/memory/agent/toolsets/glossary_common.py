@@ -19,6 +19,7 @@ def create_memory(
     mem_type: MemoryType,
     scope: Scope | None,
     tool_name: str,
+    mark: str | None = None,
 ) -> str:
     """Create a glossary memory and translate its database UUID for the agent."""
     db = ctx.deps.db
@@ -32,6 +33,7 @@ def create_memory(
                 term_names,
                 content,
                 scope,
+                mark,
             )
     except GlossaryTermNotFoundException as exc:
         missing_term_names = access.get_missing_term_names(
@@ -59,6 +61,7 @@ def supersede_memory(
     content: str,
     mem_type: MemoryType,
     scope: Scope | None,
+    mark: str | None = None,
 ) -> str:
     """Supersede a glossary memory and translate its database UUID for the agent."""
     try:
@@ -76,6 +79,7 @@ def supersede_memory(
                 mem_type,
                 content,
                 scope,
+                mark,
             )
     except MemoryNotFoundException as exc:
         raise ModelRetry(

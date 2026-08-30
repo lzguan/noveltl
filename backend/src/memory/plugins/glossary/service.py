@@ -313,6 +313,7 @@ def create_glossary_memory(
     memory_content: str,
     term_ids: list[UUID],
     scope: Scope | None = None,
+    mark: str | None = None,
 ) -> GlossaryMemory:
     _query_editable_group(db, user, memory_group_id)
     unique_term_ids = list(dict.fromkeys(term_ids))
@@ -342,6 +343,7 @@ def create_glossary_memory(
             [term.term for term in terms],
             memory_content,
             scope,
+            mark,
         )
         db.commit()
     except Exception:

@@ -55,6 +55,7 @@ class Memory(Base):
         ),
         nullable=False,
     )
+    mark: Mapped[str | None] = mapped_column(types.String, nullable=True)
     memory_observed_in: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("chapter_contents.chapter_content_id", ondelete="CASCADE"), nullable=False
     )

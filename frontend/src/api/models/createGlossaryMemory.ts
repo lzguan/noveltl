@@ -10,6 +10,7 @@ import type { Scope } from './scope';
 export interface CreateGlossaryMemory {
   chapterContentId: string;
   chapterId: string;
+  mark?: string | null;
   /** @minLength 1 */
   memoryContent: string;
   memoryType: MemoryType;

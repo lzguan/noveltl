@@ -74,6 +74,7 @@ class CreateGlossaryMemory(Model):
     chapter_id: UUID
     chapter_content_id: UUID
     memory_type: MemoryType
+    mark: str | None = Field(default=None, min_length=1)
     memory_content: str = Field(min_length=1)
     term_ids: list[UUID] = Field(min_length=1)
     scope: Scope | None = None

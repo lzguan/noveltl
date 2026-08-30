@@ -9,7 +9,7 @@ from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets import glossary_common
 from src.memory.plugins.glossary import access
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
-from src.memory.plugins.glossary.types import FactCategory, TermKind
+from src.memory.plugins.glossary.types import FactCategory, RelationCategory, TermKind
 from src.memory.schemas import AgentModel
 from src.memory.types import MemoryType, Scope
 from src.schemas import Page
@@ -24,6 +24,7 @@ class DefinitionMemoryKind(AgentModel):
 
 class RelationMemoryKind(AgentModel):
     memory_type: Literal[MemoryType.RELATION]
+    category: RelationCategory
 
 
 class FactMemoryKind(AgentModel):
@@ -35,6 +36,7 @@ type TermMemoryKind = Annotated[
     DefinitionMemoryKind | RelationMemoryKind | FactMemoryKind,
     Field(discriminator="memory_type"),
 ]
+type TermMemoryMark = FactCategory | RelationCategory
 
 """
 TODO: Add decorator instead of manual uuid translation.
@@ -70,12 +72,16 @@ in the initial context.
 `term_memories` retrieves active `def`, `rel`, and `fact` memories for one exact
 term. Form concrete candidates first, then request only one candidate term and
 the types needed for those candidates. Multiple types may be combined when they
-all correspond to real candidates for that same term. Results are newest-first.
-Start with the default page. Request another page only when its count shows it
-is necessary, repeating exactly the same `term_name` and `memory_types` and
-changing only `skip`. Never retrieve merely because a known term appears,
-request generic history, or fetch every detected term. Skip retrieval when the
-associated term was added in the current run.
+all correspond to real candidates for that same term. Use `marks` to request
+only relevant fact or relation categories. Use `term_search` for a literal,
+case-insensitive substring that should occur in the memory text. When both are
+provided, a memory must match both. Filters apply before pagination, so prefer
+a justified filter over paging through unrelated memories. Results are
+newest-first. Request another page only when the filtered count shows it is
+necessary, repeating the same filters and changing only `skip`. Never retrieve
+merely because a known term appears, request generic history, or fetch every
+detected term. Skip retrieval when the associated term was added in the current
+run.
 
 `def` is the intrinsic identity or meaning of exactly one term. Definitions are
 normally appropriate only for a `technique`, `item`, `concept`, `title`, or
@@ -88,13 +94,32 @@ corrects or completes that meaning. A definition is not a biography, plot
 history, relationship, ownership record, current state, or a default companion
 to term creation.
 
-`rel` is an explicit, continuity-relevant relationship between two or more
-terms. Associate every participant. Prioritize aliases, family, mentorship,
-rank, membership, ownership, alliance, rivalry, and organizational hierarchy.
-Do not record co-occurrence, temporary cooperation, transactions, actions, or
-shared participation in an occurrence as relations. Before writing, query
-`rel` on one existing participant most likely to reveal the candidate relation.
-Skip retrieval only when every participant is new.
+`rel` is one explicit, continuity-relevant relationship between two or more
+terms. Associate every participant and select exactly one allowed category:
+
+- `alias`: two source terms name the same entity or identity.
+- `kinship`: a family relationship.
+- `friendship`: an explicitly established friendship.
+- `romance`: an explicitly established romantic relationship.
+- `mentorship`: a teacher, mentor, master, or student relationship.
+- `rank`: a durable title or rank held relative to a group.
+- `membership`: belonging to an organization or stable group.
+- `service`: durable employment, sworn service, or a servant relationship.
+- `ownership`: durable ownership of a named term by another term.
+- `alliance`: an ongoing formal or durable alliance.
+- `rivalry`: an ongoing explicit rivalry, not vague hostility.
+- `organizational_hierarchy`: a durable superior, subordinate, branch, or
+  parent-organization relationship.
+- `commercial_partnership`: an ongoing business partnership, not a purchase,
+  sale, or one-time transaction.
+
+Friendship and romance may coexist; do not replace one with the other unless
+the source explicitly ends the older relationship. Do not record co-occurrence,
+temporary cooperation, ordinary transactions, actions, location, vague
+enmity, or shared participation in an occurrence as relations. Before writing,
+query `rel` on one existing participant most likely to reveal the candidate
+relation, using its category mark when known. Skip retrieval only when every
+participant is new.
 
 `fact` is an explicitly stated, continuity-critical attribute of one primary
 term. Facts must be extremely rare; most chapters need no new facts. Record no
@@ -174,8 +199,10 @@ def term_memories(
     memory_types: Annotated[list[TermMemoryType], Field(min_length=1)],
     skip: Annotated[int, Field(ge=0)] = 0,
     limit: Annotated[int, Field(ge=1, le=20)] = 5,
+    marks: Annotated[list[TermMemoryMark] | None, Field(min_length=1)] = None,
+    term_search: Annotated[str | None, Field(min_length=1)] = None,
 ) -> Page[AgentGlossaryMemory[str]]:
-    """See a page of active definitions, relations, and facts for one exact glossary term."""
+    """See filtered active definitions, relations, and facts for one exact glossary term."""
     page = access.inspect_terms(
         ctx.deps.db,
         ctx.deps.mem_access_context,
@@ -183,6 +210,8 @@ def term_memories(
         memory_types,
         skip,
         limit,
+        marks=None if marks is None else [mark.value for mark in marks],
+        term_search=term_search,
     )
     return glossary_common.to_agent_memory_page(ctx, page)
 
@@ -217,8 +246,8 @@ def new_term_memory(
     scope: Scope | None = None,
 ) -> str:
     """Create a definition, relation, or categorized fact for exact glossary terms."""
-    mem_type, content = _prepare_memory(memory_kind, content)
-    return glossary_common.create_memory(ctx, content, term_names, mem_type, scope, "new_term_memory")
+    mem_type, content, mark = _prepare_memory(memory_kind, content)
+    return glossary_common.create_memory(ctx, content, term_names, mem_type, scope, "new_term_memory", mark)
 
 
 def supersede_term_memory(
@@ -229,8 +258,8 @@ def supersede_term_memory(
     scope: Scope | None = None,
 ) -> str:
     """Supersede an active definition, relation, or categorized fact from an earlier chapter."""
-    mem_type, content = _prepare_memory(memory_kind, content)
-    return glossary_common.supersede_memory(ctx, memory_id, content, mem_type, scope)
+    mem_type, content, mark = _prepare_memory(memory_kind, content)
+    return glossary_common.supersede_memory(ctx, memory_id, content, mem_type, scope, mark)
 
 
 def expire_term_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
@@ -238,12 +267,14 @@ def expire_term_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     return glossary_common.expire_memory(ctx, memory_id, TERM_MEMORY_TYPES)
 
 
-def _prepare_memory(memory_kind: TermMemoryKind, content: str) -> tuple[TermMemoryType, str]:
-    if isinstance(memory_kind, FactMemoryKind):
-        marker = f"[{memory_kind.category.value}]"
+def _prepare_memory(memory_kind: TermMemoryKind, content: str) -> tuple[TermMemoryType, str, str | None]:
+    mark = None
+    if isinstance(memory_kind, (FactMemoryKind, RelationMemoryKind)):
+        mark = memory_kind.category.value
+        marker = f"[{mark}]"
         while content.startswith(marker):
             content = content.removeprefix(marker).lstrip()
-    return memory_kind.memory_type, content
+    return memory_kind.memory_type, content, mark
 
 
 glossary_term_toolset = FunctionToolset(

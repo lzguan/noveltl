@@ -199,6 +199,7 @@ def add_glossary_memory(
             request.memory_content,
             request.term_ids,
             request.scope,
+            request.mark,
         )
     except MemoryGroupNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Memory group not found.") from e

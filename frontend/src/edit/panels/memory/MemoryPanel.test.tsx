@@ -78,6 +78,7 @@ const memory: Memory = {
 	memoryContent: "Lin Fan is the sect's newest inner disciple.",
 	memoryEndNum: null,
 	memoryId: "memory-1",
+	mark: "ability",
 	memoryReviewStatus: "pending",
 	memoryStartNum: 12,
 	memoryType: "fact",
@@ -181,6 +182,7 @@ describe("MemoryPanel", () => {
 			),
 		);
 		expect(await screen.findByText(memory.memoryContent)).toBeVisible();
+		expect(screen.getByText("ability")).toBeVisible();
 
 		fireEvent.click(screen.getByRole("checkbox", { name: "From all chapters" }));
 		await waitFor(() =>
@@ -403,6 +405,9 @@ describe("MemoryPanel", () => {
 		fireEvent.change(screen.getByRole("textbox", { name: "Content" }), {
 			target: { value: "  Lin Fan joined the inner sect.  " },
 		});
+		fireEvent.change(screen.getByRole("textbox", { name: "Mark (optional)" }), {
+			target: { value: "  membership  " },
+		});
 		fireEvent.click(screen.getByRole("button", { name: "Create memory" }));
 
 		await waitFor(() =>
@@ -413,6 +418,7 @@ describe("MemoryPanel", () => {
 				chapterId: "chapter-12",
 				memoryContent: "Lin Fan joined the inner sect.",
 				memoryType: "fact",
+				mark: "membership",
 				scope: null,
 				termIds: ["term-1"],
 			}),

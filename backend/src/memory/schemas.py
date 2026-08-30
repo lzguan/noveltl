@@ -29,6 +29,9 @@ class AgentMemory[KeyT](AgentModel):
         description="Stable identifier to use when superseding, expiring, or otherwise referring to this memory."
     )
     memory_type: MemoryType = Field(description="Kind of information stored: a fact, event, definition, or relation.")
+    mark: str | None = Field(
+        description="Optional application-defined category used to narrow memory retrieval."
+    )
     memory_content: str = Field(
         description="The contextual information that should inform glossary maintenance and novel continuity."
     )
@@ -53,6 +56,9 @@ class Memory(Model):
         description="Stable identifier to use when superseding, expiring, or otherwise referring to this memory."
     )
     memory_type: MemoryType = Field(description="Kind of information stored: a fact, event, definition, or relation.")
+    mark: str | None = Field(
+        description="Optional application-defined category used to narrow memory retrieval."
+    )
     memory_content: str = Field(
         description="The contextual information that should inform glossary maintenance and novel continuity."
     )

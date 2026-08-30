@@ -11,6 +11,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -57,6 +58,7 @@ export function CreateGlossaryMemoryDialog({
 	async function submit(event: React.SubmitEvent<HTMLFormElement>) {
 		event.preventDefault();
 		const memoryContent = form.memoryContent.trim();
+		const mark = form.mark.trim();
 		if (memoryContent.length === 0 || form.selectedTermIds.length === 0) return;
 
 		form.preSend();
@@ -68,6 +70,7 @@ export function CreateGlossaryMemoryDialog({
 					chapterId,
 					memoryContent,
 					memoryType: form.memoryType,
+					mark: mark === "" ? null : mark,
 					scope: form.scope,
 					termIds: form.selectedTermIds,
 				},
@@ -116,6 +119,18 @@ export function CreateGlossaryMemoryDialog({
 								rows={4}
 								required
 								onChange={(event) => form.setMemoryContent(event.target.value)}
+							/>
+						</Field>
+						<Field>
+							<FieldLabel htmlFor="create-glossary-memory-mark">
+								Mark (optional)
+							</FieldLabel>
+							<Input
+								id="create-glossary-memory-mark"
+								value={form.mark}
+								disabled={submitting}
+								placeholder="e.g. ability or friendship"
+								onChange={(event) => form.setMark(event.target.value)}
 							/>
 						</Field>
 						<div className="grid gap-4 sm:grid-cols-2">

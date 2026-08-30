@@ -1491,6 +1491,7 @@ export const ReadMemoryMemoriesMemoryIdGetParams = S.Struct({
 
 export const ReadMemoryMemoriesMemoryIdGet200Response = S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
@@ -1533,6 +1534,7 @@ export const EditMemoryContentMemoriesMemoryIdContentPatchBody = S.Struct({
 
 export const EditMemoryContentMemoriesMemoryIdContentPatch200Response = S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
@@ -1572,6 +1574,7 @@ export const EditMemoryExpirationMemoriesMemoryIdExpirationPatchBody = S.Struct(
 
 export const EditMemoryExpirationMemoriesMemoryIdExpirationPatch200Response = S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
@@ -1611,6 +1614,7 @@ export const EditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchBody = S.Str
 
 export const EditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch200Response = S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
@@ -2271,6 +2275,7 @@ export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemo
   "count": S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet200ResponseCountMin)),
   "rows": S.Array(S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
@@ -2330,6 +2335,7 @@ export const ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChapt
   "rows": S.Array(S.Struct({
   "memory": S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
@@ -2394,6 +2400,7 @@ export const ReadGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGet200
   "rows": S.Array(S.Struct({
   "memory": S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
@@ -2435,9 +2442,11 @@ export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostParam
 
 
 
+
 export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostBody = S.Struct({
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "mark": S.optional(S.Union(S.String.pipe(S.minLength(1)), S.Null)),
   "memoryContent": S.String.pipe(S.minLength(1)),
   "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' }),
   "scope": S.optional(S.Union(S.Literal('local', 'recent', 'persist').annotations({ description: 'The scope of a memory (i.e. how long it should be retained).\n\nLOCAL: Memory is only relevant to the current chapter.\nRECENT: Memory is relevant to the current chapter and a few subsequent chapters.\nPERSIST: Memory is relevant to all chapters and should be retained indefinitely until explicitly superseded or expired.' }), S.Null)),
@@ -2447,6 +2456,7 @@ export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostBody 
 export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost200Response = S.Struct({
   "memory": S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
@@ -2750,6 +2760,7 @@ export const ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemo
   "rows": S.Array(S.Struct({
   "memory": S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
@@ -2849,6 +2860,7 @@ export const ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGet200Response = S.Str
   "count": S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet200ResponseCountMin)),
   "rows": S.Array(S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
@@ -3487,4 +3499,3 @@ export const ReadUserUsersUserNameGet422Response = S.Struct({
   "type": S.String
 })))
 })
-

@@ -85,6 +85,7 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
         MemoryType.FACT,
         ["Alpha"],
         "Alpha has a durable property.",
+        mark="trait",
     )
     relation, _ = create_memory(
         test_db,
@@ -93,6 +94,7 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
         MemoryType.RELATION,
         ["Alpha", "Beta"],
         "Alpha is related to Beta.",
+        mark="friendship",
     )
     event, _ = create_memory(
         test_db,
@@ -115,7 +117,9 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
     test_db.commit()
 
     assert fact.plugin_name == GLOSSARY_PLUGIN_NAME
+    assert fact.mark == "trait"
     assert relation.plugin_name == GLOSSARY_PLUGIN_NAME
+    assert relation.mark == "friendship"
 
     fact_page = inspect_terms(test_db, context, ["Alpha"], [MemoryType.FACT])
     assert fact_page.count == 1
@@ -134,6 +138,39 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
     assert len(first_page.rows) == len(second_page.rows) == 1
     assert first_page.rows[0].memory.memory_id != second_page.rows[0].memory.memory_id
     assert inspect_terms(test_db, context, ["Alpha"], []).model_dump() == {"count": 0, "rows": []}
+
+    marked_page = inspect_terms(
+        test_db,
+        context,
+        ["Alpha"],
+        None,
+        limit=1,
+        marks=["trait"],
+    )
+    assert marked_page.count == 1
+    assert [item.memory.memory_id for item in marked_page.rows] == [fact.memory_id]
+    searched_page = inspect_terms(
+        test_db,
+        context,
+        ["Alpha"],
+        None,
+        term_search="DURABLE",
+    )
+    assert searched_page.count == 1
+    assert [item.memory.memory_id for item in searched_page.rows] == [fact.memory_id]
+    assert inspect_terms(test_db, context, ["Alpha"], None, term_search="%").count == 0
+    assert inspect_terms(test_db, context, ["Alpha"], None, term_search="_").count == 0
+    combined_page = inspect_terms(
+        test_db,
+        context,
+        ["Alpha"],
+        None,
+        marks=["friendship"],
+        term_search="related to beta",
+    )
+    assert combined_page.count == 1
+    assert [item.memory.memory_id for item in combined_page.rows] == [relation.memory_id]
+    assert inspect_terms(test_db, context, ["Alpha"], None, marks=[]).count == 0
 
     event_page = inspect_terms(test_db, context, ["Alpha"], [MemoryType.EVENT])
     assert event_page.count == 1
@@ -154,6 +191,25 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
     )
     assert historical_events.count == 1
     assert [item.memory.memory_id for item in historical_events.rows] == [event.memory_id]
+
+    successor, _ = supersede_memory(
+        test_db,
+        next_context,
+        fact.memory_id,
+        Creator.AGENT,
+        MemoryType.FACT,
+        "Alpha has a replacement property.",
+        mark="ability",
+    )
+    assert successor.mark == "ability"
+    successor_page = inspect_terms(
+        test_db,
+        next_context,
+        ["Alpha"],
+        [MemoryType.FACT],
+        marks=["ability"],
+    )
+    assert [item.memory.memory_id for item in successor_page.rows] == [successor.memory_id]
 
     all_memories = inspect_terms(test_db, context, ["Alpha"], None)
     assert {item.memory.memory_id for item in all_memories.rows} == {

@@ -9,6 +9,7 @@ Generally speaking, a request to get relevant memories will occur within some co
 - `memory_id`
 - `memory_group_id`
 - `memory_type` - what is this memory describing (e.g. event, relation between terms, etc.)
+- `mark` - an optional application-defined category used to narrow retrieval. The database does not restrict its values; the interface creating a memory may do so.
 - `memory_observed_in` - which chapter content the memory was recorded on. Purely for tracking purposes.
 - `memory_start_num` - the first chapter (inclusive) this memory should be available to access. Cannot be null.
 - `memory_end_num` - the last chapter (exclusive) this memory should be available to access. If null, then this memory has no point at which it becomes invalid.
@@ -103,12 +104,23 @@ may duplicate, continue, or supersede existing context.
 
 The glossary term toolset exposes five tools to the agent:
 
-- `term_memories` retrieves up to five active definitions, relations, and facts
-  associated with one specified term.
+- `term_memories` retrieves a page of active definitions, relations, and facts
+  associated with one exact term. It can filter by fact or relation marks and
+  by a literal, case-insensitive piece of memory text. All supplied filters
+  apply before pagination.
 - `add_term` records and classifies a new source-language term.
-- `new_memory` records a memory and associates it with one or more terms.
-- `supersede_memory` ends an older memory and creates its replacement.
-- `expire_memory` ends an older memory without creating a replacement.
+- `new_term_memory` records a definition, categorized fact, or categorized
+  relation and associates it with one or more terms.
+- `supersede_term_memory` ends an older term memory and creates its replacement.
+- `expire_term_memory` ends an older term memory without creating a replacement.
+
+Facts and relations receive a separate `mark` chosen from the categories
+allowed by this toolset. Definitions remain unmarked. The mark is metadata and
+is not included in `memory_content`.
+
+The glossary event toolset separately exposes `term_event_memories`,
+`new_term_event_memory`, and `supersede_term_event_memory`. Event memories are
+not categorized with the fact and relation marks.
 
 The term itself remains in the source language, while memory content is written
 in the language configured by the memory group. The agent processes chapters

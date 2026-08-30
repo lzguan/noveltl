@@ -4,6 +4,33 @@ Entries are ordered newest first. Detailed evidence belongs in a linked run
 report. Planned changes should not be marked accepted before their stated
 evaluation has completed.
 
+## 2026-08-30 — Explicit memory lifecycle decision
+
+- **Status:** not yet evaluated
+- **Change:** give the agent one shared sequence for qualifying a candidate,
+  retrieving relevant older memory, and choosing no write, supersession,
+  expiry, or creation. Define what counts as the same tracked claim separately
+  for definitions, relations, facts, and events.
+- **Objectives:**
+
+  - Reduce duplicate active memories for one changing state or claim.
+  - Increase supersession when a current value changes or a later chapter
+    materially completes the same memory.
+  - Preserve separate compatible facts, relations, and events instead of
+    merging or superseding them merely because they share a broad category.
+
+- **Expected side effects:**
+
+  - The agent may perform more retrieval if it interprets the sequence as a
+    requirement to search without first forming a concrete candidate.
+  - Additional comparison may increase reasoning or output tokens even when it
+    prevents a write.
+
+- **Validation:** at matched checkpoints, inspect whether candidates with an
+  existing active memory correctly result in no write, supersession, expiry, or
+  a justified independent memory. Also compare retrieval calls, writes,
+  duplicate active memories, retries, tokens, cost, and elapsed time.
+
 ## 2026-08-30 — Split glossary memory toolsets
 
 - **Status:** infrastructure change; not yet evaluated as a memory-quality

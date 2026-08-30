@@ -51,6 +51,13 @@ relation only when the same relationship receives a replacement current value.
 Expire it only when the chapter explicitly ends it without replacement.
 Absence is never evidence for expiry. Complementary relations remain separate,
 and approved memories change only on clear textual evidence.
+
+For the shared lifecycle decision, the tracked claim is the particular
+relationship between its participants, not every relation returned for one
+participant or category. Different memberships, possessions, relatives, or
+other compatible relationships may coexist. Treat aliases that express the
+same identity equivalence as the same claim even when they use another known
+name for that identity.
 """.strip()
 
 

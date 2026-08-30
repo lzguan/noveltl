@@ -49,6 +49,14 @@ new current value rather than an account of the change. Expire a fact only when
 it explicitly stops being true without replacement. Absence is never evidence
 for expiry. Complementary facts remain separate, and approved memories change
 only on clear textual evidence.
+
+For the shared lifecycle decision, the tracked claim is the primary subject's
+specific attribute, not the broad category alone: for example, current gender,
+age stage, species, cultivation stage, one appearance feature, one inherent
+trait, one capability, or one limitation. Supersede a previous value of that
+attribute, but create a separate fact for a genuinely independent attribute in
+the same category. A refinement or fuller description of the same capability
+is not an independent ability.
 """.strip()
 
 

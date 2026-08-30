@@ -34,6 +34,11 @@ chapter materially corrects or completes the existing definition, and
 `expire_definition_memory` only when it explicitly stops being true without a
 replacement. Absence is never evidence for expiry. Do not change an approved
 memory without clear textual evidence.
+
+For the shared lifecycle decision, the tracked claim is the exact term's one
+canonical meaning. If an active definition exists, an eligible candidate for
+that term must result in no write, supersession, or expiry—never a second active
+definition.
 """.strip()
 
 

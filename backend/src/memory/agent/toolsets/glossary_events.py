@@ -37,6 +37,11 @@ event. If only the resulting state or relationship matters, use an enabled fact
 or relation toolset instead of duplicating it as an event. A clearly new
 standalone event may skip retrieval; retrieve event history when a candidate
 continues, concludes, or may duplicate an earlier occurrence.
+
+For the shared lifecycle decision, the tracked claim is one occurrence or one
+continuous development. A correction, completion, or replacement of that same
+occurrence may supersede it. A later compatible occurrence is a separate event,
+and a clearly standalone new event does not require speculative retrieval.
 """.strip()
 
 

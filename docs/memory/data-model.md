@@ -90,7 +90,7 @@ view should let users search terms and inspect the memories associated with
 each term across the novel.
 
 Users should also be able to add or rename terms, change the review status of
-terms and memories, edit memory content, change the terms associated with a
+terms and memories, edit memory content and marks, change the terms associated with a
 memory, expire memories, and delete incorrect data. The interface should retain
 the distinction between a term and a memory: approving a term does not
 implicitly approve every memory associated with it, or vice versa.

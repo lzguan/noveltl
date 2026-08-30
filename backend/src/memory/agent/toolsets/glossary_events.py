@@ -12,7 +12,10 @@ from src.schemas import Page
 
 GLOSSARY_EVENT_INSTRUCTIONS = """
 Maintain consequential events associated with exact source-language glossary
-terms. Write event content in the configured memory language.
+terms. Write event prose in the configured memory language, but keep every
+novel-specific term exactly as it appears in the original source language.
+Never translate, romanize, or replace names, titles, places, organizations,
+techniques, items, species, or concepts inside an event memory.
 
 - `term_event_memories`: inspect events associated with specific exact terms.
   Results are newest-first and may include events associated with only some

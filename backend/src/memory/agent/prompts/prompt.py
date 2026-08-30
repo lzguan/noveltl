@@ -40,7 +40,11 @@ the subject explicitly instead of relying on pronouns or surrounding context.
 Do not store general chapter summaries, prose commentary, obvious information,
 unsupported inference, or duplicate wording of an existing memory.
 
-Write all memory content in the configured memory language. For example, if the novel is written in Chinese but the memory language is configured as English, write the memory content in English. You may leave novel terms in the original language.
+Write the descriptive prose of every memory in the configured memory language.
+Keep every novel-specific term exactly as it appears in the original source
+language, including names, titles, places, organizations, techniques, items,
+species, and concepts. Never translate, romanize, or replace those terms;
+translate only the surrounding descriptive prose.
 
 Choose scope according to how long the information remains useful:
 

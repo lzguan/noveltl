@@ -11,6 +11,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiErrorMessage, requestErrorMessage } from "@/lib/apiErrors";
 import { AlertCircleIcon } from "lucide-react";
@@ -31,19 +32,20 @@ export function EditMemoryContentDialog({
 		formState: { errors, isSubmitting },
 		handleSubmit,
 		register,
-	} = useForm<{ memoryContent: string }>({
-		defaultValues: { memoryContent: memory.memoryContent },
+	} = useForm<{ memoryContent: string; mark: string }>({
+		defaultValues: { memoryContent: memory.memoryContent, mark: memory.mark ?? "" },
 	});
 
 	function handleOpenChange(nextOpen: boolean) {
 		if (!nextOpen && !isSubmitting) closeDialog();
 	}
 
-	async function submit(values: { memoryContent: string }) {
+	async function submit(values: { memoryContent: string; mark: string }) {
 		setSubmitError(null);
 		try {
 			const response = await editMemoryContentMemoriesMemoryIdContentPatch(memory.memoryId, {
 				memoryContent: values.memoryContent.trim(),
+				mark: values.mark.trim() === "" ? null : values.mark.trim(),
 			});
 			if (response.status !== 200) {
 				setSubmitError(apiErrorMessage(response.data, "Could not edit the memory."));
@@ -60,9 +62,9 @@ export function EditMemoryContentDialog({
 		<Dialog open onOpenChange={handleOpenChange}>
 			<DialogContent showCloseButton={!isSubmitting}>
 				<DialogHeader>
-					<DialogTitle>Edit memory content</DialogTitle>
+					<DialogTitle>Edit memory</DialogTitle>
 					<DialogDescription>
-						Change the contextual information in this memory.
+						Change the contextual information or retrieval mark.
 					</DialogDescription>
 				</DialogHeader>
 				<form className="flex flex-col gap-6" onSubmit={handleSubmit(submit)}>
@@ -88,6 +90,14 @@ export function EditMemoryContentDialog({
 						/>
 						<FieldError errors={[errors.memoryContent]} />
 					</Field>
+					<Field>
+						<FieldLabel htmlFor="edit-memory-mark">Mark (optional)</FieldLabel>
+						<Input
+							id="edit-memory-mark"
+							disabled={isSubmitting}
+							{...register("mark")}
+						/>
+					</Field>
 					<DialogFooter>
 						<Button
 							type="button"
@@ -98,7 +108,7 @@ export function EditMemoryContentDialog({
 							Cancel
 						</Button>
 						<Button type="submit" disabled={isSubmitting}>
-							{isSubmitting ? "Saving…" : "Save content"}
+							{isSubmitting ? "Saving…" : "Save memory"}
 						</Button>
 					</DialogFooter>
 				</form>

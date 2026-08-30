@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 
 from src.memory.access import MemAccessContext
 from src.memory.agent.dependencies import MemAgentDeps
+from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
 from src.memory.agent.toolsets import glossary_common
-from src.memory.agent.toolsets.glossary_events import glossary_event_toolset
+from src.memory.agent.toolsets.glossary_events import GLOSSARY_EVENT_INSTRUCTIONS, glossary_event_toolset
 from src.memory.agent.toolsets.glossary_terms import (
+    GLOSSARY_TERM_INSTRUCTIONS,
     DefinitionMemoryKind,
     FactMemoryKind,
     RelationMemoryKind,
@@ -36,6 +38,16 @@ def _run_context(db: Session) -> RunContext[MemAgentDeps]:
         ),
     )
     return RunContext(deps=deps, model=TestModel(), usage=RunUsage())
+
+
+def test_memory_prompts_preserve_novel_terms_in_the_source_language() -> None:
+    for instructions in (MEMORY_AGENT_PROMPT, GLOSSARY_TERM_INSTRUCTIONS, GLOSSARY_EVENT_INSTRUCTIONS):
+        normalized_instructions = " ".join(instructions.split()).lower()
+        assert (
+            "keep every novel-specific term exactly as it appears in the original source language"
+            in normalized_instructions
+        )
+        assert "never translate, romanize, or replace" in normalized_instructions
 
 
 def test_create_memory_diagnoses_missing_terms_only_after_write_failure(monkeypatch: pytest.MonkeyPatch) -> None:

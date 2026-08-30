@@ -144,7 +144,7 @@ export function MemoryRow<DataT = undefined>({
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
 						<DropdownMenuItem onSelect={() => setEditContentOpen(true)}>
-							<PencilIcon /> Edit content
+							<PencilIcon /> Edit memory
 						</DropdownMenuItem>
 						{additionalDropdownOptions?.map((option) => (
 							<Fragment key={option.key}>

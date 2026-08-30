@@ -45,8 +45,11 @@ TODO: Add decorator instead of manual uuid translation.
 GLOSSARY_TERM_INSTRUCTIONS = """
 Maintain glossary terms and the memories associated with them. A glossary term
 is the exact source-language text that later translation agents may encounter.
-Keep the term itself in the source language, but write every memory in the
-configured memory language.
+Write memory prose in the configured memory language, but keep every
+novel-specific term exactly as it appears in the original source language.
+This includes names, titles, places, organizations, techniques, items,
+species, and concepts. Never translate, romanize, or replace those terms inside
+a memory; translate only the surrounding descriptive prose.
 
 THIS TOOLSET MUST NOT RECORD EVENTS. Never use its tools to store actions,
 occurrences, scene history, or a narrative account of a change. Leave those to

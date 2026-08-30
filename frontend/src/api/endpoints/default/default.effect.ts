@@ -1528,7 +1528,9 @@ export const EditMemoryContentMemoriesMemoryIdContentPatchParams = S.Struct({
 
 
 
+
 export const EditMemoryContentMemoriesMemoryIdContentPatchBody = S.Struct({
+  "mark": S.Union(S.String.pipe(S.minLength(1)), S.Null),
   "memoryContent": S.String.pipe(S.minLength(1))
 })
 

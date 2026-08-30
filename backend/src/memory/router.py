@@ -27,7 +27,7 @@ from src.memory.service import (
     query_memories_at_chapter,
     query_memory_groups,
     query_one_memory,
-    update_memory_content,
+    update_memory,
 )
 from src.memory.types import MemoryType, PluginName
 from src.novels.exceptions import ChapterNotFoundException, NovelNotFoundException
@@ -155,7 +155,7 @@ def edit_memory_content(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     try:
-        update_memory_content(db, current_user, memory_id, request.memory_content)
+        update_memory(db, current_user, memory_id, request.memory_content, request.mark)
         return query_one_memory(db, current_user, memory_id)
     except MemoryNotFoundException as e:
         raise HTTPException(

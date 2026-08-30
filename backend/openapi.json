@@ -10966,11 +10966,24 @@
             "type": "string",
             "minLength": 1,
             "title": "Memorycontent"
+          },
+          "mark": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mark"
           }
         },
         "type": "object",
         "required": [
-          "memoryContent"
+          "memoryContent",
+          "mark"
         ],
         "title": "UpdateMemoryContent"
       },

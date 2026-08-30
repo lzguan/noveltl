@@ -634,15 +634,20 @@ describe("MemoryPanel", () => {
 		await screen.findByText(memory.memoryContent);
 
 		openMenu("Memory actions");
-		fireEvent.click(await screen.findByRole("menuitem", { name: "Edit content" }));
+		fireEvent.click(await screen.findByRole("menuitem", { name: "Edit memory" }));
 		fireEvent.change(screen.getByRole("textbox", { name: "Content" }), {
 			target: { value: "  Updated memory  " },
 		});
-		fireEvent.click(screen.getByRole("button", { name: "Save content" }));
+		expect(screen.getByRole("textbox", { name: "Mark (optional)" })).toHaveValue("ability");
+		fireEvent.change(screen.getByRole("textbox", { name: "Mark (optional)" }), {
+			target: { value: "  limitation  " },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Save memory" }));
 
 		await waitFor(() =>
 			expect(editMemoryContentMemoriesMemoryIdContentPatch).toHaveBeenCalledWith("memory-1", {
 				memoryContent: "Updated memory",
+				mark: "limitation",
 			}),
 		);
 		await waitFor(() =>

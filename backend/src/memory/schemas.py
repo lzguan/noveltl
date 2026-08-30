@@ -104,6 +104,7 @@ MemoryPage = Page[Memory]
 
 class UpdateMemoryContent(Model):
     memory_content: str = Field(min_length=1)
+    mark: str | None = Field(min_length=1)
 
 
 class UpdateReviewStatus(Model):

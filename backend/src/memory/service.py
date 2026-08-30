@@ -194,17 +194,18 @@ def change_review_status(
         raise
 
 
-def update_memory_content(
+def update_memory(
     db: Session,
     user: User,
     memory_id: UUID,
     new_content: str,
+    new_mark: str | None,
 ):
-    """Update the content of a memory."""
+    """Update the editable content and mark of a memory."""
     query = (
         update(Memory)
         .where(Memory.memory_id == memory_id)
-        .values(memory_content=new_content)
+        .values(memory_content=new_content, mark=new_mark)
         .returning(Memory.memory_id)
     )
     query = memory_mod_access_update(query, user)

@@ -6,6 +6,7 @@
  */
 
 export interface UpdateMemoryContent {
+  mark: string | null;
   /** @minLength 1 */
   memoryContent: string;
 }

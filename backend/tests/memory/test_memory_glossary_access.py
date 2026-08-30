@@ -21,7 +21,7 @@ from src.memory.plugins.glossary.access import (
 from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
 from src.memory.plugins.glossary.service import delete_glossary_term
 from src.memory.plugins.glossary.types import TermKind
-from src.memory.service import delete_memory, expire_memory
+from src.memory.service import delete_memory, expire_memory, update_memory
 from src.memory.types import Creator, MemoryType, Scope
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, ChapterContent, Novel, SourceWork
@@ -330,6 +330,15 @@ def test_memory_and_glossary_deletion_preserve_independent_records(test_db: Sess
     assert test_db.get(GlossaryTerm, beta.term_id) is None
     assert test_db.get(Memory, independent.memory_id) is not None
     assert test_db.get(GlossaryAssociation, (beta.term_id, independent.memory_id)) is None
+
+    update_memory(test_db, admin, independent.memory_id, "Beta has an edited property.", "trait")
+    test_db.refresh(independent)
+    assert independent.memory_content == "Beta has an edited property."
+    assert independent.mark == "trait"
+
+    update_memory(test_db, admin, independent.memory_id, independent.memory_content, None)
+    test_db.refresh(independent)
+    assert independent.mark is None
 
     expire_memory(test_db, admin, independent.memory_id, chapter_2.chapter_id)
     test_db.refresh(independent)

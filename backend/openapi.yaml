@@ -3025,12 +3025,19 @@ components:
       type: object
     UpdateMemoryContent:
       properties:
+        mark:
+          anyOf:
+          - minLength: 1
+            type: string
+          - type: 'null'
+          title: Mark
         memoryContent:
           minLength: 1
           title: Memorycontent
           type: string
       required:
       - memoryContent
+      - mark
       title: UpdateMemoryContent
       type: object
     UpdateNovel:

@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 uvicorn_logger = logging.getLogger("uvicorn.info")
@@ -51,6 +51,16 @@ class LogSettings(BaseConfig):
     LOG_OUTPUT: Literal["FILE", "STREAM", "BOTH"] = Field(default="BOTH", min_length=1)
     BACKEND_LOG_DIR: Path = Path("logs")
     MEMORY_AGENT_LOG_DIR: Path = Path("logs")
+    MEMORY_AGENT_LOG_FILENAME: str = Field(default="memory-agent-local.jsonl", min_length=1, max_length=255)
+
+    @field_validator("MEMORY_AGENT_LOG_FILENAME")
+    @classmethod
+    def validate_memory_agent_log_filename(cls, filename: str) -> str:
+        if filename in {".", ".."} or "/" in filename or "\\" in filename:
+            raise ValueError("MEMORY_AGENT_LOG_FILENAME must be a filename, not a path")
+        if not filename.endswith(".jsonl"):
+            raise ValueError("MEMORY_AGENT_LOG_FILENAME must end with .jsonl")
+        return filename
 
 
 database_settings = DatabaseSettings()

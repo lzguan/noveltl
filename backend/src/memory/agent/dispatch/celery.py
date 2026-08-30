@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 AGENT_RESULT_LOG_MARKER = "MEMORY_AGENT_RESULT "
 # Append-only JSONL sink capturing each completed task's full LLM output
 # (messages) alongside its job id, usage, and identifiers. One JSON object per
-# line; the directory is configurable while the application owns the filename.
-AGENT_RESULT_JSONL_PATH = log_settings.MEMORY_AGENT_LOG_DIR / "memory-agent-output.jsonl"
+# line; both the directory and filename are configurable.
+AGENT_RESULT_JSONL_PATH = log_settings.MEMORY_AGENT_LOG_DIR / log_settings.MEMORY_AGENT_LOG_FILENAME
 
 
 def _build_agent_result_payload(completed_task: CompletedMemoryTask) -> dict:

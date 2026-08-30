@@ -107,10 +107,11 @@ services:
       SECRET_KEY: ${SECRET_KEY} # purely to not crash on startup
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       MEMORY_AGENT_LOG_DIR: ${MEMORY_AGENT_LOG_DIR:-logs}
+      MEMORY_AGENT_LOG_FILENAME: ${MEMORY_AGENT_LOG_FILENAME}
     volumes:
       - ./backend:/home/newuser/backend
       - /home/newuser/backend/.venv
-      - ./logs:/home/newuser/backend/logs
+      - ./docs/memory/agent-evals/logs:/home/newuser/backend/logs
     profiles:
       - manual
 

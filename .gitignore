@@ -23,3 +23,7 @@ playwright-mcp-output
 tsconfig.tsbuildinfo
 tmp
 logs/
+docs/memory/agent-evals/corpora.local.md
+!docs/memory/agent-evals/logs/
+!docs/memory/agent-evals/logs/README.md
+docs/memory/agent-evals/logs/*.jsonl

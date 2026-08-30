@@ -70,7 +70,7 @@ def inspect_terms(
     *,
     active_only: bool = True,
     include_rejected: bool = False,
-    marks: Sequence[str] | None = None,
+    marks: Sequence[str | None] | None = None,
     term_search: str | None = None,
 ) -> Page[AgentGlossaryMemory[UUID]]:
     # TODO: Make retrieval alias-aware. Exact-name lookup can miss a conflicting
@@ -105,7 +105,13 @@ def inspect_terms(
         if memory_types is not None:
             query = query.where(Memory.memory_type.in_(memory_types))
         if marks is not None:
-            query = query.where(Memory.mark.in_(marks))
+            non_null_marks = [mark for mark in marks if mark is not None]
+            mark_filters = []
+            if non_null_marks:
+                mark_filters.append(Memory.mark.in_(non_null_marks))
+            if None in marks:
+                mark_filters.append(Memory.mark.is_(None))
+            query = query.where(or_(*mark_filters) if mark_filters else Memory.mark.in_([]))
         if term_search is not None:
             query = query.where(Memory.memory_content.icontains(term_search, autoescape=True))
         return query

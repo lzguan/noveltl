@@ -46,6 +46,15 @@ language, including names, titles, places, organizations, techniques, items,
 species, and concepts. Never translate, romanize, or replace those terms;
 translate only the surrounding descriptive prose.
 
+For example, when the source language is Chinese and the memory language is
+English:
+
+- Correct: `赤岚司 guards the northern archive.`
+- Wrong: `Crimson Mist Bureau guards the northern archive.` The novel term was
+  translated.
+- Wrong: `赤岚司守卫着北方档案馆。` The surrounding prose was not written in
+  the configured memory language.
+
 Choose scope according to how long the information remains useful:
 
 - `local`: only the current chapter.

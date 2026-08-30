@@ -19,6 +19,7 @@ from src.memory.agent.toolsets.glossary_terms import (
     RelationMemoryKind,
     glossary_term_toolset,
     new_term_memory,
+    term_memories,
 )
 from src.memory.exceptions import GlossaryTermNotFoundException
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
@@ -48,6 +49,10 @@ def test_memory_prompts_preserve_novel_terms_in_the_source_language() -> None:
             in normalized_instructions
         )
         assert "never translate, romanize, or replace" in normalized_instructions
+
+    assert "Correct: `赤岚司 guards the northern archive.`" in MEMORY_AGENT_PROMPT
+    assert "Wrong: `Crimson Mist Bureau guards the northern archive.`" in MEMORY_AGENT_PROMPT
+    assert "Wrong: `赤岚司守卫着北方档案馆。`" in MEMORY_AGENT_PROMPT
 
 
 def test_create_memory_diagnoses_missing_terms_only_after_write_failure(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -120,9 +125,11 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
     assert event_schema["properties"]["active_only"] == {"default": True, "type": "boolean"}
 
     term_schema = glossary_term_toolset.tools["term_memories"].function_schema.json_schema
-    assert term_schema["required"] == ["term_name", "memory_types"]
+    assert term_schema["required"] == ["term_name", "memory_type", "mark"]
     assert term_schema["properties"]["term_name"] == {"minLength": 1, "type": "string"}
     assert "term_names" not in term_schema["properties"]
+    assert term_schema["properties"]["memory_type"] == {"$ref": "#/$defs/TermMemoryType"}
+    assert "memory_types" not in term_schema["properties"]
     assert term_schema["properties"]["skip"] == {"default": 0, "minimum": 0, "type": "integer"}
     assert term_schema["properties"]["limit"] == {
         "default": 5,
@@ -130,11 +137,8 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
         "minimum": 1,
         "type": "integer",
     }
-    assert term_schema["properties"]["marks"]["anyOf"][0] == {
-        "items": {"$ref": "#/$defs/TermMemoryMark"},
-        "minItems": 1,
-        "type": "array",
-    }
+    assert term_schema["properties"]["mark"]["anyOf"][0] == {"$ref": "#/$defs/TermMemoryMark"}
+    assert "marks" not in term_schema["properties"]
     assert term_schema["properties"]["term_search"]["anyOf"][0] == {
         "minLength": 1,
         "type": "string",
@@ -288,3 +292,24 @@ def test_retrieval_tool_result_serializes_agent_models_with_snake_case() -> None
             }
         ],
     }
+
+
+def test_term_memories_forwards_one_type_and_one_mark(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = MagicMock(spec=Session)
+    inspect_terms = Mock(return_value=Page(count=0, rows=[]))
+    monkeypatch.setattr("src.memory.agent.toolsets.glossary_terms.access.inspect_terms", inspect_terms)
+
+    result = term_memories(
+        _run_context(db),
+        "Alpha",
+        MemoryType.FACT,
+        mark=FactCategory.SPECIES,
+        term_search="human",
+    )
+
+    assert result == Page(count=0, rows=[])
+    assert inspect_terms.call_args.args[3] == [MemoryType.FACT]
+    assert inspect_terms.call_args.kwargs == {"marks": ["species"], "term_search": "human"}
+
+    term_memories(_run_context(db), "Alpha", MemoryType.DEFINITION, None)
+    assert inspect_terms.call_args.kwargs == {"marks": [None], "term_search": None}

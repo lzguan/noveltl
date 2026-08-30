@@ -72,15 +72,16 @@ term does not require creating any memory for it. Never invent a definition or
 another memory merely to accompany a new term. Never add a term already present
 in the initial context.
 
-`term_memories` retrieves active `def`, `rel`, and `fact` memories for one exact
-term. Form concrete candidates first, then request only one candidate term and
-the types needed for those candidates. Multiple types may be combined when they
-all correspond to real candidates for that same term. Use `marks` to request
-only relevant fact or relation categories. Use `term_search` for a literal,
-case-insensitive substring that should occur in the memory text. When both are
-provided, a memory must match both. Filters apply before pagination, so prefer
-a justified filter over paging through unrelated memories. Results are
-newest-first. Request another page only when the filtered count shows it is
+`term_memories` retrieves active `def`, `rel`, or `fact` memories for one exact
+term and one memory type. Form one concrete candidate first, then request only
+the type needed to evaluate that candidate. Never combine tentative candidates
+into a generic lookup. A fact or relation candidate must have a category before
+retrieval; provide its matching `mark` whenever querying `fact` or `rel`. Omit
+`mark` for definitions. Use `term_search` for a literal, case-insensitive
+substring that should occur in the memory text. When `mark` and `term_search`
+are both provided, a memory must match both. Filters apply before pagination,
+so prefer a justified filter over paging through unrelated memories. Results
+are newest-first. Request another page only when the filtered count shows it is
 necessary, repeating the same filters and changing only `skip`. Never retrieve
 merely because a known term appears, request generic history, or fetch every
 detected term. Skip retrieval when the associated term was added in the current
@@ -199,10 +200,10 @@ def _initial_glossary_context(ctx: RunContext[MemAgentDeps]) -> str:
 def term_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
-    memory_types: Annotated[list[TermMemoryType], Field(min_length=1)],
+    memory_type: TermMemoryType,
+    mark: TermMemoryMark | None,
     skip: Annotated[int, Field(ge=0)] = 0,
     limit: Annotated[int, Field(ge=1, le=20)] = 5,
-    marks: Annotated[list[TermMemoryMark] | None, Field(min_length=1)] = None,
     term_search: Annotated[str | None, Field(min_length=1)] = None,
 ) -> Page[AgentGlossaryMemory[str]]:
     """See filtered active definitions, relations, and facts for one exact glossary term."""
@@ -210,10 +211,10 @@ def term_memories(
         ctx.deps.db,
         ctx.deps.mem_access_context,
         [term_name],
-        memory_types,
+        [memory_type],
         skip,
         limit,
-        marks=None if marks is None else [mark.value for mark in marks],
+        marks=[None if mark is None else mark.value],
         term_search=term_search,
     )
     return glossary_common.to_agent_memory_page(ctx, page)

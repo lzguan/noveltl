@@ -104,9 +104,10 @@ may duplicate, continue, or supersede existing context.
 
 The glossary term toolset exposes five tools to the agent:
 
-- `term_memories` retrieves a page of active definitions, relations, and facts
-  associated with one exact term. It can filter by fact or relation marks and
-  by a literal, case-insensitive piece of memory text. All supplied filters
+- `term_memories` retrieves a page of active definitions, relations, or facts
+  for one exact term and one memory type. It accepts at most one fact or
+  relation mark and can filter by a literal, case-insensitive piece of memory
+  text. A null mark retrieves only unmarked memories. All supplied filters
   apply before pagination.
 - `add_term` records and classifies a new source-language term.
 - `new_term_memory` records a definition, categorized fact, or categorized

@@ -149,6 +149,10 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
     )
     assert marked_page.count == 1
     assert [item.memory.memory_id for item in marked_page.rows] == [fact.memory_id]
+    unmarked_page = inspect_terms(test_db, context, ["Alpha"], None, marks=[None])
+    assert {item.memory.memory_id for item in unmarked_page.rows} == {event.memory_id}
+    mixed_mark_page = inspect_terms(test_db, context, ["Alpha"], None, marks=[None, "trait"])
+    assert {item.memory.memory_id for item in mixed_mark_page.rows} == {event.memory_id, fact.memory_id}
     searched_page = inspect_terms(
         test_db,
         context,

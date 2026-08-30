@@ -4,6 +4,36 @@ Entries are ordered newest first. Detailed evidence belongs in a linked run
 report. Planned changes should not be marked accepted before their stated
 evaluation has completed.
 
+## 2026-08-30 — Split glossary memory toolsets
+
+- **Status:** infrastructure change; not yet evaluated as a memory-quality
+  improvement
+- **Change:** make term creation, definitions, relations, facts, and events five
+  independently configurable toolsets. Give definitions, relations, and facts
+  their own retrieval, creation, supersession, expiry, and instructions. Keep
+  shared glossary context and source-language rules in one prompt block.
+- **Objectives:**
+
+  - Let a job enable only the glossary operations and memory types it needs.
+  - Let later experiments change one memory type's instructions without also
+    changing the others.
+  - Preserve the prior behavior when all five toolsets are enabled, apart from
+    replacing the generic term-memory expiry tool with type-specific expiry
+    tools.
+
+- **Expected side effects:**
+
+  - Enabling fewer toolsets should expose fewer tools and less unrelated
+    instruction text.
+  - With all five enabled, changed tool grouping and tool names may still alter
+    model behavior, token use, or retries. Treat those differences as a change
+    to measure rather than assuming equivalence.
+
+- **Validation:** compare at least one all-toolsets run against a matched run
+  from before the split before using the split as the base for later prompt
+  experiments. Record tool calls, retries, input and output tokens, elapsed
+  time, writes by memory type, duplicate writes, and checkpoint quality.
+
 ## 2026-08-30 — Persisted memory marks and scoped term-memory search
 
 - **Model and settings:** DeepSeek V4 Flash, low thinking

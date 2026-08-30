@@ -196,7 +196,16 @@ async def _run_benchmark_replica(seed: _SeededRun, run_index: int, run_dir: Path
     try:
         results = run_novel(
             seed.database.session_factory,
-            create_agent("deepseek:deepseek-v4-flash-low", ["glossary_terms", "glossary_events"]),
+            create_agent(
+                "deepseek:deepseek-v4-flash-low",
+                [
+                    "glossary_terms",
+                    "glossary_definitions",
+                    "glossary_relations",
+                    "glossary_facts",
+                    "glossary_events",
+                ],
+            ),
             seed.novel_id,
             seed.memory_group_id,
             start_chapter_num=1,
@@ -251,7 +260,13 @@ async def _run_benchmark_replica(seed: _SeededRun, run_index: int, run_dir: Path
                 "startedAt": started_at.isoformat(),
                 "finishedAt": finished_at.isoformat(),
                 "model": "deepseek:deepseek-v4-flash-low",
-                "toolsets": ["glossary_terms", "glossary_events"],
+                "toolsets": [
+                    "glossary_terms",
+                    "glossary_definitions",
+                    "glossary_relations",
+                    "glossary_facts",
+                    "glossary_events",
+                ],
                 "catalog": "tmp/snake-catalog",
                 "novel": "private-snake",
                 "chapterRange": {"startInclusive": 1, "endExclusive": 51},
@@ -305,7 +320,13 @@ async def test_benchmark_snake_chapters_1_through_50_in_parallel(test_url: str) 
                 "finishedAt": finished_at.isoformat(),
                 "parallelRuns": BENCHMARK_RUN_COUNT,
                 "model": "deepseek:deepseek-v4-flash-low",
-                "toolsets": ["glossary_terms", "glossary_events"],
+                "toolsets": [
+                    "glossary_terms",
+                    "glossary_definitions",
+                    "glossary_relations",
+                    "glossary_facts",
+                    "glossary_events",
+                ],
                 "catalog": "tmp/snake-catalog",
                 "novel": "private-snake",
                 "chapterRange": {"startInclusive": 1, "endExclusive": 51},

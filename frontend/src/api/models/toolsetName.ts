@@ -10,5 +10,8 @@ export type ToolsetName = typeof ToolsetName[keyof typeof ToolsetName];
 
 export const ToolsetName = {
   glossary_terms: 'glossary_terms',
+  glossary_definitions: 'glossary_definitions',
+  glossary_relations: 'glossary_relations',
+  glossary_facts: 'glossary_facts',
   glossary_events: 'glossary_events',
 } as const;

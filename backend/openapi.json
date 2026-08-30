@@ -10760,6 +10760,9 @@
         "type": "string",
         "enum": [
           "glossary_terms",
+          "glossary_definitions",
+          "glossary_relations",
+          "glossary_facts",
           "glossary_events"
         ]
       },

@@ -12,6 +12,37 @@ from src.memory.types import Creator, MemoryType, Scope
 from src.schemas import Page
 
 
+def term_memories(
+    ctx: RunContext[MemAgentDeps],
+    term_name: str,
+    memory_type: MemoryType,
+    mark: str | None,
+    skip: int,
+    limit: int,
+    term_search: str | None,
+) -> Page[AgentGlossaryMemory[str]]:
+    """Retrieve one filtered page and translate UUIDs for the agent."""
+    page = access.inspect_terms(
+        ctx.deps.db,
+        ctx.deps.mem_access_context,
+        [term_name],
+        [memory_type],
+        skip,
+        limit,
+        marks=[mark],
+        term_search=term_search,
+    )
+    return to_agent_memory_page(ctx, page)
+
+
+def strip_marker(content: str, category: str) -> str:
+    """Remove legacy category prefixes from agent-supplied memory prose."""
+    marker = f"[{category}]"
+    while content.startswith(marker):
+        content = content.removeprefix(marker).lstrip()
+    return content
+
+
 def create_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
@@ -44,9 +75,10 @@ def create_memory(
         if missing_term_names:
             serialized_terms = json.dumps(missing_term_names, ensure_ascii=False)
             raise ModelRetry(
-                f"Missing glossary terms: {serialized_terms}. Call add_term once for each missing exact term, "
-                f"wait for those calls to succeed, then retry {tool_name} with the same content, scope, and "
-                "complete term_names list. Do not retry before adding the missing terms."
+                f"Missing glossary terms: {serialized_terms}. If add_term is available, call it once for each "
+                f"eligible missing exact term, wait for those calls to succeed, then retry {tool_name} with "
+                "the same content, scope, and complete term_names list. If add_term is not available, do not "
+                "retry this write."
             ) from exc
         raise ModelRetry(
             f"Every memory must reference at least one glossary term. Add the intended exact source term to "

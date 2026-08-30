@@ -1669,7 +1669,7 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet200Response = S.Str
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_events'))
+  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions', 'glossary_relations', 'glossary_facts', 'glossary_events'))
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1726,7 +1726,7 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200Respons
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_events'))
+  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions', 'glossary_relations', 'glossary_facts', 'glossary_events'))
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1769,7 +1769,7 @@ export const ReadMemoryJobsMemoryAgentJobsGet200ResponseItem = S.Struct({
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_events'))
+  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions', 'glossary_relations', 'glossary_facts', 'glossary_events'))
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1807,7 +1807,7 @@ export const AddMemoryJobMemoryAgentJobsPostBody = S.Struct({
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "params": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_events'))
+  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions', 'glossary_relations', 'glossary_facts', 'glossary_events'))
 }),
   "startChapterNum": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyStartChapterNumOneMin)), S.Null))
 })
@@ -1817,7 +1817,7 @@ export const AddMemoryJobMemoryAgentJobsPost201Response = S.Struct({
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_events'))
+  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions', 'glossary_relations', 'glossary_facts', 'glossary_events'))
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1879,7 +1879,7 @@ export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet200Response = S.Struct({
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_events'))
+  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions', 'glossary_relations', 'glossary_facts', 'glossary_events'))
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1914,7 +1914,7 @@ export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200Response = S.St
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_events'))
+  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions', 'glossary_relations', 'glossary_facts', 'glossary_events'))
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1949,7 +1949,7 @@ export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost202Response = S.St
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_events'))
+  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions', 'glossary_relations', 'glossary_facts', 'glossary_events'))
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),

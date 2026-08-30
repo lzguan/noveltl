@@ -11,7 +11,11 @@ from src.languages.models import Language
 from src.memory.access import MemAccessContext
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
+from src.memory.agent.toolsets.glossary_context import GLOSSARY_SHARED_INSTRUCTIONS, initial_glossary_context
+from src.memory.agent.toolsets.glossary_definitions import glossary_definition_toolset
 from src.memory.agent.toolsets.glossary_events import glossary_event_toolset
+from src.memory.agent.toolsets.glossary_facts import glossary_fact_toolset
+from src.memory.agent.toolsets.glossary_relations import glossary_relation_toolset
 from src.memory.agent.toolsets.glossary_terms import glossary_term_toolset
 from src.memory.agent.types import ModelName, ToolsetName
 from src.memory.models import MemoryGroup
@@ -19,8 +23,21 @@ from src.novels.models import Chapter, ChapterContent
 
 toolsets_by_name: dict[ToolsetName, FunctionToolset[MemAgentDeps]] = {
     "glossary_terms": glossary_term_toolset,
+    "glossary_definitions": glossary_definition_toolset,
+    "glossary_relations": glossary_relation_toolset,
+    "glossary_facts": glossary_fact_toolset,
     "glossary_events": glossary_event_toolset,
 }
+
+GLOSSARY_TOOLSET_NAMES: frozenset[ToolsetName] = frozenset(
+    {
+        "glossary_terms",
+        "glossary_definitions",
+        "glossary_relations",
+        "glossary_facts",
+        "glossary_events",
+    }
+)
 
 
 def create_agent(model_name: ModelName, toolsets: list[ToolsetName]) -> Agent[MemAgentDeps, str]:
@@ -37,11 +54,17 @@ def create_agent(model_name: ModelName, toolsets: list[ToolsetName]) -> Agent[Me
         model_settings: OpenAIChatModelSettings = {"extra_body": {"thinking": {"type": "disabled"}}}
     else:  # deepseek:deepseek-v4-flash-low
         model_settings = {"thinking": "low"}
+    glossary_enabled = any(toolset in GLOSSARY_TOOLSET_NAMES for toolset in toolsets)
+    instructions = (
+        [MEMORY_AGENT_PROMPT, GLOSSARY_SHARED_INSTRUCTIONS, initial_glossary_context]
+        if glossary_enabled
+        else MEMORY_AGENT_PROMPT
+    )
     return Agent(
         model="deepseek:deepseek-v4-flash",
         model_settings=model_settings,
         toolsets=[toolsets_by_name[toolset] for toolset in toolsets],
-        instructions=MEMORY_AGENT_PROMPT,
+        instructions=instructions,
         deps_type=MemAgentDeps,
     )
 

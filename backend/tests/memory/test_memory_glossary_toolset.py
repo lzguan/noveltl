@@ -11,17 +11,24 @@ from src.memory.access import MemAccessContext
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
 from src.memory.agent.toolsets import glossary_common
-from src.memory.agent.toolsets.glossary_events import GLOSSARY_EVENT_INSTRUCTIONS, glossary_event_toolset
-from src.memory.agent.toolsets.glossary_terms import (
-    GLOSSARY_TERM_INSTRUCTIONS,
+from src.memory.agent.toolsets.glossary_context import GLOSSARY_SHARED_INSTRUCTIONS
+from src.memory.agent.toolsets.glossary_definitions import (
     definition_memories,
-    fact_memories,
-    glossary_term_toolset,
+    glossary_definition_toolset,
     new_definition_memory,
+)
+from src.memory.agent.toolsets.glossary_events import glossary_event_toolset
+from src.memory.agent.toolsets.glossary_facts import (
+    fact_memories,
+    glossary_fact_toolset,
     new_fact_memory,
+)
+from src.memory.agent.toolsets.glossary_relations import (
+    glossary_relation_toolset,
     new_relation_memory,
     relation_memories,
 )
+from src.memory.agent.toolsets.glossary_terms import glossary_term_toolset
 from src.memory.exceptions import GlossaryTermNotFoundException
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
 from src.memory.plugins.glossary.types import TermKind
@@ -43,7 +50,7 @@ def _run_context(db: Session) -> RunContext[MemAgentDeps]:
 
 
 def test_memory_prompts_preserve_novel_terms_in_the_source_language() -> None:
-    for instructions in (MEMORY_AGENT_PROMPT, GLOSSARY_TERM_INSTRUCTIONS, GLOSSARY_EVENT_INSTRUCTIONS):
+    for instructions in (MEMORY_AGENT_PROMPT, GLOSSARY_SHARED_INSTRUCTIONS):
         normalized_instructions = " ".join(instructions.split()).lower()
         assert (
             "keep every novel-specific term exactly as it appears in the original source language"
@@ -98,26 +105,7 @@ def test_create_memory_skips_missing_term_query_after_success(monkeypatch: pytes
     get_missing_term_names.assert_not_called()
 
 
-def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
-    assert set(glossary_term_toolset.tools) == {
-        "add_term",
-        "definition_memories",
-        "expire_term_memory",
-        "fact_memories",
-        "new_definition_memory",
-        "new_fact_memory",
-        "new_relation_memory",
-        "relation_memories",
-        "supersede_definition_memory",
-        "supersede_fact_memory",
-        "supersede_relation_memory",
-    }
-    assert set(glossary_event_toolset.tools) == {
-        "term_event_memories",
-        "new_term_event_memory",
-        "supersede_term_event_memory",
-    }
-
+def test_glossary_tool_schemas_enforce_input_constraints() -> None:
     event_schema = glossary_event_toolset.tools["term_event_memories"].function_schema.json_schema
     assert event_schema["properties"]["skip"] == {"default": 0, "minimum": 0, "type": "integer"}
     assert event_schema["properties"]["limit"] == {
@@ -128,12 +116,12 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
     }
     assert event_schema["properties"]["active_only"] == {"default": True, "type": "boolean"}
 
-    for tool_name, required in (
-        ("definition_memories", ["term_name"]),
-        ("relation_memories", ["term_name", "category"]),
-        ("fact_memories", ["term_name", "category"]),
+    for toolset, tool_name, required in (
+        (glossary_definition_toolset, "definition_memories", ["term_name"]),
+        (glossary_relation_toolset, "relation_memories", ["term_name", "category"]),
+        (glossary_fact_toolset, "fact_memories", ["term_name", "category"]),
     ):
-        term_schema = glossary_term_toolset.tools[tool_name].function_schema.json_schema
+        term_schema = toolset.tools[tool_name].function_schema.json_schema
         assert term_schema["required"] == required
         assert term_schema["properties"]["term_name"] == {"minLength": 1, "type": "string"}
         assert "memory_kind" not in term_schema["properties"]
@@ -164,32 +152,37 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
         "species",
         "other",
     ]
-    for tool_name, required in (
-        ("new_definition_memory", ["content", "term_names"]),
-        ("new_relation_memory", ["content", "term_names", "category"]),
-        ("new_fact_memory", ["content", "term_names", "category"]),
-        ("supersede_definition_memory", ["memory_id", "content"]),
-        ("supersede_relation_memory", ["memory_id", "content", "category"]),
-        ("supersede_fact_memory", ["memory_id", "content", "category"]),
+    for toolset, tool_name, required in (
+        (glossary_definition_toolset, "new_definition_memory", ["content", "term_names"]),
+        (glossary_relation_toolset, "new_relation_memory", ["content", "term_names", "category"]),
+        (glossary_fact_toolset, "new_fact_memory", ["content", "term_names", "category"]),
+        (glossary_definition_toolset, "supersede_definition_memory", ["memory_id", "content"]),
+        (
+            glossary_relation_toolset,
+            "supersede_relation_memory",
+            ["memory_id", "content", "category"],
+        ),
+        (glossary_fact_toolset, "supersede_fact_memory", ["memory_id", "content", "category"]),
     ):
-        write_schema = glossary_term_toolset.tools[tool_name].function_schema.json_schema
+        write_schema = toolset.tools[tool_name].function_schema.json_schema
         assert write_schema["required"] == required
         assert "memory_kind" not in write_schema["properties"]
         assert "memory_type" not in write_schema["properties"]
 
-    for tool_name in ("new_definition_memory", "new_fact_memory"):
-        term_names_schema = glossary_term_toolset.tools[tool_name].function_schema.json_schema["properties"][
-            "term_names"
-        ]
+    for toolset, tool_name in (
+        (glossary_definition_toolset, "new_definition_memory"),
+        (glossary_fact_toolset, "new_fact_memory"),
+    ):
+        term_names_schema = toolset.tools[tool_name].function_schema.json_schema["properties"]["term_names"]
         assert term_names_schema["minItems"] == 1
         assert term_names_schema["maxItems"] == 1
 
-    relation_term_names_schema = glossary_term_toolset.tools["new_relation_memory"].function_schema.json_schema[
+    relation_term_names_schema = glossary_relation_toolset.tools["new_relation_memory"].function_schema.json_schema[
         "properties"
     ]["term_names"]
     assert relation_term_names_schema["minItems"] == 2
 
-    fact_schema = glossary_term_toolset.tools["new_fact_memory"].function_schema.json_schema
+    fact_schema = glossary_fact_toolset.tools["new_fact_memory"].function_schema.json_schema
     assert fact_schema["properties"]["category"] == {"$ref": "#/$defs/FactCategory"}
     assert fact_schema["$defs"]["FactCategory"]["enum"] == [
         "gender",
@@ -201,7 +194,7 @@ def test_glossary_tool_schemas_separate_term_memories_from_events() -> None:
         "ability",
         "limitation",
     ]
-    relation_schema = glossary_term_toolset.tools["new_relation_memory"].function_schema.json_schema
+    relation_schema = glossary_relation_toolset.tools["new_relation_memory"].function_schema.json_schema
     assert relation_schema["properties"]["category"] == {"$ref": "#/$defs/RelationCategory"}
     assert relation_schema["$defs"]["RelationCategory"]["enum"] == [
         "alias",
@@ -313,7 +306,7 @@ def test_retrieval_tool_result_serializes_agent_models_with_snake_case() -> None
 def test_type_specific_retrieval_forwards_one_type_and_one_mark(monkeypatch: pytest.MonkeyPatch) -> None:
     db = MagicMock(spec=Session)
     inspect_terms = Mock(return_value=Page(count=0, rows=[]))
-    monkeypatch.setattr("src.memory.agent.toolsets.glossary_terms.access.inspect_terms", inspect_terms)
+    monkeypatch.setattr(glossary_common.access, "inspect_terms", inspect_terms)
 
     result = fact_memories(
         _run_context(db),

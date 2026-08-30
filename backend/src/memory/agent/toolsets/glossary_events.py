@@ -12,10 +12,7 @@ from src.schemas import Page
 
 GLOSSARY_EVENT_INSTRUCTIONS = """
 Maintain consequential events associated with exact source-language glossary
-terms. Write event prose in the configured memory language, but keep every
-novel-specific term exactly as it appears in the original source language.
-Never translate, romanize, or replace names, titles, places, organizations,
-techniques, items, species, or concepts inside an event memory.
+terms.
 
 - `term_event_memories`: inspect events associated with specific exact terms.
   Results are newest-first and may include events associated with only some
@@ -23,8 +20,8 @@ techniques, items, species, or concepts inside an event memory.
   false only when older, expired, or superseded history is relevant. Start with
   the default page and request another page only when needed.
 - `new_term_event_memory`: record a short, atomic consequential occurrence or
-  change. Every associated term must already exist; call `add_term` from the
-  glossary term toolset for missing exact terms.
+  change. Every associated term must already exist. For an eligible missing
+  term, call `add_term` when that tool is available; otherwise omit the event.
 - `supersede_term_event_memory`: supersede an active event from an earlier
   chapter only when the current chapter corrects, replaces, or ends it. Do not
   use it on an event created in the current chapter or merely to append a
@@ -36,10 +33,10 @@ only the consequential action and outcome, not a chapter summary. Associate
 only the principal participants or entities needed to retrieve it.
 
 Default to `recent`; use `persist` only for an irreversible or identity-shaping
-event. If only the resulting state or relationship matters, record a `fact` or
-`rel` with the glossary term tools instead of duplicating it as an event. A
-clearly new standalone event may skip retrieval; retrieve event history when a
-candidate continues, concludes, or may duplicate an earlier occurrence.
+event. If only the resulting state or relationship matters, use an enabled fact
+or relation toolset instead of duplicating it as an event. A clearly new
+standalone event may skip retrieval; retrieve event history when a candidate
+continues, concludes, or may duplicate an earlier occurrence.
 """.strip()
 
 

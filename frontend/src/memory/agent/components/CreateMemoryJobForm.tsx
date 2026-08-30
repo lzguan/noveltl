@@ -25,6 +25,50 @@ import { LoaderCircleIcon, PlaySquareIcon } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
+type MemoryJobFormValues = {
+	startChapterNum: string;
+	endChapterNum: string;
+	modelName: ModelName;
+	includeGlossaryTerms: boolean;
+	includeGlossaryDefinitions: boolean;
+	includeGlossaryRelations: boolean;
+	includeGlossaryFacts: boolean;
+	includeGlossaryEvents: boolean;
+};
+
+const TOOLSET_OPTIONS = [
+	{
+		fieldName: "includeGlossaryTerms",
+		toolset: "glossary_terms",
+		label: "Glossary terms",
+		description: "Create and classify new source-language terms.",
+	},
+	{
+		fieldName: "includeGlossaryDefinitions",
+		toolset: "glossary_definitions",
+		label: "Glossary definitions",
+		description: "Read and maintain canonical term meanings.",
+	},
+	{
+		fieldName: "includeGlossaryRelations",
+		toolset: "glossary_relations",
+		label: "Glossary relations",
+		description: "Read and maintain categorized relationships.",
+	},
+	{
+		fieldName: "includeGlossaryFacts",
+		toolset: "glossary_facts",
+		label: "Glossary facts",
+		description: "Read and maintain selected continuity-critical attributes.",
+	},
+	{
+		fieldName: "includeGlossaryEvents",
+		toolset: "glossary_events",
+		label: "Glossary events",
+		description: "Read and maintain consequential occurrences.",
+	},
+] as const;
+
 export function CreateMemoryJobForm({
 	memoryGroupId,
 	onCreated,
@@ -42,33 +86,25 @@ export function CreateMemoryJobForm({
 		handleSubmit,
 		register,
 		reset,
-	} = useForm<{
-		startChapterNum: string;
-		endChapterNum: string;
-		modelName: ModelName;
-		includeGlossaryTerms: boolean;
-		includeGlossaryEvents: boolean;
-	}>({
+	} = useForm<MemoryJobFormValues>({
 		defaultValues: {
 			startChapterNum: "",
 			endChapterNum: "",
 			modelName: "deepseek:deepseek-v4-flash-none",
 			includeGlossaryTerms: true,
+			includeGlossaryDefinitions: true,
+			includeGlossaryRelations: true,
+			includeGlossaryFacts: true,
 			includeGlossaryEvents: true,
 		},
 	});
 
-	async function submit(values: {
-		startChapterNum: string;
-		endChapterNum: string;
-		modelName: ModelName;
-		includeGlossaryTerms: boolean;
-		includeGlossaryEvents: boolean;
-	}) {
+	async function submit(values: MemoryJobFormValues) {
 		setSubmitError(null);
 		const toolsets: ToolsetName[] = [];
-		if (values.includeGlossaryTerms) toolsets.push("glossary_terms");
-		if (values.includeGlossaryEvents) toolsets.push("glossary_events");
+		for (const option of TOOLSET_OPTIONS) {
+			if (values[option.fieldName]) toolsets.push(option.toolset);
+		}
 		const payload: CreateMemoryJob = {
 			memoryGroupId,
 			startChapterNum: values.startChapterNum === "" ? null : Number(values.startChapterNum),
@@ -187,50 +223,39 @@ export function CreateMemoryJobForm({
 								)}
 							/>
 						</Field>
-						<div className="flex items-center gap-2">
-							<Controller
-								control={control}
-								name="includeGlossaryTerms"
-								render={({ field }) => (
-									<Checkbox
-										id="memory-job-glossary-terms-toolset"
-										checked={field.value}
-										disabled={isSubmitting}
-										onCheckedChange={(checked) =>
-											field.onChange(checked === true)
-										}
-									/>
-								)}
-							/>
-							<FieldLabel htmlFor="memory-job-glossary-terms-toolset">
-								Glossary terms
-							</FieldLabel>
+						<div className="flex flex-col gap-3">
+							{TOOLSET_OPTIONS.map((option) => {
+								const id = `memory-job-${option.toolset}-toolset`;
+								return (
+									<div className="flex items-start gap-2" key={option.toolset}>
+										<Controller
+											control={control}
+											name={option.fieldName}
+											render={({ field }) => (
+												<Checkbox
+													id={id}
+													checked={field.value}
+													disabled={isSubmitting}
+													onCheckedChange={(checked) =>
+														field.onChange(checked === true)
+													}
+												/>
+											)}
+										/>
+										<div>
+											<FieldLabel htmlFor={id}>{option.label}</FieldLabel>
+											<p className="text-xs text-muted-foreground">
+												{option.description}
+											</p>
+										</div>
+									</div>
+								);
+							})}
 						</div>
-						<div className="flex items-center gap-2">
-							<Controller
-								control={control}
-								name="includeGlossaryEvents"
-								render={({ field }) => (
-									<Checkbox
-										id="memory-job-glossary-events-toolset"
-										checked={field.value}
-										disabled={isSubmitting}
-										onCheckedChange={(checked) =>
-											field.onChange(checked === true)
-										}
-									/>
-								)}
-							/>
-							<div>
-								<FieldLabel htmlFor="memory-job-glossary-events-toolset">
-									Glossary events
-								</FieldLabel>
-								<p className="text-xs text-muted-foreground">
-									Without glossary terms, events can only reference existing
-									terms.
-								</p>
-							</div>
-						</div>
+						<p className="text-xs text-muted-foreground">
+							Memory toolsets can only write for existing terms when glossary term
+							creation is disabled.
+						</p>
 					</FieldGroup>
 					<DialogFooter>
 						<Button

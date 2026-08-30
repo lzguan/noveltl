@@ -102,28 +102,34 @@ glossary terms that occur in that chapter. Memories are retrieved separately
 and only when the agent has identified a concrete piece of information that
 may duplicate, continue, or supersede existing context.
 
-The glossary term toolset exposes type-specific tools to the agent:
+The glossary plugin exposes complementary toolsets that can be enabled
+independently:
 
-- `definition_memories`, `relation_memories`, and `fact_memories` each retrieve
-  a page of one memory type for one exact term. Relation and fact retrieval
-  requires one literal category, which becomes the retrieval mark; definitions
-  retrieve only unmarked memories. Each tool can also filter by a literal,
-  case-insensitive piece of memory text. All supplied filters apply before
-  pagination.
-- `add_term` records and classifies a new source-language term.
-- `new_definition_memory`, `new_relation_memory`, and `new_fact_memory` record
-  one memory of the corresponding type and associate it with exact terms.
-- `supersede_definition_memory`, `supersede_relation_memory`, and
-  `supersede_fact_memory` end an older memory and create its replacement.
-- `expire_term_memory` ends an older term memory without creating a replacement.
+- `glossary_terms` exposes `add_term`, which records and classifies a new
+  source-language term.
+- `glossary_definitions` exposes definition retrieval, creation, supersession,
+  and expiry for one exact term.
+- `glossary_relations` exposes categorized relation retrieval, creation,
+  supersession, and expiry.
+- `glossary_facts` exposes categorized fact retrieval, creation, supersession,
+  and expiry.
+- `glossary_events` exposes event retrieval, creation, and supersession.
+
+Each retrieval tool returns a page of one memory type. Definition, relation,
+and fact retrieval operates on one exact term. Relation and fact retrieval also
+requires one literal category, which becomes the retrieval mark; definitions
+retrieve only unmarked memories. These tools can filter by a literal,
+case-insensitive piece of memory text, and all filters apply before pagination.
+
+The definition, relation, and fact toolsets each have their own type-specific
+expiry tool. This prevents a job configured for one memory type from expiring a
+different type.
 
 Facts and relations receive a separate `mark` chosen from the categories
-allowed by this toolset. Definitions remain unmarked. The mark is metadata and
-is not included in `memory_content`.
+allowed by their respective toolsets. Definitions remain unmarked. The mark is
+metadata and is not included in `memory_content`.
 
-The glossary event toolset separately exposes `term_event_memories`,
-`new_term_event_memory`, and `supersede_term_event_memory`. Event memories are
-not categorized with the fact and relation marks.
+Event memories are not categorized with the fact and relation marks.
 
 The term itself remains in the source language, while memory content is written
 in the language configured by the memory group. The agent processes chapters

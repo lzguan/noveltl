@@ -2,10 +2,11 @@ import uuid
 from datetime import timedelta
 from typing import Literal
 
+from pydantic import model_validator
 from sqlalchemy import and_, func, insert, literal, or_, select, update
 from sqlalchemy.orm import Session
 
-from src.memory.agent.types import ModelName, ToolsetName
+from src.memory.agent.types import ModelName, ToolsetName, validate_toolset_selection
 from src.memory.models import MemoryChapterTask, MemoryGroup, MemoryJob
 from src.memory.types import JobStatus
 from src.novels.models import Chapter
@@ -15,6 +16,11 @@ from src.schemas import Model
 class JobParams(Model):
     model_name: ModelName
     toolsets: list[ToolsetName]
+
+    @model_validator(mode="after")
+    def validate_toolsets(self) -> "JobParams":
+        validate_toolset_selection(self.toolsets)
+        return self
 
 
 def _owns_job_claim(memory_job_id: uuid.UUID, claim_token: uuid.UUID):

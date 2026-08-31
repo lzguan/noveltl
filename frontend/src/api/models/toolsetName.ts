@@ -14,4 +14,9 @@ export const ToolsetName = {
   glossary_relations: 'glossary_relations',
   glossary_facts: 'glossary_facts',
   glossary_events: 'glossary_events',
+  glossary_gender: 'glossary_gender',
+  glossary_gender_transformation: 'glossary_gender_transformation',
+  glossary_cultivation: 'glossary_cultivation',
+  glossary_system: 'glossary_system',
+  glossary_artifacts: 'glossary_artifacts',
 } as const;

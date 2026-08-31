@@ -115,6 +115,18 @@ independently:
   and expiry.
 - `glossary_events` exposes event retrieval, creation, and supersession.
 
+Optional guidance toolsets add genre- or subject-specific recording rules
+without exposing additional tools:
+
+- `glossary_gender` requires `glossary_facts`.
+- `glossary_gender_transformation` requires both `glossary_gender` and
+  `glossary_facts`.
+- `glossary_cultivation` and `glossary_system` require `glossary_facts`.
+- `glossary_artifacts` requires `glossary_definitions`.
+
+Guidance toolsets are disabled unless selected for a job. Their dependencies
+are validated when the job is created.
+
 Each retrieval tool returns a page of one memory type. Definition, relation,
 and fact retrieval operates on one exact term. Relation and fact retrieval also
 requires one literal category, which becomes the retrieval mark; definitions

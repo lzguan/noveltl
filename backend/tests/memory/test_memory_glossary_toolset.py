@@ -2,14 +2,17 @@ from unittest.mock import MagicMock, Mock
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
 from pydantic_ai import ModelRetry, RunContext, RunUsage
 from pydantic_ai.messages import ToolReturnPart
 from pydantic_ai.models.test import TestModel
 from sqlalchemy.orm import Session
 
 from src.memory.access import MemAccessContext
+from src.memory.agent.agent import resolve_toolsets
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
+from src.memory.agent.tasks.jobs import JobParams
 from src.memory.agent.toolsets import glossary_common
 from src.memory.agent.toolsets.glossary_context import GLOSSARY_SHARED_INSTRUCTIONS
 from src.memory.agent.toolsets.glossary_definitions import (
@@ -29,6 +32,7 @@ from src.memory.agent.toolsets.glossary_relations import (
     relation_memories,
 )
 from src.memory.agent.toolsets.glossary_terms import glossary_term_toolset
+from src.memory.agent.toolsets.guidance.glossary_gender import glossary_gender_toolset
 from src.memory.exceptions import GlossaryTermNotFoundException
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
 from src.memory.plugins.glossary.types import TermKind
@@ -61,6 +65,30 @@ def test_memory_prompts_preserve_novel_terms_in_the_source_language() -> None:
     assert "Correct: `赤岚司 guards the northern archive.`" in MEMORY_AGENT_PROMPT
     assert "Wrong: `Crimson Mist Bureau guards the northern archive.`" in MEMORY_AGENT_PROMPT
     assert "Wrong: `赤岚司守卫着北方档案馆。`" in MEMORY_AGENT_PROMPT
+
+
+def test_guidance_toolsets_add_no_callable_tools_and_resolve_in_canonical_order() -> None:
+    resolved = resolve_toolsets(["glossary_gender", "glossary_facts"])
+
+    assert resolved == [glossary_fact_toolset, glossary_gender_toolset]
+    assert glossary_gender_toolset.tools == {}
+
+
+def test_job_params_reject_guidance_without_required_toolsets() -> None:
+    with pytest.raises(ValidationError, match="Toolset glossary_gender requires: glossary_facts"):
+        JobParams(
+            model_name="deepseek:deepseek-v4-flash-low",
+            toolsets=["glossary_gender"],
+        )
+
+    with pytest.raises(
+        ValidationError,
+        match="Toolset glossary_gender_transformation requires: glossary_gender",
+    ):
+        JobParams(
+            model_name="deepseek:deepseek-v4-flash-low",
+            toolsets=["glossary_facts", "glossary_gender_transformation"],
+        )
 
 
 def test_create_memory_diagnoses_missing_terms_only_after_write_failure(monkeypatch: pytest.MonkeyPatch) -> None:

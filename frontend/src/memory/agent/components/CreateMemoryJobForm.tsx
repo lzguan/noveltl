@@ -34,6 +34,11 @@ type MemoryJobFormValues = {
 	includeGlossaryRelations: boolean;
 	includeGlossaryFacts: boolean;
 	includeGlossaryEvents: boolean;
+	includeGlossaryGender: boolean;
+	includeGlossaryGenderTransformation: boolean;
+	includeGlossaryCultivation: boolean;
+	includeGlossarySystem: boolean;
+	includeGlossaryArtifacts: boolean;
 };
 
 const TOOLSET_OPTIONS = [
@@ -67,6 +72,37 @@ const TOOLSET_OPTIONS = [
 		label: "Glossary events",
 		description: "Read and maintain consequential occurrences.",
 	},
+	{
+		fieldName: "includeGlossaryGender",
+		toolset: "glossary_gender",
+		label: "Gender guidance",
+		description: "Track explicitly established gender. Requires glossary facts.",
+	},
+	{
+		fieldName: "includeGlossaryGenderTransformation",
+		toolset: "glossary_gender_transformation",
+		label: "Gender transformation guidance",
+		description:
+			"Distinguish lasting changes, reveals, disguises, bodies, and avatars. Requires gender guidance and glossary facts.",
+	},
+	{
+		fieldName: "includeGlossaryCultivation",
+		toolset: "glossary_cultivation",
+		label: "Cultivation guidance",
+		description: "Track completed cultivation levels and reject temporary boosts. Requires glossary facts.",
+	},
+	{
+		fieldName: "includeGlossarySystem",
+		toolset: "glossary_system",
+		label: "System guidance",
+		description: "Track durable system mechanics and state sparingly. Requires glossary facts.",
+	},
+	{
+		fieldName: "includeGlossaryArtifacts",
+		toolset: "glossary_artifacts",
+		label: "Artifact guidance",
+		description: "Track recurring fantastical objects and lasting changes. Requires glossary definitions.",
+	},
 ] as const;
 
 export function CreateMemoryJobForm({
@@ -96,6 +132,11 @@ export function CreateMemoryJobForm({
 			includeGlossaryRelations: true,
 			includeGlossaryFacts: true,
 			includeGlossaryEvents: true,
+			includeGlossaryGender: false,
+			includeGlossaryGenderTransformation: false,
+			includeGlossaryCultivation: false,
+			includeGlossarySystem: false,
+			includeGlossaryArtifacts: false,
 		},
 	});
 
@@ -135,7 +176,10 @@ export function CreateMemoryJobForm({
 
 	return (
 		<Dialog open onOpenChange={handleOpenChange}>
-			<DialogContent showCloseButton={!isSubmitting}>
+			<DialogContent
+				className="max-h-[calc(100vh-2rem)] overflow-y-auto"
+				showCloseButton={!isSubmitting}
+			>
 				<DialogHeader>
 					<DialogTitle>Create memory-agent job</DialogTitle>
 					<DialogDescription>

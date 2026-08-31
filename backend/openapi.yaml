@@ -2883,6 +2883,11 @@ components:
       - glossary_relations
       - glossary_facts
       - glossary_events
+      - glossary_gender
+      - glossary_gender_transformation
+      - glossary_cultivation
+      - glossary_system
+      - glossary_artifacts
       type: string
     UpdateChapter:
       description: "Pydantic schema to validate data for updating chapter metadata.\n\

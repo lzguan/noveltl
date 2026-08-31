@@ -17,7 +17,14 @@ from src.memory.agent.toolsets.glossary_events import glossary_event_toolset
 from src.memory.agent.toolsets.glossary_facts import glossary_fact_toolset
 from src.memory.agent.toolsets.glossary_relations import glossary_relation_toolset
 from src.memory.agent.toolsets.glossary_terms import glossary_term_toolset
-from src.memory.agent.types import TOOLSET_NAMES, ModelName, ToolsetName
+from src.memory.agent.toolsets.guidance.glossary_artifacts import glossary_artifact_toolset
+from src.memory.agent.toolsets.guidance.glossary_cultivation import glossary_cultivation_toolset
+from src.memory.agent.toolsets.guidance.glossary_gender import glossary_gender_toolset
+from src.memory.agent.toolsets.guidance.glossary_gender_transformation import (
+    glossary_gender_transformation_toolset,
+)
+from src.memory.agent.toolsets.guidance.glossary_system import glossary_system_toolset
+from src.memory.agent.types import TOOLSET_NAMES, ModelName, ToolsetName, validate_toolset_selection
 from src.memory.models import MemoryGroup
 from src.novels.models import Chapter, ChapterContent
 
@@ -27,20 +34,25 @@ toolsets_by_name: dict[ToolsetName, FunctionToolset[MemAgentDeps]] = {
     "glossary_relations": glossary_relation_toolset,
     "glossary_facts": glossary_fact_toolset,
     "glossary_events": glossary_event_toolset,
+    "glossary_gender": glossary_gender_toolset,
+    "glossary_gender_transformation": glossary_gender_transformation_toolset,
+    "glossary_cultivation": glossary_cultivation_toolset,
+    "glossary_system": glossary_system_toolset,
+    "glossary_artifacts": glossary_artifact_toolset,
 }
 
 if set(toolsets_by_name) != set(TOOLSET_NAMES):
     raise RuntimeError("Memory-agent toolset registry does not match TOOLSET_NAMES")
 
-GLOSSARY_TOOLSET_NAMES: frozenset[ToolsetName] = frozenset(
-    {
-        "glossary_terms",
-        "glossary_definitions",
-        "glossary_relations",
-        "glossary_facts",
-        "glossary_events",
-    }
-)
+GLOSSARY_TOOLSET_NAMES: frozenset[ToolsetName] = frozenset(TOOLSET_NAMES)
+
+
+def resolve_toolsets(toolsets: list[ToolsetName]) -> list[FunctionToolset[MemAgentDeps]]:
+    """Validate and resolve names in canonical order for stable prompt caching."""
+
+    validate_toolset_selection(toolsets)
+    selected = set(toolsets)
+    return [toolsets_by_name[name] for name in TOOLSET_NAMES if name in selected]
 
 
 def create_agent(model_name: ModelName, toolsets: list[ToolsetName]) -> Agent[MemAgentDeps, str]:
@@ -57,6 +69,7 @@ def create_agent(model_name: ModelName, toolsets: list[ToolsetName]) -> Agent[Me
         model_settings: OpenAIChatModelSettings = {"extra_body": {"thinking": {"type": "disabled"}}}
     else:  # deepseek:deepseek-v4-flash-low
         model_settings = {"thinking": "low"}
+    resolved_toolsets = resolve_toolsets(toolsets)
     glossary_enabled = any(toolset in GLOSSARY_TOOLSET_NAMES for toolset in toolsets)
     instructions = (
         [MEMORY_AGENT_PROMPT, GLOSSARY_SHARED_INSTRUCTIONS, initial_glossary_context]
@@ -66,7 +79,7 @@ def create_agent(model_name: ModelName, toolsets: list[ToolsetName]) -> Agent[Me
     return Agent(
         model="deepseek:deepseek-v4-flash",
         model_settings=model_settings,
-        toolsets=[toolsets_by_name[toolset] for toolset in toolsets],
+        toolsets=resolved_toolsets,
         instructions=instructions,
         deps_type=MemAgentDeps,
     )

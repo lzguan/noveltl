@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from src.memory.agent.types import TOOLSET_NAMES
+from src.memory.agent.types import TOOLSET_NAMES, validate_toolset_selection
 
 from agent_evals.checkpoints import load_checkpoint
 from agent_evals.corpora import inspect_corpus
@@ -82,10 +82,10 @@ def validate_run_config_context(workspace: EvalWorkspace, config: RunConfig) -> 
             f"corpus range {corpus.first_chapter}-{corpus.last_chapter}"
         )
 
-    available = set(discover_toolset_names())
-    unknown = sorted(toolset.name for toolset in config.agent.toolsets if toolset.name not in available)
-    if unknown:
-        raise RunConfigError(f"Unknown agent toolset(s): {', '.join(unknown)}")
+    try:
+        validate_toolset_selection([toolset.name for toolset in config.agent.toolsets])
+    except ValueError as exc:
+        raise RunConfigError(str(exc)) from exc
 
     for checkpoint_id in config.checkpoints:
         checkpoint = load_checkpoint(workspace, checkpoint_id, validate_context=True)

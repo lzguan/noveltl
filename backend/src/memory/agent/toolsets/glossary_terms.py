@@ -16,6 +16,17 @@ translation-relevant recurring term fits none of the specific kinds. Adding a
 term does not require creating a memory for it. Never add a term merely so
 another enabled toolset has something to write, and never add a term already
 present in the initial glossary context.
+
+Use `person` for an individual or independently recurring persona; `place` for
+a named geographic, political, constructed, or supernatural location;
+`organization` for a named sect, family, government, company, faction, or
+institution; `technique` for a named spell, martial art, cultivation method,
+ritual, or learned skill; `item` for a named unique object or recurring object
+class; `concept` for a setting-specific law, system, energy, phenomenon, or
+abstract mechanism; `title` for a recurring office, rank, honorific, or epithet
+rather than a personal name; and `species` for a race, creature type,
+bloodline species, or named taxonomy. Create separate exact terms for recurring
+aliases and titles, then let relation tools connect them when enabled.
 """.strip()
 
 

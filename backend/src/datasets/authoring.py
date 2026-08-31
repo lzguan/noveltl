@@ -1,3 +1,5 @@
+"""Schema-version-aware catalog authoring services."""
+
 from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 from typing import Any, Protocol
@@ -5,8 +7,9 @@ from typing import Any, Protocol
 from .domain import AutoLabelArtifact, ContentVersionDataset
 from .errors import TestDataError
 from .formats.v1 import authoring as v1_authoring
-from .formats.v1.documents import AutoLabel, ModelConfigDocument
+from .formats.v1.documents import AutoLabel, CatalogDocument, ModelConfigDocument
 from .loader import load_catalog, load_config, load_novel
+from .lockfile import write_lock
 
 ChapterPrediction = tuple[list[AutoLabel], list[dict[str, Any]]]
 Predictor = Callable[[str, object], ChapterPrediction]
@@ -35,6 +38,35 @@ class AuthoringFormat(Protocol):
 
 
 AUTHORING_FORMATS: dict[int, AuthoringFormat] = {1: v1_authoring}
+
+
+def initialize_catalog(catalog_root: Path | str, *, schema_version: int = 1) -> Path:
+    """Create an empty, locked catalog without overwriting an existing directory."""
+    if schema_version != 1:
+        raise TestDataError(f"No authoring support for schema version {schema_version}")
+
+    root = Path(catalog_root).resolve()
+    if root.exists() and any(root.iterdir()):
+        raise TestDataError(f"Catalog destination is not empty: {root}")
+    root.mkdir(parents=True, exist_ok=True)
+    catalog_path = root / "catalog.json"
+    document = CatalogDocument.model_validate(
+        {
+            "$schema": "test-data-catalog.schema.json",
+            "kind": "testDataCatalog",
+            "schemaVersion": schema_version,
+            "configs": [],
+            "novels": [],
+            "relations": [],
+        }
+    )
+    catalog_path.write_text(document.model_dump_json(by_alias=True, indent=2) + "\n", encoding="utf-8")
+    try:
+        write_lock(root)
+    except Exception:
+        catalog_path.unlink(missing_ok=True)
+        raise
+    return root
 
 
 def _format(schema_version: int) -> AuthoringFormat:

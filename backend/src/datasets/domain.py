@@ -1,3 +1,5 @@
+"""Runtime representations of versioned catalog datasets."""
+
 from dataclasses import dataclass, field
 from pathlib import Path
 

@@ -1,9 +1,19 @@
+import json
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import typer
 from pydantic import ValidationError
+from src.datasets.errors import TestDataError
 
+from agent_evals.corpora import (
+    CorpusImportError,
+    CorpusImportSpec,
+    discover_corpora,
+    import_corpus,
+    inspect_corpus,
+    resolve_corpus,
+)
 from agent_evals.schemas import Checkpoint, RunConfig
 from agent_evals.storage import EvalWorkspace, list_files, load_yaml_model
 
@@ -65,11 +75,79 @@ def ui() -> None:
 @corpus_app.command("list")
 def list_corpora() -> None:
     workspace = _workspace()
-    paths = sorted(
-        (path for path in workspace.novels.iterdir() if path.is_dir() and (path / "catalog.json").is_file()),
-        key=lambda path: path.name.casefold(),
-    )
-    _print_paths(paths)
+    try:
+        summaries = discover_corpora(workspace)
+    except (OSError, ValueError, TestDataError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    if not summaries:
+        typer.echo("No entries found.")
+        return
+    for summary in summaries:
+        typer.echo(
+            f"{summary.id}\t{summary.language_code}\t{summary.chapter_count} chapters\t{summary.title}"
+        )
+
+
+@corpus_app.command("validate")
+def validate_corpus(corpus: Annotated[str, typer.Argument(help="Corpus ID or catalog directory")]) -> None:
+    workspace = _workspace()
+    path = resolve_corpus(workspace, corpus)
+    try:
+        summary = inspect_corpus(path, corpus_id=path.name, verify_lock=True)
+    except (OSError, ValueError, TestDataError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"Valid corpus: {summary.id} ({summary.chapter_count} chapters, {summary.fingerprint})")
+
+
+@corpus_app.command("show")
+def show_corpus(corpus: Annotated[str, typer.Argument(help="Corpus ID or catalog directory")]) -> None:
+    workspace = _workspace()
+    path = resolve_corpus(workspace, corpus)
+    try:
+        summary = inspect_corpus(path, corpus_id=path.name)
+    except (OSError, ValueError, TestDataError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(summary.to_dict(), ensure_ascii=False, indent=2))
+
+
+@corpus_app.command("import")
+def import_corpus_command(
+    source: Annotated[
+        Path,
+        typer.Argument(exists=True, readable=True, help="Bulk chapter upload JSON or catalog directory"),
+    ],
+    corpus_id: Annotated[str, typer.Option("--id", help="Stable private corpus ID")],
+    title: Annotated[str | None, typer.Option(help="Novel title; required for upload JSON")] = None,
+    language_code: Annotated[str | None, typer.Option("--language", help="Language code; required for upload JSON")] = None,
+    description: Annotated[str | None, typer.Option()] = None,
+    author: Annotated[str | None, typer.Option()] = None,
+    novel_type: Annotated[
+        Literal["original", "translation", "other"],
+        typer.Option(help="Novel type"),
+    ] = "original",
+) -> None:
+    workspace = _workspace()
+    try:
+        flat_spec = None
+        if source.is_file():
+            if title is None or language_code is None:
+                raise CorpusImportError("--title and --language are required for bulk chapter upload JSON")
+            flat_spec = CorpusImportSpec(
+                id=corpus_id,
+                title=title,
+                language_code=language_code,
+                description=description,
+                author=author,
+                novel_type=novel_type,
+            )
+        summary = import_corpus(source, workspace, corpus_id=corpus_id, flat_spec=flat_spec)
+    except (OSError, ValueError, ValidationError, TestDataError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"Imported corpus: {summary.id} ({summary.chapter_count} chapters, {summary.fingerprint})")
 
 
 @checkpoint_app.command("list")

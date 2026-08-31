@@ -37,7 +37,7 @@ def _create_job(client: TestClient, user: User, memory_group_id: UUID):
             "memoryGroupId": str(memory_group_id),
             "startChapterNum": None,
             "endChapterNum": None,
-            "params": {"modelName": "deepseek:deepseek-v4-pro", "toolsets": []},
+            "params": {"modelName": "deepseek:deepseek-v4-flash-low", "toolsets": []},
         },
     )
 
@@ -58,7 +58,7 @@ def test_memory_agent_router_exposes_authenticated_job_progress_and_dispatch(
     job = response.json()
     memory_job_id = UUID(job["memoryJobId"])
     assert job["memoryGroupId"] == str(group.memory_group_id)
-    assert job["jobParams"] == {"modelName": "deepseek:deepseek-v4-pro", "toolsets": []}
+    assert job["jobParams"] == {"modelName": "deepseek:deepseek-v4-flash-low", "toolsets": []}
     assert client.get(f"/memory-agent/jobs/{memory_job_id}").status_code == status.HTTP_401_UNAUTHORIZED
 
     jobs_response = client.get(

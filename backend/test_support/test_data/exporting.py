@@ -1,10 +1,9 @@
 from pathlib import Path
 
+from src.datasets import load_catalog, load_novel
+from src.datasets.domain import ContentVersionDataset
+from src.datasets.errors import TestDataError
 from src.novels.imports import BulkChapterUploadV1, ChapterUpload
-
-from .domain import ContentVersionDataset
-from .errors import TestDataError
-from .loader import load_catalog, load_novel
 
 
 def _select_content(

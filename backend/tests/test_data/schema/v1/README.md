@@ -2,7 +2,7 @@
 
 This directory defines the first public test-data format. The generated JSON
 Schemas describe individual documents; runtime consumers live in
-`backend/test_support/test_data/formats/v1/` so schema assets remain
+`backend/src/datasets/formats/v1/` so schema assets remain
 language-neutral.
 
 The example has four layers:

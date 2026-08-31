@@ -2,7 +2,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from test_support.test_data.errors import TestDataError
+from src.datasets.errors import TestDataError
 from test_support.test_data.exporting import export_chapter_upload
 
 

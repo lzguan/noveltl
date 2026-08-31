@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from test_support.test_data.errors import LockMismatchError
-from test_support.test_data.lockfile import check_lock, read_lock, write_lock
+from src.datasets.errors import LockMismatchError
+from src.datasets.lockfile import check_lock, read_lock, write_lock
 
 DATASET_ROOT = Path(__file__).parents[1] / "test_data" / "datasets" / "synthetic-smoke"
 LEGACY_DATASET_ROOT = DATASET_ROOT.parent / "legacy-corpora"

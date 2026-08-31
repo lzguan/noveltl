@@ -1,3 +1,5 @@
+"""Errors raised while loading or authoring versioned datasets."""
+
 from pathlib import Path
 
 

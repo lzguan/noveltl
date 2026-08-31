@@ -16,14 +16,13 @@ from sqlalchemy.orm import Session
 from src.auth.constants import UserType
 from src.auth.models import User
 from src.autolabels.models import AutoLabel, AutoLabelRun
+from src.datasets.domain import NovelDataset
+from src.datasets.materializer import MaterializedNovel, make_novel, materialize_novel_contents
 from src.labels.constants import LabelRole
 from src.labels.models import Label, LabelContributor, LabelData, LabelGroup
 from src.languages.models import Language
 from src.novels.constants import NovelType, Role, Visibility
 from src.novels.models import Chapter, ChapterContent, Novel, NovelContributor, SourceWork
-
-from .domain import NovelDataset
-from .materializer import MaterializedNovel, make_novel, materialize_novel_contents
 
 
 class PasswordHash(Protocol):

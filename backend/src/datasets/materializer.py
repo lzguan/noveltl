@@ -1,3 +1,5 @@
+"""Materialize catalog datasets into NovelTL database models."""
+
 import uuid
 from dataclasses import dataclass, field
 

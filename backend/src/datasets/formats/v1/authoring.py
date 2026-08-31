@@ -1,3 +1,5 @@
+"""Author catalog schema version 1 documents."""
+
 import hashlib
 import json
 import os
@@ -24,7 +26,7 @@ from .documents import (
     Reference,
 )
 
-CHAPTER_PATTERN = re.compile(r"chapter-(\d{4})\.txt")
+CHAPTER_PATTERN = re.compile(r"chapter-(\d{4,})\.txt")
 SAFE_ID_PATTERN = re.compile(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?")
 GeneratedArtifact = tuple[
     ContentVersionDataset,

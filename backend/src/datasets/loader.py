@@ -1,3 +1,5 @@
+"""Load versioned catalog documents into runtime dataset objects."""
+
 import json
 from pathlib import Path
 from typing import Any

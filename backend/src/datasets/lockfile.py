@@ -1,3 +1,5 @@
+"""Create and validate content-addressed catalog lock files."""
+
 import hashlib
 import json
 import os

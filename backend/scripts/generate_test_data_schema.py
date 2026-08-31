@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from test_support.test_data.formats.v1 import INPUT_SCHEMA_MODELS, SCHEMA_MODELS
+from src.datasets.formats.v1 import INPUT_SCHEMA_MODELS, SCHEMA_MODELS
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_ROOT = BACKEND_ROOT / "tests" / "test_data" / "schema"

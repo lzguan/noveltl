@@ -36,6 +36,10 @@ reviewing, and reporting will be added as subsequent vertical slices.
 ## Commands
 
 ```bash
+agent-eval corpus import tmp/novel.json --id cn-fantasy-001 \
+  --title "Private evaluation novel" --language zh
+agent-eval corpus validate cn-fantasy-001
+agent-eval corpus show cn-fantasy-001
 agent-eval checkpoint list
 agent-eval checkpoint validate checkpoints/example.yaml
 agent-eval config list
@@ -46,3 +50,8 @@ agent-eval review list
 agent-eval report list
 ```
 
+`corpus import` accepts either an existing single-novel catalog directory or the
+same bulk chapter upload JSON accepted by the backend's `/chapters/upload`
+endpoint. Uploads preserve chapter numbers, titles, visibility, and source text.
+Title and language are required because the upload document does not contain
+novel metadata.

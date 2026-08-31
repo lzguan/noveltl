@@ -5,12 +5,18 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from test_support.test_data import authoring, load_catalog, load_novel
-from test_support.test_data.authoring import _normalize_cluener_errors, add_novel, generate_autolabels, parse_chapters
-from test_support.test_data.errors import TestDataError as InvalidTestDataError
-from test_support.test_data.formats.v1 import authoring as v1_authoring
-from test_support.test_data.formats.v1.documents import AutoLabel, ModelConfigDocument
-from test_support.test_data.lockfile import check_lock
+from src.datasets import authoring, load_catalog, load_novel
+from src.datasets.authoring import (
+    _normalize_cluener_errors,
+    add_novel,
+    generate_autolabels,
+    initialize_catalog,
+    parse_chapters,
+)
+from src.datasets.errors import TestDataError as InvalidTestDataError
+from src.datasets.formats.v1 import authoring as v1_authoring
+from src.datasets.formats.v1.documents import AutoLabel, ModelConfigDocument
+from src.datasets.lockfile import check_lock
 
 DATASET_ROOT = Path(__file__).parents[1] / "test_data" / "datasets" / "synthetic-smoke"
 
@@ -41,6 +47,27 @@ def _write_input(path: Path, *, novel_id: str | None = "new-novel", title: str =
     path.joinpath("novel.json").write_text(json.dumps(value), encoding="utf-8")
     path.joinpath("chapter-0001.txt").write_text("第一章。", encoding="utf-8")
     path.joinpath("chapter-0003.txt").write_text("第三章。", encoding="utf-8")
+
+
+def test_initialize_catalog_creates_loadable_locked_catalog(tmp_path: Path) -> None:
+    catalog_root = tmp_path / "new-catalog"
+
+    assert initialize_catalog(catalog_root) == catalog_root.resolve()
+
+    catalog = load_catalog(catalog_root)
+    assert catalog.novels == {}
+    check_lock(catalog_root)
+
+
+def test_initialize_catalog_refuses_nonempty_destination(tmp_path: Path) -> None:
+    catalog_root = tmp_path / "existing"
+    catalog_root.mkdir()
+    catalog_root.joinpath("private.txt").write_text("preserve me", encoding="utf-8")
+
+    with pytest.raises(InvalidTestDataError, match="not empty"):
+        initialize_catalog(catalog_root)
+
+    assert catalog_root.joinpath("private.txt").read_text(encoding="utf-8") == "preserve me"
 
 
 def test_add_novel_supports_sparse_chapters_and_overrides(dataset_copy: Path, tmp_path: Path) -> None:

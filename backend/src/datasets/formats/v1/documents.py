@@ -1,3 +1,5 @@
+"""Pydantic documents for dataset catalog schema version 1."""
+
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field

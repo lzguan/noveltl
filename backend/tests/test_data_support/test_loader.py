@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from test_support.test_data import load_catalog, load_novel, load_relation
-from test_support.test_data.errors import TestDataError as InvalidTestDataError
+from src.datasets import load_catalog, load_novel, load_relation
+from src.datasets.errors import TestDataError as InvalidTestDataError
 
 DATASET_ROOT = Path(__file__).parents[1] / "test_data" / "datasets" / "synthetic-smoke"
 LEGACY_DATASET_ROOT = DATASET_ROOT.parent / "legacy-corpora"

@@ -15,15 +15,15 @@ from pydantic_ai.usage import RunUsage
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from src.datasets import load_catalog, load_novel
+from src.datasets.domain import NovelDataset
+from src.datasets.materializer import make_novel, materialize_novel_contents
 from src.languages.models import Language
 from src.memory.agent.agent import create_agent, run_novel
 from src.memory.models import Memory, MemoryGroup
 from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
 from src.novels.models import SourceWork
 from test_support.database import TemporaryPostgresDatabase, temporary_postgres_database
-from test_support.test_data import load_catalog, load_novel
-from test_support.test_data.domain import NovelDataset
-from test_support.test_data.materializer import make_novel, materialize_novel_contents
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SNAKE_CATALOG_ROOT = REPO_ROOT / "tmp" / "snake-catalog"

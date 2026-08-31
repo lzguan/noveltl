@@ -2,8 +2,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from test_support.test_data.authoring import add_novel
-from test_support.test_data.errors import TestDataError
+from src.datasets.authoring import add_novel
+from src.datasets.errors import TestDataError
 
 
 def main() -> None:

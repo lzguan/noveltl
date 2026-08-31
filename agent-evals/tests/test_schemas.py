@@ -17,7 +17,7 @@ def valid_run_config() -> dict[str, object]:
         "decision_rule": "Accept when duplicates fall without checkpoint regression.",
         "corpus": "cn-fantasy-001",
         "chapters": {"start_inclusive": 1, "end_inclusive": 250},
-        "checkpoint_sets": ["cn-fantasy-001-core"],
+        "checkpoints": ["cn-fantasy-001-core"],
         "agent": {
             "profile": "deepseek-v4-flash-low",
             "toolsets": [
@@ -106,4 +106,3 @@ def test_checkpoint_preserves_original_language_terms(tmp_path: Path) -> None:
 
     loaded = load_yaml_model(path, Checkpoint)
     assert loaded.expected_memories[0].terms == ["林渊"]
-

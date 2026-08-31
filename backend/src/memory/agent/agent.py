@@ -17,7 +17,7 @@ from src.memory.agent.toolsets.glossary_events import glossary_event_toolset
 from src.memory.agent.toolsets.glossary_facts import glossary_fact_toolset
 from src.memory.agent.toolsets.glossary_relations import glossary_relation_toolset
 from src.memory.agent.toolsets.glossary_terms import glossary_term_toolset
-from src.memory.agent.types import ModelName, ToolsetName
+from src.memory.agent.types import TOOLSET_NAMES, ModelName, ToolsetName
 from src.memory.models import MemoryGroup
 from src.novels.models import Chapter, ChapterContent
 
@@ -28,6 +28,9 @@ toolsets_by_name: dict[ToolsetName, FunctionToolset[MemAgentDeps]] = {
     "glossary_facts": glossary_fact_toolset,
     "glossary_events": glossary_event_toolset,
 }
+
+if set(toolsets_by_name) != set(TOOLSET_NAMES):
+    raise RuntimeError("Memory-agent toolset registry does not match TOOLSET_NAMES")
 
 GLOSSARY_TOOLSET_NAMES: frozenset[ToolsetName] = frozenset(
     {

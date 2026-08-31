@@ -98,7 +98,13 @@ class RunConfig(EvalModel):
     decision_rule: str = Field(min_length=1)
     corpus: Identifier = Field(min_length=1)
     chapters: InclusiveChapterRange
-    checkpoint_sets: list[Identifier] = Field(default_factory=list)
+    checkpoints: list[Identifier] = Field(default_factory=list)
     agent: AgentSpec
     execution: ExecutionSpec = Field(default_factory=ExecutionSpec)
     budget: BudgetSpec = Field(default_factory=BudgetSpec)
+
+    @model_validator(mode="after")
+    def validate_checkpoint_ids(self) -> Self:
+        if len(self.checkpoints) != len(set(self.checkpoints)):
+            raise ValueError("checkpoint IDs must be unique")
+        return self

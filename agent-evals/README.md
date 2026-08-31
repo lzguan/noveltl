@@ -48,8 +48,18 @@ agent-eval checkpoint metric set opening --id protagonist-identity \
   --content "The protagonist reveals his identity." --lifecycle create
 agent-eval checkpoint show opening --json
 agent-eval checkpoint validate opening
-agent-eval config list
-agent-eval config validate run-configs/example.yaml
+agent-eval config toolsets
+agent-eval config create marks-single-query-v1 \
+  --change "Restrict retrieval to one mark per call" \
+  --objective "Reduce wasted context" \
+  --guardrail "Preserve checkpoint coverage" \
+  --decision-rule "Accept if context falls without coverage loss" \
+  --corpus cn-fantasy-001 --start 1 --end 250 \
+  --checkpoint opening --profile deepseek-v4-flash-low \
+  --toolset glossary_terms --toolset glossary_facts
+agent-eval config show marks-single-query-v1
+agent-eval config update marks-single-query-v1 --replicas 3 --max-parallel 2
+agent-eval config validate marks-single-query-v1
 agent-eval corpus list
 agent-eval run list
 agent-eval review list
@@ -69,3 +79,10 @@ same ID, making it safe to use for repeatable scripted edits. Use `checkpoint
 update`, `checkpoint metric remove`, and `checkpoint delete --yes` for the
 remaining non-interactive edits. Checkpoint writes verify that the selected
 corpus exists and that the chapter range falls within it.
+
+Run configs select individual checkpoints and toolsets. Toolset choices are
+read from backend-owned memory-agent metadata through the editable backend
+dependency, and the full agent verifies that its runtime registry matches that
+metadata. The CLI and terminal UI therefore need no separate toolset list.
+Toolset-specific settings remain in the YAML schema but do not yet have an
+authoring interface.

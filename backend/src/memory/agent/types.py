@@ -8,3 +8,11 @@ type ToolsetName = Literal[
     "glossary_facts",
     "glossary_events",
 ]
+
+TOOLSET_NAMES: tuple[ToolsetName, ...] = (
+    "glossary_terms",
+    "glossary_definitions",
+    "glossary_relations",
+    "glossary_facts",
+    "glossary_events",
+)

@@ -6,7 +6,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, VerticalScroll
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Button, DataTable, Footer, Header, Input, Label, Static
+from textual.widgets import Button, Checkbox, DataTable, Footer, Header, Input, Label, Static, TextArea
 
 from agent_evals.checkpoints import (
     CheckpointSummary,
@@ -17,8 +17,17 @@ from agent_evals.checkpoints import (
     save_checkpoint,
 )
 from agent_evals.corpora import CorpusImportSpec, CorpusSummary, discover_corpora, import_corpus, inspect_corpus
-from agent_evals.schemas import Checkpoint, ExpectedMemory
-from agent_evals.storage import EvalWorkspace, list_files
+from agent_evals.run_configs import (
+    RunConfigSummary,
+    create_run_config,
+    delete_run_config,
+    discover_run_configs,
+    discover_toolset_names,
+    load_run_config,
+    save_run_config,
+)
+from agent_evals.schemas import Checkpoint, ExpectedMemory, RunConfig
+from agent_evals.storage import EvalWorkspace
 
 RowsProvider = Callable[[EvalWorkspace], list[tuple[str, str]]]
 
@@ -486,8 +495,260 @@ class CheckpointScreen(Screen[None]):
             self.query_one("#checkpoint-status", Label).update(f"Deleted {checkpoint_id}")
 
 
-def _yaml_rows(directory: Path) -> list[tuple[str, str]]:
-    return [(path.name, str(path)) for path in list_files(directory, {".yaml", ".yml"})]
+def _lines(value: str) -> list[str]:
+    return [line.strip() for line in value.splitlines() if line.strip()]
+
+
+class ConfigEditScreen(ModalScreen[RunConfig | None]):
+    BINDINGS = [Binding("escape", "cancel", "Cancel")]
+
+    def __init__(self, workspace: EvalWorkspace, config: RunConfig | None = None) -> None:
+        super().__init__()
+        self.workspace = workspace
+        self.config = config
+        self.available_toolsets = discover_toolset_names()
+        self.toolset_ids = {name: f"config-toolset-{name.replace('_', '-')}" for name in self.available_toolsets}
+
+    def compose(self) -> ComposeResult:
+        config = self.config
+        execution = config.execution if config else None
+        budget = config.budget if config else None
+        selected = {toolset.name for toolset in config.agent.toolsets} if config else set()
+        with VerticalScroll(classes="dialog", id="config-dialog"):
+            yield Static("Edit run config" if config else "Create run config", classes="screen-title")
+            yield Input(value=config.id if config else "", placeholder="Config ID", id="config-id")
+            yield Input(value=config.change if config else "", placeholder="Change under evaluation", id="config-change")
+            yield Input(value=config.corpus if config else "", placeholder="Corpus ID", id="config-corpus")
+            yield Input(
+                value=str(config.chapters.start_inclusive) if config else "",
+                placeholder="First chapter (inclusive)",
+                id="config-start",
+                type="integer",
+            )
+            yield Input(
+                value=str(config.chapters.end_inclusive) if config else "",
+                placeholder="Last chapter (inclusive)",
+                id="config-end",
+                type="integer",
+            )
+            yield Input(
+                value=", ".join(config.checkpoints) if config else "",
+                placeholder="Checkpoint IDs, comma-separated",
+                id="config-checkpoints",
+            )
+            yield Input(
+                value=config.agent.profile if config else "",
+                placeholder="Agent profile or model preset",
+                id="config-profile",
+            )
+            yield Static("Backend toolsets", classes="section-title")
+            for name in self.available_toolsets:
+                yield Checkbox(name, value=name in selected, id=self.toolset_ids[name])
+            yield Static("Objectives (one per line)", classes="section-title")
+            yield TextArea("\n".join(config.objectives) if config else "", id="config-objectives")
+            yield Static("Expected side effects (one per line)", classes="section-title")
+            yield TextArea(
+                "\n".join(config.expected_side_effects) if config else "",
+                id="config-side-effects",
+            )
+            yield Static("Degradation guardrails (one per line)", classes="section-title")
+            yield TextArea(
+                "\n".join(config.degradation_guardrails) if config else "",
+                id="config-guardrails",
+            )
+            yield Static("Decision rule", classes="section-title")
+            yield TextArea(config.decision_rule if config else "", id="config-decision-rule")
+            yield Static("Execution", classes="section-title")
+            yield Input(
+                value=str(execution.replicas) if execution else "1",
+                placeholder="Replicas",
+                id="config-replicas",
+                type="integer",
+            )
+            yield Input(
+                value=str(execution.max_parallel) if execution else "1",
+                placeholder="Maximum parallel runs",
+                id="config-max-parallel",
+                type="integer",
+            )
+            yield Input(
+                value=str(execution.retries_per_chapter) if execution else "0",
+                placeholder="Retries per chapter",
+                id="config-retries",
+                type="integer",
+            )
+            yield Static("Optional budget", classes="section-title")
+            yield Input(
+                value=str(budget.max_cost_usd) if budget and budget.max_cost_usd is not None else "",
+                placeholder="Maximum cost in USD",
+                id="config-max-cost",
+                type="number",
+            )
+            yield Input(
+                value=str(budget.max_wall_seconds) if budget and budget.max_wall_seconds is not None else "",
+                placeholder="Maximum wall time in seconds",
+                id="config-max-wall",
+                type="integer",
+            )
+            yield Label("", id="config-edit-status")
+            with Horizontal(classes="actions"):
+                yield Button("Save run config", id="save-config", variant="primary")
+                yield Button("Cancel", id="cancel-config")
+
+    def on_mount(self) -> None:
+        if self.config is not None:
+            self.query_one("#config-id", Input).disabled = True
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "cancel-config":
+            self.dismiss(None)
+        elif event.button.id == "save-config":
+            self.save()
+
+    def save(self) -> None:
+        checkpoint_ids = [
+            value.strip()
+            for value in self.query_one("#config-checkpoints", Input).value.split(",")
+            if value.strip()
+        ]
+        existing_settings = (
+            {toolset.name: toolset.settings for toolset in self.config.agent.toolsets}
+            if self.config is not None
+            else {}
+        )
+        selected_toolsets = [
+            {"name": name, "settings": existing_settings.get(name, {})}
+            for name in self.available_toolsets
+            if self.query_one(f"#{self.toolset_ids[name]}", Checkbox).value
+        ]
+        max_cost = self.query_one("#config-max-cost", Input).value.strip() or None
+        max_wall = self.query_one("#config-max-wall", Input).value.strip() or None
+        try:
+            config = RunConfig.model_validate(
+                {
+                    "id": self.query_one("#config-id", Input).value.strip(),
+                    "change": self.query_one("#config-change", Input).value.strip(),
+                    "objectives": _lines(self.query_one("#config-objectives", TextArea).text),
+                    "expected_side_effects": _lines(self.query_one("#config-side-effects", TextArea).text),
+                    "degradation_guardrails": _lines(self.query_one("#config-guardrails", TextArea).text),
+                    "decision_rule": self.query_one("#config-decision-rule", TextArea).text.strip(),
+                    "corpus": self.query_one("#config-corpus", Input).value.strip(),
+                    "chapters": {
+                        "start_inclusive": self.query_one("#config-start", Input).value,
+                        "end_inclusive": self.query_one("#config-end", Input).value,
+                    },
+                    "checkpoints": checkpoint_ids,
+                    "agent": {
+                        "profile": self.query_one("#config-profile", Input).value.strip(),
+                        "toolsets": selected_toolsets,
+                    },
+                    "execution": {
+                        "replicas": self.query_one("#config-replicas", Input).value,
+                        "max_parallel": self.query_one("#config-max-parallel", Input).value,
+                        "retries_per_chapter": self.query_one("#config-retries", Input).value,
+                    },
+                    "budget": {"max_cost_usd": max_cost, "max_wall_seconds": max_wall},
+                }
+            )
+            if self.config is None:
+                create_run_config(self.workspace, config)
+            else:
+                save_run_config(self.workspace, config)
+        except (OSError, ValueError) as exc:
+            self.query_one("#config-edit-status", Label).update(str(exc))
+            return
+        self.dismiss(config)
+
+
+class ConfigScreen(Screen[None]):
+    BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
+
+    def __init__(self, workspace: EvalWorkspace) -> None:
+        super().__init__()
+        self.workspace = workspace
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        with VerticalScroll(id="resource"):
+            yield Static("Run configs", classes="screen-title")
+            with Horizontal(classes="actions"):
+                yield Button("Create", id="create-config", variant="primary")
+                yield Button("Edit selected", id="edit-config")
+                yield Button("Delete selected", id="delete-config", variant="error")
+                yield Button("Refresh", id="refresh-configs")
+            yield Label("", id="config-status")
+            yield DataTable(id="config-entries")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        table = self.query_one("#config-entries", DataTable)
+        table.add_columns("ID", "Corpus", "Chapters", "Profile", "Toolsets", "Replicas")
+        self.refresh_configs()
+
+    def refresh_configs(self) -> None:
+        table = self.query_one("#config-entries", DataTable)
+        status = self.query_one("#config-status", Label)
+        table.clear()
+        try:
+            summaries = discover_run_configs(self.workspace)
+        except (OSError, ValueError) as exc:
+            status.update(str(exc))
+            return
+        for summary in summaries:
+            table.add_row(
+                summary.id,
+                summary.corpus,
+                f"{summary.start_chapter}-{summary.end_chapter}",
+                summary.profile,
+                ", ".join(summary.toolsets),
+                str(summary.replicas),
+            )
+        status.update(f"{len(summaries)} run config(s)")
+
+    def selected_config(self) -> RunConfigSummary | None:
+        table = self.query_one("#config-entries", DataTable)
+        if table.row_count == 0:
+            return None
+        config_id = str(table.get_row_at(table.cursor_row)[0])
+        return next(summary for summary in discover_run_configs(self.workspace) if summary.id == config_id)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "refresh-configs":
+            self.refresh_configs()
+        elif event.button.id == "create-config":
+            self.app.push_screen(ConfigEditScreen(self.workspace), self._edit_finished)
+        elif event.button.id == "edit-config":
+            summary = self.selected_config()
+            if summary is not None:
+                self.app.push_screen(
+                    ConfigEditScreen(self.workspace, load_run_config(self.workspace, summary.id)),
+                    self._edit_finished,
+                )
+        elif event.button.id == "delete-config":
+            summary = self.selected_config()
+            if summary is not None:
+                self.app.push_screen(
+                    ConfirmScreen(f"Delete run config {summary.id}?"),
+                    lambda confirmed: self._delete_finished(summary.id, confirmed),
+                )
+
+    def _edit_finished(self, config: RunConfig | None) -> None:
+        if config is not None:
+            self.refresh_configs()
+            self.query_one("#config-status", Label).update(f"Saved {config.id}")
+
+    def _delete_finished(self, config_id: str, confirmed: bool) -> None:
+        if confirmed:
+            try:
+                delete_run_config(self.workspace, config_id)
+            except (OSError, ValueError) as exc:
+                self.query_one("#config-status", Label).update(str(exc))
+                return
+            self.refresh_configs()
+            self.query_one("#config-status", Label).update(f"Deleted {config_id}")
 
 
 def _run_rows(workspace: EvalWorkspace) -> list[tuple[str, str]]:
@@ -527,7 +788,7 @@ class AgentEvalApp(App[None]):
     #corpus-entries {
         height: 1fr;
     }
-    #checkpoint-entries, #checkpoint-metrics {
+    #checkpoint-entries, #checkpoint-metrics, #config-entries {
         height: 1fr;
         min-height: 6;
     }
@@ -538,7 +799,7 @@ class AgentEvalApp(App[None]):
     .actions Button {
         margin-right: 1;
     }
-    CorpusImportScreen, CheckpointEditScreen, MetricEditScreen, ConfirmScreen {
+    CorpusImportScreen, CheckpointEditScreen, MetricEditScreen, ConfigEditScreen, ConfirmScreen {
         align: center middle;
     }
     .dialog, #import-dialog {
@@ -559,6 +820,14 @@ class AgentEvalApp(App[None]):
         width: 90;
         max-height: 90%;
     }
+    #config-dialog {
+        width: 110;
+        height: 95%;
+    }
+    #config-objectives, #config-side-effects, #config-guardrails, #config-decision-rule {
+        height: 5;
+        margin-bottom: 1;
+    }
     #confirm-dialog {
         width: 60;
     }
@@ -575,10 +844,7 @@ class AgentEvalApp(App[None]):
     def on_mount(self) -> None:
         self.install_screen(CorpusScreen(self.workspace), name="corpora")
         self.install_screen(CheckpointScreen(self.workspace), name="checkpoints")
-        self.install_screen(
-            ResourceScreen("Run configs", self.workspace, lambda workspace: _yaml_rows(workspace.run_configs)),
-            name="configs",
-        )
+        self.install_screen(ConfigScreen(self.workspace), name="configs")
         self.install_screen(ResourceScreen("Runs", self.workspace, _run_rows), name="runs")
         self.install_screen(
             ResourceScreen(

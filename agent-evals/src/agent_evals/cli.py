@@ -27,8 +27,20 @@ from agent_evals.corpora import (
     inspect_corpus,
     resolve_corpus,
 )
+from agent_evals.run_configs import (
+    RunConfigError,
+    create_run_config,
+    delete_run_config,
+    discover_run_configs,
+    discover_toolset_names,
+    load_run_config,
+    render_run_config,
+    resolve_run_config,
+    update_run_config,
+    validate_run_config_context,
+)
 from agent_evals.schemas import Checkpoint, ExpectedMemory, InclusiveChapterRange, RunConfig
-from agent_evals.storage import EvalWorkspace, list_files, load_yaml_model
+from agent_evals.storage import EvalWorkspace, load_yaml_model
 
 app = typer.Typer(name="agent-eval", no_args_is_help=True, help="Evaluate the NovelTL memory agent locally.")
 corpus_app = typer.Typer(no_args_is_help=True, help="Manage private evaluation corpora.")
@@ -60,15 +72,6 @@ def _print_paths(paths: list[Path], *, relative_to: Path | None = None) -> None:
         return
     for path in paths:
         typer.echo(path.relative_to(relative_to) if relative_to is not None else path.name)
-
-
-def _validate(path: Path, model: type[Checkpoint] | type[RunConfig]) -> None:
-    try:
-        value = load_yaml_model(path, model)
-    except (OSError, ValueError, ValidationError) as exc:
-        typer.echo(str(exc), err=True)
-        raise typer.Exit(code=1) from exc
-    typer.echo(f"Valid {model.__name__}: {value.id}")
 
 
 @app.command()
@@ -347,13 +350,238 @@ def remove_checkpoint_metric(
 
 
 @config_app.command("list")
-def list_configs() -> None:
-    _print_paths(list_files(_workspace().run_configs, {".yaml", ".yml"}))
+def list_configs(as_json: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False) -> None:
+    try:
+        summaries = discover_run_configs(_workspace())
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    if as_json:
+        typer.echo(json.dumps([summary.to_dict() for summary in summaries], ensure_ascii=False, indent=2))
+    elif not summaries:
+        typer.echo("No entries found.")
+    else:
+        for summary in summaries:
+            typer.echo(
+                f"{summary.id}\t{summary.corpus}\t{summary.start_chapter}-{summary.end_chapter}"
+                f"\t{summary.profile}\t{','.join(summary.toolsets)}\t{summary.replicas} replica(s)"
+            )
+
+
+@config_app.command("toolsets")
+def list_config_toolsets() -> None:
+    """List toolsets from backend-owned memory-agent metadata."""
+
+    for name in discover_toolset_names():
+        typer.echo(name)
+
+
+@config_app.command("show")
+def show_config(
+    config: Annotated[str, typer.Argument(help="Run config ID or YAML path")],
+    as_json: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    try:
+        value = load_run_config(_workspace(), config)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(render_run_config(value, as_json=as_json))
+
+
+@config_app.command("create")
+def create_config_command(
+    config_id: Annotated[str, typer.Argument(help="Stable run-config ID")],
+    change: Annotated[str, typer.Option(help="Experimental change under evaluation")],
+    objectives: Annotated[list[str] | None, typer.Option("--objective", help="Desired improvement; repeatable")] = None,
+    expected_side_effects: Annotated[
+        list[str] | None,
+        typer.Option("--expected-side-effect", help="Expected side effect; repeatable"),
+    ] = None,
+    degradation_guardrails: Annotated[
+        list[str] | None,
+        typer.Option("--guardrail", help="Output-quality guardrail; repeatable"),
+    ] = None,
+    decision_rule: Annotated[str, typer.Option(help="Rule for accepting or rejecting the change")] = "",
+    corpus: Annotated[str, typer.Option(help="Imported corpus ID")] = "",
+    start: Annotated[int, typer.Option(min=1, help="First chapter, inclusive")] = 1,
+    end: Annotated[int, typer.Option(min=1, help="Last chapter, inclusive")] = 1,
+    checkpoints: Annotated[
+        list[str] | None,
+        typer.Option("--checkpoint", help="Checkpoint ID; repeatable"),
+    ] = None,
+    profile: Annotated[str, typer.Option(help="Agent profile or model preset")] = "",
+    toolsets: Annotated[
+        list[str] | None,
+        typer.Option("--toolset", help="Backend-registered toolset; repeatable"),
+    ] = None,
+    replicas: Annotated[int, typer.Option(min=1)] = 1,
+    max_parallel: Annotated[int, typer.Option(min=1)] = 1,
+    retries_per_chapter: Annotated[int, typer.Option(min=0)] = 0,
+    max_cost_usd: Annotated[float | None, typer.Option(min=0)] = None,
+    max_wall_seconds: Annotated[int | None, typer.Option(min=1)] = None,
+) -> None:
+    workspace = _workspace()
+    try:
+        config = RunConfig.model_validate(
+            {
+                "id": config_id,
+                "change": change,
+                "objectives": objectives or [],
+                "expected_side_effects": expected_side_effects or [],
+                "degradation_guardrails": degradation_guardrails or [],
+                "decision_rule": decision_rule,
+                "corpus": corpus,
+                "chapters": {"start_inclusive": start, "end_inclusive": end},
+                "checkpoints": checkpoints or [],
+                "agent": {
+                    "profile": profile,
+                    "toolsets": [{"name": name, "settings": {}} for name in toolsets or []],
+                },
+                "execution": {
+                    "replicas": replicas,
+                    "max_parallel": max_parallel,
+                    "retries_per_chapter": retries_per_chapter,
+                },
+                "budget": {
+                    "max_cost_usd": max_cost_usd,
+                    "max_wall_seconds": max_wall_seconds,
+                },
+            }
+        )
+        path = create_run_config(workspace, config)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"Created run config: {config.id} ({path})")
+
+
+@config_app.command("update")
+def update_config_command(
+    config_id: Annotated[str, typer.Argument(help="Run-config ID")],
+    change: Annotated[str | None, typer.Option(help="Replace experimental change")] = None,
+    objectives: Annotated[list[str] | None, typer.Option("--objective", help="Replace objectives; repeatable")] = None,
+    expected_side_effects: Annotated[
+        list[str] | None,
+        typer.Option("--expected-side-effect", help="Replace expected side effects; repeatable"),
+    ] = None,
+    clear_expected_side_effects: Annotated[bool, typer.Option("--clear-expected-side-effects")] = False,
+    degradation_guardrails: Annotated[
+        list[str] | None,
+        typer.Option("--guardrail", help="Replace guardrails; repeatable"),
+    ] = None,
+    decision_rule: Annotated[str | None, typer.Option(help="Replace decision rule")] = None,
+    corpus: Annotated[str | None, typer.Option(help="Replace corpus ID")] = None,
+    start: Annotated[int | None, typer.Option(min=1, help="Replace first chapter")] = None,
+    end: Annotated[int | None, typer.Option(min=1, help="Replace last chapter")] = None,
+    checkpoints: Annotated[
+        list[str] | None,
+        typer.Option("--checkpoint", help="Replace checkpoints; repeatable"),
+    ] = None,
+    clear_checkpoints: Annotated[bool, typer.Option("--clear-checkpoints")] = False,
+    profile: Annotated[str | None, typer.Option(help="Replace agent profile")] = None,
+    toolsets: Annotated[
+        list[str] | None,
+        typer.Option("--toolset", help="Replace toolsets; repeatable"),
+    ] = None,
+    replicas: Annotated[int | None, typer.Option(min=1)] = None,
+    max_parallel: Annotated[int | None, typer.Option(min=1)] = None,
+    retries_per_chapter: Annotated[int | None, typer.Option(min=0)] = None,
+    max_cost_usd: Annotated[float | None, typer.Option(min=0)] = None,
+    max_wall_seconds: Annotated[int | None, typer.Option(min=1)] = None,
+    clear_budget: Annotated[bool, typer.Option("--clear-budget")] = False,
+) -> None:
+    workspace = _workspace()
+    try:
+        existing = load_run_config(workspace, config_id)
+        changes: dict[str, object] = {}
+        for key, value in (
+            ("change", change),
+            ("objectives", objectives),
+            ("degradation_guardrails", degradation_guardrails),
+            ("decision_rule", decision_rule),
+            ("corpus", corpus),
+        ):
+            if value is not None:
+                changes[key] = value
+        if expected_side_effects is not None and clear_expected_side_effects:
+            raise RunConfigError("--expected-side-effect and --clear-expected-side-effects cannot be used together")
+        if expected_side_effects is not None or clear_expected_side_effects:
+            changes["expected_side_effects"] = expected_side_effects or []
+        if checkpoints is not None and clear_checkpoints:
+            raise RunConfigError("--checkpoint and --clear-checkpoints cannot be used together")
+        if checkpoints is not None or clear_checkpoints:
+            changes["checkpoints"] = checkpoints or []
+        if start is not None or end is not None:
+            changes["chapters"] = InclusiveChapterRange(
+                start_inclusive=start if start is not None else existing.chapters.start_inclusive,
+                end_inclusive=end if end is not None else existing.chapters.end_inclusive,
+            )
+        if profile is not None or toolsets is not None:
+            changes["agent"] = {
+                "profile": profile if profile is not None else existing.agent.profile,
+                "toolsets": (
+                    [{"name": name, "settings": {}} for name in toolsets]
+                    if toolsets is not None
+                    else existing.agent.toolsets
+                ),
+            }
+        if replicas is not None or max_parallel is not None or retries_per_chapter is not None:
+            changes["execution"] = {
+                "replicas": replicas if replicas is not None else existing.execution.replicas,
+                "max_parallel": max_parallel if max_parallel is not None else existing.execution.max_parallel,
+                "retries_per_chapter": (
+                    retries_per_chapter
+                    if retries_per_chapter is not None
+                    else existing.execution.retries_per_chapter
+                ),
+            }
+        if clear_budget and (max_cost_usd is not None or max_wall_seconds is not None):
+            raise RunConfigError("Budget values and --clear-budget cannot be used together")
+        if clear_budget:
+            changes["budget"] = {}
+        elif max_cost_usd is not None or max_wall_seconds is not None:
+            changes["budget"] = {
+                "max_cost_usd": max_cost_usd if max_cost_usd is not None else existing.budget.max_cost_usd,
+                "max_wall_seconds": (
+                    max_wall_seconds if max_wall_seconds is not None else existing.budget.max_wall_seconds
+                ),
+            }
+        updated = update_run_config(workspace, config_id, **changes)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"Updated run config: {updated.id}")
+
+
+@config_app.command("delete")
+def delete_config_command(
+    config_id: Annotated[str, typer.Argument(help="Run-config ID")],
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Delete without prompting")] = False,
+) -> None:
+    workspace = _workspace()
+    try:
+        resolve_run_config(workspace, config_id)
+        if not yes and not typer.confirm(f"Delete run config {config_id}?"):
+            raise typer.Abort()
+        delete_run_config(workspace, config_id)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"Deleted run config: {config_id}")
 
 
 @config_app.command("validate")
-def validate_config(path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)]) -> None:
-    _validate(path, RunConfig)
+def validate_config(config: Annotated[str, typer.Argument(help="Run config ID or YAML path")]) -> None:
+    workspace = _workspace()
+    try:
+        path = resolve_run_config(workspace, config)
+        value = load_yaml_model(path, RunConfig)
+        validate_run_config_context(workspace, value)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"Valid RunConfig: {value.id}")
 
 
 @run_app.command("list")

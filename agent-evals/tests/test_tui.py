@@ -2,15 +2,18 @@ import asyncio
 import json
 from pathlib import Path
 
-from textual.widgets import DataTable, Input
+from textual.widgets import Button, DataTable, Input, TextArea
 
 from agent_evals.checkpoints import load_checkpoint
 from agent_evals.corpora import CorpusImportSpec, import_flat_export
+from agent_evals.run_configs import load_run_config
 from agent_evals.storage import EvalWorkspace
 from agent_evals.tui import (
     AgentEvalApp,
     CheckpointEditScreen,
     CheckpointScreen,
+    ConfigEditScreen,
+    ConfigScreen,
     CorpusImportScreen,
     CorpusScreen,
     HomeScreen,
@@ -116,3 +119,54 @@ def test_checkpoint_editor_creates_checkpoint_with_expected_memory(tmp_path: Pat
     checkpoint = load_checkpoint(workspace, "opening", validate_context=True)
     assert checkpoint.expected_memories[0].id == "identity"
     assert checkpoint.expected_memories[0].terms == ["林渊"]
+
+
+def test_config_editor_creates_config_with_backend_toolset(tmp_path: Path) -> None:
+    source = tmp_path / "novel.json"
+    source.write_text(
+        json.dumps(
+            {
+                "chapters": [
+                    {
+                        "chapterNum": 1,
+                        "chapterTitle": "开端",
+                        "chapterContentText": "林渊醒来。",
+                    }
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    workspace = EvalWorkspace(tmp_path / "evals")
+    workspace.ensure()
+    import_flat_export(
+        source,
+        workspace,
+        CorpusImportSpec(id="test-novel", title="Test novel", language_code="zh"),
+    )
+
+    async def exercise() -> None:
+        app = AgentEvalApp(workspace)
+        async with app.run_test(size=(140, 60)) as pilot:
+            await pilot.click("#configs")
+            assert isinstance(app.screen, ConfigScreen)
+            await pilot.click("#create-config")
+            assert isinstance(app.screen, ConfigEditScreen)
+            app.screen.query_one("#config-id", Input).value = "baseline"
+            app.screen.query_one("#config-change", Input).value = "Establish a baseline."
+            app.screen.query_one("#config-corpus", Input).value = "test-novel"
+            app.screen.query_one("#config-start", Input).value = "1"
+            app.screen.query_one("#config-end", Input).value = "1"
+            app.screen.query_one("#config-profile", Input).value = "deepseek-v4-flash-low"
+            app.screen.query_one("#config-objectives", TextArea).text = "Measure current behavior."
+            app.screen.query_one("#config-guardrails", TextArea).text = "Retain critical memories."
+            app.screen.query_one("#config-decision-rule", TextArea).text = "Keep as reference."
+            await pilot.click("#config-toolset-glossary-terms")
+            app.screen.query_one("#save-config", Button).press()
+            await pilot.pause()
+            assert isinstance(app.screen, ConfigScreen)
+
+    asyncio.run(exercise())
+    config = load_run_config(workspace, "baseline", validate_context=True)
+    assert [toolset.name for toolset in config.agent.toolsets] == ["glossary_terms"]

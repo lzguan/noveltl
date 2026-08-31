@@ -1,0 +1,144 @@
+import json
+from pathlib import Path
+
+import pytest
+from typer.testing import CliRunner
+
+from agent_evals import cli
+from agent_evals.checkpoints import create_checkpoint
+from agent_evals.corpora import CorpusImportSpec, import_flat_export
+from agent_evals.run_configs import load_run_config
+from agent_evals.schemas import Checkpoint
+from agent_evals.storage import EvalWorkspace
+
+
+def workspace_with_corpus_and_checkpoint(tmp_path: Path) -> EvalWorkspace:
+    source = tmp_path / "novel.json"
+    source.write_text(
+        json.dumps(
+            {
+                "chapters": [
+                    {
+                        "chapterNum": number,
+                        "chapterTitle": f"Chapter {number}",
+                        "chapterContentText": f"Content {number}",
+                    }
+                    for number in range(1, 6)
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    workspace = EvalWorkspace(tmp_path / "evals")
+    workspace.ensure()
+    import_flat_export(
+        source,
+        workspace,
+        CorpusImportSpec(id="test-novel", title="Test novel", language_code="zh"),
+    )
+    create_checkpoint(
+        workspace,
+        Checkpoint.model_validate(
+            {
+                "id": "opening",
+                "corpus": "test-novel",
+                "chapters": {"start_inclusive": 1, "end_inclusive": 2},
+            }
+        ),
+    )
+    return workspace
+
+
+def test_cli_lists_toolsets_from_backend_metadata() -> None:
+    from src.memory.agent.types import TOOLSET_NAMES
+
+    result = CliRunner().invoke(cli.app, ["config", "toolsets"])
+
+    assert result.exit_code == 0, result.output
+    assert result.output.splitlines() == list(TOOLSET_NAMES)
+
+
+def test_cli_creates_and_updates_context_validated_run_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace = workspace_with_corpus_and_checkpoint(tmp_path)
+    monkeypatch.setattr(cli, "_workspace", lambda: workspace)
+    runner = CliRunner()
+
+    created = runner.invoke(
+        cli.app,
+        [
+            "config",
+            "create",
+            "single-mark-v1",
+            "--change",
+            "Restrict retrieval to one mark per call.",
+            "--objective",
+            "Reduce wasted context.",
+            "--guardrail",
+            "Preserve checkpoint coverage.",
+            "--decision-rule",
+            "Accept if context falls without coverage loss.",
+            "--corpus",
+            "test-novel",
+            "--start",
+            "1",
+            "--end",
+            "5",
+            "--checkpoint",
+            "opening",
+            "--profile",
+            "deepseek-v4-flash-low",
+            "--toolset",
+            "glossary_terms",
+            "--toolset",
+            "glossary_facts",
+        ],
+    )
+    assert created.exit_code == 0, created.output
+
+    updated = runner.invoke(cli.app, ["config", "update", "single-mark-v1", "--replicas", "2", "--max-parallel", "2"])
+    assert updated.exit_code == 0, updated.output
+
+    config = load_run_config(workspace, "single-mark-v1", validate_context=True)
+    assert config.checkpoints == ["opening"]
+    assert [toolset.name for toolset in config.agent.toolsets] == ["glossary_terms", "glossary_facts"]
+    assert config.execution.replicas == 2
+
+
+def test_cli_rejects_toolset_not_registered_by_backend(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace = workspace_with_corpus_and_checkpoint(tmp_path)
+    monkeypatch.setattr(cli, "_workspace", lambda: workspace)
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "config",
+            "create",
+            "invalid-tools",
+            "--change",
+            "Test an invalid toolset.",
+            "--objective",
+            "Exercise validation.",
+            "--guardrail",
+            "Do not save invalid input.",
+            "--decision-rule",
+            "Reject.",
+            "--corpus",
+            "test-novel",
+            "--start",
+            "1",
+            "--end",
+            "5",
+            "--profile",
+            "test-profile",
+            "--toolset",
+            "missing_toolset",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Unknown agent toolset(s): missing_toolset" in result.output

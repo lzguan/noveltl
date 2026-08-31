@@ -1,6 +1,6 @@
 import logging
 import uuid
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -50,7 +50,7 @@ async def aiterate_tasks(
     db_factory: sessionmaker[Session],
     claim_token: uuid.UUID,
     claim_next_task: Callable[[Session, uuid.UUID], MemoryChapterTask | None],
-) -> AsyncIterator[ClaimedTask]:
+) -> AsyncGenerator[ClaimedTask]:
     """
     Iterate over tasks, claiming each one.
     Caller should release task.
@@ -69,7 +69,7 @@ async def arun_tasks[T](
     claim_token: uuid.UUID,
     claim_next_task: Callable[[Session, uuid.UUID], MemoryChapterTask | None],
     process_task: Callable[[Session, ClaimedTask], Awaitable[T]],
-) -> AsyncIterator[T]:
+) -> AsyncGenerator[T]:
     """
     Pseudocode:
 
@@ -157,7 +157,7 @@ async def run_tasks(
     claim_next_task: Callable[[Session, uuid.UUID], MemoryChapterTask | None],
     *,
     claim_duration: timedelta = DEFAULT_CLAIM_DURATION,
-) -> AsyncIterator[CompletedMemoryTask]:
+) -> AsyncGenerator[CompletedMemoryTask]:
     """
     Claim a memory job and run tasks supplied by ``claim_next_task``.
 
@@ -239,7 +239,7 @@ async def run_all_tasks(
     memory_job_id: uuid.UUID,
     *,
     claim_duration: timedelta = DEFAULT_CLAIM_DURATION,
-) -> AsyncIterator[CompletedMemoryTask]:
+) -> AsyncGenerator[CompletedMemoryTask]:
     """Run every pending chapter task in a job in chapter order."""
     async for result in run_tasks(
         db_factory,

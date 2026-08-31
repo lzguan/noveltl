@@ -357,3 +357,26 @@ def release_task(
         db.rollback()
         raise
     return True
+
+
+def reset_failed_task(
+    db: Session,
+    memory_job_id: uuid.UUID,
+    chapter_id: uuid.UUID,
+) -> bool:
+    """Return a failed task to pending so a worker can claim it again."""
+    reset_chapter_id = db.scalar(
+        update(MemoryChapterTask)
+        .where(
+            MemoryChapterTask.memory_job_id == memory_job_id,
+            MemoryChapterTask.chapter_id == chapter_id,
+            MemoryChapterTask.task_status == JobStatus.FAILED,
+        )
+        .values(task_status=JobStatus.PENDING)
+        .returning(MemoryChapterTask.chapter_id)
+    )
+    if reset_chapter_id is None:
+        db.rollback()
+        return False
+    db.commit()
+    return True

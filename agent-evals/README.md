@@ -104,6 +104,9 @@ database role must be allowed to create and drop databases. Each replica gets
 a UUID-named temporary PostgreSQL database, and the runner drops it after
 capturing the final memory state. Chapters run sequentially within a replica;
 `max_parallel` controls how many isolated replicas run concurrently.
+The runner creates a real memory job and consumes the same `run_all_tasks()`
+iterator as the production worker. A configured retry resets the failed task to
+pending and resumes through a new production iterator.
 
 The runner writes to `runs/<config-id>/<run-id>/`:
 

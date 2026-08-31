@@ -17,11 +17,12 @@ from src.datasets import load_catalog, load_novel
 from src.datasets.domain import NovelDataset
 from src.datasets.materializer import make_novel, materialize_novel_contents
 from src.languages.models import Language
-from src.memory.agent.agent import create_agent, run_novel
-from src.memory.agent.tasks.jobs import JobParams
-from src.memory.models import Memory, MemoryGroup
+from src.memory.agent.tasks.jobs import JobParams, make_job, reset_failed_task
+from src.memory.agent.tasks.tasks import run_all_tasks
+from src.memory.models import Memory, MemoryChapterTask, MemoryGroup
 from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
-from src.novels.models import SourceWork
+from src.memory.types import JobStatus
+from src.novels.models import Chapter, SourceWork
 
 from agent_evals.corpora import inspect_corpus, resolve_corpus
 from agent_evals.database import TemporaryPostgresDatabase, temporary_postgres_database
@@ -150,9 +151,7 @@ def _language_name(code: str) -> str:
     return {"en": "English", "zh": "Chinese", "ja": "Japanese", "ko": "Korean"}.get(code, code)
 
 
-def _seed_database(
-    database: TemporaryPostgresDatabase, dataset: NovelDataset, index: int
-) -> tuple[uuid.UUID, uuid.UUID]:
+def _seed_database(database: TemporaryPostgresDatabase, dataset: NovelDataset, index: int) -> uuid.UUID:
     with database.session_factory() as db:
         source_language = Language(
             language_name=_language_name(dataset.language_code), language_code=dataset.language_code
@@ -174,7 +173,20 @@ def _seed_database(
         )
         db.add(memory_group)
         db.commit()
-        return novel.novel_id, memory_group.memory_group_id
+        return memory_group.memory_group_id
+
+
+def _failed_task(db: Any, memory_job_id: uuid.UUID, chapter_num: int) -> MemoryChapterTask | None:
+    return (
+        db.query(MemoryChapterTask)
+        .join(Chapter, Chapter.chapter_id == MemoryChapterTask.chapter_id)
+        .filter(
+            MemoryChapterTask.memory_job_id == memory_job_id,
+            MemoryChapterTask.task_status == JobStatus.FAILED,
+            Chapter.chapter_num == chapter_num,
+        )
+        .one_or_none()
+    )
 
 
 def _snapshot_memory(db: Any, memory_group_id: uuid.UUID) -> dict[str, object]:
@@ -268,137 +280,162 @@ async def execute_live_replica(context: RunContext, index: int, replica_dir: Pat
     try:
         with temporary_postgres_database(context.database_url) as database:
             database_name = database.name
-            novel_id, memory_group_id = _seed_database(database, context.dataset, index)
+            memory_group_id = _seed_database(database, context.dataset, index)
             params = JobParams.model_validate(
                 {
                     "model_name": context.config.agent.model_name,
                     "toolsets": [toolset.name for toolset in context.config.agent.toolsets],
                 }
             )
-            agent = create_agent(params.model_name, params.toolsets)
+            with database.session_factory() as db:
+                memory_job_id = make_job(
+                    db,
+                    memory_group_id,
+                    context.config.chapters.start_inclusive,
+                    context.config.chapters.end_inclusive + 1,
+                    params,
+                )
+            task_iterator = run_all_tasks(database.session_factory, memory_job_id)
             try:
-                async with agent:
-                    for chapter in context.dataset.chapters:
-                        stop_reason = await context.budget.stop_reason()
-                        if stop_reason is not None:
-                            result = ReplicaResult(
-                                index=index,
-                                status="budget_exceeded",
-                                completed_chapters=tuple(completed),
-                                usage=usage,
-                                failure={"type": "BudgetExceeded", "message": stop_reason},
-                            )
-                            break
-                        for attempt in range(1, context.config.execution.retries_per_chapter + 2):
-                            attempt_started = _utc_now()
-                            with capture_run_messages() as messages:
-                                try:
-                                    iterator = run_novel(
-                                        database.session_factory,
-                                        agent,
-                                        novel_id,
-                                        memory_group_id,
-                                        start_chapter_num=chapter.number,
-                                        end_chapter_num=chapter.number + 1,
+                for chapter in context.dataset.chapters:
+                    stop_reason = await context.budget.stop_reason()
+                    if stop_reason is not None:
+                        await task_iterator.aclose()
+                        result = ReplicaResult(
+                            index=index,
+                            status="budget_exceeded",
+                            completed_chapters=tuple(completed),
+                            usage=usage,
+                            failure={"type": "BudgetExceeded", "message": stop_reason},
+                        )
+                        break
+                    for attempt in range(1, context.config.execution.retries_per_chapter + 2):
+                        attempt_started = _utc_now()
+                        with capture_run_messages() as messages:
+                            try:
+                                completed_task = await anext(task_iterator)
+                            except Exception as exc:
+                                attempt_finished = _utc_now()
+                                failure = _serialize_failure(exc, chapter.number)
+                                _write_json(
+                                    replica_dir
+                                    / "chapters"
+                                    / f"chapter-{chapter.number:04d}-attempt-{attempt:02d}.json",
+                                    {
+                                        "status": "failed",
+                                        "chapterNum": chapter.number,
+                                        "attempt": attempt,
+                                        "startedAt": attempt_started.isoformat(),
+                                        "finishedAt": attempt_finished.isoformat(),
+                                        "durationSeconds": (attempt_finished - attempt_started).total_seconds(),
+                                        "failure": failure,
+                                        "messages": json.loads(ModelMessagesTypeAdapter.dump_json(messages)),
+                                    },
+                                )
+                                context.report_progress(
+                                    RunProgress(
+                                        kind="chapter_failed",
+                                        run_id=context.run_id,
+                                        run_path=context.run_path,
+                                        replica=index,
+                                        chapter_num=chapter.number,
+                                        attempt=attempt,
+                                        message=str(exc),
                                     )
-                                    chapter_num, chapter_result = await anext(aiter(iterator))
-                                except Exception as exc:
-                                    attempt_finished = _utc_now()
-                                    failure = _serialize_failure(exc, chapter.number)
-                                    _write_json(
-                                        replica_dir
-                                        / "chapters"
-                                        / f"chapter-{chapter.number:04d}-attempt-{attempt:02d}.json",
-                                        {
-                                            "status": "failed",
-                                            "chapterNum": chapter.number,
-                                            "attempt": attempt,
-                                            "startedAt": attempt_started.isoformat(),
-                                            "finishedAt": attempt_finished.isoformat(),
-                                            "durationSeconds": (attempt_finished - attempt_started).total_seconds(),
-                                            "failure": failure,
-                                            "messages": json.loads(ModelMessagesTypeAdapter.dump_json(messages)),
-                                        },
+                                )
+                                if attempt > context.config.execution.retries_per_chapter:
+                                    result = ReplicaResult(
+                                        index=index,
+                                        status="failed",
+                                        completed_chapters=tuple(completed),
+                                        usage=usage,
+                                        failure=failure,
                                     )
-                                    context.report_progress(
-                                        RunProgress(
-                                            kind="chapter_failed",
-                                            run_id=context.run_id,
-                                            run_path=context.run_path,
-                                            replica=index,
-                                            chapter_num=chapter.number,
-                                            attempt=attempt,
-                                            message=str(exc),
-                                        )
-                                    )
-                                    if attempt > context.config.execution.retries_per_chapter:
+                                    break
+                                with database.session_factory() as db:
+                                    failed_task = _failed_task(db, memory_job_id, chapter.number)
+                                    if failed_task is None or not reset_failed_task(
+                                        db, memory_job_id, failed_task.chapter_id
+                                    ):
                                         result = ReplicaResult(
                                             index=index,
                                             status="failed",
                                             completed_chapters=tuple(completed),
                                             usage=usage,
-                                            failure=failure,
+                                            failure={
+                                                **failure,
+                                                "retry": "production task was not in the failed state",
+                                            },
                                         )
-                                    continue
+                                        break
+                                task_iterator = run_all_tasks(database.session_factory, memory_job_id)
+                                continue
 
-                            attempt_finished = _utc_now()
-                            chapter_usage: Any = chapter_result.usage
-                            usage.incr(chapter_usage)
-                            run_cost = await context.budget.add_usage(chapter_usage)
-                            completed.append(chapter_num)
-                            _write_json(
-                                replica_dir / "chapters" / f"chapter-{chapter_num:04d}-attempt-{attempt:02d}.json",
-                                {
-                                    "status": "completed",
-                                    "chapterNum": chapter_num,
-                                    "attempt": attempt,
-                                    "startedAt": attempt_started.isoformat(),
-                                    "finishedAt": attempt_finished.isoformat(),
-                                    "durationSeconds": (attempt_finished - attempt_started).total_seconds(),
-                                    "agentRunId": chapter_result.run_id,
-                                    "output": chapter_result.output,
-                                    "usage": _serialize_usage(chapter_usage),
-                                    "messages": json.loads(chapter_result.all_messages_json()),
-                                },
+                        chapter_num = completed_task.chapter_num
+                        if chapter_num != chapter.number:
+                            raise RuntimeError(
+                                f"Production task iterator yielded chapter {chapter_num}; expected {chapter.number}"
                             )
-                            context.report_progress(
-                                RunProgress(
-                                    kind="chapter_completed",
-                                    run_id=context.run_id,
-                                    run_path=context.run_path,
-                                    replica=index,
-                                    chapter_num=chapter_num,
-                                    attempt=attempt,
-                                    replica_cost_usd=usage.cost,
-                                    run_cost_usd=run_cost,
-                                )
+                        attempt_finished = _utc_now()
+                        chapter_result = completed_task.result
+                        chapter_usage: Any = chapter_result.usage
+                        usage.incr(chapter_usage)
+                        run_cost = await context.budget.add_usage(chapter_usage)
+                        completed.append(chapter_num)
+                        _write_json(
+                            replica_dir / "chapters" / f"chapter-{chapter_num:04d}-attempt-{attempt:02d}.json",
+                            {
+                                "status": "completed",
+                                "chapterNum": chapter_num,
+                                "attempt": attempt,
+                                "startedAt": attempt_started.isoformat(),
+                                "finishedAt": attempt_finished.isoformat(),
+                                "durationSeconds": (attempt_finished - attempt_started).total_seconds(),
+                                "agentRunId": chapter_result.run_id,
+                                "output": chapter_result.output,
+                                "usage": _serialize_usage(chapter_usage),
+                                "messages": json.loads(chapter_result.all_messages_json()),
+                            },
+                        )
+                        context.report_progress(
+                            RunProgress(
+                                kind="chapter_completed",
+                                run_id=context.run_id,
+                                run_path=context.run_path,
+                                replica=index,
+                                chapter_num=chapter_num,
+                                attempt=attempt,
+                                replica_cost_usd=usage.cost,
+                                run_cost_usd=run_cost,
                             )
-                            result = ReplicaResult(
-                                index=index,
-                                status="running",
-                                completed_chapters=tuple(completed),
-                                usage=usage,
-                            )
-                            _write_json(
-                                replica_dir / "replica.json",
-                                _replica_manifest(
-                                    result,
-                                    started_at=started_at,
-                                    finished_at=None,
-                                    database_name=database_name,
-                                ),
-                            )
-                            break
-                        if result.status == "failed":
-                            break
-                    else:
+                        )
                         result = ReplicaResult(
                             index=index,
-                            status="completed",
+                            status="running",
                             completed_chapters=tuple(completed),
                             usage=usage,
                         )
+                        _write_json(
+                            replica_dir / "replica.json",
+                            _replica_manifest(
+                                result,
+                                started_at=started_at,
+                                finished_at=None,
+                                database_name=database_name,
+                            ),
+                        )
+                        break
+                    if result.status == "failed":
+                        break
+                else:
+                    result = ReplicaResult(
+                        index=index,
+                        status="completed",
+                        completed_chapters=tuple(completed),
+                        usage=usage,
+                    )
             finally:
+                await task_iterator.aclose()
                 with database.session_factory() as db:
                     _write_json(replica_dir / "memory.json", _snapshot_memory(db, memory_group_id))
     except asyncio.CancelledError:

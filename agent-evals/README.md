@@ -17,8 +17,7 @@ uv run --project agent-evals agent-eval ui
 ```
 
 The terminal UI and CLI use the same schemas and storage services. Authored
-checkpoint and run-config files are YAML. Generated run artifacts will use
-JSON and JSONL.
+checkpoint and run-config files are YAML. Generated run artifacts use JSON.
 
 ## Local layout
 
@@ -29,9 +28,10 @@ JSON and JSONL.
 - `logs/` contains imported or generated raw logs.
 - `history/` contains previous local evaluation notes and reports.
 
-Run `agent-eval paths` to print the resolved paths. Corpus and checkpoint
-authoring are available through both the CLI and terminal UI. Run execution,
-recovery, reviewing, and reporting will be added as subsequent vertical slices.
+Run `agent-eval paths` to print the resolved paths. Corpus, checkpoint, and
+run-config authoring are available through both the CLI and terminal UI. Run
+execution is available through the CLI. Recovery, reviewing, and reporting
+will be added as subsequent vertical slices.
 
 ## Commands
 
@@ -49,17 +49,19 @@ agent-eval checkpoint metric set opening --id protagonist-identity \
 agent-eval checkpoint show opening --json
 agent-eval checkpoint validate opening
 agent-eval config toolsets
+agent-eval config models
 agent-eval config create marks-single-query-v1 \
   --change "Restrict retrieval to one mark per call" \
   --objective "Reduce wasted context" \
   --guardrail "Preserve checkpoint coverage" \
   --decision-rule "Accept if context falls without coverage loss" \
   --corpus cn-fantasy-001 --start 1 --end 250 \
-  --checkpoint opening --profile deepseek-v4-flash-low \
+  --checkpoint opening --model deepseek:deepseek-v4-flash-low \
   --toolset glossary_terms --toolset glossary_facts
 agent-eval config show marks-single-query-v1
 agent-eval config update marks-single-query-v1 --replicas 3 --max-parallel 2
 agent-eval config validate marks-single-query-v1
+agent-eval run start marks-single-query-v1
 agent-eval corpus list
 agent-eval run list
 agent-eval review list
@@ -86,3 +88,38 @@ dependency, and the full agent verifies that its runtime registry matches that
 metadata. The CLI and terminal UI therefore need no separate toolset list.
 Toolset-specific settings remain in the YAML schema but do not yet have an
 authoring interface.
+
+## Running an evaluation
+
+Export `DEEPSEEK_API_KEY` and `AGENT_EVAL_DATABASE_URL`, then start a saved
+configuration:
+
+```bash
+export AGENT_EVAL_DATABASE_URL='postgresql://user:password@database:5432/postgres'
+uv run --project agent-evals agent-eval run start marks-single-query-v1
+```
+
+`DB_URL` is used as a fallback when `AGENT_EVAL_DATABASE_URL` is unset. The
+database role must be allowed to create and drop databases. Each replica gets
+a UUID-named temporary PostgreSQL database, and the runner drops it after
+capturing the final memory state. Chapters run sequentially within a replica;
+`max_parallel` controls how many isolated replicas run concurrently.
+
+The runner writes to `runs/<config-id>/<run-id>/`:
+
+- `config.yaml` is the exact validated configuration used by the run.
+- `run.json` records status, corpus fingerprint, timing, aggregate usage, and
+  replica outcomes.
+- `replicas/replica-NNN/replica.json` records progress and terminal status.
+- Each chapter attempt is saved under the replica's `chapters/` directory,
+  including messages, output, usage, timing, or failure details.
+- `memory.json` contains the replica's final terms, memories, marks, and
+  associations.
+
+Cost and wall-time budgets are checked between chapter calls. Concurrent calls
+already in progress can therefore finish after a budget is reached.
+
+While a run is active, the CLI prints its artifact directory immediately and
+reports replica lifecycle, chapter successes and failed attempts, and
+cumulative provider-reported cost. The JSON artifacts remain the durable source
+of truth.

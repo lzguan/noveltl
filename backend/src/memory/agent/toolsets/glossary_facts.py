@@ -45,10 +45,13 @@ Skip retrieval for a term created in the current run.
 Write only a short plain statement in `content`; the category is stored
 separately. Make no write when the fact is already represented. Supersede only
 when the same attribute receives a replacement current value, and record the
-new current value rather than an account of the change. Expire a fact only when
-it explicitly stops being true without replacement. Absence is never evidence
-for expiry. Complementary facts remain separate, and approved memories change
-only on clear textual evidence.
+new current value rather than an account of the change. Pass the replacement's
+exact primary `term_name` to `supersede_fact_memory`; this is normally the
+same term, but it may be a new recurring name when an alias relation establishes
+that both names identify the same person. Expire a fact only when it explicitly
+stops being true without replacement. Absence is never evidence for expiry.
+Complementary facts remain separate, and approved memories change only on
+clear textual evidence.
 
 For the shared lifecycle decision, the tracked claim is the primary subject's
 specific attribute, not the broad category alone: for example, current gender,
@@ -95,10 +98,11 @@ def supersede_fact_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     content: str,
+    term_name: Annotated[str, Field(min_length=1)],
     category: FactCategory,
     scope: Scope | None = None,
 ) -> str:
-    """Supersede an active fact with one categorized replacement."""
+    """Supersede an active fact and associate its replacement with one exact primary term."""
     return glossary_common.supersede_memory(
         ctx,
         memory_id,
@@ -106,6 +110,7 @@ def supersede_fact_memory(
         MemoryType.FACT,
         scope,
         category,
+        replacement_term_names=[term_name],
     )
 
 

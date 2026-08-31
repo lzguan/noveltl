@@ -6,7 +6,19 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, VerticalScroll
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Button, Checkbox, DataTable, Footer, Header, Input, Label, Static, TextArea
+from textual.widgets import (
+    Button,
+    Checkbox,
+    DataTable,
+    Footer,
+    Header,
+    Input,
+    Label,
+    RadioButton,
+    RadioSet,
+    Static,
+    TextArea,
+)
 
 from agent_evals.checkpoints import (
     CheckpointSummary,
@@ -21,6 +33,7 @@ from agent_evals.run_configs import (
     RunConfigSummary,
     create_run_config,
     delete_run_config,
+    discover_model_names,
     discover_run_configs,
     discover_toolset_names,
     load_run_config,
@@ -536,11 +549,14 @@ class ConfigEditScreen(ModalScreen[RunConfig | None]):
                 placeholder="Checkpoint IDs, comma-separated",
                 id="config-checkpoints",
             )
-            yield Input(
-                value=config.agent.profile if config else "",
-                placeholder="Agent profile or model preset",
-                id="config-profile",
-            )
+            yield Static("Backend model", classes="section-title")
+            with RadioSet():
+                for name in discover_model_names():
+                    yield RadioButton(
+                        name,
+                        value=config is not None and config.agent.model_name == name,
+                        id=f"config-model-{name.replace(':', '-').replace('_', '-')}",
+                    )
             yield Static("Backend toolsets", classes="section-title")
             for name in self.available_toolsets:
                 yield Checkbox(name, value=name in selected, id=self.toolset_ids[name])
@@ -642,7 +658,7 @@ class ConfigEditScreen(ModalScreen[RunConfig | None]):
                     },
                     "checkpoints": checkpoint_ids,
                     "agent": {
-                        "profile": self.query_one("#config-profile", Input).value.strip(),
+                        "model_name": self._selected_model(),
                         "toolsets": selected_toolsets,
                     },
                     "execution": {
@@ -661,6 +677,16 @@ class ConfigEditScreen(ModalScreen[RunConfig | None]):
             self.query_one("#config-edit-status", Label).update(str(exc))
             return
         self.dismiss(config)
+
+    def _selected_model(self) -> str:
+        selected = [
+            name
+            for name in discover_model_names()
+            if self.query_one(f"#config-model-{name.replace(':', '-').replace('_', '-')}", RadioButton).value
+        ]
+        if len(selected) != 1:
+            raise ValueError("Select exactly one backend model")
+        return selected[0]
 
 
 class ConfigScreen(Screen[None]):
@@ -702,7 +728,7 @@ class ConfigScreen(Screen[None]):
                 summary.id,
                 summary.corpus,
                 f"{summary.start_chapter}-{summary.end_chapter}",
-                summary.profile,
+                summary.model_name,
                 ", ".join(summary.toolsets),
                 str(summary.replicas),
             )

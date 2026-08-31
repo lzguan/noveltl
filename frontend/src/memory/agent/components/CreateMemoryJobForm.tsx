@@ -83,7 +83,7 @@ const TOOLSET_OPTIONS = [
 		toolset: "glossary_gender_transformation",
 		label: "Gender transformation guidance",
 		description:
-			"Distinguish lasting changes, reveals, disguises, bodies, and avatars. Requires gender guidance and glossary facts.",
+			"Distinguish lasting changes, reveals, disguises, bodies, and avatars. Requires gender guidance, glossary facts, and glossary relations.",
 	},
 	{
 		fieldName: "includeGlossaryCultivation",

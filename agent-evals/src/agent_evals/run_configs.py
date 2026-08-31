@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from src.memory.agent.types import TOOLSET_NAMES, validate_toolset_selection
+from src.memory.agent.types import MODEL_NAMES, TOOLSET_NAMES, validate_toolset_selection
 
 from agent_evals.checkpoints import load_checkpoint
 from agent_evals.corpora import inspect_corpus
@@ -22,7 +22,7 @@ class RunConfigSummary:
     corpus: str
     start_chapter: int
     end_chapter: int
-    profile: str
+    model_name: str
     toolsets: tuple[str, ...]
     replicas: int
     path: Path
@@ -33,7 +33,7 @@ class RunConfigSummary:
             "corpus": self.corpus,
             "startChapter": self.start_chapter,
             "endChapter": self.end_chapter,
-            "profile": self.profile,
+            "modelName": self.model_name,
             "toolsets": list(self.toolsets),
             "replicas": self.replicas,
             "path": str(self.path),
@@ -44,6 +44,12 @@ def discover_toolset_names() -> tuple[str, ...]:
     """Read available names from the backend's memory-agent metadata."""
 
     return tuple(TOOLSET_NAMES)
+
+
+def discover_model_names() -> tuple[str, ...]:
+    """Read available model names from the backend's memory-agent metadata."""
+
+    return tuple(MODEL_NAMES)
 
 
 def run_config_path(workspace: EvalWorkspace, config_id: str) -> Path:
@@ -86,6 +92,8 @@ def validate_run_config_context(workspace: EvalWorkspace, config: RunConfig) -> 
         validate_toolset_selection([toolset.name for toolset in config.agent.toolsets])
     except ValueError as exc:
         raise RunConfigError(str(exc)) from exc
+    if config.agent.model_name not in MODEL_NAMES:
+        raise RunConfigError(f"Unknown memory-agent model: {config.agent.model_name}")
 
     for checkpoint_id in config.checkpoints:
         checkpoint = load_checkpoint(workspace, checkpoint_id, validate_context=True)
@@ -164,7 +172,7 @@ def summarize_run_config(path: Path) -> RunConfigSummary:
         corpus=config.corpus,
         start_chapter=config.chapters.start_inclusive,
         end_chapter=config.chapters.end_inclusive,
-        profile=config.agent.profile,
+        model_name=config.agent.model_name,
         toolsets=tuple(toolset.name for toolset in config.agent.toolsets),
         replicas=config.execution.replicas,
         path=path.resolve(),

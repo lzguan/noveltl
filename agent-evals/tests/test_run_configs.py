@@ -58,6 +58,15 @@ def test_cli_lists_toolsets_from_backend_metadata() -> None:
     assert result.output.splitlines() == list(TOOLSET_NAMES)
 
 
+def test_cli_lists_models_from_backend_metadata() -> None:
+    from src.memory.agent.types import MODEL_NAMES
+
+    result = CliRunner().invoke(cli.app, ["config", "models"])
+
+    assert result.exit_code == 0, result.output
+    assert result.output.splitlines() == list(MODEL_NAMES)
+
+
 def test_cli_creates_and_updates_context_validated_run_config(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -88,8 +97,8 @@ def test_cli_creates_and_updates_context_validated_run_config(
             "5",
             "--checkpoint",
             "opening",
-            "--profile",
-            "deepseek-v4-flash-low",
+            "--model",
+            "deepseek:deepseek-v4-flash-low",
             "--toolset",
             "glossary_terms",
             "--toolset",
@@ -133,8 +142,8 @@ def test_cli_rejects_toolset_not_registered_by_backend(
             "1",
             "--end",
             "5",
-            "--profile",
-            "test-profile",
+            "--model",
+            "deepseek:deepseek-v4-flash-low",
             "--toolset",
             "missing_toolset",
         ],

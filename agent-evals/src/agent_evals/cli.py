@@ -1,4 +1,6 @@
+import asyncio
 import json
+from decimal import Decimal
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -27,10 +29,12 @@ from agent_evals.corpora import (
     inspect_corpus,
     resolve_corpus,
 )
+from agent_evals.progress import RunProgress
 from agent_evals.run_configs import (
     RunConfigError,
     create_run_config,
     delete_run_config,
+    discover_model_names,
     discover_run_configs,
     discover_toolset_names,
     load_run_config,
@@ -72,6 +76,39 @@ def _print_paths(paths: list[Path], *, relative_to: Path | None = None) -> None:
         return
     for path in paths:
         typer.echo(path.relative_to(relative_to) if relative_to is not None else path.name)
+
+
+def _cost_label(cost: Decimal | None) -> str:
+    return "cost unavailable" if cost is None else f"${cost:.6f}"
+
+
+def _replica_label(replica: int | None) -> str:
+    return "???" if replica is None else f"{replica:03d}"
+
+
+def format_run_progress(progress: RunProgress) -> str:
+    if progress.kind == "run_started":
+        return f"Run {progress.run_id} started\nArtifacts: {progress.run_path}"
+    if progress.kind == "replica_started":
+        return f"[replica {_replica_label(progress.replica)}] started"
+    if progress.kind == "chapter_completed":
+        return (
+            f"[replica {_replica_label(progress.replica)}] chapter {progress.chapter_num} completed "
+            f"(attempt {progress.attempt}; replica {_cost_label(progress.replica_cost_usd)}; "
+            f"run {_cost_label(progress.run_cost_usd)})"
+        )
+    if progress.kind == "chapter_failed":
+        return (
+            f"[replica {_replica_label(progress.replica)}] chapter {progress.chapter_num} attempt "
+            f"{progress.attempt} failed: {progress.message}"
+        )
+    if progress.kind == "replica_finished":
+        message = f": {progress.message}" if progress.message else ""
+        return (
+            f"[replica {_replica_label(progress.replica)}] {progress.status} "
+            f"({_cost_label(progress.replica_cost_usd)}){message}"
+        )
+    return f"Run {progress.status} ({_cost_label(progress.run_cost_usd)}): {progress.run_path}"
 
 
 @app.command()
@@ -364,7 +401,7 @@ def list_configs(as_json: Annotated[bool, typer.Option("--json", help="Emit mach
         for summary in summaries:
             typer.echo(
                 f"{summary.id}\t{summary.corpus}\t{summary.start_chapter}-{summary.end_chapter}"
-                f"\t{summary.profile}\t{','.join(summary.toolsets)}\t{summary.replicas} replica(s)"
+                f"\t{summary.model_name}\t{','.join(summary.toolsets)}\t{summary.replicas} replica(s)"
             )
 
 
@@ -373,6 +410,14 @@ def list_config_toolsets() -> None:
     """List toolsets from backend-owned memory-agent metadata."""
 
     for name in discover_toolset_names():
+        typer.echo(name)
+
+
+@config_app.command("models")
+def list_config_models() -> None:
+    """List models offered by the backend memory agent."""
+
+    for name in discover_model_names():
         typer.echo(name)
 
 
@@ -410,7 +455,7 @@ def create_config_command(
         list[str] | None,
         typer.Option("--checkpoint", help="Checkpoint ID; repeatable"),
     ] = None,
-    profile: Annotated[str, typer.Option(help="Agent profile or model preset")] = "",
+    model_name: Annotated[str, typer.Option("--model", help="Backend memory-agent model")] = "",
     toolsets: Annotated[
         list[str] | None,
         typer.Option("--toolset", help="Backend-registered toolset; repeatable"),
@@ -435,7 +480,7 @@ def create_config_command(
                 "chapters": {"start_inclusive": start, "end_inclusive": end},
                 "checkpoints": checkpoints or [],
                 "agent": {
-                    "profile": profile,
+                    "model_name": model_name,
                     "toolsets": [{"name": name, "settings": {}} for name in toolsets or []],
                 },
                 "execution": {
@@ -479,7 +524,7 @@ def update_config_command(
         typer.Option("--checkpoint", help="Replace checkpoints; repeatable"),
     ] = None,
     clear_checkpoints: Annotated[bool, typer.Option("--clear-checkpoints")] = False,
-    profile: Annotated[str | None, typer.Option(help="Replace agent profile")] = None,
+    model_name: Annotated[str | None, typer.Option("--model", help="Replace memory-agent model")] = None,
     toolsets: Annotated[
         list[str] | None,
         typer.Option("--toolset", help="Replace toolsets; repeatable"),
@@ -517,9 +562,9 @@ def update_config_command(
                 start_inclusive=start if start is not None else existing.chapters.start_inclusive,
                 end_inclusive=end if end is not None else existing.chapters.end_inclusive,
             )
-        if profile is not None or toolsets is not None:
+        if model_name is not None or toolsets is not None:
             changes["agent"] = {
-                "profile": profile if profile is not None else existing.agent.profile,
+                "model_name": model_name if model_name is not None else existing.agent.model_name,
                 "toolsets": (
                     [{"name": name, "settings": {}} for name in toolsets]
                     if toolsets is not None
@@ -592,6 +637,34 @@ def list_runs() -> None:
         key=lambda path: path.as_posix().casefold(),
     )
     _print_paths(paths, relative_to=workspace.runs)
+
+
+@run_app.command("start")
+def start_run(
+    config: Annotated[str, typer.Argument(help="Run config ID or YAML path")],
+) -> None:
+    """Execute a run config against isolated temporary databases."""
+
+    from agent_evals.execution import run_evaluation
+
+    try:
+        result = asyncio.run(
+            run_evaluation(
+                _workspace(),
+                config,
+                progress_reporter=lambda progress: typer.echo(format_run_progress(progress), err=True),
+            )
+        )
+    except KeyboardInterrupt as exc:
+        typer.echo("Evaluation interrupted.", err=True)
+        raise typer.Exit(code=130) from exc
+    except (OSError, RuntimeError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    if result.status == "interrupted":
+        raise typer.Exit(code=130)
+    if result.status != "completed":
+        raise typer.Exit(code=1)
 
 
 @review_app.command("list")

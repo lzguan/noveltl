@@ -158,7 +158,7 @@ def test_config_editor_creates_config_with_backend_toolset(tmp_path: Path) -> No
             app.screen.query_one("#config-corpus", Input).value = "test-novel"
             app.screen.query_one("#config-start", Input).value = "1"
             app.screen.query_one("#config-end", Input).value = "1"
-            app.screen.query_one("#config-profile", Input).value = "deepseek-v4-flash-low"
+            await pilot.click("#config-model-deepseek-deepseek-v4-flash-low")
             app.screen.query_one("#config-objectives", TextArea).text = "Measure current behavior."
             app.screen.query_one("#config-guardrails", TextArea).text = "Retain critical memories."
             app.screen.query_one("#config-decision-rule", TextArea).text = "Keep as reference."

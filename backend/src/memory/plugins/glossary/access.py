@@ -276,20 +276,22 @@ def supersede_memory(
     content: str,
     scope: Scope | None = None,
     mark: str | None = None,
+    replacement_term_names: list[str] | None = None,
 ) -> tuple[Memory, list[GlossaryAssociation]]:
-    current_term_names = list(
-        db.execute(
-            select(GlossaryTerm.term)
-            .select_from(GlossaryAssociation)
-            .where(GlossaryAssociation.memory_id == memory_id)
-            .join(GlossaryTerm, GlossaryTerm.term_id == GlossaryAssociation.term_id)
-            .where(
-                GlossaryTerm.memory_group_id == ctx.memory_group_id,
+    if replacement_term_names is None:
+        replacement_term_names = list(
+            db.execute(
+                select(GlossaryTerm.term)
+                .select_from(GlossaryAssociation)
+                .where(GlossaryAssociation.memory_id == memory_id)
+                .join(GlossaryTerm, GlossaryTerm.term_id == GlossaryAssociation.term_id)
+                .where(
+                    GlossaryTerm.memory_group_id == ctx.memory_group_id,
+                )
             )
+            .scalars()
+            .all()
         )
-        .scalars()
-        .all()
-    )
     new_memory = write_memory(
         db,
         ctx,
@@ -301,7 +303,7 @@ def supersede_memory(
         supersedes_id=memory_id,
         mark=mark,
     )
-    new_assocs = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, current_term_names)
+    new_assocs = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, replacement_term_names)
     return new_memory, new_assocs
 
 

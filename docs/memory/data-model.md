@@ -119,8 +119,8 @@ Optional guidance toolsets add genre- or subject-specific recording rules
 without exposing additional tools:
 
 - `glossary_gender` requires `glossary_facts`.
-- `glossary_gender_transformation` requires both `glossary_gender` and
-  `glossary_facts`.
+- `glossary_gender_transformation` requires `glossary_gender`,
+  `glossary_facts`, and `glossary_relations`.
 - `glossary_cultivation` and `glossary_system` require `glossary_facts`.
 - `glossary_artifacts` requires `glossary_definitions`.
 
@@ -136,6 +136,11 @@ case-insensitive piece of memory text, and all filters apply before pagination.
 The definition, relation, and fact toolsets each have their own type-specific
 expiry tool. This prevents a job configured for one memory type from expiring a
 different type.
+
+Fact supersession names the replacement's exact primary term. Normally this is
+the original term. When an established alias or name change introduces a new
+recurring term, the ended fact remains associated with the old term while its
+active replacement is associated with the new term.
 
 Facts and relations receive a separate `mark` chosen from the categories
 allowed by their respective toolsets. Definitions remain unmarked. The mark is

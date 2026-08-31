@@ -204,16 +204,26 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
         MemoryType.FACT,
         "Alpha has a replacement property.",
         mark="ability",
+        replacement_term_names=["Beta"],
     )
     assert successor.mark == "ability"
     successor_page = inspect_terms(
         test_db,
         next_context,
-        ["Alpha"],
+        ["Beta"],
         [MemoryType.FACT],
         marks=["ability"],
     )
     assert [item.memory.memory_id for item in successor_page.rows] == [successor.memory_id]
+    assert inspect_terms(
+        test_db,
+        next_context,
+        ["Alpha"],
+        [MemoryType.FACT],
+        marks=["ability"],
+    ).count == 0
+    test_db.refresh(fact)
+    assert fact.memory_end_num == next_chapter.chapter_num
 
     all_memories = inspect_terms(test_db, context, ["Alpha"], None)
     assert {item.memory.memory_id for item in all_memories.rows} == {

@@ -94,6 +94,7 @@ def supersede_memory(
     mem_type: MemoryType,
     scope: Scope | None,
     mark: str | None = None,
+    replacement_term_names: list[str] | None = None,
 ) -> str:
     """Supersede a glossary memory and translate its database UUID for the agent."""
     try:
@@ -112,7 +113,20 @@ def supersede_memory(
                 content,
                 scope,
                 mark,
+                replacement_term_names,
             )
+    except GlossaryTermNotFoundException as exc:
+        missing_term_names = access.get_missing_term_names(
+            ctx.deps.db,
+            ctx.deps.mem_access_context.memory_group_id,
+            replacement_term_names or [],
+        )
+        serialized_terms = json.dumps(missing_term_names, ensure_ascii=False)
+        raise ModelRetry(
+            f"Missing replacement glossary terms: {serialized_terms}. If add_term is available, add each "
+            "eligible missing exact term, then retrieve the original memory again and retry supersession. "
+            "If add_term is not available, do not retry this write."
+        ) from exc
     except MemoryNotFoundException as exc:
         raise ModelRetry(
             f"Memory {memory_id} does not exist, has already ended, or cannot be superseded in this chapter. "

@@ -13,7 +13,11 @@ in-world transformation. Do not treat a body's traits as the occupant's gender
 identity unless the text does. Give a separately recurring avatar, body, or
 persona its own `person` term when the story treats it as an independently
 referenced identity; connect equivalent identities with an `alias` relation
-when the relation toolset is enabled.
+when the relation toolset is enabled. When a persistent gender change also
+introduces a new recurring name, retrieve the old name's `gender` fact and
+supersede it using the new exact name as the replacement `term_name`. The old
+fact should end under the old name, the replacement should be active under the
+new name, and the alias relation should preserve their identity continuity.
 """.strip()
 
 glossary_gender_transformation_toolset = create_guidance_toolset(

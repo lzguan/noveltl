@@ -61,7 +61,7 @@ class ToolsetSpec(EvalModel):
 
 
 class AgentSpec(EvalModel):
-    profile: str = Field(min_length=1)
+    model_name: str = Field(min_length=1)
     toolsets: list[ToolsetSpec] = Field(min_length=1)
 
     @model_validator(mode="after")

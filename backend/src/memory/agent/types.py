@@ -1,8 +1,9 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, get_args
 
 type ModelName = Literal["deepseek:deepseek-v4-flash-none", "deepseek:deepseek-v4-flash-low"]
+MODEL_NAMES: tuple[ModelName, ...] = get_args(ModelName.__value__)
 type ToolsetName = Literal[
     "glossary_terms",
     "glossary_definitions",
@@ -46,7 +47,7 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
         "Gender transformation guidance",
         "Distinguish persistent changes, reveals, disguises, bodies, and avatars.",
         "guidance",
-        ("glossary_gender", "glossary_facts"),
+        ("glossary_gender", "glossary_facts", "glossary_relations"),
     ),
     ToolsetMetadata(
         "glossary_cultivation",

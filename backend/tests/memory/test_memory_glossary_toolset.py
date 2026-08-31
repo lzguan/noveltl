@@ -90,6 +90,19 @@ def test_job_params_reject_guidance_without_required_toolsets() -> None:
             toolsets=["glossary_facts", "glossary_gender_transformation"],
         )
 
+    with pytest.raises(
+        ValidationError,
+        match="Toolset glossary_gender_transformation requires: glossary_relations",
+    ):
+        JobParams(
+            model_name="deepseek:deepseek-v4-flash-low",
+            toolsets=[
+                "glossary_facts",
+                "glossary_gender",
+                "glossary_gender_transformation",
+            ],
+        )
+
 
 def test_create_memory_diagnoses_missing_terms_only_after_write_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     db = MagicMock(spec=Session)
@@ -190,7 +203,11 @@ def test_glossary_tool_schemas_enforce_input_constraints() -> None:
             "supersede_relation_memory",
             ["memory_id", "content", "category"],
         ),
-        (glossary_fact_toolset, "supersede_fact_memory", ["memory_id", "content", "category"]),
+        (
+            glossary_fact_toolset,
+            "supersede_fact_memory",
+            ["memory_id", "content", "term_name", "category"],
+        ),
     ):
         write_schema = toolset.tools[tool_name].function_schema.json_schema
         assert write_schema["required"] == required
@@ -222,6 +239,13 @@ def test_glossary_tool_schemas_enforce_input_constraints() -> None:
         "ability",
         "limitation",
     ]
+    supersede_fact_schema = glossary_fact_toolset.tools[
+        "supersede_fact_memory"
+    ].function_schema.json_schema
+    assert supersede_fact_schema["properties"]["term_name"] == {
+        "minLength": 1,
+        "type": "string",
+    }
     relation_schema = glossary_relation_toolset.tools["new_relation_memory"].function_schema.json_schema
     assert relation_schema["properties"]["category"] == {"$ref": "#/$defs/RelationCategory"}
     assert relation_schema["$defs"]["RelationCategory"]["enum"] == [

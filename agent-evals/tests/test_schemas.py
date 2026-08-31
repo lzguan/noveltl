@@ -19,7 +19,7 @@ def valid_run_config() -> dict[str, object]:
         "chapters": {"start_inclusive": 1, "end_inclusive": 250},
         "checkpoints": ["cn-fantasy-001-core"],
         "agent": {
-            "profile": "deepseek-v4-flash-low",
+            "model_name": "deepseek:deepseek-v4-flash-low",
             "toolsets": [
                 {"name": "glossary_terms", "settings": {}},
                 {"name": "glossary_facts", "settings": {"categories": ["identity"]}},

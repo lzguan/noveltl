@@ -29,9 +29,9 @@ JSON and JSONL.
 - `logs/` contains imported or generated raw logs.
 - `history/` contains previous local evaluation notes and reports.
 
-Run `agent-eval paths` to print the resolved paths. The initial scaffold can
-list and validate authored YAML. Corpus conversion, run execution, recovery,
-reviewing, and reporting will be added as subsequent vertical slices.
+Run `agent-eval paths` to print the resolved paths. Corpus and checkpoint
+authoring are available through both the CLI and terminal UI. Run execution,
+recovery, reviewing, and reporting will be added as subsequent vertical slices.
 
 ## Commands
 
@@ -41,7 +41,13 @@ agent-eval corpus import tmp/novel.json --id cn-fantasy-001 \
 agent-eval corpus validate cn-fantasy-001
 agent-eval corpus show cn-fantasy-001
 agent-eval checkpoint list
-agent-eval checkpoint validate checkpoints/example.yaml
+agent-eval checkpoint create opening --corpus cn-fantasy-001 \
+  --start 1 --end 3 --activity busy
+agent-eval checkpoint metric set opening --id protagonist-identity \
+  --memory-type fact --category identity --term 林渊 \
+  --content "The protagonist reveals his identity." --lifecycle create
+agent-eval checkpoint show opening --json
+agent-eval checkpoint validate opening
 agent-eval config list
 agent-eval config validate run-configs/example.yaml
 agent-eval corpus list
@@ -55,3 +61,11 @@ same bulk chapter upload JSON accepted by the backend's `/chapters/upload`
 endpoint. Uploads preserve chapter numbers, titles, visibility, and source text.
 Title and language are required because the upload document does not contain
 novel metadata.
+
+Each checkpoint YAML file describes one inclusive chapter range. Its
+`expected_memories` are the individual review metrics for that range. The
+`checkpoint metric set` command adds a metric or replaces the metric with the
+same ID, making it safe to use for repeatable scripted edits. Use `checkpoint
+update`, `checkpoint metric remove`, and `checkpoint delete --yes` for the
+remaining non-interactive edits. Checkpoint writes verify that the selected
+corpus exists and that the chapter range falls within it.

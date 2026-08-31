@@ -6,6 +6,19 @@ import typer
 from pydantic import ValidationError
 from src.datasets.errors import TestDataError
 
+from agent_evals.checkpoints import (
+    CheckpointError,
+    create_checkpoint,
+    delete_checkpoint,
+    discover_checkpoints,
+    load_checkpoint,
+    remove_expected_memory,
+    render_checkpoint,
+    resolve_checkpoint,
+    set_expected_memory,
+    update_checkpoint,
+    validate_checkpoint_context,
+)
 from agent_evals.corpora import (
     CorpusImportError,
     CorpusImportSpec,
@@ -14,12 +27,13 @@ from agent_evals.corpora import (
     inspect_corpus,
     resolve_corpus,
 )
-from agent_evals.schemas import Checkpoint, RunConfig
+from agent_evals.schemas import Checkpoint, ExpectedMemory, InclusiveChapterRange, RunConfig
 from agent_evals.storage import EvalWorkspace, list_files, load_yaml_model
 
 app = typer.Typer(name="agent-eval", no_args_is_help=True, help="Evaluate the NovelTL memory agent locally.")
 corpus_app = typer.Typer(no_args_is_help=True, help="Manage private evaluation corpora.")
 checkpoint_app = typer.Typer(no_args_is_help=True, help="Manage checkpoint definitions.")
+checkpoint_metric_app = typer.Typer(no_args_is_help=True, help="Manage expected memories for a checkpoint.")
 config_app = typer.Typer(no_args_is_help=True, help="Manage run configurations.")
 run_app = typer.Typer(no_args_is_help=True, help="Launch and inspect evaluation runs.")
 review_app = typer.Typer(no_args_is_help=True, help="Review checkpoint outcomes.")
@@ -27,6 +41,7 @@ report_app = typer.Typer(no_args_is_help=True, help="Summarize and compare evalu
 
 app.add_typer(corpus_app, name="corpus")
 app.add_typer(checkpoint_app, name="checkpoint")
+checkpoint_app.add_typer(checkpoint_metric_app, name="metric")
 app.add_typer(config_app, name="config")
 app.add_typer(run_app, name="run")
 app.add_typer(review_app, name="review")
@@ -151,13 +166,184 @@ def import_corpus_command(
 
 
 @checkpoint_app.command("list")
-def list_checkpoints() -> None:
-    _print_paths(list_files(_workspace().checkpoints, {".yaml", ".yml"}))
+def list_checkpoints(as_json: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False) -> None:
+    try:
+        summaries = discover_checkpoints(_workspace())
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    if as_json:
+        typer.echo(json.dumps([summary.to_dict() for summary in summaries], ensure_ascii=False, indent=2))
+    elif not summaries:
+        typer.echo("No entries found.")
+    else:
+        for summary in summaries:
+            typer.echo(
+                f"{summary.id}\t{summary.corpus}\t{summary.start_chapter}-{summary.end_chapter}"
+                f"\t{summary.activity}\t{summary.memory_count} memories"
+            )
+
+
+@checkpoint_app.command("create")
+def create_checkpoint_command(
+    checkpoint_id: Annotated[str, typer.Argument(help="Stable checkpoint ID")],
+    corpus: Annotated[str, typer.Option(help="Imported corpus ID")],
+    start: Annotated[int, typer.Option(min=1, help="First chapter, inclusive")],
+    end: Annotated[int, typer.Option(min=1, help="Last chapter, inclusive")],
+    activity: Annotated[Literal["normal", "busy", "quiet"], typer.Option()] = "normal",
+    notes: Annotated[str | None, typer.Option()] = None,
+) -> None:
+    workspace = _workspace()
+    try:
+        checkpoint = Checkpoint(
+            id=checkpoint_id,
+            corpus=corpus,
+            chapters=InclusiveChapterRange(start_inclusive=start, end_inclusive=end),
+            activity=activity,
+            notes=notes,
+        )
+        path = create_checkpoint(workspace, checkpoint)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"Created checkpoint: {checkpoint.id} ({path})")
+
+
+@checkpoint_app.command("show")
+def show_checkpoint(
+    checkpoint: Annotated[str, typer.Argument(help="Checkpoint ID or YAML path")],
+    as_json: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    workspace = _workspace()
+    try:
+        value = load_checkpoint(workspace, checkpoint)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(render_checkpoint(value, as_json=as_json))
+
+
+@checkpoint_app.command("update")
+def update_checkpoint_command(
+    checkpoint_id: Annotated[str, typer.Argument(help="Checkpoint ID")],
+    start: Annotated[int | None, typer.Option(min=1, help="Replace first chapter")] = None,
+    end: Annotated[int | None, typer.Option(min=1, help="Replace last chapter")] = None,
+    activity: Annotated[Literal["normal", "busy", "quiet"] | None, typer.Option()] = None,
+    notes: Annotated[str | None, typer.Option(help="Replace notes")] = None,
+    clear_notes: Annotated[bool, typer.Option("--clear-notes", help="Remove existing notes")] = False,
+) -> None:
+    workspace = _workspace()
+    try:
+        checkpoint = load_checkpoint(workspace, checkpoint_id)
+        changes: dict[str, object] = {}
+        if start is not None or end is not None:
+            changes["chapters"] = InclusiveChapterRange(
+                start_inclusive=start if start is not None else checkpoint.chapters.start_inclusive,
+                end_inclusive=end if end is not None else checkpoint.chapters.end_inclusive,
+            )
+        if activity is not None:
+            changes["activity"] = activity
+        if notes is not None and clear_notes:
+            raise CheckpointError("--notes and --clear-notes cannot be used together")
+        if notes is not None or clear_notes:
+            changes["notes"] = notes
+        updated = update_checkpoint(workspace, checkpoint_id, **changes)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"Updated checkpoint: {updated.id}")
+
+
+@checkpoint_app.command("delete")
+def delete_checkpoint_command(
+    checkpoint_id: Annotated[str, typer.Argument(help="Checkpoint ID")],
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Delete without prompting")] = False,
+) -> None:
+    workspace = _workspace()
+    try:
+        resolve_checkpoint(workspace, checkpoint_id)
+        if not yes and not typer.confirm(f"Delete checkpoint {checkpoint_id}?"):
+            raise typer.Abort()
+        delete_checkpoint(workspace, checkpoint_id)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"Deleted checkpoint: {checkpoint_id}")
 
 
 @checkpoint_app.command("validate")
-def validate_checkpoint(path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)]) -> None:
-    _validate(path, Checkpoint)
+def validate_checkpoint(checkpoint: Annotated[str, typer.Argument(help="Checkpoint ID or YAML path")]) -> None:
+    workspace = _workspace()
+    try:
+        path = resolve_checkpoint(workspace, checkpoint)
+        value = load_yaml_model(path, Checkpoint)
+        validate_checkpoint_context(workspace, value)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"Valid Checkpoint: {value.id}")
+
+
+@checkpoint_metric_app.command("list")
+def list_checkpoint_metrics(
+    checkpoint_id: Annotated[str, typer.Argument(help="Checkpoint ID")],
+    as_json: Annotated[bool, typer.Option("--json", help="Emit machine-readable JSON")] = False,
+) -> None:
+    try:
+        checkpoint = load_checkpoint(_workspace(), checkpoint_id)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    if as_json:
+        payload = [memory.model_dump(mode="json", exclude_none=True) for memory in checkpoint.expected_memories]
+        typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
+    elif not checkpoint.expected_memories:
+        typer.echo("No entries found.")
+    else:
+        for memory in checkpoint.expected_memories:
+            typer.echo(f"{memory.id}\t{memory.memory_type}\t{memory.lifecycle}\t{memory.content}")
+
+
+@checkpoint_metric_app.command("set")
+def set_checkpoint_metric(
+    checkpoint_id: Annotated[str, typer.Argument(help="Checkpoint ID")],
+    metric_id: Annotated[str, typer.Option("--id", help="Expected-memory ID")],
+    memory_type: Annotated[str, typer.Option(help="Memory type, such as fact, rel, or def")],
+    content: Annotated[str, typer.Option(help="Expected memory content")],
+    category: Annotated[str | None, typer.Option()] = None,
+    terms: Annotated[list[str] | None, typer.Option("--term", help="Related original-language term; repeatable")] = None,
+    expected_state: Annotated[Literal["active", "ended"], typer.Option()] = "active",
+    lifecycle: Annotated[Literal["any", "create", "supersede", "expire"], typer.Option()] = "any",
+) -> None:
+    workspace = _workspace()
+    try:
+        memory = ExpectedMemory(
+            id=metric_id,
+            memory_type=memory_type,
+            category=category,
+            terms=terms or [],
+            content=content,
+            expected_state=expected_state,
+            lifecycle=lifecycle,
+        )
+        checkpoint = set_expected_memory(workspace, checkpoint_id, memory)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"Set metric: {checkpoint.id}/{memory.id}")
+
+
+@checkpoint_metric_app.command("remove")
+def remove_checkpoint_metric(
+    checkpoint_id: Annotated[str, typer.Argument(help="Checkpoint ID")],
+    metric_id: Annotated[str, typer.Argument(help="Expected-memory ID")],
+) -> None:
+    try:
+        checkpoint = remove_expected_memory(_workspace(), checkpoint_id, metric_id)
+    except (OSError, ValueError, ValidationError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"Removed metric: {checkpoint.id}/{metric_id}")
 
 
 @config_app.command("list")

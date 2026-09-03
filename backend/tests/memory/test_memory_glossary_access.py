@@ -241,15 +241,44 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
             "Glossary must not supersede this memory.",
         )
     with pytest.raises(MemoryNotFoundException):
+        supersede_memory(
+            test_db,
+            next_context,
+            relation.memory_id,
+            Creator.AGENT,
+            MemoryType.FACT,
+            "A fact writer must not supersede a relation.",
+        )
+    with pytest.raises(MemoryNotFoundException):
+        supersede_memory(
+            test_db,
+            next_context,
+            relation.memory_id,
+            Creator.AGENT,
+            MemoryType.RELATION,
+            "A differently categorized writer must not supersede this relation.",
+            expected_marks=["ownership"],
+        )
+    with pytest.raises(MemoryNotFoundException):
         expire_glossary_memory(
             test_db,
             next_context,
             other_plugin_memory.memory_id,
             [MemoryType.FACT],
         )
+    with pytest.raises(MemoryNotFoundException):
+        expire_glossary_memory(
+            test_db,
+            next_context,
+            relation.memory_id,
+            [MemoryType.RELATION],
+            marks=["ownership"],
+        )
 
     test_db.refresh(other_plugin_memory)
     assert other_plugin_memory.memory_end_num is None
+    test_db.refresh(relation)
+    assert relation.memory_end_num is None
 
     expire_glossary_memory(test_db, next_context, relation.memory_id, [MemoryType.RELATION])
     test_db.refresh(relation)

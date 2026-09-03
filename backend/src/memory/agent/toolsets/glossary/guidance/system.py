@@ -1,4 +1,4 @@
-from src.memory.agent.toolsets.guidance import create_guidance_toolset
+from src.memory.agent.toolsets.glossary.guidance import create_guidance_toolset
 
 GLOSSARY_SYSTEM_INSTRUCTIONS = """
 Treat a story's system, interface, status panel, quests, and rewards as distinct

@@ -3,28 +3,39 @@ from pydantic_ai.models.openai import OpenAIChatModelSettings
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
-from src.memory.agent.toolsets.glossary_context import GLOSSARY_SHARED_INSTRUCTIONS, initial_glossary_context
-from src.memory.agent.toolsets.glossary_definitions import glossary_definition_toolset
-from src.memory.agent.toolsets.glossary_events import glossary_event_toolset
-from src.memory.agent.toolsets.glossary_facts import glossary_fact_toolset
-from src.memory.agent.toolsets.glossary_relations import glossary_relation_toolset
-from src.memory.agent.toolsets.glossary_terms import glossary_term_toolset
-from src.memory.agent.toolsets.guidance.glossary_artifacts import glossary_artifact_toolset
-from src.memory.agent.toolsets.guidance.glossary_cultivation import glossary_cultivation_toolset
-from src.memory.agent.toolsets.guidance.glossary_gender import glossary_gender_toolset
-from src.memory.agent.toolsets.guidance.glossary_gender_transformation import (
+from src.memory.agent.toolsets.glossary.context import GLOSSARY_SHARED_INSTRUCTIONS, initial_glossary_context
+from src.memory.agent.toolsets.glossary.definitions import (
+    glossary_definitions_read_toolset,
+    glossary_definitions_write_toolset,
+)
+from src.memory.agent.toolsets.glossary.events import glossary_events_read_toolset, glossary_events_write_toolset
+from src.memory.agent.toolsets.glossary.facts import glossary_facts_read_toolset, glossary_facts_write_toolset
+from src.memory.agent.toolsets.glossary.gender import glossary_gender_read_toolset, glossary_gender_write_toolset
+from src.memory.agent.toolsets.glossary.guidance.artifacts import glossary_artifact_toolset
+from src.memory.agent.toolsets.glossary.guidance.cultivation import glossary_cultivation_toolset
+from src.memory.agent.toolsets.glossary.guidance.gender_transformation import (
     glossary_gender_transformation_toolset,
 )
-from src.memory.agent.toolsets.guidance.glossary_system import glossary_system_toolset
+from src.memory.agent.toolsets.glossary.guidance.system import glossary_system_toolset
+from src.memory.agent.toolsets.glossary.relations import (
+    glossary_relations_read_toolset,
+    glossary_relations_write_toolset,
+)
+from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
 from src.memory.agent.types import TOOLSET_NAMES, ModelName, ToolsetName, validate_toolset_selection
 
 toolsets_by_name: dict[ToolsetName, FunctionToolset[MemAgentDeps]] = {
     "glossary_terms": glossary_term_toolset,
-    "glossary_definitions": glossary_definition_toolset,
-    "glossary_relations": glossary_relation_toolset,
-    "glossary_facts": glossary_fact_toolset,
-    "glossary_events": glossary_event_toolset,
-    "glossary_gender": glossary_gender_toolset,
+    "glossary_definitions_read": glossary_definitions_read_toolset,
+    "glossary_definitions_write": glossary_definitions_write_toolset,
+    "glossary_relations_read": glossary_relations_read_toolset,
+    "glossary_relations_write": glossary_relations_write_toolset,
+    "glossary_facts_read": glossary_facts_read_toolset,
+    "glossary_facts_write": glossary_facts_write_toolset,
+    "glossary_gender_read": glossary_gender_read_toolset,
+    "glossary_gender_write": glossary_gender_write_toolset,
+    "glossary_events_read": glossary_events_read_toolset,
+    "glossary_events_write": glossary_events_write_toolset,
     "glossary_gender_transformation": glossary_gender_transformation_toolset,
     "glossary_cultivation": glossary_cultivation_toolset,
     "glossary_system": glossary_system_toolset,

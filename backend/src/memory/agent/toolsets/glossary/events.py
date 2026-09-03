@@ -4,39 +4,41 @@ from pydantic import Field
 from pydantic_ai import FunctionToolset, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
-from src.memory.agent.toolsets import glossary_common
+from src.memory.agent.toolsets.glossary import common
 from src.memory.plugins.glossary import access
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory
 from src.memory.types import MemoryType, Scope
 from src.schemas import Page
 
-GLOSSARY_EVENT_INSTRUCTIONS = """
-Maintain consequential events associated with exact source-language glossary
-terms.
+GLOSSARY_EVENT_READ_INSTRUCTIONS = """
+Use `term_event_memories` to inspect events associated with specific exact
+terms. Results are newest-first and may include events associated with only
+some requested terms. Use `active_only=True` for current continuity. Set it to
+false only when older, expired, or superseded history is relevant. Start with
+the default page and request another page only when needed.
+""".strip()
 
-- `term_event_memories`: inspect events associated with specific exact terms.
-  Results are newest-first and may include events associated with only some
-  requested terms. Use `active_only=True` for current continuity. Set it to
-  false only when older, expired, or superseded history is relevant. Start with
-  the default page and request another page only when needed.
-- `new_term_event_memory`: record a short, atomic consequential occurrence or
-  change. Every associated term must already exist. For an eligible missing
-  term, call `add_term` when that tool is available; otherwise omit the event.
-- `supersede_term_event_memory`: supersede an active event from an earlier
-  chapter only when the current chapter corrects, replaces, or ends it. Do not
-  use it on an event created in the current chapter or merely to append a
-  compatible later occurrence.
+GLOSSARY_EVENT_WRITE_INSTRUCTIONS = """
+Maintain consequential events associated with exact source-language glossary
+terms. Record a short, atomic consequential occurrence or change. Every
+associated term must already exist. For an eligible missing term, call
+`add_term` when that tool is available; otherwise omit the event.
 
 An event includes a death, meeting, discovery, promise, relocation,
 acquisition, loss, conflict outcome, or irreversible transformation. Record
 only the consequential action and outcome, not a chapter summary. Associate
 only the principal participants or entities needed to retrieve it.
 
-Default to `recent`; use `persist` only for an irreversible or identity-shaping
-event. If only the resulting state or relationship matters, use an enabled fact
-or relation toolset instead of duplicating it as an event. A clearly new
-standalone event may skip retrieval; retrieve event history when a candidate
-continues, concludes, or may duplicate an earlier occurrence.
+Use `supersede_term_event_memory` on an active event from an earlier chapter
+only when the current chapter corrects, replaces, or ends it. Do not use it on
+an event created in the current chapter or merely to append a compatible later
+occurrence. Default to `recent`; use `persist` only for an irreversible or
+identity-shaping event. If only the resulting state or relationship matters,
+use an enabled fact or relation toolset instead of duplicating it as an event.
+
+Before acting on a candidate that continues, concludes, or may duplicate an
+earlier occurrence, call `term_event_memories` as described by the event
+retrieval instructions. A clearly new standalone event may skip retrieval.
 
 For the shared lifecycle decision, the tracked claim is one occurrence or one
 continuous development. A correction, completion, or replacement of that same
@@ -62,7 +64,7 @@ def term_event_memories(
         limit,
         active_only=active_only,
     )
-    return glossary_common.to_agent_memory_page(ctx, page)
+    return common.to_agent_memory_page(ctx, page)
 
 
 def new_term_event_memory(
@@ -72,7 +74,7 @@ def new_term_event_memory(
     scope: Scope | None = None,
 ) -> str:
     """Create an event associated with existing exact glossary terms."""
-    return glossary_common.create_memory(
+    return common.create_memory(
         ctx,
         content,
         term_names,
@@ -89,11 +91,24 @@ def supersede_term_event_memory(
     scope: Scope | None = None,
 ) -> str:
     """Supersede an active event from an earlier chapter."""
-    return glossary_common.supersede_memory(ctx, memory_id, content, MemoryType.EVENT, scope)
+    return common.supersede_memory(
+        ctx,
+        memory_id,
+        content,
+        MemoryType.EVENT,
+        scope,
+        expected_marks=[None],
+    )
 
 
-glossary_event_toolset = FunctionToolset(
-    tools=[term_event_memories, new_term_event_memory, supersede_term_event_memory],
-    instructions=[GLOSSARY_EVENT_INSTRUCTIONS],
+glossary_events_read_toolset = FunctionToolset(
+    tools=[term_event_memories],
+    instructions=[common.GLOSSARY_READ_SUPPORT_INSTRUCTIONS, GLOSSARY_EVENT_READ_INSTRUCTIONS],
+    sequential=True,
+)
+
+glossary_events_write_toolset = FunctionToolset(
+    tools=[new_term_event_memory, supersede_term_event_memory],
+    instructions=[GLOSSARY_EVENT_WRITE_INSTRUCTIONS],
     sequential=True,
 )

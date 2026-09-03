@@ -13,26 +13,37 @@ from src.memory.agent.agent import resolve_toolsets
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
 from src.memory.agent.tasks.jobs import JobParams
-from src.memory.agent.toolsets import glossary_common
-from src.memory.agent.toolsets.glossary_context import GLOSSARY_SHARED_INSTRUCTIONS
-from src.memory.agent.toolsets.glossary_definitions import (
+from src.memory.agent.toolsets.glossary import common as glossary_common
+from src.memory.agent.toolsets.glossary.context import GLOSSARY_SHARED_INSTRUCTIONS
+from src.memory.agent.toolsets.glossary.definitions import (
     definition_memories,
-    glossary_definition_toolset,
+    glossary_definitions_read_toolset,
+    glossary_definitions_write_toolset,
     new_definition_memory,
 )
-from src.memory.agent.toolsets.glossary_events import glossary_event_toolset
-from src.memory.agent.toolsets.glossary_facts import (
+from src.memory.agent.toolsets.glossary.events import glossary_events_read_toolset
+from src.memory.agent.toolsets.glossary.facts import (
     fact_memories,
-    glossary_fact_toolset,
+    glossary_facts_read_toolset,
+    glossary_facts_write_toolset,
     new_fact_memory,
 )
-from src.memory.agent.toolsets.glossary_relations import (
-    glossary_relation_toolset,
+from src.memory.agent.toolsets.glossary.gender import (
+    gender_memories,
+    glossary_gender_read_toolset,
+    glossary_gender_write_toolset,
+    new_gender_memory,
+)
+from src.memory.agent.toolsets.glossary.guidance.gender_transformation import (
+    glossary_gender_transformation_toolset,
+)
+from src.memory.agent.toolsets.glossary.relations import (
+    glossary_relations_read_toolset,
+    glossary_relations_write_toolset,
     new_relation_memory,
     relation_memories,
 )
-from src.memory.agent.toolsets.glossary_terms import glossary_term_toolset
-from src.memory.agent.toolsets.guidance.glossary_gender import glossary_gender_toolset
+from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
 from src.memory.exceptions import GlossaryTermNotFoundException
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
 from src.memory.plugins.glossary.types import TermKind
@@ -68,37 +79,55 @@ def test_memory_prompts_preserve_novel_terms_in_the_source_language() -> None:
 
 
 def test_guidance_toolsets_add_no_callable_tools_and_resolve_in_canonical_order() -> None:
-    resolved = resolve_toolsets(["glossary_gender", "glossary_facts"])
+    resolved = resolve_toolsets(
+        [
+            "glossary_relations_write",
+            "glossary_gender_write",
+            "glossary_gender_transformation",
+            "glossary_relations_read",
+            "glossary_gender_read",
+        ]
+    )
 
-    assert resolved == [glossary_fact_toolset, glossary_gender_toolset]
-    assert glossary_gender_toolset.tools == {}
+    assert resolved == [
+        glossary_relations_read_toolset,
+        glossary_relations_write_toolset,
+        glossary_gender_read_toolset,
+        glossary_gender_write_toolset,
+        glossary_gender_transformation_toolset,
+    ]
+    assert glossary_gender_transformation_toolset.tools == {}
 
 
-def test_job_params_reject_guidance_without_required_toolsets() -> None:
-    with pytest.raises(ValidationError, match="Toolset glossary_gender requires: glossary_facts"):
-        JobParams(
-            model_name="deepseek:deepseek-v4-flash-low",
-            toolsets=["glossary_gender"],
-        )
-
+def test_job_params_reject_writes_and_guidance_without_required_toolsets() -> None:
     with pytest.raises(
         ValidationError,
-        match="Toolset glossary_gender_transformation requires: glossary_gender",
+        match="Toolset glossary_gender_write requires: glossary_gender_read",
     ):
         JobParams(
             model_name="deepseek:deepseek-v4-flash-low",
-            toolsets=["glossary_facts", "glossary_gender_transformation"],
+            toolsets=["glossary_gender_write"],
         )
 
     with pytest.raises(
         ValidationError,
-        match="Toolset glossary_gender_transformation requires: glossary_relations",
+        match="Toolset glossary_gender_transformation requires: glossary_gender_write",
+    ):
+        JobParams(
+            model_name="deepseek:deepseek-v4-flash-low",
+            toolsets=["glossary_gender_read", "glossary_gender_transformation"],
+        )
+
+    with pytest.raises(
+        ValidationError,
+        match="Toolset glossary_gender_transformation requires: glossary_relations_write",
     ):
         JobParams(
             model_name="deepseek:deepseek-v4-flash-low",
             toolsets=[
-                "glossary_facts",
-                "glossary_gender",
+                "glossary_relations_read",
+                "glossary_gender_read",
+                "glossary_gender_write",
                 "glossary_gender_transformation",
             ],
         )
@@ -147,7 +176,7 @@ def test_create_memory_skips_missing_term_query_after_success(monkeypatch: pytes
 
 
 def test_glossary_tool_schemas_enforce_input_constraints() -> None:
-    event_schema = glossary_event_toolset.tools["term_event_memories"].function_schema.json_schema
+    event_schema = glossary_events_read_toolset.tools["term_event_memories"].function_schema.json_schema
     assert event_schema["properties"]["skip"] == {"default": 0, "minimum": 0, "type": "integer"}
     assert event_schema["properties"]["limit"] == {
         "default": 10,
@@ -158,9 +187,9 @@ def test_glossary_tool_schemas_enforce_input_constraints() -> None:
     assert event_schema["properties"]["active_only"] == {"default": True, "type": "boolean"}
 
     for toolset, tool_name, required in (
-        (glossary_definition_toolset, "definition_memories", ["term_name"]),
-        (glossary_relation_toolset, "relation_memories", ["term_name", "category"]),
-        (glossary_fact_toolset, "fact_memories", ["term_name", "category"]),
+        (glossary_definitions_read_toolset, "definition_memories", ["term_name"]),
+        (glossary_relations_read_toolset, "relation_memories", ["term_name", "category"]),
+        (glossary_facts_read_toolset, "fact_memories", ["term_name", "category"]),
     ):
         term_schema = toolset.tools[tool_name].function_schema.json_schema
         assert term_schema["required"] == required
@@ -194,17 +223,17 @@ def test_glossary_tool_schemas_enforce_input_constraints() -> None:
         "other",
     ]
     for toolset, tool_name, required in (
-        (glossary_definition_toolset, "new_definition_memory", ["content", "term_names"]),
-        (glossary_relation_toolset, "new_relation_memory", ["content", "term_names", "category"]),
-        (glossary_fact_toolset, "new_fact_memory", ["content", "term_names", "category"]),
-        (glossary_definition_toolset, "supersede_definition_memory", ["memory_id", "content"]),
+        (glossary_definitions_write_toolset, "new_definition_memory", ["content", "term_names"]),
+        (glossary_relations_write_toolset, "new_relation_memory", ["content", "term_names", "category"]),
+        (glossary_facts_write_toolset, "new_fact_memory", ["content", "term_names", "category"]),
+        (glossary_definitions_write_toolset, "supersede_definition_memory", ["memory_id", "content"]),
         (
-            glossary_relation_toolset,
+            glossary_relations_write_toolset,
             "supersede_relation_memory",
             ["memory_id", "content", "category"],
         ),
         (
-            glossary_fact_toolset,
+            glossary_facts_write_toolset,
             "supersede_fact_memory",
             ["memory_id", "content", "term_name", "category"],
         ),
@@ -215,22 +244,23 @@ def test_glossary_tool_schemas_enforce_input_constraints() -> None:
         assert "memory_type" not in write_schema["properties"]
 
     for toolset, tool_name in (
-        (glossary_definition_toolset, "new_definition_memory"),
-        (glossary_fact_toolset, "new_fact_memory"),
+        (glossary_definitions_write_toolset, "new_definition_memory"),
+        (glossary_facts_write_toolset, "new_fact_memory"),
     ):
         term_names_schema = toolset.tools[tool_name].function_schema.json_schema["properties"]["term_names"]
         assert term_names_schema["minItems"] == 1
         assert term_names_schema["maxItems"] == 1
 
-    relation_term_names_schema = glossary_relation_toolset.tools["new_relation_memory"].function_schema.json_schema[
+    relation_term_names_schema = glossary_relations_write_toolset.tools[
+        "new_relation_memory"
+    ].function_schema.json_schema[
         "properties"
     ]["term_names"]
     assert relation_term_names_schema["minItems"] == 2
 
-    fact_schema = glossary_fact_toolset.tools["new_fact_memory"].function_schema.json_schema
+    fact_schema = glossary_facts_write_toolset.tools["new_fact_memory"].function_schema.json_schema
     assert fact_schema["properties"]["category"] == {"$ref": "#/$defs/FactCategory"}
     assert fact_schema["$defs"]["FactCategory"]["enum"] == [
-        "gender",
         "age_stage",
         "species",
         "appearance",
@@ -239,14 +269,20 @@ def test_glossary_tool_schemas_enforce_input_constraints() -> None:
         "ability",
         "limitation",
     ]
-    supersede_fact_schema = glossary_fact_toolset.tools[
+    supersede_fact_schema = glossary_facts_write_toolset.tools[
         "supersede_fact_memory"
     ].function_schema.json_schema
     assert supersede_fact_schema["properties"]["term_name"] == {
         "minLength": 1,
         "type": "string",
     }
-    relation_schema = glossary_relation_toolset.tools["new_relation_memory"].function_schema.json_schema
+    gender_schema = glossary_gender_write_toolset.tools["new_gender_memory"].function_schema.json_schema
+    assert gender_schema["required"] == ["content", "term_names"]
+    assert "category" not in gender_schema["properties"]
+    assert gender_schema["properties"]["term_names"]["maxItems"] == 1
+    relation_schema = glossary_relations_write_toolset.tools[
+        "new_relation_memory"
+    ].function_schema.json_schema
     assert relation_schema["properties"]["category"] == {"$ref": "#/$defs/RelationCategory"}
     assert relation_schema["$defs"]["RelationCategory"]["enum"] == [
         "alias",
@@ -290,6 +326,7 @@ def test_term_write_persists_categories_without_leaking_markers_into_content(
         ["Alpha", "Beta"],
         "friendship",
     )
+    new_gender_memory(ctx, "[gender] Alpha is a woman.", ["Alpha"])
 
     assert create_memory.call_args_list[0].args[5] == "Alpha is human."
     assert create_memory.call_args_list[0].args[7] == "species"
@@ -297,6 +334,8 @@ def test_term_write_persists_categories_without_leaking_markers_into_content(
     assert create_memory.call_args_list[1].args[7] is None
     assert create_memory.call_args_list[2].args[5] == "Alpha is friends with Beta."
     assert create_memory.call_args_list[2].args[7] == "friendship"
+    assert create_memory.call_args_list[3].args[5] == "Alpha is a woman."
+    assert create_memory.call_args_list[3].args[7] == "gender"
 
 
 def test_retrieval_tool_result_serializes_agent_models_with_snake_case() -> None:
@@ -377,3 +416,7 @@ def test_type_specific_retrieval_forwards_one_type_and_one_mark(monkeypatch: pyt
     relation_memories(_run_context(db), "Alpha", "friendship")
     assert inspect_terms.call_args.args[3] == [MemoryType.RELATION]
     assert inspect_terms.call_args.kwargs == {"marks": ["friendship"], "term_search": None}
+
+    gender_memories(_run_context(db), "Alpha")
+    assert inspect_terms.call_args.args[3] == [MemoryType.FACT]
+    assert inspect_terms.call_args.kwargs == {"marks": ["gender"], "term_search": None}

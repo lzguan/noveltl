@@ -1,10 +1,10 @@
-from typing import Annotated, Literal
+from typing import Annotated, Literal, get_args
 
 from pydantic import Field
 from pydantic_ai import FunctionToolset, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
-from src.memory.agent.toolsets import glossary_common
+from src.memory.agent.toolsets.glossary import common
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory
 from src.memory.types import MemoryType, Scope
 from src.schemas import Page
@@ -24,8 +24,17 @@ type RelationCategory = Literal[
     "organizational_hierarchy",
     "commercial_partnership",
 ]
+RELATION_CATEGORIES: tuple[RelationCategory, ...] = get_args(RelationCategory.__value__)
 
-GLOSSARY_RELATION_INSTRUCTIONS = """
+GLOSSARY_RELATION_READ_INSTRUCTIONS = """
+Query one existing participant most likely to reveal the candidate
+relationship, with its one matching category. Form the candidate before
+retrieval. Use `term_search` only for a literal, case-insensitive substring
+expected in the memory text. Filters apply before pagination and results are
+newest-first. Request another page only when the filtered count requires it.
+""".strip()
+
+GLOSSARY_RELATION_WRITE_INSTRUCTIONS = """
 Maintain explicit, continuity-relevant relationships between glossary terms.
 THIS TOOLSET MUST NOT RECORD EVENTS. Do not record co-occurrence, temporary
 cooperation, ordinary transactions, actions, location, vague enmity, or shared
@@ -39,18 +48,13 @@ naming the same identity; `kinship`; explicitly established `friendship` or
 a one-time transaction. Friendship and romance may coexist unless the source
 explicitly ends one.
 
-Before writing, call `relation_memories` on one existing participant most
-likely to reveal the candidate relation, with its one matching category. Form
-the candidate before retrieval. Use `term_search` only for a literal,
-case-insensitive substring expected in the memory text. Filters apply before
-pagination and results are newest-first. Request another page only when the
-filtered count requires it. Skip retrieval only when every participant is new.
-
-Make no write when the relationship is already represented. Supersede a
-relation only when the same relationship receives a replacement current value.
-Expire it only when the chapter explicitly ends it without replacement.
-Absence is never evidence for expiry. Complementary relations remain separate,
-and approved memories change only on clear textual evidence.
+Before acting on each candidate, call `relation_memories` as described by the
+relation retrieval instructions. Retrieval is unnecessary only when every
+participant is new. Make no write when the relationship is already represented.
+Supersede a relation only when the same relationship receives a replacement
+current value. Expire it only when the chapter explicitly ends it without
+replacement. Absence is never evidence for expiry. Complementary relations
+remain separate, and approved memories change only on clear textual evidence.
 
 For the shared lifecycle decision, the tracked claim is the particular
 relationship between its participants, not every relation returned for one
@@ -70,7 +74,7 @@ def relation_memories(
     term_search: Annotated[str | None, Field(min_length=1)] = None,
 ) -> Page[AgentGlossaryMemory[str]]:
     """Retrieve active relations in one category for one exact glossary term."""
-    return glossary_common.term_memories(ctx, term_name, MemoryType.RELATION, category, skip, limit, term_search)
+    return common.term_memories(ctx, term_name, MemoryType.RELATION, category, skip, limit, term_search)
 
 
 def new_relation_memory(
@@ -81,9 +85,9 @@ def new_relation_memory(
     scope: Scope | None = None,
 ) -> str:
     """Create a categorized relation between exact glossary terms."""
-    return glossary_common.create_memory(
+    return common.create_memory(
         ctx,
-        glossary_common.strip_marker(content, category),
+        common.strip_marker(content, category),
         term_names,
         MemoryType.RELATION,
         scope,
@@ -100,28 +104,30 @@ def supersede_relation_memory(
     scope: Scope | None = None,
 ) -> str:
     """Supersede an active relation with one categorized replacement."""
-    return glossary_common.supersede_memory(
+    return common.supersede_memory(
         ctx,
         memory_id,
-        glossary_common.strip_marker(content, category),
+        common.strip_marker(content, category),
         MemoryType.RELATION,
         scope,
         category,
+        expected_marks=list(RELATION_CATEGORIES),
     )
 
 
 def expire_relation_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire an active relation that explicitly stopped being true."""
-    return glossary_common.expire_memory(ctx, memory_id, [MemoryType.RELATION])
+    return common.expire_memory(ctx, memory_id, [MemoryType.RELATION], marks=list(RELATION_CATEGORIES))
 
 
-glossary_relation_toolset = FunctionToolset(
-    tools=[
-        relation_memories,
-        new_relation_memory,
-        supersede_relation_memory,
-        expire_relation_memory,
-    ],
-    instructions=[GLOSSARY_RELATION_INSTRUCTIONS],
+glossary_relations_read_toolset = FunctionToolset(
+    tools=[relation_memories],
+    instructions=[common.GLOSSARY_READ_SUPPORT_INSTRUCTIONS, GLOSSARY_RELATION_READ_INSTRUCTIONS],
+    sequential=True,
+)
+
+glossary_relations_write_toolset = FunctionToolset(
+    tools=[new_relation_memory, supersede_relation_memory, expire_relation_memory],
+    instructions=[GLOSSARY_RELATION_WRITE_INSTRUCTIONS],
     sequential=True,
 )

@@ -277,7 +277,25 @@ def supersede_memory(
     scope: Scope | None = None,
     mark: str | None = None,
     replacement_term_names: list[str] | None = None,
+    expected_marks: Sequence[str | None] | None = None,
 ) -> tuple[Memory, list[GlossaryAssociation]]:
+    target_query = select(Memory.memory_id).where(
+        Memory.memory_id == memory_id,
+        Memory.memory_group_id == ctx.memory_group_id,
+        Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
+        Memory.memory_type == mem_type,
+    )
+    if expected_marks is not None:
+        non_null_marks = [expected_mark for expected_mark in expected_marks if expected_mark is not None]
+        mark_filters = []
+        if non_null_marks:
+            mark_filters.append(Memory.mark.in_(non_null_marks))
+        if None in expected_marks:
+            mark_filters.append(Memory.mark.is_(None))
+        target_query = target_query.where(or_(*mark_filters) if mark_filters else Memory.mark.in_([]))
+    if db.scalar(target_query) is None:
+        raise MemoryNotFoundException(f"Glossary memory with id {memory_id} is outside this toolset")
+
     if replacement_term_names is None:
         replacement_term_names = list(
             db.execute(
@@ -312,20 +330,30 @@ def expire_memory(
     ctx: MemAccessContext,
     memory_id: UUID,
     memory_types: Sequence[MemoryType],
+    *,
+    marks: Sequence[str | None] | None = None,
 ) -> None:
     """End an older active glossary memory without creating a replacement."""
     chapter_num, _ = check_mem_access_ctx(db, ctx)
     try:
+        query = update(Memory).where(
+            Memory.memory_id == memory_id,
+            Memory.memory_group_id == ctx.memory_group_id,
+            Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
+            Memory.memory_type.in_(memory_types),
+            Memory.memory_start_num < chapter_num,
+            or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chapter_num),
+        )
+        if marks is not None:
+            non_null_marks = [mark for mark in marks if mark is not None]
+            mark_filters = []
+            if non_null_marks:
+                mark_filters.append(Memory.mark.in_(non_null_marks))
+            if None in marks:
+                mark_filters.append(Memory.mark.is_(None))
+            query = query.where(or_(*mark_filters) if mark_filters else Memory.mark.in_([]))
         db.execute(
-            update(Memory)
-            .where(
-                Memory.memory_id == memory_id,
-                Memory.memory_group_id == ctx.memory_group_id,
-                Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
-                Memory.memory_type.in_(memory_types),
-                Memory.memory_start_num < chapter_num,
-                or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chapter_num),
-            )
+            query
             .values(memory_end_num=chapter_num)
             .returning(Memory.memory_id)
         ).scalar_one()

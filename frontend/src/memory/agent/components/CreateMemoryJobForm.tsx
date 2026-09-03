@@ -30,11 +30,16 @@ type MemoryJobFormValues = {
 	endChapterNum: string;
 	modelName: ModelName;
 	includeGlossaryTerms: boolean;
-	includeGlossaryDefinitions: boolean;
-	includeGlossaryRelations: boolean;
-	includeGlossaryFacts: boolean;
-	includeGlossaryEvents: boolean;
-	includeGlossaryGender: boolean;
+	includeGlossaryDefinitionsRead: boolean;
+	includeGlossaryDefinitionsWrite: boolean;
+	includeGlossaryRelationsRead: boolean;
+	includeGlossaryRelationsWrite: boolean;
+	includeGlossaryFactsRead: boolean;
+	includeGlossaryFactsWrite: boolean;
+	includeGlossaryGenderRead: boolean;
+	includeGlossaryGenderWrite: boolean;
+	includeGlossaryEventsRead: boolean;
+	includeGlossaryEventsWrite: boolean;
 	includeGlossaryGenderTransformation: boolean;
 	includeGlossaryCultivation: boolean;
 	includeGlossarySystem: boolean;
@@ -49,59 +54,89 @@ const TOOLSET_OPTIONS = [
 		description: "Create and classify new source-language terms.",
 	},
 	{
-		fieldName: "includeGlossaryDefinitions",
-		toolset: "glossary_definitions",
-		label: "Glossary definitions",
-		description: "Read and maintain canonical term meanings.",
+		fieldName: "includeGlossaryDefinitionsRead",
+		toolset: "glossary_definitions_read",
+		label: "Glossary definitions: read",
+		description: "Retrieve canonical term meanings.",
 	},
 	{
-		fieldName: "includeGlossaryRelations",
-		toolset: "glossary_relations",
-		label: "Glossary relations",
-		description: "Read and maintain categorized relationships.",
+		fieldName: "includeGlossaryDefinitionsWrite",
+		toolset: "glossary_definitions_write",
+		label: "Glossary definitions: write",
+		description: "Maintain canonical meanings. Requires definitions: read.",
 	},
 	{
-		fieldName: "includeGlossaryFacts",
-		toolset: "glossary_facts",
-		label: "Glossary facts",
-		description: "Read and maintain selected continuity-critical attributes.",
+		fieldName: "includeGlossaryRelationsRead",
+		toolset: "glossary_relations_read",
+		label: "Glossary relations: read",
+		description: "Retrieve categorized relationships.",
 	},
 	{
-		fieldName: "includeGlossaryEvents",
-		toolset: "glossary_events",
-		label: "Glossary events",
-		description: "Read and maintain consequential occurrences.",
+		fieldName: "includeGlossaryRelationsWrite",
+		toolset: "glossary_relations_write",
+		label: "Glossary relations: write",
+		description: "Maintain relationships. Requires relations: read.",
 	},
 	{
-		fieldName: "includeGlossaryGender",
-		toolset: "glossary_gender",
-		label: "Gender guidance",
-		description: "Track explicitly established gender. Requires glossary facts.",
+		fieldName: "includeGlossaryFactsRead",
+		toolset: "glossary_facts_read",
+		label: "Glossary facts: read",
+		description: "Retrieve selected continuity-critical attributes.",
+	},
+	{
+		fieldName: "includeGlossaryFactsWrite",
+		toolset: "glossary_facts_write",
+		label: "Glossary facts: write",
+		description: "Maintain selected attributes. Requires facts: read.",
+	},
+	{
+		fieldName: "includeGlossaryGenderRead",
+		toolset: "glossary_gender_read",
+		label: "Glossary gender: read",
+		description: "Retrieve explicitly established gender-related state.",
+	},
+	{
+		fieldName: "includeGlossaryGenderWrite",
+		toolset: "glossary_gender_write",
+		label: "Glossary gender: write",
+		description: "Maintain gender-related state. Requires gender: read.",
+	},
+	{
+		fieldName: "includeGlossaryEventsRead",
+		toolset: "glossary_events_read",
+		label: "Glossary events: read",
+		description: "Retrieve consequential occurrences.",
+	},
+	{
+		fieldName: "includeGlossaryEventsWrite",
+		toolset: "glossary_events_write",
+		label: "Glossary events: write",
+		description: "Maintain consequential occurrences. Requires events: read.",
 	},
 	{
 		fieldName: "includeGlossaryGenderTransformation",
 		toolset: "glossary_gender_transformation",
 		label: "Gender transformation guidance",
 		description:
-			"Distinguish lasting changes, reveals, disguises, bodies, and avatars. Requires gender guidance, glossary facts, and glossary relations.",
+			"Distinguish lasting changes, reveals, disguises, bodies, and avatars. Requires gender and relation read/write tools.",
 	},
 	{
 		fieldName: "includeGlossaryCultivation",
 		toolset: "glossary_cultivation",
 		label: "Cultivation guidance",
-		description: "Track completed cultivation levels and reject temporary boosts. Requires glossary facts.",
+		description: "Track completed cultivation levels and reject temporary boosts. Requires fact read/write tools.",
 	},
 	{
 		fieldName: "includeGlossarySystem",
 		toolset: "glossary_system",
 		label: "System guidance",
-		description: "Track durable system mechanics and state sparingly. Requires glossary facts.",
+		description: "Track durable system mechanics and state sparingly. Requires fact read/write tools.",
 	},
 	{
 		fieldName: "includeGlossaryArtifacts",
 		toolset: "glossary_artifacts",
 		label: "Artifact guidance",
-		description: "Track recurring fantastical objects and lasting changes. Requires glossary definitions.",
+		description: "Track recurring fantastical objects and lasting changes. Requires definition read/write tools.",
 	},
 ] as const;
 
@@ -128,11 +163,16 @@ export function CreateMemoryJobForm({
 			endChapterNum: "",
 			modelName: "deepseek:deepseek-v4-flash-none",
 			includeGlossaryTerms: true,
-			includeGlossaryDefinitions: true,
-			includeGlossaryRelations: true,
-			includeGlossaryFacts: true,
-			includeGlossaryEvents: true,
-			includeGlossaryGender: false,
+			includeGlossaryDefinitionsRead: true,
+			includeGlossaryDefinitionsWrite: true,
+			includeGlossaryRelationsRead: true,
+			includeGlossaryRelationsWrite: true,
+			includeGlossaryFactsRead: true,
+			includeGlossaryFactsWrite: true,
+			includeGlossaryGenderRead: true,
+			includeGlossaryGenderWrite: true,
+			includeGlossaryEventsRead: true,
+			includeGlossaryEventsWrite: true,
 			includeGlossaryGenderTransformation: false,
 			includeGlossaryCultivation: false,
 			includeGlossarySystem: false,

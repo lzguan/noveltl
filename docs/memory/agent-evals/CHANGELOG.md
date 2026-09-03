@@ -4,6 +4,35 @@ Entries are ordered newest first. Detailed evidence belongs in a linked run
 report. Planned changes should not be marked accepted before their stated
 evaluation has completed.
 
+## 2026-09-03 — Separate glossary readers and writers
+
+- **Status:** infrastructure and prompt change; not yet behaviorally evaluated
+- **Change:** split definition, relation, fact, and event retrieval from their
+  write tools. Require each writer's reader. Move glossary toolsets under one
+  plugin package. Give gender its own fact-backed reader and writer, and remove
+  gender from the generic fact categories.
+- **Objectives:**
+
+  - Let jobs enable retrieval without exposing mutation tools.
+  - Make each writer retrieve the relevant existing state before changing it.
+  - Keep generic fact instructions focused while ensuring ordinary novels can
+    still record explicitly established gender through lightweight tools.
+  - Prevent a specialized writer from changing memories owned by another
+    memory type or category.
+
+- **Expected side effects:**
+
+  - Equivalent full configurations expose more toolset instruction blocks,
+    although the callable tools are divided rather than duplicated.
+  - Dedicated gender tools may change which gender memories are selected and
+    how consistently they are superseded.
+  - Read-only configurations may retrieve context without producing writes.
+
+- **Validation:** compare a matched run using all corresponding readers and
+  writers with the prior combined-toolset baseline. Check retrieval calls,
+  writes by type and category, duplicate active memories, gender checkpoint
+  coverage, supersession, retries, tokens, cost, and elapsed time.
+
 ## 2026-08-30 — Explicit memory lifecycle decision
 
 - **Status:** not yet evaluated

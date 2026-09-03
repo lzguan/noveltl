@@ -11,6 +11,20 @@ from src.memory.schemas import AgentMemory
 from src.memory.types import Creator, MemoryType, Scope
 from src.schemas import Page
 
+GLOSSARY_READ_SUPPORT_INSTRUCTIONS = """
+These are retrieval support tools. Do not call them speculatively. Other
+enabled tool instructions may require checking existing memories before
+creating, superseding, expiring, or leaving a candidate unchanged. Follow
+those instructions to decide when retrieval is required or may be skipped;
+use the instructions below to construct the retrieval call.
+
+Retrieval may also be used when the chapter explicitly refers to an earlier
+state, relationship, definition, or continuing event that must be understood
+to decide a concrete candidate's lifecycle, even if the chapter does not fully
+restate that context. Do not retrieve merely to investigate unclear prose,
+discover possible candidates, or gather general background.
+""".strip()
+
 
 def term_memories(
     ctx: RunContext[MemAgentDeps],
@@ -95,6 +109,8 @@ def supersede_memory(
     scope: Scope | None,
     mark: str | None = None,
     replacement_term_names: list[str] | None = None,
+    *,
+    expected_marks: list[str | None] | None = None,
 ) -> str:
     """Supersede a glossary memory and translate its database UUID for the agent."""
     try:
@@ -114,6 +130,7 @@ def supersede_memory(
                 scope,
                 mark,
                 replacement_term_names,
+                expected_marks,
             )
     except GlossaryTermNotFoundException as exc:
         missing_term_names = access.get_missing_term_names(
@@ -141,6 +158,8 @@ def expire_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     memory_types: list[MemoryType],
+    *,
+    marks: list[str | None] | None = None,
 ) -> str:
     """Expire a glossary memory without creating a replacement."""
     try:
@@ -155,6 +174,7 @@ def expire_memory(
                 ctx.deps.mem_access_context,
                 current_id,
                 memory_types,
+                marks=marks,
             )
     except MemoryNotFoundException as exc:
         raise ModelRetry(

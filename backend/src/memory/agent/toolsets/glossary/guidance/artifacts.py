@@ -1,4 +1,4 @@
-from src.memory.agent.toolsets.guidance import create_guidance_toolset
+from src.memory.agent.toolsets.glossary.guidance import create_guidance_toolset
 
 GLOSSARY_ARTIFACT_INSTRUCTIONS = """
 Create `item` terms selectively for named unique objects or recurring classes

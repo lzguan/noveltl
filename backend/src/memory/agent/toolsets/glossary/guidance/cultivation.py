@@ -1,4 +1,4 @@
-from src.memory.agent.toolsets.guidance import create_guidance_toolset
+from src.memory.agent.toolsets.glossary.guidance import create_guidance_toolset
 
 GLOSSARY_CULTIVATION_INSTRUCTIONS = """
 Track a recurring person's current, completed cultivation level when it is

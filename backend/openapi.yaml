@@ -1974,6 +1974,9 @@ components:
           additionalProperties: true
           title: Configschema
           type: object
+        defaultEnabled:
+          title: Defaultenabled
+          type: boolean
         description:
           title: Description
           type: string
@@ -2000,6 +2003,7 @@ components:
       - label
       - description
       - kind
+      - defaultEnabled
       - configSchema
       - requires
       - excludes
@@ -5814,6 +5818,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/MemoryAgentConfig'
           description: Successful Response
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Unauthorized
       security:
       - OAuth2PasswordBearer: []
       summary: Read Memory Agent Config

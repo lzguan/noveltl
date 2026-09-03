@@ -68,6 +68,7 @@ def test_memory_agent_router_exposes_registered_config(
     toolsets = {toolset["name"]: toolset for toolset in config["toolsets"]}
     definitions_write = toolsets["glossary_definitions_write"]
     assert definitions_write["kind"] == "memory"
+    assert definitions_write["defaultEnabled"] is True
     assert definitions_write["requires"] == ["glossary_definitions_read"]
     assert definitions_write["excludes"] == []
     assert definitions_write["configSchema"] == {

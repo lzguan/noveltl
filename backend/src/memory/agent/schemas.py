@@ -28,6 +28,7 @@ class MemoryAgentToolsetOption(Model):
     label: str
     description: str
     kind: ToolsetKind
+    default_enabled: bool
     config_schema: dict[str, Any]
     requires: list[str]
     excludes: list[str]

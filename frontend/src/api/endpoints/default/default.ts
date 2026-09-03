@@ -48,6 +48,7 @@ import type {
   LabelGroupWithRole,
   Language,
   Memory,
+  MemoryAgentConfig,
   MemoryChapterTask,
   MemoryGroup,
   MemoryJob,
@@ -2162,6 +2163,48 @@ return customFetch<editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchRespon
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateReviewStatus)
+  }
+);}
+
+
+export type readMemoryAgentConfigMemoryAgentConfigGetResponse200 = {
+  data: MemoryAgentConfig
+  status: 200
+}
+
+export type readMemoryAgentConfigMemoryAgentConfigGetResponse401 = {
+  data: DetailHTTPErrorResponse
+  status: 401
+}
+
+export type readMemoryAgentConfigMemoryAgentConfigGetResponseSuccess = (readMemoryAgentConfigMemoryAgentConfigGetResponse200) & {
+  headers: Headers;
+};
+export type readMemoryAgentConfigMemoryAgentConfigGetResponseError = (readMemoryAgentConfigMemoryAgentConfigGetResponse401) & {
+  headers: Headers;
+};
+
+export type readMemoryAgentConfigMemoryAgentConfigGetResponse = (readMemoryAgentConfigMemoryAgentConfigGetResponseSuccess | readMemoryAgentConfigMemoryAgentConfigGetResponseError)
+
+export const getReadMemoryAgentConfigMemoryAgentConfigGetUrl = () => {
+
+
+
+
+  return `/api/memory-agent/config`
+}
+
+/**
+ * @summary Read Memory Agent Config
+ */
+export const readMemoryAgentConfigMemoryAgentConfigGet = async ( options?: Parameters<typeof customFetch>[1]): Promise<readMemoryAgentConfigMemoryAgentConfigGetResponse> => {
+
+  return customFetch<readMemoryAgentConfigMemoryAgentConfigGetResponse>(getReadMemoryAgentConfigMemoryAgentConfigGetUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 

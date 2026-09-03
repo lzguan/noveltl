@@ -4,10 +4,10 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { JobParamsToolsets } from './jobParamsToolsets';
 import type { ModelName } from './modelName';
 
-export interface JobParams {
-  modelName: ModelName;
-  toolsets: JobParamsToolsets;
+export interface MemoryAgentModelOption {
+  description: string;
+  label: string;
+  name: ModelName;
 }

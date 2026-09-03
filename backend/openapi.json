@@ -6083,6 +6083,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -9596,6 +9606,10 @@
           "kind": {
             "$ref": "#/components/schemas/ToolsetKind"
           },
+          "defaultEnabled": {
+            "type": "boolean",
+            "title": "Defaultenabled"
+          },
           "configSchema": {
             "additionalProperties": true,
             "type": "object",
@@ -9622,6 +9636,7 @@
           "label",
           "description",
           "kind",
+          "defaultEnabled",
           "configSchema",
           "requires",
           "excludes"

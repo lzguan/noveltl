@@ -65,6 +65,7 @@ class ToolsetMetadata:
     label: str
     description: str
     kind: ToolsetKind
+    default_enabled: bool = False
     config_model: type[ToolsetConfig] = ToolsetConfig
 
 
@@ -84,54 +85,68 @@ type ToolsetRestriction = ToolsetRequires | ToolsetExcludes
 
 
 TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
-    ToolsetMetadata("glossary_terms", "Glossary terms", "Create and classify source-language terms.", "memory"),
+    ToolsetMetadata(
+        "glossary_terms",
+        "Glossary terms",
+        "Create and classify source-language terms.",
+        "memory",
+        default_enabled=True,
+    ),
     ToolsetMetadata(
         "glossary_definitions_read",
         "Glossary definitions: read",
         "Retrieve canonical term meanings.",
         "memory",
+        default_enabled=True,
     ),
     ToolsetMetadata(
         "glossary_definitions_write",
         "Glossary definitions: write",
         "Create, supersede, or expire canonical term meanings.",
         "memory",
+        default_enabled=True,
     ),
     ToolsetMetadata(
         "glossary_relations_read",
         "Glossary relations: read",
         "Retrieve categorized relationships.",
         "memory",
+        default_enabled=True,
     ),
     ToolsetMetadata(
         "glossary_relations_write",
         "Glossary relations: write",
         "Create, supersede, or expire categorized relationships.",
         "memory",
+        default_enabled=True,
     ),
     ToolsetMetadata(
         "glossary_facts_read",
         "Glossary facts: read",
         "Retrieve continuity-critical attributes other than gender.",
         "memory",
+        default_enabled=True,
     ),
     ToolsetMetadata(
         "glossary_facts_write",
         "Glossary facts: write",
         "Create, supersede, or expire continuity-critical attributes other than gender.",
         "memory",
+        default_enabled=True,
     ),
     ToolsetMetadata(
         "glossary_gender_read",
         "Glossary gender: read",
         "Retrieve explicitly established gender-related state.",
         "memory",
+        default_enabled=True,
     ),
     ToolsetMetadata(
         "glossary_gender_write",
         "Glossary gender: write",
         "Create, supersede, or expire explicitly established gender-related state.",
         "memory",
+        default_enabled=True,
     ),
     ToolsetMetadata(
         "glossary_gender_advanced_facts_read",
@@ -150,12 +165,14 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
         "Glossary events: read",
         "Retrieve consequential occurrences.",
         "memory",
+        default_enabled=True,
     ),
     ToolsetMetadata(
         "glossary_events_write",
         "Glossary events: write",
         "Create or supersede consequential occurrences.",
         "memory",
+        default_enabled=True,
     ),
     ToolsetMetadata(
         "glossary_gender_advanced_events_read",

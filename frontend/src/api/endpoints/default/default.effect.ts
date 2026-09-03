@@ -1644,6 +1644,31 @@ export const EditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch422Response 
 })
 
 /**
+ * @summary Read Memory Agent Config
+ */
+export const ReadMemoryAgentConfigMemoryAgentConfigGet200Response = S.Struct({
+  "models": S.Array(S.Struct({
+  "description": S.String,
+  "label": S.String,
+  "name": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low')
+})),
+  "toolsets": S.Array(S.Struct({
+  "configSchema": S.Record({ key: S.String, value: S.Unknown }),
+  "defaultEnabled": S.Boolean,
+  "description": S.String,
+  "excludes": S.Array(S.String),
+  "kind": S.Literal('memory', 'guidance'),
+  "label": S.String,
+  "name": S.String,
+  "requires": S.Array(S.String)
+}))
+})
+
+export const ReadMemoryAgentConfigMemoryAgentConfigGet401Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+/**
  * @summary Read Memory Job Summaries
  */
 export const ReadMemoryJobSummariesMemoryAgentJobSummariesGetQueryParams = S.Struct({
@@ -1669,7 +1694,7 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet200Response = S.Str
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions_read', 'glossary_definitions_write', 'glossary_relations_read', 'glossary_relations_write', 'glossary_facts_read', 'glossary_facts_write', 'glossary_gender_read', 'glossary_gender_write', 'glossary_gender_advanced_facts_read', 'glossary_gender_advanced_facts_write', 'glossary_events_read', 'glossary_events_write', 'glossary_gender_advanced_events_read', 'glossary_gender_advanced_events_write', 'glossary_gender_transformation', 'glossary_cultivation', 'glossary_system', 'glossary_artifacts'))
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1726,7 +1751,7 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200Respons
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions_read', 'glossary_definitions_write', 'glossary_relations_read', 'glossary_relations_write', 'glossary_facts_read', 'glossary_facts_write', 'glossary_gender_read', 'glossary_gender_write', 'glossary_gender_advanced_facts_read', 'glossary_gender_advanced_facts_write', 'glossary_events_read', 'glossary_events_write', 'glossary_gender_advanced_events_read', 'glossary_gender_advanced_events_write', 'glossary_gender_transformation', 'glossary_cultivation', 'glossary_system', 'glossary_artifacts'))
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1769,7 +1794,7 @@ export const ReadMemoryJobsMemoryAgentJobsGet200ResponseItem = S.Struct({
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions_read', 'glossary_definitions_write', 'glossary_relations_read', 'glossary_relations_write', 'glossary_facts_read', 'glossary_facts_write', 'glossary_gender_read', 'glossary_gender_write', 'glossary_gender_advanced_facts_read', 'glossary_gender_advanced_facts_write', 'glossary_events_read', 'glossary_events_write', 'glossary_gender_advanced_events_read', 'glossary_gender_advanced_events_write', 'glossary_gender_transformation', 'glossary_cultivation', 'glossary_system', 'glossary_artifacts'))
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1807,7 +1832,7 @@ export const AddMemoryJobMemoryAgentJobsPostBody = S.Struct({
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "params": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions_read', 'glossary_definitions_write', 'glossary_relations_read', 'glossary_relations_write', 'glossary_facts_read', 'glossary_facts_write', 'glossary_gender_read', 'glossary_gender_write', 'glossary_gender_advanced_facts_read', 'glossary_gender_advanced_facts_write', 'glossary_events_read', 'glossary_events_write', 'glossary_gender_advanced_events_read', 'glossary_gender_advanced_events_write', 'glossary_gender_transformation', 'glossary_cultivation', 'glossary_system', 'glossary_artifacts'))
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "startChapterNum": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyStartChapterNumOneMin)), S.Null))
 })
@@ -1817,7 +1842,7 @@ export const AddMemoryJobMemoryAgentJobsPost201Response = S.Struct({
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions_read', 'glossary_definitions_write', 'glossary_relations_read', 'glossary_relations_write', 'glossary_facts_read', 'glossary_facts_write', 'glossary_gender_read', 'glossary_gender_write', 'glossary_gender_advanced_facts_read', 'glossary_gender_advanced_facts_write', 'glossary_events_read', 'glossary_events_write', 'glossary_gender_advanced_events_read', 'glossary_gender_advanced_events_write', 'glossary_gender_transformation', 'glossary_cultivation', 'glossary_system', 'glossary_artifacts'))
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1879,7 +1904,7 @@ export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet200Response = S.Struct({
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions_read', 'glossary_definitions_write', 'glossary_relations_read', 'glossary_relations_write', 'glossary_facts_read', 'glossary_facts_write', 'glossary_gender_read', 'glossary_gender_write', 'glossary_gender_advanced_facts_read', 'glossary_gender_advanced_facts_write', 'glossary_events_read', 'glossary_events_write', 'glossary_gender_advanced_events_read', 'glossary_gender_advanced_events_write', 'glossary_gender_transformation', 'glossary_cultivation', 'glossary_system', 'glossary_artifacts'))
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1914,7 +1939,7 @@ export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200Response = S.St
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions_read', 'glossary_definitions_write', 'glossary_relations_read', 'glossary_relations_write', 'glossary_facts_read', 'glossary_facts_write', 'glossary_gender_read', 'glossary_gender_write', 'glossary_gender_advanced_facts_read', 'glossary_gender_advanced_facts_write', 'glossary_events_read', 'glossary_events_write', 'glossary_gender_advanced_events_read', 'glossary_gender_advanced_events_write', 'glossary_gender_transformation', 'glossary_cultivation', 'glossary_system', 'glossary_artifacts'))
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1949,7 +1974,7 @@ export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost202Response = S.St
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
   "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
-  "toolsets": S.Array(S.Literal('glossary_terms', 'glossary_definitions_read', 'glossary_definitions_write', 'glossary_relations_read', 'glossary_relations_write', 'glossary_facts_read', 'glossary_facts_write', 'glossary_gender_read', 'glossary_gender_write', 'glossary_gender_advanced_facts_read', 'glossary_gender_advanced_facts_write', 'glossary_events_read', 'glossary_events_write', 'glossary_gender_advanced_events_read', 'glossary_gender_advanced_events_write', 'glossary_gender_transformation', 'glossary_cultivation', 'glossary_system', 'glossary_artifacts'))
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),

@@ -385,7 +385,7 @@ export function MemoryJobCard({
 					<div className="border-t">
 						<div className="flex flex-wrap gap-1 border-b px-3 py-2">
 							<Badge variant="secondary">{summary.job.jobParams.modelName}</Badge>
-							{summary.job.jobParams.toolsets.map((toolset) => (
+							{Object.keys(summary.job.jobParams.toolsets).map((toolset) => (
 								<Badge key={toolset} variant="outline">
 									{toolset}
 								</Badge>

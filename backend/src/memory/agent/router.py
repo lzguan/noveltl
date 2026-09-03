@@ -83,6 +83,7 @@ def get_memory_agent_config() -> MemoryAgentConfig:
                 label=metadata.label,
                 description=metadata.description,
                 kind=metadata.kind,
+                default_enabled=metadata.default_enabled,
                 config_schema=metadata.config_model.model_json_schema(by_alias=True),
                 requires=requires[metadata.name],
                 excludes=excludes[metadata.name],
@@ -92,7 +93,11 @@ def get_memory_agent_config() -> MemoryAgentConfig:
     )
 
 
-@router.get("/config", response_model=MemoryAgentConfig)
+@router.get(
+    "/config",
+    response_model=MemoryAgentConfig,
+    responses={401: {"model": DetailHTTPErrorResponse}},
+)
 def read_memory_agent_config(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> MemoryAgentConfig:

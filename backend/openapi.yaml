@@ -1539,10 +1539,11 @@ components:
         modelName:
           $ref: '#/components/schemas/ModelName'
         toolsets:
-          items:
-            $ref: '#/components/schemas/ToolsetName'
+          additionalProperties:
+            additionalProperties: true
+            type: object
           title: Toolsets
-          type: array
+          type: object
       required:
       - modelName
       - toolsets
@@ -1933,6 +1934,76 @@ components:
       - creatorType
       - pluginName
       title: Memory
+      type: object
+    MemoryAgentConfig:
+      properties:
+        models:
+          items:
+            $ref: '#/components/schemas/MemoryAgentModelOption'
+          title: Models
+          type: array
+        toolsets:
+          items:
+            $ref: '#/components/schemas/MemoryAgentToolsetOption'
+          title: Toolsets
+          type: array
+      required:
+      - models
+      - toolsets
+      title: MemoryAgentConfig
+      type: object
+    MemoryAgentModelOption:
+      properties:
+        description:
+          title: Description
+          type: string
+        label:
+          title: Label
+          type: string
+        name:
+          $ref: '#/components/schemas/ModelName'
+      required:
+      - name
+      - label
+      - description
+      title: MemoryAgentModelOption
+      type: object
+    MemoryAgentToolsetOption:
+      properties:
+        configSchema:
+          additionalProperties: true
+          title: Configschema
+          type: object
+        description:
+          title: Description
+          type: string
+        excludes:
+          items:
+            type: string
+          title: Excludes
+          type: array
+        kind:
+          $ref: '#/components/schemas/ToolsetKind'
+        label:
+          title: Label
+          type: string
+        name:
+          title: Name
+          type: string
+        requires:
+          items:
+            type: string
+          title: Requires
+          type: array
+      required:
+      - name
+      - label
+      - description
+      - kind
+      - configSchema
+      - requires
+      - excludes
+      title: MemoryAgentToolsetOption
       type: object
     MemoryChapterTask:
       properties:
@@ -2876,27 +2947,10 @@ components:
       - token_type
       title: Token
       type: object
-    ToolsetName:
+    ToolsetKind:
       enum:
-      - glossary_terms
-      - glossary_definitions_read
-      - glossary_definitions_write
-      - glossary_relations_read
-      - glossary_relations_write
-      - glossary_facts_read
-      - glossary_facts_write
-      - glossary_gender_read
-      - glossary_gender_write
-      - glossary_gender_advanced_facts_read
-      - glossary_gender_advanced_facts_write
-      - glossary_events_read
-      - glossary_events_write
-      - glossary_gender_advanced_events_read
-      - glossary_gender_advanced_events_write
-      - glossary_gender_transformation
-      - glossary_cultivation
-      - glossary_system
-      - glossary_artifacts
+      - memory
+      - guidance
       type: string
     UpdateChapter:
       description: "Pydantic schema to validate data for updating chapter metadata.\n\
@@ -5750,6 +5804,19 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Edit Memory Review Status
+  /memory-agent/config:
+    get:
+      operationId: read_memory_agent_config_memory_agent_config_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryAgentConfig'
+          description: Successful Response
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Memory Agent Config
   /memory-agent/job-summaries:
     get:
       operationId: read_memory_job_summaries_memory_agent_job_summaries_get

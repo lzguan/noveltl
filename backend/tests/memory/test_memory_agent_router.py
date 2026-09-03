@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 
 from src.auth.models import User
 from src.auth.utils import create_access_token
+from src.main import app
+from src.memory.agent.types import MODEL_NAMES, TOOLSET_NAMES
 from src.memory.exceptions import MemoryAgentEnqueueFailedException
 from src.memory.models import MemoryGroup
 from test_support.memory import RecordingMemoryAgentDispatcher
@@ -37,9 +39,50 @@ def _create_job(client: TestClient, user: User, memory_group_id: UUID):
             "memoryGroupId": str(memory_group_id),
             "startChapterNum": None,
             "endChapterNum": None,
-            "params": {"modelName": "deepseek:deepseek-v4-flash-low", "toolsets": []},
+            "params": {"modelName": "deepseek:deepseek-v4-flash-low", "toolsets": {}},
         },
     )
+
+
+def test_memory_agent_router_exposes_registered_config(
+    client: TestClient,
+    novel_permission_scenario: DatabaseScenario,
+) -> None:
+    assert client.get("/memory-agent/config").status_code == status.HTTP_401_UNAUTHORIZED
+
+    response = client.get(
+        "/memory-agent/config",
+        headers=_auth_headers(novel_permission_scenario.users["owner"]),
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    config = response.json()
+    assert [model["name"] for model in config["models"]] == list(MODEL_NAMES)
+    assert config["models"][0] == {
+        "name": "deepseek:deepseek-v4-flash-none",
+        "label": "DeepSeek V4 Flash (No thinking)",
+        "description": "DeepSeek V4 Flash with thinking disabled.",
+    }
+    assert [toolset["name"] for toolset in config["toolsets"]] == list(TOOLSET_NAMES)
+
+    toolsets = {toolset["name"]: toolset for toolset in config["toolsets"]}
+    definitions_write = toolsets["glossary_definitions_write"]
+    assert definitions_write["kind"] == "memory"
+    assert definitions_write["requires"] == ["glossary_definitions_read"]
+    assert definitions_write["excludes"] == []
+    assert definitions_write["configSchema"] == {
+        "additionalProperties": False,
+        "description": "Base configuration for one enabled toolset.",
+        "properties": {},
+        "title": "ToolsetConfig",
+        "type": "object",
+    }
+    assert toolsets["glossary_gender_read"]["excludes"] == [
+        "glossary_gender_advanced_facts_read"
+    ]
+    assert toolsets["glossary_gender_advanced_facts_read"]["excludes"] == [
+        "glossary_gender_read"
+    ]
 
 
 def test_memory_agent_router_exposes_authenticated_job_progress_and_dispatch(
@@ -58,7 +101,10 @@ def test_memory_agent_router_exposes_authenticated_job_progress_and_dispatch(
     job = response.json()
     memory_job_id = UUID(job["memoryJobId"])
     assert job["memoryGroupId"] == str(group.memory_group_id)
-    assert job["jobParams"] == {"modelName": "deepseek:deepseek-v4-flash-low", "toolsets": []}
+    assert job["jobParams"] == {
+        "modelName": "deepseek:deepseek-v4-flash-low",
+        "toolsets": {},
+    }
     assert client.get(f"/memory-agent/jobs/{memory_job_id}").status_code == status.HTTP_401_UNAUTHORIZED
 
     jobs_response = client.get(
@@ -118,6 +164,22 @@ def test_memory_agent_router_exposes_authenticated_job_progress_and_dispatch(
     )
     assert recording_memory_agent_dispatcher.jobs == [memory_job_id]
     assert recording_memory_agent_dispatcher.tasks == [(memory_job_id, chapter_id)]
+
+
+def test_memory_agent_openapi_keeps_toolset_names_and_configs_opaque() -> None:
+    openapi = app.openapi()
+    schemas = openapi["components"]["schemas"]
+
+    assert "ParsedToolsets" not in schemas
+    assert "ToolsetName" not in schemas
+    assert schemas["JobParams"]["properties"]["toolsets"] == {
+        "additionalProperties": {
+            "additionalProperties": True,
+            "type": "object",
+        },
+        "title": "Toolsets",
+        "type": "object",
+    }
 
 
 def test_memory_agent_router_maps_access_state_and_publication_failures(

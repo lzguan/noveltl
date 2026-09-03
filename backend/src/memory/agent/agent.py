@@ -30,7 +30,7 @@ from src.memory.agent.toolsets.glossary.relations import (
     glossary_relations_write_toolset,
 )
 from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
-from src.memory.agent.types import TOOLSET_NAMES, ModelName, ToolsetName, validate_toolset_selection
+from src.memory.agent.types import TOOLSET_NAMES, ModelName, ParsedToolsets, ToolsetName
 
 toolsets_by_name: dict[ToolsetName, FunctionToolset[MemAgentDeps]] = {
     "glossary_terms": glossary_term_toolset,
@@ -60,15 +60,12 @@ if set(toolsets_by_name) != set(TOOLSET_NAMES):
 GLOSSARY_TOOLSET_NAMES: frozenset[ToolsetName] = frozenset(TOOLSET_NAMES)
 
 
-def resolve_toolsets(toolsets: list[ToolsetName]) -> list[FunctionToolset[MemAgentDeps]]:
-    """Validate and resolve names in canonical order for stable prompt caching."""
-
-    validate_toolset_selection(toolsets)
-    selected = set(toolsets)
-    return [toolsets_by_name[name] for name in TOOLSET_NAMES if name in selected]
+def resolve_toolsets(toolsets: ParsedToolsets) -> list[FunctionToolset[MemAgentDeps]]:
+    """Resolve configured toolsets in canonical order for stable prompt caching."""
+    return [toolsets_by_name[name] for name in toolsets.selected_names()]
 
 
-def create_agent(model_name: ModelName, toolsets: list[ToolsetName]) -> Agent[MemAgentDeps, str]:
+def create_agent(model_name: ModelName, toolsets: ParsedToolsets) -> Agent[MemAgentDeps, str]:
     """Create a Pydantic AI agent with the specified model and toolsets.
 
     The model name's suffix selects the reasoning level. DeepSeek V4 does not
@@ -83,7 +80,7 @@ def create_agent(model_name: ModelName, toolsets: list[ToolsetName]) -> Agent[Me
     else:  # deepseek:deepseek-v4-flash-low
         model_settings = {"thinking": "low"}
     resolved_toolsets = resolve_toolsets(toolsets)
-    glossary_enabled = any(toolset in GLOSSARY_TOOLSET_NAMES for toolset in toolsets)
+    glossary_enabled = any(toolset in GLOSSARY_TOOLSET_NAMES for toolset in toolsets.selected_names())
     instructions = (
         [MEMORY_AGENT_PROMPT, GLOSSARY_SHARED_INSTRUCTIONS, initial_glossary_context]
         if glossary_enabled

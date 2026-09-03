@@ -192,7 +192,7 @@ async def run_tasks(
             if lang_name is None:
                 raise RuntimeError(f"Memory group {memory_group_id} has no configured language")
 
-        agent = create_agent(params.model_name, params.toolsets)
+        agent = create_agent(params.model_name, params.parse_toolsets())
         async with agent:
             async for completed_task in arun_tasks(
                 db_factory,

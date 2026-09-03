@@ -74,17 +74,17 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
 
     params = JobParams(
         model_name="deepseek:deepseek-v4-flash-low",
-        toolsets=[
-            "glossary_terms",
-            "glossary_definitions_read",
-            "glossary_definitions_write",
-            "glossary_relations_read",
-            "glossary_relations_write",
-            "glossary_facts_read",
-            "glossary_facts_write",
-            "glossary_events_read",
-            "glossary_events_write",
-        ],
+        toolsets={
+            "glossary_terms": {},
+            "glossary_definitions_read": {},
+            "glossary_definitions_write": {},
+            "glossary_relations_read": {},
+            "glossary_relations_write": {},
+            "glossary_facts_read": {},
+            "glossary_facts_write": {},
+            "glossary_events_read": {},
+            "glossary_events_write": {},
+        },
     )
     memory_job_id = make_job(test_db, memory_group.memory_group_id, 2, 4, params)
 

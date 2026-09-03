@@ -53,6 +53,7 @@ from src.memory.agent.toolsets.glossary.relations import (
     relation_memories,
 )
 from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
+from src.memory.agent.types import ParsedToolsets
 from src.memory.exceptions import GlossaryTermNotFoundException
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
 from src.memory.plugins.glossary.types import TermKind
@@ -89,13 +90,13 @@ def test_memory_prompts_preserve_novel_terms_in_the_source_language() -> None:
 
 def test_guidance_toolsets_add_no_callable_tools_and_resolve_in_canonical_order() -> None:
     resolved = resolve_toolsets(
-        [
-            "glossary_relations_write",
-            "glossary_gender_advanced_facts_write",
-            "glossary_gender_transformation",
-            "glossary_relations_read",
-            "glossary_gender_advanced_facts_read",
-        ]
+        ParsedToolsets(
+            glossary_relations_write={},
+            glossary_gender_advanced_facts_write={},
+            glossary_gender_transformation={},
+            glossary_relations_read={},
+            glossary_gender_advanced_facts_read={},
+        )
     )
 
     assert resolved == [
@@ -115,7 +116,7 @@ def test_job_params_reject_writes_and_guidance_without_required_toolsets() -> No
     ):
         JobParams(
             model_name="deepseek:deepseek-v4-flash-low",
-            toolsets=["glossary_gender_write"],
+            toolsets={"glossary_gender_write": {}},
         )
 
     with pytest.raises(
@@ -124,7 +125,10 @@ def test_job_params_reject_writes_and_guidance_without_required_toolsets() -> No
     ):
         JobParams(
             model_name="deepseek:deepseek-v4-flash-low",
-            toolsets=["glossary_gender_advanced_facts_read", "glossary_gender_transformation"],
+            toolsets={
+                "glossary_gender_advanced_facts_read": {},
+                "glossary_gender_transformation": {},
+            },
         )
 
     with pytest.raises(
@@ -133,12 +137,12 @@ def test_job_params_reject_writes_and_guidance_without_required_toolsets() -> No
     ):
         JobParams(
             model_name="deepseek:deepseek-v4-flash-low",
-            toolsets=[
-                "glossary_relations_read",
-                "glossary_gender_advanced_facts_read",
-                "glossary_gender_advanced_facts_write",
-                "glossary_gender_transformation",
-            ],
+            toolsets={
+                "glossary_relations_read": {},
+                "glossary_gender_advanced_facts_read": {},
+                "glossary_gender_advanced_facts_write": {},
+                "glossary_gender_transformation": {},
+            },
         )
 
 
@@ -513,8 +517,22 @@ def test_job_params_reject_mixed_lightweight_and_advanced_gender_policies() -> N
     ):
         JobParams(
             model_name="deepseek:deepseek-v4-flash-low",
-            toolsets=[
-                "glossary_gender_read",
-                "glossary_gender_advanced_facts_read",
-            ],
+            toolsets={
+                "glossary_gender_read": {},
+                "glossary_gender_advanced_facts_read": {},
+            },
+        )
+
+
+def test_job_params_reject_unknown_toolsets_and_settings() -> None:
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        JobParams(
+            model_name="deepseek:deepseek-v4-flash-low",
+            toolsets={"unknown_toolset": {}},
+        )
+
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        JobParams(
+            model_name="deepseek:deepseek-v4-flash-low",
+            toolsets={"glossary_terms": {"unknown_setting": True}},
         )

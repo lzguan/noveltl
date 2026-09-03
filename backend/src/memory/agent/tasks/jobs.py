@@ -1,12 +1,12 @@
 import uuid
 from datetime import timedelta
-from typing import Literal
+from typing import Any, Literal, Self
 
 from pydantic import model_validator
 from sqlalchemy import and_, func, insert, literal, or_, select, update
 from sqlalchemy.orm import Session
 
-from src.memory.agent.types import ModelName, ToolsetName, validate_toolset_selection
+from src.memory.agent.types import ModelName, ParsedToolsets
 from src.memory.models import MemoryChapterTask, MemoryGroup, MemoryJob
 from src.memory.types import JobStatus
 from src.novels.models import Chapter
@@ -15,11 +15,15 @@ from src.schemas import Model
 
 class JobParams(Model):
     model_name: ModelName
-    toolsets: list[ToolsetName]
+    toolsets: dict[str, dict[str, Any]]
+
+    def parse_toolsets(self) -> ParsedToolsets:
+        """Parse the public string-keyed selection into internal toolset configs."""
+        return ParsedToolsets.model_validate(self.toolsets)
 
     @model_validator(mode="after")
-    def validate_toolsets(self) -> "JobParams":
-        validate_toolset_selection(self.toolsets)
+    def validate_toolsets(self) -> Self:
+        self.parse_toolsets()
         return self
 
 

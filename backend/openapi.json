@@ -6069,6 +6069,29 @@
         }
       }
     },
+    "/memory-agent/config": {
+      "get": {
+        "summary": "Read Memory Agent Config",
+        "operationId": "read_memory_agent_config_memory_agent_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryAgentConfig"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/memory-agent/jobs": {
       "post": {
         "summary": "Add Memory Job",
@@ -9006,10 +9029,11 @@
             "$ref": "#/components/schemas/ModelName"
           },
           "toolsets": {
-            "items": {
-              "$ref": "#/components/schemas/ToolsetName"
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
             },
-            "type": "array",
+            "type": "object",
             "title": "Toolsets"
           }
         },
@@ -9508,6 +9532,101 @@
         ],
         "title": "Memory",
         "description": "Memory schema"
+      },
+      "MemoryAgentConfig": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryAgentModelOption"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "toolsets": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryAgentToolsetOption"
+            },
+            "type": "array",
+            "title": "Toolsets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "models",
+          "toolsets"
+        ],
+        "title": "MemoryAgentConfig"
+      },
+      "MemoryAgentModelOption": {
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/ModelName"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "description"
+        ],
+        "title": "MemoryAgentModelOption"
+      },
+      "MemoryAgentToolsetOption": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ToolsetKind"
+          },
+          "configSchema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Configschema"
+          },
+          "requires": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Requires"
+          },
+          "excludes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Excludes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "description",
+          "kind",
+          "configSchema",
+          "requires",
+          "excludes"
+        ],
+        "title": "MemoryAgentToolsetOption"
       },
       "MemoryChapterTask": {
         "properties": {
@@ -10756,28 +10875,11 @@
         "title": "Token",
         "description": "Pydantic schema for a JWT\n\nAttributes:\n    access_token: Payload.\n    token_type: Type of token."
       },
-      "ToolsetName": {
+      "ToolsetKind": {
         "type": "string",
         "enum": [
-          "glossary_terms",
-          "glossary_definitions_read",
-          "glossary_definitions_write",
-          "glossary_relations_read",
-          "glossary_relations_write",
-          "glossary_facts_read",
-          "glossary_facts_write",
-          "glossary_gender_read",
-          "glossary_gender_write",
-          "glossary_gender_advanced_facts_read",
-          "glossary_gender_advanced_facts_write",
-          "glossary_events_read",
-          "glossary_events_write",
-          "glossary_gender_advanced_events_read",
-          "glossary_gender_advanced_events_write",
-          "glossary_gender_transformation",
-          "glossary_cultivation",
-          "glossary_system",
-          "glossary_artifacts"
+          "memory",
+          "guidance"
         ]
       },
       "UpdateChapter": {

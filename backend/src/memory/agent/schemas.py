@@ -1,9 +1,11 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import ConfigDict, Field
 
 from src.memory.agent.tasks.jobs import JobParams
+from src.memory.agent.types import ModelName, ToolsetKind
 from src.memory.types import JobStatus
 from src.schemas import Model, Page
 
@@ -13,6 +15,27 @@ class CreateMemoryJob(Model):
     start_chapter_num: int | None = Field(default=None, ge=0)
     end_chapter_num: int | None = Field(default=None, ge=0)
     params: JobParams
+
+
+class MemoryAgentModelOption(Model):
+    name: ModelName
+    label: str
+    description: str
+
+
+class MemoryAgentToolsetOption(Model):
+    name: str
+    label: str
+    description: str
+    kind: ToolsetKind
+    config_schema: dict[str, Any]
+    requires: list[str]
+    excludes: list[str]
+
+
+class MemoryAgentConfig(Model):
+    models: list[MemoryAgentModelOption]
+    toolsets: list[MemoryAgentToolsetOption]
 
 
 class MemoryJob(Model):

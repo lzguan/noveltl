@@ -185,17 +185,17 @@ def _seed_run(database: TemporaryPostgresDatabase, dataset: NovelDataset) -> _Se
             51,
             JobParams(
                 model_name="deepseek:deepseek-v4-flash-low",
-                toolsets=[
-                    "glossary_terms",
-                    "glossary_definitions_read",
-                    "glossary_definitions_write",
-                    "glossary_relations_read",
-                    "glossary_relations_write",
-                    "glossary_facts_read",
-                    "glossary_facts_write",
-                    "glossary_events_read",
-                    "glossary_events_write",
-                ],
+                toolsets={
+                    "glossary_terms": {},
+                    "glossary_definitions_read": {},
+                    "glossary_definitions_write": {},
+                    "glossary_relations_read": {},
+                    "glossary_relations_write": {},
+                    "glossary_facts_read": {},
+                    "glossary_facts_write": {},
+                    "glossary_events_read": {},
+                    "glossary_events_write": {},
+                },
             ),
         )
         return _SeededRun(

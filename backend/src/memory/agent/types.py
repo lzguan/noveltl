@@ -1,6 +1,9 @@
-from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal, get_args
+
+from pydantic import ConfigDict, model_validator
+
+from src.schemas import Model
 
 type ModelName = Literal["deepseek:deepseek-v4-flash-none", "deepseek:deepseek-v4-flash-low"]
 MODEL_NAMES: tuple[ModelName, ...] = get_args(ModelName.__value__)
@@ -30,11 +33,39 @@ type ToolsetKind = Literal["memory", "guidance"]
 
 
 @dataclass(frozen=True)
+class ModelMetadata:
+    name: ModelName
+    label: str
+    description: str
+
+
+MODEL_METADATA: tuple[ModelMetadata, ...] = (
+    ModelMetadata(
+        "deepseek:deepseek-v4-flash-none",
+        "DeepSeek V4 Flash (No thinking)",
+        "DeepSeek V4 Flash with thinking disabled.",
+    ),
+    ModelMetadata(
+        "deepseek:deepseek-v4-flash-low",
+        "DeepSeek V4 Flash (Low thinking)",
+        "DeepSeek V4 Flash with low thinking effort.",
+    ),
+)
+
+
+class ToolsetConfig(Model):
+    """Base configuration for one enabled toolset."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+@dataclass(frozen=True)
 class ToolsetMetadata:
     name: ToolsetName
     label: str
     description: str
     kind: ToolsetKind
+    config_model: type[ToolsetConfig] = ToolsetConfig
 
 
 @dataclass(frozen=True)
@@ -191,19 +222,57 @@ TOOLSET_METADATA_BY_NAME: dict[str, ToolsetMetadata] = {
     metadata.name: metadata for metadata in TOOLSET_METADATA
 }
 
+if tuple(metadata.name for metadata in MODEL_METADATA) != MODEL_NAMES:
+    raise RuntimeError("Memory-agent model metadata does not match ModelName")
 
-def validate_toolset_selection(toolsets: Sequence[str]) -> None:
-    if len(toolsets) != len(set(toolsets)):
-        raise ValueError("toolsets must not contain duplicates")
-    unknown = sorted(set(toolsets) - TOOLSET_METADATA_BY_NAME.keys())
-    if unknown:
-        raise ValueError(f"Unknown agent toolset(s): {', '.join(unknown)}")
-    selected = set(toolsets)
-    for restriction in TOOLSET_RESTRICTIONS:
-        match restriction:
-            case ToolsetRequires(toolset=name, requirement=requirement):
-                if name in selected and requirement not in selected:
-                    raise ValueError(f"Toolset {name} requires: {requirement}")
-            case ToolsetExcludes(toolset1=toolset1, toolset2=toolset2):
-                if toolset1 in selected and toolset2 in selected:
-                    raise ValueError(f"Toolsets {toolset1} and {toolset2} cannot be selected together")
+
+class ParsedToolsets(Model):
+    """Selected memory-agent toolsets and their validated configurations."""
+
+    model_config = ConfigDict(alias_generator=None, extra="forbid")
+
+    glossary_terms: ToolsetConfig | None = None
+    glossary_definitions_read: ToolsetConfig | None = None
+    glossary_definitions_write: ToolsetConfig | None = None
+    glossary_relations_read: ToolsetConfig | None = None
+    glossary_relations_write: ToolsetConfig | None = None
+    glossary_facts_read: ToolsetConfig | None = None
+    glossary_facts_write: ToolsetConfig | None = None
+    glossary_gender_read: ToolsetConfig | None = None
+    glossary_gender_write: ToolsetConfig | None = None
+    glossary_gender_advanced_facts_read: ToolsetConfig | None = None
+    glossary_gender_advanced_facts_write: ToolsetConfig | None = None
+    glossary_events_read: ToolsetConfig | None = None
+    glossary_events_write: ToolsetConfig | None = None
+    glossary_gender_advanced_events_read: ToolsetConfig | None = None
+    glossary_gender_advanced_events_write: ToolsetConfig | None = None
+    glossary_gender_transformation: ToolsetConfig | None = None
+    glossary_cultivation: ToolsetConfig | None = None
+    glossary_system: ToolsetConfig | None = None
+    glossary_artifacts: ToolsetConfig | None = None
+
+    def selected_names(self) -> tuple[ToolsetName, ...]:
+        """Return enabled toolsets in canonical registry order."""
+        return tuple(name for name in TOOLSET_NAMES if getattr(self, name) is not None)
+
+    @model_validator(mode="after")
+    def validate_restrictions(self) -> "ParsedToolsets":
+        selected = set(self.selected_names())
+        for restriction in TOOLSET_RESTRICTIONS:
+            match restriction:
+                case ToolsetRequires(toolset=name, requirement=requirement):
+                    if name in selected and requirement not in selected:
+                        raise ValueError(f"Toolset {name} requires: {requirement}")
+                case ToolsetExcludes(toolset1=toolset1, toolset2=toolset2):
+                    if toolset1 in selected and toolset2 in selected:
+                        raise ValueError(f"Toolsets {toolset1} and {toolset2} cannot be selected together")
+        return self
+
+
+if set(ParsedToolsets.model_fields) != set(TOOLSET_NAMES):
+    raise RuntimeError("ParsedToolsets fields do not match registered toolset names")
+
+for metadata in TOOLSET_METADATA:
+    field_annotation = ParsedToolsets.model_fields[metadata.name].annotation
+    if metadata.config_model not in get_args(field_annotation):
+        raise RuntimeError(f"Config model for {metadata.name} does not match ParsedToolsets")

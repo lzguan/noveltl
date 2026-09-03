@@ -38,8 +38,12 @@ type MemoryJobFormValues = {
 	includeGlossaryFactsWrite: boolean;
 	includeGlossaryGenderRead: boolean;
 	includeGlossaryGenderWrite: boolean;
+	includeGlossaryGenderAdvancedFactsRead: boolean;
+	includeGlossaryGenderAdvancedFactsWrite: boolean;
 	includeGlossaryEventsRead: boolean;
 	includeGlossaryEventsWrite: boolean;
+	includeGlossaryGenderAdvancedEventsRead: boolean;
+	includeGlossaryGenderAdvancedEventsWrite: boolean;
 	includeGlossaryGenderTransformation: boolean;
 	includeGlossaryCultivation: boolean;
 	includeGlossarySystem: boolean;
@@ -102,6 +106,20 @@ const TOOLSET_OPTIONS = [
 		description: "Maintain gender-related state. Requires gender: read.",
 	},
 	{
+		fieldName: "includeGlossaryGenderAdvancedFactsRead",
+		toolset: "glossary_gender_advanced_facts_read",
+		label: "Advanced gender facts: read",
+		description:
+			"Retrieve physical body and self-identity separately. Cannot be combined with lightweight gender tools.",
+	},
+	{
+		fieldName: "includeGlossaryGenderAdvancedFactsWrite",
+		toolset: "glossary_gender_advanced_facts_write",
+		label: "Advanced gender facts: write",
+		description:
+			"Maintain one current body and identity state per person. Requires advanced gender facts: read.",
+	},
+	{
 		fieldName: "includeGlossaryEventsRead",
 		toolset: "glossary_events_read",
 		label: "Glossary events: read",
@@ -114,29 +132,46 @@ const TOOLSET_OPTIONS = [
 		description: "Maintain consequential occurrences. Requires events: read.",
 	},
 	{
+		fieldName: "includeGlossaryGenderAdvancedEventsRead",
+		toolset: "glossary_gender_advanced_events_read",
+		label: "Advanced gender events: read",
+		description:
+			"Retrieve categorized transformations, reveals, possessions, swaps, and disguises. Cannot be combined with general event tools.",
+	},
+	{
+		fieldName: "includeGlossaryGenderAdvancedEventsWrite",
+		toolset: "glossary_gender_advanced_events_write",
+		label: "Advanced gender events: write",
+		description:
+			"Record categorized consequential gender events. Requires advanced gender events: read.",
+	},
+	{
 		fieldName: "includeGlossaryGenderTransformation",
 		toolset: "glossary_gender_transformation",
 		label: "Gender transformation guidance",
 		description:
-			"Distinguish lasting changes, reveals, disguises, bodies, and avatars. Requires gender and relation read/write tools.",
+			"Distinguish lasting changes, reveals, disguises, bodies, and avatars. Requires advanced gender facts and relation read/write tools.",
 	},
 	{
 		fieldName: "includeGlossaryCultivation",
 		toolset: "glossary_cultivation",
 		label: "Cultivation guidance",
-		description: "Track completed cultivation levels and reject temporary boosts. Requires fact read/write tools.",
+		description:
+			"Track completed cultivation levels and reject temporary boosts. Requires fact read/write tools.",
 	},
 	{
 		fieldName: "includeGlossarySystem",
 		toolset: "glossary_system",
 		label: "System guidance",
-		description: "Track durable system mechanics and state sparingly. Requires fact read/write tools.",
+		description:
+			"Track durable system mechanics and state sparingly. Requires fact read/write tools.",
 	},
 	{
 		fieldName: "includeGlossaryArtifacts",
 		toolset: "glossary_artifacts",
 		label: "Artifact guidance",
-		description: "Track recurring fantastical objects and lasting changes. Requires definition read/write tools.",
+		description:
+			"Track recurring fantastical objects and lasting changes. Requires definition read/write tools.",
 	},
 ] as const;
 
@@ -171,8 +206,12 @@ export function CreateMemoryJobForm({
 			includeGlossaryFactsWrite: true,
 			includeGlossaryGenderRead: true,
 			includeGlossaryGenderWrite: true,
+			includeGlossaryGenderAdvancedFactsRead: false,
+			includeGlossaryGenderAdvancedFactsWrite: false,
 			includeGlossaryEventsRead: true,
 			includeGlossaryEventsWrite: true,
+			includeGlossaryGenderAdvancedEventsRead: false,
+			includeGlossaryGenderAdvancedEventsWrite: false,
 			includeGlossaryGenderTransformation: false,
 			includeGlossaryCultivation: false,
 			includeGlossarySystem: false,

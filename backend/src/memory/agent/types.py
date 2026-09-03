@@ -14,8 +14,12 @@ type ToolsetName = Literal[
     "glossary_facts_write",
     "glossary_gender_read",
     "glossary_gender_write",
+    "glossary_gender_advanced_facts_read",
+    "glossary_gender_advanced_facts_write",
     "glossary_events_read",
     "glossary_events_write",
+    "glossary_gender_advanced_events_read",
+    "glossary_gender_advanced_events_write",
     "glossary_gender_transformation",
     "glossary_cultivation",
     "glossary_system",
@@ -31,7 +35,21 @@ class ToolsetMetadata:
     label: str
     description: str
     kind: ToolsetKind
-    requires: tuple[ToolsetName, ...] = ()
+
+
+@dataclass(frozen=True)
+class ToolsetRequires:
+    toolset: ToolsetName
+    requirement: ToolsetName
+
+
+@dataclass(frozen=True)
+class ToolsetExcludes:
+    toolset1: ToolsetName
+    toolset2: ToolsetName
+
+
+type ToolsetRestriction = ToolsetRequires | ToolsetExcludes
 
 
 TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
@@ -47,7 +65,6 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
         "Glossary definitions: write",
         "Create, supersede, or expire canonical term meanings.",
         "memory",
-        ("glossary_definitions_read",),
     ),
     ToolsetMetadata(
         "glossary_relations_read",
@@ -60,7 +77,6 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
         "Glossary relations: write",
         "Create, supersede, or expire categorized relationships.",
         "memory",
-        ("glossary_relations_read",),
     ),
     ToolsetMetadata(
         "glossary_facts_read",
@@ -73,7 +89,6 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
         "Glossary facts: write",
         "Create, supersede, or expire continuity-critical attributes other than gender.",
         "memory",
-        ("glossary_facts_read",),
     ),
     ToolsetMetadata(
         "glossary_gender_read",
@@ -86,7 +101,18 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
         "Glossary gender: write",
         "Create, supersede, or expire explicitly established gender-related state.",
         "memory",
-        ("glossary_gender_read",),
+    ),
+    ToolsetMetadata(
+        "glossary_gender_advanced_facts_read",
+        "Advanced gender facts: read",
+        "Retrieve current physical body and self-identity state separately.",
+        "memory",
+    ),
+    ToolsetMetadata(
+        "glossary_gender_advanced_facts_write",
+        "Advanced gender facts: write",
+        "Maintain one current body and identity state per person.",
+        "memory",
     ),
     ToolsetMetadata(
         "glossary_events_read",
@@ -99,41 +125,65 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
         "Glossary events: write",
         "Create or supersede consequential occurrences.",
         "memory",
-        ("glossary_events_read",),
+    ),
+    ToolsetMetadata(
+        "glossary_gender_advanced_events_read",
+        "Advanced gender events: read",
+        "Retrieve categorized transformations, reveals, possessions, swaps, and disguises.",
+        "memory",
+    ),
+    ToolsetMetadata(
+        "glossary_gender_advanced_events_write",
+        "Advanced gender events: write",
+        "Record categorized consequential gender-related occurrences.",
+        "memory",
     ),
     ToolsetMetadata(
         "glossary_gender_transformation",
         "Gender transformation guidance",
         "Distinguish persistent changes, reveals, disguises, bodies, and avatars.",
         "guidance",
-        (
-            "glossary_gender_read",
-            "glossary_gender_write",
-            "glossary_relations_read",
-            "glossary_relations_write",
-        ),
     ),
     ToolsetMetadata(
         "glossary_cultivation",
         "Cultivation guidance",
         "Track durable cultivation levels without recording temporary boosts.",
         "guidance",
-        ("glossary_facts_read", "glossary_facts_write"),
     ),
     ToolsetMetadata(
         "glossary_system",
         "System guidance",
         "Track durable system mechanics, unlocks, and meaningful state.",
         "guidance",
-        ("glossary_facts_read", "glossary_facts_write"),
     ),
     ToolsetMetadata(
         "glossary_artifacts",
         "Artifact guidance",
         "Track recurring fantastical objects, their functions, and lasting changes.",
         "guidance",
-        ("glossary_definitions_read", "glossary_definitions_write"),
     ),
+)
+
+TOOLSET_RESTRICTIONS: tuple[ToolsetRestriction, ...] = (
+    ToolsetRequires("glossary_definitions_write", "glossary_definitions_read"),
+    ToolsetRequires("glossary_relations_write", "glossary_relations_read"),
+    ToolsetRequires("glossary_facts_write", "glossary_facts_read"),
+    ToolsetRequires("glossary_gender_write", "glossary_gender_read"),
+    ToolsetRequires("glossary_gender_advanced_facts_write", "glossary_gender_advanced_facts_read"),
+    ToolsetRequires("glossary_events_write", "glossary_events_read"),
+    ToolsetRequires("glossary_gender_advanced_events_write", "glossary_gender_advanced_events_read"),
+    ToolsetRequires("glossary_gender_transformation", "glossary_gender_advanced_facts_read"),
+    ToolsetRequires("glossary_gender_transformation", "glossary_gender_advanced_facts_write"),
+    ToolsetRequires("glossary_gender_transformation", "glossary_relations_read"),
+    ToolsetRequires("glossary_gender_transformation", "glossary_relations_write"),
+    ToolsetRequires("glossary_cultivation", "glossary_facts_read"),
+    ToolsetRequires("glossary_cultivation", "glossary_facts_write"),
+    ToolsetRequires("glossary_system", "glossary_facts_read"),
+    ToolsetRequires("glossary_system", "glossary_facts_write"),
+    ToolsetRequires("glossary_artifacts", "glossary_definitions_read"),
+    ToolsetRequires("glossary_artifacts", "glossary_definitions_write"),
+    ToolsetExcludes("glossary_gender_read", "glossary_gender_advanced_facts_read"),
+    ToolsetExcludes("glossary_events_read", "glossary_gender_advanced_events_read"),
 )
 
 TOOLSET_NAMES: tuple[ToolsetName, ...] = tuple(metadata.name for metadata in TOOLSET_METADATA)
@@ -149,10 +199,11 @@ def validate_toolset_selection(toolsets: Sequence[str]) -> None:
     if unknown:
         raise ValueError(f"Unknown agent toolset(s): {', '.join(unknown)}")
     selected = set(toolsets)
-    for name in toolsets:
-        metadata = TOOLSET_METADATA_BY_NAME.get(name)
-        if metadata is None:
-            continue
-        missing = [requirement for requirement in metadata.requires if requirement not in selected]
-        if missing:
-            raise ValueError(f"Toolset {name} requires: {', '.join(missing)}")
+    for restriction in TOOLSET_RESTRICTIONS:
+        match restriction:
+            case ToolsetRequires(toolset=name, requirement=requirement):
+                if name in selected and requirement not in selected:
+                    raise ValueError(f"Toolset {name} requires: {requirement}")
+            case ToolsetExcludes(toolset1=toolset1, toolset2=toolset2):
+                if toolset1 in selected and toolset2 in selected:
+                    raise ValueError(f"Toolsets {toolset1} and {toolset2} cannot be selected together")

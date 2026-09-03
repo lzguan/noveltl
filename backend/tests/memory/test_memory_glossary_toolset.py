@@ -30,9 +30,18 @@ from src.memory.agent.toolsets.glossary.facts import (
 )
 from src.memory.agent.toolsets.glossary.gender import (
     gender_memories,
-    glossary_gender_read_toolset,
     glossary_gender_write_toolset,
     new_gender_memory,
+)
+from src.memory.agent.toolsets.glossary.gender_advanced_events import (
+    glossary_gender_advanced_events_read_toolset,
+    glossary_gender_advanced_events_write_toolset,
+)
+from src.memory.agent.toolsets.glossary.gender_advanced_facts import (
+    gender_state,
+    glossary_gender_advanced_facts_read_toolset,
+    glossary_gender_advanced_facts_write_toolset,
+    new_gender_fact_memory,
 )
 from src.memory.agent.toolsets.glossary.guidance.gender_transformation import (
     glossary_gender_transformation_toolset,
@@ -82,18 +91,18 @@ def test_guidance_toolsets_add_no_callable_tools_and_resolve_in_canonical_order(
     resolved = resolve_toolsets(
         [
             "glossary_relations_write",
-            "glossary_gender_write",
+            "glossary_gender_advanced_facts_write",
             "glossary_gender_transformation",
             "glossary_relations_read",
-            "glossary_gender_read",
+            "glossary_gender_advanced_facts_read",
         ]
     )
 
     assert resolved == [
         glossary_relations_read_toolset,
         glossary_relations_write_toolset,
-        glossary_gender_read_toolset,
-        glossary_gender_write_toolset,
+        glossary_gender_advanced_facts_read_toolset,
+        glossary_gender_advanced_facts_write_toolset,
         glossary_gender_transformation_toolset,
     ]
     assert glossary_gender_transformation_toolset.tools == {}
@@ -111,11 +120,11 @@ def test_job_params_reject_writes_and_guidance_without_required_toolsets() -> No
 
     with pytest.raises(
         ValidationError,
-        match="Toolset glossary_gender_transformation requires: glossary_gender_write",
+        match="Toolset glossary_gender_transformation requires: glossary_gender_advanced_facts_write",
     ):
         JobParams(
             model_name="deepseek:deepseek-v4-flash-low",
-            toolsets=["glossary_gender_read", "glossary_gender_transformation"],
+            toolsets=["glossary_gender_advanced_facts_read", "glossary_gender_transformation"],
         )
 
     with pytest.raises(
@@ -126,8 +135,8 @@ def test_job_params_reject_writes_and_guidance_without_required_toolsets() -> No
             model_name="deepseek:deepseek-v4-flash-low",
             toolsets=[
                 "glossary_relations_read",
-                "glossary_gender_read",
-                "glossary_gender_write",
+                "glossary_gender_advanced_facts_read",
+                "glossary_gender_advanced_facts_write",
                 "glossary_gender_transformation",
             ],
         )
@@ -209,6 +218,17 @@ def test_glossary_tool_schemas_enforce_input_constraints() -> None:
             "type": "string",
         }
 
+    gender_event_read_schema = glossary_gender_advanced_events_read_toolset.tools[
+        "gender_event_memories"
+    ].function_schema.json_schema
+    assert gender_event_read_schema["required"] == ["term_name", "event_kind"]
+    assert gender_event_read_schema["properties"]["term_name"] == {"minLength": 1, "type": "string"}
+    assert gender_event_read_schema["properties"]["skip"] == {
+        "default": 0,
+        "minimum": 0,
+        "type": "integer",
+    }
+
     add_term_schema = glossary_term_toolset.tools["add_term"].function_schema.json_schema
     assert add_term_schema["required"] == ["term_name", "term_kind"]
     assert add_term_schema["$defs"]["TermKind"]["enum"] == [
@@ -280,6 +300,23 @@ def test_glossary_tool_schemas_enforce_input_constraints() -> None:
     assert gender_schema["required"] == ["content", "term_names"]
     assert "category" not in gender_schema["properties"]
     assert gender_schema["properties"]["term_names"]["maxItems"] == 1
+    advanced_gender_schema = glossary_gender_advanced_facts_write_toolset.tools[
+        "new_gender_fact_memory"
+    ].function_schema.json_schema
+    assert advanced_gender_schema["required"] == ["term_name", "aspect", "content"]
+    assert advanced_gender_schema["properties"]["aspect"] == {"$ref": "#/$defs/GenderFactAspect"}
+    assert advanced_gender_schema["$defs"]["GenderFactAspect"]["enum"] == ["body", "identity"]
+    gender_event_schema = glossary_gender_advanced_events_write_toolset.tools[
+        "new_gender_event_memory"
+    ].function_schema.json_schema
+    assert gender_event_schema["$defs"]["GenderEventKind"]["enum"] == [
+        "transformation",
+        "body_swap",
+        "possession",
+        "reveal",
+        "disguise_started",
+        "disguise_ended",
+    ]
     relation_schema = glossary_relations_write_toolset.tools[
         "new_relation_memory"
     ].function_schema.json_schema
@@ -420,3 +457,64 @@ def test_type_specific_retrieval_forwards_one_type_and_one_mark(monkeypatch: pyt
     gender_memories(_run_context(db), "Alpha")
     assert inspect_terms.call_args.args[3] == [MemoryType.FACT]
     assert inspect_terms.call_args.kwargs == {"marks": ["gender"], "term_search": None}
+
+
+def test_advanced_gender_state_groups_namespaced_aspects(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = MagicMock(spec=Session)
+    body = AgentGlossaryMemory(
+        memory=AgentMemory(
+            memory_id=uuid4(),
+            memory_type=MemoryType.FACT,
+            mark="gender.body",
+            memory_content="Alpha's current body is female.",
+            memory_start_num=1,
+            memory_review_status=ReviewStatus.PENDING,
+            memory_end_num=None,
+        ),
+        terms=[],
+    )
+    identity = AgentGlossaryMemory(
+        memory=AgentMemory(
+            memory_id=uuid4(),
+            memory_type=MemoryType.FACT,
+            mark="gender.identity",
+            memory_content="Alpha self-identifies as male.",
+            memory_start_num=1,
+            memory_review_status=ReviewStatus.PENDING,
+            memory_end_num=None,
+        ),
+        terms=[],
+    )
+    monkeypatch.setattr(glossary_common.access, "inspect_terms", Mock(return_value=Page(count=2, rows=[body, identity])))
+
+    state = gender_state(_run_context(db), "Alpha")
+
+    assert [row.memory.memory_content for row in state.body] == ["Alpha's current body is female."]
+    assert [row.memory.memory_content for row in state.identity] == ["Alpha self-identifies as male."]
+
+
+def test_advanced_gender_create_rejects_second_active_aspect(monkeypatch: pytest.MonkeyPatch) -> None:
+    db = MagicMock(spec=Session)
+    monkeypatch.setattr(glossary_common.access, "inspect_terms", Mock(return_value=Page(count=1, rows=[])))
+
+    with pytest.raises(ModelRetry, match="already has an active body memory"):
+        new_gender_fact_memory(
+            _run_context(db),
+            "Alpha",
+            "body",
+            "Alpha's current body is female.",
+        )
+
+
+def test_job_params_reject_mixed_lightweight_and_advanced_gender_policies() -> None:
+    with pytest.raises(
+        ValidationError,
+        match="glossary_gender_read and glossary_gender_advanced_facts_read cannot be selected together",
+    ):
+        JobParams(
+            model_name="deepseek:deepseek-v4-flash-low",
+            toolsets=[
+                "glossary_gender_read",
+                "glossary_gender_advanced_facts_read",
+            ],
+        )

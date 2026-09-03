@@ -15,13 +15,9 @@ type GenderEventKind = Literal[
     "body_swap",
     "possession",
     "reveal",
-    "disguise_started",
-    "disguise_ended",
 ]
 GENDER_EVENT_KINDS: tuple[GenderEventKind, ...] = get_args(GenderEventKind.__value__)
-GENDER_EVENT_MARKS: dict[GenderEventKind, str] = {
-    kind: f"gender.event.{kind}" for kind in GENDER_EVENT_KINDS
-}
+GENDER_EVENT_MARKS: dict[GenderEventKind, str] = {kind: f"gender.event.{kind}" for kind in GENDER_EVENT_KINDS}
 
 GLOSSARY_ADVANCED_GENDER_EVENT_READ_INSTRUCTIONS = """
 Use `gender_event_memories` to retrieve one kind of gender-related event for
@@ -32,12 +28,11 @@ explicitly refers to an earlier occurrence.
 
 GLOSSARY_ADVANCED_GENDER_EVENT_WRITE_INSTRUCTIONS = """
 EVENT DEFINITION: A gender event is a bounded, consequential occurrence that
-changes, exchanges, conceals, restores, or reveals gender-related context. It
+changes, exchanges, restores, or reveals gender-related context. It
 answers "What happened?" or "How was the context changed or revealed?" and is
 useful later as history even after the resulting current state is already
-known. Record only a transformation, body swap, possession, reveal, or the
-start or end of a persistent disguise. Store one short atomic occurrence and
-associate only recurring principal terms.
+known. Record only a transformation, body swap, possession, or reveal. Store
+one short atomic occurrence and associate only recurring principal terms.
 
 Semantic event examples:
 - `transformation`: `During the eclipse ritual, 林玥's body permanently changed
@@ -46,20 +41,24 @@ Semantic event examples:
 - `possession`: `林玥 entered and took control of 沈秋's body.`
 - `reveal`: `林玥 revealed that the identity known as 林公子 had always been a
   disguise.`
-- `disguise_started`: `林玥 began persistently presenting as 林公子 to infiltrate
-  the court.`
-- `disguise_ended`: `林玥 permanently abandoned the 林公子 disguise.`
 
 Not events: `林玥's current body is female` and `林玥 self-identifies as male`
 are current-state facts; wearing different clothing for one scene is not a
 durable event; attraction, embarrassment, adaptation, menstruation, pronoun
-use, and another character's mistaken assumption are not gender events.
+use, and another character's mistaken assumption are not gender events. The
+start or end of a disguise, cover identity, or assumed persona belongs to a
+disguise toolset when one is provided and must otherwise be ignored.
 
 Choose the most specific event kind. `transformation` means the subject's body
 changes without exchanging occupants; `body_swap` means occupants exchange
 bodies; `possession` means an occupant enters or controls another body;
-`reveal` discloses an existing truth without changing it; disguise kinds mark
-the beginning or end of a persistent assumed presentation.
+`reveal` discloses an existing truth without changing it and does not include
+beginning or ending a disguise.
+
+Do not record every routine activation of a repeatable transformation. Store
+the durable trigger or mechanic as a `change_rule` fact. Record a particular
+activation as an event only when its occurrence or immediate consequence is
+independently important to later continuity.
 
 Enabled advanced gender fact tools separately maintain what is currently true.
 A reveal may create or correct a fact but does not represent an in-world state

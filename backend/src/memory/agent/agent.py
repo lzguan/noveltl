@@ -19,6 +19,10 @@ from src.memory.agent.toolsets.glossary.gender_advanced_facts import (
     glossary_gender_advanced_facts_read_toolset,
     glossary_gender_advanced_facts_write_toolset,
 )
+from src.memory.agent.toolsets.glossary.gender_advanced_relations import (
+    glossary_gender_advanced_relations_read_toolset,
+    glossary_gender_advanced_relations_write_toolset,
+)
 from src.memory.agent.toolsets.glossary.guidance.artifacts import glossary_artifact_toolset
 from src.memory.agent.toolsets.glossary.guidance.cultivation import glossary_cultivation_toolset
 from src.memory.agent.toolsets.glossary.guidance.gender_transformation import (
@@ -44,6 +48,8 @@ toolsets_by_name: dict[ToolsetName, FunctionToolset[MemAgentDeps]] = {
     "glossary_gender_write": glossary_gender_write_toolset,
     "glossary_gender_advanced_facts_read": glossary_gender_advanced_facts_read_toolset,
     "glossary_gender_advanced_facts_write": glossary_gender_advanced_facts_write_toolset,
+    "glossary_gender_advanced_relations_read": glossary_gender_advanced_relations_read_toolset,
+    "glossary_gender_advanced_relations_write": glossary_gender_advanced_relations_write_toolset,
     "glossary_events_read": glossary_events_read_toolset,
     "glossary_events_write": glossary_events_write_toolset,
     "glossary_gender_advanced_events_read": glossary_gender_advanced_events_read_toolset,

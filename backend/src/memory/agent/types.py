@@ -19,6 +19,8 @@ type ToolsetName = Literal[
     "glossary_gender_write",
     "glossary_gender_advanced_facts_read",
     "glossary_gender_advanced_facts_write",
+    "glossary_gender_advanced_relations_read",
+    "glossary_gender_advanced_relations_write",
     "glossary_events_read",
     "glossary_events_write",
     "glossary_gender_advanced_events_read",
@@ -157,7 +159,19 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
     ToolsetMetadata(
         "glossary_gender_advanced_facts_write",
         "Advanced gender facts: write",
-        "Maintain one current body and identity state per person.",
+        "Maintain body, identity, presentation, and durable change rules.",
+        "memory",
+    ),
+    ToolsetMetadata(
+        "glossary_gender_advanced_relations_read",
+        "Advanced gender perceptions: read",
+        "Retrieve directional beliefs about another person's gender.",
+        "memory",
+    ),
+    ToolsetMetadata(
+        "glossary_gender_advanced_relations_write",
+        "Advanced gender perceptions: write",
+        "Maintain directional beliefs about another person's gender.",
         "memory",
     ),
     ToolsetMetadata(
@@ -177,7 +191,7 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
     ToolsetMetadata(
         "glossary_gender_advanced_events_read",
         "Advanced gender events: read",
-        "Retrieve categorized transformations, reveals, possessions, swaps, and disguises.",
+        "Retrieve categorized transformations, reveals, possessions, and body swaps.",
         "memory",
     ),
     ToolsetMetadata(
@@ -218,12 +232,13 @@ TOOLSET_RESTRICTIONS: tuple[ToolsetRestriction, ...] = (
     ToolsetRequires("glossary_facts_write", "glossary_facts_read"),
     ToolsetRequires("glossary_gender_write", "glossary_gender_read"),
     ToolsetRequires("glossary_gender_advanced_facts_write", "glossary_gender_advanced_facts_read"),
+    ToolsetRequires("glossary_gender_advanced_relations_write", "glossary_gender_advanced_relations_read"),
     ToolsetRequires("glossary_events_write", "glossary_events_read"),
     ToolsetRequires("glossary_gender_advanced_events_write", "glossary_gender_advanced_events_read"),
     ToolsetRequires("glossary_gender_transformation", "glossary_gender_advanced_facts_read"),
     ToolsetRequires("glossary_gender_transformation", "glossary_gender_advanced_facts_write"),
-    ToolsetRequires("glossary_gender_transformation", "glossary_relations_read"),
-    ToolsetRequires("glossary_gender_transformation", "glossary_relations_write"),
+    ToolsetRequires("glossary_gender_transformation", "glossary_gender_advanced_relations_read"),
+    ToolsetRequires("glossary_gender_transformation", "glossary_gender_advanced_relations_write"),
     ToolsetRequires("glossary_cultivation", "glossary_facts_read"),
     ToolsetRequires("glossary_cultivation", "glossary_facts_write"),
     ToolsetRequires("glossary_system", "glossary_facts_read"),
@@ -231,13 +246,10 @@ TOOLSET_RESTRICTIONS: tuple[ToolsetRestriction, ...] = (
     ToolsetRequires("glossary_artifacts", "glossary_definitions_read"),
     ToolsetRequires("glossary_artifacts", "glossary_definitions_write"),
     ToolsetExcludes("glossary_gender_read", "glossary_gender_advanced_facts_read"),
-    ToolsetExcludes("glossary_events_read", "glossary_gender_advanced_events_read"),
 )
 
 TOOLSET_NAMES: tuple[ToolsetName, ...] = tuple(metadata.name for metadata in TOOLSET_METADATA)
-TOOLSET_METADATA_BY_NAME: dict[str, ToolsetMetadata] = {
-    metadata.name: metadata for metadata in TOOLSET_METADATA
-}
+TOOLSET_METADATA_BY_NAME: dict[str, ToolsetMetadata] = {metadata.name: metadata for metadata in TOOLSET_METADATA}
 
 if tuple(metadata.name for metadata in MODEL_METADATA) != MODEL_NAMES:
     raise RuntimeError("Memory-agent model metadata does not match ModelName")
@@ -259,6 +271,8 @@ class ParsedToolsets(Model):
     glossary_gender_write: ToolsetConfig | None = None
     glossary_gender_advanced_facts_read: ToolsetConfig | None = None
     glossary_gender_advanced_facts_write: ToolsetConfig | None = None
+    glossary_gender_advanced_relations_read: ToolsetConfig | None = None
+    glossary_gender_advanced_relations_write: ToolsetConfig | None = None
     glossary_events_read: ToolsetConfig | None = None
     glossary_events_write: ToolsetConfig | None = None
     glossary_gender_advanced_events_read: ToolsetConfig | None = None

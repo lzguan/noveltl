@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from src.memory.agent.types import MODEL_NAMES, TOOLSET_NAMES, validate_toolset_selection
+from pydantic import ValidationError
+from src.memory.agent.types import MODEL_NAMES, TOOLSET_NAMES, ParsedToolsets
 
 from agent_evals.checkpoints import load_checkpoint
 from agent_evals.corpora import inspect_corpus
@@ -52,6 +53,12 @@ def discover_model_names() -> tuple[str, ...]:
     return tuple(MODEL_NAMES)
 
 
+def job_toolsets(config: RunConfig) -> dict[str, dict[str, Any]]:
+    """Convert the eval authoring shape to the backend job-parameter shape."""
+
+    return {toolset.name: toolset.settings for toolset in config.agent.toolsets}
+
+
 def run_config_path(workspace: EvalWorkspace, config_id: str) -> Path:
     return workspace.run_configs / f"{config_id}.yaml"
 
@@ -88,9 +95,13 @@ def validate_run_config_context(workspace: EvalWorkspace, config: RunConfig) -> 
             f"corpus range {corpus.first_chapter}-{corpus.last_chapter}"
         )
 
+    toolsets = job_toolsets(config)
+    unknown_toolsets = sorted(set(toolsets) - set(TOOLSET_NAMES))
+    if unknown_toolsets:
+        raise RunConfigError(f"Unknown agent toolset(s): {', '.join(unknown_toolsets)}")
     try:
-        validate_toolset_selection([toolset.name for toolset in config.agent.toolsets])
-    except ValueError as exc:
+        ParsedToolsets.model_validate(toolsets)
+    except ValidationError as exc:
         raise RunConfigError(str(exc)) from exc
     if config.agent.model_name not in MODEL_NAMES:
         raise RunConfigError(f"Unknown memory-agent model: {config.agent.model_name}")

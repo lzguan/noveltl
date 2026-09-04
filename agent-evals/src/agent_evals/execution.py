@@ -27,7 +27,7 @@ from src.novels.models import Chapter, SourceWork
 from agent_evals.corpora import inspect_corpus, resolve_corpus
 from agent_evals.database import TemporaryPostgresDatabase, temporary_postgres_database
 from agent_evals.progress import RunProgress, RunStatus
-from agent_evals.run_configs import load_run_config
+from agent_evals.run_configs import job_toolsets, load_run_config
 from agent_evals.schemas import RunConfig
 from agent_evals.storage import EvalWorkspace, dump_yaml_model
 
@@ -284,7 +284,7 @@ async def execute_live_replica(context: RunContext, index: int, replica_dir: Pat
             params = JobParams.model_validate(
                 {
                     "model_name": context.config.agent.model_name,
-                    "toolsets": [toolset.name for toolset in context.config.agent.toolsets],
+                    "toolsets": job_toolsets(context.config),
                 }
             )
             with database.session_factory() as db:

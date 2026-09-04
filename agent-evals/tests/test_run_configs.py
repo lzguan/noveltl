@@ -7,8 +7,8 @@ from typer.testing import CliRunner
 from agent_evals import cli
 from agent_evals.checkpoints import create_checkpoint
 from agent_evals.corpora import CorpusImportSpec, import_flat_export
-from agent_evals.run_configs import load_run_config
-from agent_evals.schemas import Checkpoint
+from agent_evals.run_configs import job_toolsets, load_run_config
+from agent_evals.schemas import Checkpoint, RunConfig
 from agent_evals.storage import EvalWorkspace
 
 
@@ -65,6 +65,35 @@ def test_cli_lists_models_from_backend_metadata() -> None:
 
     assert result.exit_code == 0, result.output
     assert result.output.splitlines() == list(MODEL_NAMES)
+
+
+def test_run_config_builds_backend_job_toolset_payload() -> None:
+    config = RunConfig.model_validate(
+        {
+            "id": "retention-config",
+            "change": "Configure transformation retention.",
+            "objectives": ["Bound active transformation history."],
+            "degradation_guardrails": ["Preserve retained occurrences."],
+            "decision_rule": "Accept when retention is bounded.",
+            "corpus": "test-novel",
+            "chapters": {"start_inclusive": 1, "end_inclusive": 5},
+            "agent": {
+                "model_name": "deepseek:deepseek-v4-flash-low",
+                "toolsets": [
+                    {"name": "glossary_gender_advanced_events_read"},
+                    {
+                        "name": "glossary_gender_advanced_events_write",
+                        "settings": {"keepFirst": 2, "keepRolling": 4},
+                    },
+                ],
+            },
+        }
+    )
+
+    assert job_toolsets(config) == {
+        "glossary_gender_advanced_events_read": {},
+        "glossary_gender_advanced_events_write": {"keepFirst": 2, "keepRolling": 4},
+    }
 
 
 def test_cli_creates_and_updates_context_validated_run_config(

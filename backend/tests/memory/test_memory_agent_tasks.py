@@ -196,3 +196,28 @@ def test_run_all_tasks_completes_tasks_refreshes_and_releases_job(
     assert job is not None
     assert job.claim_token is None
     assert job.claim_expires_at is None
+
+
+def test_run_all_tasks_releases_job_when_closed_early(
+    test_db: Session,
+    testing_session_local: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    memory_job_id, _chapter_ids = _make_memory_job(test_db)
+    test_agent = Agent(TestModel(call_tools=[], custom_output_text="recorded"), deps_type=MemAgentDeps)
+    monkeypatch.setattr(agent_tasks, "create_agent", lambda _model_name, _toolsets: test_agent)
+
+    async def consume_one_task_and_close() -> None:
+        completed_tasks = agent_tasks.run_all_tasks(testing_session_local, memory_job_id)
+        completed_task = await anext(completed_tasks)
+        assert completed_task.chapter_num == 1
+
+        await completed_tasks.aclose()
+
+        with testing_session_local() as db:
+            job = db.get(MemoryJob, memory_job_id)
+            assert job is not None
+            assert job.claim_token is None
+            assert job.claim_expires_at is None
+
+    asyncio.run(consume_one_task_and_close())

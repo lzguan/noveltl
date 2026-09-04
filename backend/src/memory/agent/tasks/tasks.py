@@ -1,6 +1,7 @@
 import logging
 import uuid
 from collections.abc import AsyncGenerator, Awaitable, Callable
+from contextlib import aclosing
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -241,10 +242,13 @@ async def run_all_tasks(
     claim_duration: timedelta = DEFAULT_CLAIM_DURATION,
 ) -> AsyncGenerator[CompletedMemoryTask]:
     """Run every pending chapter task in a job in chapter order."""
-    async for result in run_tasks(
-        db_factory,
-        memory_job_id,
-        lambda db, claim_token: claim_next_task(db, memory_job_id, claim_token),
-        claim_duration=claim_duration,
-    ):
-        yield result
+    async with aclosing(
+        run_tasks(
+            db_factory,
+            memory_job_id,
+            lambda db, claim_token: claim_next_task(db, memory_job_id, claim_token),
+            claim_duration=claim_duration,
+        )
+    ) as tasks:
+        async for result in tasks:
+            yield result

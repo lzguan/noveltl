@@ -115,6 +115,25 @@ def test_guidance_toolsets_add_no_callable_tools_and_resolve_in_canonical_order(
     assert glossary_gender_transformation_toolset.tools == {}
 
 
+async def test_advanced_gender_event_write_config_is_applied_when_resolving_toolsets() -> None:
+    resolved = resolve_toolsets(
+        ParsedToolsets.model_validate(
+            {
+                "glossary_gender_advanced_events_read": {},
+                "glossary_gender_advanced_events_write": {"keepFirst": 2, "keepRolling": 4},
+            }
+        )
+    )
+
+    write_toolset = resolved[1]
+    instructions = await write_toolset.get_instructions(_run_context(MagicMock(spec=Session)))
+    assert instructions is not None
+    assert any(
+        "keep the first 2 occurrence(s) and a FIFO window of the newest 4 occurrence(s)" in instruction.content
+        for instruction in instructions
+    )
+
+
 def test_job_params_reject_writes_and_guidance_without_required_toolsets() -> None:
     with pytest.raises(
         ValidationError,
@@ -330,12 +349,25 @@ def test_glossary_tool_schemas_enforce_input_constraints() -> None:
     gender_event_schema = glossary_gender_advanced_events_write_toolset.tools[
         "new_gender_event_memory"
     ].function_schema.json_schema
-    assert gender_event_schema["$defs"]["GenderEventKind"]["enum"] == [
-        "transformation",
+    assert gender_event_schema["$defs"]["OtherGenderEventKind"]["enum"] == [
         "body_swap",
         "possession",
         "reveal",
     ]
+    transformation_event_schema = glossary_gender_advanced_events_write_toolset.tools[
+        "new_gender_transformation_event_memory"
+    ].function_schema.json_schema
+    assert transformation_event_schema["required"] == ["subject_term_name", "content"]
+    assert "scope" not in transformation_event_schema["properties"]
+    supersede_transformation_schema = glossary_gender_advanced_events_write_toolset.tools[
+        "supersede_gender_transformation_event_memory"
+    ].function_schema.json_schema
+    assert supersede_transformation_schema["required"] == [
+        "memory_id",
+        "subject_term_name",
+        "content",
+    ]
+    assert "scope" not in supersede_transformation_schema["properties"]
     relation_schema = glossary_relations_write_toolset.tools["new_relation_memory"].function_schema.json_schema
     assert relation_schema["properties"]["category"] == {"$ref": "#/$defs/RelationCategory"}
     assert relation_schema["$defs"]["RelationCategory"]["enum"] == [
@@ -626,4 +658,13 @@ def test_job_params_reject_unknown_toolsets_and_settings() -> None:
         JobParams(
             model_name="deepseek:deepseek-v4-flash-low",
             toolsets={"glossary_terms": {"unknown_setting": True}},
+        )
+
+    with pytest.raises(ValidationError, match="Input should be less than or equal to 20"):
+        JobParams(
+            model_name="deepseek:deepseek-v4-flash-low",
+            toolsets={
+                "glossary_gender_advanced_events_read": {},
+                "glossary_gender_advanced_events_write": {"keepFirst": 21},
+            },
         )

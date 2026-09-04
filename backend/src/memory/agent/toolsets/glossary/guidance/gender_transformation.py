@@ -6,8 +6,8 @@ presentation as oneself, another observer's perception, a durable change rule,
 and a bounded transformation, reveal, possession, or body swap. A change to
 current body, identity, or presentation supersedes that same fact aspect. A
 repeatable ability, involuntary trigger, or constraint belongs in a
-`change_rule` fact. A consequential occurrence may separately use
-`new_gender_event_memory` when that tool is available.
+`change_rule` fact. A consequential transformation occurrence may separately
+use `new_gender_transformation_event_memory` when that tool is available.
 
 A disguise, cover identity, or assumed persona is not presentation as oneself
 and belongs to a disguise toolset when one is provided. Otherwise ignore the

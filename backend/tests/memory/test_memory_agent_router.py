@@ -78,12 +78,14 @@ def test_memory_agent_router_exposes_registered_config(
         "title": "ToolsetConfig",
         "type": "object",
     }
-    assert toolsets["glossary_gender_read"]["excludes"] == [
-        "glossary_gender_advanced_facts_read"
-    ]
-    assert toolsets["glossary_gender_advanced_facts_read"]["excludes"] == [
-        "glossary_gender_read"
-    ]
+    assert toolsets["glossary_gender_read"]["excludes"] == ["glossary_gender_advanced_facts_read"]
+    assert toolsets["glossary_gender_advanced_facts_read"]["excludes"] == ["glossary_gender_read"]
+    event_write_schema = toolsets["glossary_gender_advanced_events_write"]["configSchema"]
+    assert event_write_schema["title"] == "OccurrenceRetentionConfig"
+    assert event_write_schema["properties"]["keepFirst"]["default"] == 1
+    assert event_write_schema["properties"]["keepFirst"]["minimum"] == 0
+    assert event_write_schema["properties"]["keepRolling"]["default"] == 3
+    assert event_write_schema["properties"]["keepRolling"]["maximum"] == 20
 
 
 def test_memory_agent_router_exposes_authenticated_job_progress_and_dispatch(

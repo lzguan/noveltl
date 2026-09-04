@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from typing import Literal, get_args
+from typing import Annotated, Literal, get_args
 
-from pydantic import ConfigDict, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from src.schemas import Model
 
@@ -59,6 +59,29 @@ class ToolsetConfig(Model):
     """Base configuration for one enabled toolset."""
 
     model_config = ConfigDict(extra="forbid")
+
+
+class OccurrenceRetentionConfig(ToolsetConfig):
+    """Active-context retention for repeated occurrences per exact subject."""
+
+    keep_first: Annotated[
+        int,
+        Field(
+            ge=0,
+            le=20,
+            title="Keep first",
+            description="Number of earliest occurrences to keep active per exact subject.",
+        ),
+    ] = 1
+    keep_rolling: Annotated[
+        int,
+        Field(
+            ge=0,
+            le=20,
+            title="Keep rolling",
+            description="Size of the newest-occurrence FIFO window per exact subject.",
+        ),
+    ] = 3
 
 
 @dataclass(frozen=True)
@@ -199,6 +222,7 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
         "Advanced gender events: write",
         "Record categorized consequential gender-related occurrences.",
         "memory",
+        config_model=OccurrenceRetentionConfig,
     ),
     ToolsetMetadata(
         "glossary_gender_transformation",
@@ -276,7 +300,7 @@ class ParsedToolsets(Model):
     glossary_events_read: ToolsetConfig | None = None
     glossary_events_write: ToolsetConfig | None = None
     glossary_gender_advanced_events_read: ToolsetConfig | None = None
-    glossary_gender_advanced_events_write: ToolsetConfig | None = None
+    glossary_gender_advanced_events_write: OccurrenceRetentionConfig | None = None
     glossary_gender_transformation: ToolsetConfig | None = None
     glossary_cultivation: ToolsetConfig | None = None
     glossary_system: ToolsetConfig | None = None

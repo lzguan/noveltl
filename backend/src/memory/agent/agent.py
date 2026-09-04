@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from pydantic_ai import Agent, AgentRunResult, FunctionToolset
 from pydantic_ai.models.openai import OpenAIChatModelSettings
 
@@ -12,8 +14,8 @@ from src.memory.agent.toolsets.glossary.events import glossary_events_read_tools
 from src.memory.agent.toolsets.glossary.facts import glossary_facts_read_toolset, glossary_facts_write_toolset
 from src.memory.agent.toolsets.glossary.gender import glossary_gender_read_toolset, glossary_gender_write_toolset
 from src.memory.agent.toolsets.glossary.gender_advanced_events import (
+    create_glossary_gender_advanced_events_write_toolset,
     glossary_gender_advanced_events_read_toolset,
-    glossary_gender_advanced_events_write_toolset,
 )
 from src.memory.agent.toolsets.glossary.gender_advanced_facts import (
     glossary_gender_advanced_facts_read_toolset,
@@ -34,33 +36,56 @@ from src.memory.agent.toolsets.glossary.relations import (
     glossary_relations_write_toolset,
 )
 from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
-from src.memory.agent.types import TOOLSET_NAMES, ModelName, ParsedToolsets, ToolsetName
+from src.memory.agent.types import (
+    TOOLSET_NAMES,
+    ModelName,
+    OccurrenceRetentionConfig,
+    ParsedToolsets,
+    ToolsetConfig,
+    ToolsetName,
+)
 
-toolsets_by_name: dict[ToolsetName, FunctionToolset[MemAgentDeps]] = {
-    "glossary_terms": glossary_term_toolset,
-    "glossary_definitions_read": glossary_definitions_read_toolset,
-    "glossary_definitions_write": glossary_definitions_write_toolset,
-    "glossary_relations_read": glossary_relations_read_toolset,
-    "glossary_relations_write": glossary_relations_write_toolset,
-    "glossary_facts_read": glossary_facts_read_toolset,
-    "glossary_facts_write": glossary_facts_write_toolset,
-    "glossary_gender_read": glossary_gender_read_toolset,
-    "glossary_gender_write": glossary_gender_write_toolset,
-    "glossary_gender_advanced_facts_read": glossary_gender_advanced_facts_read_toolset,
-    "glossary_gender_advanced_facts_write": glossary_gender_advanced_facts_write_toolset,
-    "glossary_gender_advanced_relations_read": glossary_gender_advanced_relations_read_toolset,
-    "glossary_gender_advanced_relations_write": glossary_gender_advanced_relations_write_toolset,
-    "glossary_events_read": glossary_events_read_toolset,
-    "glossary_events_write": glossary_events_write_toolset,
-    "glossary_gender_advanced_events_read": glossary_gender_advanced_events_read_toolset,
-    "glossary_gender_advanced_events_write": glossary_gender_advanced_events_write_toolset,
-    "glossary_gender_transformation": glossary_gender_transformation_toolset,
-    "glossary_cultivation": glossary_cultivation_toolset,
-    "glossary_system": glossary_system_toolset,
-    "glossary_artifacts": glossary_artifact_toolset,
+type ToolsetFactory = Callable[[ToolsetConfig], FunctionToolset[MemAgentDeps]]
+
+
+def _fixed_toolset(toolset: FunctionToolset[MemAgentDeps]) -> ToolsetFactory:
+    def resolve(_: ToolsetConfig) -> FunctionToolset[MemAgentDeps]:
+        return toolset
+
+    return resolve
+
+
+def _advanced_gender_events_write(config: ToolsetConfig) -> FunctionToolset[MemAgentDeps]:
+    if not isinstance(config, OccurrenceRetentionConfig):
+        raise TypeError("Advanced gender event writes require OccurrenceRetentionConfig")
+    return create_glossary_gender_advanced_events_write_toolset(config)
+
+
+toolset_factories_by_name: dict[ToolsetName, ToolsetFactory] = {
+    "glossary_terms": _fixed_toolset(glossary_term_toolset),
+    "glossary_definitions_read": _fixed_toolset(glossary_definitions_read_toolset),
+    "glossary_definitions_write": _fixed_toolset(glossary_definitions_write_toolset),
+    "glossary_relations_read": _fixed_toolset(glossary_relations_read_toolset),
+    "glossary_relations_write": _fixed_toolset(glossary_relations_write_toolset),
+    "glossary_facts_read": _fixed_toolset(glossary_facts_read_toolset),
+    "glossary_facts_write": _fixed_toolset(glossary_facts_write_toolset),
+    "glossary_gender_read": _fixed_toolset(glossary_gender_read_toolset),
+    "glossary_gender_write": _fixed_toolset(glossary_gender_write_toolset),
+    "glossary_gender_advanced_facts_read": _fixed_toolset(glossary_gender_advanced_facts_read_toolset),
+    "glossary_gender_advanced_facts_write": _fixed_toolset(glossary_gender_advanced_facts_write_toolset),
+    "glossary_gender_advanced_relations_read": _fixed_toolset(glossary_gender_advanced_relations_read_toolset),
+    "glossary_gender_advanced_relations_write": _fixed_toolset(glossary_gender_advanced_relations_write_toolset),
+    "glossary_events_read": _fixed_toolset(glossary_events_read_toolset),
+    "glossary_events_write": _fixed_toolset(glossary_events_write_toolset),
+    "glossary_gender_advanced_events_read": _fixed_toolset(glossary_gender_advanced_events_read_toolset),
+    "glossary_gender_advanced_events_write": _advanced_gender_events_write,
+    "glossary_gender_transformation": _fixed_toolset(glossary_gender_transformation_toolset),
+    "glossary_cultivation": _fixed_toolset(glossary_cultivation_toolset),
+    "glossary_system": _fixed_toolset(glossary_system_toolset),
+    "glossary_artifacts": _fixed_toolset(glossary_artifact_toolset),
 }
 
-if set(toolsets_by_name) != set(TOOLSET_NAMES):
+if set(toolset_factories_by_name) != set(TOOLSET_NAMES):
     raise RuntimeError("Memory-agent toolset registry does not match TOOLSET_NAMES")
 
 GLOSSARY_TOOLSET_NAMES: frozenset[ToolsetName] = frozenset(TOOLSET_NAMES)
@@ -68,7 +93,13 @@ GLOSSARY_TOOLSET_NAMES: frozenset[ToolsetName] = frozenset(TOOLSET_NAMES)
 
 def resolve_toolsets(toolsets: ParsedToolsets) -> list[FunctionToolset[MemAgentDeps]]:
     """Resolve configured toolsets in canonical order for stable prompt caching."""
-    return [toolsets_by_name[name] for name in toolsets.selected_names()]
+    resolved: list[FunctionToolset[MemAgentDeps]] = []
+    for name in toolsets.selected_names():
+        config = getattr(toolsets, name)
+        if config is None:
+            raise RuntimeError(f"Selected toolset {name} has no configuration")
+        resolved.append(toolset_factories_by_name[name](config))
+    return resolved
 
 
 def create_agent(model_name: ModelName, toolsets: ParsedToolsets) -> Agent[MemAgentDeps, str]:

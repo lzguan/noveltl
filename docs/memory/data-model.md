@@ -117,6 +117,9 @@ independently:
   `glossary_gender_write` creates, supersedes, or expires it.
 - `glossary_events_read` retrieves events, while `glossary_events_write`
   creates or supersedes them.
+- Advanced gender fact, perception, and event toolsets keep body state,
+  self-identity, presentation, change rules, observer beliefs, and bounded
+  gender-related occurrences separate.
 
 Every write toolset requires its corresponding read toolset. The dependency is
 validated when a job is created; selecting a write toolset does not implicitly
@@ -154,7 +157,13 @@ allowed by their respective toolsets. Gender memories use the `gender` mark.
 Definitions remain unmarked. The mark is metadata and is not included in
 `memory_content`.
 
-Event memories are not categorized with the fact and relation marks.
+Generic event memories are unmarked. Advanced gender events use namespaced
+marks for transformations, body swaps, possessions, and reveals. Advanced
+transformation writes retain, per exact subject, the configured union of the
+first N occurrences and a FIFO window containing the newest N occurrences.
+Older agent-created occurrences are ended rather than deleted, so historical
+retrieval remains possible. Superseding corrections remain part of the same
+occurrence.
 
 The term itself remains in the source language, while memory content is written
 in the language configured by the memory group. The agent processes chapters

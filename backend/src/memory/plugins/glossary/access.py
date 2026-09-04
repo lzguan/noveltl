@@ -332,16 +332,18 @@ def expire_memory(
     memory_types: Sequence[MemoryType],
     *,
     marks: Sequence[str | None] | None = None,
+    end_offset: int = 0,
 ) -> None:
-    """End an older active glossary memory without creating a replacement."""
+    """End an active glossary memory at the context chapter plus an internal offset."""
     chapter_num, _ = check_mem_access_ctx(db, ctx)
+    end_num = chapter_num + end_offset
     try:
         query = update(Memory).where(
             Memory.memory_id == memory_id,
             Memory.memory_group_id == ctx.memory_group_id,
             Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
             Memory.memory_type.in_(memory_types),
-            Memory.memory_start_num < chapter_num,
+            Memory.memory_start_num < end_num,
             or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chapter_num),
         )
         if marks is not None:
@@ -354,7 +356,7 @@ def expire_memory(
             query = query.where(or_(*mark_filters) if mark_filters else Memory.mark.in_([]))
         db.execute(
             query
-            .values(memory_end_num=chapter_num)
+            .values(memory_end_num=end_num)
             .returning(Memory.memory_id)
         ).scalar_one()
     except NoResultFound as exc:

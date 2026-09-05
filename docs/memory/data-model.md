@@ -139,7 +139,10 @@ are validated when the job is created.
 
 Each retrieval tool returns a page of one memory type. Definition, relation,
 and fact retrieval operates on one exact term. Relation and fact retrieval also
-requires one literal category, which becomes the retrieval mark; definitions
+requires one literal category. Fact searches for `ability` or `limitation`
+retrieve both marks in one paginated result; other fact categories and relation
+categories retrieve only their selected mark. The agent no longer exposes
+`trait` as a fact category; existing stored marks are not migrated. Definitions
 retrieve only unmarked memories. These tools can filter by a literal,
 case-insensitive piece of memory text, and all filters apply before pagination.
 

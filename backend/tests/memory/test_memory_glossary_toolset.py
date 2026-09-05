@@ -61,11 +61,13 @@ from src.memory.agent.toolsets.glossary.relations import (
 from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
 from src.memory.agent.types import ParsedToolsets
 from src.memory.exceptions import GlossaryTermNotFoundException
+from src.memory.models import MemoryGroup
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
 from src.memory.plugins.glossary.types import TermKind
 from src.memory.schemas import AgentMemory
-from src.memory.types import MemoryType, ReviewStatus
+from src.memory.types import Creator, MemoryType, ReviewStatus
 from src.schemas import Page
+from test_support.test_data.scenarios import DatabaseScenario
 
 
 def _run_context(db: Session) -> RunContext[MemAgentDeps]:
@@ -312,7 +314,6 @@ def test_glossary_tool_schemas_enforce_input_constraints() -> None:
         "species",
         "appearance",
         "cultivation_level",
-        "trait",
         "ability",
         "limitation",
     ]
@@ -478,6 +479,50 @@ def test_retrieval_tool_result_serializes_agent_models_with_snake_case() -> None
             }
         ],
     }
+
+
+def test_fact_retrieval_combines_abilities_and_limitations_before_pagination(
+    test_db: Session, sample_scenario: DatabaseScenario,
+) -> None:
+    group = MemoryGroup(
+        memory_group_name="Fact retrieval",
+        novel_id=sample_scenario.novels["novel_1"].novel_id,
+        memory_language="en",
+    )
+    test_db.add(group)
+    test_db.flush()
+    ctx = _run_context(test_db)
+    ctx.deps.mem_access_context = MemAccessContext(
+        memory_group_id=group.memory_group_id,
+        chapter_id=sample_scenario.chapters["chapter_1"].chapter_id,
+        chapter_content_id=sample_scenario.contents["chapter_1_v2"].chapter_content_id,
+    )
+    glossary_common.access.create_term(test_db, group.memory_group_id, "Alpha")
+    for mark, content in (
+        ("ability", "Alpha can channel magic through marked gates."),
+        ("limitation", "Alpha is vulnerable to silver magic."),
+        ("limitation", "Alpha cannot swim."),
+        ("species", "Alpha is a magical human."),
+        ("trait", "Alpha has a legacy magic trait."),
+    ):
+        glossary_common.access.create_memory(
+            test_db, ctx.deps.mem_access_context, Creator.AGENT, MemoryType.FACT,
+            ["Alpha"], content, mark=mark,
+        )
+    test_db.flush()
+
+    ability_page = fact_memories(ctx, "Alpha", "ability", term_search="MAGIC")
+    limitation_page = fact_memories(ctx, "Alpha", "limitation", term_search="MAGIC")
+    assert ability_page == limitation_page
+    assert ability_page.count == 2
+    assert {row.memory.mark for row in ability_page.rows} == {"ability", "limitation"}
+    first = fact_memories(ctx, "Alpha", "ability", limit=1, term_search="MAGIC")
+    second = fact_memories(ctx, "Alpha", "limitation", skip=1, limit=1, term_search="MAGIC")
+    assert first.count == second.count == 2
+    assert first.rows + second.rows == ability_page.rows
+    species_page = fact_memories(ctx, "Alpha", "species")
+    assert species_page.count == 1
+    assert species_page.rows[0].memory.mark == "species"
 
 
 def test_type_specific_retrieval_forwards_one_type_and_one_mark(monkeypatch: pytest.MonkeyPatch) -> None:

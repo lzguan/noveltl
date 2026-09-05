@@ -14,7 +14,6 @@ type FactCategory = Literal[
     "species",
     "appearance",
     "cultivation_level",
-    "trait",
     "ability",
     "limitation",
 ]
@@ -22,7 +21,11 @@ FACT_CATEGORIES: tuple[FactCategory, ...] = get_args(FactCategory.__value__)
 
 GLOSSARY_FACT_READ_INSTRUCTIONS = """
 Retrieve facts only after forming one specific candidate. Query its exact
-primary term and one matching category. Use `term_search` only for a literal,
+primary term and the candidate's category. An `ability` or `limitation` query
+returns both categories together, so a prior classification difference does
+not hide a related claim. Inspect both kinds of result; do not repeat the same
+query under the other category. All other categories retrieve only themselves.
+Use `term_search` only for a literal,
 case-insensitive substring expected in the memory text. Filters apply before
 pagination and results are newest-first. Request another page only when the
 filtered count requires it. A term created in the current run has no fact
@@ -38,7 +41,7 @@ dedicated gender tools and must not be written with this toolset.
 
 Each fact has one primary term and exactly one category: explicit `age_stage`;
 `species`; stable identifying `appearance`; the current canonical
-`cultivation_level`; an enduring inherent `trait`; an enduring unusual
+`cultivation_level`; an enduring unusual
 `ability`; or an enduring `limitation`. Never record actions, history,
 personality, emotions, intentions, discoveries, knowledge, location,
 inventory, wealth, occupation, affiliation, ownership, routines, temporary
@@ -46,6 +49,31 @@ state, ordinary technique use, one-off feats, fatigue, pain, or temporary
 injury.
 
 Multiple independent facts may share a category.
+
+An `ability` describes what the subject can do, including the conditions and
+intrinsic limits needed to describe that capability accurately. A `limitation`
+describes an enduring vulnerability, impairment, or restriction on the subject
+that is not merely an operating condition of a recorded ability. Do not split
+one capability into ability and limitation memories merely because part of its
+description is negative. These distinctions do not relax the eligibility
+rules above.
+
+Examples:
+- "林渊 can teleport only between marked locations." is one `ability`,
+  including its constraint; do not separately record inability to teleport
+  elsewhere.
+- "林渊 cannot cultivate because his meridians are permanently damaged." is
+  a `limitation`.
+- "林渊 is vulnerable to silver regardless of which ability he uses." is a
+  `limitation` independent of those abilities.
+- "林渊 cannot teleport." is normally omitted when it is merely the ordinary
+  absence of an ability; do not inventory everything a subject cannot do.
+
+When a capability's range, conditions, or intrinsic restrictions change,
+supersede the existing ability with its new complete current description. Do
+not create a separate limitation for the changed restriction. For example,
+learning to teleport to any visible location replaces the marked-location
+ability above rather than adding an independent ability or limitation.
 
 Write only a short plain statement in `content`; the category is stored
 separately. Before acting on each candidate, call `fact_memories` as described
@@ -62,7 +90,7 @@ clear textual evidence.
 
 For the shared lifecycle decision, the tracked claim is the primary subject's
 specific attribute, not the broad category alone: for example, age stage,
-species, cultivation stage, one appearance feature, one inherent trait, one
+species, cultivation stage, one appearance feature, one
 capability, or one limitation. Supersede a previous value of that
 attribute, but create a separate fact for a genuinely independent attribute in
 the same category. A refinement or fuller description of the same capability
@@ -78,8 +106,19 @@ def fact_memories(
     limit: Annotated[int, Field(ge=1, le=20)] = 5,
     term_search: Annotated[str | None, Field(min_length=1)] = None,
 ) -> Page[AgentGlossaryMemory[str]]:
-    """Retrieve active facts in one category for one exact glossary term."""
-    return common.term_memories(ctx, term_name, MemoryType.FACT, category, skip, limit, term_search)
+    """Retrieve active facts for one exact term; ability and limitation share a result set."""
+    marks = ["ability", "limitation"] if category in ("ability", "limitation") else [category]
+    page = common.access.inspect_terms(
+        ctx.deps.db,
+        ctx.deps.mem_access_context,
+        [term_name],
+        [MemoryType.FACT],
+        skip,
+        limit,
+        marks=marks,
+        term_search=term_search,
+    )
+    return common.to_agent_memory_page(ctx, page)
 
 
 def new_fact_memory(

@@ -108,9 +108,7 @@ def test_transformation_retention_bounds_agent_occurrences_without_touching_othe
             subject,
             content,
         )
-        return test_db.scalars(
-            select(Memory).where(Memory.memory_id == deps.uuid_cache.get_uuid(handle))
-        ).one()
+        return test_db.scalars(select(Memory).where(Memory.memory_id == deps.uuid_cache.get_uuid(handle))).one()
 
     def correct_transformation(
         chapter_number: int,
@@ -120,9 +118,9 @@ def test_transformation_retention_bounds_agent_occurrences_without_touching_othe
     ) -> Memory:
         deps.mem_access_context = context(chapter_number)
         handle = deps.uuid_cache.new(memory.memory_id)
-        replacement_handle = retained_toolset.tools[
-            "supersede_gender_transformation_event_memory"
-        ].function(run_context, handle, subject, content)
+        replacement_handle = retained_toolset.tools["supersede_gender_transformation_event_memory"].function(
+            run_context, handle, subject, content
+        )
         return test_db.scalars(
             select(Memory).where(Memory.memory_id == deps.uuid_cache.get_uuid(replacement_handle))
         ).one()

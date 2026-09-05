@@ -58,7 +58,7 @@ agent-eval config create marks-single-query-v1 \
   --corpus cn-fantasy-001 --start 1 --end 250 \
   --checkpoint opening --model deepseek:deepseek-v4-flash-low \
   --toolset glossary_terms \
-  --toolset glossary_facts_read --toolset glossary_facts_write
+  --toolset glossary_character_read --toolset glossary_character_write
 agent-eval config show marks-single-query-v1
 agent-eval config update marks-single-query-v1 --replicas 3 --max-parallel 2
 agent-eval config validate marks-single-query-v1

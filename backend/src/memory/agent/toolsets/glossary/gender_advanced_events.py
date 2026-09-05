@@ -30,7 +30,10 @@ GENDER_EVENT_MARKS: dict[GenderEventKind, str] = {kind: f"gender.event.{kind}" f
 
 GLOSSARY_ADVANCED_GENDER_EVENT_READ_INSTRUCTIONS = """
 Use `gender_event_memories` to retrieve one kind of gender-related event for
-one exact recurring person. Results are newest-first. Use active-only results
+one exact recurring person. Selecting `body_swap` or `possession` searches
+both kinds together; do not repeat the same query under the other kind.
+Inspect each returned mark and occurrence rather than treating both kinds as
+equivalent claims. Results are newest-first. Use active-only results
 for current continuity and include ended history only when the chapter
 explicitly refers to an earlier occurrence.
 """.strip()
@@ -100,7 +103,10 @@ def gender_event_memories(
     limit: Annotated[int, Field(ge=1, le=20)] = 5,
     active_only: bool = True,
 ) -> Page[AgentGlossaryMemory[str]]:
-    """Retrieve one kind of gender-related event for one exact person term."""
+    """Retrieve gender events for one person; body swaps and possessions share results."""
+    kinds: tuple[GenderEventKind, ...] = (
+        ("body_swap", "possession") if event_kind in ("body_swap", "possession") else (event_kind,)
+    )
     page = access.inspect_terms(
         ctx.deps.db,
         ctx.deps.mem_access_context,
@@ -109,7 +115,7 @@ def gender_event_memories(
         skip,
         limit,
         active_only=active_only,
-        marks=[GENDER_EVENT_MARKS[event_kind]],
+        marks=[GENDER_EVENT_MARKS[kind] for kind in kinds],
     )
     return common.to_agent_memory_page(ctx, page)
 
@@ -215,9 +221,7 @@ def create_glossary_gender_advanced_events_write_toolset(
                     ),
                 )
                 stop = (
-                    len(occurrence_roots) - retention.keep_rolling
-                    if retention.keep_rolling
-                    else len(occurrence_roots)
+                    len(occurrence_roots) - retention.keep_rolling if retention.keep_rolling else len(occurrence_roots)
                 )
                 expired_roots = set(occurrence_roots[retention.keep_first : max(retention.keep_first, stop)])
                 for memory in active_memories:

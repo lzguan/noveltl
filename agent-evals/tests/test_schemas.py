@@ -22,7 +22,7 @@ def valid_run_config() -> dict[str, object]:
             "model_name": "deepseek:deepseek-v4-flash-low",
             "toolsets": [
                 {"name": "glossary_terms", "settings": {}},
-                {"name": "glossary_facts_read", "settings": {"categories": ["identity"]}},
+                {"name": "glossary_character_read", "settings": {"categories": ["identity"]}},
             ],
         },
         "execution": {"replicas": 3, "max_parallel": 2, "retries_per_chapter": 2},

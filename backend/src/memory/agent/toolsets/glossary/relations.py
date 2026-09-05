@@ -29,7 +29,12 @@ RELATION_CATEGORIES: tuple[RelationCategory, ...] = get_args(RelationCategory.__
 GLOSSARY_RELATION_READ_INSTRUCTIONS = """
 Query one existing participant most likely to reveal the candidate
 relationship, with its one matching category. Form the candidate before
-retrieval. Use `term_search` only for a literal, case-insensitive substring
+retrieval. Selecting any of `rank`, `membership`, `service`, or
+`organizational_hierarchy` searches all four together. Selecting `alliance`
+or `commercial_partnership` searches both together. Do not repeat equivalent
+queries for the other categories in a shared group. Returned categories stay
+distinct: related results are not necessarily the same relationship.
+Use `term_search` only for a literal, case-insensitive substring
 expected in the memory text. Filters apply before pagination and results are
 newest-first. Request another page only when the filtered count requires it.
 """.strip()
@@ -73,8 +78,24 @@ def relation_memories(
     limit: Annotated[int, Field(ge=1, le=20)] = 5,
     term_search: Annotated[str | None, Field(min_length=1)] = None,
 ) -> Page[AgentGlossaryMemory[str]]:
-    """Retrieve active relations in one category for one exact glossary term."""
-    return common.term_memories(ctx, term_name, MemoryType.RELATION, category, skip, limit, term_search)
+    """Retrieve active relations, including related categories, for one exact term."""
+    if category in ("rank", "membership", "service", "organizational_hierarchy"):
+        marks = ["rank", "membership", "service", "organizational_hierarchy"]
+    elif category in ("alliance", "commercial_partnership"):
+        marks = ["alliance", "commercial_partnership"]
+    else:
+        marks = [category]
+    page = common.access.inspect_terms(
+        ctx.deps.db,
+        ctx.deps.mem_access_context,
+        [term_name],
+        [MemoryType.RELATION],
+        skip,
+        limit,
+        marks=marks,
+        term_search=term_search,
+    )
+    return common.to_agent_memory_page(ctx, page)
 
 
 def new_relation_memory(

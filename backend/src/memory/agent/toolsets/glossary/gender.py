@@ -34,6 +34,14 @@ distinguishes gender identity, physical sex, or presentation, state the exact
 attribute rather than collapsing them into one vague claim. Independent
 attributes may coexist.
 
+Keep physical identifying features and apparent age in generic appearance
+facts when eligible; do not inventory hair, eyes, scars, build, outfits, or
+accessories here. Gender presentation is an explicit statement about how the
+person presents as themself, not an inference from clothing or physical looks.
+Use `character_state_memories` when a candidate may overlap generic physical
+facts, then perform the required gender retrieval. Do not duplicate an existing
+claim merely to move it between toolsets; only its owning writer may modify it.
+
 Before each write, use `gender_memories` to inspect the exact person's existing
 gender state unless the term was created in the current run. Make no write when
 the claim is already represented. Supersede only when the same attribute has a

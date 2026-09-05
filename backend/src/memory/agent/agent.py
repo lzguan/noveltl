@@ -5,32 +5,30 @@ from pydantic_ai.models.openai import OpenAIChatModelSettings
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
+from src.memory.agent.toolsets.glossary.appearance import glossary_appearance_write_toolset
+from src.memory.agent.toolsets.glossary.character_state import glossary_character_state_read_toolset
 from src.memory.agent.toolsets.glossary.context import GLOSSARY_SHARED_INSTRUCTIONS, initial_glossary_context
+from src.memory.agent.toolsets.glossary.cultivation import glossary_cultivation_write_toolset
 from src.memory.agent.toolsets.glossary.definitions import (
     glossary_definitions_read_toolset,
     glossary_definitions_write_toolset,
 )
 from src.memory.agent.toolsets.glossary.events import glossary_events_read_toolset, glossary_events_write_toolset
-from src.memory.agent.toolsets.glossary.facts import glossary_facts_read_toolset, glossary_facts_write_toolset
-from src.memory.agent.toolsets.glossary.gender import glossary_gender_read_toolset, glossary_gender_write_toolset
+from src.memory.agent.toolsets.glossary.facts import glossary_facts_write_toolset
 from src.memory.agent.toolsets.glossary.gender_advanced_events import (
     create_glossary_gender_advanced_events_write_toolset,
     glossary_gender_advanced_events_read_toolset,
 )
 from src.memory.agent.toolsets.glossary.gender_advanced_facts import (
-    glossary_gender_advanced_facts_read_toolset,
     glossary_gender_advanced_facts_write_toolset,
 )
 from src.memory.agent.toolsets.glossary.gender_advanced_relations import (
-    glossary_gender_advanced_relations_read_toolset,
     glossary_gender_advanced_relations_write_toolset,
 )
 from src.memory.agent.toolsets.glossary.guidance.artifacts import glossary_artifact_toolset
-from src.memory.agent.toolsets.glossary.guidance.cultivation import glossary_cultivation_toolset
 from src.memory.agent.toolsets.glossary.guidance.gender_transformation import (
     glossary_gender_transformation_toolset,
 )
-from src.memory.agent.toolsets.glossary.guidance.system import glossary_system_toolset
 from src.memory.agent.toolsets.glossary.relations import (
     glossary_relations_read_toolset,
     glossary_relations_write_toolset,
@@ -67,21 +65,17 @@ toolset_factories_by_name: dict[ToolsetName, ToolsetFactory] = {
     "glossary_definitions_write": _fixed_toolset(glossary_definitions_write_toolset),
     "glossary_relations_read": _fixed_toolset(glossary_relations_read_toolset),
     "glossary_relations_write": _fixed_toolset(glossary_relations_write_toolset),
-    "glossary_facts_read": _fixed_toolset(glossary_facts_read_toolset),
-    "glossary_facts_write": _fixed_toolset(glossary_facts_write_toolset),
-    "glossary_gender_read": _fixed_toolset(glossary_gender_read_toolset),
-    "glossary_gender_write": _fixed_toolset(glossary_gender_write_toolset),
-    "glossary_gender_advanced_facts_read": _fixed_toolset(glossary_gender_advanced_facts_read_toolset),
+    "glossary_character_read": _fixed_toolset(glossary_character_state_read_toolset),
+    "glossary_character_write": _fixed_toolset(glossary_facts_write_toolset),
+    "glossary_appearance_write": _fixed_toolset(glossary_appearance_write_toolset),
+    "glossary_cultivation_write": _fixed_toolset(glossary_cultivation_write_toolset),
     "glossary_gender_advanced_facts_write": _fixed_toolset(glossary_gender_advanced_facts_write_toolset),
-    "glossary_gender_advanced_relations_read": _fixed_toolset(glossary_gender_advanced_relations_read_toolset),
     "glossary_gender_advanced_relations_write": _fixed_toolset(glossary_gender_advanced_relations_write_toolset),
     "glossary_events_read": _fixed_toolset(glossary_events_read_toolset),
     "glossary_events_write": _fixed_toolset(glossary_events_write_toolset),
     "glossary_gender_advanced_events_read": _fixed_toolset(glossary_gender_advanced_events_read_toolset),
     "glossary_gender_advanced_events_write": _advanced_gender_events_write,
     "glossary_gender_transformation": _fixed_toolset(glossary_gender_transformation_toolset),
-    "glossary_cultivation": _fixed_toolset(glossary_cultivation_toolset),
-    "glossary_system": _fixed_toolset(glossary_system_toolset),
     "glossary_artifacts": _fixed_toolset(glossary_artifact_toolset),
 }
 

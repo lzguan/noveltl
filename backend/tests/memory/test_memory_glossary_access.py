@@ -123,14 +123,10 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
 
     fact_page = inspect_terms(test_db, context, ["Alpha"], [MemoryType.FACT])
     assert fact_page.count == 1
-    assert [item.memory.memory_id for item in fact_page.rows] == [
-        fact.memory_id
-    ]
+    assert [item.memory.memory_id for item in fact_page.rows] == [fact.memory_id]
     relation_page = inspect_terms(test_db, context, ["Alpha"], [MemoryType.RELATION])
     assert relation_page.count == 1
-    assert [item.memory.memory_id for item in relation_page.rows] == [
-        relation.memory_id
-    ]
+    assert [item.memory.memory_id for item in relation_page.rows] == [relation.memory_id]
     first_page = inspect_terms(test_db, context, ["Alpha"], None, limit=1)
     second_page = inspect_terms(test_db, context, ["Alpha"], None, skip=1, limit=1)
     assert first_page.count == 3
@@ -215,13 +211,16 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
         marks=["ability"],
     )
     assert [item.memory.memory_id for item in successor_page.rows] == [successor.memory_id]
-    assert inspect_terms(
-        test_db,
-        next_context,
-        ["Alpha"],
-        [MemoryType.FACT],
-        marks=["ability"],
-    ).count == 0
+    assert (
+        inspect_terms(
+            test_db,
+            next_context,
+            ["Alpha"],
+            [MemoryType.FACT],
+            marks=["ability"],
+        ).count
+        == 0
+    )
     test_db.refresh(fact)
     assert fact.memory_end_num == next_chapter.chapter_num
 

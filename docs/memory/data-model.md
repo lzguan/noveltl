@@ -111,40 +111,85 @@ independently:
   `glossary_definitions_write` creates, supersedes, or expires them.
 - `glossary_relations_read` retrieves categorized relations, while
   `glossary_relations_write` creates, supersedes, or expires them.
-- `glossary_facts_read` retrieves categorized attributes other than gender,
-  while `glossary_facts_write` creates, supersedes, or expires them.
-- `glossary_gender_read` retrieves gender-related state, while
-  `glossary_gender_write` creates, supersedes, or expires it.
+- `glossary_character_read` exposes the shared `character_state_memories`
+  reader and the separate directional `gender_perception_memories` query.
+- `glossary_character_write` maintains age stage, species, abilities, and
+  limitations of individual characters.
+- `glossary_appearance_write` maintains physical identifying features and
+  recurring attire, using `appearance.<field>` marks. It can supersede or expire
+  older unstructured `appearance` records without an automatic migration.
+- `glossary_cultivation_write` maintains one completed level per named track,
+  preserving the existing `cultivation_level` mark.
+- `glossary_gender_advanced_facts_write` maintains body, self-identity,
+  presentation, and change rules. `glossary_gender_advanced_relations_write`
+  maintains directional observer beliefs. Both require the shared character reader.
 - `glossary_events_read` retrieves events, while `glossary_events_write`
   creates or supersedes them.
 - Advanced gender fact, perception, and event toolsets keep body state,
   self-identity, presentation, change rules, observer beliefs, and bounded
   gender-related occurrences separate.
 
-Every write toolset requires its corresponding read toolset. The dependency is
+Every character writer requires `glossary_character_read`; other write toolsets
+require their corresponding readers. The dependency is
 validated when a job is created; selecting a write toolset does not implicitly
 add its reader.
 
 Optional guidance toolsets add genre- or subject-specific recording rules
 without exposing additional tools:
 
-- `glossary_gender_transformation` requires gender and relation read/write
-  toolsets.
-- `glossary_cultivation` and `glossary_system` require fact read/write
-  toolsets.
+- `glossary_gender_transformation` requires the advanced gender fact and
+  observer-perception writers plus `glossary_character_read`.
+- Cultivation is now a scoped writer, not an instruction-only extension.
+  The untested system guidance is not selectable; a system writer is deferred.
 - `glossary_artifacts` requires definition read/write toolsets.
 
 Guidance toolsets are disabled unless selected for a job. Their dependencies
 are validated when the job is created.
 
 Each retrieval tool returns a page of one memory type. Definition, relation,
-and fact retrieval operates on one exact term. Relation and fact retrieval also
-requires one literal category. Fact searches for `ability` or `limitation`
-retrieve both marks in one paginated result; other fact categories and relation
-categories retrieve only their selected mark. The agent no longer exposes
+and character-state retrieval operates on one exact term. Relation retrieval
+requires one literal category. Relation searches combine
+`rank`, `membership`, `service`, and `organizational_hierarchy`; searches for
+`alliance` or `commercial_partnership` combine that pair. Other categories
+retrieve only their selected mark. The agent no longer exposes
 `trait` as a fact category; existing stored marks are not migrated. Definitions
 retrieve only unmarked memories. These tools can filter by a literal,
 case-insensitive piece of memory text, and all filters apply before pagination.
+
+The explicit `glossary_character_read` selection exposes
+`character_state_memories`. It returns a bounded, newest-first
+page of current core, appearance, cultivation, and gender facts for one exact term, retaining original
+marks and agent-facing memory IDs. The total count covers all matching rows;
+`skip` and `limit` paginate the combined result. Read scope does not depend on
+enabled writers. Events and observer beliefs remain separate queries. Legacy
+`gender` facts remain identifiable as such; this reader does not migrate them
+or authorize specialized writers to mutate them.
+
+Core character fact eligibility is limited by its prompt to individual characters.
+Object and technique functions and intrinsic constraints belong in definitions;
+a character's particular access to a capability may be a separate fact.
+Appearance covers stable identifying physical features, apparent age, and
+recurring attire; it excludes routine outfit changes, temporary transformation
+looks, and gendered state. Gender
+change rules own character-specific gender transformation mechanics. These are
+prompt eligibility rules, not database restrictions on term kinds. Mutation
+marks are enforced by each writer. Structured form contexts remain future work.
+
+### Updating older job configurations
+
+The previous `glossary_facts_read`, `glossary_gender_read`,
+`glossary_gender_advanced_facts_read`, and
+`glossary_gender_advanced_relations_read` selections are replaced by one
+`glossary_character_read`. Replace `glossary_facts_write` with the desired
+combination of core, appearance, and cultivation writers. Replace basic
+`glossary_gender_write` with the advanced gender fact writer; legacy `gender`
+records remain readable but are not automatically converted. The old
+`glossary_cultivation` guidance becomes `glossary_cultivation_write`.
+Remove `glossary_system` until a scoped system writer is defined.
+
+Old selections are rejected by validation rather than silently granting new
+writer capabilities. Saved run artifacts and database memory rows are not
+rewritten; update local run configurations explicitly before starting new jobs.
 
 The definition, relation, fact, and gender write toolsets each have their own
 type-specific expiry tool. This prevents a job configured for one memory type
@@ -156,13 +201,17 @@ recurring term, the ended fact remains associated with the old term while its
 active replacement is associated with the new term.
 
 Facts and relations receive a separate `mark` chosen from the categories
-allowed by their respective toolsets. Gender memories use the `gender` mark.
+allowed by their respective toolsets. Legacy gender memories use `gender`;
+current gender state uses the `gender.*` marks.
 Definitions remain unmarked. The mark is metadata and is not included in
 `memory_content`.
 
 Generic event memories are unmarked. Advanced gender events use namespaced
 marks for transformations, body swaps, possessions, and reveals. Advanced
-transformation writes retain, per exact subject, the configured union of the
+event searches for body swaps or possessions return both kinds together while
+retaining their marks. Writers remain scoped; related retrieved events do not
+automatically qualify as the same occurrence or allow cross-kind supersession.
+Advanced transformation writes retain, per exact subject, the configured union of the
 first N occurrences and a FIFO window containing the newest N occurrences.
 Older agent-created occurrences are ended rather than deleted, so historical
 retrieval remains possible. Superseding corrections remain part of the same

@@ -4,6 +4,39 @@ Entries are ordered newest first. Detailed evidence belongs in a linked run
 report. Planned changes should not be marked accepted before their stated
 evaluation has completed.
 
+## 2026-09-05 — Explicit character reader and scoped writers
+
+- **Status:** implemented; not yet behaviorally evaluated
+- **Change:** replace old fact/gender reader selections with
+  `glossary_character_read`; expose independent core-character, appearance/attire,
+  cultivation, and existing advanced gender/perception writers. Remove untested
+  system guidance from selection pending a scoped system writer.
+- **Compatibility:** old job selections require explicit updates; recorded runs
+  and existing memories are retained. Appearance can update legacy appearance
+  marks; cultivation keeps its existing mark. Core writers cannot mutate either.
+- **Validation:** tool exposure, dependency, schema, and database mutation-scope
+  checks. No live model evaluation was run.
+
+## 2026-09-05 — Shared state retrieval and narrower fact ownership
+
+- **Status:** implemented; not yet behaviorally evaluated
+- **Changes:** expose bounded shared generic/gender fact retrieval independently
+  of enabled writers; combine institutional relation categories, cooperative
+  relation categories, and body-swap/possession events during retrieval; narrow
+  generic facts to individual characters and stable identifying appearance;
+  clarify definition ownership and specialized gender transformation mechanics.
+- **Objective:** reduce missed prior claims caused by ambiguous classification
+  without merging independent states or broadening writer permissions.
+- **Validation:** database and tool-exposure tests check combined pagination,
+  filtering, and read-only availability. These checks do not establish extraction
+  quality or model compliance with prompt eligibility rules.
+- **Next behavioral comparison:** retain DeepSeek and the September 4 control
+  artifacts; omit generic events and system guidance. This combined change is
+  a new working configuration, not an isolated attribution experiment. No new
+  paid run has been started for this change.
+- **Deferred:** separate appearance/attire tools, form-aware state, migration of
+  legacy gender marks, dynamic writer ownership, and hit-based retention.
+
 ## 2026-09-03 — Separate glossary readers and writers
 
 - **Status:** infrastructure and prompt change; not yet behaviorally evaluated

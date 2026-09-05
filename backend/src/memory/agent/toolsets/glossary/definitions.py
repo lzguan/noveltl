@@ -30,6 +30,16 @@ definition only when its stable nature or function is not evident from the
 term itself. Never define a `person`, and never invent a definition merely to
 accompany a new term.
 
+Definitions own a named object's or technique's intrinsic function and its
+operating constraints. Generic facts describe an individual character's
+attributes or particular access to a capability, not an object's specification.
+For example, "月镜 allows its wielder to teleport between marked locations"
+defines the item; "林渊 alone can activate 月镜" may warrant a character ability
+when forgetting that access would cause a continuity error. Do not repeat the
+item's full definition as a character fact. An individual's species belongs in
+a character fact; the intrinsic nature of that species belongs in its definition.
+A broken object's temporary condition is current state, not its definition.
+
 Maintain at most one active canonical definition per term. Make no write when
 the meaning is already represented. Before acting on each candidate, call
 `definition_memories` as described by the definition retrieval instructions,
@@ -64,9 +74,7 @@ def new_definition_memory(
     scope: Scope | None = None,
 ) -> str:
     """Create an unmarked definition for one exact glossary term."""
-    return common.create_memory(
-        ctx, content, term_names, MemoryType.DEFINITION, scope, "new_definition_memory"
-    )
+    return common.create_memory(ctx, content, term_names, MemoryType.DEFINITION, scope, "new_definition_memory")
 
 
 def supersede_definition_memory(

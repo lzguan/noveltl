@@ -131,7 +131,7 @@ def test_cli_creates_and_updates_context_validated_run_config(
             "--toolset",
             "glossary_terms",
             "--toolset",
-            "glossary_facts_read",
+            "glossary_character_read",
         ],
     )
     assert created.exit_code == 0, created.output
@@ -141,7 +141,7 @@ def test_cli_creates_and_updates_context_validated_run_config(
 
     config = load_run_config(workspace, "single-mark-v1", validate_context=True)
     assert config.checkpoints == ["opening"]
-    assert [toolset.name for toolset in config.agent.toolsets] == ["glossary_terms", "glossary_facts_read"]
+    assert [toolset.name for toolset in config.agent.toolsets] == ["glossary_terms", "glossary_character_read"]
     assert config.execution.replicas == 2
 
 

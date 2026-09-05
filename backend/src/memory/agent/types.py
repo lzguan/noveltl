@@ -13,21 +13,17 @@ type ToolsetName = Literal[
     "glossary_definitions_write",
     "glossary_relations_read",
     "glossary_relations_write",
-    "glossary_facts_read",
-    "glossary_facts_write",
-    "glossary_gender_read",
-    "glossary_gender_write",
-    "glossary_gender_advanced_facts_read",
+    "glossary_character_read",
+    "glossary_character_write",
+    "glossary_appearance_write",
+    "glossary_cultivation_write",
     "glossary_gender_advanced_facts_write",
-    "glossary_gender_advanced_relations_read",
     "glossary_gender_advanced_relations_write",
     "glossary_events_read",
     "glossary_events_write",
     "glossary_gender_advanced_events_read",
     "glossary_gender_advanced_events_write",
     "glossary_gender_transformation",
-    "glossary_cultivation",
-    "glossary_system",
     "glossary_artifacts",
 ]
 
@@ -146,54 +142,42 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
         default_enabled=True,
     ),
     ToolsetMetadata(
-        "glossary_facts_read",
-        "Glossary facts: read",
-        "Retrieve continuity-critical attributes other than gender.",
+        "glossary_character_read",
+        "Character state: read",
+        "Retrieve character attributes across writer domains and observer perceptions.",
         "memory",
         default_enabled=True,
     ),
     ToolsetMetadata(
-        "glossary_facts_write",
-        "Glossary facts: write",
-        "Create, supersede, or expire continuity-critical attributes other than gender.",
+        "glossary_character_write",
+        "Character core: write",
+        "Maintain age stage, species, abilities, and limitations of individual characters.",
         "memory",
         default_enabled=True,
     ),
     ToolsetMetadata(
-        "glossary_gender_read",
-        "Glossary gender: read",
-        "Retrieve explicitly established gender-related state.",
+        "glossary_appearance_write",
+        "Character appearance: write",
+        "Maintain identifying physical attributes and recurring attire.",
         "memory",
         default_enabled=True,
     ),
     ToolsetMetadata(
-        "glossary_gender_write",
-        "Glossary gender: write",
-        "Create, supersede, or expire explicitly established gender-related state.",
-        "memory",
-        default_enabled=True,
-    ),
-    ToolsetMetadata(
-        "glossary_gender_advanced_facts_read",
-        "Advanced gender facts: read",
-        "Retrieve current physical body and self-identity state separately.",
+        "glossary_cultivation_write",
+        "Character cultivation: write",
+        "Maintain completed cultivation levels separately for each track.",
         "memory",
     ),
     ToolsetMetadata(
         "glossary_gender_advanced_facts_write",
-        "Advanced gender facts: write",
+        "Character gender: write",
         "Maintain body, identity, presentation, and durable change rules.",
         "memory",
-    ),
-    ToolsetMetadata(
-        "glossary_gender_advanced_relations_read",
-        "Advanced gender perceptions: read",
-        "Retrieve directional beliefs about another person's gender.",
-        "memory",
+        default_enabled=True,
     ),
     ToolsetMetadata(
         "glossary_gender_advanced_relations_write",
-        "Advanced gender perceptions: write",
+        "Character gender perceptions: write",
         "Maintain directional beliefs about another person's gender.",
         "memory",
     ),
@@ -231,18 +215,6 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
         "guidance",
     ),
     ToolsetMetadata(
-        "glossary_cultivation",
-        "Cultivation guidance",
-        "Track durable cultivation levels without recording temporary boosts.",
-        "guidance",
-    ),
-    ToolsetMetadata(
-        "glossary_system",
-        "System guidance",
-        "Track durable system mechanics, unlocks, and meaningful state.",
-        "guidance",
-    ),
-    ToolsetMetadata(
         "glossary_artifacts",
         "Artifact guidance",
         "Track recurring fantastical objects, their functions, and lasting changes.",
@@ -253,23 +225,18 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
 TOOLSET_RESTRICTIONS: tuple[ToolsetRestriction, ...] = (
     ToolsetRequires("glossary_definitions_write", "glossary_definitions_read"),
     ToolsetRequires("glossary_relations_write", "glossary_relations_read"),
-    ToolsetRequires("glossary_facts_write", "glossary_facts_read"),
-    ToolsetRequires("glossary_gender_write", "glossary_gender_read"),
-    ToolsetRequires("glossary_gender_advanced_facts_write", "glossary_gender_advanced_facts_read"),
-    ToolsetRequires("glossary_gender_advanced_relations_write", "glossary_gender_advanced_relations_read"),
+    ToolsetRequires("glossary_character_write", "glossary_character_read"),
+    ToolsetRequires("glossary_appearance_write", "glossary_character_read"),
+    ToolsetRequires("glossary_cultivation_write", "glossary_character_read"),
+    ToolsetRequires("glossary_gender_advanced_facts_write", "glossary_character_read"),
+    ToolsetRequires("glossary_gender_advanced_relations_write", "glossary_character_read"),
     ToolsetRequires("glossary_events_write", "glossary_events_read"),
     ToolsetRequires("glossary_gender_advanced_events_write", "glossary_gender_advanced_events_read"),
-    ToolsetRequires("glossary_gender_transformation", "glossary_gender_advanced_facts_read"),
+    ToolsetRequires("glossary_gender_transformation", "glossary_character_read"),
     ToolsetRequires("glossary_gender_transformation", "glossary_gender_advanced_facts_write"),
-    ToolsetRequires("glossary_gender_transformation", "glossary_gender_advanced_relations_read"),
     ToolsetRequires("glossary_gender_transformation", "glossary_gender_advanced_relations_write"),
-    ToolsetRequires("glossary_cultivation", "glossary_facts_read"),
-    ToolsetRequires("glossary_cultivation", "glossary_facts_write"),
-    ToolsetRequires("glossary_system", "glossary_facts_read"),
-    ToolsetRequires("glossary_system", "glossary_facts_write"),
     ToolsetRequires("glossary_artifacts", "glossary_definitions_read"),
     ToolsetRequires("glossary_artifacts", "glossary_definitions_write"),
-    ToolsetExcludes("glossary_gender_read", "glossary_gender_advanced_facts_read"),
 )
 
 TOOLSET_NAMES: tuple[ToolsetName, ...] = tuple(metadata.name for metadata in TOOLSET_METADATA)
@@ -289,21 +256,17 @@ class ParsedToolsets(Model):
     glossary_definitions_write: ToolsetConfig | None = None
     glossary_relations_read: ToolsetConfig | None = None
     glossary_relations_write: ToolsetConfig | None = None
-    glossary_facts_read: ToolsetConfig | None = None
-    glossary_facts_write: ToolsetConfig | None = None
-    glossary_gender_read: ToolsetConfig | None = None
-    glossary_gender_write: ToolsetConfig | None = None
-    glossary_gender_advanced_facts_read: ToolsetConfig | None = None
+    glossary_character_read: ToolsetConfig | None = None
+    glossary_character_write: ToolsetConfig | None = None
+    glossary_appearance_write: ToolsetConfig | None = None
+    glossary_cultivation_write: ToolsetConfig | None = None
     glossary_gender_advanced_facts_write: ToolsetConfig | None = None
-    glossary_gender_advanced_relations_read: ToolsetConfig | None = None
     glossary_gender_advanced_relations_write: ToolsetConfig | None = None
     glossary_events_read: ToolsetConfig | None = None
     glossary_events_write: ToolsetConfig | None = None
     glossary_gender_advanced_events_read: ToolsetConfig | None = None
     glossary_gender_advanced_events_write: OccurrenceRetentionConfig | None = None
     glossary_gender_transformation: ToolsetConfig | None = None
-    glossary_cultivation: ToolsetConfig | None = None
-    glossary_system: ToolsetConfig | None = None
     glossary_artifacts: ToolsetConfig | None = None
 
     def selected_names(self) -> tuple[ToolsetName, ...]:

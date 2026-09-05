@@ -14,6 +14,10 @@ from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
 from src.memory.agent.tasks.jobs import JobParams
 from src.memory.agent.toolsets.glossary import common as glossary_common
+from src.memory.agent.toolsets.glossary.character_state import (
+    character_state_memories,
+    glossary_character_state_read_toolset,
+)
 from src.memory.agent.toolsets.glossary.context import GLOSSARY_SHARED_INSTRUCTIONS
 from src.memory.agent.toolsets.glossary.definitions import (
     definition_memories,
@@ -39,13 +43,11 @@ from src.memory.agent.toolsets.glossary.gender_advanced_events import (
 )
 from src.memory.agent.toolsets.glossary.gender_advanced_facts import (
     gender_state,
-    glossary_gender_advanced_facts_read_toolset,
     glossary_gender_advanced_facts_write_toolset,
     new_gender_fact_memory,
 )
 from src.memory.agent.toolsets.glossary.gender_advanced_relations import (
     gender_perception_memories,
-    glossary_gender_advanced_relations_read_toolset,
     glossary_gender_advanced_relations_write_toolset,
     new_gender_perception_memory,
 )
@@ -102,19 +104,32 @@ def test_guidance_toolsets_add_no_callable_tools_and_resolve_in_canonical_order(
             glossary_gender_advanced_facts_write={},
             glossary_gender_advanced_relations_write={},
             glossary_gender_transformation={},
-            glossary_gender_advanced_facts_read={},
-            glossary_gender_advanced_relations_read={},
+            glossary_character_read={},
         )
     )
 
     assert resolved == [
-        glossary_gender_advanced_facts_read_toolset,
+        glossary_character_state_read_toolset,
         glossary_gender_advanced_facts_write_toolset,
-        glossary_gender_advanced_relations_read_toolset,
         glossary_gender_advanced_relations_write_toolset,
         glossary_gender_transformation_toolset,
     ]
     assert glossary_gender_transformation_toolset.tools == {}
+
+
+@pytest.mark.parametrize(
+    "selection",
+    [
+        {"glossary_character_read": {}},
+        {"glossary_character_read": {}, "glossary_relations_read": {}},
+    ],
+)
+def test_character_reader_is_exposed_once_without_enabling_writers(selection: dict[str, dict]) -> None:
+    resolved = resolve_toolsets(ParsedToolsets.model_validate(selection))
+    names = [name for toolset in resolved for name in toolset.tools]
+    assert names.count("character_state_memories") == 1
+    assert len(names) == len(set(names))
+    assert not any(name.startswith(("new_", "supersede_", "expire_")) for name in names)
 
 
 async def test_advanced_gender_event_write_config_is_applied_when_resolving_toolsets() -> None:
@@ -139,11 +154,11 @@ async def test_advanced_gender_event_write_config_is_applied_when_resolving_tool
 def test_job_params_reject_writes_and_guidance_without_required_toolsets() -> None:
     with pytest.raises(
         ValidationError,
-        match="Toolset glossary_gender_write requires: glossary_gender_read",
+        match="Toolset glossary_character_write requires: glossary_character_read",
     ):
         JobParams(
             model_name="deepseek:deepseek-v4-flash-low",
-            toolsets={"glossary_gender_write": {}},
+            toolsets={"glossary_character_write": {}},
         )
 
     with pytest.raises(
@@ -153,7 +168,7 @@ def test_job_params_reject_writes_and_guidance_without_required_toolsets() -> No
         JobParams(
             model_name="deepseek:deepseek-v4-flash-low",
             toolsets={
-                "glossary_gender_advanced_facts_read": {},
+                "glossary_character_read": {},
                 "glossary_gender_transformation": {},
             },
         )
@@ -165,9 +180,8 @@ def test_job_params_reject_writes_and_guidance_without_required_toolsets() -> No
         JobParams(
             model_name="deepseek:deepseek-v4-flash-low",
             toolsets={
-                "glossary_gender_advanced_facts_read": {},
+                "glossary_character_read": {},
                 "glossary_gender_advanced_facts_write": {},
-                "glossary_gender_advanced_relations_read": {},
                 "glossary_gender_transformation": {},
             },
         )
@@ -312,8 +326,6 @@ def test_glossary_tool_schemas_enforce_input_constraints() -> None:
     assert fact_schema["$defs"]["FactCategory"]["enum"] == [
         "age_stage",
         "species",
-        "appearance",
-        "cultivation_level",
         "ability",
         "limitation",
     ]
@@ -482,7 +494,8 @@ def test_retrieval_tool_result_serializes_agent_models_with_snake_case() -> None
 
 
 def test_fact_retrieval_combines_abilities_and_limitations_before_pagination(
-    test_db: Session, sample_scenario: DatabaseScenario,
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
 ) -> None:
     group = MemoryGroup(
         memory_group_name="Fact retrieval",
@@ -506,8 +519,13 @@ def test_fact_retrieval_combines_abilities_and_limitations_before_pagination(
         ("trait", "Alpha has a legacy magic trait."),
     ):
         glossary_common.access.create_memory(
-            test_db, ctx.deps.mem_access_context, Creator.AGENT, MemoryType.FACT,
-            ["Alpha"], content, mark=mark,
+            test_db,
+            ctx.deps.mem_access_context,
+            Creator.AGENT,
+            MemoryType.FACT,
+            ["Alpha"],
+            content,
+            mark=mark,
         )
     test_db.flush()
 
@@ -523,6 +541,54 @@ def test_fact_retrieval_combines_abilities_and_limitations_before_pagination(
     species_page = fact_memories(ctx, "Alpha", "species")
     assert species_page.count == 1
     assert species_page.rows[0].memory.mark == "species"
+
+    # Shared reads find specialized state even though generic writers cannot own it.
+    for mark in ("gender", "gender.body", "gender.identity", "gender.presentation", "gender.change_rule"):
+        glossary_common.access.create_memory(
+            test_db,
+            ctx.deps.mem_access_context,
+            Creator.AGENT,
+            MemoryType.FACT,
+            ["Alpha"],
+            f"Alpha has recorded state for {mark}.",
+            mark=mark,
+        )
+    glossary_common.access.create_memory(
+        test_db,
+        ctx.deps.mem_access_context,
+        Creator.AGENT,
+        MemoryType.EVENT,
+        ["Alpha"],
+        "Alpha changed during an event.",
+        mark="gender.event.transformation",
+    )
+    glossary_common.access.create_memory(
+        test_db,
+        ctx.deps.mem_access_context,
+        Creator.AGENT,
+        MemoryType.RELATION,
+        ["Alpha"],
+        "An observer perceives Alpha differently.",
+        mark="gender.perception",
+    )
+    shared = character_state_memories(ctx, "Alpha")
+    assert shared.count == 9
+    assert {row.memory.mark for row in shared.rows} == {
+        "ability",
+        "limitation",
+        "species",
+        "gender",
+        "gender.body",
+        "gender.identity",
+        "gender.presentation",
+        "gender.change_rule",
+    }
+    assert all(row.memory.memory_type == MemoryType.FACT for row in shared.rows)
+    shared_first = character_state_memories(ctx, "Alpha", limit=4)
+    shared_rest = character_state_memories(ctx, "Alpha", skip=4)
+    assert shared_first.count == shared_rest.count == 9
+    assert shared_first.rows + shared_rest.rows == shared.rows
+    assert character_state_memories(ctx, "Alpha", term_search="recorded state").count == 5
 
 
 def test_type_specific_retrieval_forwards_one_type_and_one_mark(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -678,10 +744,10 @@ def test_gender_perception_tools_preserve_direction_and_namespaced_mark(
     assert create_memory.call_args.args[6] == "gender.perception"
 
 
-def test_job_params_reject_mixed_lightweight_and_advanced_gender_policies() -> None:
+def test_job_params_reject_retired_reader_names() -> None:
     with pytest.raises(
         ValidationError,
-        match="glossary_gender_read and glossary_gender_advanced_facts_read cannot be selected together",
+        match="Extra inputs are not permitted",
     ):
         JobParams(
             model_name="deepseek:deepseek-v4-flash-low",

@@ -12,8 +12,6 @@ from src.schemas import Page
 type FactCategory = Literal[
     "age_stage",
     "species",
-    "appearance",
-    "cultivation_level",
     "ability",
     "limitation",
 ]
@@ -33,22 +31,32 @@ history to retrieve.
 """.strip()
 
 GLOSSARY_FACT_WRITE_INSTRUCTIONS = """
-Maintain explicitly stated, continuity-critical attributes of glossary terms.
+Maintain explicitly stated, continuity-critical attributes of individual
+characters: humans, spirits, monsters, or other independently acting beings.
+Use the exact term for the individual, normally classified as `person`.
+Do not write generic facts about objects, techniques, concepts, organizations,
+places, or species as a class. Their intrinsic meaning, functions, and operating
+constraints belong in definitions when that writer is enabled.
 THIS TOOLSET MUST NOT RECORD EVENTS. Facts must be extremely rare; most
 chapters need no new generic facts. Record a fact only when forgetting it could
 cause a later translation or continuity error. Gender is maintained by the
 dedicated gender tools and must not be written with this toolset.
 
 Each fact has one primary term and exactly one category: explicit `age_stage`;
-`species`; stable identifying `appearance`; the current canonical
-`cultivation_level`; an enduring unusual
-`ability`; or an enduring `limitation`. Never record actions, history,
+`species`; an enduring unusual `ability`; or an enduring `limitation`.
+Appearance/attire and cultivation levels belong to their own character writers.
+System classes, ranks, unlocks, and mechanics are deferred until a scoped system
+writer is provided; do not force them into these categories. Never record actions, history,
 personality, emotions, intentions, discoveries, knowledge, location,
 inventory, wealth, occupation, affiliation, ownership, routines, temporary
 state, ordinary technique use, one-off feats, fatigue, pain, or temporary
 injury.
 
 Multiple independent facts may share a category.
+
+"林渊 looks like a child" is apparent age for the appearance writer, not
+evidence for `age_stage`; "林渊 is a child" is age stage. Having wings is not
+evidence of flight. Keep independently established anatomy and capability separate.
 
 An `ability` describes what the subject can do, including the conditions and
 intrinsic limits needed to describe that capability accurately. A `limitation`
@@ -68,6 +76,12 @@ Examples:
   `limitation` independent of those abilities.
 - "林渊 cannot teleport." is normally omitted when it is merely the ordinary
   absence of an ability; do not inventory everything a subject cannot do.
+- A wand's ability to transform its wielder belongs in the wand's definition.
+  A character's particular access to that ability may warrant a character fact
+  only when independently continuity-critical. Do not copy the object's whole
+  specification into its wielder's facts. If the transformation is gender-related,
+  its character-specific mechanic belongs to the advanced gender `change_rule`
+  writer when available; do not duplicate it as a generic ability or limitation.
 
 When a capability's range, conditions, or intrinsic restrictions change,
 supersede the existing ability with its new complete current description. Do
@@ -76,8 +90,8 @@ learning to teleport to any visible location replaces the marked-location
 ability above rather than adding an independent ability or limitation.
 
 Write only a short plain statement in `content`; the category is stored
-separately. Before acting on each candidate, call `fact_memories` as described
-by the fact retrieval instructions, unless the term was created in the current
+separately. Before acting on each candidate, call `character_state_memories`
+as described by the retrieval instructions, unless the term was created in the current
 run. Make no write when the fact is already represented. Supersede only when
 the same attribute receives a replacement current value, and record the new
 current value rather than an account of the change. Pass the replacement's
@@ -87,10 +101,13 @@ that both names identify the same person. Expire a fact only when it explicitly
 stops being true without replacement. Absence is never evidence for expiry.
 Complementary facts remain separate, and approved memories change only on
 clear textual evidence.
+If shared retrieval finds the same claim under a specialized gender mark, do
+not duplicate it as a generic fact. Only an enabled writer that owns that mark
+may update it; seeing a memory does not grant this writer permission to change it.
 
 For the shared lifecycle decision, the tracked claim is the primary subject's
 specific attribute, not the broad category alone: for example, age stage,
-species, cultivation stage, one appearance feature, one
+species, one
 capability, or one limitation. Supersede a previous value of that
 attribute, but create a separate fact for a genuinely independent attribute in
 the same category. A refinement or fuller description of the same capability

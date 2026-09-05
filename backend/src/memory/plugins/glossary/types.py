@@ -11,4 +11,3 @@ class TermKind(StrEnum):
     TITLE = "title"
     SPECIES = "species"
     OTHER = "other"
-

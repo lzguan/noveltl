@@ -73,6 +73,23 @@ Semantic fact examples:
   person's actual current body or self-identity. Another person's belief is not
   the subject's fact.
 
+Gender-related transformation capabilities and their intrinsic restrictions
+belong in `change_rule`, including involuntary triggers and inability to choose
+a resulting form. Do not duplicate the same mechanic in generic `ability` or
+`limitation` facts. An independent non-gender capability remains a generic fact.
+An artifact's intrinsic transformation function belongs in its definition;
+record a character change rule only for independently useful character-specific
+conditions, access, or constraints. Do not copy the artifact's whole definition.
+Before writing such a rule, use `character_state_memories` when available to
+check existing representations and all relevant pages. A related memory outside this writer's scope is not yours
+to supersede; do not create a duplicate merely to change its category.
+
+Keep identifying hair/eye features, markings, stature, anatomy, apparent age,
+and recurring attire in the appearance writer when eligible. Gender facts do not inventory these
+features or clothing. `presentation` records only explicitly established gender
+presentation as oneself, not outfits or appearance-based guesses. Do not infer
+body or self-identity from those descriptions.
+
 Not facts: `林玥 was transformed into a woman during the eclipse` is an event;
 `林玥 is posing as Lady Shen to enter the banquet` belongs to a disguise toolset
 when one is provided and must otherwise be ignored; `沈秋 believes 林玥 is a
@@ -85,7 +102,7 @@ role, stereotypes, pronouns alone, or another character's belief.
 
 Body, identity, and presentation each permit one active memory per person.
 Multiple independent change rules may coexist. Before every write, call
-`gender_state` for the exact person unless that term was created in the current
+`character_state_memories` for the exact person unless that term was created in the current
 run. Make no write if the same state or rule is already represented. Supersede
 only the same aspect and tracked claim when it receives a replacement value.
 For a change rule, supersede only the particular rule being corrected or
@@ -159,7 +176,7 @@ def new_gender_fact_memory(
         )
         if existing.count:
             raise ModelRetry(
-                f"{term_name} already has an active {aspect} memory. Call gender_state and either leave it "
+                f"{term_name} already has an active {aspect} memory. Call character_state_memories and either leave it "
                 "unchanged or supersede its handle; do not create another memory for this aspect."
             )
     return common.create_memory(

@@ -78,8 +78,16 @@ def test_memory_agent_router_exposes_registered_config(
         "title": "ToolsetConfig",
         "type": "object",
     }
-    assert toolsets["glossary_gender_read"]["excludes"] == ["glossary_gender_advanced_facts_read"]
-    assert toolsets["glossary_gender_advanced_facts_read"]["excludes"] == ["glossary_gender_read"]
+    for name in (
+        "glossary_character_write",
+        "glossary_appearance_write",
+        "glossary_cultivation_write",
+        "glossary_gender_advanced_facts_write",
+        "glossary_gender_advanced_relations_write",
+    ):
+        assert toolsets[name]["requires"] == ["glossary_character_read"]
+    assert "glossary_facts_write" not in toolsets
+    assert "glossary_system" not in toolsets
     event_write_schema = toolsets["glossary_gender_advanced_events_write"]["configSchema"]
     assert event_write_schema["title"] == "OccurrenceRetentionConfig"
     assert event_write_schema["properties"]["keepFirst"]["default"] == 1

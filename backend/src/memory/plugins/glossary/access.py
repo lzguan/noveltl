@@ -91,6 +91,7 @@ def inspect_terms(
     )
     if not include_rejected:
         matching_memory_ids = matching_memory_ids.where(matching_term.review_status != ReviewStatus.REJECTED)
+
     def build_memory_query():
         query = select(Memory).where(
             Memory.memory_id.in_(matching_memory_ids),
@@ -119,10 +120,7 @@ def inspect_terms(
     count = db.scalar(select(func.count()).select_from(build_memory_query().subquery())) or 0
     memories = list(
         db.scalars(
-            build_memory_query()
-            .order_by(Memory.memory_start_num.desc(), Memory.memory_id)
-            .offset(skip)
-            .limit(limit)
+            build_memory_query().order_by(Memory.memory_start_num.desc(), Memory.memory_id).offset(skip).limit(limit)
         ).all()
     )
     memory_ids = [memory.memory_id for memory in memories]
@@ -354,10 +352,6 @@ def expire_memory(
             if None in marks:
                 mark_filters.append(Memory.mark.is_(None))
             query = query.where(or_(*mark_filters) if mark_filters else Memory.mark.in_([]))
-        db.execute(
-            query
-            .values(memory_end_num=end_num)
-            .returning(Memory.memory_id)
-        ).scalar_one()
+        db.execute(query.values(memory_end_num=end_num).returning(Memory.memory_id)).scalar_one()
     except NoResultFound as exc:
         raise MemoryNotFoundException(f"Glossary memory with id {memory_id} not found or already ended") from exc

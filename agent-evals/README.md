@@ -34,11 +34,30 @@ execution is available through the CLI. Recovery, reviewing, and reporting
 will be added as subsequent vertical slices.
 
 Set `AGENT_EVAL_ROOT` to use a different data directory for both CLI and UI.
-It redirects all the directories above, not the imported runner/backend code.
+It supplies the default location for all directories above, not the imported
+runner/backend code. Two optional overrides allow sharing inputs while keeping
+experiment configs and outputs separate:
+
+- `AGENT_EVAL_CONFIG_DIR`: the exact directory containing run configs.
+- `AGENT_EVAL_OUTPUT_DIR`: the parent directory for `runs/`, `logs/`, and `history/`.
+
+Unset or empty overrides retain the corresponding location under `AGENT_EVAL_ROOT`.
+Novels and checkpoints always remain under the root.
 Relative paths resolve from the process working directory; an absolute path
 is recommended for worktrees. Explicit Python `EvalWorkspace(root=...)`
-arguments take precedence. An unset or empty variable preserves the default
+arguments bypass all three environment overrides. An unset or empty root variable preserves the default
 directory containing this package's `pyproject.toml`.
+
+For example, the alias worktree's `agent-evals/.env` can contain:
+
+```dotenv
+AGENT_EVAL_ROOT=/workspaces/NovelTL_Dev/agent-evals
+AGENT_EVAL_CONFIG_DIR=/workspaces/NovelTL_Dev/.worktrees/alias/agent-evals/run-configs
+AGENT_EVAL_OUTPUT_DIR=/workspaces/NovelTL_Dev/.worktrees/alias/agent-evals
+```
+
+Replace `alias` with `continuity` in the latter two paths for that experiment.
+These settings select locations; they do not copy existing configs or results.
 
 Before importing backend settings, the runner loads `.env` beside its own
 `pyproject.toml` into the process environment using `load_dotenv(override=False)`.

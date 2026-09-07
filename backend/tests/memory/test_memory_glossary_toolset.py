@@ -3,13 +3,14 @@ from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
-from pydantic_ai import ModelRetry, RunContext, RunUsage
+from pydantic_ai import FunctionToolset, ModelRetry, RunContext, RunUsage
+from pydantic_ai.capabilities import AbstractCapability, Toolset
 from pydantic_ai.messages import ToolReturnPart
 from pydantic_ai.models.test import TestModel
 from sqlalchemy.orm import Session
 
 from src.memory.access import MemAccessContext
-from src.memory.agent.agent import resolve_toolsets
+from src.memory.agent.agent import resolve_capabilities
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
 from src.memory.agent.tasks.jobs import JobParams
@@ -84,6 +85,12 @@ def _run_context(db: Session) -> RunContext[MemAgentDeps]:
     return RunContext(deps=deps, model=TestModel(), usage=RunUsage())
 
 
+def _toolset(capability: AbstractCapability[MemAgentDeps]) -> FunctionToolset[MemAgentDeps]:
+    assert isinstance(capability, Toolset)
+    assert isinstance(capability.toolset, FunctionToolset)
+    return capability.toolset
+
+
 def test_memory_prompts_preserve_novel_terms_in_the_source_language() -> None:
     for instructions in (MEMORY_AGENT_PROMPT, GLOSSARY_SHARED_INSTRUCTIONS):
         normalized_instructions = " ".join(instructions.split()).lower()
@@ -99,7 +106,7 @@ def test_memory_prompts_preserve_novel_terms_in_the_source_language() -> None:
 
 
 def test_guidance_toolsets_add_no_callable_tools_and_resolve_in_canonical_order() -> None:
-    resolved = resolve_toolsets(
+    resolved = resolve_capabilities(
         ParsedToolsets(
             glossary_gender_advanced_facts_write={},
             glossary_gender_advanced_relations_write={},
@@ -108,7 +115,7 @@ def test_guidance_toolsets_add_no_callable_tools_and_resolve_in_canonical_order(
         )
     )
 
-    assert resolved == [
+    assert [_toolset(capability) for capability in resolved] == [
         glossary_character_state_read_toolset,
         glossary_gender_advanced_facts_write_toolset,
         glossary_gender_advanced_relations_write_toolset,
@@ -125,15 +132,15 @@ def test_guidance_toolsets_add_no_callable_tools_and_resolve_in_canonical_order(
     ],
 )
 def test_character_reader_is_exposed_once_without_enabling_writers(selection: dict[str, dict]) -> None:
-    resolved = resolve_toolsets(ParsedToolsets.model_validate(selection))
-    names = [name for toolset in resolved for name in toolset.tools]
+    resolved = resolve_capabilities(ParsedToolsets.model_validate(selection))
+    names = [name for capability in resolved for name in _toolset(capability).tools]
     assert names.count("character_state_memories") == 1
     assert len(names) == len(set(names))
     assert not any(name.startswith(("new_", "supersede_", "expire_")) for name in names)
 
 
 async def test_advanced_gender_event_write_config_is_applied_when_resolving_toolsets() -> None:
-    resolved = resolve_toolsets(
+    resolved = resolve_capabilities(
         ParsedToolsets.model_validate(
             {
                 "glossary_gender_advanced_events_read": {},
@@ -142,7 +149,7 @@ async def test_advanced_gender_event_write_config_is_applied_when_resolving_tool
         )
     )
 
-    write_toolset = resolved[1]
+    write_toolset = _toolset(resolved[1])
     instructions = await write_toolset.get_instructions(_run_context(MagicMock(spec=Session)))
     assert instructions is not None
     assert any(

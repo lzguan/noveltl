@@ -1,12 +1,13 @@
 """Shared reads must not let specialized character writers mutate other domains."""
 
 import pytest
-from pydantic_ai import ModelRetry, RunContext, RunUsage
+from pydantic_ai import FunctionToolset, ModelRetry, RunContext, RunUsage
+from pydantic_ai.capabilities import AbstractCapability, Toolset
 from pydantic_ai.models.test import TestModel
 from sqlalchemy.orm import Session
 
 from src.memory.access import MemAccessContext
-from src.memory.agent.agent import resolve_toolsets
+from src.memory.agent.agent import resolve_capabilities
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary.appearance import (
     expire_appearance_memory,
@@ -25,6 +26,12 @@ from src.memory.models import Memory, MemoryGroup
 from src.memory.plugins.glossary.access import create_term
 from src.novels.models import ChapterContent
 from test_support.test_data.scenarios import DatabaseScenario
+
+
+def _toolset(capability: AbstractCapability[MemAgentDeps]) -> FunctionToolset[MemAgentDeps]:
+    assert isinstance(capability, Toolset)
+    assert isinstance(capability.toolset, FunctionToolset)
+    return capability.toolset
 
 
 def test_character_writers_share_reads_but_preserve_mutation_ownership(
@@ -104,8 +111,8 @@ def test_character_writers_share_reads_but_preserve_mutation_ownership(
     ],
 )
 def test_character_writers_are_independently_selectable(writer: str, expected: str) -> None:
-    toolsets = resolve_toolsets(ParsedToolsets.model_validate({"glossary_character_read": {}, writer: {}}))
-    names = [name for toolset in toolsets for name in toolset.tools]
+    capabilities = resolve_capabilities(ParsedToolsets.model_validate({"glossary_character_read": {}, writer: {}}))
+    names = [name for capability in capabilities for name in _toolset(capability).tools]
     assert names.count("character_state_memories") == 1
     assert "gender_perception_memories" in names
     assert [name for name in names if name.startswith("new_")] == [expected]

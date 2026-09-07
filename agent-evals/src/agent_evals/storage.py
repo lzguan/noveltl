@@ -15,6 +15,12 @@ class EvalWorkspace:
             if root is not None
             else Path(configured_root) if configured_root else Path(__file__).resolve().parents[2]
         ).resolve()
+        configured_configs = os.getenv("AGENT_EVAL_CONFIG_DIR") if root is None else None
+        configured_outputs = os.getenv("AGENT_EVAL_OUTPUT_DIR") if root is None else None
+        self._config_dir = (
+            Path(configured_configs).resolve() if configured_configs else self.root / "run-configs"
+        )
+        self._output_dir = Path(configured_outputs).resolve() if configured_outputs else self.root
 
     @property
     def novels(self) -> Path:
@@ -26,19 +32,19 @@ class EvalWorkspace:
 
     @property
     def run_configs(self) -> Path:
-        return self.root / "run-configs"
+        return self._config_dir
 
     @property
     def runs(self) -> Path:
-        return self.root / "runs"
+        return self._output_dir / "runs"
 
     @property
     def logs(self) -> Path:
-        return self.root / "logs"
+        return self._output_dir / "logs"
 
     @property
     def history(self) -> Path:
-        return self.root / "history"
+        return self._output_dir / "history"
 
     def local_directories(self) -> tuple[Path, ...]:
         return (self.novels, self.checkpoints, self.run_configs, self.runs, self.logs, self.history)

@@ -17,6 +17,7 @@ from src.datasets import load_catalog, load_novel
 from src.datasets.domain import NovelDataset
 from src.datasets.materializer import make_novel, materialize_novel_contents
 from src.languages.models import Language
+from src.memory.agent.capabilities.continuity import ContinuitySummaryOutput
 from src.memory.agent.tasks.jobs import JobParams, make_job, reset_failed_task
 from src.memory.agent.tasks.tasks import run_all_tasks
 from src.memory.models import Memory, MemoryChapterTask, MemoryGroup
@@ -392,7 +393,11 @@ async def execute_live_replica(context: RunContext, index: int, replica_dir: Pat
                                 "finishedAt": attempt_finished.isoformat(),
                                 "durationSeconds": (attempt_finished - attempt_started).total_seconds(),
                                 "agentRunId": chapter_result.run_id,
-                                "output": chapter_result.output,
+                                "output": (
+                                    chapter_result.output.model_dump(mode="json")
+                                    if isinstance(chapter_result.output, ContinuitySummaryOutput)
+                                    else chapter_result.output
+                                ),
                                 "usage": _serialize_usage(chapter_usage),
                                 "messages": json.loads(chapter_result.all_messages_json()),
                             },

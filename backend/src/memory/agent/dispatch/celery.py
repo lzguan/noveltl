@@ -5,6 +5,7 @@ from uuid import UUID
 
 from src.config import log_settings
 from src.database import SessionLocal
+from src.memory.agent.capabilities.continuity import ContinuitySummaryOutput
 from src.memory.agent.celery_app import app
 from src.memory.agent.dispatch.dispatcher import MemoryAgentDispatcher
 from src.memory.agent.tasks.tasks import CompletedMemoryTask, run_all_tasks, run_task
@@ -30,7 +31,11 @@ def _build_agent_result_payload(completed_task: CompletedMemoryTask) -> dict:
         "chapterNum": completed_task.chapter_num,
         "runId": result.run_id,
         "timestamp": result.timestamp.isoformat(),
-        "output": result.output,
+        "output": (
+            result.output.model_dump(mode="json")
+            if isinstance(result.output, ContinuitySummaryOutput)
+            else result.output
+        ),
         "usage": {
             "requests": usage.requests,
             "toolCalls": usage.tool_calls,

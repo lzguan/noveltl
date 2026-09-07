@@ -4,6 +4,7 @@ from pydantic_ai import Agent, AgentRunResult, FunctionToolset
 from pydantic_ai.capabilities import AbstractCapability, Toolset
 from pydantic_ai.models.openai import OpenAIChatModelSettings
 
+from src.memory.agent.capabilities.continuity import ContinuitySummaryCapability, ContinuitySummaryOutput
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
 from src.memory.agent.toolsets.glossary.appearance import glossary_appearance_write_toolset
@@ -61,6 +62,7 @@ def _advanced_gender_events_write(config: ToolsetConfig) -> AbstractCapability[M
 
 
 capability_factories_by_name: dict[ToolsetName, CapabilityFactory] = {
+    "continuity_summary": lambda _: ContinuitySummaryCapability(),
     "glossary_terms": _toolset_capability(glossary_term_toolset),
     "glossary_definitions_read": _toolset_capability(glossary_definitions_read_toolset),
     "glossary_definitions_write": _toolset_capability(glossary_definitions_write_toolset),
@@ -83,7 +85,9 @@ capability_factories_by_name: dict[ToolsetName, CapabilityFactory] = {
 if set(capability_factories_by_name) != set(TOOLSET_NAMES):
     raise RuntimeError("Memory-agent capability registry does not match TOOLSET_NAMES")
 
-GLOSSARY_TOOLSET_NAMES: frozenset[ToolsetName] = frozenset(TOOLSET_NAMES)
+GLOSSARY_TOOLSET_NAMES: frozenset[ToolsetName] = frozenset(
+    name for name in TOOLSET_NAMES if name != "continuity_summary"
+)
 
 
 def resolve_capabilities(toolsets: ParsedToolsets) -> list[AbstractCapability[MemAgentDeps]]:
@@ -97,7 +101,9 @@ def resolve_capabilities(toolsets: ParsedToolsets) -> list[AbstractCapability[Me
     return resolved
 
 
-def create_agent(model_name: ModelName, toolsets: ParsedToolsets) -> Agent[MemAgentDeps, str]:
+def create_agent(
+    model_name: ModelName, toolsets: ParsedToolsets
+) -> Agent[MemAgentDeps, str | ContinuitySummaryOutput]:
     """Create a Pydantic AI agent with the specified model and toolsets.
 
     The model name's suffix selects the reasoning level. DeepSeek V4 does not
@@ -124,16 +130,17 @@ def create_agent(model_name: ModelName, toolsets: ParsedToolsets) -> Agent[MemAg
         capabilities=resolved_capabilities,
         instructions=instructions,
         deps_type=MemAgentDeps,
+        output_type=ContinuitySummaryOutput if toolsets.continuity_summary is not None else str,
     )
 
 
 async def run_agent(
-    agent: Agent[MemAgentDeps, str],
+    agent: Agent[MemAgentDeps, str | ContinuitySummaryOutput],
     deps: MemAgentDeps,
     chapter_text: str,
     chapter_num: int,
     language_name: str,
-) -> AgentRunResult[str]:
+) -> AgentRunResult[str | ContinuitySummaryOutput]:
     """Run the agent with the given input text and dependencies."""
 
     prompt = f"Record memories with content written in {language_name} from the following chapter text (chapter {chapter_num}):\n\n{chapter_text}"

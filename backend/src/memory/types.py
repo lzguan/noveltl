@@ -28,6 +28,7 @@ class MemoryType(StrEnum):
     EVENT = "event"
     DEFINITION = "def"
     RELATION = "rel"
+    SUMMARY = "summary"
 
 
 class Scope(StrEnum):
@@ -44,7 +45,7 @@ class Scope(StrEnum):
     PERSIST = "persist"
 
 
-type PluginName = Literal["glossary"]
+type PluginName = Literal["glossary", "continuity"]
 
 
 class JobStatus(StrEnum):

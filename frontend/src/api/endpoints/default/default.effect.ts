@@ -1497,8 +1497,8 @@ export const ReadMemoryMemoriesMemoryIdGet200Response = S.Struct({
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'Memory schema' })
 
@@ -1542,8 +1542,8 @@ export const EditMemoryContentMemoriesMemoryIdContentPatch200Response = S.Struct
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'Memory schema' })
 
@@ -1582,8 +1582,8 @@ export const EditMemoryExpirationMemoriesMemoryIdExpirationPatch200Response = S.
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'Memory schema' })
 
@@ -1622,8 +1622,8 @@ export const EditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch200Response 
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'Memory schema' })
 
@@ -2290,8 +2290,8 @@ export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemo
   "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQuerySkipMin)), { default: () => readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQuerySkipDefault }),
   "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQueryLimitMax)), { default: () => readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQueryLimitDefault }),
   "createdExactlyAtChapter": S.optionalWith(S.Boolean, { default: () => readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQueryCreatedExactlyAtChapterDefault }),
-  "pluginNames": S.optional(S.Union(S.Array(S.Literal("glossary")), S.Null)),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
+  "pluginNames": S.optional(S.Union(S.Array(S.Literal('glossary', 'continuity')), S.Null)),
+  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
 })
 
 export const readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet200ResponseCountMin = 0;
@@ -2308,8 +2308,8 @@ export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemo
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'Memory schema' }))
 })
@@ -2350,7 +2350,7 @@ export const ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChapt
   "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQuerySkipMin)), { default: () => readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQuerySkipDefault }),
   "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQueryLimitMax)), { default: () => readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQueryLimitDefault }),
   "createdExactlyAtChapter": S.optionalWith(S.Boolean, { default: () => readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQueryCreatedExactlyAtChapterDefault }),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
+  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
 })
 
 export const readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGet200ResponseCountMin = 0;
@@ -2368,8 +2368,8 @@ export const ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChapt
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'The memory that describes the glossary terms.' }),
   "terms": S.Array(S.Struct({
@@ -2415,7 +2415,7 @@ export const readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQue
 export const ReadGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQueryParams = S.Struct({
   "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQuerySkipMin)), { default: () => readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQuerySkipDefault }),
   "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQueryLimitMax)), { default: () => readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQueryLimitDefault }),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
+  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
 })
 
 export const readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGet200ResponseCountMin = 0;
@@ -2433,8 +2433,8 @@ export const ReadGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGet200
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'The memory that describes the glossary terms.' }),
   "terms": S.Array(S.Struct({
@@ -2475,7 +2475,7 @@ export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostBody 
   "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "mark": S.optional(S.Union(S.String.pipe(S.minLength(1)), S.Null)),
   "memoryContent": S.String.pipe(S.minLength(1)),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' }),
   "scope": S.optional(S.Union(S.Literal('local', 'recent', 'persist').annotations({ description: 'The scope of a memory (i.e. how long it should be retained).\n\nLOCAL: Memory is only relevant to the current chapter.\nRECENT: Memory is relevant to the current chapter and a few subsequent chapters.\nPERSIST: Memory is relevant to all chapters and should be retained indefinitely until explicitly superseded or expired.' }), S.Null)),
   "termIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))).pipe(S.minItems(1))
 })
@@ -2489,8 +2489,8 @@ export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost200Re
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'The memory that describes the glossary terms.' }),
   "terms": S.Array(S.Struct({
@@ -2793,8 +2793,8 @@ export const ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemo
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'The memory that describes the glossary terms.' }),
   "terms": S.Array(S.Struct({
@@ -2875,8 +2875,8 @@ export const readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQueryLimitMax = 100
 export const ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQueryParams = S.Struct({
   "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQuerySkipMin)), { default: () => readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQuerySkipDefault }),
   "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQueryLimitMax)), { default: () => readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQueryLimitDefault }),
-  "pluginNames": S.optional(S.Union(S.Array(S.Literal("glossary")), S.Null)),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
+  "pluginNames": S.optional(S.Union(S.Array(S.Literal('glossary', 'continuity')), S.Null)),
+  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
 })
 
 export const readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet200ResponseCountMin = 0;
@@ -2893,8 +2893,8 @@ export const ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGet200Response = S.Str
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'Memory schema' }))
 })
@@ -3526,3 +3526,4 @@ export const ReadUserUsersUserNameGet422Response = S.Struct({
   "type": S.String
 })))
 })
+

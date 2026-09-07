@@ -2193,6 +2193,7 @@ components:
       - event
       - def
       - rel
+      - summary
       title: MemoryType
       type: string
     ModelName:
@@ -2492,7 +2493,9 @@ components:
       title: Page[Memory]
       type: object
     PluginName:
-      const: glossary
+      enum:
+      - glossary
+      - continuity
       type: string
     PythonAnnotationRequest:
       additionalProperties: false

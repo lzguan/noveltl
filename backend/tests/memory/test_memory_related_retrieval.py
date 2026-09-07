@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from src.memory.access import MemAccessContext
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary.gender_advanced_events import gender_event_memories
-from src.memory.agent.toolsets.glossary.relations import RelationCategory, relation_memories
+from src.memory.agent.toolsets.glossary.relations import RelationReadCategory, relation_memories
 from src.memory.models import MemoryGroup
 from src.memory.plugins.glossary import access
 from src.memory.types import Creator, MemoryType
@@ -50,7 +50,7 @@ def related_context(test_db: Session, sample_scenario: DatabaseScenario) -> RunC
 )
 def test_related_relations_share_filtered_pagination(
     related_context: RunContext[MemAgentDeps],
-    categories: tuple[RelationCategory, ...],
+    categories: tuple[RelationReadCategory, ...],
 ) -> None:
     ctx = related_context
     for mark in (*categories, "friendship"):

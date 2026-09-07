@@ -13,6 +13,7 @@ type ToolsetName = Literal[
     "glossary_definitions_write",
     "glossary_relations_read",
     "glossary_relations_write",
+    "glossary_aliases_write",
     "glossary_character_read",
     "glossary_character_write",
     "glossary_appearance_write",
@@ -142,6 +143,12 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
         default_enabled=True,
     ),
     ToolsetMetadata(
+        "glossary_aliases_write",
+        "Glossary aliases: write",
+        "Create, supersede, or expire pairwise identity aliases.",
+        "memory",
+    ),
+    ToolsetMetadata(
         "glossary_character_read",
         "Character state: read",
         "Retrieve character attributes across writer domains and observer perceptions.",
@@ -225,6 +232,7 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
 TOOLSET_RESTRICTIONS: tuple[ToolsetRestriction, ...] = (
     ToolsetRequires("glossary_definitions_write", "glossary_definitions_read"),
     ToolsetRequires("glossary_relations_write", "glossary_relations_read"),
+    ToolsetRequires("glossary_aliases_write", "glossary_relations_read"),
     ToolsetRequires("glossary_character_write", "glossary_character_read"),
     ToolsetRequires("glossary_appearance_write", "glossary_character_read"),
     ToolsetRequires("glossary_cultivation_write", "glossary_character_read"),
@@ -256,6 +264,7 @@ class ParsedToolsets(Model):
     glossary_definitions_write: ToolsetConfig | None = None
     glossary_relations_read: ToolsetConfig | None = None
     glossary_relations_write: ToolsetConfig | None = None
+    glossary_aliases_write: ToolsetConfig | None = None
     glossary_character_read: ToolsetConfig | None = None
     glossary_character_write: ToolsetConfig | None = None
     glossary_appearance_write: ToolsetConfig | None = None

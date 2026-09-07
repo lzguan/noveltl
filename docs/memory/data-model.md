@@ -109,8 +109,12 @@ independently:
   source-language term.
 - `glossary_definitions_read` retrieves definitions, while
   `glossary_definitions_write` creates, supersedes, or expires them.
-- `glossary_relations_read` retrieves categorized relations, while
-  `glossary_relations_write` creates, supersedes, or expires them.
+- `glossary_relations_read` retrieves categorized relations, including stored
+  aliases, while `glossary_relations_write` creates, supersedes, or expires
+  non-alias relations.
+- `glossary_aliases_write` creates, supersedes, or expires durable pairwise
+  identity aliases. It is independently selectable and requires
+  `glossary_relations_read`; generic relation writes cannot mutate aliases.
 - `glossary_character_read` exposes the shared `character_state_memories`
   reader and the separate directional `gender_perception_memories` query.
 - `glossary_character_write` maintains age stage, species, abilities, and
@@ -146,7 +150,18 @@ without exposing additional tools:
 Guidance toolsets are disabled unless selected for a job. Their dependencies
 are validated when the job is created.
 
-Each retrieval tool returns a page of one memory type. Definition, relation,
+Each retrieval tool returns a page of one memory type. Definition and all
+non-shared readers operate on one exact term. The shared character-state and
+generic relation readers expand an exact source form through active pairwise
+alias links, returning the links in an `aliases` field alongside `count` and
+`rows`; original terms and marks on every returned memory remain unchanged.
+Expansion is transitive only while every required link is active at the
+requested chapter, and is deterministically capped at 32 reached terms and 64
+alias edges. `aliases_truncated` signals that a cap was reached, so callers
+must not treat the component as complete. Rejected terms and alias memories do
+not participate. Legacy alias memories associated with more than two terms do
+not expand retrieval; they are retained but not interpreted as a clique.
+Definition, relation,
 and character-state retrieval operates on one exact term. Relation retrieval
 requires one literal category. Relation searches combine
 `rank`, `membership`, `service`, and `organizational_hierarchy`; searches for
@@ -203,6 +218,13 @@ active replacement is associated with the new term.
 Facts and relations receive a separate `mark` chosen from the categories
 allowed by their respective toolsets. Legacy gender memories use `gender`;
 current gender state uses the `gender.*` marks.
+
+An alias states only that two source-language terms identify one person or
+identity during its active interval. It does not merge stored records or make
+form-specific facts interchangeable: an adult name and a magical-girl persona
+may retain conflicting appearance or presentation memories under their
+original terms. Alias links always use persistent scope and end only through
+the normal explicit chapter-bounded expiry lifecycle.
 Definitions remain unmarked. The mark is metadata and is not included in
 `memory_content`.
 

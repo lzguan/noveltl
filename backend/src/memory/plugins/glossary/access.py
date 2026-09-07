@@ -10,7 +10,7 @@ from src.memory.access import MemAccessContext, check_mem_access_ctx, write_memo
 from src.memory.exceptions import GlossaryTermNotFoundException, MemoryNotFoundException
 from src.memory.models import Memory
 from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
-from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
+from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryMemoryPage, AgentGlossaryTerm
 from src.memory.plugins.glossary.types import TermKind
 from src.memory.schemas import AgentMemory
 from src.memory.types import Creator, MemoryType, PluginName, ReviewStatus, Scope
@@ -23,6 +23,9 @@ type ContainsQuery = Callable[
 ]
 
 GLOSSARY_PLUGIN_NAME: Final[PluginName] = "glossary"
+ALIAS_MARK: Final = "alias"
+MAX_ALIAS_TERMS: Final = 32
+MAX_ALIAS_EDGES: Final = 64
 
 
 def contains_query(chapter: SQLColumnExpression[str], term: SQLColumnExpression[str]) -> SQLColumnExpression[bool]:
@@ -72,12 +75,14 @@ def inspect_terms(
     include_rejected: bool = False,
     marks: Sequence[str | None] | None = None,
     term_search: str | None = None,
+    expand_aliases: bool = False,
 ) -> Page[AgentGlossaryMemory[UUID]]:
-    # TODO: Make retrieval alias-aware. Exact-name lookup can miss a conflicting
-    # memory stored under another alias of the same entity. This likely needs a
-    # structured alias relation or shared entity identity; expanding every free-
-    # text relation would incorrectly merge other kinds of related terms.
     chap_num, _ = check_mem_access_ctx(db, ctx)
+    alias_memories: list[Memory] = []
+    aliases_truncated = False
+    if expand_aliases:
+        term_names, alias_memories, aliases_truncated = _expand_alias_terms(db, ctx, chap_num, term_names)
+
     matching_association = aliased(GlossaryAssociation)
     matching_term = aliased(GlossaryTerm)
     matching_memory_ids = (
@@ -140,16 +145,136 @@ def inspect_terms(
     terms_by_memory: dict[UUID, list[AgentGlossaryTerm]] = {memory_id: [] for memory_id in memory_ids}
     for memory_id, term in db.execute(terms_query).tuples():
         terms_by_memory[memory_id].append(AgentGlossaryTerm.model_validate(term))
-    return Page[AgentGlossaryMemory[UUID]](
-        count=count,
-        rows=[
-            AgentGlossaryMemory[UUID](
-                memory=AgentMemory.model_validate(memory),
-                terms=terms_by_memory[memory.memory_id],
-            )
-            for memory in memories
-        ],
+    rows = [
+        AgentGlossaryMemory[UUID](
+            memory=AgentMemory.model_validate(memory),
+            terms=terms_by_memory[memory.memory_id],
+        )
+        for memory in memories
+    ]
+    if expand_aliases:
+        return AgentGlossaryMemoryPage[UUID](
+            count=count,
+            rows=rows,
+            aliases=_agent_glossary_memories(db, ctx.memory_group_id, alias_memories, include_rejected),
+            aliases_truncated=aliases_truncated,
+        )
+    return Page[AgentGlossaryMemory[UUID]](count=count, rows=rows)
+
+
+def _agent_glossary_memories(
+    db: Session,
+    memory_group_id: UUID,
+    memories: Sequence[Memory],
+    include_rejected: bool,
+) -> list[AgentGlossaryMemory[UUID]]:
+    """Attach original term forms to an already ordered collection of memories."""
+    memory_ids = [memory.memory_id for memory in memories]
+    if not memory_ids:
+        return []
+    query = (
+        select(GlossaryAssociation.memory_id, GlossaryTerm)
+        .select_from(GlossaryAssociation)
+        .join(GlossaryTerm, GlossaryTerm.term_id == GlossaryAssociation.term_id)
+        .where(GlossaryAssociation.memory_id.in_(memory_ids), GlossaryTerm.memory_group_id == memory_group_id)
+        .order_by(GlossaryAssociation.memory_id, GlossaryTerm.term, GlossaryTerm.term_id)
     )
+    if not include_rejected:
+        query = query.where(GlossaryTerm.review_status != ReviewStatus.REJECTED)
+    terms_by_memory: dict[UUID, list[AgentGlossaryTerm]] = {memory_id: [] for memory_id in memory_ids}
+    for memory_id, term in db.execute(query).tuples():
+        terms_by_memory[memory_id].append(AgentGlossaryTerm.model_validate(term))
+    return [
+        AgentGlossaryMemory[UUID](memory=AgentMemory.model_validate(memory), terms=terms_by_memory[memory.memory_id])
+        for memory in memories
+    ]
+
+
+def _expand_alias_terms(
+    db: Session,
+    ctx: MemAccessContext,
+    chapter_num: int,
+    term_names: Sequence[str],
+) -> tuple[list[str], list[Memory], bool]:
+    """Expand active pair aliases with bounded deterministic traversal.
+
+    Legacy aliases with more than two terms are deliberately ignored: they may
+    describe a broad relation rather than pairwise identity equivalence.
+    """
+    initial_terms = list(
+        db.scalars(
+            select(GlossaryTerm.term)
+            .where(
+                GlossaryTerm.memory_group_id == ctx.memory_group_id,
+                GlossaryTerm.term.in_(term_names),
+                GlossaryTerm.review_status != ReviewStatus.REJECTED,
+            )
+            .order_by(GlossaryTerm.term, GlossaryTerm.term_id)
+        ).all()
+    )
+    if not initial_terms:
+        return list(term_names), [], False
+
+    alias_rows = list(
+        db.execute(
+            select(Memory, GlossaryTerm)
+            .select_from(Memory)
+            .join(GlossaryAssociation, GlossaryAssociation.memory_id == Memory.memory_id)
+            .join(GlossaryTerm, GlossaryTerm.term_id == GlossaryAssociation.term_id)
+            .where(
+                Memory.memory_group_id == ctx.memory_group_id,
+                Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
+                Memory.memory_type == MemoryType.RELATION,
+                Memory.mark == ALIAS_MARK,
+                Memory.memory_review_status != ReviewStatus.REJECTED,
+                Memory.memory_start_num <= chapter_num,
+                or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chapter_num),
+                GlossaryTerm.memory_group_id == ctx.memory_group_id,
+            )
+            .order_by(Memory.memory_start_num.desc(), Memory.memory_id, GlossaryTerm.term, GlossaryTerm.term_id)
+        ).tuples()
+    )
+    terms_by_alias: dict[UUID, list[GlossaryTerm]] = {}
+    memories_by_id: dict[UUID, Memory] = {}
+    for memory, term in alias_rows:
+        memories_by_id[memory.memory_id] = memory
+        terms_by_alias.setdefault(memory.memory_id, []).append(term)
+
+    adjacency: dict[str, list[tuple[str, Memory]]] = {}
+    for memory_id, terms in terms_by_alias.items():
+        if len(terms) != 2 or any(term.review_status == ReviewStatus.REJECTED for term in terms):
+            continue
+        first, second = terms
+        memory = memories_by_id[memory_id]
+        adjacency.setdefault(first.term, []).append((second.term, memory))
+        adjacency.setdefault(second.term, []).append((first.term, memory))
+    for neighbors in adjacency.values():
+        neighbors.sort(key=lambda item: (item[0], -item[1].memory_start_num, str(item[1].memory_id)))
+
+    reached = set(initial_terms)
+    queue = list(initial_terms)
+    used_edges: list[Memory] = []
+    used_edge_ids: set[UUID] = set()
+    truncated = False
+    while queue:
+        current = queue.pop(0)
+        for other, memory in adjacency.get(current, []):
+            if memory.memory_id in used_edge_ids:
+                continue
+            if len(used_edges) >= MAX_ALIAS_EDGES:
+                truncated = True
+                break
+            if other not in reached and len(reached) >= MAX_ALIAS_TERMS:
+                truncated = True
+                continue
+            used_edge_ids.add(memory.memory_id)
+            used_edges.append(memory)
+            if other not in reached:
+                reached.add(other)
+                queue.append(other)
+        if truncated and len(used_edges) >= MAX_ALIAS_EDGES:
+            break
+    return sorted(reached), used_edges, truncated
 
 
 def create_term(

@@ -5,11 +5,10 @@ from pydantic_ai import FunctionToolset, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
-from src.memory.plugins.glossary.schemas import AgentGlossaryMemory
+from src.memory.plugins.glossary.schemas import AgentGlossaryMemoryPage
 from src.memory.types import MemoryType, Scope
-from src.schemas import Page
 
-type RelationCategory = Literal[
+type RelationReadCategory = Literal[
     "alias",
     "kinship",
     "friendship",
@@ -24,16 +23,26 @@ type RelationCategory = Literal[
     "organizational_hierarchy",
     "commercial_partnership",
 ]
-RELATION_CATEGORIES: tuple[RelationCategory, ...] = get_args(RelationCategory.__value__)
+type RelationWriteCategory = Literal[
+    "kinship", "friendship", "romance", "mentorship", "rank", "membership", "service", "ownership",
+    "alliance", "rivalry", "organizational_hierarchy", "commercial_partnership",
+]
+RELATION_READ_CATEGORIES: tuple[RelationReadCategory, ...] = get_args(RelationReadCategory.__value__)
+RELATION_WRITE_CATEGORIES: tuple[RelationWriteCategory, ...] = get_args(RelationWriteCategory.__value__)
 
 GLOSSARY_RELATION_READ_INSTRUCTIONS = """
 Query one existing participant most likely to reveal the candidate
-relationship, with its one matching category. Form the candidate before
+relationship, with its one matching category. `alias` is read-only here and is
+maintained by the dedicated alias writer. Form the candidate before
 retrieval. Selecting any of `rank`, `membership`, `service`, or
 `organizational_hierarchy` searches all four together. Selecting `alliance`
 or `commercial_partnership` searches both together. Do not repeat equivalent
 queries for the other categories in a shared group. Returned categories stay
 distinct: related results are not necessarily the same relationship.
+Alias context identifies source forms that have been explicitly linked, not a
+license to rewrite or merge form-specific facts. Use alias-derived evidence to
+seek corroboration in the source before making any write, and never infer
+permission to mutate an alias from retrieval.
 Use `term_search` only for a literal, case-insensitive substring
 expected in the memory text. Filters apply before pagination and results are
 newest-first. Request another page only when the filtered count requires it.
@@ -45,8 +54,8 @@ THIS TOOLSET MUST NOT RECORD EVENTS. Do not record co-occurrence, temporary
 cooperation, ordinary transactions, actions, location, vague enmity, or shared
 participation in an occurrence as relations.
 
-Associate every participant and select exactly one category: `alias` for terms
-naming the same identity; `kinship`; explicitly established `friendship` or
+Associate every participant and select exactly one category: `kinship`;
+explicitly established `friendship` or
 `romance`; `mentorship`; durable `rank`, `membership`, `service`, or
 `ownership`; an ongoing formal `alliance` or explicit `rivalry`;
 `organizational_hierarchy`; or an ongoing `commercial_partnership` rather than
@@ -64,21 +73,19 @@ remain separate, and approved memories change only on clear textual evidence.
 For the shared lifecycle decision, the tracked claim is the particular
 relationship between its participants, not every relation returned for one
 participant or category. Different memberships, possessions, relatives, or
-other compatible relationships may coexist. Treat aliases that express the
-same identity equivalence as the same claim even when they use another known
-name for that identity.
+other compatible relationships may coexist.
 """.strip()
 
 
 def relation_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
-    category: RelationCategory,
+    category: RelationReadCategory,
     skip: Annotated[int, Field(ge=0)] = 0,
     limit: Annotated[int, Field(ge=1, le=20)] = 5,
     term_search: Annotated[str | None, Field(min_length=1)] = None,
-) -> Page[AgentGlossaryMemory[str]]:
-    """Retrieve active relations, including related categories, for one exact term."""
+) -> AgentGlossaryMemoryPage[str]:
+    """Retrieve active relations for an alias-expanded source form."""
     if category in ("rank", "membership", "service", "organizational_hierarchy"):
         marks = ["rank", "membership", "service", "organizational_hierarchy"]
     elif category in ("alliance", "commercial_partnership"):
@@ -94,15 +101,18 @@ def relation_memories(
         limit,
         marks=marks,
         term_search=term_search,
+        expand_aliases=True,
     )
-    return common.to_agent_memory_page(ctx, page)
+    if not isinstance(page, AgentGlossaryMemoryPage):
+        raise RuntimeError("Relation retrieval must preserve alias context")
+    return common.to_agent_alias_memory_page(ctx, page)
 
 
 def new_relation_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
     term_names: Annotated[list[str], Field(min_length=2)],
-    category: RelationCategory,
+    category: RelationWriteCategory,
     scope: Scope | None = None,
 ) -> str:
     """Create a categorized relation between exact glossary terms."""
@@ -121,7 +131,7 @@ def supersede_relation_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
     content: str,
-    category: RelationCategory,
+    category: RelationWriteCategory,
     scope: Scope | None = None,
 ) -> str:
     """Supersede an active relation with one categorized replacement."""
@@ -132,13 +142,13 @@ def supersede_relation_memory(
         MemoryType.RELATION,
         scope,
         category,
-        expected_marks=list(RELATION_CATEGORIES),
+        expected_marks=list(RELATION_WRITE_CATEGORIES),
     )
 
 
 def expire_relation_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire an active relation that explicitly stopped being true."""
-    return common.expire_memory(ctx, memory_id, [MemoryType.RELATION], marks=list(RELATION_CATEGORIES))
+    return common.expire_memory(ctx, memory_id, [MemoryType.RELATION], marks=list(RELATION_WRITE_CATEGORIES))
 
 
 glossary_relations_read_toolset = FunctionToolset(

@@ -6,6 +6,7 @@ from pydantic_ai.models.openai import OpenAIChatModelSettings
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
+from src.memory.agent.toolsets.glossary.aliases import glossary_aliases_write_toolset
 from src.memory.agent.toolsets.glossary.appearance import glossary_appearance_write_toolset
 from src.memory.agent.toolsets.glossary.character_state import glossary_character_state_read_toolset
 from src.memory.agent.toolsets.glossary.context import GLOSSARY_SHARED_INSTRUCTIONS, initial_glossary_context
@@ -66,6 +67,7 @@ capability_factories_by_name: dict[ToolsetName, CapabilityFactory] = {
     "glossary_definitions_write": _toolset_capability(glossary_definitions_write_toolset),
     "glossary_relations_read": _toolset_capability(glossary_relations_read_toolset),
     "glossary_relations_write": _toolset_capability(glossary_relations_write_toolset),
+    "glossary_aliases_write": _toolset_capability(glossary_aliases_write_toolset),
     "glossary_character_read": _toolset_capability(glossary_character_state_read_toolset),
     "glossary_character_write": _toolset_capability(glossary_facts_write_toolset),
     "glossary_appearance_write": _toolset_capability(glossary_appearance_write_toolset),

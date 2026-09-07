@@ -6,7 +6,7 @@ from pydantic_ai import ModelRetry, RunContext
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.exceptions import GlossaryTermNotFoundException, MemoryNotFoundException
 from src.memory.plugins.glossary import access
-from src.memory.plugins.glossary.schemas import AgentGlossaryMemory
+from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryMemoryPage
 from src.memory.schemas import AgentMemory
 from src.memory.types import Creator, MemoryType, Scope
 from src.schemas import Page
@@ -190,18 +190,33 @@ def to_agent_memory_page(
     page: Page[AgentGlossaryMemory[UUID]],
 ) -> Page[AgentGlossaryMemory[str]]:
     """Translate database memory UUIDs in a page to short agent-facing handles."""
-    return Page[AgentGlossaryMemory[str]](
-        count=page.count,
-        rows=[
-            AgentGlossaryMemory[str](
-                memory=AgentMemory[str].model_validate(
-                    {
-                        **glossary_memory.memory.model_dump(),
-                        "memory_id": ctx.deps.uuid_cache.new(glossary_memory.memory.memory_id),
-                    }
-                ),
-                terms=glossary_memory.terms,
-            )
-            for glossary_memory in page.rows
-        ],
-    )
+    def translate(glossary_memory: AgentGlossaryMemory[UUID]) -> AgentGlossaryMemory[str]:
+        return AgentGlossaryMemory[str](
+            memory=AgentMemory[str].model_validate(
+                {
+                    **glossary_memory.memory.model_dump(),
+                    "memory_id": ctx.deps.uuid_cache.new(glossary_memory.memory.memory_id),
+                }
+            ),
+            terms=glossary_memory.terms,
+        )
+
+    rows = [translate(glossary_memory) for glossary_memory in page.rows]
+    if isinstance(page, AgentGlossaryMemoryPage):
+        return AgentGlossaryMemoryPage[str](
+            count=page.count,
+            rows=rows,
+            aliases=[translate(glossary_memory) for glossary_memory in page.aliases],
+            aliases_truncated=page.aliases_truncated,
+        )
+    return Page[AgentGlossaryMemory[str]](count=page.count, rows=rows)
+
+
+def to_agent_alias_memory_page(
+    ctx: RunContext[MemAgentDeps], page: AgentGlossaryMemoryPage[UUID]
+) -> AgentGlossaryMemoryPage[str]:
+    """Translate the alias-aware page shape exposed by shared readers."""
+    converted = to_agent_memory_page(ctx, page)
+    if not isinstance(converted, AgentGlossaryMemoryPage):
+        raise RuntimeError("Alias-aware glossary retrieval lost its alias context")
+    return converted

@@ -33,6 +33,32 @@ run-config authoring are available through both the CLI and terminal UI. Run
 execution is available through the CLI. Recovery, reviewing, and reporting
 will be added as subsequent vertical slices.
 
+Set `AGENT_EVAL_ROOT` to use a different data directory for both CLI and UI.
+It redirects all the directories above, not the imported runner/backend code.
+Relative paths resolve from the process working directory; an absolute path
+is recommended for worktrees. Explicit Python `EvalWorkspace(root=...)`
+arguments take precedence. An unset or empty variable preserves the default
+directory containing this package's `pyproject.toml`.
+
+Before importing backend settings, the runner loads `.env` beside its own
+`pyproject.toml` into the process environment using `load_dotenv(override=False)`.
+Existing environment variables (including Compose-provided values) win. A missing
+file is harmless; parent directories and `AGENT_EVAL_ROOT` are not searched for
+another `.env`. Each worktree therefore uses its own runner's `.env`.
+
+To load a different file instead, use uv's explicit environment-file option
+(those values take precedence over the runner's local file):
+
+```bash
+uv run --project .worktrees/alias/agent-evals \
+  --env-file /absolute/path/to/eval.env agent-eval paths
+```
+
+For example, that file can contain
+`AGENT_EVAL_ROOT=/workspaces/NovelTL_Dev/agent-evals`. Keep credential-bearing
+files ignored by Git. Shared roots also share configs and outputs, so use
+distinct config IDs for separate experiments.
+
 ## Commands
 
 ```bash

@@ -1,3 +1,4 @@
+import os
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -8,7 +9,12 @@ from pydantic import BaseModel
 
 class EvalWorkspace:
     def __init__(self, root: Path | None = None) -> None:
-        self.root = (root or Path(__file__).resolve().parents[2]).resolve()
+        configured_root = os.getenv("AGENT_EVAL_ROOT")
+        self.root = (
+            root
+            if root is not None
+            else Path(configured_root) if configured_root else Path(__file__).resolve().parents[2]
+        ).resolve()
 
     @property
     def novels(self) -> Path:

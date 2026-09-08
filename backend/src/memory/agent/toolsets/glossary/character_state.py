@@ -16,9 +16,8 @@ from src.memory.agent.toolsets.glossary.gender_advanced_relations import (
     GLOSSARY_ADVANCED_GENDER_RELATION_READ_INSTRUCTIONS,
     gender_perception_memories,
 )
-from src.memory.plugins.glossary.schemas import AgentGlossaryMemory
+from src.memory.plugins.glossary.schemas import AgentGlossaryMemoryPage
 from src.memory.types import MemoryType
-from src.schemas import Page
 
 CHARACTER_STATE_INSTRUCTIONS = """
 Use `character_state_memories` before character-state writes. It reads core
@@ -34,11 +33,20 @@ distinct. Legacy `gender` records retain their original wording; do not guess
 an aspect for ambiguous legacy state. Observer beliefs and events are excluded;
 use their readers when enabled.
 
-Query one exact term, inspect the returned count, and request subsequent pages
-when relevant existing state has not been found and more rows remain. Results
-are active, newest-first, and bounded by limit; count covers the entire matching
-set, not only this page. Avoid a text filter when wording is uncertain. A
-literal `term_search` narrows all included categories before pagination.
+Alias context links names without merging their stored state. In particular,
+different physical forms or personas may have conflicting appearance or
+presentation memories that must remain associated with their original terms.
+Alias-derived context is not by itself evidence to write, supersede, or expire
+any fact; corroborate the source and preserve the intended exact primary term.
+
+Query one source form, inspect aliases alongside the returned count, and request
+subsequent pages when relevant existing state has not been found and more rows
+remain. Alias expansion follows active pair links transitively but is bounded;
+when `aliases_truncated` is true, do not assume the returned component is
+complete. Results retain each memory's original terms, are active, newest-first,
+and bounded by limit; count covers the expanded matching set, not only this
+page. Avoid a text filter when wording is uncertain. A literal `term_search`
+narrows all included categories before pagination.
 All character fact writers use this reader and enforce their own mutation scope.
 Use gender_perception_memories for the separate directional observer query.
 """.strip()
@@ -50,7 +58,7 @@ def character_state_memories(
     skip: Annotated[int, Field(ge=0)] = 0,
     limit: Annotated[int, Field(ge=1, le=20)] = 10,
     term_search: Annotated[str | None, Field(min_length=1)] = None,
-) -> Page[AgentGlossaryMemory[str]]:
+) -> AgentGlossaryMemoryPage[str]:
     """Read a bounded page of generic and gender facts, independent of enabled writers."""
     page = common.access.inspect_terms(
         ctx.deps.db,
@@ -68,8 +76,11 @@ def character_state_memories(
             *GENDER_FACT_MARKS.values(),
         ],
         term_search=term_search,
+        expand_aliases=True,
     )
-    return common.to_agent_memory_page(ctx, page)
+    if not isinstance(page, AgentGlossaryMemoryPage):
+        raise RuntimeError("Character state retrieval must preserve alias context")
+    return common.to_agent_alias_memory_page(ctx, page)
 
 
 glossary_character_state_read_toolset = FunctionToolset(

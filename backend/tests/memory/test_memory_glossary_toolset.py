@@ -65,7 +65,7 @@ from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
 from src.memory.agent.types import ParsedToolsets
 from src.memory.exceptions import GlossaryTermNotFoundException
 from src.memory.models import MemoryGroup
-from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryTerm
+from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossaryMemoryPage, AgentGlossaryTerm
 from src.memory.plugins.glossary.types import TermKind
 from src.memory.schemas import AgentMemory
 from src.memory.types import Creator, MemoryType, ReviewStatus
@@ -389,8 +389,23 @@ def test_glossary_tool_schemas_enforce_input_constraints() -> None:
     ]
     assert "scope" not in supersede_transformation_schema["properties"]
     relation_schema = glossary_relations_write_toolset.tools["new_relation_memory"].function_schema.json_schema
-    assert relation_schema["properties"]["category"] == {"$ref": "#/$defs/RelationCategory"}
-    assert relation_schema["$defs"]["RelationCategory"]["enum"] == [
+    assert relation_schema["properties"]["category"] == {"$ref": "#/$defs/RelationWriteCategory"}
+    assert relation_schema["$defs"]["RelationWriteCategory"]["enum"] == [
+        "kinship",
+        "friendship",
+        "romance",
+        "mentorship",
+        "rank",
+        "membership",
+        "service",
+        "ownership",
+        "alliance",
+        "rivalry",
+        "organizational_hierarchy",
+        "commercial_partnership",
+    ]
+    relation_read_schema = glossary_relations_read_toolset.tools["relation_memories"].function_schema.json_schema
+    assert relation_read_schema["$defs"]["RelationReadCategory"]["enum"] == [
         "alias",
         "kinship",
         "friendship",
@@ -617,9 +632,14 @@ def test_type_specific_retrieval_forwards_one_type_and_one_mark(monkeypatch: pyt
     definition_memories(_run_context(db), "Alpha")
     assert inspect_terms.call_args.kwargs == {"marks": [None], "term_search": None}
 
+    inspect_terms.return_value = AgentGlossaryMemoryPage(count=0, rows=[])
     relation_memories(_run_context(db), "Alpha", "friendship")
     assert inspect_terms.call_args.args[3] == [MemoryType.RELATION]
-    assert inspect_terms.call_args.kwargs == {"marks": ["friendship"], "term_search": None}
+    assert inspect_terms.call_args.kwargs == {
+        "marks": ["friendship"],
+        "term_search": None,
+        "expand_aliases": True,
+    }
 
     gender_memories(_run_context(db), "Alpha")
     assert inspect_terms.call_args.args[3] == [MemoryType.FACT]

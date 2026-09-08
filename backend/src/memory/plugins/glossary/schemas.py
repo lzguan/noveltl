@@ -33,6 +33,19 @@ class AgentGlossaryMemory[KeyT](AgentModel):
     )
 
 
+class AgentGlossaryMemoryPage[KeyT](Page[AgentGlossaryMemory[KeyT]]):
+    """A glossary-memory page, optionally with the alias links used for retrieval."""
+
+    aliases: list[AgentGlossaryMemory[KeyT]] = Field(
+        default_factory=list,
+        description="Active pair aliases used to expand this query, retaining their original terms and marks.",
+    )
+    aliases_truncated: bool = Field(
+        default=False,
+        description="Whether alias expansion reached its bounded term or edge limit.",
+    )
+
+
 class GlossaryTerm(Model):
     """A glossary term represented as context for an agent."""
 

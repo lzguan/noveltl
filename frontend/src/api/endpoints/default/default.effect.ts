@@ -3526,3 +3526,4 @@ export const ReadUserUsersUserNameGet422Response = S.Struct({
   "type": S.String
 })))
 })
+

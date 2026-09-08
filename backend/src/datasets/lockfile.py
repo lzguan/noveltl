@@ -176,7 +176,9 @@ def check_lock(root: Path | str, targets: list[str] | None = None) -> None:
     current = read_lock(dataset_root)
     computed, selected_roots = compute_lock(dataset_root, targets)
     if targets is None:
-        if current != computed:
+        # The schema URI is an editor hint relative to this checkout, not a
+        # content-integrity field. Shared corpora must work across worktrees.
+        if current.model_dump(exclude={"schema_uri"}) != computed.model_dump(exclude={"schema_uri"}):
             raise LockMismatchError("catalog.lock.json is stale")
         return
     current_selected = {

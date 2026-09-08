@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, aliased, sessionmaker
 
 from src.languages.models import Language
 from src.memory.access import MemAccessContext
-from src.memory.agent.agent import create_agent, run_agent
+from src.memory.agent.agent import ContinuitySummaryOutput, create_agent, run_agent
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.tasks.jobs import (
     JobParams,
@@ -44,7 +44,7 @@ class CompletedMemoryTask:
     chapter_id: uuid.UUID
     chapter_content_id: uuid.UUID
     chapter_num: int
-    result: AgentRunResult[str]
+    result: AgentRunResult[str | ContinuitySummaryOutput]
 
 
 async def aiterate_tasks(
@@ -117,7 +117,7 @@ async def arun_tasks[T](
 
 async def _run_single_task(
     db: Session,
-    agent: Agent[MemAgentDeps, str],
+    agent: Agent[MemAgentDeps, str | ContinuitySummaryOutput],
     memory_group_id: uuid.UUID,
     task: ClaimedTask,
     lang_name: str,

@@ -243,3 +243,23 @@ The term itself remains in the source language, while memory content is written
 in the language configured by the memory group. The agent processes chapters
 in order so memories written for one chapter can become context for later
 chapters.
+
+## Continuity summaries
+
+The optional continuity capability records one `summary` memory with plugin
+`continuity` for each processed chapter-content version in a memory group. It
+is independent of glossary terms and associations. Its structured output is a
+nonempty rolling handoff of at most 1500 characters; it retains unresolved
+translation-relevant continuity rather than serving as a durable fact store.
+
+For a chapter, the capability considers only the immediately preceding existing
+source chapter by chapter number. It injects that chapter's summary only when
+the summary is non-rejected, still active, and tied to that chapter's latest
+content version. If it is absent or ineligible, no older summary is used.
+Editing a source chapter therefore makes its old summary ineligible; invalidating
+descendant summaries is intentionally deferred.
+
+Rerunning the same group and source content updates only its pending,
+agent-created summary. Approved, user-created, and rejected summaries are
+preserved rather than overwritten. Summaries are staged during the agent run
+and commit only with successful chapter-task completion.

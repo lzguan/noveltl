@@ -5,4 +5,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type PluginName = 'glossary';
+export type PluginName = typeof PluginName[keyof typeof PluginName];
+
+
+export const PluginName = {
+  glossary: 'glossary',
+  continuity: 'continuity',
+} as const;

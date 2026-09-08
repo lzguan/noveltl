@@ -32,6 +32,7 @@ const MEMORY_TYPE_LABELS: Record<Memory["memoryType"], string> = {
 	event: "event",
 	def: "definition",
 	rel: "relation",
+	summary: "summary",
 };
 
 function reviewBadgeVariant(status: ReviewStatus) {

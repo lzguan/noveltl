@@ -8,6 +8,7 @@ from src.schemas import Model
 type ModelName = Literal["deepseek:deepseek-v4-flash-none", "deepseek:deepseek-v4-flash-low"]
 MODEL_NAMES: tuple[ModelName, ...] = get_args(ModelName.__value__)
 type ToolsetName = Literal[
+    "continuity_summary",
     "glossary_terms",
     "glossary_definitions_read",
     "glossary_definitions_write",
@@ -107,6 +108,12 @@ type ToolsetRestriction = ToolsetRequires | ToolsetExcludes
 
 
 TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
+    ToolsetMetadata(
+        "continuity_summary",
+        "Continuity summary",
+        "Carry a concise rolling handoff from the immediately preceding source chapter.",
+        "memory",
+    ),
     ToolsetMetadata(
         "glossary_terms",
         "Glossary terms",
@@ -259,6 +266,7 @@ class ParsedToolsets(Model):
 
     model_config = ConfigDict(alias_generator=None, extra="forbid")
 
+    continuity_summary: ToolsetConfig | None = None
     glossary_terms: ToolsetConfig | None = None
     glossary_definitions_read: ToolsetConfig | None = None
     glossary_definitions_write: ToolsetConfig | None = None

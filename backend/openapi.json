@@ -9872,7 +9872,8 @@
           "fact",
           "event",
           "def",
-          "rel"
+          "rel",
+          "summary"
         ],
         "title": "MemoryType",
         "description": "The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms."
@@ -10274,7 +10275,10 @@
       },
       "PluginName": {
         "type": "string",
-        "const": "glossary"
+        "enum": [
+          "glossary",
+          "continuity"
+        ]
       },
       "PythonAnnotationRequest": {
         "properties": {

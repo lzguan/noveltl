@@ -16,8 +16,9 @@ from src.memory.agent.toolsets.glossary.gender_advanced_relations import (
     GLOSSARY_ADVANCED_GENDER_RELATION_READ_INSTRUCTIONS,
     gender_perception_memories,
 )
-from src.memory.plugins.glossary.schemas import AgentGlossaryMemoryPage
+from src.memory.plugins.glossary.schemas import AgentCharacterStatePage, AgentGlossaryMemoryPage
 from src.memory.types import MemoryType
+from src.schemas import Page
 
 CHARACTER_STATE_INSTRUCTIONS = """
 Use `character_state_memories` before character-state writes. It reads core
@@ -38,6 +39,11 @@ different physical forms or personas may have conflicting appearance or
 presentation memories that must remain associated with their original terms.
 Alias-derived context is not by itself evidence to write, supersede, or expire
 any fact; corroborate the source and preserve the intended exact primary term.
+Aliases retain their spelling, persona, or transformation category. Impersonations
+are separate directional relations in the impersonations section: the queried
+identity may be actor OR target. Never equate the participants or import a
+target's facts. This section follows true aliases only, never impersonation
+links. Page it independently with impersonation_skip and the same limit.
 
 Query one source form, inspect aliases alongside the returned count, and request
 subsequent pages when relevant existing state has not been found and more rows
@@ -58,7 +64,8 @@ def character_state_memories(
     skip: Annotated[int, Field(ge=0)] = 0,
     limit: Annotated[int, Field(ge=1, le=20)] = 10,
     term_search: Annotated[str | None, Field(min_length=1)] = None,
-) -> AgentGlossaryMemoryPage[str]:
+    impersonation_skip: Annotated[int, Field(ge=0)] = 0,
+) -> AgentCharacterStatePage[str]:
     """Read a bounded page of generic and gender facts, independent of enabled writers."""
     page = common.access.inspect_terms(
         ctx.deps.db,
@@ -80,7 +87,23 @@ def character_state_memories(
     )
     if not isinstance(page, AgentGlossaryMemoryPage):
         raise RuntimeError("Character state retrieval must preserve alias context")
-    return common.to_agent_alias_memory_page(ctx, page)
+    impersonations = common.access.inspect_terms(
+        ctx.deps.db,
+        ctx.deps.mem_access_context,
+        [term_name],
+        [MemoryType.RELATION],
+        impersonation_skip,
+        limit,
+        marks=["impersonation"],
+        term_search=term_search,
+        expand_aliases=True,
+    )
+    state = common.to_agent_alias_memory_page(ctx, page)
+    related = common.to_agent_memory_page(ctx, impersonations)
+    return AgentCharacterStatePage[str](
+        **state.model_dump(),
+        impersonations=Page(count=related.count, rows=related.rows),
+    )
 
 
 glossary_character_state_read_toolset = FunctionToolset(

@@ -31,7 +31,7 @@ def alias_context(test_db: Session, sample_scenario: DatabaseScenario) -> RunCon
     )
     test_db.add(group)
     test_db.flush()
-    for name in ("Alpha", "Beta", "Gamma", "Unrelated"):
+    for name in ("Alpha", "Beta", "Gamma", "Delta", "Unrelated"):
         access.create_term(test_db, group.memory_group_id, name)
     return RunContext(
         deps=MemAgentDeps(
@@ -47,9 +47,7 @@ def alias_context(test_db: Session, sample_scenario: DatabaseScenario) -> RunCon
     )
 
 
-def _memory(
-    ctx: RunContext[MemAgentDeps], terms: list[str], content: str, memory_type: MemoryType, mark: str
-) -> str:
+def _memory(ctx: RunContext[MemAgentDeps], terms: list[str], content: str, memory_type: MemoryType, mark: str) -> str:
     memory, _ = access.create_memory(
         ctx.deps.db, ctx.deps.mem_access_context, Creator.AGENT, memory_type, terms, content, mark=mark
     )
@@ -60,34 +58,57 @@ def test_alias_readers_expand_active_transitive_pairs_without_merging_forms(
     alias_context: RunContext[MemAgentDeps],
 ) -> None:
     ctx = alias_context
-    alpha_beta = _memory(ctx, ["Alpha", "Beta"], "Alpha is Beta's codename.", MemoryType.RELATION, "alias")
-    beta_gamma = _memory(ctx, ["Beta", "Gamma"], "Beta is Gamma's persona.", MemoryType.RELATION, "alias")
+    alpha_beta = _memory(
+        ctx, ["Alpha", "Beta"], "Alpha is Beta's alternate spelling.", MemoryType.RELATION, "alias.spelling"
+    )
+    beta_gamma = _memory(ctx, ["Beta", "Gamma"], "Beta is Gamma's persona.", MemoryType.RELATION, "alias.persona")
+    gamma_delta = _memory(
+        ctx, ["Gamma", "Delta"], "Gamma is Delta's transformed form.", MemoryType.RELATION, "alias.transformation"
+    )
     beta_fact = _memory(ctx, ["Beta"], "Beta has black hair.", MemoryType.FACT, "appearance.hair")
     gamma_fact = _memory(ctx, ["Gamma"], "Gamma has silver hair.", MemoryType.FACT, "appearance.hair")
-    friendship = _memory(ctx, ["Gamma", "Unrelated"], "Gamma trusts Unrelated.", MemoryType.RELATION, "friendship")
+    delta_fact = _memory(ctx, ["Delta"], "Delta has gold hair.", MemoryType.FACT, "appearance.hair")
+    friendship = _memory(ctx, ["Delta", "Unrelated"], "Delta trusts Unrelated.", MemoryType.RELATION, "friendship")
     ctx.deps.db.flush()
 
     state = character_state_memories(ctx, "Alpha", limit=1)
-    assert state.count == 2
-    assert state.rows[0].memory.memory_id in {beta_fact, gamma_fact}
-    assert {term.term for row in state.rows + state.aliases for term in row.terms} >= {"Beta", "Gamma"}
+    assert state.count == 3
+    assert state.rows[0].memory.memory_id in {beta_fact, gamma_fact, delta_fact}
+    assert {term.term for row in state.rows + state.aliases for term in row.terms} >= {"Beta", "Gamma", "Delta"}
     assert state.aliases_truncated is False
     second = character_state_memories(ctx, "Alpha", skip=1, limit=1)
-    assert second.count == 2
-    assert {row.memory.memory_id for row in state.rows + second.rows} == {beta_fact, gamma_fact}
-    assert {term.term for row in state.rows + second.rows for term in row.terms} == {"Beta", "Gamma"}
+    assert second.count == 3
+    third = character_state_memories(ctx, "Alpha", skip=2, limit=1)
+    assert {row.memory.memory_id for row in state.rows + second.rows + third.rows} == {
+        beta_fact,
+        gamma_fact,
+        delta_fact,
+    }
+    assert {term.term for row in state.rows + second.rows + third.rows for term in row.terms} == {
+        "Beta",
+        "Gamma",
+        "Delta",
+    }
 
     relations = relation_memories(ctx, "Alpha", "friendship")
     assert [row.memory.memory_id for row in relations.rows] == [friendship]
-    assert {row.memory.memory_id for row in relations.aliases} == {alpha_beta, beta_gamma}
+    assert {row.memory.memory_id for row in relations.aliases} == {alpha_beta, beta_gamma, gamma_delta}
+    aliases = relation_memories(ctx, "Alpha", "alias")
+    assert {row.memory.memory_id for row in aliases.rows} == {alpha_beta, beta_gamma, gamma_delta}
+    assert {row.memory.memory_id for row in aliases.aliases} == {alpha_beta, beta_gamma, gamma_delta}
+    assert {row.memory.mark for row in aliases.aliases} == {
+        "alias.spelling",
+        "alias.persona",
+        "alias.transformation",
+    }
 
 
 def test_expiring_alias_edge_splits_transitive_retrieval(
     alias_context: RunContext[MemAgentDeps], sample_scenario: DatabaseScenario
 ) -> None:
     ctx = alias_context
-    _memory(ctx, ["Alpha", "Beta"], "Alpha is Beta.", MemoryType.RELATION, "alias")
-    beta_gamma = _memory(ctx, ["Beta", "Gamma"], "Beta is Gamma.", MemoryType.RELATION, "alias")
+    _memory(ctx, ["Alpha", "Beta"], "Alpha is Beta.", MemoryType.RELATION, "alias.transformation")
+    beta_gamma = _memory(ctx, ["Beta", "Gamma"], "Beta is Gamma.", MemoryType.RELATION, "alias.persona")
     _memory(ctx, ["Gamma"], "Gamma has silver hair.", MemoryType.FACT, "appearance.hair")
     next_content = ChapterContent(
         chapter_id=sample_scenario.chapters["chapter_2"].chapter_id,
@@ -105,8 +126,11 @@ def test_expiring_alias_edge_splits_transitive_retrieval(
     assert character_state_memories(ctx, "Alpha").count == 0
 
 
-def test_legacy_multi_party_or_rejected_alias_does_not_expand(alias_context: RunContext[MemAgentDeps]) -> None:
+def test_legacy_pair_remains_expandable_but_multi_party_or_rejected_alias_does_not_expand(
+    alias_context: RunContext[MemAgentDeps],
+) -> None:
     ctx = alias_context
+    legacy_pair = _memory(ctx, ["Alpha", "Beta"], "Legacy pair alias.", MemoryType.RELATION, "alias")
     _memory(ctx, ["Alpha", "Beta", "Gamma"], "Legacy broad alias.", MemoryType.RELATION, "alias")
     _memory(ctx, ["Beta"], "Beta has black hair.", MemoryType.FACT, "appearance.hair")
     rejected = _memory(ctx, ["Alpha", "Gamma"], "Rejected alias.", MemoryType.RELATION, "alias")
@@ -116,15 +140,17 @@ def test_legacy_multi_party_or_rejected_alias_does_not_expand(alias_context: Run
         .values(memory_review_status=ReviewStatus.REJECTED)
     )
     ctx.deps.db.flush()
-    assert character_state_memories(ctx, "Alpha").count == 0
+    page = character_state_memories(ctx, "Alpha")
+    assert [row.memory.memory_content for row in page.rows] == ["Beta has black hair."]
+    assert [row.memory.memory_id for row in page.aliases] == [legacy_pair]
 
 
 def test_alias_expansion_reports_a_reached_term_cap(
     alias_context: RunContext[MemAgentDeps], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     ctx = alias_context
-    _memory(ctx, ["Alpha", "Beta"], "Alpha is Beta.", MemoryType.RELATION, "alias")
-    _memory(ctx, ["Beta", "Gamma"], "Beta is Gamma.", MemoryType.RELATION, "alias")
+    _memory(ctx, ["Alpha", "Beta"], "Alpha is Beta.", MemoryType.RELATION, "alias.spelling")
+    _memory(ctx, ["Beta", "Gamma"], "Beta is Gamma.", MemoryType.RELATION, "alias.persona")
     _memory(ctx, ["Gamma"], "Gamma has silver hair.", MemoryType.FACT, "appearance.hair")
     monkeypatch.setattr(access, "MAX_ALIAS_TERMS", 2)
     page = character_state_memories(ctx, "Alpha")
@@ -137,13 +163,13 @@ def test_alias_writer_persists_pair_and_rejects_generic_alias_lifecycle(
 ) -> None:
     ctx = alias_context
     with pytest.raises(ModelRetry):
-        new_alias_memory(ctx, "Not a pair.", ["Alpha", "Alpha"])
-    handle = new_alias_memory(ctx, "Alpha is Beta.", ["Alpha", "Beta"])
+        new_alias_memory(ctx, "Not a pair.", ["Alpha", "Alpha"], "spelling")
+    handle = new_alias_memory(ctx, "Alpha is Beta.", ["Alpha", "Beta"], "transformation")
     memory_id = ctx.deps.uuid_cache.get_uuid(handle)
     memory = ctx.deps.db.get(Memory, memory_id)
-    assert memory is not None and memory.mark == "alias" and memory.memory_end_num is None
+    assert memory is not None and memory.mark == "alias.transformation" and memory.memory_end_num is None
     with pytest.raises(ModelRetry):
-        supersede_alias_memory(ctx, handle, "Wrong.", ["Alpha", "Beta", "Gamma"])
+        supersede_alias_memory(ctx, handle, "Wrong.", ["Alpha", "Beta", "Gamma"], "persona")
     next_content = ChapterContent(
         chapter_id=sample_scenario.chapters["chapter_2"].chapter_id,
         chapter_content_version=1,

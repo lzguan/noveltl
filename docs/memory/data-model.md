@@ -115,6 +115,18 @@ independently:
 - `glossary_aliases_write` creates, supersedes, or expires durable pairwise
   identity aliases. It is independently selectable and requires
   `glossary_relations_read`; generic relation writes cannot mutate aliases.
+- New alias writes select exactly one of `alias.spelling` (context-established
+  orthographic variants), `alias.persona` (the individual's other names or
+  invented identities), and `alias.transformation` (a named transformed form).
+  Prefer transformation over persona when both apply. None can identify an
+  impersonator with an independently existing target. A transformation alias
+  does not replace the separately supported transformation mechanic fact.
+  Existing flat `alias` rows remain readable; they are not bulk-migrated.
+- `glossary_impersonation_write` requires `glossary_character_read` and maintains
+  persistent, directional `impersonation` relations. The writer names actor and
+  target in the stored claim rather than relying on unordered associations.
+  It expires a relation when impersonation ends and does not assert observer
+  beliefs, bodily changes, or same-person equivalence.
 - `glossary_character_read` exposes the shared `character_state_memories`
   reader and the separate directional `gender_perception_memories` query.
 - `glossary_character_write` maintains age stage, species, abilities, and
@@ -161,9 +173,9 @@ alias edges. `aliases_truncated` signals that a cap was reached, so callers
 must not treat the component as complete. Rejected terms and alias memories do
 not participate. Legacy alias memories associated with more than two terms do
 not expand retrieval; they are retained but not interpreted as a clique.
-Definition, relation,
-and character-state retrieval operates on one exact term. Relation retrieval
-requires one literal category. Relation searches combine
+Definition retrieval operates on one exact term. Relation retrieval
+requires one category; aggregate `alias` includes all typed and legacy aliases.
+Relation searches combine
 `rank`, `membership`, `service`, and `organizational_hierarchy`; searches for
 `alliance` or `commercial_partnership` combine that pair. Other categories
 retrieve only their selected mark. The agent no longer exposes
@@ -179,6 +191,12 @@ marks and agent-facing memory IDs. The total count covers all matching rows;
 enabled writers. Events and observer beliefs remain separate queries. Legacy
 `gender` facts remain identifiable as such; this reader does not migrate them
 or authorize specialized writers to mutate them.
+The character reader also returns a separate `impersonations` page, with its
+own count and `impersonation_skip` offset and the shared limit/text filter.
+It includes active relations involving the queried identity or its true
+aliases, whether actor or target. It never traverses impersonation edges or
+imports the other participant's facts. Read the directional claim, not the
+unordered association list, to identify each participant's role.
 
 Core character fact eligibility is limited by its prompt to individual characters.
 Object and technique functions and intrinsic constraints belong in definitions;
@@ -251,6 +269,10 @@ The optional continuity capability records one `summary` memory with plugin
 is independent of glossary terms and associations. Its structured output is a
 nonempty rolling handoff of at most 1500 characters; it retains unresolved
 translation-relevant continuity rather than serving as a durable fact store.
+When an alias writer is enabled, the handoff instructions require supported
+identity equivalences used by the summary to be recorded through that writer,
+including context-established spelling variants. This is prompt guidance,
+not automatic alias creation or a guarantee of model compliance.
 
 For a chapter, the capability considers only the immediately preceding existing
 source chapter by chapter number. It injects that chapter's summary only when

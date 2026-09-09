@@ -15,6 +15,7 @@ type ToolsetName = Literal[
     "glossary_relations_read",
     "glossary_relations_write",
     "glossary_aliases_write",
+    "glossary_impersonation_write",
     "glossary_character_read",
     "glossary_character_write",
     "glossary_appearance_write",
@@ -163,6 +164,12 @@ TOOLSET_METADATA: tuple[ToolsetMetadata, ...] = (
         default_enabled=True,
     ),
     ToolsetMetadata(
+        "glossary_impersonation_write",
+        "Character impersonation: write",
+        "Maintain directional impersonation of another individual without alias equivalence.",
+        "memory",
+    ),
+    ToolsetMetadata(
         "glossary_character_write",
         "Character core: write",
         "Maintain age stage, species, abilities, and limitations of individual characters.",
@@ -240,6 +247,7 @@ TOOLSET_RESTRICTIONS: tuple[ToolsetRestriction, ...] = (
     ToolsetRequires("glossary_definitions_write", "glossary_definitions_read"),
     ToolsetRequires("glossary_relations_write", "glossary_relations_read"),
     ToolsetRequires("glossary_aliases_write", "glossary_relations_read"),
+    ToolsetRequires("glossary_impersonation_write", "glossary_character_read"),
     ToolsetRequires("glossary_character_write", "glossary_character_read"),
     ToolsetRequires("glossary_appearance_write", "glossary_character_read"),
     ToolsetRequires("glossary_cultivation_write", "glossary_character_read"),
@@ -273,6 +281,7 @@ class ParsedToolsets(Model):
     glossary_relations_read: ToolsetConfig | None = None
     glossary_relations_write: ToolsetConfig | None = None
     glossary_aliases_write: ToolsetConfig | None = None
+    glossary_impersonation_write: ToolsetConfig | None = None
     glossary_character_read: ToolsetConfig | None = None
     glossary_character_write: ToolsetConfig | None = None
     glossary_appearance_write: ToolsetConfig | None = None

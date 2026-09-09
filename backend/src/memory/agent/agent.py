@@ -32,6 +32,7 @@ from src.memory.agent.toolsets.glossary.guidance.artifacts import glossary_artif
 from src.memory.agent.toolsets.glossary.guidance.gender_transformation import (
     glossary_gender_transformation_toolset,
 )
+from src.memory.agent.toolsets.glossary.impersonation import glossary_impersonation_write_toolset
 from src.memory.agent.toolsets.glossary.relations import (
     glossary_relations_read_toolset,
     glossary_relations_write_toolset,
@@ -70,6 +71,7 @@ capability_factories_by_name: dict[ToolsetName, CapabilityFactory] = {
     "glossary_relations_read": _toolset_capability(glossary_relations_read_toolset),
     "glossary_relations_write": _toolset_capability(glossary_relations_write_toolset),
     "glossary_aliases_write": _toolset_capability(glossary_aliases_write_toolset),
+    "glossary_impersonation_write": _toolset_capability(glossary_impersonation_write_toolset),
     "glossary_character_read": _toolset_capability(glossary_character_state_read_toolset),
     "glossary_character_write": _toolset_capability(glossary_facts_write_toolset),
     "glossary_appearance_write": _toolset_capability(glossary_appearance_write_toolset),

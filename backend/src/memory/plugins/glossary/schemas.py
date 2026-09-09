@@ -46,6 +46,14 @@ class AgentGlossaryMemoryPage[KeyT](Page[AgentGlossaryMemory[KeyT]]):
     )
 
 
+class AgentCharacterStatePage[KeyT](AgentGlossaryMemoryPage[KeyT]):
+    """Facts and aliases, with separately paginated non-equivalent identity context."""
+
+    impersonations: Page[AgentGlossaryMemory[KeyT]] = Field(
+        description="Active impersonations involving this identity, not alias edges. Read actor/target in each claim."
+    )
+
+
 class GlossaryTerm(Model):
     """A glossary term represented as context for an agent."""
 

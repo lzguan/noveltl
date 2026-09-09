@@ -23,7 +23,19 @@ type ContainsQuery = Callable[
 ]
 
 GLOSSARY_PLUGIN_NAME: Final[PluginName] = "glossary"
+# ``alias`` was the original, untyped mark.  Keep it in this set so existing
+# memories remain useful, but only the dedicated alias writer may create new
+# links and it always uses one of the typed marks below.
 ALIAS_MARK: Final = "alias"
+ALIAS_SPELLING_MARK: Final = "alias.spelling"
+ALIAS_PERSONA_MARK: Final = "alias.persona"
+ALIAS_TRANSFORMATION_MARK: Final = "alias.transformation"
+ALIAS_MARKS: Final = (
+    ALIAS_MARK,
+    ALIAS_SPELLING_MARK,
+    ALIAS_PERSONA_MARK,
+    ALIAS_TRANSFORMATION_MARK,
+)
 MAX_ALIAS_TERMS: Final = 32
 MAX_ALIAS_EDGES: Final = 64
 
@@ -198,8 +210,9 @@ def _expand_alias_terms(
 ) -> tuple[list[str], list[Memory], bool]:
     """Expand active pair aliases with bounded deterministic traversal.
 
-    Legacy aliases with more than two terms are deliberately ignored: they may
-    describe a broad relation rather than pairwise identity equivalence.
+    Legacy flat aliases remain readable alongside typed aliases. Records with
+    more than two terms are deliberately ignored: they may describe a broad
+    relation rather than pairwise identity equivalence.
     """
     initial_terms = list(
         db.scalars(
@@ -225,7 +238,7 @@ def _expand_alias_terms(
                 Memory.memory_group_id == ctx.memory_group_id,
                 Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
                 Memory.memory_type == MemoryType.RELATION,
-                Memory.mark == ALIAS_MARK,
+                Memory.mark.in_(ALIAS_MARKS),
                 Memory.memory_review_status != ReviewStatus.REJECTED,
                 Memory.memory_start_num <= chapter_num,
                 or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chapter_num),

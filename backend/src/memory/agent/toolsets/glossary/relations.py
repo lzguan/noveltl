@@ -5,6 +5,7 @@ from pydantic_ai import FunctionToolset, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
+from src.memory.plugins.glossary.access import ALIAS_MARKS
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemoryPage
 from src.memory.types import MemoryType, Scope
 
@@ -24,16 +25,27 @@ type RelationReadCategory = Literal[
     "commercial_partnership",
 ]
 type RelationWriteCategory = Literal[
-    "kinship", "friendship", "romance", "mentorship", "rank", "membership", "service", "ownership",
-    "alliance", "rivalry", "organizational_hierarchy", "commercial_partnership",
+    "kinship",
+    "friendship",
+    "romance",
+    "mentorship",
+    "rank",
+    "membership",
+    "service",
+    "ownership",
+    "alliance",
+    "rivalry",
+    "organizational_hierarchy",
+    "commercial_partnership",
 ]
 RELATION_READ_CATEGORIES: tuple[RelationReadCategory, ...] = get_args(RelationReadCategory.__value__)
 RELATION_WRITE_CATEGORIES: tuple[RelationWriteCategory, ...] = get_args(RelationWriteCategory.__value__)
 
 GLOSSARY_RELATION_READ_INSTRUCTIONS = """
 Query one existing participant most likely to reveal the candidate
-relationship, with its one matching category. `alias` is read-only here and is
-maintained by the dedicated alias writer. Form the candidate before
+relationship, with its one matching category. `alias` aggregates spelling,
+persona, and transformation links (and readable legacy links), is read-only
+here, and is maintained by the dedicated alias writer. Form the candidate before
 retrieval. Selecting any of `rank`, `membership`, `service`, or
 `organizational_hierarchy` searches all four together. Selecting `alliance`
 or `commercial_partnership` searches both together. Do not repeat equivalent
@@ -90,6 +102,8 @@ def relation_memories(
         marks = ["rank", "membership", "service", "organizational_hierarchy"]
     elif category in ("alliance", "commercial_partnership"):
         marks = ["alliance", "commercial_partnership"]
+    elif category == "alias":
+        marks = list(ALIAS_MARKS)
     else:
         marks = [category]
     page = common.access.inspect_terms(

@@ -27,6 +27,12 @@ character's beliefs, claims, or uncertainties. For example, distinguish a
 disguise or perceived identity from a character's physical body state. The
 current chapter's source text overrides a previous handoff. The handoff is
 useful context, not durable fact authority.
+When an alias writer is enabled and your handoff relies on two source names
+identifying the same individual, verify that the supported alias is recorded
+with that writer. Mentioning the equivalence only in the summary or choosing
+one spelling is insufficient. In particular, context-established simplified/
+traditional spelling variants need an alias.spelling link; similarity alone
+does not establish identity. Do not call unavailable writers.
 """.strip()
 
 

@@ -4,6 +4,14 @@ Local tools for defining, running, reviewing, and comparing memory-agent
 evaluations. Evaluation inputs and results are intentionally excluded from
 Git; only the framework and its tests are tracked.
 
+## Design history
+
+[Design history](docs/design-history.md) records the evolution of the memory
+agent and evaluation approach, including revised interpretations and deferred
+ideas. It uses abstract examples rather than private corpus content. Operational
+instructions remain here; memory architecture lives in the
+[memory data model](../docs/memory/data-model.md).
+
 ## Setup
 
 The project uses the backend as an editable dependency, so every new runner

@@ -105,9 +105,7 @@ def resolve_capabilities(toolsets: ParsedToolsets) -> list[AbstractCapability[Me
     return resolved
 
 
-def create_agent(
-    model_name: ModelName, toolsets: ParsedToolsets
-) -> Agent[MemAgentDeps, str | ContinuitySummaryOutput]:
+def create_agent(model_name: ModelName, toolsets: ParsedToolsets) -> Agent[MemAgentDeps, str | ContinuitySummaryOutput]:
     """Create a Pydantic AI agent with the specified model and toolsets.
 
     The model name's suffix selects the reasoning level. DeepSeek V4 does not

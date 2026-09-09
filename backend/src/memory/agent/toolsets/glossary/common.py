@@ -190,6 +190,7 @@ def to_agent_memory_page(
     page: Page[AgentGlossaryMemory[UUID]],
 ) -> Page[AgentGlossaryMemory[str]]:
     """Translate database memory UUIDs in a page to short agent-facing handles."""
+
     def translate(glossary_memory: AgentGlossaryMemory[UUID]) -> AgentGlossaryMemory[str]:
         return AgentGlossaryMemory[str](
             memory=AgentMemory[str].model_validate(

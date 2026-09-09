@@ -55,18 +55,14 @@ def impersonation_context(test_db: Session, sample_scenario: DatabaseScenario) -
     )
 
 
-def _memory(
-    ctx: RunContext[MemAgentDeps], terms: list[str], content: str, memory_type: MemoryType, mark: str
-) -> str:
+def _memory(ctx: RunContext[MemAgentDeps], terms: list[str], content: str, memory_type: MemoryType, mark: str) -> str:
     memory, _ = access.create_memory(
         ctx.deps.db, ctx.deps.mem_access_context, Creator.AGENT, memory_type, terms, content, mark=mark
     )
     return ctx.deps.uuid_cache.new(memory.memory_id)
 
 
-def _advance_to_chapter_two(
-    ctx: RunContext[MemAgentDeps], sample_scenario: DatabaseScenario
-) -> MemAccessContext:
+def _advance_to_chapter_two(ctx: RunContext[MemAgentDeps], sample_scenario: DatabaseScenario) -> MemAccessContext:
     content = ChapterContent(
         chapter_id=sample_scenario.chapters["chapter_2"].chapter_id,
         chapter_content_version=1,
@@ -105,7 +101,10 @@ def test_character_state_keeps_impersonations_separate_and_pages_alias_context(
 
     next_page = character_state_memories(ctx, "Alpha", limit=1, impersonation_skip=1)
     final_page = character_state_memories(ctx, "Alpha", limit=1, impersonation_skip=2)
-    assert {row.memory.memory_id for row in state.impersonations.rows + next_page.impersonations.rows + final_page.impersonations.rows} == {
+    assert {
+        row.memory.memory_id
+        for row in state.impersonations.rows + next_page.impersonations.rows + final_page.impersonations.rows
+    } == {
         first,
         second,
         third,
@@ -133,7 +132,8 @@ def test_impersonation_supersession_is_directional_and_isolated_from_generic_lif
     assert original.mark == "impersonation"
     assert original.memory_content == "Alpha is impersonating Beta. The initial disguise."
     assert {
-        term for term in ctx.deps.db.scalars(
+        term
+        for term in ctx.deps.db.scalars(
             select(GlossaryTerm.term)
             .join(GlossaryAssociation, GlossaryAssociation.term_id == GlossaryTerm.term_id)
             .where(GlossaryAssociation.memory_id == original_id)
@@ -161,7 +161,9 @@ def test_impersonation_supersession_is_directional_and_isolated_from_generic_lif
     assert successor.supersedes_memory_id == original_id
     assert successor.memory_content == "Beta is impersonating Alpha. The direction has reversed."
     assert original.memory_end_num == 2
-    assert [row.memory.memory_id for row in character_state_memories(ctx, "Alpha").impersonations.rows] == [successor_handle]
+    assert [row.memory.memory_id for row in character_state_memories(ctx, "Alpha").impersonations.rows] == [
+        successor_handle
+    ]
 
 
 def test_expiring_impersonation_preserves_earlier_history(

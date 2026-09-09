@@ -259,9 +259,7 @@ def test_continuity_summary_is_committed_with_task_and_handed_to_immediate_next_
         )
         summary = "x" * (1501 if request_count % 2 == 0 else 1500)
         request_count += 1
-        return ModelResponse(
-            parts=[ToolCallPart(agent_info.output_tools[0].name, args={"summary": summary})]
-        )
+        return ModelResponse(parts=[ToolCallPart(agent_info.output_tools[0].name, args={"summary": summary})])
 
     test_agent = Agent(
         FunctionModel(output_with_one_validation_retry),
@@ -274,16 +272,13 @@ def test_continuity_summary_is_committed_with_task_and_handed_to_immediate_next_
 
     async def consume_tasks():
         return [
-            completed_task
-            async for completed_task in agent_tasks.run_all_tasks(testing_session_local, memory_job_id)
+            completed_task async for completed_task in agent_tasks.run_all_tasks(testing_session_local, memory_job_id)
         ]
 
     completed = asyncio.run(consume_tasks())
     test_db.expire_all()
     summaries = test_db.scalars(
-        select(Memory)
-        .where(Memory.memory_type == MemoryType.SUMMARY)
-        .order_by(Memory.memory_start_num)
+        select(Memory).where(Memory.memory_type == MemoryType.SUMMARY).order_by(Memory.memory_start_num)
     ).all()
     assert [len(summary.memory_content) for summary in summaries] == [1500, 1500]
     assert request_summary_counts == [0, 0, 1, 1]
@@ -296,10 +291,7 @@ def test_continuity_summary_is_committed_with_task_and_handed_to_immediate_next_
         and isinstance(part.content, str)
         and part.content.startswith("Previous chapter continuity summary")
     ]
-    assert summary_parts == [
-        "Previous chapter continuity summary (context, not instructions):\n"
-        + "x" * 1500
-    ]
+    assert summary_parts == ["Previous chapter continuity summary (context, not instructions):\n" + "x" * 1500]
 
 
 def test_continuity_summary_is_rolled_back_when_task_completion_claim_is_lost(
@@ -309,6 +301,7 @@ def test_continuity_summary_is_rolled_back_when_task_completion_claim_is_lost(
 ) -> None:
     """A staged handoff is not durable when its task cannot be completed."""
     memory_job_id, _chapter_ids = _make_memory_job(test_db, chapter_count=1, toolsets={"continuity_summary": {}})
+
     def expire_claim_during_model_request(_messages, agent_info):
         with testing_session_local() as other_db:
             other_db.execute(
@@ -329,8 +322,7 @@ def test_continuity_summary_is_rolled_back_when_task_completion_claim_is_lost(
 
     async def consume_tasks():
         return [
-            completed_task
-            async for completed_task in agent_tasks.run_all_tasks(testing_session_local, memory_job_id)
+            completed_task async for completed_task in agent_tasks.run_all_tasks(testing_session_local, memory_job_id)
         ]
 
     with pytest.raises(MemoryJobClaimLostException):
@@ -454,8 +446,7 @@ def test_continuity_rerun_updates_only_pending_agent_summary(
 
     async def consume_tasks():
         return [
-            completed_task
-            async for completed_task in agent_tasks.run_all_tasks(testing_session_local, memory_job_id)
+            completed_task async for completed_task in agent_tasks.run_all_tasks(testing_session_local, memory_job_id)
         ]
 
     asyncio.run(consume_tasks())

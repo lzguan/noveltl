@@ -17,5 +17,6 @@ This folder contains the documentation for this project. Documentation is primar
 - [labels.md](labels.md): Label groups, versioned label data, and text annotations
 - [autolabels.md](autolabels.md): Automated labeling jobs and review
 - [memory/](memory/README.md): Memory architecture, glossary data, and UI design
+- [Agent evaluations](../agent-evals/README.md): Harness usage and abstract design history
 - [editor/](editor/README.md): Editor synchronization, controller, managers, and rendering
 - [filters/](filters/README.md): Current filter implementation and future workflow design

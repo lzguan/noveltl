@@ -21,4 +21,5 @@ export const MemoryType = {
   event: 'event',
   def: 'def',
   rel: 'rel',
+  summary: 'summary',
 } as const;

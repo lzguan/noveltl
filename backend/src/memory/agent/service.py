@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from src.auth.models import User
 from src.memory.agent import schemas
 from src.memory.agent.dispatch.dispatcher import MemoryAgentDispatcher
-from src.memory.agent.tasks.jobs import JobParams, make_job
+from src.memory.agent.tasks.jobs import JobParams, make_job, reset_failed_task
 from src.memory.agent.tasks.jobs import abort_job as abort_job_claim
 from src.memory.exceptions import (
     MemoryAgentEnqueueFailedException,
@@ -354,20 +354,8 @@ def retry_task(
             f"Memory task for job {memory_job_id} and chapter {chapter_id} not found or not accessible."
         ) from exc
 
-    task = db.scalar(
-        update(MemoryChapterTaskModel)
-        .where(
-            MemoryChapterTaskModel.memory_job_id == memory_job_id,
-            MemoryChapterTaskModel.chapter_id == chapter_id,
-            MemoryChapterTaskModel.task_status == JobStatus.FAILED,
-        )
-        .values(task_status=JobStatus.PENDING)
-        .returning(MemoryChapterTaskModel)
-    )
-    if task is None:
-        db.rollback()
+    if not reset_failed_task(db, memory_job_id, chapter_id):
         raise MemoryChapterTaskStateException(f"Memory task for chapter {chapter_id} is not failed.")
-    db.commit()
 
     try:
         dispatcher.enqueue_task(memory_job_id, chapter_id)

@@ -32,6 +32,7 @@ const MEMORY_TYPE_LABELS: Record<Memory["memoryType"], string> = {
 	event: "event",
 	def: "definition",
 	rel: "relation",
+	summary: "summary",
 };
 
 function reviewBadgeVariant(status: ReviewStatus) {
@@ -125,6 +126,7 @@ export function MemoryRow<DataT = undefined>({
 					{REVIEW_STATUS_LABELS[memory.memoryReviewStatus]}
 				</Badge>
 				<Badge variant="secondary">{MEMORY_TYPE_LABELS[memory.memoryType]}</Badge>
+				{memory.mark !== null && <Badge variant="outline">{memory.mark}</Badge>}
 				{additionalHeader}
 				<span className="text-xs text-muted-foreground">
 					{chapterRangeLabel(memory)} · {memory.creatorType}
@@ -143,7 +145,7 @@ export function MemoryRow<DataT = undefined>({
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
 						<DropdownMenuItem onSelect={() => setEditContentOpen(true)}>
-							<PencilIcon /> Edit content
+							<PencilIcon /> Edit memory
 						</DropdownMenuItem>
 						{additionalDropdownOptions?.map((option) => (
 							<Fragment key={option.key}>

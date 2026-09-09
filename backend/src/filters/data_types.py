@@ -29,6 +29,8 @@ type FieldName = Annotated[
 # rejected because they do not have portable JSON, SQL, or comparison semantics.
 type StringValue = Annotated[str, Field(strict=True)]
 type IntegerValue = Annotated[int, Field(strict=True)]
+# For nicer OpenAPI
+type NonNegativeIntegerValue = Annotated[int, Field(strict=True, ge=0)]
 type FloatValue = Annotated[float, Field(strict=True, allow_inf_nan=False)]
 type BooleanValue = Annotated[bool, Field(strict=True)]
 
@@ -99,8 +101,8 @@ class ChapterRef(Model):
 
 
 class TextSpan(ChapterRef):
-    start: IntegerValue = Field(ge=0)
-    end: IntegerValue = Field(ge=0)
+    start: NonNegativeIntegerValue
+    end: NonNegativeIntegerValue
 
     @model_validator(mode="after")
     def validate_range(self) -> "TextSpan":

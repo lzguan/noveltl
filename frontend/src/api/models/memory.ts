@@ -15,6 +15,8 @@ import type { ReviewStatus } from './reviewStatus';
 export interface Memory {
   /** Type of entity that created the memory: a human, an AI agent, or a workflow. */
   creatorType: Creator;
+  /** Optional application-defined category used to narrow memory retrieval. */
+  mark: string | null;
   /** The contextual information that should inform glossary maintenance and novel continuity. */
   memoryContent: string;
   /** Exclusive ending chapter number stored by the database, or null when the memory does not expire. */

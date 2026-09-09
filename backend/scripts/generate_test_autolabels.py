@@ -2,8 +2,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from test_support.test_data.authoring import generate_autolabels, parse_chapters
-from test_support.test_data.errors import TestDataError
+from src.datasets.authoring import generate_autolabels, parse_chapters
+from src.datasets.errors import TestDataError
 
 
 def _version(value: str) -> int | None:

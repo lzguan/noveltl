@@ -4,10 +4,10 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
+import type { JobParamsToolsets } from './jobParamsToolsets';
 import type { ModelName } from './modelName';
-import type { PluginName } from './pluginName';
 
 export interface JobParams {
   modelName: ModelName;
-  plugins: PluginName[];
+  toolsets: JobParamsToolsets;
 }

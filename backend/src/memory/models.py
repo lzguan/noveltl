@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, Index, func, types
+from sqlalchemy import CheckConstraint, Enum, ForeignKey, Index, func, text, types
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -55,6 +55,7 @@ class Memory(Base):
         ),
         nullable=False,
     )
+    mark: Mapped[str | None] = mapped_column(types.String, nullable=True)
     memory_observed_in: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("chapter_contents.chapter_content_id", ondelete="CASCADE"), nullable=False
     )
@@ -90,6 +91,13 @@ class Memory(Base):
         Index("ix_memories_memory_group_id_start_num", "memory_group_id", "memory_start_num"),
         Index("ix_memories_memory_observed_in", "memory_observed_in"),
         Index("ix_memories_supersedes_memory_id", "supersedes_memory_id"),
+        Index(
+            "uq_continuity_summary_group_content",
+            "memory_group_id",
+            "memory_observed_in",
+            unique=True,
+            postgresql_where=text("memory_type = 'summary' AND plugin_name = 'continuity'"),
+        ),
     )
 
 

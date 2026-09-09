@@ -1,0 +1,14 @@
+/.venv/
+/novels/*
+!/novels/.gitkeep
+/checkpoints/*
+!/checkpoints/.gitkeep
+/run-configs/*
+!/run-configs/.gitkeep
+/runs/*
+!/runs/.gitkeep
+/logs/*
+!/logs/.gitkeep
+/history/*
+!/history/.gitkeep
+

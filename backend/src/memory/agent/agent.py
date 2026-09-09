@@ -1,43 +1,148 @@
-import uuid
-from collections.abc import AsyncIterator
-from itertools import batched
-from typing import Literal
+from collections.abc import Callable
 
 from pydantic_ai import Agent, AgentRunResult, FunctionToolset
-from sqlalchemy import select
-from sqlalchemy.orm import Session, aliased, defer, sessionmaker
+from pydantic_ai.capabilities import AbstractCapability, Toolset
+from pydantic_ai.models.openai import OpenAIChatModelSettings
 
-from src.languages.models import Language
-from src.memory.access import MemAccessContext
+from src.memory.agent.capabilities.continuity import ContinuitySummaryCapability, ContinuitySummaryOutput
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
-from src.memory.agent.toolsets.glossary import glossary_toolset
-from src.memory.models import MemoryGroup
-from src.memory.types import PluginName
-from src.novels.models import Chapter, ChapterContent
+from src.memory.agent.toolsets.glossary.aliases import glossary_aliases_write_toolset
+from src.memory.agent.toolsets.glossary.appearance import glossary_appearance_write_toolset
+from src.memory.agent.toolsets.glossary.character_state import glossary_character_state_read_toolset
+from src.memory.agent.toolsets.glossary.context import GLOSSARY_SHARED_INSTRUCTIONS, initial_glossary_context
+from src.memory.agent.toolsets.glossary.cultivation import glossary_cultivation_write_toolset
+from src.memory.agent.toolsets.glossary.definitions import (
+    glossary_definitions_read_toolset,
+    glossary_definitions_write_toolset,
+)
+from src.memory.agent.toolsets.glossary.events import glossary_events_read_toolset, glossary_events_write_toolset
+from src.memory.agent.toolsets.glossary.facts import glossary_facts_write_toolset
+from src.memory.agent.toolsets.glossary.gender_advanced_events import (
+    create_glossary_gender_advanced_events_write_toolset,
+    glossary_gender_advanced_events_read_toolset,
+)
+from src.memory.agent.toolsets.glossary.gender_advanced_facts import (
+    glossary_gender_advanced_facts_write_toolset,
+)
+from src.memory.agent.toolsets.glossary.gender_advanced_relations import (
+    glossary_gender_advanced_relations_write_toolset,
+)
+from src.memory.agent.toolsets.glossary.guidance.artifacts import glossary_artifact_toolset
+from src.memory.agent.toolsets.glossary.guidance.gender_transformation import (
+    glossary_gender_transformation_toolset,
+)
+from src.memory.agent.toolsets.glossary.impersonation import glossary_impersonation_write_toolset
+from src.memory.agent.toolsets.glossary.relations import (
+    glossary_relations_read_toolset,
+    glossary_relations_write_toolset,
+)
+from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
+from src.memory.agent.types import (
+    TOOLSET_NAMES,
+    ModelName,
+    OccurrenceRetentionConfig,
+    ParsedToolsets,
+    ToolsetConfig,
+    ToolsetName,
+)
 
-plugin_toolsets: dict[PluginName, FunctionToolset[MemAgentDeps]] = {"glossary": glossary_toolset}
-
-type ModelName = Literal["deepseek:deepseek-chat"]
+type CapabilityFactory = Callable[[ToolsetConfig], AbstractCapability[MemAgentDeps]]
 
 
-def create_agent(model_name: ModelName, plugins: list[PluginName]) -> Agent[MemAgentDeps, str]:
-    """Create a Pydantic AI agent with the specified model and plugins."""
+def _toolset_capability(toolset: FunctionToolset[MemAgentDeps]) -> CapabilityFactory:
+    def resolve(_: ToolsetConfig) -> AbstractCapability[MemAgentDeps]:
+        return Toolset(toolset)
+
+    return resolve
+
+
+def _advanced_gender_events_write(config: ToolsetConfig) -> AbstractCapability[MemAgentDeps]:
+    if not isinstance(config, OccurrenceRetentionConfig):
+        raise TypeError("Advanced gender event writes require OccurrenceRetentionConfig")
+    return Toolset(create_glossary_gender_advanced_events_write_toolset(config))
+
+
+capability_factories_by_name: dict[ToolsetName, CapabilityFactory] = {
+    "continuity_summary": lambda _: ContinuitySummaryCapability(),
+    "glossary_terms": _toolset_capability(glossary_term_toolset),
+    "glossary_definitions_read": _toolset_capability(glossary_definitions_read_toolset),
+    "glossary_definitions_write": _toolset_capability(glossary_definitions_write_toolset),
+    "glossary_relations_read": _toolset_capability(glossary_relations_read_toolset),
+    "glossary_relations_write": _toolset_capability(glossary_relations_write_toolset),
+    "glossary_aliases_write": _toolset_capability(glossary_aliases_write_toolset),
+    "glossary_impersonation_write": _toolset_capability(glossary_impersonation_write_toolset),
+    "glossary_character_read": _toolset_capability(glossary_character_state_read_toolset),
+    "glossary_character_write": _toolset_capability(glossary_facts_write_toolset),
+    "glossary_appearance_write": _toolset_capability(glossary_appearance_write_toolset),
+    "glossary_cultivation_write": _toolset_capability(glossary_cultivation_write_toolset),
+    "glossary_gender_advanced_facts_write": _toolset_capability(glossary_gender_advanced_facts_write_toolset),
+    "glossary_gender_advanced_relations_write": _toolset_capability(glossary_gender_advanced_relations_write_toolset),
+    "glossary_events_read": _toolset_capability(glossary_events_read_toolset),
+    "glossary_events_write": _toolset_capability(glossary_events_write_toolset),
+    "glossary_gender_advanced_events_read": _toolset_capability(glossary_gender_advanced_events_read_toolset),
+    "glossary_gender_advanced_events_write": _advanced_gender_events_write,
+    "glossary_gender_transformation": _toolset_capability(glossary_gender_transformation_toolset),
+    "glossary_artifacts": _toolset_capability(glossary_artifact_toolset),
+}
+
+if set(capability_factories_by_name) != set(TOOLSET_NAMES):
+    raise RuntimeError("Memory-agent capability registry does not match TOOLSET_NAMES")
+
+GLOSSARY_TOOLSET_NAMES: frozenset[ToolsetName] = frozenset(
+    name for name in TOOLSET_NAMES if name != "continuity_summary"
+)
+
+
+def resolve_capabilities(toolsets: ParsedToolsets) -> list[AbstractCapability[MemAgentDeps]]:
+    """Resolve configured capabilities in canonical order for stable prompt caching."""
+    resolved: list[AbstractCapability[MemAgentDeps]] = []
+    for name in toolsets.selected_names():
+        config = getattr(toolsets, name)
+        if config is None:
+            raise RuntimeError(f"Selected toolset {name} has no configuration")
+        resolved.append(capability_factories_by_name[name](config))
+    return resolved
+
+
+def create_agent(model_name: ModelName, toolsets: ParsedToolsets) -> Agent[MemAgentDeps, str | ContinuitySummaryOutput]:
+    """Create a Pydantic AI agent with the specified model and toolsets.
+
+    The model name's suffix selects the reasoning level. DeepSeek V4 does not
+    accept `reasoning_effort="none"` (it 400s); non-thinking mode is requested
+    via its native `thinking: {"type": "disabled"}` body flag instead. So the
+    "-none" variant passes that through `extra_body` and leaves `thinking`
+    unset, rather than using pydantic-ai's `thinking=False` (which would map to
+    the rejected `reasoning_effort="none"`).
+    """
+    if model_name == "deepseek:deepseek-v4-flash-none":
+        model_settings: OpenAIChatModelSettings = {"extra_body": {"thinking": {"type": "disabled"}}}
+    else:  # deepseek:deepseek-v4-flash-low
+        model_settings = {"thinking": "low"}
+    resolved_capabilities = resolve_capabilities(toolsets)
+    glossary_enabled = any(toolset in GLOSSARY_TOOLSET_NAMES for toolset in toolsets.selected_names())
+    instructions = (
+        [MEMORY_AGENT_PROMPT, GLOSSARY_SHARED_INSTRUCTIONS, initial_glossary_context]
+        if glossary_enabled
+        else MEMORY_AGENT_PROMPT
+    )
     return Agent(
-        model=model_name,
-        toolsets=[plugin_toolsets[plugin] for plugin in plugins],
-        instructions=MEMORY_AGENT_PROMPT,
+        model="deepseek:deepseek-v4-flash",
+        model_settings=model_settings,
+        capabilities=resolved_capabilities,
+        instructions=instructions,
         deps_type=MemAgentDeps,
+        output_type=ContinuitySummaryOutput if toolsets.continuity_summary is not None else str,
     )
 
 
 async def run_agent(
-    agent: Agent[MemAgentDeps, str],
+    agent: Agent[MemAgentDeps, str | ContinuitySummaryOutput],
     deps: MemAgentDeps,
     chapter_text: str,
     chapter_num: int,
     language_name: str,
-) -> AgentRunResult[str]:
+) -> AgentRunResult[str | ContinuitySummaryOutput]:
     """Run the agent with the given input text and dependencies."""
 
     prompt = f"Record memories with content written in {language_name} from the following chapter text (chapter {chapter_num}):\n\n{chapter_text}"
@@ -45,79 +150,3 @@ async def run_agent(
         prompt,
         deps=deps,
     )
-
-
-async def run_novel(
-    db_factory: sessionmaker[Session],
-    agent: Agent[MemAgentDeps, str],
-    novel_id: uuid.UUID,
-    memory_group_id: uuid.UUID,
-    *,
-    start_chapter_num: int | None = None,
-    end_chapter_num: int | None = None,
-) -> AsyncIterator[tuple[int, AgentRunResult[str]]]:
-    """Run the agent over a half-open range of a novel's chapters."""
-    if start_chapter_num is not None and start_chapter_num < 1:
-        raise ValueError("start_chapter_num must be positive")
-    if end_chapter_num is not None and end_chapter_num < 1:
-        raise ValueError("end_chapter_num must be positive")
-    if start_chapter_num is not None and end_chapter_num is not None and start_chapter_num > end_chapter_num:
-        raise ValueError("start_chapter_num must not exceed end_chapter_num")
-
-    latest_chapter_content = aliased(ChapterContent)
-    with db_factory() as db:
-        chapter_query = (
-            select(Chapter, ChapterContent)
-            .where(Chapter.novel_id == novel_id)
-            .join(ChapterContent, ChapterContent.chapter_id == Chapter.chapter_id)
-            .where(
-                ChapterContent.chapter_content_version
-                == select(latest_chapter_content.chapter_content_version)
-                .where(latest_chapter_content.chapter_id == Chapter.chapter_id)
-                .order_by(latest_chapter_content.chapter_content_version.desc())
-                .limit(1)
-                .scalar_subquery()
-            )
-            .options(defer(ChapterContent.chapter_content_text))
-            .order_by(Chapter.chapter_num)
-        )
-        if start_chapter_num is not None:
-            chapter_query = chapter_query.where(Chapter.chapter_num >= start_chapter_num)
-        if end_chapter_num is not None:
-            chapter_query = chapter_query.where(Chapter.chapter_num < end_chapter_num)
-        chapters = db.execute(chapter_query).all()
-        language_name = db.execute(
-            select(Language.language_name)
-            .select_from(MemoryGroup)
-            .where(MemoryGroup.memory_group_id == memory_group_id)
-            .join(Language, Language.language_code == MemoryGroup.memory_language)
-        ).scalar_one()
-    for batch in batched(chapters, 10):
-        with db_factory() as db:
-            texts = db.execute(
-                select(ChapterContent).where(
-                    ChapterContent.chapter_content_id.in_([row._t[1].chapter_content_id for row in batch])
-                )
-            )
-            texts_dict = {r._t[0].chapter_content_id: r._t[0].chapter_content_text for r in texts.all()}
-        for row in batch:
-            chapter, chapter_content = row._t
-            context = MemAccessContext(
-                memory_group_id=memory_group_id,
-                chapter_id=chapter.chapter_id,
-                chapter_content_id=chapter_content.chapter_content_id,
-            )
-            with db_factory() as db:
-                try:
-                    result = await run_agent(
-                        agent,
-                        MemAgentDeps(db=db, mem_access_context=context),
-                        texts_dict[chapter_content.chapter_content_id],
-                        chapter.chapter_num,
-                        language_name,
-                    )
-                    db.commit()
-                except Exception:
-                    db.rollback()
-                    raise
-            yield chapter.chapter_num, result

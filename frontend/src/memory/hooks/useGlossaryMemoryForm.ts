@@ -10,6 +10,7 @@ type FormStatus =
 /** Owns the draft and request-state transitions for creating a new glossary memory. */
 export function useGlossaryMemoryForm(initialTerms: readonly GlossaryTerm[] = []) {
 	const [memoryContent, setMemoryContentState] = useState("");
+	const [mark, setMarkState] = useState("");
 	const [memoryType, setMemoryTypeState] = useState<MemoryType>(MemoryType.fact);
 	const [scope, setScopeState] = useState<Scope | null>(null);
 	const [selectedTerms, setSelectedTerms] = useState<readonly GlossaryTerm[]>(initialTerms);
@@ -21,6 +22,11 @@ export function useGlossaryMemoryForm(initialTerms: readonly GlossaryTerm[] = []
 
 	function setMemoryContent(memoryContent: string) {
 		setMemoryContentState(memoryContent);
+		resetRequestStatus();
+	}
+
+	function setMark(mark: string) {
+		setMarkState(mark);
 		resetRequestStatus();
 	}
 
@@ -59,6 +65,7 @@ export function useGlossaryMemoryForm(initialTerms: readonly GlossaryTerm[] = []
 
 	function resetForm() {
 		setMemoryContentState("");
+		setMarkState("");
 		setMemoryTypeState(MemoryType.fact);
 		setScopeState(null);
 		setSelectedTerms(initialTerms);
@@ -67,12 +74,14 @@ export function useGlossaryMemoryForm(initialTerms: readonly GlossaryTerm[] = []
 
 	return {
 		memoryContent,
+		mark,
 		memoryType,
 		scope,
 		selectedTerms,
 		selectedTermIds: selectedTerms.map((term) => term.termId),
 		formStatus,
 		setMemoryContent,
+		setMark,
 		setMemoryType,
 		setScope,
 		setTermSelected,

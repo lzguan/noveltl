@@ -5,7 +5,7 @@ import pytest
 
 from src.autolabels.params import CluenerParams
 from src.autolabels.worker.interfaces import NERModel
-from test_support.test_data import NovelDataset
+from src.datasets import NovelDataset
 
 pytestmark = pytest.mark.implementation
 

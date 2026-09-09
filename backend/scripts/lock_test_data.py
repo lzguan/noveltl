@@ -2,8 +2,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from test_support.test_data.errors import TestDataError
-from test_support.test_data.lockfile import check_lock, write_lock
+from src.datasets.errors import TestDataError
+from src.datasets.lockfile import check_lock, write_lock
 
 
 def main() -> None:

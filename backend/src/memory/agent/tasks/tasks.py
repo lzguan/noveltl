@@ -1,6 +1,7 @@
 import logging
 import uuid
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from contextlib import aclosing
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -10,7 +11,7 @@ from sqlalchemy.orm import Session, aliased, sessionmaker
 
 from src.languages.models import Language
 from src.memory.access import MemAccessContext
-from src.memory.agent.agent import create_agent, run_agent
+from src.memory.agent.agent import ContinuitySummaryOutput, create_agent, run_agent
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.tasks.jobs import (
     JobParams,
@@ -36,11 +37,21 @@ class ClaimedTask:
     chapter_id: uuid.UUID
 
 
+@dataclass(frozen=True)
+class CompletedMemoryTask:
+    memory_job_id: uuid.UUID
+    memory_group_id: uuid.UUID
+    chapter_id: uuid.UUID
+    chapter_content_id: uuid.UUID
+    chapter_num: int
+    result: AgentRunResult[str | ContinuitySummaryOutput]
+
+
 async def aiterate_tasks(
     db_factory: sessionmaker[Session],
     claim_token: uuid.UUID,
     claim_next_task: Callable[[Session, uuid.UUID], MemoryChapterTask | None],
-) -> AsyncIterator[ClaimedTask]:
+) -> AsyncGenerator[ClaimedTask]:
     """
     Iterate over tasks, claiming each one.
     Caller should release task.
@@ -59,7 +70,7 @@ async def arun_tasks[T](
     claim_token: uuid.UUID,
     claim_next_task: Callable[[Session, uuid.UUID], MemoryChapterTask | None],
     process_task: Callable[[Session, ClaimedTask], Awaitable[T]],
-) -> AsyncIterator[T]:
+) -> AsyncGenerator[T]:
     """
     Pseudocode:
 
@@ -106,11 +117,11 @@ async def arun_tasks[T](
 
 async def _run_single_task(
     db: Session,
-    agent: Agent[MemAgentDeps, str],
+    agent: Agent[MemAgentDeps, str | ContinuitySummaryOutput],
     memory_group_id: uuid.UUID,
     task: ClaimedTask,
     lang_name: str,
-) -> AgentRunResult[str]:
+) -> CompletedMemoryTask:
     # fetch chapter content and language
     cc_alias = aliased(ChapterContent)
     q = (
@@ -130,7 +141,15 @@ async def _run_single_task(
     ccid, cctext, cnum = db.execute(q).one()._t
     context = MemAccessContext(memory_group_id, task.chapter_id, ccid)
     deps = MemAgentDeps(db, context)
-    return await run_agent(agent, deps, cctext, cnum, lang_name)
+    result = await run_agent(agent, deps, cctext, cnum, lang_name)
+    return CompletedMemoryTask(
+        memory_job_id=task.memory_job_id,
+        memory_group_id=memory_group_id,
+        chapter_id=task.chapter_id,
+        chapter_content_id=ccid,
+        chapter_num=cnum,
+        result=result,
+    )
 
 
 async def run_tasks(
@@ -139,7 +158,7 @@ async def run_tasks(
     claim_next_task: Callable[[Session, uuid.UUID], MemoryChapterTask | None],
     *,
     claim_duration: timedelta = DEFAULT_CLAIM_DURATION,
-) -> AsyncIterator[AgentRunResult[str]]:
+) -> AsyncGenerator[CompletedMemoryTask]:
     """
     Claim a memory job and run tasks supplied by ``claim_next_task``.
 
@@ -174,9 +193,9 @@ async def run_tasks(
             if lang_name is None:
                 raise RuntimeError(f"Memory group {memory_group_id} has no configured language")
 
-        agent = create_agent(params.model_name, params.plugins)
+        agent = create_agent(params.model_name, params.parse_toolsets())
         async with agent:
-            async for result in arun_tasks(
+            async for completed_task in arun_tasks(
                 db_factory,
                 claim_token,
                 claim_next_task,
@@ -185,7 +204,7 @@ async def run_tasks(
                 with db_factory() as db:
                     if not refresh_job(db, memory_job_id, claim_token, claim_duration):
                         raise MemoryJobClaimLostException(f"Lost claim while refreshing memory job {memory_job_id}")
-                yield result
+                yield completed_task
     finally:
         if owns_claim:
             with db_factory() as db:
@@ -203,7 +222,7 @@ async def run_task(
     chapter_id: uuid.UUID,
     *,
     claim_duration: timedelta = DEFAULT_CLAIM_DURATION,
-) -> AgentRunResult[str] | None:
+) -> CompletedMemoryTask | None:
     """Run one pending chapter task, returning ``None`` when it cannot be claimed."""
     result = None
     async for task_result in run_tasks(
@@ -221,12 +240,15 @@ async def run_all_tasks(
     memory_job_id: uuid.UUID,
     *,
     claim_duration: timedelta = DEFAULT_CLAIM_DURATION,
-) -> AsyncIterator[AgentRunResult[str]]:
+) -> AsyncGenerator[CompletedMemoryTask]:
     """Run every pending chapter task in a job in chapter order."""
-    async for result in run_tasks(
-        db_factory,
-        memory_job_id,
-        lambda db, claim_token: claim_next_task(db, memory_job_id, claim_token),
-        claim_duration=claim_duration,
-    ):
-        yield result
+    async with aclosing(
+        run_tasks(
+            db_factory,
+            memory_job_id,
+            lambda db, claim_token: claim_next_task(db, memory_job_id, claim_token),
+            claim_duration=claim_duration,
+        )
+    ) as tasks:
+        async for result in tasks:
+            yield result

@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session, sessionmaker
 from src.auth.constants import UserType
 from src.auth.models import User
 from src.autolabels.models import AutoLabelRun
+from src.datasets import Catalog, NovelDataset, load_config
+from src.datasets.materializer import materialize_latest_autolabels
 from src.filters.data_types import (
     BoolData,
     BoolField,
@@ -78,8 +80,6 @@ from src.labels.schemas import CreateLabelDataByAutoLabel
 from src.labels.service import insert_label_datas_by_autolabels
 from src.novels.constants import Role
 from src.schemas import Model
-from test_support.test_data import Catalog, NovelDataset, load_config
-from test_support.test_data.materializer import materialize_latest_autolabels
 from test_support.test_data.scenarios import DatabaseScenario, PasswordHash, ScenarioBuilder
 
 

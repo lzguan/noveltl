@@ -15,15 +15,16 @@ from pydantic_ai.usage import RunUsage
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from src.datasets import load_catalog, load_novel
+from src.datasets.domain import NovelDataset
+from src.datasets.materializer import make_novel, materialize_novel_contents
 from src.languages.models import Language
-from src.memory.agent.agent import create_agent, run_novel
+from src.memory.agent.tasks.jobs import JobParams, make_job
+from src.memory.agent.tasks.tasks import run_all_tasks
 from src.memory.models import Memory, MemoryGroup
 from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
 from src.novels.models import SourceWork
 from test_support.database import TemporaryPostgresDatabase, temporary_postgres_database
-from test_support.test_data import load_catalog, load_novel
-from test_support.test_data.domain import NovelDataset
-from test_support.test_data.materializer import make_novel, materialize_novel_contents
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SNAKE_CATALOG_ROOT = REPO_ROOT / "tmp" / "snake-catalog"
@@ -144,8 +145,8 @@ def _snapshot_memory(db: Session, memory_group_id: uuid.UUID) -> dict[str, objec
 @dataclass(frozen=True)
 class _SeededRun:
     database: TemporaryPostgresDatabase
-    novel_id: uuid.UUID
     memory_group_id: uuid.UUID
+    memory_job_id: uuid.UUID
 
 
 @dataclass(frozen=True)
@@ -177,10 +178,30 @@ def _seed_run(database: TemporaryPostgresDatabase, dataset: NovelDataset) -> _Se
         )
         db.add(memory_group)
         db.commit()
+        memory_job_id = make_job(
+            db,
+            memory_group.memory_group_id,
+            1,
+            51,
+            JobParams(
+                model_name="deepseek:deepseek-v4-flash-low",
+                toolsets={
+                    "glossary_terms": {},
+                    "glossary_definitions_read": {},
+                    "glossary_definitions_write": {},
+                    "glossary_relations_read": {},
+                    "glossary_relations_write": {},
+                    "glossary_character_read": {},
+                    "glossary_character_write": {},
+                    "glossary_events_read": {},
+                    "glossary_events_write": {},
+                },
+            ),
+        )
         return _SeededRun(
             database=database,
-            novel_id=novel.novel_id,
             memory_group_id=memory_group.memory_group_id,
+            memory_job_id=memory_job_id,
         )
 
 
@@ -194,19 +215,12 @@ async def _run_benchmark_replica(seed: _SeededRun, run_index: int, run_dir: Path
     failure: dict[str, object] | None = None
 
     try:
-        results = run_novel(
-            seed.database.session_factory,
-            create_agent("deepseek:deepseek-chat", ["glossary"]),
-            seed.novel_id,
-            seed.memory_group_id,
-            start_chapter_num=1,
-            end_chapter_num=51,
-        )
+        results = run_all_tasks(seed.database.session_factory, seed.memory_job_id)
         result_iterator = aiter(results)
         while True:
             with capture_run_messages() as messages:
                 try:
-                    chapter_num, result = await anext(result_iterator)
+                    completed_task = await anext(result_iterator)
                 except StopAsyncIteration:
                     break
                 except Exception as exc:
@@ -222,6 +236,8 @@ async def _run_benchmark_replica(seed: _SeededRun, run_index: int, run_dir: Path
                         },
                     )
                     raise
+            chapter_num = completed_task.chapter_num
+            result = completed_task.result
             aggregate_usage.incr(result.usage)
             completed_chapters.append(chapter_num)
             _write_json(
@@ -250,8 +266,18 @@ async def _run_benchmark_replica(seed: _SeededRun, run_index: int, run_dir: Path
                 "database": seed.database.name,
                 "startedAt": started_at.isoformat(),
                 "finishedAt": finished_at.isoformat(),
-                "model": "deepseek:deepseek-chat",
-                "plugins": ["glossary"],
+                "model": "deepseek:deepseek-v4-flash-low",
+                "toolsets": [
+                    "glossary_terms",
+                    "glossary_definitions_read",
+                    "glossary_definitions_write",
+                    "glossary_relations_read",
+                    "glossary_relations_write",
+                    "glossary_character_read",
+                    "glossary_character_write",
+                    "glossary_events_read",
+                    "glossary_events_write",
+                ],
                 "catalog": "tmp/snake-catalog",
                 "novel": "private-snake",
                 "chapterRange": {"startInclusive": 1, "endExclusive": 51},
@@ -304,8 +330,18 @@ async def test_benchmark_snake_chapters_1_through_50_in_parallel(test_url: str) 
                 "startedAt": started_at.isoformat(),
                 "finishedAt": finished_at.isoformat(),
                 "parallelRuns": BENCHMARK_RUN_COUNT,
-                "model": "deepseek:deepseek-chat",
-                "plugins": ["glossary"],
+                "model": "deepseek:deepseek-v4-flash-low",
+                "toolsets": [
+                    "glossary_terms",
+                    "glossary_definitions_read",
+                    "glossary_definitions_write",
+                    "glossary_relations_read",
+                    "glossary_relations_write",
+                    "glossary_character_read",
+                    "glossary_character_write",
+                    "glossary_events_read",
+                    "glossary_events_write",
+                ],
                 "catalog": "tmp/snake-catalog",
                 "novel": "private-snake",
                 "chapterRange": {"startInclusive": 1, "endExclusive": 51},

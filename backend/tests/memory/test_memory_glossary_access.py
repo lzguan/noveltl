@@ -15,10 +15,14 @@ from src.memory.plugins.glossary.access import (
     inspect_terms,
     supersede_memory,
 )
+from src.memory.plugins.glossary.access import (
+    expire_memory as expire_glossary_memory,
+)
 from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
 from src.memory.plugins.glossary.service import delete_glossary_term
-from src.memory.service import delete_memory, expire_memory
-from src.memory.types import Creator, MemoryType
+from src.memory.plugins.glossary.types import TermKind
+from src.memory.service import delete_memory, expire_memory, update_memory
+from src.memory.types import Creator, MemoryType, Scope
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, ChapterContent, Novel, SourceWork
 
@@ -66,8 +70,9 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
     test_db.add_all([chapter_content, next_chapter_content, memory_group])
     test_db.flush()
 
-    alpha = create_term(test_db, memory_group.memory_group_id, "Alpha")
+    alpha = create_term(test_db, memory_group.memory_group_id, "Alpha", TermKind.PERSON)
     create_term(test_db, memory_group.memory_group_id, "Beta")
+    assert alpha.term_kind == TermKind.PERSON
     context = MemAccessContext(
         memory_group_id=memory_group.memory_group_id,
         chapter_id=chapter.chapter_id,
@@ -80,6 +85,7 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
         MemoryType.FACT,
         ["Alpha"],
         "Alpha has a durable property.",
+        mark="trait",
     )
     relation, _ = create_memory(
         test_db,
@@ -88,6 +94,16 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
         MemoryType.RELATION,
         ["Alpha", "Beta"],
         "Alpha is related to Beta.",
+        mark="friendship",
+    )
+    event, _ = create_memory(
+        test_db,
+        context,
+        Creator.AGENT,
+        MemoryType.EVENT,
+        ["Alpha", "Beta"],
+        "Alpha briefly encountered Beta.",
+        Scope.LOCAL,
     )
     other_plugin_memory = write_memory(
         test_db,
@@ -101,25 +117,119 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
     test_db.commit()
 
     assert fact.plugin_name == GLOSSARY_PLUGIN_NAME
+    assert fact.mark == "trait"
     assert relation.plugin_name == GLOSSARY_PLUGIN_NAME
+    assert relation.mark == "friendship"
 
-    assert [memory.memory_id for memory, _ in inspect_terms(test_db, context, ["Alpha"], [MemoryType.FACT])] == [
-        fact.memory_id
-    ]
-    assert [memory.memory_id for memory, _ in inspect_terms(test_db, context, ["Alpha"], [MemoryType.RELATION])] == [
-        relation.memory_id
-    ]
-    assert {memory.memory_id for memory, _ in inspect_terms(test_db, context, ["Alpha"], None)} == {
-        fact.memory_id,
-        relation.memory_id,
-    }
-    assert inspect_terms(test_db, context, ["Alpha"], []) == []
+    fact_page = inspect_terms(test_db, context, ["Alpha"], [MemoryType.FACT])
+    assert fact_page.count == 1
+    assert [item.memory.memory_id for item in fact_page.rows] == [fact.memory_id]
+    relation_page = inspect_terms(test_db, context, ["Alpha"], [MemoryType.RELATION])
+    assert relation_page.count == 1
+    assert [item.memory.memory_id for item in relation_page.rows] == [relation.memory_id]
+    first_page = inspect_terms(test_db, context, ["Alpha"], None, limit=1)
+    second_page = inspect_terms(test_db, context, ["Alpha"], None, skip=1, limit=1)
+    assert first_page.count == 3
+    assert second_page.count == 3
+    assert len(first_page.rows) == len(second_page.rows) == 1
+    assert first_page.rows[0].memory.memory_id != second_page.rows[0].memory.memory_id
+    assert inspect_terms(test_db, context, ["Alpha"], []).model_dump() == {"count": 0, "rows": []}
+
+    marked_page = inspect_terms(
+        test_db,
+        context,
+        ["Alpha"],
+        None,
+        limit=1,
+        marks=["trait"],
+    )
+    assert marked_page.count == 1
+    assert [item.memory.memory_id for item in marked_page.rows] == [fact.memory_id]
+    unmarked_page = inspect_terms(test_db, context, ["Alpha"], None, marks=[None])
+    assert {item.memory.memory_id for item in unmarked_page.rows} == {event.memory_id}
+    mixed_mark_page = inspect_terms(test_db, context, ["Alpha"], None, marks=[None, "trait"])
+    assert {item.memory.memory_id for item in mixed_mark_page.rows} == {event.memory_id, fact.memory_id}
+    searched_page = inspect_terms(
+        test_db,
+        context,
+        ["Alpha"],
+        None,
+        term_search="DURABLE",
+    )
+    assert searched_page.count == 1
+    assert [item.memory.memory_id for item in searched_page.rows] == [fact.memory_id]
+    assert inspect_terms(test_db, context, ["Alpha"], None, term_search="%").count == 0
+    assert inspect_terms(test_db, context, ["Alpha"], None, term_search="_").count == 0
+    combined_page = inspect_terms(
+        test_db,
+        context,
+        ["Alpha"],
+        None,
+        marks=["friendship"],
+        term_search="related to beta",
+    )
+    assert combined_page.count == 1
+    assert [item.memory.memory_id for item in combined_page.rows] == [relation.memory_id]
+    assert inspect_terms(test_db, context, ["Alpha"], None, marks=[]).count == 0
+
+    event_page = inspect_terms(test_db, context, ["Alpha"], [MemoryType.EVENT])
+    assert event_page.count == 1
+    assert len(event_page.rows[0].terms) == 2
 
     next_context = MemAccessContext(
         memory_group_id=memory_group.memory_group_id,
         chapter_id=next_chapter.chapter_id,
         chapter_content_id=next_chapter_content.chapter_content_id,
     )
+    assert inspect_terms(test_db, next_context, ["Alpha"], [MemoryType.EVENT]).count == 0
+    historical_events = inspect_terms(
+        test_db,
+        next_context,
+        ["Alpha"],
+        [MemoryType.EVENT],
+        active_only=False,
+    )
+    assert historical_events.count == 1
+    assert [item.memory.memory_id for item in historical_events.rows] == [event.memory_id]
+
+    successor, _ = supersede_memory(
+        test_db,
+        next_context,
+        fact.memory_id,
+        Creator.AGENT,
+        MemoryType.FACT,
+        "Alpha has a replacement property.",
+        mark="ability",
+        replacement_term_names=["Beta"],
+    )
+    assert successor.mark == "ability"
+    successor_page = inspect_terms(
+        test_db,
+        next_context,
+        ["Beta"],
+        [MemoryType.FACT],
+        marks=["ability"],
+    )
+    assert [item.memory.memory_id for item in successor_page.rows] == [successor.memory_id]
+    assert (
+        inspect_terms(
+            test_db,
+            next_context,
+            ["Alpha"],
+            [MemoryType.FACT],
+            marks=["ability"],
+        ).count
+        == 0
+    )
+    test_db.refresh(fact)
+    assert fact.memory_end_num == next_chapter.chapter_num
+
+    all_memories = inspect_terms(test_db, context, ["Alpha"], None)
+    assert {item.memory.memory_id for item in all_memories.rows} == {
+        fact.memory_id,
+        relation.memory_id,
+        event.memory_id,
+    }
     with pytest.raises(MemoryNotFoundException):
         supersede_memory(
             test_db,
@@ -129,9 +239,49 @@ def test_glossary_access_filters_memory_types_and_plugin_ownership(test_db: Sess
             MemoryType.FACT,
             "Glossary must not supersede this memory.",
         )
+    with pytest.raises(MemoryNotFoundException):
+        supersede_memory(
+            test_db,
+            next_context,
+            relation.memory_id,
+            Creator.AGENT,
+            MemoryType.FACT,
+            "A fact writer must not supersede a relation.",
+        )
+    with pytest.raises(MemoryNotFoundException):
+        supersede_memory(
+            test_db,
+            next_context,
+            relation.memory_id,
+            Creator.AGENT,
+            MemoryType.RELATION,
+            "A differently categorized writer must not supersede this relation.",
+            expected_marks=["ownership"],
+        )
+    with pytest.raises(MemoryNotFoundException):
+        expire_glossary_memory(
+            test_db,
+            next_context,
+            other_plugin_memory.memory_id,
+            [MemoryType.FACT],
+        )
+    with pytest.raises(MemoryNotFoundException):
+        expire_glossary_memory(
+            test_db,
+            next_context,
+            relation.memory_id,
+            [MemoryType.RELATION],
+            marks=["ownership"],
+        )
 
     test_db.refresh(other_plugin_memory)
     assert other_plugin_memory.memory_end_num is None
+    test_db.refresh(relation)
+    assert relation.memory_end_num is None
+
+    expire_glossary_memory(test_db, next_context, relation.memory_id, [MemoryType.RELATION])
+    test_db.refresh(relation)
+    assert relation.memory_end_num == next_chapter.chapter_num
 
 
 def test_memory_and_glossary_deletion_preserve_independent_records(test_db: Session) -> None:
@@ -222,6 +372,15 @@ def test_memory_and_glossary_deletion_preserve_independent_records(test_db: Sess
     assert test_db.get(GlossaryTerm, beta.term_id) is None
     assert test_db.get(Memory, independent.memory_id) is not None
     assert test_db.get(GlossaryAssociation, (beta.term_id, independent.memory_id)) is None
+
+    update_memory(test_db, admin, independent.memory_id, "Beta has an edited property.", "trait")
+    test_db.refresh(independent)
+    assert independent.memory_content == "Beta has an edited property."
+    assert independent.mark == "trait"
+
+    update_memory(test_db, admin, independent.memory_id, independent.memory_content, None)
+    test_db.refresh(independent)
+    assert independent.mark is None
 
     expire_memory(test_db, admin, independent.memory_id, chapter_2.chapter_id)
     test_db.refresh(independent)

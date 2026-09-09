@@ -4,6 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
+import type { TermKind } from './termKind';
 
 export interface UpdateGlossaryTerm {
   /**
@@ -11,4 +12,5 @@ export interface UpdateGlossaryTerm {
      * @maxLength 100
      */
   term: string;
+  termKind?: TermKind | null;
 }

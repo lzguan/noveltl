@@ -1,20 +1,30 @@
 import uuid
 from datetime import timedelta
-from typing import Literal
+from typing import Any, Literal, Self
 
+from pydantic import model_validator
 from sqlalchemy import and_, func, insert, literal, or_, select, update
 from sqlalchemy.orm import Session
 
-from src.memory.agent.agent import ModelName
+from src.memory.agent.types import ModelName, ParsedToolsets
 from src.memory.models import MemoryChapterTask, MemoryGroup, MemoryJob
-from src.memory.types import JobStatus, PluginName
+from src.memory.types import JobStatus
 from src.novels.models import Chapter
 from src.schemas import Model
 
 
 class JobParams(Model):
     model_name: ModelName
-    plugins: list[PluginName]
+    toolsets: dict[str, dict[str, Any]]
+
+    def parse_toolsets(self) -> ParsedToolsets:
+        """Parse the public string-keyed selection into internal toolset configs."""
+        return ParsedToolsets.model_validate(self.toolsets)
+
+    @model_validator(mode="after")
+    def validate_toolsets(self) -> Self:
+        self.parse_toolsets()
+        return self
 
 
 def _owns_job_claim(memory_job_id: uuid.UUID, claim_token: uuid.UUID):
@@ -350,4 +360,27 @@ def release_task(
     except Exception:
         db.rollback()
         raise
+    return True
+
+
+def reset_failed_task(
+    db: Session,
+    memory_job_id: uuid.UUID,
+    chapter_id: uuid.UUID,
+) -> bool:
+    """Return a failed task to pending so a worker can claim it again."""
+    reset_chapter_id = db.scalar(
+        update(MemoryChapterTask)
+        .where(
+            MemoryChapterTask.memory_job_id == memory_job_id,
+            MemoryChapterTask.chapter_id == chapter_id,
+            MemoryChapterTask.task_status == JobStatus.FAILED,
+        )
+        .values(task_status=JobStatus.PENDING)
+        .returning(MemoryChapterTask.chapter_id)
+    )
+    if reset_chapter_id is None:
+        db.rollback()
+        return False
+    db.commit()
     return True

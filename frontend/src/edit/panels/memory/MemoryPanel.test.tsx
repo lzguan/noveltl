@@ -78,6 +78,7 @@ const memory: Memory = {
 	memoryContent: "Lin Fan is the sect's newest inner disciple.",
 	memoryEndNum: null,
 	memoryId: "memory-1",
+	mark: "ability",
 	memoryReviewStatus: "pending",
 	memoryStartNum: 12,
 	memoryType: "fact",
@@ -90,13 +91,14 @@ const term: GlossaryTermSummary = {
 	reviewStatus: "approved",
 	term: "林凡",
 	termId: "term-1",
+	termKind: "person",
 };
 
 const glossaryMemory: GlossaryMemory = {
 	memory,
 	terms: [
-		{ reviewStatus: "approved", term: "林凡", termId: "term-1" },
-		{ reviewStatus: "pending", term: "青阳镇", termId: "term-2" },
+		{ reviewStatus: "approved", term: "林凡", termId: "term-1", termKind: "person" },
+		{ reviewStatus: "pending", term: "青阳镇", termId: "term-2", termKind: "place" },
 	],
 };
 
@@ -180,6 +182,7 @@ describe("MemoryPanel", () => {
 			),
 		);
 		expect(await screen.findByText(memory.memoryContent)).toBeVisible();
+		expect(screen.getByText("ability")).toBeVisible();
 
 		fireEvent.click(screen.getByRole("checkbox", { name: "From all chapters" }));
 		await waitFor(() =>
@@ -341,7 +344,12 @@ describe("MemoryPanel", () => {
 	it("creates a glossary term and refreshes the current term query", async () => {
 		vi.mocked(addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost).mockResolvedValueOnce({
 			status: 200,
-			data: { reviewStatus: "pending", term: "周明瑞", termId: "term-created" },
+			data: {
+				reviewStatus: "pending",
+				term: "周明瑞",
+				termId: "term-created",
+				termKind: "person",
+			},
 			headers: new Headers(),
 		});
 		render(
@@ -360,12 +368,13 @@ describe("MemoryPanel", () => {
 		fireEvent.change(screen.getByRole("textbox", { name: "Term" }), {
 			target: { value: "  周明瑞  " },
 		});
+		selectOption("Kind", "Person");
 		fireEvent.click(screen.getByRole("button", { name: "Create term" }));
 
 		await waitFor(() =>
 			expect(addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost).toHaveBeenCalledWith(
 				"group-1",
-				{ term: "周明瑞" },
+				{ term: "周明瑞", termKind: "person" },
 			),
 		);
 		await waitFor(() =>
@@ -396,6 +405,9 @@ describe("MemoryPanel", () => {
 		fireEvent.change(screen.getByRole("textbox", { name: "Content" }), {
 			target: { value: "  Lin Fan joined the inner sect.  " },
 		});
+		fireEvent.change(screen.getByRole("textbox", { name: "Mark (optional)" }), {
+			target: { value: "  membership  " },
+		});
 		fireEvent.click(screen.getByRole("button", { name: "Create memory" }));
 
 		await waitFor(() =>
@@ -406,6 +418,7 @@ describe("MemoryPanel", () => {
 				chapterId: "chapter-12",
 				memoryContent: "Lin Fan joined the inner sect.",
 				memoryType: "fact",
+				mark: "membership",
 				scope: null,
 				termIds: ["term-1"],
 			}),
@@ -460,7 +473,12 @@ describe("MemoryPanel", () => {
 			editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch,
 		).mockResolvedValueOnce({
 			status: 200,
-			data: { reviewStatus: "approved", term: "林凡更新", termId: "term-1" },
+			data: {
+				reviewStatus: "approved",
+				term: "林凡更新",
+				termId: "term-1",
+				termKind: "place",
+			},
 			headers: new Headers(),
 		});
 		render(
@@ -480,12 +498,16 @@ describe("MemoryPanel", () => {
 		fireEvent.change(screen.getByRole("textbox", { name: "Term" }), {
 			target: { value: "  林凡更新  " },
 		});
+		selectOption("Kind", "Place");
 		fireEvent.click(screen.getByRole("button", { name: "Save term" }));
 
 		await waitFor(() =>
 			expect(
 				editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch,
-			).toHaveBeenCalledWith("group-1", "term-1", { term: "林凡更新" }),
+			).toHaveBeenCalledWith("group-1", "term-1", {
+				term: "林凡更新",
+				termKind: "place",
+			}),
 		);
 		await waitFor(() =>
 			expect(
@@ -564,7 +586,12 @@ describe("MemoryPanel", () => {
 			editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch,
 		).mockResolvedValueOnce({
 			status: 200,
-			data: { reviewStatus: "pending", term: "林凡", termId: "term-1" },
+			data: {
+				reviewStatus: "pending",
+				term: "林凡",
+				termId: "term-1",
+				termKind: "person",
+			},
 			headers: new Headers(),
 		});
 		render(
@@ -607,15 +634,20 @@ describe("MemoryPanel", () => {
 		await screen.findByText(memory.memoryContent);
 
 		openMenu("Memory actions");
-		fireEvent.click(await screen.findByRole("menuitem", { name: "Edit content" }));
+		fireEvent.click(await screen.findByRole("menuitem", { name: "Edit memory" }));
 		fireEvent.change(screen.getByRole("textbox", { name: "Content" }), {
 			target: { value: "  Updated memory  " },
 		});
-		fireEvent.click(screen.getByRole("button", { name: "Save content" }));
+		expect(screen.getByRole("textbox", { name: "Mark (optional)" })).toHaveValue("ability");
+		fireEvent.change(screen.getByRole("textbox", { name: "Mark (optional)" }), {
+			target: { value: "  limitation  " },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Save memory" }));
 
 		await waitFor(() =>
 			expect(editMemoryContentMemoriesMemoryIdContentPatch).toHaveBeenCalledWith("memory-1", {
 				memoryContent: "Updated memory",
+				mark: "limitation",
 			}),
 		);
 		await waitFor(() =>
@@ -676,7 +708,14 @@ describe("MemoryPanel", () => {
 			replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut,
 		).mockResolvedValueOnce({
 			status: 200,
-			data: [{ reviewStatus: "approved", term: "林凡", termId: "term-1" }],
+			data: [
+				{
+					reviewStatus: "approved",
+					term: "林凡",
+					termId: "term-1",
+					termKind: "person",
+				},
+			],
 			headers: new Headers(),
 		});
 		render(

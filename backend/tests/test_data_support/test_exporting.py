@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from test_support.test_data.errors import TestDataError as InvalidTestDataError
+from src.datasets.errors import TestDataError as InvalidTestDataError
 from test_support.test_data.exporting import (
     build_chapter_upload_v1,
     export_chapter_upload,

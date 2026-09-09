@@ -6,7 +6,7 @@
  */
 import type { BoolData } from './boolData';
 import type { FloatData } from './floatData';
-import type { IntDataInput } from './intDataInput';
+import type { IntData } from './intData';
 import type { StringData } from './stringData';
 
-export type MDataType = StringData | IntDataInput | FloatData | BoolData;
+export type MDataType = StringData | IntData | FloatData | BoolData;

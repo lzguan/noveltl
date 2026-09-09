@@ -74,7 +74,7 @@ services:
     volumes:
       - ./backend:/home/newuser/backend
       - /home/newuser/backend/.venv
-      - /home/newuser/backend/logs
+      - ./logs:/home/newuser/backend/logs
     profiles:
       - manual
 
@@ -91,7 +91,7 @@ services:
     volumes:
       - ./backend:/home/newuser/backend
       - /home/newuser/backend/.venv
-      - /home/newuser/backend/logs
+      - ./logs:/home/newuser/backend/logs
     profiles:
       - manual
 
@@ -106,10 +106,12 @@ services:
       UV_COMPILE_BYTECODE: false
       SECRET_KEY: ${SECRET_KEY} # purely to not crash on startup
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      MEMORY_AGENT_LOG_DIR: ${MEMORY_AGENT_LOG_DIR:-logs}
+      MEMORY_AGENT_LOG_FILENAME: ${MEMORY_AGENT_LOG_FILENAME}
     volumes:
       - ./backend:/home/newuser/backend
       - /home/newuser/backend/.venv
-      - /home/newuser/backend/logs
+      - ./docs/memory/agent-evals/logs:/home/newuser/backend/logs
     profiles:
       - manual
 
@@ -123,10 +125,11 @@ services:
       <<: [*db-env, *redis-env]
       PYTHONDONTWRITEBYTECODE: "1"
       SECRET_KEY: ${SECRET_KEY}
+      BACKEND_LOG_DIR: ${BACKEND_LOG_DIR:-logs}
     volumes:
       - ./backend:/home/newuser/backend
       - /home/newuser/backend/.venv
-      - /home/newuser/backend/backend.log
+      - ./logs:/home/newuser/backend/logs
     ports:
       - "${BACKEND_PORT}:8000"
 

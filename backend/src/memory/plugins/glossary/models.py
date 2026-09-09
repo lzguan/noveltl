@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import ForeignKey, Index, UniqueConstraint, func, types
 from sqlalchemy.orm import Mapped, mapped_column
 
+from src.memory.plugins.glossary.types import TermKind
 from src.memory.types import ReviewStatus
 from src.models import Base
 
@@ -12,6 +13,15 @@ class GlossaryTerm(Base):
 
     term_id: Mapped[uuid.UUID] = mapped_column(types.UUID, primary_key=True, server_default=func.gen_random_uuid())
     term: Mapped[str] = mapped_column(types.String(100), nullable=False)
+    term_kind: Mapped[TermKind | None] = mapped_column(
+        types.Enum(
+            TermKind,
+            native_enum=False,
+            length=20,
+            values_callable=lambda values: [term_kind.value for term_kind in values],
+        ),
+        nullable=True,
+    )
     memory_group_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey(
             "memory_groups.memory_group_id",

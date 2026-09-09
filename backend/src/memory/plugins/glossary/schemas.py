@@ -4,28 +4,53 @@ from uuid import UUID
 
 from pydantic import ConfigDict, Field
 
-from src.memory.schemas import AgentMemory, Memory
+from src.memory.plugins.glossary.types import TermKind
+from src.memory.schemas import AgentMemory, AgentModel, Memory
 from src.memory.types import MemoryType, ReviewStatus, Scope
 from src.schemas import Model, Page
 
 
-class AgentGlossaryTerm(Model):
+class AgentGlossaryTerm(AgentModel):
     """A glossary term represented as context for an agent."""
 
     model_config = ConfigDict(from_attributes=True)
 
     term: str = Field(description="Term exactly as it appears in the novel's source text.")
+    term_kind: TermKind | None = Field(
+        description="Semantic kind of the glossary term, or null when it has not been categorized."
+    )
     review_status: ReviewStatus = Field(
         description="Human-review state of the term. Pending terms are unverified; approved terms are verified."
     )
 
 
-class AgentGlossaryMemory[KeyT](Model):
+class AgentGlossaryMemory[KeyT](AgentModel):
     """A memory together with the glossary terms it describes."""
 
     memory: AgentMemory[KeyT] = Field(description="The memory that describes the glossary terms.")
     terms: list[AgentGlossaryTerm] = Field(
         description="Glossary terms described by this memory; one memory may apply to multiple related terms."
+    )
+
+
+class AgentGlossaryMemoryPage[KeyT](Page[AgentGlossaryMemory[KeyT]]):
+    """A glossary-memory page, optionally with the alias links used for retrieval."""
+
+    aliases: list[AgentGlossaryMemory[KeyT]] = Field(
+        default_factory=list,
+        description="Active pair aliases used to expand this query, retaining their original terms and marks.",
+    )
+    aliases_truncated: bool = Field(
+        default=False,
+        description="Whether alias expansion reached its bounded term or edge limit.",
+    )
+
+
+class AgentCharacterStatePage[KeyT](AgentGlossaryMemoryPage[KeyT]):
+    """Facts and aliases, with separately paginated non-equivalent identity context."""
+
+    impersonations: Page[AgentGlossaryMemory[KeyT]] = Field(
+        description="Active impersonations involving this identity, not alias edges. Read actor/target in each claim."
     )
 
 
@@ -35,6 +60,9 @@ class GlossaryTerm(Model):
     model_config = ConfigDict(from_attributes=True)
     term_id: UUID = Field(description="Stable identifier for the glossary term.")
     term: str = Field(description="Term exactly as it appears in the novel's source text.")
+    term_kind: TermKind | None = Field(
+        description="Semantic kind of the glossary term, or null when it has not been categorized."
+    )
     review_status: ReviewStatus = Field(
         description="Human-review state of the term. Pending terms are unverified; approved terms are verified."
     )
@@ -67,6 +95,7 @@ class CreateGlossaryMemory(Model):
     chapter_id: UUID
     chapter_content_id: UUID
     memory_type: MemoryType
+    mark: str | None = Field(default=None, min_length=1)
     memory_content: str = Field(min_length=1)
     term_ids: list[UUID] = Field(min_length=1)
     scope: Scope | None = None
@@ -74,10 +103,12 @@ class CreateGlossaryMemory(Model):
 
 class CreateGlossaryTerm(Model):
     term: str = Field(min_length=1, max_length=100)
+    term_kind: TermKind | None = None
 
 
 class UpdateGlossaryTerm(Model):
     term: str = Field(min_length=1, max_length=100)
+    term_kind: TermKind | None = None
 
 
 class ReplaceGlossaryAssociations(Model):

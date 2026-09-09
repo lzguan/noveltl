@@ -1,0 +1,172 @@
+import asyncio
+import json
+from pathlib import Path
+
+from textual.widgets import Button, DataTable, Input, TextArea
+
+from agent_evals.checkpoints import load_checkpoint
+from agent_evals.corpora import CorpusImportSpec, import_flat_export
+from agent_evals.run_configs import load_run_config
+from agent_evals.storage import EvalWorkspace
+from agent_evals.tui import (
+    AgentEvalApp,
+    CheckpointEditScreen,
+    CheckpointScreen,
+    ConfigEditScreen,
+    ConfigScreen,
+    CorpusImportScreen,
+    CorpusScreen,
+    HomeScreen,
+    MetricEditScreen,
+)
+
+
+def test_corpus_import_workflow_displays_imported_corpus(tmp_path: Path) -> None:
+    source = tmp_path / "novel.json"
+    source.write_text(
+        json.dumps(
+            {
+                "chapters": [
+                    {
+                        "chapterNum": 1,
+                        "chapterTitle": "开端",
+                        "chapterIsPublic": False,
+                        "chapterContentText": "林渊醒来。",
+                    }
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    workspace = EvalWorkspace(tmp_path / "evals")
+    workspace.ensure()
+
+    async def exercise() -> None:
+        app = AgentEvalApp(workspace)
+        async with app.run_test() as pilot:
+            assert isinstance(app.screen, HomeScreen)
+            await pilot.click("#corpora")
+            assert isinstance(app.screen, CorpusScreen)
+            await pilot.click("#open-import")
+            assert isinstance(app.screen, CorpusImportScreen)
+            app.screen.query_one("#import-source", Input).value = str(source)
+            app.screen.query_one("#import-id", Input).value = "cn-xianxia-001"
+            app.screen.query_one("#import-title", Input).value = "Private evaluation novel"
+            app.screen.query_one("#import-language", Input).value = "zh"
+            await pilot.click("#confirm-import")
+            for _ in range(50):
+                if isinstance(app.screen, CorpusScreen):
+                    break
+                await pilot.pause(0.1)
+            assert isinstance(app.screen, CorpusScreen)
+            table = app.screen.query_one("#corpus-entries", DataTable)
+            assert table.row_count == 1
+            assert table.get_row_at(0)[0] == "cn-xianxia-001"
+
+    asyncio.run(exercise())
+
+
+def test_checkpoint_editor_creates_checkpoint_with_expected_memory(tmp_path: Path) -> None:
+    source = tmp_path / "novel.json"
+    source.write_text(
+        json.dumps(
+            {
+                "chapters": [
+                    {
+                        "chapterNum": 1,
+                        "chapterTitle": "开端",
+                        "chapterContentText": "林渊醒来。",
+                    }
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    workspace = EvalWorkspace(tmp_path / "evals")
+    workspace.ensure()
+    import_flat_export(
+        source,
+        workspace,
+        CorpusImportSpec(id="test-novel", title="Test novel", language_code="zh"),
+    )
+
+    async def exercise() -> None:
+        app = AgentEvalApp(workspace)
+        async with app.run_test(size=(140, 50)) as pilot:
+            await pilot.click("#checkpoints")
+            assert isinstance(app.screen, CheckpointScreen)
+            await pilot.click("#create-checkpoint")
+            assert isinstance(app.screen, CheckpointEditScreen)
+            app.screen.query_one("#checkpoint-id", Input).value = "opening"
+            app.screen.query_one("#checkpoint-corpus", Input).value = "test-novel"
+            app.screen.query_one("#checkpoint-start", Input).value = "1"
+            app.screen.query_one("#checkpoint-end", Input).value = "1"
+            await pilot.click("#add-metric")
+            assert isinstance(app.screen, MetricEditScreen)
+            app.screen.query_one("#metric-id", Input).value = "identity"
+            app.screen.query_one("#metric-type", Input).value = "fact"
+            app.screen.query_one("#metric-category", Input).value = "identity"
+            app.screen.query_one("#metric-terms", Input).value = "林渊"
+            app.screen.query_one("#metric-content", Input).value = "The protagonist awakens."
+            await pilot.click("#apply-metric")
+            assert isinstance(app.screen, CheckpointEditScreen)
+            await pilot.click("#save-checkpoint")
+            assert isinstance(app.screen, CheckpointScreen)
+
+    asyncio.run(exercise())
+    checkpoint = load_checkpoint(workspace, "opening", validate_context=True)
+    assert checkpoint.expected_memories[0].id == "identity"
+    assert checkpoint.expected_memories[0].terms == ["林渊"]
+
+
+def test_config_editor_creates_config_with_backend_toolset(tmp_path: Path) -> None:
+    source = tmp_path / "novel.json"
+    source.write_text(
+        json.dumps(
+            {
+                "chapters": [
+                    {
+                        "chapterNum": 1,
+                        "chapterTitle": "开端",
+                        "chapterContentText": "林渊醒来。",
+                    }
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    workspace = EvalWorkspace(tmp_path / "evals")
+    workspace.ensure()
+    import_flat_export(
+        source,
+        workspace,
+        CorpusImportSpec(id="test-novel", title="Test novel", language_code="zh"),
+    )
+
+    async def exercise() -> None:
+        app = AgentEvalApp(workspace)
+        async with app.run_test(size=(140, 60)) as pilot:
+            await pilot.click("#configs")
+            assert isinstance(app.screen, ConfigScreen)
+            await pilot.click("#create-config")
+            assert isinstance(app.screen, ConfigEditScreen)
+            app.screen.query_one("#config-id", Input).value = "baseline"
+            app.screen.query_one("#config-change", Input).value = "Establish a baseline."
+            app.screen.query_one("#config-corpus", Input).value = "test-novel"
+            app.screen.query_one("#config-start", Input).value = "1"
+            app.screen.query_one("#config-end", Input).value = "1"
+            await pilot.click("#config-model-deepseek-deepseek-v4-flash-low")
+            app.screen.query_one("#config-objectives", TextArea).text = "Measure current behavior."
+            app.screen.query_one("#config-guardrails", TextArea).text = "Retain critical memories."
+            app.screen.query_one("#config-decision-rule", TextArea).text = "Keep as reference."
+            await pilot.click("#config-toolset-glossary-terms")
+            app.screen.query_one("#save-config", Button).press()
+            await pilot.pause()
+            assert isinstance(app.screen, ConfigScreen)
+
+    asyncio.run(exercise())
+    config = load_run_config(workspace, "baseline", validate_context=True)
+    assert [toolset.name for toolset in config.agent.toolsets] == ["glossary_terms"]

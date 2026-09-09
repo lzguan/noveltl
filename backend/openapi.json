@@ -6069,6 +6069,39 @@
         }
       }
     },
+    "/memory-agent/config": {
+      "get": {
+        "summary": "Read Memory Agent Config",
+        "operationId": "read_memory_agent_config_memory_agent_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryAgentConfig"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/memory-agent/jobs": {
       "post": {
         "summary": "Add Memory Job",
@@ -7689,6 +7722,18 @@
           "memoryType": {
             "$ref": "#/components/schemas/MemoryType"
           },
+          "mark": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mark"
+          },
           "memoryContent": {
             "type": "string",
             "minLength": 1,
@@ -7731,6 +7776,16 @@
             "maxLength": 100,
             "minLength": 1,
             "title": "Term"
+          },
+          "termKind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TermKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -8097,7 +8152,7 @@
             "$ref": "#/components/schemas/StringData"
           },
           {
-            "$ref": "#/components/schemas/IntData-Output"
+            "$ref": "#/components/schemas/IntData"
           },
           {
             "$ref": "#/components/schemas/FloatData"
@@ -8117,7 +8172,7 @@
           "mapping": {
             "bool": "#/components/schemas/BoolData",
             "float": "#/components/schemas/FloatData",
-            "int": "#/components/schemas/IntData-Output",
+            "int": "#/components/schemas/IntData",
             "labelRef": "#/components/schemas/LabelRefData",
             "string": "#/components/schemas/StringData",
             "textSpan": "#/components/schemas/TextSpanData"
@@ -8480,6 +8535,17 @@
             "title": "Term",
             "description": "Term exactly as it appears in the novel's source text."
           },
+          "termKind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TermKind"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Semantic kind of the glossary term, or null when it has not been categorized."
+          },
           "reviewStatus": {
             "$ref": "#/components/schemas/ReviewStatus",
             "description": "Human-review state of the term. Pending terms are unverified; approved terms are verified."
@@ -8489,6 +8555,7 @@
         "required": [
           "termId",
           "term",
+          "termKind",
           "reviewStatus"
         ],
         "title": "GlossaryTerm",
@@ -8507,6 +8574,17 @@
             "title": "Term",
             "description": "Term exactly as it appears in the novel's source text."
           },
+          "termKind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TermKind"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Semantic kind of the glossary term, or null when it has not been categorized."
+          },
           "reviewStatus": {
             "$ref": "#/components/schemas/ReviewStatus",
             "description": "Human-review state of the term. Pending terms are unverified; approved terms are verified."
@@ -8521,19 +8599,20 @@
         "required": [
           "termId",
           "term",
+          "termKind",
           "reviewStatus",
           "associatedMemoryCount"
         ],
         "title": "GlossaryTermSummary",
         "description": "A glossary term together with its associated-memory count in the requested scope."
       },
-      "GroupData-Input": {
+      "GroupData": {
         "oneOf": [
           {
             "$ref": "#/components/schemas/StringData"
           },
           {
-            "$ref": "#/components/schemas/IntData-Input"
+            "$ref": "#/components/schemas/IntData"
           },
           {
             "$ref": "#/components/schemas/BoolData"
@@ -8543,28 +8622,7 @@
           "propertyName": "type",
           "mapping": {
             "bool": "#/components/schemas/BoolData",
-            "int": "#/components/schemas/IntData-Input",
-            "string": "#/components/schemas/StringData"
-          }
-        }
-      },
-      "GroupData-Output": {
-        "oneOf": [
-          {
-            "$ref": "#/components/schemas/StringData"
-          },
-          {
-            "$ref": "#/components/schemas/IntData-Output"
-          },
-          {
-            "$ref": "#/components/schemas/BoolData"
-          }
-        ],
-        "discriminator": {
-          "propertyName": "type",
-          "mapping": {
-            "bool": "#/components/schemas/BoolData",
-            "int": "#/components/schemas/IntData-Output",
+            "int": "#/components/schemas/IntData",
             "string": "#/components/schemas/StringData"
           }
         }
@@ -8578,7 +8636,7 @@
           },
           "values": {
             "items": {
-              "$ref": "#/components/schemas/GroupData-Input"
+              "$ref": "#/components/schemas/GroupData"
             },
             "type": "array",
             "maxItems": 100,
@@ -8613,7 +8671,7 @@
       "GroupValueCount": {
         "properties": {
           "value": {
-            "$ref": "#/components/schemas/GroupData-Output"
+            "$ref": "#/components/schemas/GroupData"
           },
           "count": {
             "type": "integer",
@@ -8837,7 +8895,7 @@
           },
           "groupValues": {
             "additionalProperties": {
-              "$ref": "#/components/schemas/GroupData-Output"
+              "$ref": "#/components/schemas/GroupData"
             },
             "propertyNames": {
               "format": "uuid"
@@ -8877,35 +8935,10 @@
         ],
         "title": "InstanceResponse"
       },
-      "IntData-Input": {
+      "IntData": {
         "properties": {
           "value": {
-            "$ref": "#/components/schemas/IntegerValue-Input"
-          },
-          "type": {
-            "type": "string",
-            "const": "int",
-            "title": "Type",
-            "default": "int"
-          },
-          "kind": {
-            "type": "string",
-            "const": "value",
-            "title": "Kind",
-            "default": "value"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "value"
-        ],
-        "title": "IntData"
-      },
-      "IntData-Output": {
-        "properties": {
-          "value": {
-            "$ref": "#/components/schemas/src__filters__data_types__IntegerValue__1"
+            "$ref": "#/components/schemas/IntegerValue"
           },
           "type": {
             "type": "string",
@@ -8951,7 +8984,7 @@
         "type": "object",
         "title": "IntField"
       },
-      "IntegerValue-Input": {
+      "IntegerValue": {
         "type": "integer"
       },
       "JobParams": {
@@ -8959,18 +8992,19 @@
           "modelName": {
             "$ref": "#/components/schemas/ModelName"
           },
-          "plugins": {
-            "items": {
-              "$ref": "#/components/schemas/PluginName"
+          "toolsets": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
             },
-            "type": "array",
-            "title": "Plugins"
+            "type": "object",
+            "title": "Toolsets"
           }
         },
         "type": "object",
         "required": [
           "modelName",
-          "plugins"
+          "toolsets"
         ],
         "title": "JobParams"
       },
@@ -9356,7 +9390,7 @@
             "$ref": "#/components/schemas/StringData"
           },
           {
-            "$ref": "#/components/schemas/IntData-Input"
+            "$ref": "#/components/schemas/IntData"
           },
           {
             "$ref": "#/components/schemas/FloatData"
@@ -9370,7 +9404,7 @@
           "mapping": {
             "bool": "#/components/schemas/BoolData",
             "float": "#/components/schemas/FloatData",
-            "int": "#/components/schemas/IntData-Input",
+            "int": "#/components/schemas/IntData",
             "string": "#/components/schemas/StringData"
           }
         }
@@ -9386,6 +9420,18 @@
           "memoryType": {
             "$ref": "#/components/schemas/MemoryType",
             "description": "Kind of information stored: a fact, event, definition, or relation."
+          },
+          "mark": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mark",
+            "description": "Optional application-defined category used to narrow memory retrieval."
           },
           "memoryContent": {
             "type": "string",
@@ -9439,6 +9485,7 @@
         "required": [
           "memoryId",
           "memoryType",
+          "mark",
           "memoryContent",
           "memoryStartNum",
           "memoryReviewStatus",
@@ -9449,6 +9496,106 @@
         ],
         "title": "Memory",
         "description": "Memory schema"
+      },
+      "MemoryAgentConfig": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryAgentModelOption"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "toolsets": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryAgentToolsetOption"
+            },
+            "type": "array",
+            "title": "Toolsets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "models",
+          "toolsets"
+        ],
+        "title": "MemoryAgentConfig"
+      },
+      "MemoryAgentModelOption": {
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/ModelName"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "description"
+        ],
+        "title": "MemoryAgentModelOption"
+      },
+      "MemoryAgentToolsetOption": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ToolsetKind"
+          },
+          "defaultEnabled": {
+            "type": "boolean",
+            "title": "Defaultenabled"
+          },
+          "configSchema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Configschema"
+          },
+          "requires": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Requires"
+          },
+          "excludes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Excludes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "description",
+          "kind",
+          "defaultEnabled",
+          "configSchema",
+          "requires",
+          "excludes"
+        ],
+        "title": "MemoryAgentToolsetOption"
       },
       "MemoryChapterTask": {
         "properties": {
@@ -9679,14 +9826,18 @@
           "fact",
           "event",
           "def",
-          "rel"
+          "rel",
+          "summary"
         ],
         "title": "MemoryType",
         "description": "The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms."
       },
       "ModelName": {
         "type": "string",
-        "const": "deepseek:deepseek-chat"
+        "enum": [
+          "deepseek:deepseek-v4-flash-none",
+          "deepseek:deepseek-v4-flash-low"
+        ]
       },
       "ModifyChapterContentResponse": {
         "properties": {
@@ -9821,6 +9972,10 @@
         ],
         "title": "NewStringFieldRequest"
       },
+      "NonNegativeIntegerValue": {
+        "type": "integer",
+        "minimum": 0.0
+      },
       "Novel": {
         "properties": {
           "novelId": {
@@ -9916,8 +10071,7 @@
             "title": "Novelid"
           },
           "contributorRole": {
-            "type": "string",
-            "title": "Contributorrole"
+            "$ref": "#/components/schemas/Role"
           }
         },
         "type": "object",
@@ -10078,7 +10232,10 @@
       },
       "PluginName": {
         "type": "string",
-        "const": "glossary"
+        "enum": [
+          "glossary",
+          "continuity"
+        ]
       },
       "PythonAnnotationRequest": {
         "properties": {
@@ -10309,6 +10466,15 @@
           "rejected"
         ],
         "title": "ReviewStatus"
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "owner",
+          "viewer",
+          "editor"
+        ],
+        "title": "Role"
       },
       "SObj": {
         "oneOf": [
@@ -10553,6 +10719,21 @@
       "StringValue": {
         "type": "string"
       },
+      "TermKind": {
+        "type": "string",
+        "enum": [
+          "person",
+          "place",
+          "organization",
+          "technique",
+          "item",
+          "concept",
+          "title",
+          "species",
+          "other"
+        ],
+        "title": "TermKind"
+      },
       "TextOp": {
         "properties": {
           "op": {
@@ -10594,10 +10775,10 @@
             "title": "Chaptercontentid"
           },
           "start": {
-            "$ref": "#/components/schemas/src__filters__data_types__IntegerValue__2"
+            "$ref": "#/components/schemas/NonNegativeIntegerValue"
           },
           "end": {
-            "$ref": "#/components/schemas/src__filters__data_types__IntegerValue__2"
+            "$ref": "#/components/schemas/NonNegativeIntegerValue"
           }
         },
         "additionalProperties": false,
@@ -10679,6 +10860,13 @@
         "title": "Token",
         "description": "Pydantic schema for a JWT\n\nAttributes:\n    access_token: Payload.\n    token_type: Type of token."
       },
+      "ToolsetKind": {
+        "type": "string",
+        "enum": [
+          "memory",
+          "guidance"
+        ]
+      },
       "UpdateChapter": {
         "properties": {
           "chapterTitle": {
@@ -10723,6 +10911,16 @@
             "maxLength": 100,
             "minLength": 1,
             "title": "Term"
+          },
+          "termKind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TermKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -10872,11 +11070,24 @@
             "type": "string",
             "minLength": 1,
             "title": "Memorycontent"
+          },
+          "mark": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mark"
           }
         },
         "type": "object",
         "required": [
-          "memoryContent"
+          "memoryContent",
+          "mark"
         ],
         "title": "UpdateMemoryContent"
       },
@@ -11288,13 +11499,6 @@
           "glossary"
         ],
         "title": "WorkflowUseCase"
-      },
-      "src__filters__data_types__IntegerValue__1": {
-        "type": "integer"
-      },
-      "src__filters__data_types__IntegerValue__2": {
-        "type": "integer",
-        "minimum": 0.0
       }
     },
     "securitySchemes": {

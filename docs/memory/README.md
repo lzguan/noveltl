@@ -4,6 +4,7 @@ This folder documents the memory feature.
 
 - [data-model.md](data-model.md): Memory and plugin data models
 - [ui-overview.md](ui-overview.md): Proposed memory-panel hierarchy and wireframes
+- [agent-evals/](agent-evals/): Memory-agent evaluation protocol, change log, and run reports
 
 ## Motivation
 

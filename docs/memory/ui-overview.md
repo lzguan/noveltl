@@ -143,19 +143,22 @@ alphabetically.
 
 ### Term accordion
 
-Each term row displays its associated-memory count and an `Add memory` action.
+Each term row displays its semantic kind when categorized, associated-memory
+count, and an `Add memory` action.
 Expanding a row loads a separately paginated list of memories associated with
 that term.
 
 Each memory uses the same basic presentation and actions as the all-memories
-list. Its associated glossary terms appear to the right of the memory content.
+list. An optional mark appears as a separate badge beside the memory type. Its
+associated glossary terms appear to the right of the memory content.
 The nested list respects `Show all terms`: when the switch is off it contains
 only memories active in the current chapter, and when it is on it contains all
 memories associated with the term.
 
 ## Adding a glossary memory
 
-Selecting `Add memory` beside a term opens the memory form with that term
+Creating or editing a glossary term allows its semantic kind to be selected or
+left uncategorized. Selecting `Add memory` beside a term opens the memory form with that term
 selected by default. The user may search for and select additional terms, or
 remove selected terms before submitting.
 
@@ -168,6 +171,7 @@ remove selected terms before submitting.
 | |                                                  | |
 | +--------------------------------------------------+ |
 |                                                      |
+| Mark (optional) [ ability________________________ ] |
 | Type [ Fact v ]              Scope [ Automatic v ]  |
 |                                                      |
 | Terms                                               |
@@ -182,7 +186,8 @@ remove selected terms before submitting.
 ```
 
 The term selector is a searchable multi-select. A memory may be associated with
-multiple terms.
+multiple terms. Human-created memories may use any non-empty mark or leave it
+blank; agent toolsets apply their own narrower category rules.
 
 ## Pagination summary
 

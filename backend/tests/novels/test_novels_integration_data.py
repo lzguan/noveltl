@@ -10,6 +10,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from src.datasets import NovelDataset
 from src.labels.constants import LabelRole
 from src.labels.models import Label as LabelModel
 from src.labels.models import LabelContributor, LabelData, LabelGroup
@@ -18,7 +19,6 @@ from src.novels.models import ChapterContent
 from src.novels.schemas import TextOp
 from src.novels.service import modify_chapter_content
 from src.novels.utils import apply_text_ops
-from test_support.test_data import NovelDataset
 from test_support.test_data.scenarios import DatabaseScenario
 
 

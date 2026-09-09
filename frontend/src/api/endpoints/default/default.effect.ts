@@ -1491,13 +1491,14 @@ export const ReadMemoryMemoriesMemoryIdGetParams = S.Struct({
 
 export const ReadMemoryMemoriesMemoryIdGet200Response = S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'Memory schema' })
 
@@ -1527,19 +1528,22 @@ export const EditMemoryContentMemoriesMemoryIdContentPatchParams = S.Struct({
 
 
 
+
 export const EditMemoryContentMemoriesMemoryIdContentPatchBody = S.Struct({
+  "mark": S.Union(S.String.pipe(S.minLength(1)), S.Null),
   "memoryContent": S.String.pipe(S.minLength(1))
 })
 
 export const EditMemoryContentMemoriesMemoryIdContentPatch200Response = S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'Memory schema' })
 
@@ -1572,13 +1576,14 @@ export const EditMemoryExpirationMemoriesMemoryIdExpirationPatchBody = S.Struct(
 
 export const EditMemoryExpirationMemoriesMemoryIdExpirationPatch200Response = S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'Memory schema' })
 
@@ -1611,13 +1616,14 @@ export const EditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchBody = S.Str
 
 export const EditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch200Response = S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'Memory schema' })
 
@@ -1636,6 +1642,31 @@ export const EditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch422Response 
   "type": S.String
 })))
 })
+
+/**
+ * @summary Read Memory Agent Config
+ */
+export const ReadMemoryAgentConfigMemoryAgentConfigGet200Response = S.Struct({
+  "models": S.Array(S.Struct({
+  "description": S.String,
+  "label": S.String,
+  "name": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low')
+})),
+  "toolsets": S.Array(S.Struct({
+  "configSchema": S.Record({ key: S.String, value: S.Unknown }),
+  "defaultEnabled": S.Boolean,
+  "description": S.String,
+  "excludes": S.Array(S.String),
+  "kind": S.Literal('memory', 'guidance'),
+  "label": S.String,
+  "name": S.String,
+  "requires": S.Array(S.String)
+}))
+})
+
+export const ReadMemoryAgentConfigMemoryAgentConfigGet401Response = S.Struct({
+  "detail": S.String
+}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 /**
  * @summary Read Memory Job Summaries
@@ -1662,8 +1693,8 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet200Response = S.Str
   "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal("deepseek:deepseek-chat"),
-  "plugins": S.Array(S.Literal("glossary"))
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1719,8 +1750,8 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200Respons
   "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal("deepseek:deepseek-chat"),
-  "plugins": S.Array(S.Literal("glossary"))
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1762,8 +1793,8 @@ export const ReadMemoryJobsMemoryAgentJobsGet200ResponseItem = S.Struct({
   "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal("deepseek:deepseek-chat"),
-  "plugins": S.Array(S.Literal("glossary"))
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1800,8 +1831,8 @@ export const AddMemoryJobMemoryAgentJobsPostBody = S.Struct({
   "endChapterNum": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyEndChapterNumOneMin)), S.Null)),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "params": S.Struct({
-  "modelName": S.Literal("deepseek:deepseek-chat"),
-  "plugins": S.Array(S.Literal("glossary"))
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "startChapterNum": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyStartChapterNumOneMin)), S.Null))
 })
@@ -1810,8 +1841,8 @@ export const AddMemoryJobMemoryAgentJobsPost201Response = S.Struct({
   "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal("deepseek:deepseek-chat"),
-  "plugins": S.Array(S.Literal("glossary"))
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1872,8 +1903,8 @@ export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet200Response = S.Struct({
   "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal("deepseek:deepseek-chat"),
-  "plugins": S.Array(S.Literal("glossary"))
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1907,8 +1938,8 @@ export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200Response = S.St
   "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal("deepseek:deepseek-chat"),
-  "plugins": S.Array(S.Literal("glossary"))
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1942,8 +1973,8 @@ export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost202Response = S.St
   "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal("deepseek:deepseek-chat"),
-  "plugins": S.Array(S.Literal("glossary"))
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -2259,8 +2290,8 @@ export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemo
   "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQuerySkipMin)), { default: () => readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQuerySkipDefault }),
   "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQueryLimitMax)), { default: () => readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQueryLimitDefault }),
   "createdExactlyAtChapter": S.optionalWith(S.Boolean, { default: () => readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQueryCreatedExactlyAtChapterDefault }),
-  "pluginNames": S.optional(S.Union(S.Array(S.Literal("glossary")), S.Null)),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
+  "pluginNames": S.optional(S.Union(S.Array(S.Literal('glossary', 'continuity')), S.Null)),
+  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
 })
 
 export const readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet200ResponseCountMin = 0;
@@ -2271,13 +2302,14 @@ export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemo
   "count": S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet200ResponseCountMin)),
   "rows": S.Array(S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'Memory schema' }))
 })
@@ -2318,7 +2350,7 @@ export const ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChapt
   "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQuerySkipMin)), { default: () => readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQuerySkipDefault }),
   "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQueryLimitMax)), { default: () => readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQueryLimitDefault }),
   "createdExactlyAtChapter": S.optionalWith(S.Boolean, { default: () => readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQueryCreatedExactlyAtChapterDefault }),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
+  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
 })
 
 export const readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGet200ResponseCountMin = 0;
@@ -2330,19 +2362,21 @@ export const ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChapt
   "rows": S.Array(S.Struct({
   "memory": S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'The memory that describes the glossary terms.' }),
   "terms": S.Array(S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })).annotations({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
 }).annotations({ description: 'A memory together with the glossary terms it describes.' }))
 })
@@ -2381,7 +2415,7 @@ export const readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQue
 export const ReadGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQueryParams = S.Struct({
   "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQuerySkipMin)), { default: () => readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQuerySkipDefault }),
   "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQueryLimitMax)), { default: () => readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQueryLimitDefault }),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
+  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
 })
 
 export const readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGet200ResponseCountMin = 0;
@@ -2393,19 +2427,21 @@ export const ReadGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGet200
   "rows": S.Array(S.Struct({
   "memory": S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'The memory that describes the glossary terms.' }),
   "terms": S.Array(S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })).annotations({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
 }).annotations({ description: 'A memory together with the glossary terms it describes.' }))
 })
@@ -2433,11 +2469,13 @@ export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostParam
 
 
 
+
 export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostBody = S.Struct({
   "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "mark": S.optional(S.Union(S.String.pipe(S.minLength(1)), S.Null)),
   "memoryContent": S.String.pipe(S.minLength(1)),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' }),
   "scope": S.optional(S.Union(S.Literal('local', 'recent', 'persist').annotations({ description: 'The scope of a memory (i.e. how long it should be retained).\n\nLOCAL: Memory is only relevant to the current chapter.\nRECENT: Memory is relevant to the current chapter and a few subsequent chapters.\nPERSIST: Memory is relevant to all chapters and should be retained indefinitely until explicitly superseded or expired.' }), S.Null)),
   "termIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))).pipe(S.minItems(1))
 })
@@ -2445,19 +2483,21 @@ export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostBody 
 export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost200Response = S.Struct({
   "memory": S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'The memory that describes the glossary terms.' }),
   "terms": S.Array(S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })).annotations({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
 }).annotations({ description: 'A memory together with the glossary terms it describes.' })
 
@@ -2492,7 +2532,8 @@ export const ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryId
 export const ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsGet200ResponseItem = S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })
 export const ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsGet200Response = S.Array(ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsGet200ResponseItem)
 
@@ -2527,7 +2568,8 @@ export const ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemories
 export const ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut200ResponseItem = S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })
 export const ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut200Response = S.Array(ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut200ResponseItem)
 
@@ -2582,7 +2624,8 @@ export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200Respon
   "associatedMemoryCount": S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseRowsItemAssociatedMemoryCountMin)),
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term together with its associated-memory count in the requested scope.' }))
 })
 
@@ -2614,13 +2657,15 @@ export const addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostBodyTermMa
 
 
 export const AddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostBody = S.Struct({
-  "term": S.String.pipe(S.minLength(1), S.maxLength(addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostBodyTermMax))
+  "term": S.String.pipe(S.minLength(1), S.maxLength(addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostBodyTermMax)),
+  "termKind": S.optional(S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null))
 })
 
 export const AddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost200Response = S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })
 
 export const AddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost404Response = S.Struct({
@@ -2680,13 +2725,15 @@ export const editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchBo
 
 
 export const EditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchBody = S.Struct({
-  "term": S.String.pipe(S.minLength(1), S.maxLength(editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchBodyTermMax))
+  "term": S.String.pipe(S.minLength(1), S.maxLength(editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchBodyTermMax)),
+  "termKind": S.optional(S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null))
 })
 
 export const EditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch200Response = S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })
 
 export const EditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch404Response = S.Struct({
@@ -2740,19 +2787,21 @@ export const ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemo
   "rows": S.Array(S.Struct({
   "memory": S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'The memory that describes the glossary terms.' }),
   "terms": S.Array(S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })).annotations({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
 }).annotations({ description: 'A memory together with the glossary terms it describes.' }))
 })
@@ -2788,7 +2837,8 @@ export const EditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsT
 export const EditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch200Response = S.Struct({
   "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
   "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' })
+  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
 }).annotations({ description: 'A glossary term represented as context for an agent.' })
 
 export const EditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch404Response = S.Struct({
@@ -2825,8 +2875,8 @@ export const readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQueryLimitMax = 100
 export const ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQueryParams = S.Struct({
   "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQuerySkipMin)), { default: () => readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQuerySkipDefault }),
   "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQueryLimitMax)), { default: () => readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQueryLimitDefault }),
-  "pluginNames": S.optional(S.Union(S.Array(S.Literal("glossary")), S.Null)),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
+  "pluginNames": S.optional(S.Union(S.Array(S.Literal('glossary', 'continuity')), S.Null)),
+  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
 })
 
 export const readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet200ResponseCountMin = 0;
@@ -2837,13 +2887,14 @@ export const ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGet200Response = S.Str
   "count": S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet200ResponseCountMin)),
   "rows": S.Array(S.Struct({
   "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
   "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
   "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
   "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
   "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
   "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal("glossary").annotations({ description: 'Name of the plugin that owns the memory.' }),
+  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
   "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
 }).annotations({ description: 'Memory schema' }))
 })
@@ -3118,7 +3169,7 @@ export const ReadNovelWithContributorsNovelsNovelIdWithContributorsGet200Respons
   "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 }).annotations({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' }),
   "users": S.Array(S.Struct({
-  "contributorRole": S.String,
+  "contributorRole": S.Literal('owner', 'viewer', 'editor'),
   "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "userId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 }).annotations({ description: 'Pydantic schema for a novel contributor.\n\nAttributes:\n    user_id: UUID of the user.\n    novel_id: UUID of the novel.\n    contributor_role: Role of the user in the novel.' }))
@@ -3475,3 +3526,4 @@ export const ReadUserUsersUserNameGet422Response = S.Struct({
   "type": S.String
 })))
 })
+

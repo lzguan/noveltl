@@ -1,3 +1,4 @@
+from functools import cache
 from typing import Annotated
 from uuid import UUID
 
@@ -11,6 +12,9 @@ from src.memory.agent.dispatch.dependencies import get_dispatcher
 from src.memory.agent.dispatch.dispatcher import MemoryAgentDispatcher
 from src.memory.agent.schemas import (
     CreateMemoryJob,
+    MemoryAgentConfig,
+    MemoryAgentModelOption,
+    MemoryAgentToolsetOption,
     MemoryChapterTask,
     MemoryChapterTaskPage,
     MemoryJob,
@@ -32,6 +36,13 @@ from src.memory.agent.service import (
     start_job,
     start_task,
 )
+from src.memory.agent.types import (
+    MODEL_METADATA,
+    TOOLSET_METADATA,
+    TOOLSET_RESTRICTIONS,
+    ToolsetExcludes,
+    ToolsetRequires,
+)
 from src.memory.exceptions import (
     MemoryAgentEnqueueFailedException,
     MemoryChapterTaskNotFoundException,
@@ -43,6 +54,54 @@ from src.memory.exceptions import (
 from src.schemas import DetailHTTPErrorResponse
 
 router = APIRouter(prefix="/memory-agent")
+
+
+@cache
+def get_memory_agent_config() -> MemoryAgentConfig:
+    requires = {metadata.name: [] for metadata in TOOLSET_METADATA}
+    excludes = {metadata.name: [] for metadata in TOOLSET_METADATA}
+    for restriction in TOOLSET_RESTRICTIONS:
+        match restriction:
+            case ToolsetRequires(toolset=toolset, requirement=requirement):
+                requires[toolset].append(requirement)
+            case ToolsetExcludes(toolset1=toolset1, toolset2=toolset2):
+                excludes[toolset1].append(toolset2)
+                excludes[toolset2].append(toolset1)
+
+    return MemoryAgentConfig(
+        models=[
+            MemoryAgentModelOption(
+                name=metadata.name,
+                label=metadata.label,
+                description=metadata.description,
+            )
+            for metadata in MODEL_METADATA
+        ],
+        toolsets=[
+            MemoryAgentToolsetOption(
+                name=metadata.name,
+                label=metadata.label,
+                description=metadata.description,
+                kind=metadata.kind,
+                default_enabled=metadata.default_enabled,
+                config_schema=metadata.config_model.model_json_schema(by_alias=True),
+                requires=requires[metadata.name],
+                excludes=excludes[metadata.name],
+            )
+            for metadata in TOOLSET_METADATA
+        ],
+    )
+
+
+@router.get(
+    "/config",
+    response_model=MemoryAgentConfig,
+    responses={401: {"model": DetailHTTPErrorResponse}},
+)
+def read_memory_agent_config(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> MemoryAgentConfig:
+    return get_memory_agent_config()
 
 
 @router.post(

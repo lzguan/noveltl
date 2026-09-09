@@ -49,12 +49,14 @@ const groupTwo: MemoryGroup = {
 const termOne: GlossaryTerm = {
 	termId: "term-1",
 	term: "林凡",
+	termKind: "person",
 	reviewStatus: ReviewStatus.pending,
 };
 
 const termTwo: GlossaryTerm = {
 	termId: "term-2",
 	term: "林家",
+	termKind: "organization",
 	reviewStatus: ReviewStatus.approved,
 };
 
@@ -64,6 +66,7 @@ function memory(memoryId: string): Memory {
 		memoryContent: `Memory ${memoryId}`,
 		memoryEndNum: null,
 		memoryId,
+		mark: null,
 		memoryReviewStatus: ReviewStatus.pending,
 		memoryStartNum: 1,
 		memoryType: MemoryType.fact,
@@ -82,6 +85,7 @@ function glossaryTermSummary(termId: string): GlossaryTermSummary {
 		reviewStatus: ReviewStatus.pending,
 		term: `Term ${termId}`,
 		termId,
+		termKind: null,
 	};
 }
 
@@ -495,12 +499,14 @@ describe("memory hooks", () => {
 		expect(result.current.selectedTermIds).toEqual([termOne.termId]);
 		act(() => {
 			result.current.setMemoryContent("Lin Fan is an inner disciple.");
+			result.current.setMark("membership");
 			result.current.setMemoryType(MemoryType.rel);
 			result.current.setScope(Scope.persist);
 			result.current.setTermSelected(termTwo, true);
 			result.current.preSend();
 		});
 		expect(result.current.formStatus).toEqual({ status: "submitting" });
+		expect(result.current.mark).toBe("membership");
 		expect(result.current.selectedTermIds).toEqual([termOne.termId, termTwo.termId]);
 
 		act(() => result.current.onSendError("Could not create memory."));
@@ -510,6 +516,7 @@ describe("memory hooks", () => {
 		});
 		act(() => result.current.resetForm());
 		expect(result.current.memoryContent).toBe("");
+		expect(result.current.mark).toBe("");
 		expect(result.current.memoryType).toBe(MemoryType.fact);
 		expect(result.current.scope).toBeNull();
 		expect(result.current.selectedTerms).toEqual([termOne]);

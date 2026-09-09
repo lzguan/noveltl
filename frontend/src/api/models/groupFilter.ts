@@ -4,10 +4,10 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { GroupDataInput } from './groupDataInput';
+import type { GroupData } from './groupData';
 
 export interface GroupFilter {
   groupingId: string;
   /** @maxItems 100 */
-  values: GroupDataInput[];
+  values: GroupData[];
 }

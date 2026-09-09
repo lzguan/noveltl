@@ -4,9 +4,9 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { GroupDataOutput } from './groupDataOutput';
+import type { GroupData } from './groupData';
 
 export interface GroupValueCount {
   count: number;
-  value: GroupDataOutput;
+  value: GroupData;
 }

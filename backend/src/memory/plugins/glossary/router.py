@@ -199,6 +199,7 @@ def add_glossary_memory(
             request.memory_content,
             request.term_ids,
             request.scope,
+            request.mark,
         )
     except MemoryGroupNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Memory group not found.") from e
@@ -230,7 +231,7 @@ def add_glossary_term(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     try:
-        return create_glossary_term(db, current_user, memory_group_id, request.term)
+        return create_glossary_term(db, current_user, memory_group_id, request.term, request.term_kind)
     except MemoryGroupNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Memory group not found.") from e
     except GlossaryTermAlreadyExistsException as e:
@@ -253,7 +254,7 @@ def edit_glossary_term(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     try:
-        return update_glossary_term(db, current_user, memory_group_id, term_id, request.term)
+        return update_glossary_term(db, current_user, memory_group_id, term_id, request.term, request.term_kind)
     except GlossaryTermNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Glossary term not found.") from e
     except GlossaryTermAlreadyExistsException as e:

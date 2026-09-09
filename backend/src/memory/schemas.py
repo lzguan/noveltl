@@ -8,13 +8,19 @@ from src.memory.types import Creator, MemoryType, PluginName, ReviewStatus
 from src.schemas import Model, Page
 
 
-class MemoryGroupContext(Model):
+class AgentModel(Model):
+    """Base for agent-facing schemas, which use Python field names on the wire."""
+
+    model_config = ConfigDict(alias_generator=None)
+
+
+class MemoryGroupContext(AgentModel):
     """Memory-group metadata relevant to an agent run."""
 
     memory_language: str = Field(description="Language in which memory content should be written.")
 
 
-class AgentMemory[KeyT](Model):
+class AgentMemory[KeyT](AgentModel):
     """A memory represented as context for an agent."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -22,7 +28,10 @@ class AgentMemory[KeyT](Model):
     memory_id: KeyT = Field(
         description="Stable identifier to use when superseding, expiring, or otherwise referring to this memory."
     )
-    memory_type: MemoryType = Field(description="Kind of information stored: a fact, event, definition, or relation.")
+    memory_type: MemoryType = Field(
+        description="Kind of information stored: a fact, event, definition, relation, or summary."
+    )
+    mark: str | None = Field(description="Optional application-defined category used to narrow memory retrieval.")
     memory_content: str = Field(
         description="The contextual information that should inform glossary maintenance and novel continuity."
     )
@@ -47,6 +56,7 @@ class Memory(Model):
         description="Stable identifier to use when superseding, expiring, or otherwise referring to this memory."
     )
     memory_type: MemoryType = Field(description="Kind of information stored: a fact, event, definition, or relation.")
+    mark: str | None = Field(description="Optional application-defined category used to narrow memory retrieval.")
     memory_content: str = Field(
         description="The contextual information that should inform glossary maintenance and novel continuity."
     )
@@ -92,6 +102,7 @@ MemoryPage = Page[Memory]
 
 class UpdateMemoryContent(Model):
     memory_content: str = Field(min_length=1)
+    mark: str | None = Field(min_length=1)
 
 
 class UpdateReviewStatus(Model):

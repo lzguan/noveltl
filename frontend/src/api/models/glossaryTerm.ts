@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ReviewStatus } from './reviewStatus';
+import type { TermKind } from './termKind';
 
 /**
  * A glossary term represented as context for an agent.
@@ -16,4 +17,6 @@ export interface GlossaryTerm {
   term: string;
   /** Stable identifier for the glossary term. */
   termId: string;
+  /** Semantic kind of the glossary term, or null when it has not been categorized. */
+  termKind: TermKind | null;
 }

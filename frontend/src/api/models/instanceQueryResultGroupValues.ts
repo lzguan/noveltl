@@ -4,6 +4,6 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { GroupDataOutput } from './groupDataOutput';
+import type { GroupData } from './groupData';
 
-export type InstanceQueryResultGroupValues = {[key: string]: GroupDataOutput};
+export type InstanceQueryResultGroupValues = {[key: string]: GroupData};

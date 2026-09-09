@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import ConfigDict
 
-from src.novels.constants import NovelType, Visibility
+from src.novels.constants import NovelType, Role, Visibility
 from src.schemas import Model
 
 
@@ -93,7 +93,7 @@ class NovelContributor(Model):
     model_config = ConfigDict(from_attributes=True)
     user_id: uuid.UUID
     novel_id: uuid.UUID
-    contributor_role: str
+    contributor_role: Role
 
 
 class NovelAndUsers(Model):

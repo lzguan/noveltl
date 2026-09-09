@@ -191,6 +191,7 @@ export * from './replaceGlossaryAssociations';
 export * from './requestConflictDetail';
 export * from './requestConflictErrorResponse';
 export * from './reviewStatus';
+export * from './role';
 export * from './schema';
 export * from './schemaField';
 export * from './schemaFieldKind';

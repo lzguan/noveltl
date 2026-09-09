@@ -4,6 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
+import type { Role } from './role';
 
 /**
  * Pydantic schema for a novel contributor.
@@ -14,7 +15,7 @@
  *     contributor_role: Role of the user in the novel.
  */
 export interface NovelContributor {
-  contributorRole: string;
+  contributorRole: Role;
   novelId: string;
   userId: string;
 }

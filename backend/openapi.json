@@ -10113,8 +10113,7 @@
             "title": "Novelid"
           },
           "contributorRole": {
-            "type": "string",
-            "title": "Contributorrole"
+            "$ref": "#/components/schemas/Role"
           }
         },
         "type": "object",
@@ -10509,6 +10508,15 @@
           "rejected"
         ],
         "title": "ReviewStatus"
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "owner",
+          "viewer",
+          "editor"
+        ],
+        "title": "Role"
       },
       "SObj": {
         "oneOf": [

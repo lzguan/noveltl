@@ -2368,8 +2368,7 @@ components:
         \ Role of the user in the novel."
       properties:
         contributorRole:
-          title: Contributorrole
-          type: string
+          $ref: '#/components/schemas/Role'
         novelId:
           format: uuid
           title: Novelid
@@ -2660,6 +2659,13 @@ components:
       - approved
       - rejected
       title: ReviewStatus
+      type: string
+    Role:
+      enum:
+      - owner
+      - viewer
+      - editor
+      title: Role
       type: string
     SObj:
       discriminator:

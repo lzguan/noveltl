@@ -3169,7 +3169,7 @@ export const ReadNovelWithContributorsNovelsNovelIdWithContributorsGet200Respons
   "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 }).annotations({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' }),
   "users": S.Array(S.Struct({
-  "contributorRole": S.String,
+  "contributorRole": S.Literal('owner', 'viewer', 'editor'),
   "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "userId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 }).annotations({ description: 'Pydantic schema for a novel contributor.\n\nAttributes:\n    user_id: UUID of the user.\n    novel_id: UUID of the novel.\n    contributor_role: Role of the user in the novel.' }))

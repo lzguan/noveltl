@@ -5,9 +5,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type IntDataInputType = typeof IntDataInputType[keyof typeof IntDataInputType];
+export type IntDataType = typeof IntDataType[keyof typeof IntDataType];
 
 
-export const IntDataInputType = {
+export const IntDataType = {
   int: 'int',
 } as const;

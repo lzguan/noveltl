@@ -5,7 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { BoolData } from './boolData';
-import type { IntDataInput } from './intDataInput';
+import type { IntData } from './intData';
 import type { StringData } from './stringData';
 
-export type GroupDataInput = StringData | IntDataInput | BoolData;
+export type GroupData = StringData | IntData | BoolData;

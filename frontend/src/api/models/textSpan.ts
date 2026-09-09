@@ -4,11 +4,11 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { SrcFiltersDataTypesIntegerValue2 } from './srcFiltersDataTypesIntegerValue2';
+import type { NonNegativeIntegerValue } from './nonNegativeIntegerValue';
 
 export interface TextSpan {
   chapterContentId: string;
   chapterId: string;
-  end: SrcFiltersDataTypesIntegerValue2;
-  start: SrcFiltersDataTypesIntegerValue2;
+  end: NonNegativeIntegerValue;
+  start: NonNegativeIntegerValue;
 }

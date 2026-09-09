@@ -6,9 +6,9 @@
  */
 import type { BoolData } from './boolData';
 import type { FloatData } from './floatData';
-import type { IntDataOutput } from './intDataOutput';
+import type { IntData } from './intData';
 import type { LabelRefData } from './labelRefData';
 import type { StringData } from './stringData';
 import type { TextSpanData } from './textSpanData';
 
-export type DataType = StringData | IntDataOutput | FloatData | BoolData | TextSpanData | LabelRefData;
+export type DataType = StringData | IntData | FloatData | BoolData | TextSpanData | LabelRefData;

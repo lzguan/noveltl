@@ -8152,7 +8152,7 @@
             "$ref": "#/components/schemas/StringData"
           },
           {
-            "$ref": "#/components/schemas/IntData-Output"
+            "$ref": "#/components/schemas/IntData"
           },
           {
             "$ref": "#/components/schemas/FloatData"
@@ -8172,7 +8172,7 @@
           "mapping": {
             "bool": "#/components/schemas/BoolData",
             "float": "#/components/schemas/FloatData",
-            "int": "#/components/schemas/IntData-Output",
+            "int": "#/components/schemas/IntData",
             "labelRef": "#/components/schemas/LabelRefData",
             "string": "#/components/schemas/StringData",
             "textSpan": "#/components/schemas/TextSpanData"
@@ -8606,13 +8606,13 @@
         "title": "GlossaryTermSummary",
         "description": "A glossary term together with its associated-memory count in the requested scope."
       },
-      "GroupData-Input": {
+      "GroupData": {
         "oneOf": [
           {
             "$ref": "#/components/schemas/StringData"
           },
           {
-            "$ref": "#/components/schemas/IntData-Input"
+            "$ref": "#/components/schemas/IntData"
           },
           {
             "$ref": "#/components/schemas/BoolData"
@@ -8622,28 +8622,7 @@
           "propertyName": "type",
           "mapping": {
             "bool": "#/components/schemas/BoolData",
-            "int": "#/components/schemas/IntData-Input",
-            "string": "#/components/schemas/StringData"
-          }
-        }
-      },
-      "GroupData-Output": {
-        "oneOf": [
-          {
-            "$ref": "#/components/schemas/StringData"
-          },
-          {
-            "$ref": "#/components/schemas/IntData-Output"
-          },
-          {
-            "$ref": "#/components/schemas/BoolData"
-          }
-        ],
-        "discriminator": {
-          "propertyName": "type",
-          "mapping": {
-            "bool": "#/components/schemas/BoolData",
-            "int": "#/components/schemas/IntData-Output",
+            "int": "#/components/schemas/IntData",
             "string": "#/components/schemas/StringData"
           }
         }
@@ -8657,7 +8636,7 @@
           },
           "values": {
             "items": {
-              "$ref": "#/components/schemas/GroupData-Input"
+              "$ref": "#/components/schemas/GroupData"
             },
             "type": "array",
             "maxItems": 100,
@@ -8692,7 +8671,7 @@
       "GroupValueCount": {
         "properties": {
           "value": {
-            "$ref": "#/components/schemas/GroupData-Output"
+            "$ref": "#/components/schemas/GroupData"
           },
           "count": {
             "type": "integer",
@@ -8916,7 +8895,7 @@
           },
           "groupValues": {
             "additionalProperties": {
-              "$ref": "#/components/schemas/GroupData-Output"
+              "$ref": "#/components/schemas/GroupData"
             },
             "propertyNames": {
               "format": "uuid"
@@ -8956,35 +8935,10 @@
         ],
         "title": "InstanceResponse"
       },
-      "IntData-Input": {
+      "IntData": {
         "properties": {
           "value": {
-            "$ref": "#/components/schemas/IntegerValue-Input"
-          },
-          "type": {
-            "type": "string",
-            "const": "int",
-            "title": "Type",
-            "default": "int"
-          },
-          "kind": {
-            "type": "string",
-            "const": "value",
-            "title": "Kind",
-            "default": "value"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "value"
-        ],
-        "title": "IntData"
-      },
-      "IntData-Output": {
-        "properties": {
-          "value": {
-            "$ref": "#/components/schemas/src__filters__data_types__IntegerValue__1"
+            "$ref": "#/components/schemas/IntegerValue"
           },
           "type": {
             "type": "string",
@@ -9030,7 +8984,7 @@
         "type": "object",
         "title": "IntField"
       },
-      "IntegerValue-Input": {
+      "IntegerValue": {
         "type": "integer"
       },
       "JobParams": {
@@ -9436,7 +9390,7 @@
             "$ref": "#/components/schemas/StringData"
           },
           {
-            "$ref": "#/components/schemas/IntData-Input"
+            "$ref": "#/components/schemas/IntData"
           },
           {
             "$ref": "#/components/schemas/FloatData"
@@ -9450,7 +9404,7 @@
           "mapping": {
             "bool": "#/components/schemas/BoolData",
             "float": "#/components/schemas/FloatData",
-            "int": "#/components/schemas/IntData-Input",
+            "int": "#/components/schemas/IntData",
             "string": "#/components/schemas/StringData"
           }
         }
@@ -10017,6 +9971,10 @@
           "type"
         ],
         "title": "NewStringFieldRequest"
+      },
+      "NonNegativeIntegerValue": {
+        "type": "integer",
+        "minimum": 0.0
       },
       "Novel": {
         "properties": {
@@ -10817,10 +10775,10 @@
             "title": "Chaptercontentid"
           },
           "start": {
-            "$ref": "#/components/schemas/src__filters__data_types__IntegerValue__2"
+            "$ref": "#/components/schemas/NonNegativeIntegerValue"
           },
           "end": {
-            "$ref": "#/components/schemas/src__filters__data_types__IntegerValue__2"
+            "$ref": "#/components/schemas/NonNegativeIntegerValue"
           }
         },
         "additionalProperties": false,
@@ -11541,13 +11499,6 @@
           "glossary"
         ],
         "title": "WorkflowUseCase"
-      },
-      "src__filters__data_types__IntegerValue__1": {
-        "type": "integer"
-      },
-      "src__filters__data_types__IntegerValue__2": {
-        "type": "integer",
-        "minimum": 0.0
       }
     },
     "securitySchemes": {

@@ -5,4 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type IntegerValueInput = number;
+/**
+ * @minimum 0
+ */
+export type NonNegativeIntegerValue = number;

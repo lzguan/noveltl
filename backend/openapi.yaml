@@ -895,14 +895,14 @@ components:
         mapping:
           bool: '#/components/schemas/BoolData'
           float: '#/components/schemas/FloatData'
-          int: '#/components/schemas/IntData-Output'
+          int: '#/components/schemas/IntData'
           labelRef: '#/components/schemas/LabelRefData'
           string: '#/components/schemas/StringData'
           textSpan: '#/components/schemas/TextSpanData'
         propertyName: type
       oneOf:
       - $ref: '#/components/schemas/StringData'
-      - $ref: '#/components/schemas/IntData-Output'
+      - $ref: '#/components/schemas/IntData'
       - $ref: '#/components/schemas/FloatData'
       - $ref: '#/components/schemas/BoolData'
       - $ref: '#/components/schemas/TextSpanData'
@@ -1234,27 +1234,16 @@ components:
       - associatedMemoryCount
       title: GlossaryTermSummary
       type: object
-    GroupData-Input:
+    GroupData:
       discriminator:
         mapping:
           bool: '#/components/schemas/BoolData'
-          int: '#/components/schemas/IntData-Input'
+          int: '#/components/schemas/IntData'
           string: '#/components/schemas/StringData'
         propertyName: type
       oneOf:
       - $ref: '#/components/schemas/StringData'
-      - $ref: '#/components/schemas/IntData-Input'
-      - $ref: '#/components/schemas/BoolData'
-    GroupData-Output:
-      discriminator:
-        mapping:
-          bool: '#/components/schemas/BoolData'
-          int: '#/components/schemas/IntData-Output'
-          string: '#/components/schemas/StringData'
-        propertyName: type
-      oneOf:
-      - $ref: '#/components/schemas/StringData'
-      - $ref: '#/components/schemas/IntData-Output'
+      - $ref: '#/components/schemas/IntData'
       - $ref: '#/components/schemas/BoolData'
     GroupFilter:
       properties:
@@ -1264,7 +1253,7 @@ components:
           type: string
         values:
           items:
-            $ref: '#/components/schemas/GroupData-Input'
+            $ref: '#/components/schemas/GroupData'
           maxItems: 100
           title: Values
           type: array
@@ -1292,7 +1281,7 @@ components:
           title: Count
           type: integer
         value:
-          $ref: '#/components/schemas/GroupData-Output'
+          $ref: '#/components/schemas/GroupData'
       required:
       - value
       - count
@@ -1445,7 +1434,7 @@ components:
       properties:
         groupValues:
           additionalProperties:
-            $ref: '#/components/schemas/GroupData-Output'
+            $ref: '#/components/schemas/GroupData'
           propertyNames:
             format: uuid
           title: Groupvalues
@@ -1475,7 +1464,7 @@ components:
       - value
       title: InstanceResponse
       type: object
-    IntData-Input:
+    IntData:
       additionalProperties: false
       properties:
         kind:
@@ -1489,26 +1478,7 @@ components:
           title: Type
           type: string
         value:
-          $ref: '#/components/schemas/IntegerValue-Input'
-      required:
-      - value
-      title: IntData
-      type: object
-    IntData-Output:
-      additionalProperties: false
-      properties:
-        kind:
-          const: value
-          default: value
-          title: Kind
-          type: string
-        type:
-          const: int
-          default: int
-          title: Type
-          type: string
-        value:
-          $ref: '#/components/schemas/src__filters__data_types__IntegerValue__1'
+          $ref: '#/components/schemas/IntegerValue'
       required:
       - value
       title: IntData
@@ -1532,7 +1502,7 @@ components:
           type: string
       title: IntField
       type: object
-    IntegerValue-Input:
+    IntegerValue:
       type: integer
     JobParams:
       properties:
@@ -1858,12 +1828,12 @@ components:
         mapping:
           bool: '#/components/schemas/BoolData'
           float: '#/components/schemas/FloatData'
-          int: '#/components/schemas/IntData-Input'
+          int: '#/components/schemas/IntData'
           string: '#/components/schemas/StringData'
         propertyName: type
       oneOf:
       - $ref: '#/components/schemas/StringData'
-      - $ref: '#/components/schemas/IntData-Input'
+      - $ref: '#/components/schemas/IntData'
       - $ref: '#/components/schemas/FloatData'
       - $ref: '#/components/schemas/BoolData'
     Memory:
@@ -2299,6 +2269,9 @@ components:
       - type
       title: NewStringFieldRequest
       type: object
+    NonNegativeIntegerValue:
+      minimum: 0.0
+      type: integer
     Novel:
       description: "Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID\
         \ id of novel in db.\n    novel_title: String title of novel.\n    novel_description:\
@@ -2896,9 +2869,9 @@ components:
           title: Chapterid
           type: string
         end:
-          $ref: '#/components/schemas/src__filters__data_types__IntegerValue__2'
+          $ref: '#/components/schemas/NonNegativeIntegerValue'
         start:
-          $ref: '#/components/schemas/src__filters__data_types__IntegerValue__2'
+          $ref: '#/components/schemas/NonNegativeIntegerValue'
       required:
       - chapterId
       - chapterContentId
@@ -3398,11 +3371,6 @@ components:
       - glossary
       title: WorkflowUseCase
       type: string
-    src__filters__data_types__IntegerValue__1:
-      type: integer
-    src__filters__data_types__IntegerValue__2:
-      minimum: 0.0
-      type: integer
   securitySchemes:
     OAuth2PasswordBearer:
       flows:

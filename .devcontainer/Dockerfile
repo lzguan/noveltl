@@ -35,6 +35,5 @@ WORKDIR ${PROJECT_ROOT}
 
 COPY --chown=vscode:vscode frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./frontend/
 WORKDIR ${PROJECT_ROOT}/frontend
-RUN pnpm fetch --frozen-lockfile
+RUN pnpm fetch
 WORKDIR ${PROJECT_ROOT}
-

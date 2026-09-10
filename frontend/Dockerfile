@@ -1,10 +1,10 @@
-FROM ghcr.io/pnpm/pnpm:11.22.0 AS base
+FROM ghcr.io/pnpm/pnpm:12.3.4 AS base
 
 SHELL [ "/bin/bash", "-c" ]
 
 ARG GNAME=newgroup
 ARG UNAME=newuser
-ARG NODE_VERSION=22
+ARG NODE_VERSION=24
 ARG UID=1000
 ARG GID=1000
 

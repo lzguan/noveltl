@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/devcontainers/base:dev-trixie
 
-ARG PNPM_VERSION=11.22.0
-ARG NODE_VERSION=22
+ARG PNPM_VERSION=12.3.4
+ARG NODE_VERSION=24
 ARG PROJECT_ROOT=/workspaces/NovelTL_Dev
 
 ENV PNPM_HOME=/home/vscode/.local/share/pnpm
@@ -14,7 +14,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 USER vscode
-COPY --from=ghcr.io/astral-sh/uv:0.12.1 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.12.12 /uv /uvx /bin/
 RUN wget -qO- https://get.pnpm.io/install.sh | ENV="$HOME/.bashrc" SHELL="/bin/bash" bash -
 RUN pnpm runtime set node ${NODE_VERSION} -g
 
@@ -35,6 +35,5 @@ WORKDIR ${PROJECT_ROOT}
 
 COPY --chown=vscode:vscode frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./frontend/
 WORKDIR ${PROJECT_ROOT}/frontend
-RUN pnpm fetch --frozen-lockfile
+RUN pnpm fetch
 WORKDIR ${PROJECT_ROOT}
-

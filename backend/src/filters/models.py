@@ -36,7 +36,7 @@ class Workflow(Base):
     __tablename__ = "workflows"
 
     workflow_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
-    workflow_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    workflow_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     use_case: Mapped[WorkflowUseCase] = mapped_column(
         Enum(
             WorkflowUseCase,

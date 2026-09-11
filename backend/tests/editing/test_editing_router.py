@@ -49,17 +49,18 @@ def _normalize_payload(payload: dict[str, object]) -> dict[str, object]:
             key=lambda entry: entry["labelGroup"]["labelGroupName"],
         )
     for key in ("eagerLabelData",):
+        entries: list[dict[str, Any]] = [
+            {
+                **entry,
+                "labels": sorted(
+                    cast(list[dict[str, Any]], entry["labels"]),
+                    key=lambda lbl: (lbl["labelStart"], lbl["labelEnd"], lbl["labelWord"]),
+                ),
+            }
+            for entry in cast(list[dict[str, Any]], normalized[key])
+        ]
         normalized[key] = sorted(
-            [
-                {
-                    **entry,
-                    "labels": sorted(
-                        cast(list[dict[str, Any]], entry["labels"]),
-                        key=lambda lbl: (lbl["labelStart"], lbl["labelEnd"], lbl["labelWord"]),
-                    ),
-                }
-                for entry in cast(list[dict[str, Any]], normalized[key])
-            ],
+            entries,
             key=lambda entry: entry["labelGroup"]["labelGroupName"],
         )
     return normalized

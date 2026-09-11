@@ -141,6 +141,17 @@ services:
       - /home/newuser/frontend/node_modules
     ports:
       - "${FRONTEND_PORT}:5173"
+  
+  garage:
+    image: dxflrs/garage:v2.4.1
+    network_mode: "host"
+    restart: unless-stopped
+    volumes:
+      - ./garage.toml:/etc/garage.toml
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
 
 volumes:
   db_data:
+  garage_meta:
+  garage_data:

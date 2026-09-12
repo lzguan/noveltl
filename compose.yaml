@@ -20,11 +20,20 @@ x-test-redis-env: &test-redis-env
   TEST_REDIS_HOST: test_redis
   TEST_REDIS_PORT: ${TEST_REDIS_PORT}
 
+x-file-store-env: &file-store-env
+  FILE_STORE_NAME: ${FILE_STORE_NAME:-default}
+  S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://garage:3900}
+  S3_BUCKET: ${S3_BUCKET:-noveltl}
+  S3_REGION: ${S3_REGION:-garage}
+  S3_ADDRESSING_STYLE: ${S3_ADDRESSING_STYLE:-path}
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+
 services:
   dev:
     image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-devcontainer:${DEV_IMAGE_TAG:-latest}
     environment:
-      <<: [*db-env, *test-db-env, *redis-env, *test-redis-env]
+      <<: [*db-env, *test-db-env, *redis-env, *test-redis-env, *file-store-env]
       SECRET_KEY: ${SECRET_KEY}
       HF_TOKEN: ${HF_TOKEN:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
@@ -122,7 +131,7 @@ services:
       - db
       - redis
     environment:
-      <<: [*db-env, *redis-env]
+      <<: [*db-env, *redis-env, *file-store-env]
       PYTHONDONTWRITEBYTECODE: "1"
       SECRET_KEY: ${SECRET_KEY}
       BACKEND_LOG_DIR: ${BACKEND_LOG_DIR:-logs}
@@ -144,12 +153,19 @@ services:
   
   garage:
     image: dxflrs/garage:v2.4.1
-    network_mode: "host"
     restart: unless-stopped
+    command: /garage server --single-node --default-bucket
+    environment:
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?Set GARAGE_RPC_SECRET to a 32-byte hex secret}
+      GARAGE_DEFAULT_ACCESS_KEY: ${AWS_ACCESS_KEY_ID:?Set AWS_ACCESS_KEY_ID for Garage S3 access}
+      GARAGE_DEFAULT_SECRET_KEY: ${AWS_SECRET_ACCESS_KEY:?Set AWS_SECRET_ACCESS_KEY for Garage S3 access}
+      GARAGE_DEFAULT_BUCKET: ${S3_BUCKET:-noveltl}
     volumes:
       - ./garage.toml:/etc/garage.toml
       - garage_meta:/var/lib/garage/meta
       - garage_data:/var/lib/garage/data
+    ports:
+      - "3900:3900"
 
 volumes:
   db_data:

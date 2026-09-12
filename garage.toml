@@ -4,14 +4,9 @@ data_dir = "/var/lib/garage/data"
 db_engine = "lmdb"
 replication_factor = 1
 
-# Compose uses host networking. Cluster RPC is local to this host.
 rpc_bind_addr = "127.0.0.1:3901"
 rpc_public_addr = "127.0.0.1:3901"
-# Development-only shared secret. Override with GARAGE_RPC_SECRET for deployment.
-rpc_secret = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 [s3_api]
-# Reachable through the host from containers on the Compose bridge network.
 api_bind_addr = "0.0.0.0:3900"
 s3_region = "garage"
-# No root_domain: clients use path-style addressing (endpoint/bucket/key).

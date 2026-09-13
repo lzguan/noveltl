@@ -1,7 +1,8 @@
 import uuid
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import UUID
@@ -82,8 +83,10 @@ class TranslationTask(Base):
     )
     input_file_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("stored_files.file_id"), nullable=True)
     output_file_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("stored_files.file_id"), nullable=True)
+    provider_batch_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    provider_output_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Failure preserves the lifecycle step so recovery can select the appropriate worker.
+    failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    __table_args__ = (
-        UniqueConstraint("stage_id", "batch_id", name="uq_translation_task_stage_batch"),
-    )
+    __table_args__ = (UniqueConstraint("stage_id", "batch_id", name="uq_translation_task_stage_batch"),)

@@ -39,5 +39,6 @@ class TranslationTaskStatus(StrEnum):
     PREPARING = "preparing"
     PREPARED = "prepared"
     PROCESSING = "processing"
+    PROCESSED = "processed"
+    FINALIZING = "finalizing"
     COMPLETE = "complete"
-    FAILED = "failed"

@@ -64,5 +64,8 @@ retaining Python field names, including in reused memory schemas.
 `jsonl.iter_translation_records(chunks)` reads arbitrary byte chunks and validates
 each record. It accepts CRLF and a final record without a newline, rejects blank
 or malformed lines, and propagates download errors. Empty streams yield no records.
-Artifact-wide validation of membership, uniqueness, and completeness remains to
-be implemented.
+`validation.validate_output_records(records, chapter_ids=..., output_types=...)`
+checks chapter membership, component types, unique keys, and completeness while
+yielding records. It retains only keys. Callers must exhaust it inside the upload
+context before publishing the artifact, since missing components raise an error
+only at exhaustion. Source errors propagate to the caller.

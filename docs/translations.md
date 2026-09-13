@@ -69,3 +69,28 @@ checks chapter membership, component types, unique keys, and completeness while
 yielding records. It retains only keys. Callers must exhaust it inside the upload
 context before publishing the artifact, since missing components raise an error
 only at exhaustion. Source errors propagate to the caller.
+
+## Callback claims
+
+`new_func(expect=..., during=..., finish=..., lease_seconds=300)` registers a
+callback receiving `ActionTaskContext`; the queued callable still receives only
+the task UUID. The wrapper commits a claim token and expiry before running the
+callback, then commits callback writes and the `finish` state before dispatch.
+An active claim, failed task, or incompatible state prevents execution. Expired
+claims in the declared `during` state can be replaced by a fresh token.
+
+Callbacks can mutate their task's output fields and use `context.db`. The wrapper
+owns status, failure, and claim fields, as well as commit/rollback. Exceptions
+roll back callback writes; a still-owned, unexpired claim records `failed_at` and
+`error`, retaining the `during` state and clearing the claim. Lost owners cannot
+commit completion or record failure over a replacement worker.
+
+Renewal is cooperative, following the memory worker's pattern. Call
+`context.renew_lease()` between units of long work, before expiry. It uses a fresh
+transaction, so call it before flushing or locking the task row in the callback
+session. Choose a lease long enough for the longest individual blocking operation.
+There is no background heartbeat. Completion checks database wall-clock time,
+not the callback transaction's start time.
+
+These claims fence database completion, not external provider/S3 side effects.
+Polling, recovery dispatch, and exitpoint state transitions remain separate work.

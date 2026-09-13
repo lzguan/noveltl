@@ -1,7 +1,9 @@
 import uuid
+from collections.abc import Callable
+from datetime import timedelta
 
 from celery import Celery
-from celery.app import Task
+from celery.app.task import Task
 from pydantic import TypeAdapter
 from sqlalchemy import select
 from sqlalchemy.orm import aliased
@@ -9,7 +11,8 @@ from sqlalchemy.orm import aliased
 from src.autolabels.worker.config import SessionLocal
 from src.translations.actions.actions import ActionCallback, ActionCallbacks, ActionTask, ActionTaskContext
 from src.translations.models import TranslationStage, TranslationTask
-from src.translations.types import ActionName
+from src.translations.tasks.claims import TranslationClaimLostError, claim_task, fail_claim, finish_claim, renew_claim
+from src.translations.types import ActionName, TranslationTaskStatus
 
 
 class CeleryActionCallbacks(ActionCallbacks):
@@ -18,25 +21,52 @@ class CeleryActionCallbacks(ActionCallbacks):
         self._intermediate: list[Task] = []
         self._callbacks_dict = callbacks_dict
 
-    def new_func(self, f: ActionCallback) -> ActionTask:
-        idx = len(self._intermediate)
+    def new_func(
+        self,
+        *,
+        expect: TranslationTaskStatus,
+        during: TranslationTaskStatus,
+        finish: TranslationTaskStatus,
+        lease_seconds: int = 300,
+    ) -> Callable[[ActionCallback], ActionTask]:
+        if lease_seconds <= 0:
+            raise ValueError("lease_seconds must be positive")
+        duration = timedelta(seconds=lease_seconds)
 
-        def new_func(x: uuid.UUID) -> None:
-            with SessionLocal.begin() as session:
-                task = session.execute(select(TranslationTask).where(TranslationTask.task_id == x)).scalar_one()
-                f(ActionTaskContext(db=session, task=task))
-            if idx + 1 < len(self._intermediate):
-                self._intermediate[idx + 1].apply_async((x,))
-            elif idx + 1 == len(self._intermediate):
-                self.exitpoint(x)
+        def decorate(f: ActionCallback) -> ActionTask:
+            idx = len(self._intermediate)
 
-        @self.celery_app.task
-        def celery_task(x: uuid.UUID) -> None:
-            new_func(x)
+            @self.celery_app.task(name=f"{f.__module__}.{f.__qualname__}")
+            def celery_task(x: uuid.UUID) -> None:
+                token = uuid.uuid4()
+                with SessionLocal.begin() as session:
+                    if not claim_task(session, x, token, expect=expect, during=during, duration=duration):
+                        return
 
-        self._intermediate.append(celery_task)
+                def renew_lease() -> None:
+                    with SessionLocal.begin() as session:
+                        if not renew_claim(session, x, token, during=during, duration=duration):
+                            raise TranslationClaimLostError(f"Lost translation task claim: {x}")
 
-        return celery_task
+                try:
+                    with SessionLocal.begin() as session:
+                        task = session.execute(select(TranslationTask).where(TranslationTask.task_id == x)).scalar_one()
+                        f(ActionTaskContext(db=session, task=task, claim_token=token, renew_lease=renew_lease))
+                        finish_claim(session, x, token, during=during, finish=finish)
+                except Exception as error:
+                    with SessionLocal.begin() as session:
+                        fail_claim(session, x, token, during=during, error=str(error))
+                    raise
+
+                if idx + 1 < len(self._intermediate):
+                    self._intermediate[idx + 1].apply_async((x,))
+                else:
+                    self.exitpoint(x)
+
+            self._intermediate.append(celery_task)
+            return celery_task
+
+        return decorate
 
     def entrypoint(self, x: uuid.UUID) -> None:
         if self._intermediate:

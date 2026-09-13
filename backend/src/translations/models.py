@@ -88,5 +88,14 @@ class TranslationTask(Base):
     # Failure preserves the lifecycle step so recovery can select the appropriate worker.
     failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    claim_token: Mapped[uuid.UUID | None] = mapped_column(UUID, nullable=True, unique=True)
+    claim_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    __table_args__ = (UniqueConstraint("stage_id", "batch_id", name="uq_translation_task_stage_batch"),)
+    __table_args__ = (
+        UniqueConstraint("stage_id", "batch_id", name="uq_translation_task_stage_batch"),
+        CheckConstraint(
+            "(claim_token IS NULL AND claim_expires_at IS NULL) OR "
+            "(claim_token IS NOT NULL AND claim_expires_at IS NOT NULL)",
+            name="ck_translation_task_claim_token_expiration",
+        ),
+    )

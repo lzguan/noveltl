@@ -59,8 +59,10 @@ The same record schemas apply to the initial canonical artifact and each task's
 normalized output. They do not describe `input_file_id`, which holds vendor JSONL.
 Record keys are available through the non-serialized `key` property.
 
-`translation_record_adapter.validate_json(line)` validates a single record.
-Serialize with `model_dump_json(by_alias=False)` to retain Python field names,
-including in reused memory schemas, and append a newline when writing JSONL.
-Stream framing and artifact-wide validation of membership, uniqueness, and
-completeness remain to be implemented.
+`jsonl.encode_translation_record(record)` emits UTF-8 JSON and a trailing newline,
+retaining Python field names, including in reused memory schemas.
+`jsonl.iter_translation_records(chunks)` reads arbitrary byte chunks and validates
+each record. It accepts CRLF and a final record without a newline, rejects blank
+or malformed lines, and propagates download errors. Empty streams yield no records.
+Artifact-wide validation of membership, uniqueness, and completeness remains to
+be implemented.

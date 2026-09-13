@@ -2,9 +2,29 @@
 
 import uuid
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Protocol
 
-type ActionCallback = Callable[[uuid.UUID], None]  # task id
+from sqlalchemy.orm import Session
+
+from src.translations.models import TranslationTask
+
+
+@dataclass(frozen=True)
+class ActionTaskContext:
+    """Task and session owned by the current worker invocation.
+
+    Callbacks may mutate the task and use the session, but must not commit,
+    roll back, or close it. The wrapper owns the transaction and session lifetime.
+    This context stays in the worker; queue messages contain only the task ID.
+    """
+
+    db: Session
+    task: TranslationTask
+
+
+type ActionCallback = Callable[[ActionTaskContext], None]
+type ActionTask = Callable[[uuid.UUID], None]
 
 
 class ActionCallbacks(Protocol):
@@ -18,4 +38,4 @@ class ActionCallbacks(Protocol):
 
     def exitpoint(self, x: uuid.UUID) -> None: ...
 
-    def new_func(self, f: ActionCallback) -> ActionCallback: ...
+    def new_func(self, f: ActionCallback) -> ActionTask: ...

@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import aliased
 
 from src.autolabels.worker.config import SessionLocal
-from src.translations.actions.actions import ActionCallback, ActionCallbacks
+from src.translations.actions.actions import ActionCallback, ActionCallbacks, ActionTask, ActionTaskContext
 from src.translations.models import TranslationStage, TranslationTask
 from src.translations.types import ActionName
 
@@ -18,11 +18,13 @@ class CeleryActionCallbacks(ActionCallbacks):
         self._intermediate: list[Task] = []
         self._callbacks_dict = callbacks_dict
 
-    def new_func(self, f: ActionCallback) -> ActionCallback:
+    def new_func(self, f: ActionCallback) -> ActionTask:
         idx = len(self._intermediate)
 
         def new_func(x: uuid.UUID) -> None:
-            f(x)
+            with SessionLocal.begin() as session:
+                task = session.execute(select(TranslationTask).where(TranslationTask.task_id == x)).scalar_one()
+                f(ActionTaskContext(db=session, task=task))
             if idx + 1 < len(self._intermediate):
                 self._intermediate[idx + 1].apply_async((x,))
             elif idx + 1 == len(self._intermediate):

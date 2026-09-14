@@ -93,4 +93,8 @@ There is no background heartbeat. Completion checks database wall-clock time,
 not the callback transaction's start time.
 
 These claims fence database completion, not external provider/S3 side effects.
-Polling, recovery dispatch, and exitpoint state transitions remain separate work.
+Exitpoint requires the current task to be complete and not failed. It marks the
+next task in the same batch READY, commits, then dispatches that action's
+entrypoint. Retrying exitpoint can redispatch an already-ready task after a queue
+failure; it does not reset running, completed, claimed, or failed tasks. Polling
+and recovery dispatch remain separate work.

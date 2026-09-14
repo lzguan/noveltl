@@ -5,7 +5,7 @@ from datetime import timedelta
 from celery import Celery
 from celery.app.task import Task
 from pydantic import TypeAdapter
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import aliased
 
 from src.autolabels.worker.config import SessionLocal
@@ -75,10 +75,14 @@ class CeleryActionCallbacks(ActionCallbacks):
             self.exitpoint(x)
 
     def exitpoint(self, x: uuid.UUID) -> None:
-        with SessionLocal() as session:
+        with SessionLocal.begin() as session:
             cur_task_q = (
                 select(TranslationTask.batch_id, TranslationStage.job_id, TranslationStage.stage_num)
-                .where(TranslationTask.task_id == x)
+                .where(
+                    TranslationTask.task_id == x,
+                    TranslationTask.status == TranslationTaskStatus.COMPLETE,
+                    TranslationTask.failed_at.is_(None),
+                )
                 .join(TranslationStage, TranslationTask.stage_id == TranslationStage.stage_id)
                 .subquery()
             )
@@ -93,5 +97,19 @@ class CeleryActionCallbacks(ActionCallbacks):
             if next_task is None:
                 return
             next_task_id, next_action = next_task._t
-            next_callbacks = self._callbacks_dict[TypeAdapter(ActionName).validate_python(next_action)]
-            next_callbacks.entrypoint(next_task_id)
+            ready_task_id = session.scalar(
+                update(TranslationTask)
+                .where(
+                    TranslationTask.task_id == next_task_id,
+                    TranslationTask.status.in_((TranslationTaskStatus.WAITING, TranslationTaskStatus.READY)),
+                    TranslationTask.failed_at.is_(None),
+                    TranslationTask.claim_token.is_(None),
+                )
+                .values(status=TranslationTaskStatus.READY)
+                .returning(TranslationTask.task_id)
+            )
+            if ready_task_id is None:
+                return
+        # A failed dispatch leaves the task READY so exitpoint can be retried.
+        next_callbacks = self._callbacks_dict[TypeAdapter(ActionName).validate_python(next_action)]
+        next_callbacks.entrypoint(next_task_id)

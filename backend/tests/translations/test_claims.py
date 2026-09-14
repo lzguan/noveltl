@@ -188,3 +188,93 @@ def test_wrapper_commits_before_running_next_step(
             assert task.status == State.COMPLETE and task.claim_token is None
     finally:
         app.close()
+
+
+@pytest.fixture
+def next_task_id(task_id: UUID, test_db: Session) -> UUID:
+    current = test_db.get(TranslationTask, task_id)
+    assert current is not None
+    stage = test_db.get(TranslationStage, current.stage_id)
+    assert stage is not None
+    next_stage = TranslationStage(job_id=stage.job_id, stage_num=1, action="prune_memories", config={})
+    test_db.add(next_stage)
+    test_db.flush()
+    task = TranslationTask(stage_id=next_stage.stage_id, batch_id=current.batch_id, status=State.WAITING)
+    test_db.add(task)
+    test_db.flush()
+    result = task.task_id
+    test_db.commit()
+    return result
+
+
+def test_exitpoint_commits_ready_before_dispatch_and_can_retry(
+    task_id: UUID,
+    next_task_id: UUID,
+    testing_session_local: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
+    app = Celery("exitpoint-test", set_as_current=False)
+    calls: list[UUID] = []
+
+    # Replace only the queue boundary; read the committed state in a real new session.
+    class NextAction(CeleryActionCallbacks):
+        def entrypoint(self, x: UUID) -> None:
+            with testing_session_local() as db:
+                task = db.get(TranslationTask, x)
+                assert task is not None and task.status == State.READY
+            calls.append(x)
+            if len(calls) == 1:
+                raise ConnectionError("broker unavailable")
+
+    callbacks = CeleryActionCallbacks(app, {"prune_memories": NextAction(app, {})})
+    try:
+        with testing_session_local.begin() as db:
+            db.execute(update(TranslationTask).where(TranslationTask.task_id == task_id).values(status=State.COMPLETE))
+        with pytest.raises(ConnectionError, match="broker unavailable"):
+            callbacks.exitpoint(task_id)
+        callbacks.exitpoint(task_id)
+        assert calls == [next_task_id, next_task_id]
+    finally:
+        app.close()
+
+
+@pytest.mark.parametrize(
+    ("current_status", "next_status", "failed"),
+    [
+        (State.FINALIZING, State.WAITING, False),
+        (State.COMPLETE, State.PREPARING, False),
+        (State.COMPLETE, State.COMPLETE, False),
+        (State.COMPLETE, State.WAITING, True),
+    ],
+)
+def test_exitpoint_does_not_advance_ineligible_tasks(
+    task_id: UUID,
+    next_task_id: UUID,
+    testing_session_local: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    current_status: State,
+    next_status: State,
+    failed: bool,
+) -> None:
+    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
+    app = Celery("exitpoint-ineligible-test", set_as_current=False)
+    try:
+        with testing_session_local.begin() as db:
+            db.execute(update(TranslationTask).where(TranslationTask.task_id == task_id).values(status=current_status))
+            db.execute(
+                update(TranslationTask)
+                .where(TranslationTask.task_id == next_task_id)
+                .values(
+                    status=next_status,
+                    failed_at=func.clock_timestamp() if failed else None,
+                )
+            )
+        # An empty registry also ensures an ineligible task never reaches dispatch.
+        CeleryActionCallbacks(app, {}).exitpoint(task_id)
+        with testing_session_local() as db:
+            task = db.get(TranslationTask, next_task_id)
+            assert task is not None and task.status == next_status
+            assert (task.failed_at is not None) == failed
+    finally:
+        app.close()

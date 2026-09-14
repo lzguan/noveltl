@@ -31,6 +31,7 @@ class ActionTaskContext:
 
 
 type ActionCallback = Callable[[ActionTaskContext], None]
+type PollCallback = Callable[[ActionTaskContext], bool]
 type ActionTask = Callable[[uuid.UUID], None]
 
 
@@ -53,3 +54,15 @@ class ActionCallbacks(Protocol):
         finish: TranslationTaskStatus,
         lease_seconds: int = 300,
     ) -> Callable[[ActionCallback], ActionTask]: ...
+
+    def new_poll(
+        self,
+        *,
+        expect: TranslationTaskStatus,
+        during: TranslationTaskStatus,
+        finish: TranslationTaskStatus,
+        interval_seconds: int = 60,
+        lease_seconds: int = 300,
+    ) -> Callable[[PollCallback], ActionTask]:
+        """False releases and reschedules this step; True advances; errors fail."""
+        ...

@@ -1,4 +1,4 @@
-"""Plain translation preparation, independent of the inference provider."""
+"""Plain translation callbacks, independent of the inference provider."""
 
 from collections.abc import Iterator
 from tempfile import TemporaryFile
@@ -16,9 +16,11 @@ from src.novels.models import ChapterContent
 from src.translations.actions.actions import ActionTaskContext
 from src.translations.actions.celery_actions import CeleryActionCallbacks
 from src.translations.actions.registry import ACTION_CALLBACKS
+from src.translations.batch_jobs import BatchJobComplete, BatchJobFailed, BatchJobId, BatchJobPending
 from src.translations.batch_lines import BatchItem, InferenceMessage, InferenceRequest
 from src.translations.celery_app import app
 from src.translations.codecs.registry import get_codec
+from src.translations.dependencies import get_batch_client
 from src.translations.jsonl import iter_translation_records
 from src.translations.models import TranslationJobChapter, TranslationStage, TranslationTask
 from src.translations.records import ChapterRecord
@@ -73,6 +75,7 @@ def _chapter_inputs(
 
 callbacks = CeleryActionCallbacks(app, ACTION_CALLBACKS)
 _PREPARE_LEASE_SECONDS = 300
+_SUBMIT_LEASE_SECONDS = 300
 
 
 @callbacks.new_func(
@@ -148,3 +151,63 @@ def prepare(context: ActionTaskContext) -> None:
         )
         context.db.flush([stored_file])
         context.task.input_file_id = stored_file.file_id
+
+
+@callbacks.new_func(
+    expect=TranslationTaskStatus.PREPARED,
+    during=TranslationTaskStatus.SUBMITTING,
+    finish=TranslationTaskStatus.PROCESSING,
+    lease_seconds=_SUBMIT_LEASE_SECONDS,
+)
+def submit(context: ActionTaskContext) -> None:
+    if context.task.provider_batch_id is not None:
+        return
+    if context.task.input_file_id is None:
+        raise ValueError("Submission requires a prepared input file")
+    stage = context.db.get(TranslationStage, context.task.stage_id)
+    if stage is None:
+        raise ValueError("Translation stage does not exist")
+    config = TranslateConfig.model_validate(stage.config)
+    client = get_batch_client(config.model)
+    store = get_object_store()
+    input_file_id = context.task.input_file_id
+
+    def content() -> Iterator[bytes]:
+        renew_at = monotonic() + _SUBMIT_LEASE_SECONDS / 3
+        for chunk in fetch_file(context.db, store, input_file_id):
+            if monotonic() >= renew_at:
+                context.renew_lease()
+                renew_at = monotonic() + _SUBMIT_LEASE_SECONDS / 3
+            yield chunk
+
+    context.renew_lease()
+    job_id = client.create_batch_job(content())
+    if not job_id:
+        raise ValueError("Batch client returned an empty job ID")
+    context.task.provider_batch_id = job_id
+
+
+@callbacks.new_poll(
+    expect=TranslationTaskStatus.PROCESSING,
+    during=TranslationTaskStatus.PROCESSING,
+    finish=TranslationTaskStatus.PROCESSED,
+    interval_seconds=60,
+)
+def poll(context: ActionTaskContext) -> bool:
+    if context.task.provider_batch_id is None:
+        raise ValueError("Polling requires a provider batch ID")
+    stage = context.db.get(TranslationStage, context.task.stage_id)
+    if stage is None:
+        raise ValueError("Translation stage does not exist")
+    config = TranslateConfig.model_validate(stage.config)
+    result = get_batch_client(config.model).poll_batch_job(BatchJobId(context.task.provider_batch_id))
+    match result:
+        case BatchJobPending():
+            return False
+        case BatchJobComplete(output_id=output_id):
+            if not output_id:
+                raise ValueError("Batch client returned an empty output ID")
+            context.task.provider_output_id = output_id
+            return True
+        case BatchJobFailed(error=error):
+            raise RuntimeError(f"Provider batch failed: {error}")

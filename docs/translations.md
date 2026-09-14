@@ -96,8 +96,14 @@ These claims fence database completion, not external provider/S3 side effects.
 Exitpoint requires the current task to be complete and not failed. It marks the
 next task in the same batch READY, commits, then dispatches that action's
 entrypoint. Retrying exitpoint can redispatch an already-ready task after a queue
-failure; it does not reset running, completed, claimed, or failed tasks. Polling
-and recovery dispatch remain separate work.
+failure; it does not reset running, completed, claimed, or failed tasks.
+
+`new_poll` accepts the same state/lease parameters plus `interval_seconds`.
+Its callback returns `False` while pending: the wrapper restores `expect`,
+releases the claim, commits, and queues the same callback with a countdown.
+Returning `True` commits `finish` and dispatches the next callback. Exceptions
+use the same failure handling as `new_func`. Workers do not wait between polls.
+Recovery dispatch remains separate work.
 
 ## Plain translation preparation
 
@@ -105,7 +111,7 @@ and recovery dispatch remain separate work.
 `callbacks.new_func`. Its module constructs one `CeleryActionCallbacks` instance.
 At execution time, preparation resolves the codec from the stage's model, obtains
 the store through `files.dependencies.get_object_store`, and reads storage name
-and bucket from file settings. Submission and polling are not implemented yet.
+and bucket from file settings. Submission and polling follow preparation.
 
 The translation Celery app includes `src.translations.actions` during worker
 startup. That package imports the action modules, then populates the shared
@@ -127,6 +133,23 @@ The encoded requests are written incrementally to a temporary file, then uploade
 through the existing readable-file accessor. Successful preparation stores
 `input_file_id` and transitions to PREPARED through the claim wrapper. It does not
 write `output_file_id` or submit a provider job.
+
+`submit` claims PREPARED as SUBMITTING, streams the stored vendor input through
+`BatchJobClient.create_batch_job`, then stores `provider_batch_id` and commits
+PROCESSING before dispatching `poll`. Client factories are injected through
+`dependencies.BATCH_CLIENT_FACTORIES`, keyed by model. No concrete provider
+client is registered yet.
+
+`poll` checks the saved provider ID once. Pending jobs reschedule after 60 seconds;
+completion saves `provider_output_id` and transitions to PROCESSED. Provider
+failures and transport exceptions record failure without automatic retry.
+Finalization (download, decode, validate, and publish normalized output) remains
+unimplemented, so the current chain stops at PROCESSED.
+
+Submission is not exactly-once: a provider may accept a job before the worker
+loses its response or database commit. SUBMITTING identifies that ambiguous
+step, but retrying an expired submission can create another provider job.
+Provider idempotency/reconciliation and recovery endpoints remain future work.
 
 ## OpenAI-compatible chat codec
 
@@ -156,5 +179,5 @@ this codec. It does not implement the Responses API.
 `OpenAIChatBatchCodec[TranslationDataKey]`, configured to use `max_tokens`.
 `get_codec(model)` creates a fresh instance. No codec-name indirection or
 environment mapping is needed. To add a model, extend `ModelName` and this mapping.
-Preparation resolves the codec at execution time; transport/client selection
-is still separate work.
+Preparation resolves the codec at execution time; transport uses a separate
+injected client factory for the same model.

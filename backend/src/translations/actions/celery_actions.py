@@ -9,7 +9,13 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import aliased
 
 from src.autolabels.worker.config import SessionLocal
-from src.translations.actions.actions import ActionCallback, ActionCallbacks, ActionTask, ActionTaskContext
+from src.translations.actions.actions import (
+    ActionCallback,
+    ActionCallbacks,
+    ActionTask,
+    ActionTaskContext,
+    PollCallback,
+)
 from src.translations.models import TranslationStage, TranslationTask
 from src.translations.tasks.claims import TranslationClaimLostError, claim_task, fail_claim, finish_claim, renew_claim
 from src.translations.types import ActionName, TranslationTaskStatus
@@ -29,44 +35,94 @@ class CeleryActionCallbacks(ActionCallbacks):
         finish: TranslationTaskStatus,
         lease_seconds: int = 300,
     ) -> Callable[[ActionCallback], ActionTask]:
+        def decorate(f: ActionCallback) -> ActionTask:
+            def run(context: ActionTaskContext) -> bool:
+                f(context)
+                return True
+
+            return self._register(
+                run,
+                name=f"{f.__module__}.{f.__qualname__}",
+                expect=expect,
+                during=during,
+                finish=finish,
+                lease_seconds=lease_seconds,
+            )
+
+        return decorate
+
+    def new_poll(
+        self,
+        *,
+        expect: TranslationTaskStatus,
+        during: TranslationTaskStatus,
+        finish: TranslationTaskStatus,
+        interval_seconds: int = 60,
+        lease_seconds: int = 300,
+    ) -> Callable[[PollCallback], ActionTask]:
+        if interval_seconds <= 0:
+            raise ValueError("interval_seconds must be positive")
+
+        def decorate(f: PollCallback) -> ActionTask:
+            return self._register(
+                f,
+                name=f"{f.__module__}.{f.__qualname__}",
+                expect=expect,
+                during=during,
+                finish=finish,
+                lease_seconds=lease_seconds,
+                interval_seconds=interval_seconds,
+            )
+
+        return decorate
+
+    def _register(
+        self,
+        f: PollCallback,
+        *,
+        name: str,
+        expect: TranslationTaskStatus,
+        during: TranslationTaskStatus,
+        finish: TranslationTaskStatus,
+        lease_seconds: int,
+        interval_seconds: int = 60,
+    ) -> ActionTask:
         if lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
         duration = timedelta(seconds=lease_seconds)
+        idx = len(self._intermediate)
 
-        def decorate(f: ActionCallback) -> ActionTask:
-            idx = len(self._intermediate)
+        @self.celery_app.task(name=name, shared=False)
+        def celery_task(x: uuid.UUID) -> None:
+            token = uuid.uuid4()
+            with SessionLocal.begin() as session:
+                if not claim_task(session, x, token, expect=expect, during=during, duration=duration):
+                    return
 
-            @self.celery_app.task(name=f"{f.__module__}.{f.__qualname__}", shared=False)
-            def celery_task(x: uuid.UUID) -> None:
-                token = uuid.uuid4()
+            def renew_lease() -> None:
                 with SessionLocal.begin() as session:
-                    if not claim_task(session, x, token, expect=expect, during=during, duration=duration):
-                        return
+                    if not renew_claim(session, x, token, during=during, duration=duration):
+                        raise TranslationClaimLostError(f"Lost translation task claim: {x}")
 
-                def renew_lease() -> None:
-                    with SessionLocal.begin() as session:
-                        if not renew_claim(session, x, token, during=during, duration=duration):
-                            raise TranslationClaimLostError(f"Lost translation task claim: {x}")
+            try:
+                with SessionLocal.begin() as session:
+                    task = session.execute(select(TranslationTask).where(TranslationTask.task_id == x)).scalar_one()
+                    done = f(ActionTaskContext(db=session, task=task, claim_token=token, renew_lease=renew_lease))
+                    finish_claim(session, x, token, during=during, finish=finish if done else expect)
+            except Exception as error:
+                with SessionLocal.begin() as session:
+                    fail_claim(session, x, token, during=during, error=str(error))
+                raise
 
-                try:
-                    with SessionLocal.begin() as session:
-                        task = session.execute(select(TranslationTask).where(TranslationTask.task_id == x)).scalar_one()
-                        f(ActionTaskContext(db=session, task=task, claim_token=token, renew_lease=renew_lease))
-                        finish_claim(session, x, token, during=during, finish=finish)
-                except Exception as error:
-                    with SessionLocal.begin() as session:
-                        fail_claim(session, x, token, during=during, error=str(error))
-                    raise
+            if not done:
+                celery_task.apply_async((x,), countdown=interval_seconds)
+            elif idx + 1 < len(self._intermediate):
+                self._intermediate[idx + 1].apply_async((x,))
+            else:
+                self.exitpoint(x)
 
-                if idx + 1 < len(self._intermediate):
-                    self._intermediate[idx + 1].apply_async((x,))
-                else:
-                    self.exitpoint(x)
-
-            self._intermediate.append(celery_task)
-            return celery_task
-
-        return decorate
+        self._intermediate.append(celery_task)
+        return celery_task
 
     def entrypoint(self, x: uuid.UUID) -> None:
         if self._intermediate:

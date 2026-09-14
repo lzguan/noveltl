@@ -36,7 +36,7 @@ class CeleryActionCallbacks(ActionCallbacks):
         def decorate(f: ActionCallback) -> ActionTask:
             idx = len(self._intermediate)
 
-            @self.celery_app.task(name=f"{f.__module__}.{f.__qualname__}")
+            @self.celery_app.task(name=f"{f.__module__}.{f.__qualname__}", shared=False)
             def celery_task(x: uuid.UUID) -> None:
                 token = uuid.uuid4()
                 with SessionLocal.begin() as session:

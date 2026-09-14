@@ -6,6 +6,7 @@ from uuid import UUID
 type DataName = Literal["chapter", "memories"]
 type DataT = frozenset[DataName]
 type ActionName = Literal["prune_memories", "combine_chapter", "translate_with_memories", "translate"]
+type ModelName = Literal["qwen-plus", "qwen-flash"]
 
 
 @dataclass(frozen=True)

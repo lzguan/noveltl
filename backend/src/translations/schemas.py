@@ -2,10 +2,10 @@ import uuid
 from itertools import pairwise
 from typing import Annotated, Any, Literal, Self
 
-from pydantic import Field, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from src.schemas import Model
-from src.translations.types import ACTIONS
+from src.translations.types import ACTIONS, ModelName
 
 
 class TranslationStageCreateBase(Model):
@@ -24,15 +24,23 @@ class TranslateWithMemoriesStageCreate(TranslationStageCreateBase):
     action: Literal["translate_with_memories"]
 
 
-class TranslateStageCreate(TranslationStageCreateBase):
+class TranslateConfig(Model):
+    model_config = ConfigDict(extra="forbid")
+
+    model: ModelName
+    target_language: str = Field(default="English", min_length=1)
+    instructions: str = ""
+    temperature: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    max_output_tokens: int | None = Field(default=None, gt=0)
+
+
+class TranslateStageCreate(Model):
     action: Literal["translate"]
+    config: TranslateConfig
 
 
 type TranslationStageCreate = Annotated[
-    PruneMemoriesStageCreate
-    | CombineChapterStageCreate
-    | TranslateWithMemoriesStageCreate
-    | TranslateStageCreate,
+    PruneMemoriesStageCreate | CombineChapterStageCreate | TranslateWithMemoriesStageCreate | TranslateStageCreate,
     Field(discriminator="action"),
 ]
 

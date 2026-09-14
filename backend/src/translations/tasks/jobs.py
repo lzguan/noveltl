@@ -65,7 +65,7 @@ def create_job(db: Session, request: TranslationJobCreate) -> UUID:
                     "job_id": job_id,
                     "stage_num": stage_num,
                     "action": stage.action,
-                    "config": stage.config,
+                    "config": stage.model_dump(mode="json")["config"],
                 }
                 for stage_num, stage in enumerate(request.stages)
             ],

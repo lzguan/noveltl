@@ -98,3 +98,63 @@ next task in the same batch READY, commits, then dispatches that action's
 entrypoint. Retrying exitpoint can redispatch an already-ready task after a queue
 failure; it does not reset running, completed, claimed, or failed tasks. Polling
 and recovery dispatch remain separate work.
+
+## Plain translation preparation
+
+`actions.translate.prepare` is a module-level callback decorated with
+`callbacks.new_func`. Its module constructs one `CeleryActionCallbacks` instance.
+At execution time, preparation resolves the codec from the stage's model, obtains
+the store through `files.dependencies.get_object_store`, and reads storage name
+and bucket from file settings. Submission and polling are not implemented yet.
+
+The translation Celery app includes `src.translations.actions` during worker
+startup. That package imports the action modules, then populates the shared
+`actions.registry.ACTION_CALLBACKS` dictionary. Registration does not create an
+S3 client or perform database/network calls. The broker uses
+`TRANSLATIONS_DATABASE` (default Redis database 4), separately from other workers.
+
+The stage uses `TranslateConfig`: an explicit model name, a target language
+(English by default), optional instructions, temperature, and maximum output
+tokens. Job creation stores this typed config as JSON.
+
+On the first stage, preparation reads pinned chapter-content revisions directly.
+On subsequent stages, it requires the previous task's complete normalized output,
+validates that artifact, and selects its chapter records. No initial artifact is
+required. Each chapter becomes one provider-neutral inference request with a
+`TranslationDataKey`; only the resolved codec handles vendor formatting.
+
+The encoded requests are written incrementally to a temporary file, then uploaded
+through the existing readable-file accessor. Successful preparation stores
+`input_file_id` and transitions to PREPARED through the claim wrapper. It does not
+write `output_file_id` or submit a provider job.
+
+## OpenAI-compatible chat codec
+
+`codecs.openai_chat.OpenAIChatBatchCodec[KeyT]` implements `BatchLineCodec` for
+the [Chat Completions batch format](https://developers.openai.com/api/docs/guides/batch).
+Construct it with `TypeAdapter(TranslationDataKey)` for translation components,
+or another Pydantic key adapter for other request keys. The key is serialized as
+JSON inside `custom_id`; decoding needs no in-memory request mapping.
+
+The codec emits one UTF-8 JSONL request for `/v1/chat/completions` and reads one
+complete result line. It handles batch errors, HTTP/API errors, and refusals.
+Non-`stop` completions (including truncation) return item failures; malformed
+records raise `ValueError`. Successful results retain text and finish reason.
+
+`max_output_tokens` maps to `max_completion_tokens` by default. Set
+`max_tokens_field="max_tokens"` for compatible backends that require that field.
+Model capabilities, provider limits, transport, and registry lookup remain outside
+this codec. It does not implement the Responses API.
+
+## Codec selection
+
+`ModelName` currently supports `qwen-plus` and `qwen-flash`, both listed in
+[Model Studio's batch documentation](https://www.alibabacloud.com/help/en/model-studio/batch-inference).
+`TranslateConfig.model` validates this selection before job creation.
+
+`codecs.registry.MODEL_CODECS` maps those model names directly to factories for
+`OpenAIChatBatchCodec[TranslationDataKey]`, configured to use `max_tokens`.
+`get_codec(model)` creates a fresh instance. No codec-name indirection or
+environment mapping is needed. To add a model, extend `ModelName` and this mapping.
+Preparation resolves the codec at execution time; transport/client selection
+is still separate work.

@@ -65,7 +65,12 @@ def test_batch_candidates_respect_boundaries_filters_and_use_one_query(
             {
                 "novel_id": novel.novel_id,
                 "config": {"batch_size": 10},
-                "stages": [{"action": "prune_memories"}],
+                "stages": [
+                    {
+                        "action": "prune_memories",
+                        "config": {"model": "qwen-plus", "memory_group_id": group.memory_group_id},
+                    }
+                ],
             }
         ),
     )

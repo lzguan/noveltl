@@ -159,6 +159,25 @@ loses its response or database commit. SUBMITTING identifies that ambiguous
 step, but retrying an expired submission can create another provider job.
 Provider idempotency/reconciliation and recovery endpoints remain future work.
 
+## Memory pruning
+
+`actions.prune_memories` registers its own prepare/submit/poll/finalize callbacks.
+`PruneMemoriesConfig` specifies the model, prompt instructions, inference options,
+and the same memory retrieval filters as translation with memories. A first-stage
+pruner requires a memory group; later stages consume their predecessor's artifact.
+
+For stage zero, preparation saves canonical chapter/memory pairs in the batch's
+nullable `initial_file_id` and vendor requests in the task's `input_file_id`.
+Both references commit only after both uploads succeed. An existing initial
+artifact is reused when rebuilding requests. Candidate list indices become the
+model-facing IDs; the saved snapshots retain their real memory IDs and contents.
+
+Finalization decodes strict integer-array selections and matches them against the
+initial artifact or previous-stage output, never a fresh memory query. Invalid
+indices, failed requests, duplicate keys, and missing results fail the task.
+Only selected `MemoriesRecord`s are published, in original candidate order;
+empty selections are valid. Completion advances the next task through exitpoint.
+
 ## Translation with memories
 
 `translate_with_memories` shares the translate callback chain and provider adapters.

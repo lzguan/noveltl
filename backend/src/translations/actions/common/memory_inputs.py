@@ -1,6 +1,6 @@
 """Batch memory retrieval for translation preparation."""
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from itertools import groupby
 from uuid import UUID
 
@@ -25,7 +25,7 @@ def iter_batch_memories(
     plugin_names: list[PluginName] | None = None,
     memory_types: list[MemoryType] | None = None,
     exclude_current_chapter: bool = True,
-) -> Iterator[MemoriesRecord]:
+) -> Generator[MemoriesRecord, None, None]:
     """Read one ordered candidate list per chapter using a single SQL query.
 
     Include pending/approved memories active at N (end > N), optionally excluding

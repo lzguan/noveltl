@@ -1,5 +1,6 @@
 from io import BytesIO
 from unittest.mock import Mock
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
@@ -37,7 +38,7 @@ def test_combine_publishes_pinned_chapter_and_memories_before_advancing(
                 "novel_id": sample_scenario.novels["novel_1"].novel_id,
                 "config": {"batch_size": 10},
                 "stages": [
-                    {"action": "prune_memories"},
+                    {"action": "prune_memories", "config": {"model": "qwen-plus", "memory_group_id": uuid4()}},
                     {"action": "combine_chapter"},
                     {"action": "translate", "config": {"model": "qwen-plus"}},
                 ],

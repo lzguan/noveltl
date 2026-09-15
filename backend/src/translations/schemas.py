@@ -13,8 +13,22 @@ class TranslationStageCreateBase(Model):
     config: dict[str, Any] = Field(default_factory=dict)
 
 
-class PruneMemoriesStageCreate(TranslationStageCreateBase):
+class PruneMemoriesConfig(Model):
+    model_config = ConfigDict(extra="forbid")
+
+    model: ModelName
+    instructions: str = ""
+    temperature: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    max_output_tokens: int | None = Field(default=None, gt=0)
+    memory_group_id: uuid.UUID | None = None
+    plugin_names: list[PluginName] | None = None
+    memory_types: list[MemoryType] | None = None
+    exclude_current_chapter: bool = True
+
+
+class PruneMemoriesStageCreate(Model):
     action: Literal["prune_memories"]
+    config: PruneMemoriesConfig
 
 
 class CombineChapterStageCreate(TranslationStageCreateBase):
@@ -78,8 +92,11 @@ class TranslationJobCreate(Model):
     @model_validator(mode="after")
     def validate_pipeline(self) -> Self:
         first = self.stages[0]
-        if isinstance(first, TranslateWithMemoriesStageCreate) and first.config.memory_group_id is None:
-            raise ValueError("First-stage translate_with_memories requires memory_group_id")
+        if (
+            isinstance(first, (TranslateWithMemoriesStageCreate, PruneMemoriesStageCreate))
+            and first.config.memory_group_id is None
+        ):
+            raise ValueError(f"First-stage {first.action} requires memory_group_id")
         for stage_num, (current_stage, next_stage) in enumerate(pairwise(self.stages)):
             output_types = ACTIONS[current_stage.action].output_types
             input_types = ACTIONS[next_stage.action].input_types

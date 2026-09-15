@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -66,7 +68,7 @@ def test_create_job_builds_batched_pipeline_from_latest_chapter_contents(test_db
             "batch_size": 2,
         },
         stages=[
-            {"action": "prune_memories"},
+            {"action": "prune_memories", "config": {"model": "qwen-plus", "memory_group_id": uuid4()}},
             {"action": "combine_chapter"},
             {"action": "translate_with_memories", "config": {"model": "qwen-plus"}},
         ],
@@ -121,10 +123,7 @@ def test_create_job_builds_batched_pipeline_from_latest_chapter_contents(test_db
         .where(TranslationStage.job_id == job_id)
         .order_by(TranslationStage.stage_num, TranslationBatch.batch_num)
     ).all()
-    assert [
-        (stage_num, batch_num, task.status)
-        for task, stage_num, batch_num in tasks
-    ] == [
+    assert [(stage_num, batch_num, task.status) for task, stage_num, batch_num in tasks] == [
         (0, 0, TranslationTaskStatus.READY),
         (0, 1, TranslationTaskStatus.READY),
         (1, 0, TranslationTaskStatus.WAITING),

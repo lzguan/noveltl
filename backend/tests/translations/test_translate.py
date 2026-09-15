@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from src.files.access import create_file
 from src.files.models import StoredFile
+from src.memory.models import Memory, MemoryGroup
+from src.memory.types import Creator, MemoryType
 from src.novels.models import ChapterContent
 from src.translations.actions.translate import finalize, poll, prepare, submit
 from src.translations.batch_jobs import (
@@ -83,7 +85,7 @@ def recording_codec(monkeypatch: pytest.MonkeyPatch) -> RecordingCodec:
     return codec
 
 
-def make_job(db: Session, scenario: DatabaseScenario, *, later: bool) -> list[UUID]:
+def make_job(db: Session, scenario: DatabaseScenario, *, later: bool, with_memories: bool = False) -> list[UUID]:
     translate = {
         "action": "translate",
         "config": {
@@ -94,6 +96,24 @@ def make_job(db: Session, scenario: DatabaseScenario, *, later: bool) -> list[UU
             "max_output_tokens": 2048,
         },
     }
+    if with_memories:
+        novel = scenario.novels["novel_1"]
+        group = MemoryGroup(novel_id=novel.novel_id, memory_group_name="Context", memory_language=novel.language_code)
+        db.add(group)
+        db.flush()
+        db.add(
+            Memory(
+                memory_group_id=group.memory_group_id,
+                memory_observed_in=scenario.contents["chapter_1_v2"].chapter_content_id,
+                memory_type=MemoryType.FACT,
+                memory_content="Use the name Alice.",
+                memory_start_num=0,
+                creator_type=Creator.USER,
+                plugin_name="continuity",
+            )
+        )
+        translate["action"] = "translate_with_memories"
+        translate["config"]["memory_group_id"] = str(group.memory_group_id)
     request = TranslationJobCreate.model_validate(
         {
             "novel_id": scenario.novels["novel_1"].novel_id,
@@ -112,6 +132,7 @@ def make_job(db: Session, scenario: DatabaseScenario, *, later: bool) -> list[UU
     )
 
 
+@pytest.mark.parametrize("with_memories", [False, True])
 @pytest.mark.parametrize("later", [False, True])
 def test_prepare_uses_correct_input_and_persists_adapter_bytes(
     test_db: Session,
@@ -119,9 +140,10 @@ def test_prepare_uses_correct_input_and_persists_adapter_bytes(
     testing_session_local: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
     later: bool,
+    with_memories: bool,
     recording_codec: RecordingCodec,
 ) -> None:
-    task_ids = make_job(test_db, sample_scenario, later=later)
+    task_ids = make_job(test_db, sample_scenario, later=later, with_memories=with_memories)
     chapter_id = sample_scenario.chapters["chapter_1"].chapter_id
     store, codec = MemoryObjectStore(), recording_codec
     expected_text = (
@@ -164,7 +186,16 @@ def test_prepare_uses_correct_input_and_persists_adapter_bytes(
     item = codec.items[0]
     assert item.key == TranslationDataKey(chapter_id, "chapter")
     assert item.request.model == "qwen-plus"
-    assert item.request.messages[1].content == expected_text
+    if with_memories:
+        assert item.request.messages[1].content.endswith(expected_text)
+        if later:
+            assert "Context memories:\n[]" in item.request.messages[1].content
+            assert "Alice" not in item.request.messages[1].content
+        else:
+            assert "Use the name Alice." in item.request.messages[1].content
+            assert '"index":0' in item.request.messages[1].content
+    else:
+        assert item.request.messages[1].content == expected_text
     assert "French" in item.request.messages[0].content
     assert "Preserve formal speech." in item.request.messages[0].content
     assert item.request.temperature == 0.4 and item.request.max_output_tokens == 2048
@@ -211,6 +242,47 @@ def test_prepare_rejects_incomplete_previous_task(
     assert not codec.items and not store.objects
 
 
+def test_memory_translation_rejects_foreign_group(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+    testing_session_local: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    recording_codec: RecordingCodec,
+) -> None:
+    task_id = make_job(test_db, sample_scenario, later=False, with_memories=True)[0]
+    task = test_db.get(TranslationTask, task_id)
+    assert task is not None
+    stage = test_db.get(TranslationStage, task.stage_id)
+    assert stage is not None
+    group = test_db.get(MemoryGroup, UUID(stage.config["memory_group_id"]))
+    assert group is not None
+    group.novel_id = sample_scenario.novels["novel_2"].novel_id
+    test_db.commit()
+    store = MemoryObjectStore()
+    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
+    monkeypatch.setattr("src.translations.actions.translate.get_object_store", lambda: store)
+    with pytest.raises(ValueError, match="does not belong"):
+        prepare(task_id)
+    test_db.expire_all()
+    assert task.input_file_id is None and task.failed_at is not None
+    assert not store.objects and not recording_codec.items
+
+
+def test_memory_translation_requires_group_only_for_first_stage() -> None:
+    stage = {"action": "translate_with_memories", "config": {"model": "qwen-plus"}}
+    with pytest.raises(ValueError, match="requires memory_group_id"):
+        TranslationJobCreate.model_validate({"novel_id": UUID(int=1), "config": {"batch_size": 10}, "stages": [stage]})
+    request = TranslationJobCreate.model_validate(
+        {
+            "novel_id": UUID(int=1),
+            "config": {"batch_size": 10},
+            "stages": [{"action": "combine_chapter"}, stage],
+        }
+    )
+    assert len(request.stages) == 2
+
+
+@pytest.mark.parametrize("with_memories", [False, True])
 @pytest.mark.parametrize("failed", [False, True])
 def test_submission_and_polling_persist_progress_before_dispatch(
     test_db: Session,
@@ -220,10 +292,11 @@ def test_submission_and_polling_persist_progress_before_dispatch(
     recording_codec: RecordingCodec,
     queued_tasks: dict[str, Mock],
     failed: bool,
+    with_memories: bool,
 ) -> None:
     # Finalization/recovery rely on durable provider IDs, and pending polls must
     # release their claim so a fresh worker can perform the next check.
-    task_id = make_job(test_db, sample_scenario, later=False)[0]
+    task_id = make_job(test_db, sample_scenario, later=False, with_memories=with_memories)[0]
     client, store = FakeBatchClient(), MemoryObjectStore()
     monkeypatch.setitem(BATCH_CLIENT_FACTORIES, "qwen-plus", lambda: client)
     monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
@@ -272,6 +345,7 @@ def test_submission_and_polling_persist_progress_before_dispatch(
         queued_tasks["finalize"].assert_called_once_with((task_id,))
 
 
+@pytest.mark.parametrize("with_memories", [False, True])
 @pytest.mark.parametrize(
     "failure", [None, "duplicate", "missing", "component", "foreign", "item", "malformed", "download", "upload"]
 )
@@ -281,8 +355,9 @@ def test_finalize_publishes_only_complete_normalized_output(
     testing_session_local: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
     failure: str | None,
+    with_memories: bool,
 ) -> None:
-    task_id = make_job(test_db, sample_scenario, later=False)[0]
+    task_id = make_job(test_db, sample_scenario, later=False, with_memories=with_memories)[0]
     chapter_id = sample_scenario.chapters["chapter_1"].chapter_id
     task = test_db.get(TranslationTask, task_id)
     assert task is not None

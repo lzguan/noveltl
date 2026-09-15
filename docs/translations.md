@@ -159,6 +159,22 @@ loses its response or database commit. SUBMITTING identifies that ambiguous
 step, but retrying an expired submission can create another provider job.
 Provider idempotency/reconciliation and recovery endpoints remain future work.
 
+## Translation with memories
+
+`translate_with_memories` shares the translate callback chain and provider adapters.
+Its typed config extends `TranslateConfig` with `memory_group_id`, optional
+`plugin_names`/`memory_types`, and `exclude_current_chapter` (default true).
+Stage zero requires a memory group belonging to the job's novel. Preparation
+reads pinned chapter text and queries active memories for the batch, excluding
+rejected memories and, by default, those starting at the current chapter.
+Later stages read chapter/memory pairs exclusively from the preceding completed
+artifact; retrieval options apply only to stage zero.
+
+Preparation matches records by chapter ID, formats memories using the shared
+formatter's default fields, and submits one chapter translation request per pair.
+Finalization publishes chapter records only. Both action names resolve to the
+same callback chain; the stage action selects config and input handling.
+
 ## Chapter combination
 
 `actions.combine_chapter.combine` is a deterministic callback registered at worker

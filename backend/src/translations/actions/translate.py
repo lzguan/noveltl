@@ -1,4 +1,4 @@
-"""Plain translation callbacks, independent of the inference provider."""
+"""Shared callbacks for plain translation and translation with memories."""
 
 from collections.abc import Iterator
 from tempfile import TemporaryFile
@@ -12,9 +12,12 @@ from src.files.access import create_file, fetch_file
 from src.files.config import file_store_settings
 from src.files.dependencies import get_object_store
 from src.files.storage import ObjectStore
+from src.memory.models import MemoryGroup
 from src.novels.models import ChapterContent
 from src.translations.actions.actions import ActionTaskContext
 from src.translations.actions.celery_actions import CeleryActionCallbacks
+from src.translations.actions.common.memory_inputs import iter_batch_memories
+from src.translations.actions.common.prompts import format_memories
 from src.translations.actions.registry import ACTION_CALLBACKS
 from src.translations.batch_jobs import BatchJobComplete, BatchJobFailed, BatchJobId, BatchJobPending, BatchOutputId
 from src.translations.batch_lines import BatchItem, BatchItemFailure, InferenceMessage, InferenceRequest
@@ -22,16 +25,20 @@ from src.translations.celery_app import app
 from src.translations.codecs.registry import get_codec
 from src.translations.dependencies import get_batch_client
 from src.translations.jsonl import encode_translation_record, iter_jsonl_lines, iter_translation_records
-from src.translations.models import TranslationJobChapter, TranslationStage, TranslationTask
-from src.translations.records import ChapterRecord
-from src.translations.schemas import TranslateConfig
+from src.translations.models import TranslationJob, TranslationJobChapter, TranslationStage, TranslationTask
+from src.translations.records import ChapterRecord, MemoriesRecord, TranslationRecord
+from src.translations.schemas import TranslateConfig, TranslateWithMemoriesConfig
 from src.translations.types import ACTIONS, ActionName, TranslationTaskStatus
 from src.translations.validation import validate_output_records
 
 
-def _chapter_inputs(
-    context: ActionTaskContext, store: ObjectStore, stage: TranslationStage, chapter_ids: list[UUID]
-) -> Iterator[ChapterRecord]:
+def _inputs(
+    context: ActionTaskContext,
+    store: ObjectStore,
+    stage: TranslationStage,
+    chapter_ids: list[UUID],
+    config: TranslateConfig,
+) -> Iterator[TranslationRecord]:
     if stage.stage_num == 0:
         rows = context.db.execute(
             select(TranslationJobChapter.chapter_id, ChapterContent.chapter_content_text)
@@ -45,6 +52,25 @@ def _chapter_inputs(
         )
         for chapter_id, content in rows:
             yield ChapterRecord(chapter_id=chapter_id, payload=content)
+        if isinstance(config, TranslateWithMemoriesConfig):
+            if config.memory_group_id is None:
+                raise ValueError("First-stage translate_with_memories requires memory_group_id")
+            group = context.db.scalar(
+                select(MemoryGroup.memory_group_id)
+                .join(TranslationJob, TranslationJob.novel_id == MemoryGroup.novel_id)
+                .where(TranslationJob.job_id == stage.job_id, MemoryGroup.memory_group_id == config.memory_group_id)
+            )
+            if group is None:
+                raise ValueError("Memory group does not belong to the translation job's novel")
+            yield from iter_batch_memories(
+                context.db,
+                job_id=stage.job_id,
+                batch_id=context.task.batch_id,
+                memory_group_id=config.memory_group_id,
+                plugin_names=config.plugin_names,
+                memory_types=config.memory_types,
+                exclude_current_chapter=config.exclude_current_chapter,
+            )
         return
 
     previous, previous_stage = (
@@ -69,8 +95,40 @@ def _chapter_inputs(
     signature = ACTIONS[TypeAdapter(ActionName).validate_python(previous_stage.action)]
     records = iter_translation_records(fetch_file(context.db, store, previous.output_file_id))
     for record in validate_output_records(records, chapter_ids=chapter_ids, output_types=signature.output_types):
-        if isinstance(record, ChapterRecord):
+        if isinstance(record, ChapterRecord) or isinstance(config, TranslateWithMemoriesConfig):
             yield record
+
+
+def _config(stage: TranslationStage) -> TranslateConfig:
+    if stage.action == "translate":
+        return TranslateConfig.model_validate(stage.config)
+    if stage.action == "translate_with_memories":
+        return TranslateWithMemoriesConfig.model_validate(stage.config)
+    raise ValueError("Translation callbacks require a translation stage")
+
+
+def _prompt_inputs(records: Iterator[TranslationRecord], *, with_memories: bool) -> Iterator[tuple[ChapterRecord, str]]:
+    chapters: dict[UUID, ChapterRecord] = {}
+    memories: dict[UUID, MemoriesRecord] = {}
+    for record in records:
+        if not with_memories:
+            if not isinstance(record, ChapterRecord):
+                raise ValueError("Translate requires chapter records")
+            yield record, record.payload
+            continue
+        if isinstance(record, ChapterRecord):
+            chapters[record.chapter_id] = record
+        else:
+            memories[record.chapter_id] = record
+        if record.chapter_id in chapters and record.chapter_id in memories:
+            chapter = chapters.pop(record.chapter_id)
+            memory = memories.pop(record.chapter_id)
+            yield (
+                chapter,
+                f"Context memories:\n{format_memories(memory.payload)}\n\nChapter to translate:\n{chapter.payload}",
+            )
+    if chapters or memories:
+        raise ValueError("Unmatched chapter and memory inputs")
 
 
 callbacks = CeleryActionCallbacks(app, ACTION_CALLBACKS)
@@ -90,9 +148,7 @@ def prepare(context: ActionTaskContext) -> None:
     stage = context.db.execute(
         select(TranslationStage).where(TranslationStage.stage_id == context.task.stage_id)
     ).scalar_one()
-    if stage.action != "translate":
-        raise ValueError("Translation preparation requires a translate stage")
-    config = TranslateConfig.model_validate(stage.config)
+    config = _config(stage)
     codec = get_codec(config.model)
     chapter_ids = list(
         context.db.scalars(
@@ -110,26 +166,28 @@ def prepare(context: ActionTaskContext) -> None:
         "Preserve its meaning, narrative voice, dialogue, and paragraph structure. "
         "Return only the translated chapter, without commentary or Markdown fences."
     )
+    if isinstance(config, TranslateWithMemoriesConfig):
+        instructions += (
+            " Use the context memories for consistent names and continuity; translate only the supplied chapter."
+        )
     if config.instructions:
         instructions += "\n\n" + config.instructions
 
     records = validate_output_records(
-        _chapter_inputs(context, store, stage, chapter_ids),
+        _inputs(context, store, stage, chapter_ids, config),
         chapter_ids=chapter_ids,
-        output_types=ACTIONS["translate"].input_types,
+        output_types=ACTIONS[TypeAdapter(ActionName).validate_python(stage.action)].input_types,
     )
     renew_at = monotonic() + _PREPARE_LEASE_SECONDS / 3
     with TemporaryFile(mode="w+b") as content:
-        for record in records:
-            if not isinstance(record, ChapterRecord):
-                raise ValueError("Translate requires chapter records")
+        for record, prompt in _prompt_inputs(records, with_memories=isinstance(config, TranslateWithMemoriesConfig)):
             item = BatchItem(
                 key=record.key,
                 request=InferenceRequest(
                     model=config.model,
                     messages=(
                         InferenceMessage(role="system", content=instructions),
-                        InferenceMessage(role="user", content=record.payload),
+                        InferenceMessage(role="user", content=prompt),
                     ),
                     temperature=config.temperature,
                     max_output_tokens=config.max_output_tokens,
@@ -168,7 +226,7 @@ def submit(context: ActionTaskContext) -> None:
     stage = context.db.get(TranslationStage, context.task.stage_id)
     if stage is None:
         raise ValueError("Translation stage does not exist")
-    config = TranslateConfig.model_validate(stage.config)
+    config = _config(stage)
     client = get_batch_client(config.model)
     store = get_object_store()
     input_file_id = context.task.input_file_id
@@ -200,7 +258,7 @@ def poll(context: ActionTaskContext) -> bool:
     stage = context.db.get(TranslationStage, context.task.stage_id)
     if stage is None:
         raise ValueError("Translation stage does not exist")
-    config = TranslateConfig.model_validate(stage.config)
+    config = _config(stage)
     result = get_batch_client(config.model).poll_batch_job(BatchJobId(context.task.provider_batch_id))
     match result:
         case BatchJobPending():
@@ -224,9 +282,9 @@ def finalize(context: ActionTaskContext) -> None:
     if context.task.provider_output_id is None:
         raise ValueError("Finalization requires a provider output ID")
     stage = context.db.get(TranslationStage, context.task.stage_id)
-    if stage is None or stage.action != "translate":
-        raise ValueError("Translation finalization requires a translate stage")
-    config = TranslateConfig.model_validate(stage.config)
+    if stage is None:
+        raise ValueError("Translation stage does not exist")
+    config = _config(stage)
     codec = get_codec(config.model)
     client = get_batch_client(config.model)
     store = get_object_store()

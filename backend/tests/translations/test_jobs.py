@@ -68,7 +68,7 @@ def test_create_job_builds_batched_pipeline_from_latest_chapter_contents(test_db
         stages=[
             {"action": "prune_memories"},
             {"action": "combine_chapter"},
-            {"action": "translate_with_memories"},
+            {"action": "translate_with_memories", "config": {"model": "qwen-plus"}},
         ],
     )
     job_id = create_job(test_db, request)

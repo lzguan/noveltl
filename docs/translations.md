@@ -159,6 +159,19 @@ loses its response or database commit. SUBMITTING identifies that ambiguous
 step, but retrying an expired submission can create another provider job.
 Provider idempotency/reconciliation and recovery endpoints remain future work.
 
+## Chapter combination
+
+`actions.combine_chapter.combine` is a deterministic callback registered at worker
+startup. It transitions READY → FINALIZING → COMPLETE in one claimed invocation.
+It requires the immediately preceding stage's completed output for the same batch,
+validates that stage's full output signature, and preserves its memory records.
+It attaches chapter text from the job's pinned source revisions, ignoring any
+chapter text in the previous output. The combined artifact must contain exactly
+one chapter and one memories record per batch chapter before it is uploaded.
+Successful completion stores `output_file_id` and advances via the shared exitpoint.
+No provider job or input file is created. First-stage memory retrieval is not
+implemented; using this action as stage zero fails explicitly.
+
 ## OpenAI-compatible chat codec
 
 `codecs.openai_chat.OpenAIChatBatchCodec[KeyT]` implements `BatchLineCodec` for

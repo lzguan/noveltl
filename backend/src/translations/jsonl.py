@@ -17,14 +17,20 @@ def iter_translation_records(chunks: Iterable[bytes]) -> Iterator[TranslationRec
     records; blank lines and invalid records raise Pydantic ValidationError.
     Upstream stream errors propagate to the caller.
     """
+    for line in iter_jsonl_lines(chunks):
+        yield translation_record_adapter.validate_json(line)
+
+
+def iter_jsonl_lines(chunks: Iterable[bytes]) -> Iterator[bytes]:
+    """Frame arbitrary chunks as lines, retaining CR and accepting a final newline-less line."""
     pending = bytearray()
     for chunk in chunks:
         start = 0
         while (end := chunk.find(b"\n", start)) != -1:
             pending.extend(chunk[start:end])
-            yield translation_record_adapter.validate_json(pending)
+            yield bytes(pending)
             pending.clear()
             start = end + 1
         pending.extend(chunk[start:])
     if pending:
-        yield translation_record_adapter.validate_json(pending)
+        yield bytes(pending)

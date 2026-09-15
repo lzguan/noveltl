@@ -143,8 +143,16 @@ client is registered yet.
 `poll` checks the saved provider ID once. Pending jobs reschedule after 60 seconds;
 completion saves `provider_output_id` and transitions to PROCESSED. Provider
 failures and transport exceptions record failure without automatic retry.
-Finalization (download, decode, validate, and publish normalized output) remains
-unimplemented, so the current chain stops at PROCESSED.
+`finalize` claims PROCESSED as FINALIZING, downloads the provider output, frames
+its byte chunks into JSONL lines, and decodes them with the configured codec.
+Every successful chapter becomes a normalized `ChapterRecord`. Failed items,
+malformed records, unexpected keys, duplicates, and missing chapters fail the
+task without publishing an output file reference. Validated records are written
+incrementally to a temporary file before uploading through the file accessor.
+Only after upload succeeds does the wrapper commit `output_file_id` and COMPLETE,
+then invoke exitpoint to ready and dispatch the next stage for this batch.
+Download/upload failures retain FINALIZING with failure details; after recovery
+clears the failure, finalization can restart without resubmitting inference.
 
 Submission is not exactly-once: a provider may accept a job before the worker
 loses its response or database commit. SUBMITTING identifies that ambiguous

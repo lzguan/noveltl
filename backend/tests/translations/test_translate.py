@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterable, Iterator
 from io import BytesIO
 from unittest.mock import Mock
@@ -10,7 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from src.files.access import create_file
 from src.files.models import StoredFile
 from src.novels.models import ChapterContent
-from src.translations.actions.translate import poll, prepare, submit
+from src.translations.actions.translate import finalize, poll, prepare, submit
 from src.translations.batch_jobs import (
     BatchJobComplete,
     BatchJobFailed,
@@ -23,7 +24,7 @@ from src.translations.batch_lines import BatchItem, BatchItemResult
 from src.translations.celery_app import app
 from src.translations.codecs.registry import MODEL_CODECS
 from src.translations.dependencies import BATCH_CLIENT_FACTORIES
-from src.translations.jsonl import encode_translation_record
+from src.translations.jsonl import encode_translation_record, iter_translation_records
 from src.translations.models import TranslationStage, TranslationTask
 from src.translations.records import ChapterRecord, MemoriesRecord
 from src.translations.schemas import TranslationJobCreate
@@ -51,7 +52,7 @@ class RecordingCodec:
 @pytest.fixture(autouse=True)
 def queued_tasks(monkeypatch: pytest.MonkeyPatch) -> dict[str, Mock]:
     # Observe dispatch without running background workers or waiting for countdowns.
-    queued = {name: Mock() for name in ("submit", "poll")}
+    queued = {name: Mock() for name in ("submit", "poll", "finalize")}
     for name, dispatch in queued.items():
         monkeypatch.setattr(app.tasks[f"src.translations.actions.translate.{name}"], "apply_async", dispatch)
     return queued
@@ -265,3 +266,101 @@ def test_submission_and_polling_persist_progress_before_dispatch(
     assert task.output_file_id is None
     assert client.polled == ["provider-job", "provider-job"]
     queued_tasks["poll"].assert_not_called()
+    if failed:
+        queued_tasks["finalize"].assert_not_called()
+    else:
+        queued_tasks["finalize"].assert_called_once_with((task_id,))
+
+
+@pytest.mark.parametrize(
+    "failure", [None, "duplicate", "missing", "component", "foreign", "item", "malformed", "download", "upload"]
+)
+def test_finalize_publishes_only_complete_normalized_output(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+    testing_session_local: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    failure: str | None,
+) -> None:
+    task_id = make_job(test_db, sample_scenario, later=False)[0]
+    chapter_id = sample_scenario.chapters["chapter_1"].chapter_id
+    task = test_db.get(TranslationTask, task_id)
+    assert task is not None
+    task.status = State.PROCESSED
+    task.provider_output_id = "provider-output"
+    test_db.commit()
+    wire: dict[str, object] = {
+        "custom_id": json.dumps(
+            {
+                "chapter_id": str(UUID(int=0) if failure == "foreign" else chapter_id),
+                "data_name": "memories" if failure == "component" else "chapter",
+            }
+        ),
+        "response": {
+            "status_code": 200,
+            "body": {
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": "Texte traduit — français"},
+                        "finish_reason": "stop",
+                    },
+                ]
+            },
+        },
+    }
+    if failure == "item":
+        wire["error"] = {"code": "failed", "message": "inference failed"}
+    line = json.dumps(wire, ensure_ascii=False).encode()
+    output = line
+    if failure == "duplicate":
+        output = line + b"\r\n" + line
+    elif failure == "missing":
+        output = b""
+    elif failure == "malformed":
+        output = b"not json"
+
+    class OutputClient(FakeBatchClient):
+        def fetch_batch_output(self, output_id: BatchOutputId) -> Iterator[bytes]:
+            assert output_id == "provider-output"
+            # Split even multibyte characters, and omit the final newline.
+            for offset in range(0, len(output), 3):
+                yield output[offset : offset + 3]
+            if failure == "download":
+                raise ConnectionError("download interrupted")
+
+    store = MemoryObjectStore(upload_error=ConnectionError("upload interrupted") if failure == "upload" else None)
+    monkeypatch.setitem(BATCH_CLIENT_FACTORIES, "qwen-plus", OutputClient)
+    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
+    monkeypatch.setattr("src.translations.actions.translate.get_object_store", lambda: store)
+    if failure is None:
+        finalize(task_id)
+    else:
+        expected_error = {
+            "duplicate": "Duplicate output",
+            "missing": "Missing",
+            "component": "chapter keys",
+            "foreign": "Unexpected chapter",
+            "item": "inference failed",
+            "malformed": "Invalid JSON",
+            "download": "download interrupted",
+            "upload": "upload interrupted",
+        }[failure]
+        with pytest.raises((ValueError, ConnectionError), match=expected_error):
+            finalize(task_id)
+    test_db.expire_all()
+    task = test_db.get(TranslationTask, task_id)
+    assert task is not None
+    assert task.claim_token is None and task.claim_expires_at is None
+    if failure is not None:
+        assert task.status == State.FINALIZING and task.failed_at is not None
+        assert task.output_file_id is None and not store.objects
+        assert test_db.scalar(select(func.count()).select_from(StoredFile)) == 0
+    else:
+        assert task.status == State.COMPLETE and task.failed_at is None
+        assert task.output_file_id is not None
+        stored = test_db.get(StoredFile, task.output_file_id)
+        assert stored is not None
+        assert list(iter_translation_records([store.objects[stored.object_key]])) == [
+            ChapterRecord(chapter_id=chapter_id, payload="Texte traduit — français"),
+        ]

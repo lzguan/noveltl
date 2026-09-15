@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from itertools import pairwise
 from typing import Annotated, Any, Literal, Self
 
@@ -6,7 +7,7 @@ from pydantic import ConfigDict, Field, model_validator
 
 from src.memory.types import MemoryType, PluginName
 from src.schemas import Model
-from src.translations.types import ACTIONS, ModelName
+from src.translations.types import ACTIONS, ModelName, TranslationTaskStatus
 
 
 class TranslationStageCreateBase(Model):
@@ -112,3 +113,50 @@ class TranslationJobCreate(Model):
 
 class TranslationJobStart(Model):
     job_id: uuid.UUID
+
+
+class TranslationJobCreated(Model):
+    job_id: uuid.UUID
+
+
+class TranslationControlResult(Model):
+    affected_batch_ids: list[uuid.UUID] = Field(default_factory=list)
+    dispatched_task_ids: list[uuid.UUID] = Field(default_factory=list)
+    dispatch_failed_task_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class TranslationTaskRead(Model):
+    model_config = ConfigDict(from_attributes=True)
+    task_id: uuid.UUID
+    stage_id: uuid.UUID
+    batch_id: uuid.UUID
+    status: TranslationTaskStatus
+    failed_at: datetime | None
+    error: str | None
+    claim_expires_at: datetime | None
+    input_file_id: uuid.UUID | None
+    output_file_id: uuid.UUID | None
+
+
+class TranslationStageRead(Model):
+    model_config = ConfigDict(from_attributes=True)
+    stage_id: uuid.UUID
+    stage_num: int
+    action: str
+    config: dict[str, Any]
+
+
+class TranslationBatchRead(Model):
+    model_config = ConfigDict(from_attributes=True)
+    batch_id: uuid.UUID
+    batch_num: int
+    initial_file_id: uuid.UUID | None
+
+
+class TranslationJobRead(Model):
+    job_id: uuid.UUID
+    novel_id: uuid.UUID
+    config: dict[str, Any]
+    stages: list[TranslationStageRead]
+    batches: list[TranslationBatchRead]
+    tasks: list[TranslationTaskRead]

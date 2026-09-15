@@ -35,6 +35,14 @@ type PollCallback = Callable[[ActionTaskContext], bool]
 type ActionTask = Callable[[uuid.UUID], None]
 
 
+@dataclass(frozen=True)
+class ActionStep:
+    expect: TranslationTaskStatus
+    during: TranslationTaskStatus
+    finish: TranslationTaskStatus
+    dispatch: ActionTask
+
+
 class ActionCallbacks(Protocol):
     """
     Conceptually, entrypoint should be a function that dispatches a task to the "next" step in this action, and exitpoint should be a function that dispatches the entrypoint to the "next" action in the stages pipeline. new_func should take a plain function and record it as a dispatcher for a step in this action, which then automatically dispatches the next step at the end.
@@ -45,6 +53,8 @@ class ActionCallbacks(Protocol):
     def entrypoint(self, x: uuid.UUID) -> None: ...
 
     def exitpoint(self, x: uuid.UUID) -> None: ...
+
+    def last_step(self, state: TranslationTaskStatus) -> ActionStep | None: ...
 
     def new_func(
         self,

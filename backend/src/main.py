@@ -18,6 +18,7 @@ from src.memory.plugins.glossary.router import router as glossary_memory_router
 from src.memory.router import router as memory_router
 from src.novels.router import router as novel_router
 from src.requests.router import router as requests_router
+from src.translations.router import router as translations_router
 
 logger = logging.getLogger("src")
 if log_settings.LOG_LEVEL == "DEBUG":
@@ -58,6 +59,7 @@ app.include_router(filter_router)
 app.include_router(memory_router)
 app.include_router(glossary_memory_router)
 app.include_router(memory_agent_router)
+app.include_router(translations_router)
 
 if __name__ == "__main__":
     import uvicorn

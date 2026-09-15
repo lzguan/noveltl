@@ -12,11 +12,12 @@ from src.autolabels.worker.config import SessionLocal
 from src.translations.actions.actions import (
     ActionCallback,
     ActionCallbacks,
+    ActionStep,
     ActionTask,
     ActionTaskContext,
     PollCallback,
 )
-from src.translations.models import TranslationStage, TranslationTask
+from src.translations.models import TranslationBatch, TranslationStage, TranslationTask
 from src.translations.tasks.claims import TranslationClaimLostError, claim_task, fail_claim, finish_claim, renew_claim
 from src.translations.types import ActionName, TranslationTaskStatus
 
@@ -25,6 +26,7 @@ class CeleryActionCallbacks(ActionCallbacks):
     def __init__(self, celery_app: Celery, callbacks_dict: dict[ActionName, ActionCallbacks]) -> None:
         self.celery_app = celery_app
         self._intermediate: list[Task] = []
+        self._steps: list[ActionStep] = []
         self._callbacks_dict = callbacks_dict
 
     def new_func(
@@ -122,7 +124,26 @@ class CeleryActionCallbacks(ActionCallbacks):
                 self.exitpoint(x)
 
         self._intermediate.append(celery_task)
+
+        def dispatch(task_id: uuid.UUID) -> None:
+            celery_task.apply_async((task_id,))
+
+        self._steps.append(ActionStep(expect, during, finish, dispatch))
         return celery_task
+
+    def last_step(self, state: TranslationTaskStatus) -> ActionStep | None:
+        if state == TranslationTaskStatus.COMPLETE:
+            return None
+        if state == TranslationTaskStatus.WAITING and self._steps:
+            return self._steps[0]
+        # Prefer the next step at a boundary, e.g. PROCESSING selects polling.
+        for step in self._steps:
+            if step.expect == state:
+                return step
+        for step in self._steps:
+            if step.during == state:
+                return step
+        raise ValueError(f"No registered action step for state {state}")
 
     def entrypoint(self, x: uuid.UUID) -> None:
         if self._intermediate:
@@ -132,6 +153,15 @@ class CeleryActionCallbacks(ActionCallbacks):
 
     def exitpoint(self, x: uuid.UUID) -> None:
         with SessionLocal.begin() as session:
+            # Serialize stage handoff with cancel/retry before touching task rows.
+            session.execute(
+                select(TranslationBatch.batch_id)
+                .where(
+                    TranslationBatch.batch_id
+                    == select(TranslationTask.batch_id).where(TranslationTask.task_id == x).scalar_subquery()
+                )
+                .with_for_update()
+            ).scalar_one_or_none()
             cur_task_q = (
                 select(TranslationTask.batch_id, TranslationStage.job_id, TranslationStage.stage_num)
                 .where(

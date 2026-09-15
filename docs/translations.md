@@ -70,6 +70,36 @@ yielding records. It retains only keys. Callers must exhaust it inside the uploa
 context before publishing the artifact, since missing components raise an error
 only at exhaustion. Source errors propagate to the caller.
 
+## Job control API
+
+Translation jobs are exposed under `/translation-jobs`. Creation (`POST`) and
+job progress (`GET /{jobId}`) require edit access to the source novel, as do all
+controls. Progress includes stages, batches, task states, errors, and lease expiry;
+claim tokens remain internal.
+
+Job controls are `POST /{jobId}/start`, `/resume-all`, `/cancel-all`, and `/retry-all`.
+Individual batch controls are `POST /{jobId}/batches/{batchId}/cancel` and `/retry`.
+Start queues first-stage READY tasks. Resume locates the first unfinished task in
+each nonfailed batch, skipping live leases. Retry skips live leases and completed
+batches, clears failures on unfinished tasks, and restores the current step's
+expected state. Reusable provider IDs and artifacts are retained; missing required
+IDs/files cause retry to back up to an earlier step. Retrying interrupted submission
+can still duplicate a provider job.
+
+`actions.registry.last_step(action, state)` resolves an `ActionStep` from callback
+registration, including its expected/during/finish states and dispatcher. At shared
+boundaries, expected states take precedence (PROCESSING selects polling). COMPLETE
+has no remaining step; WAITING resolves to the action's first step.
+
+Cancellation clears claims and marks every unfinished task failed without changing
+its lifecycle state. The controls and exitpoint lock the same batch row before task
+rows, serializing cancellation with stage handoff. Cleared claim tokens prevent old
+workers from committing. Provider work is not cancelled.
+
+State changes commit before dispatch. Responses report affected batch IDs, queued
+task IDs, and dispatch-failed task IDs separately. A queue failure leaves committed
+state resumable; it does not falsely mark work queued or reset completed work.
+
 ## Callback claims
 
 `new_func(expect=..., during=..., finish=..., lease_seconds=300)` registers a
@@ -103,7 +133,7 @@ Its callback returns `False` while pending: the wrapper restores `expect`,
 releases the claim, commits, and queues the same callback with a countdown.
 Returning `True` commits `finish` and dispatches the next callback. Exceptions
 use the same failure handling as `new_func`. Workers do not wait between polls.
-Recovery dispatch remains separate work.
+Recovery dispatch is exposed through the job control API described above.
 
 ## Plain translation preparation
 
@@ -157,7 +187,7 @@ clears the failure, finalization can restart without resubmitting inference.
 Submission is not exactly-once: a provider may accept a job before the worker
 loses its response or database commit. SUBMITTING identifies that ambiguous
 step, but retrying an expired submission can create another provider job.
-Provider idempotency/reconciliation and recovery endpoints remain future work.
+Provider idempotency and reconciliation remain future work.
 
 ## Memory pruning
 

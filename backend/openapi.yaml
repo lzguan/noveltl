@@ -471,6 +471,20 @@ components:
           type: object
       title: CluenerParams
       type: object
+    CombineChapterStageCreate:
+      properties:
+        action:
+          const: combine_chapter
+          title: Action
+          type: string
+        config:
+          additionalProperties: true
+          title: Config
+          type: object
+      required:
+      - action
+      title: CombineChapterStageCreate
+      type: object
     CreateAutoLabels:
       description: "Pydantic schema for creating a new autolabel run.\n\nAttributes:\n\
         \    novel_id: UUID of novel to create auto labels for.\n    params: Parameters\
@@ -1507,7 +1521,7 @@ components:
     JobParams:
       properties:
         modelName:
-          $ref: '#/components/schemas/ModelName'
+          $ref: '#/components/schemas/ModelName-Output'
         toolsets:
           additionalProperties:
             additionalProperties: true
@@ -1931,7 +1945,7 @@ components:
           title: Label
           type: string
         name:
-          $ref: '#/components/schemas/ModelName'
+          $ref: '#/components/schemas/ModelName-Output'
       required:
       - name
       - label
@@ -2166,7 +2180,7 @@ components:
       - summary
       title: MemoryType
       type: string
-    ModelName:
+    ModelName-Output:
       enum:
       - deepseek:deepseek-v4-flash-none
       - deepseek:deepseek-v4-flash-low
@@ -2469,6 +2483,68 @@ components:
       - glossary
       - continuity
       type: string
+    PruneMemoriesConfig:
+      additionalProperties: false
+      properties:
+        excludeCurrentChapter:
+          default: true
+          title: Excludecurrentchapter
+          type: boolean
+        instructions:
+          default: ''
+          title: Instructions
+          type: string
+        maxOutputTokens:
+          anyOf:
+          - exclusiveMinimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Maxoutputtokens
+        memoryGroupId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Memorygroupid
+        memoryTypes:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/MemoryType'
+            type: array
+          - type: 'null'
+          title: Memorytypes
+        model:
+          $ref: '#/components/schemas/src__translations__types__ModelName'
+        pluginNames:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/PluginName'
+            type: array
+          - type: 'null'
+          title: Pluginnames
+        temperature:
+          anyOf:
+          - minimum: 0.0
+            type: number
+          - type: 'null'
+          title: Temperature
+      required:
+      - model
+      title: PruneMemoriesConfig
+      type: object
+    PruneMemoriesStageCreate:
+      properties:
+        action:
+          const: prune_memories
+          title: Action
+          type: string
+        config:
+          $ref: '#/components/schemas/PruneMemoriesConfig'
+      required:
+      - action
+      - config
+      title: PruneMemoriesStageCreate
+      type: object
     PythonAnnotationRequest:
       additionalProperties: false
       properties:
@@ -2938,6 +3014,356 @@ components:
       - memory
       - guidance
       type: string
+    TranslateConfig:
+      additionalProperties: false
+      properties:
+        instructions:
+          default: ''
+          title: Instructions
+          type: string
+        maxOutputTokens:
+          anyOf:
+          - exclusiveMinimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Maxoutputtokens
+        model:
+          $ref: '#/components/schemas/src__translations__types__ModelName'
+        targetLanguage:
+          default: English
+          minLength: 1
+          title: Targetlanguage
+          type: string
+        temperature:
+          anyOf:
+          - minimum: 0.0
+            type: number
+          - type: 'null'
+          title: Temperature
+      required:
+      - model
+      title: TranslateConfig
+      type: object
+    TranslateStageCreate:
+      properties:
+        action:
+          const: translate
+          title: Action
+          type: string
+        config:
+          $ref: '#/components/schemas/TranslateConfig'
+      required:
+      - action
+      - config
+      title: TranslateStageCreate
+      type: object
+    TranslateWithMemoriesConfig:
+      additionalProperties: false
+      properties:
+        excludeCurrentChapter:
+          default: true
+          title: Excludecurrentchapter
+          type: boolean
+        instructions:
+          default: ''
+          title: Instructions
+          type: string
+        maxOutputTokens:
+          anyOf:
+          - exclusiveMinimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Maxoutputtokens
+        memoryGroupId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Memorygroupid
+        memoryTypes:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/MemoryType'
+            type: array
+          - type: 'null'
+          title: Memorytypes
+        model:
+          $ref: '#/components/schemas/src__translations__types__ModelName'
+        pluginNames:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/PluginName'
+            type: array
+          - type: 'null'
+          title: Pluginnames
+        targetLanguage:
+          default: English
+          minLength: 1
+          title: Targetlanguage
+          type: string
+        temperature:
+          anyOf:
+          - minimum: 0.0
+            type: number
+          - type: 'null'
+          title: Temperature
+      required:
+      - model
+      title: TranslateWithMemoriesConfig
+      type: object
+    TranslateWithMemoriesStageCreate:
+      properties:
+        action:
+          const: translate_with_memories
+          title: Action
+          type: string
+        config:
+          $ref: '#/components/schemas/TranslateWithMemoriesConfig'
+      required:
+      - action
+      - config
+      title: TranslateWithMemoriesStageCreate
+      type: object
+    TranslationBatchRead:
+      properties:
+        batchId:
+          format: uuid
+          title: Batchid
+          type: string
+        batchNum:
+          title: Batchnum
+          type: integer
+        initialFileId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Initialfileid
+      required:
+      - batchId
+      - batchNum
+      - initialFileId
+      title: TranslationBatchRead
+      type: object
+    TranslationControlResult:
+      properties:
+        affectedBatchIds:
+          items:
+            format: uuid
+            type: string
+          title: Affectedbatchids
+          type: array
+        dispatchFailedTaskIds:
+          items:
+            format: uuid
+            type: string
+          title: Dispatchfailedtaskids
+          type: array
+        dispatchedTaskIds:
+          items:
+            format: uuid
+            type: string
+          title: Dispatchedtaskids
+          type: array
+      title: TranslationControlResult
+      type: object
+    TranslationJobConfig:
+      properties:
+        batchSize:
+          exclusiveMinimum: 0.0
+          title: Batchsize
+          type: integer
+        endChapterNum:
+          anyOf:
+          - minimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Endchapternum
+        startChapterNum:
+          anyOf:
+          - minimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Startchapternum
+      required:
+      - batchSize
+      title: TranslationJobConfig
+      type: object
+    TranslationJobCreate:
+      properties:
+        config:
+          $ref: '#/components/schemas/TranslationJobConfig'
+        novelId:
+          format: uuid
+          title: Novelid
+          type: string
+        stages:
+          items:
+            $ref: '#/components/schemas/TranslationStageCreate'
+          maxItems: 5
+          minItems: 1
+          title: Stages
+          type: array
+      required:
+      - novelId
+      - config
+      - stages
+      title: TranslationJobCreate
+      type: object
+    TranslationJobCreated:
+      properties:
+        jobId:
+          format: uuid
+          title: Jobid
+          type: string
+      required:
+      - jobId
+      title: TranslationJobCreated
+      type: object
+    TranslationJobRead:
+      properties:
+        batches:
+          items:
+            $ref: '#/components/schemas/TranslationBatchRead'
+          title: Batches
+          type: array
+        config:
+          additionalProperties: true
+          title: Config
+          type: object
+        jobId:
+          format: uuid
+          title: Jobid
+          type: string
+        novelId:
+          format: uuid
+          title: Novelid
+          type: string
+        stages:
+          items:
+            $ref: '#/components/schemas/TranslationStageRead'
+          title: Stages
+          type: array
+        tasks:
+          items:
+            $ref: '#/components/schemas/TranslationTaskRead'
+          title: Tasks
+          type: array
+      required:
+      - jobId
+      - novelId
+      - config
+      - stages
+      - batches
+      - tasks
+      title: TranslationJobRead
+      type: object
+    TranslationStageCreate:
+      discriminator:
+        mapping:
+          combine_chapter: '#/components/schemas/CombineChapterStageCreate'
+          prune_memories: '#/components/schemas/PruneMemoriesStageCreate'
+          translate: '#/components/schemas/TranslateStageCreate'
+          translate_with_memories: '#/components/schemas/TranslateWithMemoriesStageCreate'
+        propertyName: action
+      oneOf:
+      - $ref: '#/components/schemas/PruneMemoriesStageCreate'
+      - $ref: '#/components/schemas/CombineChapterStageCreate'
+      - $ref: '#/components/schemas/TranslateWithMemoriesStageCreate'
+      - $ref: '#/components/schemas/TranslateStageCreate'
+    TranslationStageRead:
+      properties:
+        action:
+          title: Action
+          type: string
+        config:
+          additionalProperties: true
+          title: Config
+          type: object
+        stageId:
+          format: uuid
+          title: Stageid
+          type: string
+        stageNum:
+          title: Stagenum
+          type: integer
+      required:
+      - stageId
+      - stageNum
+      - action
+      - config
+      title: TranslationStageRead
+      type: object
+    TranslationTaskRead:
+      properties:
+        batchId:
+          format: uuid
+          title: Batchid
+          type: string
+        claimExpiresAt:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Claimexpiresat
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+        failedAt:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Failedat
+        inputFileId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Inputfileid
+        outputFileId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Outputfileid
+        stageId:
+          format: uuid
+          title: Stageid
+          type: string
+        status:
+          $ref: '#/components/schemas/TranslationTaskStatus'
+        taskId:
+          format: uuid
+          title: Taskid
+          type: string
+      required:
+      - taskId
+      - stageId
+      - batchId
+      - status
+      - failedAt
+      - error
+      - claimExpiresAt
+      - inputFileId
+      - outputFileId
+      title: TranslationTaskRead
+      type: object
+    TranslationTaskStatus:
+      enum:
+      - waiting
+      - ready
+      - preparing
+      - prepared
+      - submitting
+      - processing
+      - processed
+      - finalizing
+      - complete
+      title: TranslationTaskStatus
+      type: string
     UpdateChapter:
       description: "Pydantic schema to validate data for updating chapter metadata.\n\
         \nAttributes:\n    chapter_title: The new title for the chapter."
@@ -3370,6 +3796,16 @@ components:
       - advanced
       - glossary
       title: WorkflowUseCase
+      type: string
+    src__memory__agent__types__ModelName:
+      enum:
+      - deepseek:deepseek-v4-flash-none
+      - deepseek:deepseek-v4-flash-low
+      type: string
+    src__translations__types__ModelName:
+      enum:
+      - qwen-plus
+      - qwen-flash
       type: string
   securitySchemes:
     OAuth2PasswordBearer:
@@ -7557,6 +7993,250 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Login For Access Token
+  /translation-jobs:
+    post:
+      operationId: create_translation_jobs_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TranslationJobCreate'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationJobCreated'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Create
+      tags:
+      - translations
+  /translation-jobs/{jobId}:
+    get:
+      operationId: read_translation_jobs__jobId__get
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          format: uuid
+          title: Jobid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationJobRead'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read
+      tags:
+      - translations
+  /translation-jobs/{jobId}/batches/{batchId}/cancel:
+    post:
+      operationId: cancel_translation_jobs__jobId__batches__batchId__cancel_post
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          format: uuid
+          title: Jobid
+          type: string
+      - in: path
+        name: batchId
+        required: true
+        schema:
+          format: uuid
+          title: Batchid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationControlResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Cancel
+      tags:
+      - translations
+  /translation-jobs/{jobId}/batches/{batchId}/retry:
+    post:
+      operationId: retry_translation_jobs__jobId__batches__batchId__retry_post
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          format: uuid
+          title: Jobid
+          type: string
+      - in: path
+        name: batchId
+        required: true
+        schema:
+          format: uuid
+          title: Batchid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationControlResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Retry
+      tags:
+      - translations
+  /translation-jobs/{jobId}/cancel-all:
+    post:
+      operationId: cancel_all_translation_jobs__jobId__cancel_all_post
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          format: uuid
+          title: Jobid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationControlResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Cancel All
+      tags:
+      - translations
+  /translation-jobs/{jobId}/resume-all:
+    post:
+      operationId: resume_all_translation_jobs__jobId__resume_all_post
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          format: uuid
+          title: Jobid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationControlResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Resume All
+      tags:
+      - translations
+  /translation-jobs/{jobId}/retry-all:
+    post:
+      operationId: retry_all_translation_jobs__jobId__retry_all_post
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          format: uuid
+          title: Jobid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationControlResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Retry All
+      tags:
+      - translations
+  /translation-jobs/{jobId}/start:
+    post:
+      operationId: start_translation_jobs__jobId__start_post
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          format: uuid
+          title: Jobid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationControlResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Start
+      tags:
+      - translations
   /users:
     post:
       description: "Creates a user with metadata request, provided that the current_user\

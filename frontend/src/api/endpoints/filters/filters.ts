@@ -126,11 +126,19 @@ export const getCreateFilterFunctionUrl = () => {
  */
 export const createFilterFunction = async (createFunctionDefinitionRequest: CreateFunctionDefinitionRequest, options?: Parameters<typeof customFetch>[1]): Promise<createFilterFunctionResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<createFilterFunctionResponse>(getCreateFilterFunctionUrl(),
   {
@@ -175,11 +183,19 @@ export const getValidateFilterFunctionUrl = () => {
  */
 export const validateFilterFunction = async (validateFunctionDefinitionRequest: ValidateFunctionDefinitionRequest, options?: Parameters<typeof customFetch>[1]): Promise<validateFilterFunctionResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<validateFilterFunctionResponse>(getValidateFilterFunctionUrl(),
   {
@@ -402,11 +418,19 @@ export const getReadInstancesAdvancedFiltersInstancesQueryPostUrl = () => {
  */
 export const readInstancesAdvancedFiltersInstancesQueryPost = async (instanceQuery: InstanceQuery, options?: Parameters<typeof customFetch>[1]): Promise<readInstancesAdvancedFiltersInstancesQueryPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<readInstancesAdvancedFiltersInstancesQueryPostResponse>(getReadInstancesAdvancedFiltersInstancesQueryPostUrl(),
   {
@@ -467,11 +491,19 @@ export const getUpdateFilterInstanceUrl = (instanceId: string,) => {
 export const updateFilterInstance = async (instanceId: string,
     updateInstanceRequest: UpdateInstanceRequest, options?: Parameters<typeof customFetch>[1]): Promise<updateFilterInstanceResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<updateFilterInstanceResponse>(getUpdateFilterInstanceUrl(instanceId),
   {
@@ -536,11 +568,19 @@ export const getRunPythonAnnotationUrl = () => {
  */
 export const runPythonAnnotation = async (pythonAnnotationRequest: PythonAnnotationRequest, options?: Parameters<typeof customFetch>[1]): Promise<runPythonAnnotationResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<runPythonAnnotationResponse>(getRunPythonAnnotationUrl(),
   {
@@ -605,11 +645,19 @@ export const getRunPythonFilterUrl = () => {
  */
 export const runPythonFilter = async (pythonFilterRequest: PythonFilterRequest, options?: Parameters<typeof customFetch>[1]): Promise<runPythonFilterResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<runPythonFilterResponse>(getRunPythonFilterUrl(),
   {
@@ -674,11 +722,19 @@ export const getRunPythonGroupUrl = () => {
  */
 export const runPythonGroup = async (pythonGroupRequest: PythonGroupRequest, options?: Parameters<typeof customFetch>[1]): Promise<runPythonGroupResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<runPythonGroupResponse>(getRunPythonGroupUrl(),
   {
@@ -733,11 +789,19 @@ export const getRunPythonLabelSourceUrl = () => {
  */
 export const runPythonLabelSource = async (pythonLabelSourceRequest: PythonLabelSourceRequest, options?: Parameters<typeof customFetch>[1]): Promise<runPythonLabelSourceResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<runPythonLabelSourceResponse>(getRunPythonLabelSourceUrl(),
   {
@@ -802,11 +866,19 @@ export const getRunPythonMapUrl = () => {
  */
 export const runPythonMap = async (pythonMapRequest: PythonMapRequest, options?: Parameters<typeof customFetch>[1]): Promise<runPythonMapResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<runPythonMapResponse>(getRunPythonMapUrl(),
   {
@@ -955,11 +1027,19 @@ export const getRenameFilterWorkflowUrl = (workflowId: string,) => {
 export const renameFilterWorkflow = async (workflowId: string,
     renameWorkflowRequest: RenameWorkflowRequest, options?: Parameters<typeof customFetch>[1]): Promise<renameFilterWorkflowResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<renameFilterWorkflowResponse>(getRenameFilterWorkflowUrl(workflowId),
   {

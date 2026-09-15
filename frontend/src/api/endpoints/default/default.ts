@@ -275,11 +275,19 @@ export const getCreateAutolabelsAutoLabelsPostUrl = (params?: CreateAutolabelsAu
 export const createAutolabelsAutoLabelsPost = async (createAutoLabels: CreateAutoLabels,
     params?: CreateAutolabelsAutoLabelsPostParams, options?: Parameters<typeof customFetch>[1]): Promise<createAutolabelsAutoLabelsPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<createAutolabelsAutoLabelsPostResponse>(getCreateAutolabelsAutoLabelsPostUrl(params),
   {
@@ -689,11 +697,19 @@ export const getUpdateChapterChaptersChapterIdPatchUrl = (chapterId: string,) =>
 export const updateChapterChaptersChapterIdPatch = async (chapterId: string,
     updateChapter: UpdateChapter, options?: Parameters<typeof customFetch>[1]): Promise<updateChapterChaptersChapterIdPatchResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<updateChapterChaptersChapterIdPatchResponse>(getUpdateChapterChaptersChapterIdPatchUrl(chapterId),
   {
@@ -816,11 +832,19 @@ export const updateChapterContentChaptersChapterIdContentPatch = async (chapterI
     updateChapterContent: UpdateChapterContent,
     params?: UpdateChapterContentChaptersChapterIdContentPatchParams, options?: Parameters<typeof customFetch>[1]): Promise<updateChapterContentChaptersChapterIdContentPatchResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<updateChapterContentChaptersChapterIdContentPatchResponse>(getUpdateChapterContentChaptersChapterIdContentPatchUrl(chapterId,params),
   {
@@ -1023,11 +1047,19 @@ export const readEditChapterDataEditChapterDataChapterIdPost = async (chapterId:
     readEditChapterDataEditChapterDataChapterIdPostBody: string[],
     params?: ReadEditChapterDataEditChapterDataChapterIdPostParams, options?: Parameters<typeof customFetch>[1]): Promise<readEditChapterDataEditChapterDataChapterIdPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<readEditChapterDataEditChapterDataChapterIdPostResponse>(getReadEditChapterDataEditChapterDataChapterIdPostUrl(chapterId,params),
   {
@@ -1087,11 +1119,19 @@ export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost = asy
     readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostBody: string[],
     params?: ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostParams, options?: Parameters<typeof customFetch>[1]): Promise<readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<readEditChapterLabelDataEditChapterDataChapterIdLabelDataPostResponse>(getReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostUrl(chapterId,params),
   {
@@ -1262,11 +1302,19 @@ export const updateLabelDataStreamLabelDatasLabelDataIdPatch = async (labelDataI
     updateLabelDataStream: UpdateLabelDataStream,
     params?: UpdateLabelDataStreamLabelDatasLabelDataIdPatchParams, options?: Parameters<typeof customFetch>[1]): Promise<updateLabelDataStreamLabelDatasLabelDataIdPatchResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<updateLabelDataStreamLabelDatasLabelDataIdPatchResponse>(getUpdateLabelDataStreamLabelDatasLabelDataIdPatchUrl(labelDataId,params),
   {
@@ -1431,11 +1479,19 @@ export const getCreateLabelGroupLabelGroupsPostUrl = (params?: CreateLabelGroupL
 export const createLabelGroupLabelGroupsPost = async (createLabelGroup: CreateLabelGroup,
     params?: CreateLabelGroupLabelGroupsPostParams, options?: Parameters<typeof customFetch>[1]): Promise<createLabelGroupLabelGroupsPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<createLabelGroupLabelGroupsPostResponse>(getCreateLabelGroupLabelGroupsPostUrl(params),
   {
@@ -1581,11 +1637,19 @@ export const getUpdateLabelGroupLabelGroupsLabelGroupIdPatchUrl = (labelGroupId:
 export const updateLabelGroupLabelGroupsLabelGroupIdPatch = async (labelGroupId: string,
     updateLabelGroup: UpdateLabelGroup, options?: Parameters<typeof customFetch>[1]): Promise<updateLabelGroupLabelGroupsLabelGroupIdPatchResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<updateLabelGroupLabelGroupsLabelGroupIdPatchResponse>(getUpdateLabelGroupLabelGroupsLabelGroupIdPatchUrl(labelGroupId),
   {
@@ -1697,11 +1761,19 @@ export const createLabelDataLabelGroupsLabelGroupIdLabelDatasPost = async (label
     createLabelData: CreateLabelData,
     params?: CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostParams, options?: Parameters<typeof customFetch>[1]): Promise<createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<createLabelDataLabelGroupsLabelGroupIdLabelDatasPostResponse>(getCreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostUrl(labelGroupId,params),
   {
@@ -1766,11 +1838,19 @@ export const createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLa
     createLabelDataByAutoLabel: CreateLabelDataByAutoLabel,
     params?: CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostParams, options?: Parameters<typeof customFetch>[1]): Promise<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostResponse>(getCreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostUrl(labelGroupId,params),
   {
@@ -2043,11 +2123,19 @@ export const getEditMemoryContentMemoriesMemoryIdContentPatchUrl = (memoryId: st
 export const editMemoryContentMemoriesMemoryIdContentPatch = async (memoryId: string,
     updateMemoryContent: UpdateMemoryContent, options?: Parameters<typeof customFetch>[1]): Promise<editMemoryContentMemoriesMemoryIdContentPatchResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<editMemoryContentMemoriesMemoryIdContentPatchResponse>(getEditMemoryContentMemoriesMemoryIdContentPatchUrl(memoryId),
   {
@@ -2097,11 +2185,19 @@ export const getEditMemoryExpirationMemoriesMemoryIdExpirationPatchUrl = (memory
 export const editMemoryExpirationMemoriesMemoryIdExpirationPatch = async (memoryId: string,
     expireMemory: ExpireMemory, options?: Parameters<typeof customFetch>[1]): Promise<editMemoryExpirationMemoriesMemoryIdExpirationPatchResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<editMemoryExpirationMemoriesMemoryIdExpirationPatchResponse>(getEditMemoryExpirationMemoriesMemoryIdExpirationPatchUrl(memoryId),
   {
@@ -2151,11 +2247,19 @@ export const getEditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchUrl = (me
 export const editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch = async (memoryId: string,
     updateReviewStatus: UpdateReviewStatus, options?: Parameters<typeof customFetch>[1]): Promise<editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchResponse>(getEditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchUrl(memoryId),
   {
@@ -2401,11 +2505,19 @@ export const getAddMemoryJobMemoryAgentJobsPostUrl = () => {
  */
 export const addMemoryJobMemoryAgentJobsPost = async (createMemoryJob: CreateMemoryJob, options?: Parameters<typeof customFetch>[1]): Promise<addMemoryJobMemoryAgentJobsPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<addMemoryJobMemoryAgentJobsPostResponse>(getAddMemoryJobMemoryAgentJobsPostUrl(),
   {
@@ -2983,11 +3095,19 @@ export const getAddMemoryGroupMemoryGroupsPostUrl = () => {
  */
 export const addMemoryGroupMemoryGroupsPost = async (createMemoryGroup: CreateMemoryGroup, options?: Parameters<typeof customFetch>[1]): Promise<addMemoryGroupMemoryGroupsPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<addMemoryGroupMemoryGroupsPostResponse>(getAddMemoryGroupMemoryGroupsPostUrl(),
   {
@@ -3233,11 +3353,19 @@ export const getAddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostUr
 export const addGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost = async (memoryGroupId: string,
     createGlossaryMemory: CreateGlossaryMemory, options?: Parameters<typeof customFetch>[1]): Promise<addGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<addGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostResponse>(getAddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostUrl(memoryGroupId),
   {
@@ -3338,11 +3466,19 @@ export const replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemories
     memoryId: string,
     replaceGlossaryAssociations: ReplaceGlossaryAssociations, options?: Parameters<typeof customFetch>[1]): Promise<replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPutResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPutResponse>(getReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPutUrl(memoryGroupId,memoryId),
   {
@@ -3461,11 +3597,19 @@ export const getAddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostUrl = (
 export const addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost = async (memoryGroupId: string,
     createGlossaryTerm: CreateGlossaryTerm, options?: Parameters<typeof customFetch>[1]): Promise<addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostResponse>(getAddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostUrl(memoryGroupId),
   {
@@ -3571,11 +3715,19 @@ export const editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch =
     termId: string,
     updateGlossaryTerm: UpdateGlossaryTerm, options?: Parameters<typeof customFetch>[1]): Promise<editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchResponse>(getEditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchUrl(memoryGroupId,termId),
   {
@@ -3685,11 +3837,19 @@ export const editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsT
     termId: string,
     updateReviewStatus: UpdateReviewStatus, options?: Parameters<typeof customFetch>[1]): Promise<editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatchResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatchResponse>(getEditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatchUrl(memoryGroupId,termId),
   {
@@ -3847,11 +4007,19 @@ export const getCreateNovelNovelsPostUrl = () => {
  */
 export const createNovelNovelsPost = async (createNovel: CreateNovel, options?: Parameters<typeof customFetch>[1]): Promise<createNovelNovelsPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<createNovelNovelsPostResponse>(getCreateNovelNovelsPostUrl(),
   {
@@ -3998,11 +4166,19 @@ export const getUpdateNovelNovelsNovelIdPatchUrl = (novelId: string,) => {
 export const updateNovelNovelsNovelIdPatch = async (novelId: string,
     updateNovel: UpdateNovel, options?: Parameters<typeof customFetch>[1]): Promise<updateNovelNovelsNovelIdPatchResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<updateNovelNovelsNovelIdPatchResponse>(getUpdateNovelNovelsNovelIdPatchUrl(novelId),
   {
@@ -4053,11 +4229,19 @@ export const getCreateChapterNovelsNovelIdChaptersPostUrl = (novelId: string,) =
 export const createChapterNovelsNovelIdChaptersPost = async (novelId: string,
     createChapter: CreateChapter, options?: Parameters<typeof customFetch>[1]): Promise<createChapterNovelsNovelIdChaptersPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<createChapterNovelsNovelIdChaptersPostResponse>(getCreateChapterNovelsNovelIdChaptersPostUrl(novelId),
   {
@@ -4153,11 +4337,19 @@ export const getRegisterUserRegisterPostUrl = () => {
  */
 export const registerUserRegisterPost = async (createUser: CreateUser, options?: Parameters<typeof customFetch>[1]): Promise<registerUserRegisterPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<registerUserRegisterPostResponse>(getRegisterUserRegisterPostUrl(),
   {
@@ -4255,11 +4447,19 @@ export const getCreateSourceWorkSourceWorksPostUrl = () => {
  */
 export const createSourceWorkSourceWorksPost = async (createSourceWork: CreateSourceWork, options?: Parameters<typeof customFetch>[1]): Promise<createSourceWorkSourceWorksPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<createSourceWorkSourceWorksPostResponse>(getCreateSourceWorkSourceWorksPostUrl(),
   {
@@ -4356,11 +4556,19 @@ export const getUpdateSourceWorkSourceWorksSourceWorkIdPatchUrl = (sourceWorkId:
 export const updateSourceWorkSourceWorksSourceWorkIdPatch = async (sourceWorkId: string,
     updateSourceWork: UpdateSourceWork, options?: Parameters<typeof customFetch>[1]): Promise<updateSourceWorkSourceWorksSourceWorkIdPatchResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<updateSourceWorkSourceWorksSourceWorkIdPatchResponse>(getUpdateSourceWorkSourceWorksSourceWorkIdPatchUrl(sourceWorkId),
   {
@@ -4475,11 +4683,19 @@ if(bodyLoginForAccessTokenTokenPost.scope !== undefined) {
  }
 formUrlEncoded.append(`username`, bodyLoginForAccessTokenTokenPost.username);
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<loginForAccessTokenTokenPostResponse>(getLoginForAccessTokenTokenPostUrl(),
   {
@@ -4529,11 +4745,19 @@ export const getCreateUserUsersPostUrl = () => {
  */
 export const createUserUsersPost = async (createUser: CreateUser, options?: Parameters<typeof customFetch>[1]): Promise<createUserUsersPostResponse> => {
 
-    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
   };
 return customFetch<createUserUsersPostResponse>(getCreateUserUsersPostUrl(),
   {

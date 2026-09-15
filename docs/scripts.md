@@ -49,8 +49,12 @@ uv --directory backend run --no-sync python -m scripts.extract_openapi
 Then run Orval from the frontend project:
 
 ```bash
-pnpm --dir frontend exec orval
+pnpm --dir frontend generate:api
 ```
+
+This command removes only `frontend/src/api/endpoints/` and `frontend/src/api/models/`
+once before running both generators, preventing stale files while preserving
+handwritten helpers such as `custom-fetch.ts`.
 
 Orval reads `frontend/orval.config.ts` and writes generated models and clients
 under `frontend/src/api/`. Do not edit those generated files manually. Review

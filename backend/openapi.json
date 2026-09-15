@@ -6941,6 +6941,408 @@
           }
         }
       }
+    },
+    "/translation-jobs": {
+      "post": {
+        "tags": [
+          "translations"
+        ],
+        "summary": "Create",
+        "operationId": "create_translation_jobs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslationJobCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationJobCreated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/translation-jobs/{jobId}": {
+      "get": {
+        "tags": [
+          "translations"
+        ],
+        "summary": "Read",
+        "operationId": "read_translation_jobs__jobId__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Jobid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationJobRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/translation-jobs/{jobId}/start": {
+      "post": {
+        "tags": [
+          "translations"
+        ],
+        "summary": "Start",
+        "operationId": "start_translation_jobs__jobId__start_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Jobid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationControlResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/translation-jobs/{jobId}/resume-all": {
+      "post": {
+        "tags": [
+          "translations"
+        ],
+        "summary": "Resume All",
+        "operationId": "resume_all_translation_jobs__jobId__resume_all_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Jobid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationControlResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/translation-jobs/{jobId}/cancel-all": {
+      "post": {
+        "tags": [
+          "translations"
+        ],
+        "summary": "Cancel All",
+        "operationId": "cancel_all_translation_jobs__jobId__cancel_all_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Jobid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationControlResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/translation-jobs/{jobId}/retry-all": {
+      "post": {
+        "tags": [
+          "translations"
+        ],
+        "summary": "Retry All",
+        "operationId": "retry_all_translation_jobs__jobId__retry_all_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Jobid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationControlResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/translation-jobs/{jobId}/batches/{batchId}/cancel": {
+      "post": {
+        "tags": [
+          "translations"
+        ],
+        "summary": "Cancel",
+        "operationId": "cancel_translation_jobs__jobId__batches__batchId__cancel_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Jobid"
+            }
+          },
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Batchid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationControlResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/translation-jobs/{jobId}/batches/{batchId}/retry": {
+      "post": {
+        "tags": [
+          "translations"
+        ],
+        "summary": "Retry",
+        "operationId": "retry_translation_jobs__jobId__batches__batchId__retry_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Jobid"
+            }
+          },
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Batchid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationControlResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7550,6 +7952,25 @@
         "type": "object",
         "title": "CluenerParams",
         "description": "Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size: Integer between 1 and 512. Determines max size of chunks passed to NER model. Has default value 500.\n    separators: Dictionary of the form `char : SepPriority`. The predict algorithm will prioritize chunks ending in higher priority separators. Has default value (read the code to see what it is.)\n    force_chunk: If no separators found in some interval, force the chunker to chunk mid-sentence. Has default value False.\n\nNotes:\n    To validate this model without injecting default values, call `CluenerModelParams.model_validate(..., context={'skip_default_values' : True})`."
+      },
+      "CombineChapterStageCreate": {
+        "properties": {
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          },
+          "action": {
+            "type": "string",
+            "const": "combine_chapter",
+            "title": "Action"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "CombineChapterStageCreate"
       },
       "CreateAutoLabels": {
         "properties": {
@@ -8990,7 +9411,7 @@
       "JobParams": {
         "properties": {
           "modelName": {
-            "$ref": "#/components/schemas/ModelName"
+            "$ref": "#/components/schemas/ModelName-Output"
           },
           "toolsets": {
             "additionalProperties": {
@@ -9524,7 +9945,7 @@
       "MemoryAgentModelOption": {
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/ModelName"
+            "$ref": "#/components/schemas/ModelName-Output"
           },
           "label": {
             "type": "string",
@@ -9832,7 +10253,7 @@
         "title": "MemoryType",
         "description": "The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms."
       },
-      "ModelName": {
+      "ModelName-Output": {
         "type": "string",
         "enum": [
           "deepseek:deepseek-v4-flash-none",
@@ -10236,6 +10657,111 @@
           "glossary",
           "continuity"
         ]
+      },
+      "PruneMemoriesConfig": {
+        "properties": {
+          "model": {
+            "$ref": "#/components/schemas/src__translations__types__ModelName"
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions",
+            "default": ""
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          },
+          "maxOutputTokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxoutputtokens"
+          },
+          "memoryGroupId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memorygroupid"
+          },
+          "pluginNames": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PluginName"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pluginnames"
+          },
+          "memoryTypes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MemoryType"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memorytypes"
+          },
+          "excludeCurrentChapter": {
+            "type": "boolean",
+            "title": "Excludecurrentchapter",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "model"
+        ],
+        "title": "PruneMemoriesConfig"
+      },
+      "PruneMemoriesStageCreate": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "const": "prune_memories",
+            "title": "Action"
+          },
+          "config": {
+            "$ref": "#/components/schemas/PruneMemoriesConfig"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "config"
+        ],
+        "title": "PruneMemoriesStageCreate"
       },
       "PythonAnnotationRequest": {
         "properties": {
@@ -10866,6 +11392,539 @@
           "memory",
           "guidance"
         ]
+      },
+      "TranslateConfig": {
+        "properties": {
+          "model": {
+            "$ref": "#/components/schemas/src__translations__types__ModelName"
+          },
+          "targetLanguage": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Targetlanguage",
+            "default": "English"
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions",
+            "default": ""
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          },
+          "maxOutputTokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxoutputtokens"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "model"
+        ],
+        "title": "TranslateConfig"
+      },
+      "TranslateStageCreate": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "const": "translate",
+            "title": "Action"
+          },
+          "config": {
+            "$ref": "#/components/schemas/TranslateConfig"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "config"
+        ],
+        "title": "TranslateStageCreate"
+      },
+      "TranslateWithMemoriesConfig": {
+        "properties": {
+          "model": {
+            "$ref": "#/components/schemas/src__translations__types__ModelName"
+          },
+          "targetLanguage": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Targetlanguage",
+            "default": "English"
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions",
+            "default": ""
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          },
+          "maxOutputTokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maxoutputtokens"
+          },
+          "memoryGroupId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memorygroupid"
+          },
+          "pluginNames": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PluginName"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pluginnames"
+          },
+          "memoryTypes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MemoryType"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memorytypes"
+          },
+          "excludeCurrentChapter": {
+            "type": "boolean",
+            "title": "Excludecurrentchapter",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "model"
+        ],
+        "title": "TranslateWithMemoriesConfig"
+      },
+      "TranslateWithMemoriesStageCreate": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "const": "translate_with_memories",
+            "title": "Action"
+          },
+          "config": {
+            "$ref": "#/components/schemas/TranslateWithMemoriesConfig"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "config"
+        ],
+        "title": "TranslateWithMemoriesStageCreate"
+      },
+      "TranslationBatchRead": {
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Batchid"
+          },
+          "batchNum": {
+            "type": "integer",
+            "title": "Batchnum"
+          },
+          "initialFileId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initialfileid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batchId",
+          "batchNum",
+          "initialFileId"
+        ],
+        "title": "TranslationBatchRead"
+      },
+      "TranslationControlResult": {
+        "properties": {
+          "affectedBatchIds": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Affectedbatchids"
+          },
+          "dispatchedTaskIds": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Dispatchedtaskids"
+          },
+          "dispatchFailedTaskIds": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Dispatchfailedtaskids"
+          }
+        },
+        "type": "object",
+        "title": "TranslationControlResult"
+      },
+      "TranslationJobConfig": {
+        "properties": {
+          "startChapterNum": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startchapternum"
+          },
+          "endChapterNum": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endchapternum"
+          },
+          "batchSize": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Batchsize"
+          }
+        },
+        "type": "object",
+        "required": [
+          "batchSize"
+        ],
+        "title": "TranslationJobConfig"
+      },
+      "TranslationJobCreate": {
+        "properties": {
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "config": {
+            "$ref": "#/components/schemas/TranslationJobConfig"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationStageCreate"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Stages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "novelId",
+          "config",
+          "stages"
+        ],
+        "title": "TranslationJobCreate"
+      },
+      "TranslationJobCreated": {
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Jobid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobId"
+        ],
+        "title": "TranslationJobCreated"
+      },
+      "TranslationJobRead": {
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Jobid"
+          },
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationStageRead"
+            },
+            "type": "array",
+            "title": "Stages"
+          },
+          "batches": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationBatchRead"
+            },
+            "type": "array",
+            "title": "Batches"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationTaskRead"
+            },
+            "type": "array",
+            "title": "Tasks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobId",
+          "novelId",
+          "config",
+          "stages",
+          "batches",
+          "tasks"
+        ],
+        "title": "TranslationJobRead"
+      },
+      "TranslationStageCreate": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PruneMemoriesStageCreate"
+          },
+          {
+            "$ref": "#/components/schemas/CombineChapterStageCreate"
+          },
+          {
+            "$ref": "#/components/schemas/TranslateWithMemoriesStageCreate"
+          },
+          {
+            "$ref": "#/components/schemas/TranslateStageCreate"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "action",
+          "mapping": {
+            "combine_chapter": "#/components/schemas/CombineChapterStageCreate",
+            "prune_memories": "#/components/schemas/PruneMemoriesStageCreate",
+            "translate": "#/components/schemas/TranslateStageCreate",
+            "translate_with_memories": "#/components/schemas/TranslateWithMemoriesStageCreate"
+          }
+        }
+      },
+      "TranslationStageRead": {
+        "properties": {
+          "stageId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Stageid"
+          },
+          "stageNum": {
+            "type": "integer",
+            "title": "Stagenum"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stageId",
+          "stageNum",
+          "action",
+          "config"
+        ],
+        "title": "TranslationStageRead"
+      },
+      "TranslationTaskRead": {
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Taskid"
+          },
+          "stageId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Stageid"
+          },
+          "batchId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Batchid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TranslationTaskStatus"
+          },
+          "failedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failedat"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "claimExpiresAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimexpiresat"
+          },
+          "inputFileId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inputfileid"
+          },
+          "outputFileId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outputfileid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "taskId",
+          "stageId",
+          "batchId",
+          "status",
+          "failedAt",
+          "error",
+          "claimExpiresAt",
+          "inputFileId",
+          "outputFileId"
+        ],
+        "title": "TranslationTaskRead"
+      },
+      "TranslationTaskStatus": {
+        "type": "string",
+        "enum": [
+          "waiting",
+          "ready",
+          "preparing",
+          "prepared",
+          "submitting",
+          "processing",
+          "processed",
+          "finalizing",
+          "complete"
+        ],
+        "title": "TranslationTaskStatus"
       },
       "UpdateChapter": {
         "properties": {
@@ -11499,6 +12558,20 @@
           "glossary"
         ],
         "title": "WorkflowUseCase"
+      },
+      "src__memory__agent__types__ModelName": {
+        "type": "string",
+        "enum": [
+          "deepseek:deepseek-v4-flash-none",
+          "deepseek:deepseek-v4-flash-low"
+        ]
+      },
+      "src__translations__types__ModelName": {
+        "type": "string",
+        "enum": [
+          "qwen-plus",
+          "qwen-flash"
+        ]
       }
     },
     "securitySchemes": {

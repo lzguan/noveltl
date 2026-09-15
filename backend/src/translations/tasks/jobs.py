@@ -25,8 +25,7 @@ def create_job(db: Session, request: TranslationJobCreate) -> UUID:
     )
     batch_num = cast(
         func.floor(
-            (func.row_number().over(order_by=(Chapter.chapter_num, Chapter.chapter_id)) - 1)
-            / request.config.batch_size
+            (func.row_number().over(order_by=(Chapter.chapter_num, Chapter.chapter_id)) - 1) / request.config.batch_size
         ),
         Integer,
     ).label("batch_num")

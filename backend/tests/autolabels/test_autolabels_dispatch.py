@@ -6,23 +6,27 @@ from unittest.mock import Mock
 import pytest
 
 from src.autolabels.celery_app import app
-from src.autolabels.dispatch.celery import CeleryDispatcher, celery_infer
+from src.autolabels.dispatch.celery import celery_infer
+from src.autolabels.dispatch.celery_dispatcher import CeleryDispatcher
 from src.autolabels.exceptions import EnqueueFailedException
+from src.autolabels.task_names import CELERY_INFER
 
 
 class TestCeleryDispatcher:
     def test_enqueue_publishes_task_with_string_job_id(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        apply_async = Mock()
-        monkeypatch.setattr(celery_infer, "apply_async", apply_async)
+        # Published by name, so the API never imports the inference implementation.
+        send_task = Mock()
+        monkeypatch.setattr(app, "send_task", send_task)
         job_id = uuid.uuid4()
         auto_label_id = uuid.uuid4()
 
         CeleryDispatcher().enqueue(job_id, auto_label_id)
 
-        apply_async.assert_called_once_with((job_id, auto_label_id), task_id=str(job_id))
+        send_task.assert_called_once_with(CELERY_INFER, args=(job_id, auto_label_id), task_id=str(job_id))
+        assert celery_infer.name == CELERY_INFER
 
     def test_enqueue_translates_publish_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(celery_infer, "apply_async", Mock(side_effect=RuntimeError("broker unavailable")))
+        monkeypatch.setattr(app, "send_task", Mock(side_effect=RuntimeError("broker unavailable")))
 
         with pytest.raises(EnqueueFailedException, match="broker unavailable"):
             CeleryDispatcher().enqueue(uuid.uuid4(), uuid.uuid4())

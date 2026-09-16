@@ -4,6 +4,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
+		"generate:api": "node scripts/generate-api.mjs",
 		"dev": "vite",
 		"lint": "oxlint",
 		"lint:fix": "oxlint --fix",

@@ -7,13 +7,15 @@ import pytest
 from kombu.serialization import dumps
 
 from src.filters.celery_app import app
-from src.filters.dispatch.celery import CeleryRunnerDispatcher, run_runner_task
+from src.filters.dispatch.celery import run_runner_task
+from src.filters.dispatch.celery_dispatcher import CeleryRunnerDispatcher
 from src.filters.exceptions import RunnerEnqueueFailedException
 from src.filters.runners.python.annotation_runner import (
     NewStringFieldRequest,
     PythonAnnotationInput,
 )
 from src.filters.runners.python.group_runner import PythonGroupInput
+from src.filters.task_names import RUN_RUNNER_TASK
 from src.filters.worker.tasks import run_runner, runners
 
 
@@ -27,8 +29,9 @@ def _group_input() -> PythonGroupInput:
 
 class TestCeleryRunnerDispatcher:
     def test_enqueue_publishes_json_serializable_payload(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        apply_async = Mock()
-        monkeypatch.setattr(run_runner_task, "apply_async", apply_async)
+        # Published by name, so the API never imports the runner implementation.
+        send_task = Mock()
+        monkeypatch.setattr(app, "send_task", send_task)
         job_id = uuid.uuid4()
         runner_input = _group_input()
 
@@ -36,10 +39,11 @@ class TestCeleryRunnerDispatcher:
 
         payload = runner_input.model_dump(mode="json", by_alias=True, exclude_computed_fields=True)
         dumps((str(job_id), payload), serializer="json")
-        apply_async.assert_called_once_with((str(job_id), payload), task_id=str(job_id))
+        send_task.assert_called_once_with(RUN_RUNNER_TASK, args=(str(job_id), payload), task_id=str(job_id))
+        assert run_runner_task.name == RUN_RUNNER_TASK
 
     def test_enqueue_translates_publish_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(run_runner_task, "apply_async", Mock(side_effect=RuntimeError("broker unavailable")))
+        monkeypatch.setattr(app, "send_task", Mock(side_effect=RuntimeError("broker unavailable")))
 
         with pytest.raises(RunnerEnqueueFailedException, match="broker unavailable"):
             CeleryRunnerDispatcher().enqueue(uuid.uuid4(), _group_input())

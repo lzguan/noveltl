@@ -53,3 +53,5 @@ If an issue is caused by a typo, describe it as a typo when communicating with t
 Excluding `as const` casts, don't cast variables without permission (i.e. don't use the `as` keyword on the frontend).
 
 If you are running into issues connecting with the test database/external services, it may be because you are running a command in a sandbox. Escalate the request to the user in that case.
+
+If you decide to use database locks raise that to the user. Almost certainly there is a way to do it without locks.

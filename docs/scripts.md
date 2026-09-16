@@ -49,8 +49,12 @@ uv --directory backend run --no-sync python -m scripts.extract_openapi
 Then run Orval from the frontend project:
 
 ```bash
-pnpm --dir frontend exec orval
+pnpm --dir frontend generate:api
 ```
+
+This command removes only `frontend/src/api/endpoints/` and `frontend/src/api/models/`
+once before running both generators, preventing stale files while preserving
+handwritten helpers such as `custom-fetch.ts`.
 
 Orval reads `frontend/orval.config.ts` and writes generated models and clients
 under `frontend/src/api/`. Do not edit those generated files manually. Review
@@ -117,3 +121,25 @@ General frontend scripts are defined in
 [`frontend/package.json`](../frontend/package.json). Backend dependency groups
 and tool configuration are defined in
 [`backend/pyproject.toml`](../backend/pyproject.toml).
+
+## Translation worker
+
+Set `QWEN_API_KEY` and `QWEN_API_URL` to the credentials and OpenAI-compatible
+base URL for your Model Studio region, along with the existing database, Redis,
+and S3 settings. Start the worker with:
+
+```bash
+docker compose --profile manual up -d translations-worker
+docker compose logs -f translations-worker
+```
+
+The Compose service uses `noveltl-translations-worker` with `IMAGE_TAG`
+(default `latest`), matching the other workers. Production CI publishes that
+image as `latest` and per-commit tags from the `translations-worker` target in
+`backend/Dockerfile`, installing only the base and `tagent` dependencies. The
+service connects to Garage through the shared S3 settings; it does not need
+Garage's RPC secret.
+
+The memory agent and evaluation harness use `pydantic-ai-slim[openai]` for the
+DeepSeek adapter. Additional provider or integration extras must be explicitly
+added when needed.

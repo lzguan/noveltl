@@ -1,0 +1,60 @@
+from dataclasses import dataclass
+from enum import StrEnum
+from typing import Literal
+from uuid import UUID
+
+type DataName = Literal["chapter", "memories"]
+type DataT = frozenset[DataName]
+type ActionName = Literal["prune_memories", "combine_chapter", "translate_with_memories", "translate"]
+type ModelName = Literal["qwen-plus", "qwen-flash"]
+
+
+@dataclass(frozen=True)
+class TranslationDataKey:
+    """Identify one complete component within a task's stored stage artifact.
+
+    Keys must be unique within the artifact. The owning task supplies job,
+    batch, and stage scope. Provider request/chunk identifiers are separate.
+    See docs/translations.md for the producer/consumer contract.
+    """
+
+    chapter_id: UUID
+    data_name: DataName
+
+
+@dataclass(frozen=True)
+class ActionSignature:
+    input_types: DataT
+    output_types: DataT
+
+
+ACTIONS: dict[ActionName, ActionSignature] = {
+    "prune_memories": ActionSignature(
+        input_types=frozenset(("chapter", "memories")),
+        output_types=frozenset(("memories",)),
+    ),
+    "combine_chapter": ActionSignature(
+        input_types=frozenset(("memories",)),
+        output_types=frozenset(("chapter", "memories")),
+    ),
+    "translate_with_memories": ActionSignature(
+        input_types=frozenset(("chapter", "memories")),
+        output_types=frozenset(("chapter",)),
+    ),
+    "translate": ActionSignature(
+        input_types=frozenset(("chapter",)),
+        output_types=frozenset(("chapter",)),
+    ),
+}
+
+
+class TranslationTaskStatus(StrEnum):
+    WAITING = "waiting"
+    READY = "ready"
+    PREPARING = "preparing"
+    PREPARED = "prepared"
+    SUBMITTING = "submitting"
+    PROCESSING = "processing"
+    PROCESSED = "processed"
+    FINALIZING = "finalizing"
+    COMPLETE = "complete"

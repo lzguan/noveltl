@@ -1,3 +1,4 @@
+import { readFile, writeFile } from "node:fs/promises";
 import { defineConfig } from "orval";
 
 export default defineConfig({
@@ -22,6 +23,24 @@ export default defineConfig({
 	},
 	// Effect schema generation
 	openapiEffect: {
+		hooks: {
+			afterAllFilesWrite: async () => {
+				// Orval widens separator weights to number, but their Effect schema
+				// accepts only 1 | 2 | 3. Preserve literal types after regeneration.
+				const path = new URL(
+					"./src/api/endpoints/default/default.effect.ts",
+					import.meta.url,
+				);
+				const source = await readFile(path, "utf8");
+				await writeFile(
+					path,
+					source.replace(
+						/(export const \w+SeparatorsDefault = \{[^\r\n]*\});/g,
+						"$1 as const;",
+					),
+				);
+			},
+		},
 		input: {
 			target: "../backend/openapi.yaml",
 		},

@@ -5,10 +5,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ModelName = typeof ModelName[keyof typeof ModelName];
+export type ModelNameOutput = typeof ModelNameOutput[keyof typeof ModelNameOutput];
 
 
-export const ModelName = {
+export const ModelNameOutput = {
   'deepseek:deepseek-v4-flash-none': 'deepseek:deepseek-v4-flash-none',
   'deepseek:deepseek-v4-flash-low': 'deepseek:deepseek-v4-flash-low',
 } as const;

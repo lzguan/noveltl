@@ -13,6 +13,7 @@ dependencies = [
     "alembic>=1.13.0",
     "celery[redis]>=5.6.3",
     "redis[hiredis]>=6.4.0",
+    "boto3>=1.43.93",
 ]
 
 [dependency-groups]
@@ -42,7 +43,10 @@ dev = [
     "numpy>=2.5.2",
 ]
 agent = [
-    "pydantic-ai>=2.31.0",
+    "pydantic-ai-slim[openai]>=2.31.0",
+]
+tagent = [
+    "openai>=3.11.0",
 ]
 
 [tool.uv]
@@ -51,7 +55,8 @@ default-groups = [
     "backend",
     "worker",
     "dev",
-    "agent"
+    "agent",
+    "tagent"
 ]
 required-version = ">=0.10.0"
 

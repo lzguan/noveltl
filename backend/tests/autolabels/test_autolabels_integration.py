@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from src.autolabels.celery_app import app
 from src.autolabels.constants import AutoLabelProgress
-from src.autolabels.dispatch.celery import CeleryDispatcher
+from src.autolabels.dispatch.celery_dispatcher import CeleryDispatcher
 from src.autolabels.models import AutoLabel
 from src.autolabels.params import CluenerParams
 from src.autolabels.schemas import CreateAutoLabels

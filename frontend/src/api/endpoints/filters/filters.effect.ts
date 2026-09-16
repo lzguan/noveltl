@@ -94,80 +94,80 @@ export const ValidateFilterFunctionBody = S.Struct({
 })
 
 export const validateFilterFunction200ResponseSignatureArgsDefault = [];
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneTypeDefault = `string`;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneTypeDefault = 'string';
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoTypeDefault = `int`;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoTypeDefault = 'int';
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeTypeDefault = `float`;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeTypeDefault = 'float';
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourTypeDefault = `bool`;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourTypeDefault = 'bool';
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveTypeDefault = `labelRef`;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveTypeDefault = 'labelRef';
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixTypeDefault = `textSpan`;
-export const validateFilterFunction200ResponseSignatureArgsItemOneKindDefault = `schema`;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoOneKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixTypeDefault = 'textSpan';
+export const validateFilterFunction200ResponseSignatureArgsItemOneKindDefault = 'schema';
+export const validateFilterFunction200ResponseSignatureArgsItemTwoOneKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureArgsItemTwoOneMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoOneTypeDefault = `string`;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoTwoKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureArgsItemTwoOneTypeDefault = 'string';
+export const validateFilterFunction200ResponseSignatureArgsItemTwoTwoKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureArgsItemTwoTwoMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoTwoTypeDefault = `int`;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoThreeKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureArgsItemTwoTwoTypeDefault = 'int';
+export const validateFilterFunction200ResponseSignatureArgsItemTwoThreeKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureArgsItemTwoThreeMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoThreeTypeDefault = `float`;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoFourKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureArgsItemTwoThreeTypeDefault = 'float';
+export const validateFilterFunction200ResponseSignatureArgsItemTwoFourKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureArgsItemTwoFourMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoFourTypeDefault = `bool`;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoFiveKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureArgsItemTwoFourTypeDefault = 'bool';
+export const validateFilterFunction200ResponseSignatureArgsItemTwoFiveKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureArgsItemTwoFiveMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoFiveTypeDefault = `labelRef`;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoSixKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureArgsItemTwoFiveTypeDefault = 'labelRef';
+export const validateFilterFunction200ResponseSignatureArgsItemTwoSixKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureArgsItemTwoSixMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureArgsItemTwoSixTypeDefault = `textSpan`;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsOneKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureArgsItemTwoSixTypeDefault = 'textSpan';
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsOneKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsOneMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsOneTypeDefault = `string`;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsTwoKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsOneTypeDefault = 'string';
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsTwoKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsTwoMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsTwoTypeDefault = `int`;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsThreeKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsTwoTypeDefault = 'int';
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsThreeKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsThreeMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsThreeTypeDefault = `float`;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsFourKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsThreeTypeDefault = 'float';
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsFourKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsFourMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsFourTypeDefault = `bool`;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsFiveKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsFourTypeDefault = 'bool';
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsFiveKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsFiveMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsFiveTypeDefault = `labelRef`;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsSixKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsFiveTypeDefault = 'labelRef';
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsSixKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureOutputOneFieldsSixMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputOneFieldsSixTypeDefault = `textSpan`;
-export const validateFilterFunction200ResponseSignatureOutputOneKindDefault = `schema`;
-export const validateFilterFunction200ResponseSignatureOutputTwoOneKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureOutputOneFieldsSixTypeDefault = 'textSpan';
+export const validateFilterFunction200ResponseSignatureOutputOneKindDefault = 'schema';
+export const validateFilterFunction200ResponseSignatureOutputTwoOneKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureOutputTwoOneMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputTwoOneTypeDefault = `string`;
-export const validateFilterFunction200ResponseSignatureOutputTwoTwoKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureOutputTwoOneTypeDefault = 'string';
+export const validateFilterFunction200ResponseSignatureOutputTwoTwoKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureOutputTwoTwoMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputTwoTwoTypeDefault = `int`;
-export const validateFilterFunction200ResponseSignatureOutputTwoThreeKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureOutputTwoTwoTypeDefault = 'int';
+export const validateFilterFunction200ResponseSignatureOutputTwoThreeKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureOutputTwoThreeMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputTwoThreeTypeDefault = `float`;
-export const validateFilterFunction200ResponseSignatureOutputTwoFourKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureOutputTwoThreeTypeDefault = 'float';
+export const validateFilterFunction200ResponseSignatureOutputTwoFourKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureOutputTwoFourMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputTwoFourTypeDefault = `bool`;
-export const validateFilterFunction200ResponseSignatureOutputTwoFiveKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureOutputTwoFourTypeDefault = 'bool';
+export const validateFilterFunction200ResponseSignatureOutputTwoFiveKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureOutputTwoFiveMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputTwoFiveTypeDefault = `labelRef`;
-export const validateFilterFunction200ResponseSignatureOutputTwoSixKindDefault = `field`;
+export const validateFilterFunction200ResponseSignatureOutputTwoFiveTypeDefault = 'labelRef';
+export const validateFilterFunction200ResponseSignatureOutputTwoSixKindDefault = 'field';
 export const validateFilterFunction200ResponseSignatureOutputTwoSixMutableDefault = false;
-export const validateFilterFunction200ResponseSignatureOutputTwoSixTypeDefault = `textSpan`;
+export const validateFilterFunction200ResponseSignatureOutputTwoSixTypeDefault = 'textSpan';
 
 export const ValidateFilterFunction200Response = S.Struct({
   "signature": S.Struct({
@@ -394,12 +394,12 @@ export const ReadGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryParams = 
   "offset": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryOffsetMin)), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryOffsetDefault })
 })
 
-export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneKindDefault = `value`;
-export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneTypeDefault = `string`;
-export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueTwoKindDefault = `value`;
-export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueTwoTypeDefault = `int`;
-export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueThreeKindDefault = `value`;
-export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueThreeTypeDefault = `bool`;
+export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneKindDefault = 'value';
+export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneTypeDefault = 'string';
+export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueTwoKindDefault = 'value';
+export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueTwoTypeDefault = 'int';
+export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueThreeKindDefault = 'value';
+export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueThreeTypeDefault = 'bool';
 
 export const ReadGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseItem = S.Struct({
   "count": S.Number,
@@ -451,12 +451,12 @@ export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFilters
 
 export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesMax = 100;
 
-export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemOneKindDefault = `value`;
-export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemOneTypeDefault = `string`;
-export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemTwoKindDefault = `value`;
-export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemTwoTypeDefault = `int`;
-export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemThreeKindDefault = `value`;
-export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemThreeTypeDefault = `bool`;
+export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemOneKindDefault = 'value';
+export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemOneTypeDefault = 'string';
+export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemTwoKindDefault = 'value';
+export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemTwoTypeDefault = 'int';
+export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemThreeKindDefault = 'value';
+export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemThreeTypeDefault = 'bool';
 export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameSortKeysMax = 3;
 
 export const readInstancesAdvancedFiltersInstancesQueryPostBodyFrameSortKeysItemFieldNameMax = 128;
@@ -496,29 +496,29 @@ export const ReadInstancesAdvancedFiltersInstancesQueryPostBody = S.Struct({
   "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readInstancesAdvancedFiltersInstancesQueryPostBodyLimitMax)), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyLimitDefault })
 })
 
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneKindDefault = `value`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneTypeDefault = `string`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesTwoKindDefault = `value`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesTwoTypeDefault = `int`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesThreeKindDefault = `value`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesThreeTypeDefault = `bool`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsOneKindDefault = `value`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsOneTypeDefault = `string`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsTwoKindDefault = `value`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsTwoTypeDefault = `int`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsThreeKindDefault = `value`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsThreeTypeDefault = `float`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFourKindDefault = `value`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFourTypeDefault = `bool`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveKindDefault = `value`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveTypeDefault = `textSpan`;
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneKindDefault = 'value';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneTypeDefault = 'string';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesTwoKindDefault = 'value';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesTwoTypeDefault = 'int';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesThreeKindDefault = 'value';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesThreeTypeDefault = 'bool';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsOneKindDefault = 'value';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsOneTypeDefault = 'string';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsTwoKindDefault = 'value';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsTwoTypeDefault = 'int';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsThreeKindDefault = 'value';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsThreeTypeDefault = 'float';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFourKindDefault = 'value';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFourTypeDefault = 'bool';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveKindDefault = 'value';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveTypeDefault = 'textSpan';
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveValueEndMin = 0;
 
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveValueStartMin = 0;
 
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsSixKindDefault = `value`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsSixTypeDefault = `labelRef`;
-export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueKindDefault = `object`;
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsSixKindDefault = 'value';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsSixTypeDefault = 'labelRef';
+export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueKindDefault = 'object';
 
 export const ReadInstancesAdvancedFiltersInstancesQueryPost200ResponseItem = S.Struct({
   "groupValues": S.Record({ key: S.String, value: S.Union(S.Struct({
@@ -612,14 +612,14 @@ export const UpdateFilterInstanceParams = S.Struct({
   "instanceId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
-export const updateFilterInstanceBodyFieldsOneKindDefault = `value`;
-export const updateFilterInstanceBodyFieldsOneTypeDefault = `string`;
-export const updateFilterInstanceBodyFieldsTwoKindDefault = `value`;
-export const updateFilterInstanceBodyFieldsTwoTypeDefault = `int`;
-export const updateFilterInstanceBodyFieldsThreeKindDefault = `value`;
-export const updateFilterInstanceBodyFieldsThreeTypeDefault = `float`;
-export const updateFilterInstanceBodyFieldsFourKindDefault = `value`;
-export const updateFilterInstanceBodyFieldsFourTypeDefault = `bool`;
+export const updateFilterInstanceBodyFieldsOneKindDefault = 'value';
+export const updateFilterInstanceBodyFieldsOneTypeDefault = 'string';
+export const updateFilterInstanceBodyFieldsTwoKindDefault = 'value';
+export const updateFilterInstanceBodyFieldsTwoTypeDefault = 'int';
+export const updateFilterInstanceBodyFieldsThreeKindDefault = 'value';
+export const updateFilterInstanceBodyFieldsThreeTypeDefault = 'float';
+export const updateFilterInstanceBodyFieldsFourKindDefault = 'value';
+export const updateFilterInstanceBodyFieldsFourTypeDefault = 'bool';
 
 export const UpdateFilterInstanceBody = S.Struct({
   "fields": S.Record({ key: S.String, value: S.Union(S.Struct({
@@ -641,23 +641,23 @@ export const UpdateFilterInstanceBody = S.Struct({
 })) })
 })
 
-export const updateFilterInstance200ResponseValueFieldsOneKindDefault = `value`;
-export const updateFilterInstance200ResponseValueFieldsOneTypeDefault = `string`;
-export const updateFilterInstance200ResponseValueFieldsTwoKindDefault = `value`;
-export const updateFilterInstance200ResponseValueFieldsTwoTypeDefault = `int`;
-export const updateFilterInstance200ResponseValueFieldsThreeKindDefault = `value`;
-export const updateFilterInstance200ResponseValueFieldsThreeTypeDefault = `float`;
-export const updateFilterInstance200ResponseValueFieldsFourKindDefault = `value`;
-export const updateFilterInstance200ResponseValueFieldsFourTypeDefault = `bool`;
-export const updateFilterInstance200ResponseValueFieldsFiveKindDefault = `value`;
-export const updateFilterInstance200ResponseValueFieldsFiveTypeDefault = `textSpan`;
+export const updateFilterInstance200ResponseValueFieldsOneKindDefault = 'value';
+export const updateFilterInstance200ResponseValueFieldsOneTypeDefault = 'string';
+export const updateFilterInstance200ResponseValueFieldsTwoKindDefault = 'value';
+export const updateFilterInstance200ResponseValueFieldsTwoTypeDefault = 'int';
+export const updateFilterInstance200ResponseValueFieldsThreeKindDefault = 'value';
+export const updateFilterInstance200ResponseValueFieldsThreeTypeDefault = 'float';
+export const updateFilterInstance200ResponseValueFieldsFourKindDefault = 'value';
+export const updateFilterInstance200ResponseValueFieldsFourTypeDefault = 'bool';
+export const updateFilterInstance200ResponseValueFieldsFiveKindDefault = 'value';
+export const updateFilterInstance200ResponseValueFieldsFiveTypeDefault = 'textSpan';
 export const updateFilterInstance200ResponseValueFieldsFiveValueEndMin = 0;
 
 export const updateFilterInstance200ResponseValueFieldsFiveValueStartMin = 0;
 
-export const updateFilterInstance200ResponseValueFieldsSixKindDefault = `value`;
-export const updateFilterInstance200ResponseValueFieldsSixTypeDefault = `labelRef`;
-export const updateFilterInstance200ResponseValueKindDefault = `object`;
+export const updateFilterInstance200ResponseValueFieldsSixKindDefault = 'value';
+export const updateFilterInstance200ResponseValueFieldsSixTypeDefault = 'labelRef';
+export const updateFilterInstance200ResponseValueKindDefault = 'object';
 
 export const UpdateFilterInstance200Response = S.Struct({
   "instanceId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -731,7 +731,7 @@ export const UpdateFilterInstance422Response = S.Struct({
  * Add mutable annotation fields to an existing workflow.
  * @summary Run Python Annotation
  */
-export const runPythonAnnotationBodyNewFieldsOneDefaultValueDefault = ``;
+export const runPythonAnnotationBodyNewFieldsOneDefaultValueDefault = '';
 export const runPythonAnnotationBodyNewFieldsTwoDefaultValueDefault = 0;
 export const runPythonAnnotationBodyNewFieldsThreeDefaultValueDefault = 0;
 export const runPythonAnnotationBodyNewFieldsFourDefaultValueDefault = false;
@@ -753,25 +753,25 @@ export const RunPythonAnnotationBody = S.Struct({
   "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Completed workflow whose instances will receive the new fields.' })
 })
 
-export const runPythonAnnotation202ResponseWorkflowSchemaFieldsOneKindDefault = `field`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsOneKindDefault = 'field';
 export const runPythonAnnotation202ResponseWorkflowSchemaFieldsOneMutableDefault = false;
-export const runPythonAnnotation202ResponseWorkflowSchemaFieldsOneTypeDefault = `string`;
-export const runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoKindDefault = `field`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsOneTypeDefault = 'string';
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoKindDefault = 'field';
 export const runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoMutableDefault = false;
-export const runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoTypeDefault = `int`;
-export const runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeKindDefault = `field`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoTypeDefault = 'int';
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeKindDefault = 'field';
 export const runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeMutableDefault = false;
-export const runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeTypeDefault = `float`;
-export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFourKindDefault = `field`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeTypeDefault = 'float';
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFourKindDefault = 'field';
 export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFourMutableDefault = false;
-export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFourTypeDefault = `bool`;
-export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveKindDefault = `field`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFourTypeDefault = 'bool';
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveKindDefault = 'field';
 export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveMutableDefault = false;
-export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveTypeDefault = `labelRef`;
-export const runPythonAnnotation202ResponseWorkflowSchemaFieldsSixKindDefault = `field`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveTypeDefault = 'labelRef';
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsSixKindDefault = 'field';
 export const runPythonAnnotation202ResponseWorkflowSchemaFieldsSixMutableDefault = false;
-export const runPythonAnnotation202ResponseWorkflowSchemaFieldsSixTypeDefault = `textSpan`;
-export const runPythonAnnotation202ResponseWorkflowSchemaKindDefault = `schema`;
+export const runPythonAnnotation202ResponseWorkflowSchemaFieldsSixTypeDefault = 'textSpan';
+export const runPythonAnnotation202ResponseWorkflowSchemaKindDefault = 'schema';
 
 export const RunPythonAnnotation202Response = S.Struct({
   "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -862,25 +862,25 @@ export const RunPythonFilterBody = S.Struct({
   "sourceWorkflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Completed workflow whose instances will be filtered.' })
 })
 
-export const runPythonFilter202ResponseWorkflowSchemaFieldsOneKindDefault = `field`;
+export const runPythonFilter202ResponseWorkflowSchemaFieldsOneKindDefault = 'field';
 export const runPythonFilter202ResponseWorkflowSchemaFieldsOneMutableDefault = false;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsOneTypeDefault = `string`;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsTwoKindDefault = `field`;
+export const runPythonFilter202ResponseWorkflowSchemaFieldsOneTypeDefault = 'string';
+export const runPythonFilter202ResponseWorkflowSchemaFieldsTwoKindDefault = 'field';
 export const runPythonFilter202ResponseWorkflowSchemaFieldsTwoMutableDefault = false;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsTwoTypeDefault = `int`;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsThreeKindDefault = `field`;
+export const runPythonFilter202ResponseWorkflowSchemaFieldsTwoTypeDefault = 'int';
+export const runPythonFilter202ResponseWorkflowSchemaFieldsThreeKindDefault = 'field';
 export const runPythonFilter202ResponseWorkflowSchemaFieldsThreeMutableDefault = false;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsThreeTypeDefault = `float`;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsFourKindDefault = `field`;
+export const runPythonFilter202ResponseWorkflowSchemaFieldsThreeTypeDefault = 'float';
+export const runPythonFilter202ResponseWorkflowSchemaFieldsFourKindDefault = 'field';
 export const runPythonFilter202ResponseWorkflowSchemaFieldsFourMutableDefault = false;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsFourTypeDefault = `bool`;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsFiveKindDefault = `field`;
+export const runPythonFilter202ResponseWorkflowSchemaFieldsFourTypeDefault = 'bool';
+export const runPythonFilter202ResponseWorkflowSchemaFieldsFiveKindDefault = 'field';
 export const runPythonFilter202ResponseWorkflowSchemaFieldsFiveMutableDefault = false;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsFiveTypeDefault = `labelRef`;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsSixKindDefault = `field`;
+export const runPythonFilter202ResponseWorkflowSchemaFieldsFiveTypeDefault = 'labelRef';
+export const runPythonFilter202ResponseWorkflowSchemaFieldsSixKindDefault = 'field';
 export const runPythonFilter202ResponseWorkflowSchemaFieldsSixMutableDefault = false;
-export const runPythonFilter202ResponseWorkflowSchemaFieldsSixTypeDefault = `textSpan`;
-export const runPythonFilter202ResponseWorkflowSchemaKindDefault = `schema`;
+export const runPythonFilter202ResponseWorkflowSchemaFieldsSixTypeDefault = 'textSpan';
+export const runPythonFilter202ResponseWorkflowSchemaKindDefault = 'schema';
 
 export const RunPythonFilter202Response = S.Struct({
   "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1027,25 +1027,25 @@ export const RunPythonLabelSourceBody = S.Struct({
   "outputName": S.optional(S.Union(S.String.pipe(S.maxLength(runPythonLabelSourceBodyOutputNameOneMax)), S.Null))
 })
 
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsOneKindDefault = `field`;
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsOneKindDefault = 'field';
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsOneMutableDefault = false;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsOneTypeDefault = `string`;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoKindDefault = `field`;
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsOneTypeDefault = 'string';
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoKindDefault = 'field';
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoMutableDefault = false;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoTypeDefault = `int`;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeKindDefault = `field`;
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoTypeDefault = 'int';
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeKindDefault = 'field';
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeMutableDefault = false;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeTypeDefault = `float`;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFourKindDefault = `field`;
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeTypeDefault = 'float';
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFourKindDefault = 'field';
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFourMutableDefault = false;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFourTypeDefault = `bool`;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveKindDefault = `field`;
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFourTypeDefault = 'bool';
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveKindDefault = 'field';
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveMutableDefault = false;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveTypeDefault = `labelRef`;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsSixKindDefault = `field`;
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveTypeDefault = 'labelRef';
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsSixKindDefault = 'field';
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsSixMutableDefault = false;
-export const runPythonLabelSource202ResponseWorkflowSchemaFieldsSixTypeDefault = `textSpan`;
-export const runPythonLabelSource202ResponseWorkflowSchemaKindDefault = `schema`;
+export const runPythonLabelSource202ResponseWorkflowSchemaFieldsSixTypeDefault = 'textSpan';
+export const runPythonLabelSource202ResponseWorkflowSchemaKindDefault = 'schema';
 
 export const RunPythonLabelSource202Response = S.Struct({
   "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1128,25 +1128,25 @@ export const RunPythonMapBody = S.Struct({
   "sourceWorkflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Completed workflow whose instances will be mapped.' })
 })
 
-export const runPythonMap202ResponseWorkflowSchemaFieldsOneKindDefault = `field`;
+export const runPythonMap202ResponseWorkflowSchemaFieldsOneKindDefault = 'field';
 export const runPythonMap202ResponseWorkflowSchemaFieldsOneMutableDefault = false;
-export const runPythonMap202ResponseWorkflowSchemaFieldsOneTypeDefault = `string`;
-export const runPythonMap202ResponseWorkflowSchemaFieldsTwoKindDefault = `field`;
+export const runPythonMap202ResponseWorkflowSchemaFieldsOneTypeDefault = 'string';
+export const runPythonMap202ResponseWorkflowSchemaFieldsTwoKindDefault = 'field';
 export const runPythonMap202ResponseWorkflowSchemaFieldsTwoMutableDefault = false;
-export const runPythonMap202ResponseWorkflowSchemaFieldsTwoTypeDefault = `int`;
-export const runPythonMap202ResponseWorkflowSchemaFieldsThreeKindDefault = `field`;
+export const runPythonMap202ResponseWorkflowSchemaFieldsTwoTypeDefault = 'int';
+export const runPythonMap202ResponseWorkflowSchemaFieldsThreeKindDefault = 'field';
 export const runPythonMap202ResponseWorkflowSchemaFieldsThreeMutableDefault = false;
-export const runPythonMap202ResponseWorkflowSchemaFieldsThreeTypeDefault = `float`;
-export const runPythonMap202ResponseWorkflowSchemaFieldsFourKindDefault = `field`;
+export const runPythonMap202ResponseWorkflowSchemaFieldsThreeTypeDefault = 'float';
+export const runPythonMap202ResponseWorkflowSchemaFieldsFourKindDefault = 'field';
 export const runPythonMap202ResponseWorkflowSchemaFieldsFourMutableDefault = false;
-export const runPythonMap202ResponseWorkflowSchemaFieldsFourTypeDefault = `bool`;
-export const runPythonMap202ResponseWorkflowSchemaFieldsFiveKindDefault = `field`;
+export const runPythonMap202ResponseWorkflowSchemaFieldsFourTypeDefault = 'bool';
+export const runPythonMap202ResponseWorkflowSchemaFieldsFiveKindDefault = 'field';
 export const runPythonMap202ResponseWorkflowSchemaFieldsFiveMutableDefault = false;
-export const runPythonMap202ResponseWorkflowSchemaFieldsFiveTypeDefault = `labelRef`;
-export const runPythonMap202ResponseWorkflowSchemaFieldsSixKindDefault = `field`;
+export const runPythonMap202ResponseWorkflowSchemaFieldsFiveTypeDefault = 'labelRef';
+export const runPythonMap202ResponseWorkflowSchemaFieldsSixKindDefault = 'field';
 export const runPythonMap202ResponseWorkflowSchemaFieldsSixMutableDefault = false;
-export const runPythonMap202ResponseWorkflowSchemaFieldsSixTypeDefault = `textSpan`;
-export const runPythonMap202ResponseWorkflowSchemaKindDefault = `schema`;
+export const runPythonMap202ResponseWorkflowSchemaFieldsSixTypeDefault = 'textSpan';
+export const runPythonMap202ResponseWorkflowSchemaKindDefault = 'schema';
 
 export const RunPythonMap202Response = S.Struct({
   "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1242,25 +1242,25 @@ export const ReadWorkflowsFiltersWorkflowsGetQueryParams = S.Struct({
   "cursor": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
 })
 
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneKindDefault = `field`;
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneKindDefault = 'field';
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneMutableDefault = false;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneTypeDefault = `string`;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoKindDefault = `field`;
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneTypeDefault = 'string';
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoKindDefault = 'field';
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoMutableDefault = false;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoTypeDefault = `int`;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeKindDefault = `field`;
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoTypeDefault = 'int';
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeKindDefault = 'field';
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeMutableDefault = false;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeTypeDefault = `float`;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourKindDefault = `field`;
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeTypeDefault = 'float';
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourKindDefault = 'field';
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourMutableDefault = false;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourTypeDefault = `bool`;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveKindDefault = `field`;
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourTypeDefault = 'bool';
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveKindDefault = 'field';
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveMutableDefault = false;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveTypeDefault = `labelRef`;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixKindDefault = `field`;
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveTypeDefault = 'labelRef';
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixKindDefault = 'field';
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixMutableDefault = false;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixTypeDefault = `textSpan`;
-export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaKindDefault = `schema`;
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixTypeDefault = 'textSpan';
+export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaKindDefault = 'schema';
 
 export const ReadWorkflowsFiltersWorkflowsGet200ResponseItem = S.Struct({
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
@@ -1324,25 +1324,25 @@ export const ReadWorkflowFiltersWorkflowsWorkflowIdGetParams = S.Struct({
   "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneKindDefault = `field`;
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneKindDefault = 'field';
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneMutableDefault = false;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneTypeDefault = `string`;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoKindDefault = `field`;
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneTypeDefault = 'string';
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoKindDefault = 'field';
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoMutableDefault = false;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoTypeDefault = `int`;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeKindDefault = `field`;
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoTypeDefault = 'int';
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeKindDefault = 'field';
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeMutableDefault = false;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeTypeDefault = `float`;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourKindDefault = `field`;
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeTypeDefault = 'float';
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourKindDefault = 'field';
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourMutableDefault = false;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourTypeDefault = `bool`;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveKindDefault = `field`;
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourTypeDefault = 'bool';
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveKindDefault = 'field';
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveMutableDefault = false;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveTypeDefault = `labelRef`;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixKindDefault = `field`;
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveTypeDefault = 'labelRef';
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixKindDefault = 'field';
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixMutableDefault = false;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixTypeDefault = `textSpan`;
-export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaKindDefault = `schema`;
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixTypeDefault = 'textSpan';
+export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaKindDefault = 'schema';
 
 export const ReadWorkflowFiltersWorkflowsWorkflowIdGet200Response = S.Struct({
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
@@ -1420,25 +1420,25 @@ export const RenameFilterWorkflowBody = S.Struct({
   "workflowName": S.Union(S.String.pipe(S.maxLength(renameFilterWorkflowBodyWorkflowNameOneMax)), S.Null)
 })
 
-export const renameFilterWorkflow200ResponseSchemaFieldsOneKindDefault = `field`;
+export const renameFilterWorkflow200ResponseSchemaFieldsOneKindDefault = 'field';
 export const renameFilterWorkflow200ResponseSchemaFieldsOneMutableDefault = false;
-export const renameFilterWorkflow200ResponseSchemaFieldsOneTypeDefault = `string`;
-export const renameFilterWorkflow200ResponseSchemaFieldsTwoKindDefault = `field`;
+export const renameFilterWorkflow200ResponseSchemaFieldsOneTypeDefault = 'string';
+export const renameFilterWorkflow200ResponseSchemaFieldsTwoKindDefault = 'field';
 export const renameFilterWorkflow200ResponseSchemaFieldsTwoMutableDefault = false;
-export const renameFilterWorkflow200ResponseSchemaFieldsTwoTypeDefault = `int`;
-export const renameFilterWorkflow200ResponseSchemaFieldsThreeKindDefault = `field`;
+export const renameFilterWorkflow200ResponseSchemaFieldsTwoTypeDefault = 'int';
+export const renameFilterWorkflow200ResponseSchemaFieldsThreeKindDefault = 'field';
 export const renameFilterWorkflow200ResponseSchemaFieldsThreeMutableDefault = false;
-export const renameFilterWorkflow200ResponseSchemaFieldsThreeTypeDefault = `float`;
-export const renameFilterWorkflow200ResponseSchemaFieldsFourKindDefault = `field`;
+export const renameFilterWorkflow200ResponseSchemaFieldsThreeTypeDefault = 'float';
+export const renameFilterWorkflow200ResponseSchemaFieldsFourKindDefault = 'field';
 export const renameFilterWorkflow200ResponseSchemaFieldsFourMutableDefault = false;
-export const renameFilterWorkflow200ResponseSchemaFieldsFourTypeDefault = `bool`;
-export const renameFilterWorkflow200ResponseSchemaFieldsFiveKindDefault = `field`;
+export const renameFilterWorkflow200ResponseSchemaFieldsFourTypeDefault = 'bool';
+export const renameFilterWorkflow200ResponseSchemaFieldsFiveKindDefault = 'field';
 export const renameFilterWorkflow200ResponseSchemaFieldsFiveMutableDefault = false;
-export const renameFilterWorkflow200ResponseSchemaFieldsFiveTypeDefault = `labelRef`;
-export const renameFilterWorkflow200ResponseSchemaFieldsSixKindDefault = `field`;
+export const renameFilterWorkflow200ResponseSchemaFieldsFiveTypeDefault = 'labelRef';
+export const renameFilterWorkflow200ResponseSchemaFieldsSixKindDefault = 'field';
 export const renameFilterWorkflow200ResponseSchemaFieldsSixMutableDefault = false;
-export const renameFilterWorkflow200ResponseSchemaFieldsSixTypeDefault = `textSpan`;
-export const renameFilterWorkflow200ResponseSchemaKindDefault = `schema`;
+export const renameFilterWorkflow200ResponseSchemaFieldsSixTypeDefault = 'textSpan';
+export const renameFilterWorkflow200ResponseSchemaKindDefault = 'schema';
 
 export const RenameFilterWorkflow200Response = S.Struct({
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
@@ -1565,23 +1565,23 @@ export const ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGetQueryPar
   "cursor": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
 })
 
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneKindDefault = `value`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneTypeDefault = `string`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsTwoKindDefault = `value`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsTwoTypeDefault = `int`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsThreeKindDefault = `value`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsThreeTypeDefault = `float`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFourKindDefault = `value`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFourTypeDefault = `bool`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveKindDefault = `value`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveTypeDefault = `textSpan`;
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneKindDefault = 'value';
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneTypeDefault = 'string';
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsTwoKindDefault = 'value';
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsTwoTypeDefault = 'int';
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsThreeKindDefault = 'value';
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsThreeTypeDefault = 'float';
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFourKindDefault = 'value';
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFourTypeDefault = 'bool';
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveKindDefault = 'value';
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveTypeDefault = 'textSpan';
 export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveValueEndMin = 0;
 
 export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveValueStartMin = 0;
 
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsSixKindDefault = `value`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsSixTypeDefault = `labelRef`;
-export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueKindDefault = `object`;
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsSixKindDefault = 'value';
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsSixTypeDefault = 'labelRef';
+export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueKindDefault = 'object';
 
 export const ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseItem = S.Struct({
   "instanceId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),

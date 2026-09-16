@@ -59,6 +59,7 @@ jobs:
         uses: pnpm/action-setup@v6
         with:
           package_json_file: ./e2e/package.json
+          version: 12.3.4
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:

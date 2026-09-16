@@ -1,3 +1,5 @@
+"""Worker-side task registration; imports the agent implementation and its SDK."""
+
 import asyncio
 import json
 import logging
@@ -7,9 +9,8 @@ from src.config import log_settings
 from src.database import SessionLocal
 from src.memory.agent.capabilities.continuity import ContinuitySummaryOutput
 from src.memory.agent.celery_app import app
-from src.memory.agent.dispatch.dispatcher import MemoryAgentDispatcher
+from src.memory.agent.task_names import RUN_MEMORY_JOB, RUN_MEMORY_TASK
 from src.memory.agent.tasks.tasks import CompletedMemoryTask, run_all_tasks, run_task
-from src.memory.exceptions import MemoryAgentEnqueueFailedException
 
 logger = logging.getLogger(__name__)
 AGENT_RESULT_LOG_MARKER = "MEMORY_AGENT_RESULT "
@@ -76,7 +77,7 @@ def _log_agent_result(completed_task: CompletedMemoryTask) -> None:
     )
 
 
-@app.task
+@app.task(name=RUN_MEMORY_JOB)
 def run_memory_job(memory_job_id: str) -> None:
     """Celery entry point for processing every pending task in a memory job."""
 
@@ -87,38 +88,9 @@ def run_memory_job(memory_job_id: str) -> None:
     asyncio.run(consume_job())
 
 
-@app.task
+@app.task(name=RUN_MEMORY_TASK)
 def run_memory_task(memory_job_id: str, chapter_id: str) -> None:
     """Celery entry point for processing one pending chapter task."""
     completed_task = asyncio.run(run_task(SessionLocal, UUID(memory_job_id), UUID(chapter_id)))
     if completed_task is not None:
         _log_agent_result(completed_task)
-
-
-class CeleryMemoryAgentDispatcher(MemoryAgentDispatcher):
-    """Publish memory-agent work to Celery using JSON-safe identifiers."""
-
-    def enqueue_job(self, memory_job_id: UUID) -> None:
-        try:
-            logger.info("Enqueuing memory-agent job job_id=%s", memory_job_id)
-            run_memory_job.apply_async((str(memory_job_id),), task_id=str(memory_job_id))
-        except Exception as exc:
-            logger.exception("Memory-agent job enqueue failed job_id=%s", memory_job_id)
-            raise MemoryAgentEnqueueFailedException(f"Celery enqueue failed: {exc}") from exc
-
-    def enqueue_task(self, memory_job_id: UUID, chapter_id: UUID) -> None:
-        try:
-            logger.info("Enqueuing memory-agent task job_id=%s chapter_id=%s", memory_job_id, chapter_id)
-            run_memory_task.apply_async(
-                (str(memory_job_id), str(chapter_id)),
-                task_id=f"{memory_job_id}:{chapter_id}",
-            )
-        except Exception as exc:
-            logger.exception("Memory-agent task enqueue failed job_id=%s chapter_id=%s", memory_job_id, chapter_id)
-            raise MemoryAgentEnqueueFailedException(f"Celery enqueue failed: {exc}") from exc
-
-    async def aenqueue_job(self, memory_job_id: UUID) -> None:
-        await asyncio.to_thread(self.enqueue_job, memory_job_id)
-
-    async def aenqueue_task(self, memory_job_id: UUID, chapter_id: UUID) -> None:
-        await asyncio.to_thread(self.enqueue_task, memory_job_id, chapter_id)

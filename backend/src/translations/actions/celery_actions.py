@@ -17,7 +17,7 @@ from src.translations.actions.actions import (
     ActionTaskContext,
     PollCallback,
 )
-from src.translations.models import TranslationBatch, TranslationStage, TranslationTask
+from src.translations.models import TranslationStage, TranslationTask
 from src.translations.tasks.claims import TranslationClaimLostError, claim_task, fail_claim, finish_claim, renew_claim
 from src.translations.types import ActionName, TranslationTaskStatus
 
@@ -153,15 +153,6 @@ class CeleryActionCallbacks(ActionCallbacks):
 
     def exitpoint(self, x: uuid.UUID) -> None:
         with SessionLocal.begin() as session:
-            # Serialize stage handoff with cancel/retry before touching task rows.
-            session.execute(
-                select(TranslationBatch.batch_id)
-                .where(
-                    TranslationBatch.batch_id
-                    == select(TranslationTask.batch_id).where(TranslationTask.task_id == x).scalar_subquery()
-                )
-                .with_for_update()
-            ).scalar_one_or_none()
             cur_task_q = (
                 select(TranslationTask.batch_id, TranslationStage.job_id, TranslationStage.stage_num)
                 .where(

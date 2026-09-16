@@ -1,21 +1,23 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Event
+from time import monotonic, sleep
 from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import event, func, select
+from sqlalchemy import event, func, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.auth.utils import create_access_token
+from src.files.models import StoredFile
 from src.translations.actions.registry import ACTION_CALLBACKS, last_step
 from src.translations.celery_app import app
 from src.translations.models import TranslationBatch, TranslationStage, TranslationTask
 from src.translations.schemas import TranslationJobCreate
-from src.translations.service import TranslationNotFoundError, control_translation_job, create_translation_job
-from src.translations.tasks.claims import TranslationClaimLostError, finish_claim
+from src.translations.service import Control, TranslationNotFoundError, control_translation_job, create_translation_job
+from src.translations.tasks.claims import TranslationClaimLostError, finish_claim, publish_initial_file
 from src.translations.types import TranslationTaskStatus as State
 from test_support.test_data.scenarios import DatabaseScenario
 
@@ -129,7 +131,7 @@ def test_resume_skips_live_claim_then_resumes_expired_poll_and_reports_broker_fa
     assert control_translation_job(test_db, user, job_id, "resume").dispatched_task_ids == [current.task_id]
 
 
-def test_cancel_serializes_with_inflight_exitpoint(
+def test_cancel_fences_inflight_exitpoint(
     test_db: Session,
     sample_scenario: DatabaseScenario,
     testing_session_local: sessionmaker[Session],
@@ -142,12 +144,14 @@ def test_cancel_serializes_with_inflight_exitpoint(
     monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
     queued = Mock()
     monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", queued)
-    test_db.execute(select(TranslationBatch).where(TranslationBatch.batch_id == current.batch_id).with_for_update())
+    test_db.execute(
+        update(TranslationTask).where(TranslationTask.task_id == following.task_id).values(error="pending cancel")
+    )
     entered = Event()
     engine = testing_session_local.kw["bind"]
 
     def observe(conn, cursor, statement, parameters, context, executemany):
-        if "translation_batches" in statement and "FOR UPDATE" in statement:
+        if statement.startswith("UPDATE translation_tasks") and parameters.get("status") == State.READY:
             entered.set()
 
     event.listen(engine, "before_cursor_execute", observe)
@@ -249,3 +253,106 @@ def test_router_controls_and_permissions(
     assert client.post(f"/translation-jobs/{job_id}/batches/{uuid4()}/cancel", headers=headers).status_code == 404
     with pytest.raises(TranslationNotFoundError):
         control_translation_job(test_db, sample_scenario.users["user"], UUID(job_id), "cancel")
+
+
+def test_cancel_during_snapshot_publication_rolls_back_worker(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+    testing_session_local: sessionmaker[Session],
+) -> None:
+    # Controls must cancel without waiting for a worker's batch artifact write;
+    # the worker must then roll that artifact back when completion loses its claim.
+    job_id, (task, _) = make_job(test_db, sample_scenario)
+    token = uuid4()
+    task.status = State.PREPARING
+    task.claim_token = token
+    task.claim_expires_at = test_db.scalar(select(func.clock_timestamp())) + timedelta(minutes=5)
+    file = StoredFile(
+        storage_name="test",
+        bucket="test",
+        object_key=str(uuid4()),
+        content_type="application/jsonl",
+        byte_size=0,
+        sha256="0" * 64,
+    )
+    test_db.add(file)
+    test_db.commit()
+    task_id, batch_id, file_id = task.task_id, task.batch_id, file.file_id
+    published, cancelled = Event(), Event()
+
+    def worker():
+        with testing_session_local() as db:
+            try:
+                publish_initial_file(db, task_id, token, file_id)
+                published.set()
+                assert cancelled.wait(10)
+                with pytest.raises(TranslationClaimLostError):
+                    finish_claim(db, task_id, token, during=State.PREPARING, finish=State.PREPARED)
+            finally:
+                db.rollback()
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(worker)
+        try:
+            assert published.wait(5)
+            # Bound a regression's failure rather than hanging on the old batch lock.
+            test_db.execute(select(func.set_config("lock_timeout", "2000", True)))
+            result = control_translation_job(test_db, sample_scenario.users["admin"], job_id, "cancel")
+            assert result.affected_batch_ids == [batch_id]
+        finally:
+            cancelled.set()
+        future.result(timeout=5)
+    test_db.refresh(task)
+    assert task.failed_at is not None and task.claim_token is None
+    assert test_db.scalar(select(TranslationBatch.initial_file_id).where(TranslationBatch.batch_id == batch_id)) is None
+
+
+@pytest.mark.parametrize("operation", ["start", "resume", "retry"])
+def test_control_does_not_overwrite_concurrent_worker_claim(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+    testing_session_local: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    operation: Control,
+) -> None:
+    # A control snapshot can precede a worker claim's commit. The UPDATE must
+    # recheck ownership after waiting, so the worker keeps its lease and work.
+    job_id, (task, _) = make_job(test_db, sample_scenario)
+    task_id, token = task.task_id, uuid4()
+    user = sample_scenario.users["admin"]
+    queued = Mock()
+    monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", queued)
+    test_db.execute(
+        update(TranslationTask)
+        .where(TranslationTask.task_id == task_id)
+        .values(
+            status=State.PREPARING,
+            claim_token=token,
+            claim_expires_at=func.clock_timestamp() + timedelta(minutes=5),
+        )
+    )
+    started = Event()
+    backend_pids: list[int] = []
+
+    def control():
+        with testing_session_local() as db:
+            backend_pids.append(db.scalar(select(func.pg_backend_pid())))
+            started.set()
+            return control_translation_job(db, user, job_id, operation)
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(control)
+        try:
+            assert started.wait(5)
+            deadline = monotonic() + 5
+            while not test_db.scalar(select(func.cardinality(func.pg_blocking_pids(backend_pids[0])) > 0)):
+                assert monotonic() < deadline, "Control did not reach the contested UPDATE"
+                sleep(0.01)
+            test_db.commit()
+        finally:
+            test_db.rollback()
+        result = future.result(timeout=5)
+    assert result.dispatched_task_ids == []
+    test_db.refresh(task)
+    assert task.status == State.PREPARING and task.claim_token == token
+    queued.assert_not_called()

@@ -3,10 +3,10 @@
 from datetime import timedelta
 from uuid import UUID
 
-from sqlalchemy import and_, func, or_, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.orm import Session
 
-from src.translations.models import TranslationTask
+from src.translations.models import TranslationBatch, TranslationTask
 from src.translations.types import TranslationTaskStatus
 
 
@@ -89,6 +89,32 @@ def finish_claim(
     if owned is None:
         raise TranslationClaimLostError(f"Lost translation task claim: {task_id}")
     db.flush()
+
+
+def publish_initial_file(db: Session, task_id: UUID, token: UUID, file_id: UUID) -> None:
+    """Write the batch artifact before completion updates the task, in its transaction.
+
+    The later finish_claim check still fences the entire transaction if ownership
+    changes concurrently. Never leave this batch mutation pending in the ORM.
+    """
+    owner = (
+        select(TranslationTask.batch_id)
+        .where(_owned(task_id, token, TranslationTaskStatus.PREPARING))
+        .scalar_subquery()
+    )
+    with db.no_autoflush:
+        published = db.scalar(
+            update(TranslationBatch)
+            .where(
+                TranslationBatch.batch_id == owner,
+                TranslationBatch.initial_file_id.is_(None),
+            )
+            .values(initial_file_id=file_id)
+            .returning(TranslationBatch.batch_id)
+            .execution_options(synchronize_session=False)
+        )
+    if published is None:
+        raise TranslationClaimLostError(f"Lost initial artifact publication claim: {task_id}")
 
 
 def fail_claim(db: Session, task_id: UUID, token: UUID, *, during: TranslationTaskStatus, error: str) -> bool:

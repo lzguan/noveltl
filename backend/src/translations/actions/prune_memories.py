@@ -35,6 +35,7 @@ from src.translations.models import (
 )
 from src.translations.records import ChapterRecord, MemoriesRecord, TranslationRecord
 from src.translations.schemas import PruneMemoriesConfig
+from src.translations.tasks.claims import publish_initial_file
 from src.translations.types import ACTIONS, ActionName, DataT
 from src.translations.types import TranslationTaskStatus as State
 from src.translations.validation import validate_output_records
@@ -214,10 +215,7 @@ def prepare(context: ActionTaskContext) -> None:
         )
         context.db.flush([prepared] + ([snapshot] if snapshot is not None else []))
         if snapshot is not None:
-            batch = context.db.get(TranslationBatch, context.task.batch_id)
-            if batch is None:
-                raise ValueError("Pruning batch does not exist")
-            batch.initial_file_id = snapshot.file_id
+            publish_initial_file(context.db, context.task.task_id, context.claim_token, snapshot.file_id)
         context.task.input_file_id = prepared.file_id
 
 

@@ -5,7 +5,7 @@ from typing import Literal
 from uuid import UUID
 
 from pydantic import TypeAdapter
-from sqlalchemy import func, select
+from sqlalchemy import and_, case, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from src.auth.models import User
@@ -13,7 +13,7 @@ from src.memory.models import MemoryGroup
 from src.novels.models import Novel
 from src.novels.permissions import novel_mod_access_select
 from src.translations.actions.actions import ActionTask
-from src.translations.actions.registry import ACTION_CALLBACKS, last_step
+from src.translations.actions.registry import ACTION_CALLBACKS, last_step, last_step_sql
 from src.translations.models import TranslationBatch, TranslationJob, TranslationStage, TranslationTask
 from src.translations.schemas import (
     PruneMemoriesStageCreate,
@@ -105,20 +105,121 @@ def read_translation_job(db: Session, user: User, job_id: UUID) -> TranslationJo
     )
 
 
-def _restart_state(task: TranslationTask, stage: TranslationStage, batch: TranslationBatch) -> State:
-    """Back up only when the saved step's required artifact/ID is missing."""
-    state = task.status
-    if stage.action == "combine_chapter":
-        return state
-    if stage.action == "prune_memories" and stage.stage_num == 0 and batch.initial_file_id is None:
-        return State.READY
-    if state in (State.PROCESSED, State.FINALIZING) and task.provider_output_id is None:
-        state = State.PROCESSING
-    if state == State.PROCESSING and task.provider_batch_id is None:
-        state = State.PREPARED
-    if state in (State.PREPARED, State.SUBMITTING) and task.input_file_id is None:
-        state = State.READY
-    return state
+def _restart_state_sql():
+    """Walk back to the earliest missing artifact before resolving an action step."""
+    state = TranslationTask.status
+    state = case(
+        (
+            and_(state.in_((State.PROCESSED, State.FINALIZING)), TranslationTask.provider_output_id.is_(None)),
+            str(State.PROCESSING),
+        ),
+        else_=state,
+    )
+    state = case(
+        (and_(state == State.PROCESSING, TranslationTask.provider_batch_id.is_(None)), str(State.PREPARED)), else_=state
+    )
+    state = case(
+        (
+            and_(state.in_((State.PREPARED, State.SUBMITTING)), TranslationTask.input_file_id.is_(None)),
+            str(State.READY),
+        ),
+        else_=state,
+    )
+    return case(
+        (TranslationStage.action == "combine_chapter", TranslationTask.status),
+        (
+            and_(
+                TranslationStage.action == "prune_memories",
+                TranslationStage.stage_num == 0,
+                TranslationBatch.initial_file_id.is_(None),
+            ),
+            str(State.READY),
+        ),
+        else_=state,
+    )
+
+
+def _control_statement(job_id: UUID, operation: Control, batch_id: UUID | None):
+    task = TranslationTask
+    scope = [TranslationStage.job_id == job_id, task.status != State.COMPLETE]
+    if batch_id is not None:
+        scope.append(task.batch_id == batch_id)
+    if operation == "cancel":
+        # Direct predicates are rechecked by PostgreSQL if a worker completes while
+        # this UPDATE waits. Mark future tasks too, so handoff cannot undo cancel.
+        return (
+            update(task)
+            .where(task.stage_id == TranslationStage.stage_id, *scope)
+            .values(
+                failed_at=func.clock_timestamp(), error="Cancelled by user", claim_token=None, claim_expires_at=None
+            )
+            .returning(task.task_id, task.batch_id, TranslationStage.action, task.status)
+            .execution_options(synchronize_session=False)
+        )
+
+    live = and_(task.claim_token.is_not(None), task.claim_expires_at > func.clock_timestamp())
+    state = _restart_state_sql() if operation == "retry" else task.status
+    # Rank only unfinished tasks. Retry also clears failures on later tasks, but
+    # only the first unfinished task in each batch is reset and dispatched.
+    snapshot = (
+        select(
+            task.task_id,
+            task.batch_id,
+            task.status.label("old_status"),
+            task.claim_token.label("old_token"),
+            task.claim_expires_at.label("old_expiry"),
+            task.failed_at.label("old_failure"),
+            TranslationStage.action,
+            TranslationStage.stage_num,
+            func.row_number().over(partition_by=task.batch_id, order_by=TranslationStage.stage_num).label("position"),
+            func.bool_or(live).over(partition_by=task.batch_id).label("live_batch"),
+            func.bool_or(task.failed_at.is_not(None)).over(partition_by=task.batch_id).label("failed_batch"),
+            last_step_sql(TranslationStage.action, state).label("restart"),
+        )
+        .join(TranslationStage, TranslationStage.stage_id == task.stage_id)
+        .join(TranslationBatch, TranslationBatch.batch_id == task.batch_id)
+        .where(*scope)
+        .cte("control_candidates")
+    )
+    current = snapshot.c.position == 1
+    # Recheck against the UPDATE target: its row may have changed since the CTE
+    # snapshot while PostgreSQL waited for a worker's write to commit.
+    eligible = [
+        task.task_id == snapshot.c.task_id,
+        snapshot.c.live_batch.is_(False),
+        task.status == snapshot.c.old_status,
+        task.claim_token.is_not_distinct_from(snapshot.c.old_token),
+        task.claim_expires_at.is_not_distinct_from(snapshot.c.old_expiry),
+        task.failed_at.is_not_distinct_from(snapshot.c.old_failure),
+        or_(task.claim_token.is_(None), task.claim_expires_at <= func.clock_timestamp()),
+    ]
+    if operation != "retry":
+        eligible.extend([snapshot.c.failed_batch.is_(False), current])
+    if operation == "start":
+        eligible.extend([snapshot.c.stage_num == 0, task.status == State.READY])
+    eligible.append(or_(~current, snapshot.c.restart.is_not(None)))
+    statement = (
+        update(task)
+        .where(*eligible)
+        .values(
+            status=case((current, snapshot.c.restart), else_=task.status),
+            claim_token=None,
+            claim_expires_at=None,
+        )
+    )
+    if operation == "retry":
+        rebuild = and_(current, snapshot.c.restart == State.READY)
+        statement = statement.values(
+            failed_at=None,
+            error=None,
+            provider_batch_id=case((rebuild, None), else_=task.provider_batch_id),
+            provider_output_id=case((rebuild, None), else_=task.provider_output_id),
+            input_file_id=case((rebuild, None), else_=task.input_file_id),
+            output_file_id=case((rebuild, None), else_=task.output_file_id),
+        )
+    return statement.returning(
+        task.task_id, task.batch_id, snapshot.c.action, task.status, snapshot.c.position
+    ).execution_options(synchronize_session=False)
 
 
 def control_translation_job(
@@ -133,63 +234,31 @@ def control_translation_job(
     dispatches: list[tuple[UUID, ActionTask]] = []
     try:
         _job(db, user, job_id)
-        query = select(TranslationBatch).where(TranslationBatch.job_id == job_id)
-        if batch_id is not None:
-            query = query.where(TranslationBatch.batch_id == batch_id)
-        batches = db.scalars(
-            query.order_by(TranslationBatch.batch_id).with_for_update().execution_options(populate_existing=True)
-        ).all()
-        if batch_id is not None and not batches:
+        if (
+            batch_id is not None
+            and db.scalar(
+                select(TranslationBatch.batch_id).where(
+                    TranslationBatch.job_id == job_id,
+                    TranslationBatch.batch_id == batch_id,
+                )
+            )
+            is None
+        ):
             raise TranslationNotFoundError("Translation batch not found")
-        for batch in batches:
-            rows = db.execute(
-                select(TranslationTask, TranslationStage)
-                .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
-                .where(TranslationTask.batch_id == batch.batch_id, TranslationStage.job_id == job_id)
-                .order_by(TranslationStage.stage_num)
-                .with_for_update(of=TranslationTask)
-                .execution_options(populate_existing=True)
-            ).all()
-            unfinished = [(row._t[0], row._t[1]) for row in rows if row._t[0].status != State.COMPLETE]
-            if not unfinished:
-                continue
-            now = db.scalar(select(func.clock_timestamp()))
-            if operation == "cancel":
-                for task, _ in unfinished:
-                    task.claim_token = task.claim_expires_at = None
-                    task.failed_at, task.error = now, "Cancelled by user"
-                result.affected_batch_ids.append(batch.batch_id)
-                continue
-            if any(
-                task.claim_token is not None and task.claim_expires_at is not None and task.claim_expires_at > now
-                for task, _ in unfinished
-            ):
-                continue
-            task, stage = unfinished[0]
-            if operation != "retry" and any(item.failed_at is not None for item, _ in unfinished):
-                continue
-            action = TypeAdapter(ActionName).validate_python(stage.action)
-            if operation == "start":
-                if stage.stage_num != 0 or task.status != State.READY:
+        rows = db.execute(_control_statement(job_id, operation, batch_id)).all()
+        result.affected_batch_ids = list(dict.fromkeys(row._t[1] for row in rows))
+        if operation != "cancel":
+            for row in rows:
+                task_id, _, name, state, position = row._t
+                if position != 1:
                     continue
-                dispatches.append((task.task_id, ACTION_CALLBACKS[action].entrypoint))
-            else:
-                state = _restart_state(task, stage, batch) if operation == "retry" else task.status
-                step = last_step(action, state)
-                if step is None:
-                    continue
-                if operation == "retry":
-                    for item, _ in unfinished:
-                        item.failed_at = item.error = None
-                        item.claim_token = item.claim_expires_at = None
-                    if step.expect == State.READY:
-                        # Rebuilding requests invalidates provider IDs for the old input.
-                        task.provider_batch_id = task.provider_output_id = None
-                        task.input_file_id = task.output_file_id = None
-                task.status = step.expect
-                task.claim_token = task.claim_expires_at = None
-                dispatches.append((task.task_id, step.dispatch))
-            result.affected_batch_ids.append(batch.batch_id)
+                action = TypeAdapter(ActionName).validate_python(name)
+                if operation == "start":
+                    dispatches.append((task_id, ACTION_CALLBACKS[action].entrypoint))
+                else:
+                    step = last_step(action, State(state))
+                    if step is not None:
+                        dispatches.append((task_id, step.dispatch))
         db.commit()
     except Exception:
         db.rollback()

@@ -92,9 +92,14 @@ boundaries, expected states take precedence (PROCESSING selects polling). COMPLE
 has no remaining step; WAITING resolves to the action's first step.
 
 Cancellation clears claims and marks every unfinished task failed without changing
-its lifecycle state. The controls and exitpoint lock the same batch row before task
-rows, serializing cancellation with stage handoff. Cleared claim tokens prevent old
-workers from committing. Provider work is not cancelled.
+its lifecycle state. Each control uses one guarded `UPDATE ... RETURNING`, then
+commits before dispatching. Resume/retry derive restart states in SQL from callback
+registrations and compare the task's observed state, claim, lease, and failure fields
+before changing it. Exitpoint updates only an unclaimed, nonfailed next task.
+Neither path uses `SELECT ... FOR UPDATE`; PostgreSQL still takes ordinary write
+locks for updates. Cleared claim tokens prevent old workers from committing.
+Pruning publishes its initial batch artifact before finishing the task claim in the
+same transaction, so a lost claim rolls publication back. Provider work is not cancelled.
 
 State changes commit before dispatch. Responses report affected batch IDs, queued
 task IDs, and dispatch-failed task IDs separately. A queue failure leaves committed

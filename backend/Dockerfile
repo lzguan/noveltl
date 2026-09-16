@@ -18,13 +18,13 @@ COPY --chown=${UNAME}:${GNAME} pyproject.toml uv.lock* ./
 RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --no-default-groups --no-install-project
 
 FROM base AS backend
-RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --group backend --no-group worker --no-group dev --no-install-project
+RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --no-default-groups --group backend --group agent --no-install-project
 COPY --chown=${UNAME}:${GNAME} . .
 
 CMD ["uv", "run", "--no-sync", "uvicorn", "src.main:app", "--host", "0.0.0.0"]
 
 FROM base AS autolabels-worker
-RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --group worker --no-group backend --no-group dev --no-group agent --no-install-project
+RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --no-default-groups --group worker --no-install-project
 COPY --chown=${UNAME}:${GNAME} . .
 
 ARG CLUENER_REVISION=cddd8fc233e373855a8c0a7f4b7eb83acb686a2b
@@ -46,7 +46,13 @@ COPY --chown=${UNAME}:${GNAME} . .
 CMD ["uv", "run", "--no-sync", "celery", "-A", "src.filters.celery_app", "worker", "--loglevel=info"]
 
 FROM base AS memory-agent-worker
-RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --group agent --no-group backend --no-group worker --no-group dev --no-install-project
+RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --no-default-groups --group agent --no-install-project
 COPY --chown=${UNAME}:${GNAME} . .
 
 CMD ["uv", "run", "--no-sync", "celery", "-A", "src.memory.agent.celery_app", "worker", "--loglevel=info"]
+
+FROM base AS translations-worker
+RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --no-default-groups --group tagent --no-install-project
+COPY --chown=${UNAME}:${GNAME} . .
+
+CMD ["uv", "run", "--no-sync", "celery", "-A", "src.translations.celery_app", "worker", "--loglevel=info"]

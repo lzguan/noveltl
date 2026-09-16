@@ -43,7 +43,7 @@ dev = [
     "numpy>=2.5.2",
 ]
 agent = [
-    "pydantic-ai>=2.31.0",
+    "pydantic-ai-slim[openai]>=2.31.0",
 ]
 tagent = [
     "openai>=3.11.0",
@@ -55,7 +55,8 @@ default-groups = [
     "backend",
     "worker",
     "dev",
-    "agent"
+    "agent",
+    "tagent"
 ]
 required-version = ">=0.10.0"
 

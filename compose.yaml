@@ -37,6 +37,8 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       HF_TOKEN: ${HF_TOKEN:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      QWEN_API_KEY: ${QWEN_API_KEY:-}
+      QWEN_API_URL: ${QWEN_API_URL:-}
     command: sleep infinity
 
   db:
@@ -121,6 +123,26 @@ services:
       - ./backend:/home/newuser/backend
       - /home/newuser/backend/.venv
       - ./docs/memory/agent-evals/logs:/home/newuser/backend/logs
+    profiles:
+      - manual
+
+  translations-worker:
+    image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-translations-worker-dev:${DEV_IMAGE_TAG:-latest}
+    pull_policy: always
+    depends_on:
+      - db
+      - redis
+      - garage
+    environment:
+      <<: [*db-env, *redis-env, *file-store-env]
+      UV_COMPILE_BYTECODE: "0"
+      SECRET_KEY: ${SECRET_KEY} # shared config validates this on startup
+      QWEN_API_KEY: ${QWEN_API_KEY:-}
+      QWEN_API_URL: ${QWEN_API_URL:-}
+    volumes:
+      - ./backend:/home/newuser/backend
+      - /home/newuser/backend/.venv
+      - ./logs:/home/newuser/backend/logs
     profiles:
       - manual
 

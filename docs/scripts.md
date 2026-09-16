@@ -121,3 +121,25 @@ General frontend scripts are defined in
 [`frontend/package.json`](../frontend/package.json). Backend dependency groups
 and tool configuration are defined in
 [`backend/pyproject.toml`](../backend/pyproject.toml).
+
+## Translation worker
+
+Set `QWEN_API_KEY` and `QWEN_API_URL` to the credentials and OpenAI-compatible
+base URL for your Model Studio region, along with the existing database, Redis,
+and S3 settings. Start the worker with:
+
+```bash
+docker compose --profile manual up -d translations-worker
+docker compose logs -f translations-worker
+```
+
+The Compose service uses `noveltl-translations-worker-dev` with `DEV_IMAGE_TAG`
+(default `latest`). Development CI publishes branch tags; production CI publishes
+`noveltl-translations-worker:latest` and commit tags. Both use the
+`translations-worker` target in `backend/Dockerfile`, installing only the base
+and `tagent` dependencies. The service connects to Garage through the shared S3
+settings; it does not need Garage's RPC secret.
+
+The memory agent and evaluation harness use `pydantic-ai-slim[openai]` for the
+DeepSeek adapter. Additional provider or integration extras must be explicitly
+added when needed.

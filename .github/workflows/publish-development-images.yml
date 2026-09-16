@@ -50,6 +50,10 @@ jobs:
             context: ./backend
             file: ./backend/Dockerfile
             target: backend
+          - image: noveltl-translations-worker-dev
+            context: ./backend
+            file: ./backend/Dockerfile
+            target: translations-worker
 
     steps:
       - name: Checkout repository

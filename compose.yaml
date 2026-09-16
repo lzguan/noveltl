@@ -127,7 +127,7 @@ services:
       - manual
 
   translations-worker:
-    image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-translations-worker-dev:${DEV_IMAGE_TAG:-latest}
+    image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-translations-worker:${IMAGE_TAG:-latest}
     pull_policy: always
     depends_on:
       - db
@@ -157,6 +157,21 @@ services:
       PYTHONDONTWRITEBYTECODE: "1"
       SECRET_KEY: ${SECRET_KEY}
       BACKEND_LOG_DIR: ${BACKEND_LOG_DIR:-logs}
+    # Reload against the bind-mounted source. The image CMD has no --reload,
+    # since the same Dockerfile target builds the production image. Watching
+    # only src keeps the reloader off the .venv volume; without watchfiles in
+    # the image, uvicorn polls, so the narrower directory matters.
+    command:
+      - uv
+      - run
+      - --no-sync
+      - uvicorn
+      - src.main:app
+      - --host
+      - 0.0.0.0
+      - --reload
+      - --reload-dir
+      - src
     volumes:
       - ./backend:/home/newuser/backend
       - /home/newuser/backend/.venv

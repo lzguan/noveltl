@@ -73,11 +73,13 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ["chapter_id"],
             ["chapters.chapter_id"],
+            ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(["job_id"], ["translation_jobs.job_id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["source_chapter_content_id"],
             ["chapter_contents.chapter_content_id"],
+            ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("job_id", "chapter_id"),
     )

@@ -54,9 +54,11 @@ class TranslationJobChapter(Base):
     job_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("translation_jobs.job_id", ondelete="CASCADE"), primary_key=True
     )
-    chapter_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("chapters.chapter_id"), primary_key=True)
+    chapter_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("chapters.chapter_id", ondelete="CASCADE"), primary_key=True
+    )
     source_chapter_content_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("chapter_contents.chapter_content_id"), nullable=False
+        ForeignKey("chapter_contents.chapter_content_id", ondelete="CASCADE"), nullable=False
     )
     batch_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("translation_batches.batch_id", ondelete="CASCADE"), nullable=False, index=True

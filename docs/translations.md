@@ -21,6 +21,10 @@ Before publishing a completed stage output, validate that:
   signature's `output_types`: no missing or unexpected components.
 - Each payload is valid for its declared `data_name`.
 
+Deleting a source chapter or its pinned content revision cascades to its
+`TranslationJobChapter` association. The job, batches, stages, and tasks remain;
+affected jobs may fail validation or preparation after their source set changes.
+
 Record ordering carries no meaning. If multiple inference requests contribute
 to a component, the action assembles their results before publishing that
 component. Model calls and carried-forward data are both subject to the same
@@ -182,9 +186,10 @@ write `output_file_id` or submit a provider job.
 
 `submit` claims PREPARED as SUBMITTING, streams the stored vendor input through
 `BatchJobClient.create_batch_job`, then stores `provider_batch_id` and commits
-PROCESSING before dispatching `poll`. Client factories are injected through
-`dependencies.BATCH_CLIENT_FACTORIES`, keyed by model. No concrete provider
-client is registered yet.
+PROCESSING before dispatching `poll`. Client factories are resolved through
+`clients.registry.BATCH_CLIENT_FACTORIES`, keyed by model. Qwen settings and its
+SDK adapter load only when a worker resolves the client, not when Uvicorn imports
+the app. Both supported models use the cached Qwen client.
 
 `poll` checks the saved provider ID once. Pending jobs reschedule after 60 seconds;
 completion saves `provider_output_id` and transitions to PROCESSED. Provider

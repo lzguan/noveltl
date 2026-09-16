@@ -40,7 +40,11 @@ class QwenClient(BatchJobClient):
             return BatchJobFailed(error=f"Batch job {job_id} failed with status {response.status}: response={response}")
 
     def create_batch_job(self, content: Iterable[bytes]) -> BatchJobId:
-        file_obj = self.client.files.create(file=buffered_reader(content), purpose="batch")
+        # This stream cannot rewind. Task recovery must reopen it after failure.
+        with buffered_reader(content) as stream:
+            file_obj = self.client.with_options(max_retries=0).files.create(
+                file=("input.jsonl", stream), purpose="batch"
+            )
         response = self.client.batches.create(
             input_file_id=file_obj.id, endpoint="/v1/chat/completions", completion_window="24h"
         )

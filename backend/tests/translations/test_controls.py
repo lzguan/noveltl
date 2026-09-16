@@ -356,3 +356,38 @@ def test_control_does_not_overwrite_concurrent_worker_claim(
     test_db.refresh(task)
     assert task.status == State.PREPARING and task.claim_token == token
     queued.assert_not_called()
+
+
+@pytest.mark.parametrize("operation", ["resume", "retry"])
+def test_recovery_schedules_poll_at_persisted_deadline(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+    monkeypatch: pytest.MonkeyPatch,
+    operation: Control,
+) -> None:
+    # Job controls provide recovery after lost queue delivery; the replacement
+    # must survive until the deadline without bypassing the polling interval.
+    job_id, (task, _) = make_job(test_db, sample_scenario)
+    task.status = State.PROCESSING
+    task.provider_batch_id = "provider-job"
+    deadline = test_db.scalar(select(func.clock_timestamp())) + timedelta(minutes=1)
+    task.next_poll_at = deadline
+    test_db.commit()
+    queued = Mock()
+    monkeypatch.setattr(app.tasks["src.translations.actions.translate.poll"], "apply_async", queued)
+    for _ in range(2):
+        result = control_translation_job(test_db, sample_scenario.users["admin"], job_id, operation)
+        assert result.dispatched_task_ids == [task.task_id]
+        queued.assert_called_with((task.task_id,), eta=deadline)
+        test_db.refresh(task)
+        assert task.next_poll_at == deadline
+
+    # If retry has to rebuild input, that old provider's deadline is irrelevant.
+    task.provider_batch_id = None
+    test_db.commit()
+    prepare = Mock()
+    monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", prepare)
+    control_translation_job(test_db, sample_scenario.users["admin"], job_id, "retry")
+    test_db.refresh(task)
+    assert task.status == State.READY and task.next_poll_at is None
+    prepare.assert_called_once_with((task.task_id,))

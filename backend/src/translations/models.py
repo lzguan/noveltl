@@ -89,6 +89,7 @@ class TranslationTask(Base):
     # Failure preserves the lifecycle step so recovery can select the appropriate worker.
     failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    next_poll_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     claim_token: Mapped[uuid.UUID | None] = mapped_column(UUID, nullable=True, unique=True)
     claim_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

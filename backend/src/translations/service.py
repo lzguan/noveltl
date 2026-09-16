@@ -1,6 +1,7 @@
 """User-facing job controls; database transitions commit before queue dispatch."""
 
 import logging
+from functools import partial
 from typing import Literal
 from uuid import UUID
 
@@ -140,6 +141,9 @@ def _restart_state_sql():
 
 
 def _control_statement(job_id: UUID, operation: Control, batch_id: UUID | None):
+    """
+    Heavenly sql good luck reading ts
+    """
     task = TranslationTask
     scope = [TranslationStage.job_id == job_id, task.status != State.COMPLETE]
     if batch_id is not None:
@@ -169,6 +173,7 @@ def _control_statement(job_id: UUID, operation: Control, batch_id: UUID | None):
             task.claim_token.label("old_token"),
             task.claim_expires_at.label("old_expiry"),
             task.failed_at.label("old_failure"),
+            task.next_poll_at.label("old_next_poll"),
             TranslationStage.action,
             TranslationStage.stage_num,
             func.row_number().over(partition_by=task.batch_id, order_by=TranslationStage.stage_num).label("position"),
@@ -191,6 +196,7 @@ def _control_statement(job_id: UUID, operation: Control, batch_id: UUID | None):
         task.claim_token.is_not_distinct_from(snapshot.c.old_token),
         task.claim_expires_at.is_not_distinct_from(snapshot.c.old_expiry),
         task.failed_at.is_not_distinct_from(snapshot.c.old_failure),
+        task.next_poll_at.is_not_distinct_from(snapshot.c.old_next_poll),
         or_(task.claim_token.is_(None), task.claim_expires_at <= func.clock_timestamp()),
     ]
     if operation != "retry":
@@ -203,6 +209,7 @@ def _control_statement(job_id: UUID, operation: Control, batch_id: UUID | None):
         .where(*eligible)
         .values(
             status=case((current, snapshot.c.restart), else_=task.status),
+            next_poll_at=case((and_(current, snapshot.c.restart != task.status), None), else_=task.next_poll_at),
             claim_token=None,
             claim_expires_at=None,
         )
@@ -218,7 +225,7 @@ def _control_statement(job_id: UUID, operation: Control, batch_id: UUID | None):
             output_file_id=case((rebuild, None), else_=task.output_file_id),
         )
     return statement.returning(
-        task.task_id, task.batch_id, snapshot.c.action, task.status, snapshot.c.position
+        task.task_id, task.batch_id, snapshot.c.action, task.status, snapshot.c.position, task.next_poll_at
     ).execution_options(synchronize_session=False)
 
 
@@ -249,7 +256,7 @@ def control_translation_job(
         result.affected_batch_ids = list(dict.fromkeys(row._t[1] for row in rows))
         if operation != "cancel":
             for row in rows:
-                task_id, _, name, state, position = row._t
+                task_id, _, name, state, position, next_poll_at = row._t
                 if position != 1:
                     continue
                 action = TypeAdapter(ActionName).validate_python(name)
@@ -258,7 +265,7 @@ def control_translation_job(
                 else:
                     step = last_step(action, State(state))
                     if step is not None:
-                        dispatches.append((task_id, step.dispatch))
+                        dispatches.append((task_id, partial(step.dispatch, next_poll_at=next_poll_at)))
         db.commit()
     except Exception:
         db.rollback()

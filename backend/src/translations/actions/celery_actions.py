@@ -1,6 +1,6 @@
 import uuid
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from celery import Celery
 from celery.app.task import Task
@@ -110,7 +110,14 @@ class CeleryActionCallbacks(ActionCallbacks):
                 with SessionLocal.begin() as session:
                     task = session.execute(select(TranslationTask).where(TranslationTask.task_id == x)).scalar_one()
                     done = f(ActionTaskContext(db=session, task=task, claim_token=token, renew_lease=renew_lease))
-                    finish_claim(session, x, token, during=during, finish=finish if done else expect)
+                    finish_claim(
+                        session,
+                        x,
+                        token,
+                        during=during,
+                        finish=finish if done else expect,
+                        poll_interval=timedelta(seconds=interval_seconds) if not done else None,
+                    )
             except Exception as error:
                 with SessionLocal.begin() as session:
                     fail_claim(session, x, token, during=during, error=str(error))
@@ -125,8 +132,11 @@ class CeleryActionCallbacks(ActionCallbacks):
 
         self._intermediate.append(celery_task)
 
-        def dispatch(task_id: uuid.UUID) -> None:
-            celery_task.apply_async((task_id,))
+        def dispatch(task_id: uuid.UUID, *, next_poll_at: datetime | None = None) -> None:
+            if next_poll_at is None:
+                celery_task.apply_async((task_id,))
+            else:
+                celery_task.apply_async((task_id,), eta=next_poll_at)
 
         self._steps.append(ActionStep(expect, during, finish, dispatch))
         return celery_task

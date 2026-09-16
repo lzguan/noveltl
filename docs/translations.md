@@ -135,7 +135,12 @@ failure; it does not reset running, completed, claimed, or failed tasks.
 
 `new_poll` accepts the same state/lease parameters plus `interval_seconds`.
 Its callback returns `False` while pending: the wrapper restores `expect`,
-releases the claim, commits, and queues the same callback with a countdown.
+sets `next_poll_at` using database time plus the interval, releases the claim,
+commits, and queues the same callback with a countdown. Claims require that
+`next_poll_at` be absent or due; early duplicate messages exit without rescheduling.
+Resume/retry preserve the deadline when remaining in the same step and dispatch
+for that deadline, allowing recovery when the original queued message was lost.
+Advancing or resetting to a different step clears the deadline.
 Returning `True` commits `finish` and dispatches the next callback. Exceptions
 use the same failure handling as `new_func`. Workers do not wait between polls.
 Recovery dispatch is exposed through the job control API described above.

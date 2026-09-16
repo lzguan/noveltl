@@ -31,6 +31,7 @@ def claim_task(
             .where(
                 TranslationTask.task_id == task_id,
                 TranslationTask.failed_at.is_(None),
+                or_(TranslationTask.next_poll_at.is_(None), TranslationTask.next_poll_at <= func.clock_timestamp()),
                 or_(
                     and_(TranslationTask.status == expect, TranslationTask.claim_token.is_(None)),
                     and_(
@@ -71,18 +72,31 @@ def renew_claim(db: Session, task_id: UUID, token: UUID, *, during: TranslationT
 
 
 def finish_claim(
-    db: Session, task_id: UUID, token: UUID, *, during: TranslationTaskStatus, finish: TranslationTaskStatus
+    db: Session,
+    task_id: UUID,
+    token: UUID,
+    *,
+    during: TranslationTaskStatus,
+    finish: TranslationTaskStatus,
+    poll_interval: timedelta | None = None,
 ) -> None:
     """Fence callback writes before flushing them; stale workers must roll back.
 
     Use wall-clock time because the callback transaction may have started long
     before its lease expired. The guarded update locks the row through commit.
     """
+    if poll_interval is not None and poll_interval <= timedelta(0):
+        raise ValueError("Poll interval must be positive")
     with db.no_autoflush:
         owned = db.scalar(
             update(TranslationTask)
             .where(_owned(task_id, token, during))
-            .values(status=finish, claim_token=None, claim_expires_at=None)
+            .values(
+                status=finish,
+                claim_token=None,
+                claim_expires_at=None,
+                next_poll_at=func.clock_timestamp() + poll_interval if poll_interval is not None else None,
+            )
             .returning(TranslationTask.task_id)
             .execution_options(synchronize_session=False)
         )

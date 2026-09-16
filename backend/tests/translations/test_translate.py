@@ -1,11 +1,12 @@
 import json
 from collections.abc import Iterable, Iterator
+from datetime import timedelta
 from io import BytesIO
 from unittest.mock import Mock
 from uuid import UUID
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.files.access import create_file
@@ -322,6 +323,17 @@ def test_submission_and_polling_persist_progress_before_dispatch(
     queued_tasks["poll"].assert_called_once_with((task_id,), countdown=60)
     queued_tasks["poll"].reset_mock()
 
+    # Early duplicate messages must neither call the provider nor reschedule.
+    poll(task_id)
+    queued_tasks["poll"].assert_not_called()
+    assert client.polled == ["provider-job"]
+    test_db.execute(
+        update(TranslationTask)
+        .where(TranslationTask.task_id == task_id)
+        .values(next_poll_at=func.clock_timestamp() - timedelta(seconds=1))
+    )
+    test_db.commit()
+
     if failed:
         client.result = BatchJobFailed("provider rejected batch")
         with pytest.raises(RuntimeError, match="provider rejected batch"):
@@ -337,6 +349,8 @@ def test_submission_and_polling_persist_progress_before_dispatch(
     assert (task.failed_at is not None) == failed
     assert task.claim_token is None and task.claim_expires_at is None
     assert task.output_file_id is None
+    if not failed:
+        assert task.next_poll_at is None
     assert client.polled == ["provider-job", "provider-job"]
     queued_tasks["poll"].assert_not_called()
     if failed:

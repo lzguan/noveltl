@@ -1181,6 +1181,9 @@ dev = [
     { name = "types-psycopg2" },
     { name = "types-pyyaml" },
 ]
+tagent = [
+    { name = "openai" },
+]
 worker = [
     { name = "hf" },
     { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
@@ -1222,6 +1225,7 @@ dev = [
     { name = "types-psycopg2", specifier = ">=2.9.21.20260408" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20260518" },
 ]
+tagent = [{ name = "openai", specifier = ">=3.11.0" }]
 worker = [
     { name = "hf", specifier = ">=1.27.0" },
     { name = "torch", specifier = ">=2.9.1", index = "https://download.pytorch.org/whl/cpu" },

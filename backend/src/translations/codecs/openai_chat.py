@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import ConfigDict, Field, TypeAdapter
 
 from src.schemas import Model
-from src.translations.batch_lines import BatchItem, BatchItemFailure, BatchItemResult, BatchItemSuccess
+from src.translations.codecs.batch_lines import BatchItem, BatchItemFailure, BatchItemResult, BatchItemSuccess
 
 
 class _WireModel(Model):

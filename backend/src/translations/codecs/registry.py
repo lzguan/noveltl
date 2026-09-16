@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 from pydantic import TypeAdapter
 
-from src.translations.batch_lines import BatchLineCodec
+from src.translations.codecs.batch_lines import BatchLineCodec
 from src.translations.codecs.openai_chat import OpenAIChatBatchCodec
 from src.translations.types import ModelName, TranslationDataKey
 

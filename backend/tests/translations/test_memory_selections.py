@@ -9,7 +9,7 @@ from src.translations.actions.common.memory_selections import (
     apply_memory_selections,
     parse_memory_selection,
 )
-from src.translations.batch_lines import BatchItemFailure, BatchItemSuccess
+from src.translations.codecs.batch_lines import BatchItemFailure, BatchItemSuccess
 from src.translations.records import ChapterRecord, MemoriesRecord
 from src.translations.types import TranslationDataKey
 

@@ -59,9 +59,7 @@ def acquire(db: Session, task_id: UUID, token: UUID) -> bool:
     return claim_task(db, task_id, token, expect=State.READY, during=State.PREPARING, duration=DURATION)
 
 
-@pytest.mark.parametrize(
-    ("until_deadline", "claimable"), [(POLL_GATE_SLACK / 2, True), (POLL_GATE_SLACK * 2, False)]
-)
+@pytest.mark.parametrize(("until_deadline", "claimable"), [(POLL_GATE_SLACK / 2, True), (POLL_GATE_SLACK * 2, False)])
 def test_poll_gate_admits_slightly_early_message_but_not_a_duplicate(
     task_id: UUID, testing_session_local: sessionmaker[Session], until_deadline: timedelta, claimable: bool
 ) -> None:

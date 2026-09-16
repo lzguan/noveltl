@@ -13,9 +13,9 @@ from src.memory.models import Memory, MemoryGroup
 from src.memory.schemas import Memory as MemorySchema
 from src.memory.types import Creator, MemoryType
 from src.translations.actions.prune_memories import finalize, poll, prepare, submit
-from src.translations.batch_jobs import BatchJobComplete, BatchJobId, BatchJobPoll, BatchOutputId
 from src.translations.celery_app import app
-from src.translations.dependencies import BATCH_CLIENT_FACTORIES
+from src.translations.clients.batch_jobs import BatchJobComplete, BatchJobId, BatchJobPoll, BatchOutputId
+from src.translations.clients.registry import BATCH_CLIENT_FACTORIES
 from src.translations.jsonl import encode_translation_record, iter_translation_records
 from src.translations.models import TranslationBatch, TranslationStage, TranslationTask
 from src.translations.records import ChapterRecord, MemoriesRecord

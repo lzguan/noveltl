@@ -45,6 +45,9 @@ dev = [
 agent = [
     "pydantic-ai>=2.31.0",
 ]
+tagent = [
+    "openai>=3.11.0",
+]
 
 [tool.uv]
 package = true

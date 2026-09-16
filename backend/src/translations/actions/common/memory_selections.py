@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import StrictInt, TypeAdapter
 
-from src.translations.batch_lines import BatchItemFailure, BatchItemResult
+from src.translations.codecs.batch_lines import BatchItemFailure, BatchItemResult
 from src.translations.records import MemoriesRecord, TranslationRecord
 from src.translations.types import TranslationDataKey
 

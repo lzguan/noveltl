@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
-from src.translations.batch_jobs import BatchJobClient
+from src.translations.clients.batch_jobs import BatchJobClient
 
 
 @dataclass(frozen=True)

@@ -5,7 +5,7 @@ from uuid import UUID
 import pytest
 from pydantic import ValidationError
 
-from src.translations.batch_lines import BatchItem, InferenceMessage, InferenceRequest
+from src.translations.codecs.batch_lines import BatchItem, InferenceMessage, InferenceRequest
 from src.translations.codecs.registry import MODEL_CODECS, get_codec
 from src.translations.schemas import TranslateConfig
 from src.translations.types import ModelName, TranslationDataKey

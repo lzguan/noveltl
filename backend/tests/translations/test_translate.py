@@ -15,7 +15,8 @@ from src.memory.models import Memory, MemoryGroup
 from src.memory.types import Creator, MemoryType
 from src.novels.models import ChapterContent
 from src.translations.actions.translate import finalize, poll, prepare, submit
-from src.translations.batch_jobs import (
+from src.translations.celery_app import app
+from src.translations.clients.batch_jobs import (
     BatchJobComplete,
     BatchJobFailed,
     BatchJobId,
@@ -23,10 +24,9 @@ from src.translations.batch_jobs import (
     BatchJobPoll,
     BatchOutputId,
 )
-from src.translations.batch_lines import BatchItem, BatchItemResult
-from src.translations.celery_app import app
+from src.translations.clients.registry import BATCH_CLIENT_FACTORIES
+from src.translations.codecs.batch_lines import BatchItem, BatchItemResult
 from src.translations.codecs.registry import MODEL_CODECS
-from src.translations.dependencies import BATCH_CLIENT_FACTORIES
 from src.translations.jsonl import encode_translation_record, iter_translation_records
 from src.translations.models import TranslationStage, TranslationTask
 from src.translations.records import ChapterRecord, MemoriesRecord

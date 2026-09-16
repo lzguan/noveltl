@@ -4,7 +4,7 @@ from uuid import UUID
 import pytest
 from pydantic import TypeAdapter
 
-from src.translations.batch_lines import (
+from src.translations.codecs.batch_lines import (
     BatchItem,
     BatchItemFailure,
     BatchItemSuccess,

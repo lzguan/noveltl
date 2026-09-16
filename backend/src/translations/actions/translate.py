@@ -19,11 +19,17 @@ from src.translations.actions.celery_actions import CeleryActionCallbacks
 from src.translations.actions.common.memory_inputs import iter_batch_memories
 from src.translations.actions.common.prompts import format_memories
 from src.translations.actions.registry import ACTION_CALLBACKS
-from src.translations.batch_jobs import BatchJobComplete, BatchJobFailed, BatchJobId, BatchJobPending, BatchOutputId
-from src.translations.batch_lines import BatchItem, BatchItemFailure, InferenceMessage, InferenceRequest
 from src.translations.celery_app import app
+from src.translations.clients.batch_jobs import (
+    BatchJobComplete,
+    BatchJobFailed,
+    BatchJobId,
+    BatchJobPending,
+    BatchOutputId,
+)
+from src.translations.clients.registry import get_batch_client
+from src.translations.codecs.batch_lines import BatchItem, BatchItemFailure, InferenceMessage, InferenceRequest
 from src.translations.codecs.registry import get_codec
-from src.translations.dependencies import get_batch_client
 from src.translations.jsonl import encode_translation_record, iter_jsonl_lines, iter_translation_records
 from src.translations.models import TranslationJob, TranslationJobChapter, TranslationStage, TranslationTask
 from src.translations.records import ChapterRecord, MemoriesRecord, TranslationRecord

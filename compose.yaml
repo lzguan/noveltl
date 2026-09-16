@@ -35,10 +35,6 @@ services:
     environment:
       <<: [*db-env, *test-db-env, *redis-env, *test-redis-env, *file-store-env]
       SECRET_KEY: ${SECRET_KEY}
-      HF_TOKEN: ${HF_TOKEN:-}
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
-      QWEN_API_KEY: ${QWEN_API_KEY:-}
-      QWEN_API_URL: ${QWEN_API_URL:-}
     command: sleep infinity
 
   db:

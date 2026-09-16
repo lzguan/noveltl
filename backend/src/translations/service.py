@@ -224,9 +224,6 @@ def _control_statement(job_id: UUID, operation: Control, batch_id: UUID | None):
             input_file_id=case((rebuild, None), else_=task.input_file_id),
             output_file_id=case((rebuild, None), else_=task.output_file_id),
         )
-    # Subtract inside the statement so the deadline never leaves database time.
-    # Declaring the clock's type lets SQLAlchemy infer Interval, so the value
-    # arrives as a timedelta rather than being mistyped as a datetime.
     poll_in = task.next_poll_at - func.clock_timestamp(type_=DateTime(timezone=True))
     return statement.returning(
         task.task_id, task.batch_id, snapshot.c.action, task.status, snapshot.c.position, poll_in.label("poll_in")

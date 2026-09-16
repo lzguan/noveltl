@@ -378,7 +378,11 @@ def test_recovery_schedules_poll_at_persisted_deadline(
     for _ in range(2):
         result = control_translation_job(test_db, sample_scenario.users["admin"], job_id, operation)
         assert result.dispatched_task_ids == [task.task_id]
-        queued.assert_called_with((task.task_id,), eta=deadline)
+        # A duration, never the deadline itself: the consuming worker releases
+        # the message against its own clock, not the database's.
+        args, kwargs = queued.call_args
+        assert args == ((task.task_id,),)
+        assert list(kwargs) == ["countdown"] and 0 < kwargs["countdown"] <= 60
         test_db.refresh(task)
         assert task.next_poll_at == deadline
 

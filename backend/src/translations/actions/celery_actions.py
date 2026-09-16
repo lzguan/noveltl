@@ -1,6 +1,6 @@
 import uuid
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from celery import Celery
 from celery.app.task import Task
@@ -124,7 +124,7 @@ class CeleryActionCallbacks(ActionCallbacks):
                 raise
 
             if not done:
-                celery_task.apply_async((x,), countdown=interval_seconds)
+                dispatch(x, delay=timedelta(seconds=interval_seconds))
             elif idx + 1 < len(self._intermediate):
                 self._intermediate[idx + 1].apply_async((x,))
             else:
@@ -132,11 +132,12 @@ class CeleryActionCallbacks(ActionCallbacks):
 
         self._intermediate.append(celery_task)
 
-        def dispatch(task_id: uuid.UUID, *, next_poll_at: datetime | None = None) -> None:
-            if next_poll_at is None:
+        def dispatch(task_id: uuid.UUID, *, delay: timedelta | None = None) -> None:
+            if delay is None:
                 celery_task.apply_async((task_id,))
             else:
-                celery_task.apply_async((task_id,), eta=next_poll_at)
+                # A deadline already passed means the gate is open; fire at once.
+                celery_task.apply_async((task_id,), countdown=max(delay, timedelta(0)).total_seconds())
 
         self._steps.append(ActionStep(expect, during, finish, dispatch))
         return celery_task

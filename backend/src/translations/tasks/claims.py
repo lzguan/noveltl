@@ -14,6 +14,9 @@ class TranslationClaimLostError(RuntimeError):
     pass
 
 
+POLL_GATE_SLACK = timedelta(seconds=30)
+
+
 def claim_task(
     db: Session,
     task_id: UUID,
@@ -31,7 +34,10 @@ def claim_task(
             .where(
                 TranslationTask.task_id == task_id,
                 TranslationTask.failed_at.is_(None),
-                or_(TranslationTask.next_poll_at.is_(None), TranslationTask.next_poll_at <= func.clock_timestamp()),
+                or_(
+                    TranslationTask.next_poll_at.is_(None),
+                    TranslationTask.next_poll_at <= func.clock_timestamp() + POLL_GATE_SLACK,
+                ),
                 or_(
                     and_(TranslationTask.status == expect, TranslationTask.claim_token.is_(None)),
                     and_(

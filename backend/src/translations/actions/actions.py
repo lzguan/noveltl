@@ -3,7 +3,7 @@
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import timedelta
 from typing import Protocol
 
 from sqlalchemy.orm import Session
@@ -37,7 +37,7 @@ type ActionTask = Callable[[uuid.UUID], None]
 
 
 class StepDispatcher(Protocol):
-    def __call__(self, task_id: uuid.UUID, *, next_poll_at: datetime | None = None) -> None: ...
+    def __call__(self, task_id: uuid.UUID, *, delay: timedelta | None = None) -> None: ...
 
 
 @dataclass(frozen=True)

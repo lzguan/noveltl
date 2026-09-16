@@ -6,7 +6,7 @@ from typing import Literal
 from uuid import UUID
 
 from pydantic import TypeAdapter
-from sqlalchemy import and_, case, func, or_, select, update
+from sqlalchemy import DateTime, and_, case, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from src.auth.models import User
@@ -224,8 +224,12 @@ def _control_statement(job_id: UUID, operation: Control, batch_id: UUID | None):
             input_file_id=case((rebuild, None), else_=task.input_file_id),
             output_file_id=case((rebuild, None), else_=task.output_file_id),
         )
+    # Subtract inside the statement so the deadline never leaves database time.
+    # Declaring the clock's type lets SQLAlchemy infer Interval, so the value
+    # arrives as a timedelta rather than being mistyped as a datetime.
+    poll_in = task.next_poll_at - func.clock_timestamp(type_=DateTime(timezone=True))
     return statement.returning(
-        task.task_id, task.batch_id, snapshot.c.action, task.status, snapshot.c.position, task.next_poll_at
+        task.task_id, task.batch_id, snapshot.c.action, task.status, snapshot.c.position, poll_in.label("poll_in")
     ).execution_options(synchronize_session=False)
 
 
@@ -256,7 +260,7 @@ def control_translation_job(
         result.affected_batch_ids = list(dict.fromkeys(row._t[1] for row in rows))
         if operation != "cancel":
             for row in rows:
-                task_id, _, name, state, position, next_poll_at = row._t
+                task_id, _, name, state, position, poll_in = row._t
                 if position != 1:
                     continue
                 action = TypeAdapter(ActionName).validate_python(name)
@@ -265,7 +269,7 @@ def control_translation_job(
                 else:
                     step = last_step(action, State(state))
                     if step is not None:
-                        dispatches.append((task_id, partial(step.dispatch, next_poll_at=next_poll_at)))
+                        dispatches.append((task_id, partial(step.dispatch, delay=poll_in)))
         db.commit()
     except Exception:
         db.rollback()

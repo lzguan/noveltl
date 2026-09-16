@@ -12,7 +12,14 @@ from src.novels.models import Novel, SourceWork
 from src.translations.actions.actions import ActionTaskContext
 from src.translations.actions.celery_actions import CeleryActionCallbacks
 from src.translations.models import TranslationBatch, TranslationJob, TranslationStage, TranslationTask
-from src.translations.tasks.claims import TranslationClaimLostError, claim_task, fail_claim, finish_claim, renew_claim
+from src.translations.tasks.claims import (
+    POLL_GATE_SLACK,
+    TranslationClaimLostError,
+    claim_task,
+    fail_claim,
+    finish_claim,
+    renew_claim,
+)
 from src.translations.types import TranslationTaskStatus as State
 
 DURATION = timedelta(minutes=5)
@@ -50,6 +57,26 @@ def task_id(test_db: Session) -> UUID:
 
 def acquire(db: Session, task_id: UUID, token: UUID) -> bool:
     return claim_task(db, task_id, token, expect=State.READY, during=State.PREPARING, duration=DURATION)
+
+
+@pytest.mark.parametrize(
+    ("until_deadline", "claimable"), [(POLL_GATE_SLACK / 2, True), (POLL_GATE_SLACK * 2, False)]
+)
+def test_poll_gate_admits_slightly_early_message_but_not_a_duplicate(
+    task_id: UUID, testing_session_local: sessionmaker[Session], until_deadline: timedelta, claimable: bool
+) -> None:
+    # Worker clocks can disagree, so a message may arrive before its deadline.
+    # Admitting it within the slack window keeps the polling chain alive: a lost
+    # claim returns without rescheduling. A real duplicate is far too early to
+    # pass, so it still loses and the chain cannot multiply.
+    with testing_session_local.begin() as db:
+        db.execute(
+            update(TranslationTask)
+            .where(TranslationTask.task_id == task_id)
+            .values(next_poll_at=func.clock_timestamp() + until_deadline)
+        )
+    with testing_session_local.begin() as db:
+        assert acquire(db, task_id, uuid4()) is claimable
 
 
 def expire(db: Session, task_id: UUID) -> None:

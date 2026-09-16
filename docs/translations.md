@@ -137,9 +137,15 @@ failure; it does not reset running, completed, claimed, or failed tasks.
 Its callback returns `False` while pending: the wrapper restores `expect`,
 sets `next_poll_at` using database time plus the interval, releases the claim,
 commits, and queues the same callback with a countdown. Claims require that
-`next_poll_at` be absent or due; early duplicate messages exit without rescheduling.
+`next_poll_at` be absent or within `POLL_GATE_SLACK` of being due; a duplicate
+message arriving well before the deadline exits without rescheduling. The slack
+covers disagreement between the clocks of the publishing and consuming workers,
+since a lost claim ends the polling chain.
 Resume/retry preserve the deadline when remaining in the same step and dispatch
 for that deadline, allowing recovery when the original queued message was lost.
+Deadlines are stored in database time, so dispatch converts one to a remaining
+duration in SQL: step dispatchers accept a delay rather than an absolute time,
+which keeps a database timestamp from being compared against a worker's clock.
 Advancing or resetting to a different step clears the deadline.
 Returning `True` commits `finish` and dispatches the next callback. Exceptions
 use the same failure handling as `new_func`. Workers do not wait between polls.

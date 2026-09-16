@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from src.filters.celery_app import app
 from src.filters.compilers.python import PythonCompiler
 from src.filters.data_types import BoolData, DataObj, LabelRefData, Schema
-from src.filters.dispatch.celery import CeleryRunnerDispatcher
+from src.filters.dispatch.celery_dispatcher import CeleryRunnerDispatcher
 from src.filters.functions import Call, Compare, Extend, Get, LiteralFloat, ScoreOf, WordOf
 from src.filters.models import GroupAssignment, Grouping, GroupingStatus, Instance, Workflow, WorkflowStatus
 from src.filters.runners.python.annotation_runner import PythonAnnotationRunner

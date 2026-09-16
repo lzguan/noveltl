@@ -36,6 +36,7 @@ class CeleryActionCallbacks(ActionCallbacks):
         during: TranslationTaskStatus,
         finish: TranslationTaskStatus,
         lease_seconds: int = 300,
+        name: str | None = None,
     ) -> Callable[[ActionCallback], ActionTask]:
         def decorate(f: ActionCallback) -> ActionTask:
             def run(context: ActionTaskContext) -> bool:
@@ -44,7 +45,7 @@ class CeleryActionCallbacks(ActionCallbacks):
 
             return self._register(
                 run,
-                name=f"{f.__module__}.{f.__qualname__}",
+                name=name if name is not None else f"{f.__module__}.{f.__qualname__}",
                 expect=expect,
                 during=during,
                 finish=finish,
@@ -61,6 +62,7 @@ class CeleryActionCallbacks(ActionCallbacks):
         finish: TranslationTaskStatus,
         interval_seconds: int = 60,
         lease_seconds: int = 300,
+        name: str | None = None,
     ) -> Callable[[PollCallback], ActionTask]:
         if interval_seconds <= 0:
             raise ValueError("interval_seconds must be positive")
@@ -68,7 +70,7 @@ class CeleryActionCallbacks(ActionCallbacks):
         def decorate(f: PollCallback) -> ActionTask:
             return self._register(
                 f,
-                name=f"{f.__module__}.{f.__qualname__}",
+                name=name if name is not None else f"{f.__module__}.{f.__qualname__}",
                 expect=expect,
                 during=during,
                 finish=finish,

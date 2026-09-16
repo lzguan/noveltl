@@ -1,4 +1,4 @@
-from src.filters.dispatch.celery import CeleryRunnerDispatcher
+from src.filters.dispatch.celery_dispatcher import CeleryRunnerDispatcher
 from src.filters.dispatch.dispatcher import RunnerDispatcher
 
 

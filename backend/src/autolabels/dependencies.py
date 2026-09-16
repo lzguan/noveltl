@@ -1,4 +1,4 @@
-from src.autolabels.dispatch.celery import CeleryDispatcher
+from src.autolabels.dispatch.celery_dispatcher import CeleryDispatcher
 from src.autolabels.dispatch.dispatcher import AutoLabelDispatcher
 
 

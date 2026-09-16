@@ -41,6 +41,12 @@ from src.translations.models import (
 )
 from src.translations.records import ChapterRecord, MemoriesRecord, TranslationRecord
 from src.translations.schemas import PruneMemoriesConfig
+from src.translations.task_names import (
+    PRUNE_MEMORIES_FINALIZE,
+    PRUNE_MEMORIES_POLL,
+    PRUNE_MEMORIES_PREPARE,
+    PRUNE_MEMORIES_SUBMIT,
+)
 from src.translations.tasks.claims import publish_initial_file
 from src.translations.types import ACTIONS, ActionName, DataT
 from src.translations.types import TranslationTaskStatus as State
@@ -139,7 +145,13 @@ def _database_inputs(
         memories.close()
 
 
-@callbacks.new_func(expect=State.READY, during=State.PREPARING, finish=State.PREPARED, lease_seconds=_LEASE_SECONDS)
+@callbacks.new_func(
+    expect=State.READY,
+    during=State.PREPARING,
+    finish=State.PREPARED,
+    lease_seconds=_LEASE_SECONDS,
+    name=PRUNE_MEMORIES_PREPARE,
+)
 def prepare(context: ActionTaskContext) -> None:
     stage, config = _stage(context)
     chapter_ids = _chapter_ids(context, stage)
@@ -226,7 +238,11 @@ def prepare(context: ActionTaskContext) -> None:
 
 
 @callbacks.new_func(
-    expect=State.PREPARED, during=State.SUBMITTING, finish=State.PROCESSING, lease_seconds=_LEASE_SECONDS
+    expect=State.PREPARED,
+    during=State.SUBMITTING,
+    finish=State.PROCESSING,
+    lease_seconds=_LEASE_SECONDS,
+    name=PRUNE_MEMORIES_SUBMIT,
 )
 def submit(context: ActionTaskContext) -> None:
     _, config = _stage(context)
@@ -252,7 +268,13 @@ def submit(context: ActionTaskContext) -> None:
     context.task.provider_batch_id = job_id
 
 
-@callbacks.new_poll(expect=State.PROCESSING, during=State.PROCESSING, finish=State.PROCESSED, interval_seconds=60)
+@callbacks.new_poll(
+    expect=State.PROCESSING,
+    during=State.PROCESSING,
+    finish=State.PROCESSED,
+    interval_seconds=60,
+    name=PRUNE_MEMORIES_POLL,
+)
 def poll(context: ActionTaskContext) -> bool:
     _, config = _stage(context)
     if context.task.provider_batch_id is None:
@@ -271,7 +293,11 @@ def poll(context: ActionTaskContext) -> bool:
 
 
 @callbacks.new_func(
-    expect=State.PROCESSED, during=State.FINALIZING, finish=State.COMPLETE, lease_seconds=_LEASE_SECONDS
+    expect=State.PROCESSED,
+    during=State.FINALIZING,
+    finish=State.COMPLETE,
+    lease_seconds=_LEASE_SECONDS,
+    name=PRUNE_MEMORIES_FINALIZE,
 )
 def finalize(context: ActionTaskContext) -> None:
     stage, config = _stage(context)

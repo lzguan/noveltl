@@ -18,7 +18,7 @@ COPY --chown=${UNAME}:${GNAME} pyproject.toml uv.lock* ./
 RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --no-default-groups --no-install-project
 
 FROM base AS backend
-RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --no-default-groups --group backend --group agent --no-install-project
+RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --no-default-groups --group backend --no-install-project
 COPY --chown=${UNAME}:${GNAME} . .
 
 CMD ["uv", "run", "--no-sync", "uvicorn", "src.main:app", "--host", "0.0.0.0"]

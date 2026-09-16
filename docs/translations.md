@@ -137,6 +137,9 @@ next task in the same batch READY, commits, then dispatches that action's
 entrypoint. Retrying exitpoint can redispatch an already-ready task after a queue
 failure; it does not reset running, completed, claimed, or failed tasks.
 
+`new_func` and `new_poll` accept an optional `name` for a stable Celery task name.
+When omitted, the name remains the callback's module plus qualified function name.
+
 `new_poll` accepts the same state/lease parameters plus `interval_seconds`.
 Its callback returns `False` while pending: the wrapper restores `expect`,
 sets `next_poll_at` using database time plus the interval, releases the claim,

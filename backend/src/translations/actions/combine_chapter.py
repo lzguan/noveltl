@@ -18,6 +18,7 @@ from src.translations.celery_app import app
 from src.translations.jsonl import encode_translation_record, iter_translation_records
 from src.translations.models import TranslationJobChapter, TranslationStage, TranslationTask
 from src.translations.records import ChapterRecord, MemoriesRecord, TranslationRecord
+from src.translations.task_names import COMBINE_CHAPTER_COMBINE
 from src.translations.types import ACTIONS, ActionName, TranslationTaskStatus
 from src.translations.validation import validate_output_records
 
@@ -30,6 +31,7 @@ _LEASE_SECONDS = 300
     during=TranslationTaskStatus.FINALIZING,
     finish=TranslationTaskStatus.COMPLETE,
     lease_seconds=_LEASE_SECONDS,
+    name=COMBINE_CHAPTER_COMBINE,
 )
 def combine(context: ActionTaskContext) -> None:
     stage = context.db.get(TranslationStage, context.task.stage_id)

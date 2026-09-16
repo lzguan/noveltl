@@ -34,6 +34,12 @@ from src.translations.jsonl import encode_translation_record, iter_jsonl_lines, 
 from src.translations.models import TranslationJob, TranslationJobChapter, TranslationStage, TranslationTask
 from src.translations.records import ChapterRecord, MemoriesRecord, TranslationRecord
 from src.translations.schemas import TranslateConfig, TranslateWithMemoriesConfig
+from src.translations.task_names import (
+    TRANSLATE_FINALIZE,
+    TRANSLATE_POLL,
+    TRANSLATE_PREPARE,
+    TRANSLATE_SUBMIT,
+)
 from src.translations.types import ACTIONS, ActionName, TranslationTaskStatus
 from src.translations.validation import validate_output_records
 
@@ -148,6 +154,7 @@ _FINALIZE_LEASE_SECONDS = 300
     during=TranslationTaskStatus.PREPARING,
     finish=TranslationTaskStatus.PREPARED,
     lease_seconds=_PREPARE_LEASE_SECONDS,
+    name=TRANSLATE_PREPARE,
 )
 def prepare(context: ActionTaskContext) -> None:
     store = get_object_store()
@@ -223,6 +230,7 @@ def prepare(context: ActionTaskContext) -> None:
     during=TranslationTaskStatus.SUBMITTING,
     finish=TranslationTaskStatus.PROCESSING,
     lease_seconds=_SUBMIT_LEASE_SECONDS,
+    name=TRANSLATE_SUBMIT,
 )
 def submit(context: ActionTaskContext) -> None:
     if context.task.provider_batch_id is not None:
@@ -257,6 +265,7 @@ def submit(context: ActionTaskContext) -> None:
     during=TranslationTaskStatus.PROCESSING,
     finish=TranslationTaskStatus.PROCESSED,
     interval_seconds=60,
+    name=TRANSLATE_POLL,
 )
 def poll(context: ActionTaskContext) -> bool:
     if context.task.provider_batch_id is None:
@@ -283,6 +292,7 @@ def poll(context: ActionTaskContext) -> bool:
     during=TranslationTaskStatus.FINALIZING,
     finish=TranslationTaskStatus.COMPLETE,
     lease_seconds=_FINALIZE_LEASE_SECONDS,
+    name=TRANSLATE_FINALIZE,
 )
 def finalize(context: ActionTaskContext) -> None:
     if context.task.provider_output_id is None:

@@ -68,6 +68,7 @@ class ActionCallbacks(Protocol):
         during: TranslationTaskStatus,
         finish: TranslationTaskStatus,
         lease_seconds: int = 300,
+        name: str | None = None,
     ) -> Callable[[ActionCallback], ActionTask]: ...
 
     def new_poll(
@@ -78,6 +79,7 @@ class ActionCallbacks(Protocol):
         finish: TranslationTaskStatus,
         interval_seconds: int = 60,
         lease_seconds: int = 300,
+        name: str | None = None,
     ) -> Callable[[PollCallback], ActionTask]:
         """False releases and reschedules this step; True advances; errors fail."""
         ...

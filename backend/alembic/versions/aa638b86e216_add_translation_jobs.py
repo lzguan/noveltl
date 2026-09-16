@@ -112,6 +112,7 @@ def upgrade():
         sa.Column("provider_output_id", sa.Text(), nullable=True),
         sa.Column("failed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("error", sa.Text(), nullable=True),
+        sa.Column("next_poll_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("claim_token", sa.UUID(), nullable=True),
         sa.Column("claim_expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),

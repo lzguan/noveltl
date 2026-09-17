@@ -1,4 +1,9 @@
-# Translation stage artifact contract
+# Translations
+
+- [UI layout](ui-layout.md): Proposed editor panel, job creation dialog, and batch controls.
+- The sections below describe the implemented backend pipeline and artifact contract.
+
+## Translation stage artifact contract
 
 Normalized stage artifacts use JSONL records keyed by `TranslationDataKey`
 (`backend/src/translations/types.py`). Every key contains:

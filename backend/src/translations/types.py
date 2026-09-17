@@ -15,7 +15,7 @@ class TranslationDataKey:
 
     Keys must be unique within the artifact. The owning task supplies job,
     batch, and stage scope. Provider request/chunk identifiers are separate.
-    See docs/translations.md for the producer/consumer contract.
+    See docs/translations/README.md for the producer/consumer contract.
     """
 
     chapter_id: UUID

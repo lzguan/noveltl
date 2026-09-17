@@ -5,14 +5,17 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { TranslationJobConfig } from './translationJobConfig';
-import type { TranslationStageCreate } from './translationStageCreate';
+import type { TranslationStageRequest } from './translationStageRequest';
 
-export interface TranslationJobCreate {
+/**
+ * Public envelope; action-specific validation happens before job creation.
+ */
+export interface TranslationJobCreateRequest {
   config: TranslationJobConfig;
   novelId: string;
   /**
      * @minItems 1
      * @maxItems 5
      */
-  stages: TranslationStageCreate[];
+  stages: TranslationStageRequest[];
 }

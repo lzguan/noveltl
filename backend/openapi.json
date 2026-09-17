@@ -6953,7 +6953,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TranslationJobCreate"
+                "$ref": "#/components/schemas/TranslationJobCreateRequest"
               }
             }
           },
@@ -6976,6 +6976,33 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/translation-jobs/actions": {
+      "get": {
+        "tags": [
+          "translations"
+        ],
+        "summary": "List Actions",
+        "description": "Return action compatibility and standalone configuration JSON Schemas.",
+        "operationId": "list_actions_translation_jobs_actions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationActionsRead"
                 }
               }
             }
@@ -7953,25 +7980,6 @@
         "title": "CluenerParams",
         "description": "Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size: Integer between 1 and 512. Determines max size of chunks passed to NER model. Has default value 500.\n    separators: Dictionary of the form `char : SepPriority`. The predict algorithm will prioritize chunks ending in higher priority separators. Has default value (read the code to see what it is.)\n    force_chunk: If no separators found in some interval, force the chunker to chunk mid-sentence. Has default value False.\n\nNotes:\n    To validate this model without injecting default values, call `CluenerModelParams.model_validate(..., context={'skip_default_values' : True})`."
       },
-      "CombineChapterStageCreate": {
-        "properties": {
-          "config": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Config"
-          },
-          "action": {
-            "type": "string",
-            "const": "combine_chapter",
-            "title": "Action"
-          }
-        },
-        "type": "object",
-        "required": [
-          "action"
-        ],
-        "title": "CombineChapterStageCreate"
-      },
       "CreateAutoLabels": {
         "properties": {
           "novelId": {
@@ -8542,6 +8550,13 @@
           "agent"
         ],
         "title": "Creator"
+      },
+      "DataName": {
+        "type": "string",
+        "enum": [
+          "chapter",
+          "memories"
+        ]
       },
       "DataObj": {
         "properties": {
@@ -9411,7 +9426,7 @@
       "JobParams": {
         "properties": {
           "modelName": {
-            "$ref": "#/components/schemas/ModelName-Output"
+            "$ref": "#/components/schemas/ModelName"
           },
           "toolsets": {
             "additionalProperties": {
@@ -9945,7 +9960,7 @@
       "MemoryAgentModelOption": {
         "properties": {
           "name": {
-            "$ref": "#/components/schemas/ModelName-Output"
+            "$ref": "#/components/schemas/ModelName"
           },
           "label": {
             "type": "string",
@@ -10253,7 +10268,7 @@
         "title": "MemoryType",
         "description": "The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms."
       },
-      "ModelName-Output": {
+      "ModelName": {
         "type": "string",
         "enum": [
           "deepseek:deepseek-v4-flash-none",
@@ -10657,111 +10672,6 @@
           "glossary",
           "continuity"
         ]
-      },
-      "PruneMemoriesConfig": {
-        "properties": {
-          "model": {
-            "$ref": "#/components/schemas/src__translations__types__ModelName"
-          },
-          "instructions": {
-            "type": "string",
-            "title": "Instructions",
-            "default": ""
-          },
-          "temperature": {
-            "anyOf": [
-              {
-                "type": "number",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Temperature"
-          },
-          "maxOutputTokens": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "exclusiveMinimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Maxoutputtokens"
-          },
-          "memoryGroupId": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Memorygroupid"
-          },
-          "pluginNames": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/PluginName"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pluginnames"
-          },
-          "memoryTypes": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/MemoryType"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Memorytypes"
-          },
-          "excludeCurrentChapter": {
-            "type": "boolean",
-            "title": "Excludecurrentchapter",
-            "default": true
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "model"
-        ],
-        "title": "PruneMemoriesConfig"
-      },
-      "PruneMemoriesStageCreate": {
-        "properties": {
-          "action": {
-            "type": "string",
-            "const": "prune_memories",
-            "title": "Action"
-          },
-          "config": {
-            "$ref": "#/components/schemas/PruneMemoriesConfig"
-          }
-        },
-        "type": "object",
-        "required": [
-          "action",
-          "config"
-        ],
-        "title": "PruneMemoriesStageCreate"
       },
       "PythonAnnotationRequest": {
         "properties": {
@@ -11393,182 +11303,66 @@
           "guidance"
         ]
       },
-      "TranslateConfig": {
+      "TranslationActionMetadata": {
         "properties": {
-          "model": {
-            "$ref": "#/components/schemas/src__translations__types__ModelName"
-          },
-          "targetLanguage": {
+          "name": {
             "type": "string",
-            "minLength": 1,
-            "title": "Targetlanguage",
-            "default": "English"
+            "title": "Name"
           },
-          "instructions": {
+          "label": {
             "type": "string",
-            "title": "Instructions",
-            "default": ""
+            "title": "Label"
           },
-          "temperature": {
-            "anyOf": [
-              {
-                "type": "number",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Temperature"
+          "inputTypes": {
+            "items": {
+              "$ref": "#/components/schemas/DataName"
+            },
+            "type": "array",
+            "title": "Inputtypes"
           },
-          "maxOutputTokens": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "exclusiveMinimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Maxoutputtokens"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "model"
-        ],
-        "title": "TranslateConfig"
-      },
-      "TranslateStageCreate": {
-        "properties": {
-          "action": {
-            "type": "string",
-            "const": "translate",
-            "title": "Action"
+          "outputTypes": {
+            "items": {
+              "$ref": "#/components/schemas/DataName"
+            },
+            "type": "array",
+            "title": "Outputtypes"
           },
-          "config": {
-            "$ref": "#/components/schemas/TranslateConfig"
-          }
-        },
-        "type": "object",
-        "required": [
-          "action",
-          "config"
-        ],
-        "title": "TranslateStageCreate"
-      },
-      "TranslateWithMemoriesConfig": {
-        "properties": {
-          "model": {
-            "$ref": "#/components/schemas/src__translations__types__ModelName"
-          },
-          "targetLanguage": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Targetlanguage",
-            "default": "English"
-          },
-          "instructions": {
-            "type": "string",
-            "title": "Instructions",
-            "default": ""
-          },
-          "temperature": {
-            "anyOf": [
-              {
-                "type": "number",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Temperature"
-          },
-          "maxOutputTokens": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "exclusiveMinimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Maxoutputtokens"
-          },
-          "memoryGroupId": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Memorygroupid"
-          },
-          "pluginNames": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/PluginName"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pluginnames"
-          },
-          "memoryTypes": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/MemoryType"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Memorytypes"
-          },
-          "excludeCurrentChapter": {
+          "allowedAsFirstStage": {
             "type": "boolean",
-            "title": "Excludecurrentchapter",
-            "default": true
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "model"
-        ],
-        "title": "TranslateWithMemoriesConfig"
-      },
-      "TranslateWithMemoriesStageCreate": {
-        "properties": {
-          "action": {
-            "type": "string",
-            "const": "translate_with_memories",
-            "title": "Action"
+            "title": "Allowedasfirststage"
           },
-          "config": {
-            "$ref": "#/components/schemas/TranslateWithMemoriesConfig"
+          "configSchema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Configschema"
           }
         },
         "type": "object",
         "required": [
-          "action",
-          "config"
+          "name",
+          "label",
+          "inputTypes",
+          "outputTypes",
+          "allowedAsFirstStage",
+          "configSchema"
         ],
-        "title": "TranslateWithMemoriesStageCreate"
+        "title": "TranslationActionMetadata"
+      },
+      "TranslationActionsRead": {
+        "properties": {
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationActionMetadata"
+            },
+            "type": "array",
+            "title": "Actions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "actions"
+        ],
+        "title": "TranslationActionsRead"
       },
       "TranslationBatchRead": {
         "properties": {
@@ -11670,7 +11464,7 @@
         ],
         "title": "TranslationJobConfig"
       },
-      "TranslationJobCreate": {
+      "TranslationJobCreateRequest": {
         "properties": {
           "novelId": {
             "type": "string",
@@ -11682,7 +11476,7 @@
           },
           "stages": {
             "items": {
-              "$ref": "#/components/schemas/TranslationStageCreate"
+              "$ref": "#/components/schemas/TranslationStageRequest"
             },
             "type": "array",
             "maxItems": 5,
@@ -11696,7 +11490,8 @@
           "config",
           "stages"
         ],
-        "title": "TranslationJobCreate"
+        "title": "TranslationJobCreateRequest",
+        "description": "Public envelope; action-specific validation happens before job creation."
       },
       "TranslationJobCreated": {
         "properties": {
@@ -11762,31 +11557,6 @@
         ],
         "title": "TranslationJobRead"
       },
-      "TranslationStageCreate": {
-        "oneOf": [
-          {
-            "$ref": "#/components/schemas/PruneMemoriesStageCreate"
-          },
-          {
-            "$ref": "#/components/schemas/CombineChapterStageCreate"
-          },
-          {
-            "$ref": "#/components/schemas/TranslateWithMemoriesStageCreate"
-          },
-          {
-            "$ref": "#/components/schemas/TranslateStageCreate"
-          }
-        ],
-        "discriminator": {
-          "propertyName": "action",
-          "mapping": {
-            "combine_chapter": "#/components/schemas/CombineChapterStageCreate",
-            "prune_memories": "#/components/schemas/PruneMemoriesStageCreate",
-            "translate": "#/components/schemas/TranslateStageCreate",
-            "translate_with_memories": "#/components/schemas/TranslateWithMemoriesStageCreate"
-          }
-        }
-      },
       "TranslationStageRead": {
         "properties": {
           "stageId": {
@@ -11816,6 +11586,24 @@
           "config"
         ],
         "title": "TranslationStageRead"
+      },
+      "TranslationStageRequest": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "TranslationStageRequest"
       },
       "TranslationTaskRead": {
         "properties": {
@@ -12558,20 +12346,6 @@
           "glossary"
         ],
         "title": "WorkflowUseCase"
-      },
-      "src__memory__agent__types__ModelName": {
-        "type": "string",
-        "enum": [
-          "deepseek:deepseek-v4-flash-none",
-          "deepseek:deepseek-v4-flash-low"
-        ]
-      },
-      "src__translations__types__ModelName": {
-        "type": "string",
-        "enum": [
-          "qwen-plus",
-          "qwen-flash"
-        ]
       }
     },
     "securitySchemes": {

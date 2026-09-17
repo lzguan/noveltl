@@ -5,9 +5,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { JobParamsToolsets } from './jobParamsToolsets';
-import type { ModelNameOutput } from './modelNameOutput';
+import type { ModelName } from './modelName';
 
 export interface JobParams {
-  modelName: ModelNameOutput;
+  modelName: ModelName;
   toolsets: JobParamsToolsets;
 }

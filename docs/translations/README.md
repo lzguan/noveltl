@@ -81,12 +81,35 @@ only at exhaustion. Source errors propagate to the caller.
 
 ## Job control API
 
+`GET /translation-jobs/actions` requires authentication and returns an `actions`
+list for the pipeline builder. Each entry includes `name`, `label`, `inputTypes`,
+`outputTypes`, `allowedAsFirstStage`, and `configSchema`. Input and output lists
+come from the action signatures; configuration JSON Schemas come from the actual
+stage config types in validation mode, with camelCase property names. Any `$defs`
+and local references remain within the returned standalone schema.
+
+Compatibility requires the next action's inputs to be a subset of the preceding
+outputs. First-stage eligibility is a separate restriction: `combine_chapter`
+requires a predecessor. Memory-consuming first stages also require a selected
+memory group, as enforced by job creation. The metadata does not encode this
+cross-field rule in the config schema. `combine_chapter` currently accepts an
+arbitrary config object, so its schema exposes that existing behavior.
+
 Translation jobs are exposed under `/translation-jobs`. Creation (`POST`) and
 job progress (`GET /{jobId}`) require edit access to the source novel, as do all
 controls. Progress includes stages, batches, task states, errors, and lease expiry;
 claim tokens remain internal.
 
 Job controls are `POST /{jobId}/start`, `/resume-all`, `/cancel-all`, and `/retry-all`.
+The public creation request uses stages shaped as `{action: string, config: object}`
+so clients can build forms from action metadata without a generated action union.
+The route validates this envelope into the internal `TranslationJobCreate` model
+before calling the creation service. Action-specific defaults, config validation,
+and pipeline compatibility remain enforced; validation errors return HTTP 422.
+The top-level novel ID, chapter range, batch size, and one-to-five stage limit
+remain typed in OpenAPI. An omitted stage config defaults to an empty object,
+which still has to pass that action's config validation.
+
 Individual batch controls are `POST /{jobId}/batches/{batchId}/cancel` and `/retry`.
 Start queues first-stage READY tasks. Resume locates the first unfinished task in
 each nonfailed batch, skipping live leases. Retry skips live leases and completed

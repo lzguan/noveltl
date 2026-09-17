@@ -471,20 +471,6 @@ components:
           type: object
       title: CluenerParams
       type: object
-    CombineChapterStageCreate:
-      properties:
-        action:
-          const: combine_chapter
-          title: Action
-          type: string
-        config:
-          additionalProperties: true
-          title: Config
-          type: object
-      required:
-      - action
-      title: CombineChapterStageCreate
-      type: object
     CreateAutoLabels:
       description: "Pydantic schema for creating a new autolabel run.\n\nAttributes:\n\
         \    novel_id: UUID of novel to create auto labels for.\n    params: Parameters\
@@ -885,6 +871,11 @@ components:
       - workflow
       - agent
       title: Creator
+      type: string
+    DataName:
+      enum:
+      - chapter
+      - memories
       type: string
     DataObj:
       additionalProperties: false
@@ -1521,7 +1512,7 @@ components:
     JobParams:
       properties:
         modelName:
-          $ref: '#/components/schemas/ModelName-Output'
+          $ref: '#/components/schemas/ModelName'
         toolsets:
           additionalProperties:
             additionalProperties: true
@@ -1945,7 +1936,7 @@ components:
           title: Label
           type: string
         name:
-          $ref: '#/components/schemas/ModelName-Output'
+          $ref: '#/components/schemas/ModelName'
       required:
       - name
       - label
@@ -2180,7 +2171,7 @@ components:
       - summary
       title: MemoryType
       type: string
-    ModelName-Output:
+    ModelName:
       enum:
       - deepseek:deepseek-v4-flash-none
       - deepseek:deepseek-v4-flash-low
@@ -2483,68 +2474,6 @@ components:
       - glossary
       - continuity
       type: string
-    PruneMemoriesConfig:
-      additionalProperties: false
-      properties:
-        excludeCurrentChapter:
-          default: true
-          title: Excludecurrentchapter
-          type: boolean
-        instructions:
-          default: ''
-          title: Instructions
-          type: string
-        maxOutputTokens:
-          anyOf:
-          - exclusiveMinimum: 0.0
-            type: integer
-          - type: 'null'
-          title: Maxoutputtokens
-        memoryGroupId:
-          anyOf:
-          - format: uuid
-            type: string
-          - type: 'null'
-          title: Memorygroupid
-        memoryTypes:
-          anyOf:
-          - items:
-              $ref: '#/components/schemas/MemoryType'
-            type: array
-          - type: 'null'
-          title: Memorytypes
-        model:
-          $ref: '#/components/schemas/src__translations__types__ModelName'
-        pluginNames:
-          anyOf:
-          - items:
-              $ref: '#/components/schemas/PluginName'
-            type: array
-          - type: 'null'
-          title: Pluginnames
-        temperature:
-          anyOf:
-          - minimum: 0.0
-            type: number
-          - type: 'null'
-          title: Temperature
-      required:
-      - model
-      title: PruneMemoriesConfig
-      type: object
-    PruneMemoriesStageCreate:
-      properties:
-        action:
-          const: prune_memories
-          title: Action
-          type: string
-        config:
-          $ref: '#/components/schemas/PruneMemoriesConfig'
-      required:
-      - action
-      - config
-      title: PruneMemoriesStageCreate
-      type: object
     PythonAnnotationRequest:
       additionalProperties: false
       properties:
@@ -3014,115 +2943,50 @@ components:
       - memory
       - guidance
       type: string
-    TranslateConfig:
-      additionalProperties: false
+    TranslationActionMetadata:
       properties:
-        instructions:
-          default: ''
-          title: Instructions
-          type: string
-        maxOutputTokens:
-          anyOf:
-          - exclusiveMinimum: 0.0
-            type: integer
-          - type: 'null'
-          title: Maxoutputtokens
-        model:
-          $ref: '#/components/schemas/src__translations__types__ModelName'
-        targetLanguage:
-          default: English
-          minLength: 1
-          title: Targetlanguage
-          type: string
-        temperature:
-          anyOf:
-          - minimum: 0.0
-            type: number
-          - type: 'null'
-          title: Temperature
-      required:
-      - model
-      title: TranslateConfig
-      type: object
-    TranslateStageCreate:
-      properties:
-        action:
-          const: translate
-          title: Action
-          type: string
-        config:
-          $ref: '#/components/schemas/TranslateConfig'
-      required:
-      - action
-      - config
-      title: TranslateStageCreate
-      type: object
-    TranslateWithMemoriesConfig:
-      additionalProperties: false
-      properties:
-        excludeCurrentChapter:
-          default: true
-          title: Excludecurrentchapter
+        allowedAsFirstStage:
+          title: Allowedasfirststage
           type: boolean
-        instructions:
-          default: ''
-          title: Instructions
+        configSchema:
+          additionalProperties: true
+          title: Configschema
+          type: object
+        inputTypes:
+          items:
+            $ref: '#/components/schemas/DataName'
+          title: Inputtypes
+          type: array
+        label:
+          title: Label
           type: string
-        maxOutputTokens:
-          anyOf:
-          - exclusiveMinimum: 0.0
-            type: integer
-          - type: 'null'
-          title: Maxoutputtokens
-        memoryGroupId:
-          anyOf:
-          - format: uuid
-            type: string
-          - type: 'null'
-          title: Memorygroupid
-        memoryTypes:
-          anyOf:
-          - items:
-              $ref: '#/components/schemas/MemoryType'
-            type: array
-          - type: 'null'
-          title: Memorytypes
-        model:
-          $ref: '#/components/schemas/src__translations__types__ModelName'
-        pluginNames:
-          anyOf:
-          - items:
-              $ref: '#/components/schemas/PluginName'
-            type: array
-          - type: 'null'
-          title: Pluginnames
-        targetLanguage:
-          default: English
-          minLength: 1
-          title: Targetlanguage
+        name:
+          title: Name
           type: string
-        temperature:
-          anyOf:
-          - minimum: 0.0
-            type: number
-          - type: 'null'
-          title: Temperature
+        outputTypes:
+          items:
+            $ref: '#/components/schemas/DataName'
+          title: Outputtypes
+          type: array
       required:
-      - model
-      title: TranslateWithMemoriesConfig
+      - name
+      - label
+      - inputTypes
+      - outputTypes
+      - allowedAsFirstStage
+      - configSchema
+      title: TranslationActionMetadata
       type: object
-    TranslateWithMemoriesStageCreate:
+    TranslationActionsRead:
       properties:
-        action:
-          const: translate_with_memories
-          title: Action
-          type: string
-        config:
-          $ref: '#/components/schemas/TranslateWithMemoriesConfig'
+        actions:
+          items:
+            $ref: '#/components/schemas/TranslationActionMetadata'
+          title: Actions
+          type: array
       required:
-      - action
-      - config
-      title: TranslateWithMemoriesStageCreate
+      - actions
+      title: TranslationActionsRead
       type: object
     TranslationBatchRead:
       properties:
@@ -3189,7 +3053,9 @@ components:
       - batchSize
       title: TranslationJobConfig
       type: object
-    TranslationJobCreate:
+    TranslationJobCreateRequest:
+      description: Public envelope; action-specific validation happens before job
+        creation.
       properties:
         config:
           $ref: '#/components/schemas/TranslationJobConfig'
@@ -3199,7 +3065,7 @@ components:
           type: string
         stages:
           items:
-            $ref: '#/components/schemas/TranslationStageCreate'
+            $ref: '#/components/schemas/TranslationStageRequest'
           maxItems: 5
           minItems: 1
           title: Stages
@@ -3208,7 +3074,7 @@ components:
       - novelId
       - config
       - stages
-      title: TranslationJobCreate
+      title: TranslationJobCreateRequest
       type: object
     TranslationJobCreated:
       properties:
@@ -3258,19 +3124,6 @@ components:
       - tasks
       title: TranslationJobRead
       type: object
-    TranslationStageCreate:
-      discriminator:
-        mapping:
-          combine_chapter: '#/components/schemas/CombineChapterStageCreate'
-          prune_memories: '#/components/schemas/PruneMemoriesStageCreate'
-          translate: '#/components/schemas/TranslateStageCreate'
-          translate_with_memories: '#/components/schemas/TranslateWithMemoriesStageCreate'
-        propertyName: action
-      oneOf:
-      - $ref: '#/components/schemas/PruneMemoriesStageCreate'
-      - $ref: '#/components/schemas/CombineChapterStageCreate'
-      - $ref: '#/components/schemas/TranslateWithMemoriesStageCreate'
-      - $ref: '#/components/schemas/TranslateStageCreate'
     TranslationStageRead:
       properties:
         action:
@@ -3293,6 +3146,19 @@ components:
       - action
       - config
       title: TranslationStageRead
+      type: object
+    TranslationStageRequest:
+      properties:
+        action:
+          title: Action
+          type: string
+        config:
+          additionalProperties: true
+          title: Config
+          type: object
+      required:
+      - action
+      title: TranslationStageRequest
       type: object
     TranslationTaskRead:
       properties:
@@ -3796,16 +3662,6 @@ components:
       - advanced
       - glossary
       title: WorkflowUseCase
-      type: string
-    src__memory__agent__types__ModelName:
-      enum:
-      - deepseek:deepseek-v4-flash-none
-      - deepseek:deepseek-v4-flash-low
-      type: string
-    src__translations__types__ModelName:
-      enum:
-      - qwen-plus
-      - qwen-flash
       type: string
   securitySchemes:
     OAuth2PasswordBearer:
@@ -8000,7 +7856,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TranslationJobCreate'
+              $ref: '#/components/schemas/TranslationJobCreateRequest'
         required: true
       responses:
         '201':
@@ -8018,6 +7874,22 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Create
+      tags:
+      - translations
+  /translation-jobs/actions:
+    get:
+      description: Return action compatibility and standalone configuration JSON Schemas.
+      operationId: list_actions_translation_jobs_actions_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationActionsRead'
+          description: Successful Response
+      security:
+      - OAuth2PasswordBearer: []
+      summary: List Actions
       tags:
       - translations
   /translation-jobs/{jobId}:

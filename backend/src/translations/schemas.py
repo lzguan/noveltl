@@ -7,7 +7,20 @@ from pydantic import ConfigDict, Field, model_validator
 
 from src.memory.types import MemoryType, PluginName
 from src.schemas import Model
-from src.translations.types import ACTIONS, ModelName, TranslationTaskStatus
+from src.translations.types import ACTIONS, DataName, ModelName, TranslationTaskStatus
+
+
+class TranslationActionMetadata(Model):
+    name: str
+    label: str
+    input_types: list[DataName]
+    output_types: list[DataName]
+    allowed_as_first_stage: bool
+    config_schema: dict[str, Any]
+
+
+class TranslationActionsRead(Model):
+    actions: list[TranslationActionMetadata]
 
 
 class TranslationStageCreateBase(Model):
@@ -85,7 +98,22 @@ class TranslationJobConfig(Model):
         return self
 
 
+class TranslationStageRequest(Model):
+    action: str
+    config: dict[str, Any] = Field(default_factory=dict)
+
+
+class TranslationJobCreateRequest(Model):
+    """Public envelope; action-specific validation happens before job creation."""
+
+    novel_id: uuid.UUID
+    config: TranslationJobConfig
+    stages: list[TranslationStageRequest] = Field(min_length=1, max_length=5)
+
+
 class TranslationJobCreate(Model):
+    """Validated internal request used by job creation and persistence."""
+
     novel_id: uuid.UUID
     config: TranslationJobConfig
     stages: list[TranslationStageCreate] = Field(min_length=1, max_length=5)

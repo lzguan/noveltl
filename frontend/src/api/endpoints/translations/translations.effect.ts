@@ -20,27 +20,6 @@ export const createTranslationJobsPostBodyConfigStartChapterNumOneMin = 0;
 
 export const createTranslationJobsPostBodyStagesMax = 5;
 
-export const createTranslationJobsPostBodyStagesItemOneConfigExcludeCurrentChapterDefault = true;
-export const createTranslationJobsPostBodyStagesItemOneConfigInstructionsDefault = '';
-export const createTranslationJobsPostBodyStagesItemOneConfigMaxOutputTokensOneExclusiveMin = 0;
-
-export const createTranslationJobsPostBodyStagesItemOneConfigTemperatureOneMin = 0;
-
-export const createTranslationJobsPostBodyStagesItemThreeConfigExcludeCurrentChapterDefault = true;
-export const createTranslationJobsPostBodyStagesItemThreeConfigInstructionsDefault = '';
-export const createTranslationJobsPostBodyStagesItemThreeConfigMaxOutputTokensOneExclusiveMin = 0;
-
-export const createTranslationJobsPostBodyStagesItemThreeConfigTargetLanguageDefault = 'English';
-
-export const createTranslationJobsPostBodyStagesItemThreeConfigTemperatureOneMin = 0;
-
-export const createTranslationJobsPostBodyStagesItemFourConfigInstructionsDefault = '';
-export const createTranslationJobsPostBodyStagesItemFourConfigMaxOutputTokensOneExclusiveMin = 0;
-
-export const createTranslationJobsPostBodyStagesItemFourConfigTargetLanguageDefault = 'English';
-
-export const createTranslationJobsPostBodyStagesItemFourConfigTemperatureOneMin = 0;
-
 
 
 export const CreateTranslationJobsPostBody = S.Struct({
@@ -50,45 +29,11 @@ export const CreateTranslationJobsPostBody = S.Struct({
   "startChapterNum": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(createTranslationJobsPostBodyConfigStartChapterNumOneMin)), S.Null))
 }),
   "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "stages": S.Array(S.Union(S.Struct({
-  "action": S.Literal('prune_memories'),
-  "config": S.Struct({
-  "excludeCurrentChapter": S.optionalWith(S.Boolean, { default: () => createTranslationJobsPostBodyStagesItemOneConfigExcludeCurrentChapterDefault }),
-  "instructions": S.optionalWith(S.String, { default: () => createTranslationJobsPostBodyStagesItemOneConfigInstructionsDefault }),
-  "maxOutputTokens": S.optional(S.Union(S.Number.pipe(S.greaterThan(createTranslationJobsPostBodyStagesItemOneConfigMaxOutputTokensOneExclusiveMin)), S.Null)),
-  "memoryGroupId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null)),
-  "model": S.Literal('qwen-plus', 'qwen-flash'),
-  "pluginNames": S.optional(S.Union(S.Array(S.Literal('glossary', 'continuity')), S.Null)),
-  "temperature": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(createTranslationJobsPostBodyStagesItemOneConfigTemperatureOneMin)), S.Null))
-})
-}), S.Struct({
-  "action": S.Literal('combine_chapter'),
+  "stages": S.Array(S.Struct({
+  "action": S.String,
   "config": S.optional(S.Record({ key: S.String, value: S.Unknown }))
-}), S.Struct({
-  "action": S.Literal('translate_with_memories'),
-  "config": S.Struct({
-  "excludeCurrentChapter": S.optionalWith(S.Boolean, { default: () => createTranslationJobsPostBodyStagesItemThreeConfigExcludeCurrentChapterDefault }),
-  "instructions": S.optionalWith(S.String, { default: () => createTranslationJobsPostBodyStagesItemThreeConfigInstructionsDefault }),
-  "maxOutputTokens": S.optional(S.Union(S.Number.pipe(S.greaterThan(createTranslationJobsPostBodyStagesItemThreeConfigMaxOutputTokensOneExclusiveMin)), S.Null)),
-  "memoryGroupId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null)),
-  "model": S.Literal('qwen-plus', 'qwen-flash'),
-  "pluginNames": S.optional(S.Union(S.Array(S.Literal('glossary', 'continuity')), S.Null)),
-  "targetLanguage": S.optionalWith(S.String.pipe(S.minLength(1)), { default: () => createTranslationJobsPostBodyStagesItemThreeConfigTargetLanguageDefault }),
-  "temperature": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(createTranslationJobsPostBodyStagesItemThreeConfigTemperatureOneMin)), S.Null))
-})
-}), S.Struct({
-  "action": S.Literal('translate'),
-  "config": S.Struct({
-  "instructions": S.optionalWith(S.String, { default: () => createTranslationJobsPostBodyStagesItemFourConfigInstructionsDefault }),
-  "maxOutputTokens": S.optional(S.Union(S.Number.pipe(S.greaterThan(createTranslationJobsPostBodyStagesItemFourConfigMaxOutputTokensOneExclusiveMin)), S.Null)),
-  "model": S.Literal('qwen-plus', 'qwen-flash'),
-  "targetLanguage": S.optionalWith(S.String.pipe(S.minLength(1)), { default: () => createTranslationJobsPostBodyStagesItemFourConfigTargetLanguageDefault }),
-  "temperature": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(createTranslationJobsPostBodyStagesItemFourConfigTemperatureOneMin)), S.Null))
-})
-}))).pipe(S.minItems(1), S.maxItems(createTranslationJobsPostBodyStagesMax))
-})
+})).pipe(S.minItems(1), S.maxItems(createTranslationJobsPostBodyStagesMax))
+}).annotations({ description: 'Public envelope; action-specific validation happens before job creation.' })
 
 export const CreateTranslationJobsPost201Response = S.Struct({
   "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
@@ -104,6 +49,21 @@ export const CreateTranslationJobsPost422Response = S.Struct({
   "msg": S.String,
   "type": S.String
 })))
+})
+
+/**
+ * Return action compatibility and standalone configuration JSON Schemas.
+ * @summary List Actions
+ */
+export const ListActionsTranslationJobsActionsGet200Response = S.Struct({
+  "actions": S.Array(S.Struct({
+  "allowedAsFirstStage": S.Boolean,
+  "configSchema": S.Record({ key: S.String, value: S.Unknown }),
+  "inputTypes": S.Array(S.Literal('chapter', 'memories')),
+  "label": S.String,
+  "name": S.String,
+  "outputTypes": S.Array(S.Literal('chapter', 'memories'))
+}))
 })
 
 /**

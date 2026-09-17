@@ -2,15 +2,20 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi.exceptions import RequestValidationError
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
 from src.database import get_db
+from src.translations.metadata import read_action_metadata
 from src.translations.schemas import (
+    TranslationActionsRead,
     TranslationControlResult,
     TranslationJobCreate,
     TranslationJobCreated,
+    TranslationJobCreateRequest,
     TranslationJobRead,
 )
 from src.translations.service import (
@@ -29,13 +34,24 @@ type BatchId = Annotated[UUID, Path(alias="batchId")]
 
 
 @router.post("", response_model=TranslationJobCreated, status_code=201)
-def create(request: TranslationJobCreate, db: DB, current_user: CurrentUser) -> TranslationJobCreated:
+def create(request: TranslationJobCreateRequest, db: DB, current_user: CurrentUser) -> TranslationJobCreated:
     try:
-        return TranslationJobCreated(job_id=create_translation_job(db, current_user, request))
+        validated = TranslationJobCreate.model_validate(request.model_dump())
+    except ValidationError as error:
+        errors = [{**item, "loc": ("body", *item["loc"])} for item in error.errors()]
+        raise RequestValidationError(errors, body=request.model_dump()) from error
+    try:
+        return TranslationJobCreated(job_id=create_translation_job(db, current_user, validated))
     except TranslationNotFoundError as error:
         raise HTTPException(404, str(error)) from error
     except ValueError as error:
         raise HTTPException(400, str(error)) from error
+
+
+@router.get("/actions", response_model=TranslationActionsRead)
+def list_actions(current_user: CurrentUser) -> TranslationActionsRead:
+    """Return action compatibility and standalone configuration JSON Schemas."""
+    return read_action_metadata()
 
 
 @router.get("/{jobId}", response_model=TranslationJobRead)

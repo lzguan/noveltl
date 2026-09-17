@@ -6,8 +6,9 @@
  */
 import type {
   HTTPValidationError,
+  TranslationActionsRead,
   TranslationControlResult,
-  TranslationJobCreate,
+  TranslationJobCreateRequest,
   TranslationJobCreated,
   TranslationJobRead
 } from '../../models';
@@ -44,7 +45,7 @@ export const getCreateTranslationJobsPostUrl = () => {
 /**
  * @summary Create
  */
-export const createTranslationJobsPost = async (translationJobCreate: TranslationJobCreate, options?: Parameters<typeof customFetch>[1]): Promise<createTranslationJobsPostResponse> => {
+export const createTranslationJobsPost = async (translationJobCreateRequest: TranslationJobCreateRequest, options?: Parameters<typeof customFetch>[1]): Promise<createTranslationJobsPostResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -65,7 +66,43 @@ return customFetch<createTranslationJobsPostResponse>(getCreateTranslationJobsPo
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(translationJobCreate)
+    body: JSON.stringify(translationJobCreateRequest)
+  }
+);}
+
+
+export type listActionsTranslationJobsActionsGetResponse200 = {
+  data: TranslationActionsRead
+  status: 200
+}
+
+export type listActionsTranslationJobsActionsGetResponseSuccess = (listActionsTranslationJobsActionsGetResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listActionsTranslationJobsActionsGetResponse = (listActionsTranslationJobsActionsGetResponseSuccess)
+
+export const getListActionsTranslationJobsActionsGetUrl = () => {
+
+
+
+
+  return `/api/translation-jobs/actions`
+}
+
+/**
+ * Return action compatibility and standalone configuration JSON Schemas.
+ * @summary List Actions
+ */
+export const listActionsTranslationJobsActionsGet = async ( options?: Parameters<typeof customFetch>[1]): Promise<listActionsTranslationJobsActionsGetResponse> => {
+
+  return customFetch<listActionsTranslationJobsActionsGetResponse>(getListActionsTranslationJobsActionsGetUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 

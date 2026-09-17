@@ -237,7 +237,8 @@ in the first stage's configuration form.
 These are dependencies for implementation, not prerequisites for a mocked UI
 prototype:
 
-- Expose action metadata alongside the existing typed configuration schemas.
+- Connect the prototype to `GET /translation-jobs/actions`, which now exposes
+  action metadata and configuration schemas generated from the existing types.
 - Add a novel-scoped, paginated job-list endpoint with aggregated progress counts.
 - Provide batch details on demand with pagination. The current job-detail endpoint
   already returns stages, batches, task statuses, and errors, but returns them all.

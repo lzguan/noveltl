@@ -9,6 +9,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { CreatedTranslationJob } from "./CreatedTranslationJob";
 import { CreateTranslationDialog } from "./CreateTranslationDialog";
 import { controls, demoJobs, eligible } from "./prototype";
 import type { Batch, Control, Job } from "./prototype";
@@ -203,7 +204,14 @@ function JobCard({
 		</Dialog>
 	);
 }
-export function TranslationsPanel() {
+export function TranslationsPanel({
+	novelId,
+	chapterNumbers,
+}: {
+	novelId: string;
+	chapterNumbers: number[];
+}) {
+	const [createdIds, setCreatedIds] = useState<string[]>([]);
 	const [jobs, setJobs] = useState(demoJobs);
 	const [creating, setCreating] = useState(false);
 	const [notice, setNotice] = useState("");
@@ -272,10 +280,15 @@ export function TranslationsPanel() {
 					+ Create job
 				</Button>
 			</div>
+			{createdIds.map((jobId) => (
+				<CreatedTranslationJob key={jobId} jobId={jobId} />
+			))}
+			<p className="text-xs text-muted-foreground">
+				New jobs are saved to the server. Previously created jobs will be listed once job
+				history is connected.
+			</p>
 			<details className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-				<summary className="cursor-pointer">
-					Prototype · sample data, no jobs submitted
-				</summary>
+				<summary className="cursor-pointer">Sample viewer · simulated controls</summary>
 				<div className="mt-3 flex flex-wrap gap-2">
 					<Button size="sm" variant="outline" onClick={advance}>
 						Advance running stages
@@ -317,7 +330,7 @@ export function TranslationsPanel() {
 			</p>
 			{jobs.length === 0 && (
 				<div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-					No translation jobs yet. Create a job to build your first pipeline.
+					No sample jobs. Use Create job to create a real translation job.
 				</div>
 			)}
 			{jobs.slice(page * 5, (page + 1) * 5).map((job) => (
@@ -353,12 +366,13 @@ export function TranslationsPanel() {
 			)}
 			{creating && (
 				<CreateTranslationDialog
+					novelId={novelId}
+					chapterNumbers={chapterNumbers}
 					onClose={() => setCreating(false)}
-					onCreate={(job) => {
-						setJobs((current) => [job, ...current]);
-						setPage(0);
+					onCreate={(jobId) => {
+						setCreatedIds((current) => [jobId, ...current]);
 						setCreating(false);
-						setNotice("Job created. Select Start when ready.");
+						setNotice("Job saved. Live controls are not connected yet.");
 					}}
 				/>
 			)}

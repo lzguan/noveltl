@@ -93,7 +93,7 @@ outputs. First-stage eligibility is a separate restriction: `combine_chapter`
 requires a predecessor. Memory-consuming first stages also require a selected
 memory group, as enforced by job creation. The metadata does not encode this
 cross-field rule in the config schema. `combine_chapter` currently accepts an
-arbitrary config object, so its schema exposes that existing behavior.
+empty config object and rejects extra properties, so its form has no configurable fields.
 
 Translation jobs are exposed under `/translation-jobs`. Creation (`POST`) and
 job progress (`GET /{jobId}`) require edit access to the source novel, as do all

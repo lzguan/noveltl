@@ -37,6 +37,13 @@ def test_action_metadata_supports_pipeline_builder() -> None:
     assert properties["targetLanguage"]["default"] == "English"
     assert properties["targetLanguage"]["minLength"] == 1
     assert properties["maxOutputTokens"]["anyOf"][0]["exclusiveMinimum"] == 0
+    assert properties["maxOutputTokens"]["title"] == "Max output tokens"
+    assert properties["maxOutputTokens"]["x-ui"] == {
+        "control": "number",
+        "showAfter": "model",
+        "placeholder": "Provider default",
+    }
+    assert properties["instructions"]["x-ui"] == {"control": "textarea", "showAfter": "model"}
     model_ref = properties["model"]["$ref"]
     assert model_ref.startswith("#/$defs/")
     for model in schema["$defs"][model_ref.removeprefix("#/$defs/")]["enum"]:
@@ -52,9 +59,23 @@ def test_action_metadata_supports_pipeline_builder() -> None:
 
     for name in ("translate_with_memories", "prune_memories"):
         props = actions[name]["configSchema"]["properties"]
+        assert props["memoryGroupId"]["x-ui"] == {
+            "control": "resource-picker",
+            "resource": "memory-group",
+            "scope": "current-novel",
+            "placement": "job-inputs",
+            "stageScope": "first",
+            "nullLabel": "None",
+        }
+        for field in ("pluginNames", "memoryTypes"):
+            assert props[field]["x-ui"]["control"] == "filter-checklist"
+            assert props[field]["x-ui"]["stageScope"] == "first"
         assert props["excludeCurrentChapter"]["default"] is True
         assert props["memoryGroupId"]["anyOf"][0]["format"] == "uuid"
-    assert actions["combine_chapter"]["configSchema"] == {"additionalProperties": True, "type": "object"}
+    combine_schema = actions["combine_chapter"]["configSchema"]
+    assert combine_schema["additionalProperties"] is False
+    assert combine_schema["properties"] == {}
+    assert combine_schema["type"] == "object"
 
 
 def test_action_metadata_requires_authentication() -> None:

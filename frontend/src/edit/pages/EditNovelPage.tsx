@@ -405,7 +405,15 @@ export function EditNovelPage() {
 										value: "translations",
 										label: "Translations",
 										keepMounted: true,
-										content: <TranslationsPanel key={novel.novel.novelId} />,
+										content: (
+											<TranslationsPanel
+												key={novel.novel.novelId}
+												novelId={novel.novel.novelId}
+												chapterNumbers={chapterState.chapterList.map(
+													(chapter) => chapter.chapterNum,
+												)}
+											/>
+										),
 									},
 								]}
 							/>

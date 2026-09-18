@@ -4,17 +4,22 @@ This is a proposed layout for discussion before frontend integration. The
 wireframes describe information hierarchy and interactions rather than final
 spacing or styling. Backend behavior is documented in [README.md](README.md).
 
-## Trying the prototype
+## Current implementation
 
-The edit page now includes a Translations tab in the right sidebar. It uses local
-sample jobs and memory groups; creating jobs and using controls makes no backend
-requests. State lasts while that novel's editor remains mounted.
+The edit page includes a Translations tab in the right sidebar. Creation is live:
+the dialog loads action metadata, uses the novel's memory groups, and submits a
+real job. Chapter bounds default to the current novel's chapter range; the UI's
+inclusive end is converted to an exclusive end in the request. Schema validation
+and server validation errors preserve the draft for correction.
 
-Open the “Prototype · sample data, no jobs submitted” controls to advance running
-stages manually, reset sample jobs, show an empty list, or simulate a dispatch
-failure. Create job opens the stage builder with schema-driven configuration.
-Conversion remains disabled until backend integration. Chapter ranges currently
-use an inclusive end in the prototype.
+Created jobs appear separately with read-only server details and a reload button.
+Creation does not start translation. Their IDs stay in the current editor session
+even if loading details fails, so reloading does not resubmit creation. Listing
+previous jobs, live controls, and conversion remain to be connected.
+
+The sample viewer still uses local jobs. Open “Sample viewer · simulated controls”
+to advance those jobs, reset them, clear the samples, or simulate a dispatch failure.
+These controls never act on real created jobs.
 
 ## Placement
 
@@ -232,13 +237,50 @@ and configuration schemas. Reuse the project's schema-driven form approach.
 Memory-group selection at the top should not become a second conflicting field
 in the first stage's configuration form.
 
+### Schema rendering conventions
+
+The metadata endpoint's JSON Schema is the validation contract: properties,
+`$defs`/`$ref`, enums, defaults, nullability, and numeric constraints remain intact.
+Presentation is declared on Pydantic fields using validated `UIHints` in
+`Field(json_schema_extra=UIHints(...).schema_extra())`. The metadata endpoint
+passes these annotations through as `x-ui`; standard `title` and `description`
+provide labels and help text. Unknown hint keys are rejected when constructing
+`UIHints`. No extra endpoint or generated action-specific request union is needed.
+
+| Annotation | Values / meaning |
+| --- | --- |
+| `control` | `number`, `text`, `textarea`, `select`, `checkbox`, `filter-checklist`, `resource-picker`; omit for ordinary JSON Schema rendering |
+| `resource`, `scope` | `memory-group`, `current-novel`; identifies the frontend resource loader, never a server-provided URL |
+| `placement` | `job-inputs`: render above the stage stack and inject into the annotated configuration property |
+| `stageScope` | `first`: omit from later-stage forms and configuration |
+| `showAfter` | Serialized sibling property name, e.g. `model`; reveal after a non-null, nonempty value is selected |
+| `placeholder` | Input placeholder text |
+| `nullLabel` | Unrestricted filter or absent resource label |
+| `emptyLabel` | Help text explaining an explicit empty filter |
+
+The frontend has a fixed registry of supported controls and resources. The
+memory-group handler uses the current novel's existing provider and adds the
+`memories` input type when selected. New resource kinds require a loader and
+input-type mapping in the frontend; renaming a configuration property does not.
+Unknown presentation hints fall back to ordinary schema rendering.
+
+Numeric/null fields marked `number` become one optional number input. Fields
+marked `filter-checklist` show the schema's enum choices: All submits `null`,
+while an explicit empty selection submits `[]`. The adapter normalizes these
+nullable unions without losing constraints or local references. Dependency
+visibility preserves hidden draft values, and saving waits for the controlling
+selection. Presentation hints do not replace backend request validation.
+
+The backend currently supplies one configuration schema per action, shared by
+both supported models. Model selection does not currently change the allowed
+fields or constraints. Model-specific configuration would need to be expressed
+in the metadata and supported by the renderer before adding differing contracts.
+
 ## Backend integration follow-up
 
-These are dependencies for implementation, not prerequisites for a mocked UI
-prototype:
+Creation is connected to action metadata, memory groups, and the creation endpoint.
+Remaining viewer and conversion work:
 
-- Connect the prototype to `GET /translation-jobs/actions`, which now exposes
-  action metadata and configuration schemas generated from the existing types.
 - Add a novel-scoped, paginated job-list endpoint with aggregated progress counts.
 - Provide batch details on demand with pagination. The current job-detail endpoint
   already returns stages, batches, task statuses, and errors, but returns them all.

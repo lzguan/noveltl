@@ -110,7 +110,17 @@ The top-level novel ID, chapter range, batch size, and one-to-five stage limit
 remain typed in OpenAPI. An omitted stage config defaults to an empty object,
 which still has to pass that action's config validation.
 
-Individual batch controls are `POST /{jobId}/batches/{batchId}/cancel` and `/retry`.
+The viewer uses `GET /translation-jobs?novelId=...&offset=0&limit=5` for a
+novel-scoped job page with SQL-aggregated progress and stage configurations.
+`GET /{jobId}/batches?offset=0&limit=5` returns the job summary, a page of batches
+with their task details, and the server observation time for lease comparisons.
+Both endpoints require novel edit access, return `{items, total, ...}`, and bound
+`limit` to 1–50. They never load individual chapter associations. UUID ordering
+is stable but not chronological; jobs currently have no creation timestamp.
+The existing full-detail endpoint remains available to other consumers.
+
+Individual batch controls are `POST /{jobId}/batches/{batchId}/start`, `/resume`,
+`/cancel`, and `/retry`.
 Start queues first-stage READY tasks. Resume locates the first unfinished task in
 each nonfailed batch, skipping live leases. Retry skips live leases and completed
 batches, clears failures on unfinished tasks, and restores the current step's

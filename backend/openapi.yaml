@@ -2988,6 +2988,56 @@ components:
       - actions
       title: TranslationActionsRead
       type: object
+    TranslationBatchDetail:
+      properties:
+        batchId:
+          format: uuid
+          title: Batchid
+          type: string
+        batchNum:
+          title: Batchnum
+          type: integer
+        initialFileId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Initialfileid
+        tasks:
+          items:
+            $ref: '#/components/schemas/TranslationTaskRead'
+          title: Tasks
+          type: array
+      required:
+      - batchId
+      - batchNum
+      - initialFileId
+      - tasks
+      title: TranslationBatchDetail
+      type: object
+    TranslationBatchPage:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/TranslationBatchDetail'
+          title: Items
+          type: array
+        job:
+          $ref: '#/components/schemas/TranslationJobSummary'
+        observedAt:
+          format: date-time
+          title: Observedat
+          type: string
+        total:
+          title: Total
+          type: integer
+      required:
+      - job
+      - items
+      - total
+      - observedAt
+      title: TranslationBatchPage
+      type: object
     TranslationBatchRead:
       properties:
         batchId:
@@ -3086,6 +3136,21 @@ components:
       - jobId
       title: TranslationJobCreated
       type: object
+    TranslationJobPage:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/TranslationJobSummary'
+          title: Items
+          type: array
+        total:
+          title: Total
+          type: integer
+      required:
+      - items
+      - total
+      title: TranslationJobPage
+      type: object
     TranslationJobRead:
       properties:
         batches:
@@ -3123,6 +3188,74 @@ components:
       - batches
       - tasks
       title: TranslationJobRead
+      type: object
+    TranslationJobSummary:
+      properties:
+        config:
+          additionalProperties: true
+          title: Config
+          type: object
+        jobId:
+          format: uuid
+          title: Jobid
+          type: string
+        progress:
+          $ref: '#/components/schemas/TranslationProgress'
+        stages:
+          items:
+            $ref: '#/components/schemas/TranslationStageRead'
+          title: Stages
+          type: array
+      required:
+      - jobId
+      - config
+      - stages
+      - progress
+      title: TranslationJobSummary
+      type: object
+    TranslationProgress:
+      properties:
+        activeBatches:
+          default: 0
+          title: Activebatches
+          type: integer
+        cancelledBatches:
+          default: 0
+          title: Cancelledbatches
+          type: integer
+        completedBatches:
+          default: 0
+          title: Completedbatches
+          type: integer
+        completedTasks:
+          default: 0
+          title: Completedtasks
+          type: integer
+        failedBatches:
+          default: 0
+          title: Failedbatches
+          type: integer
+        resumableBatches:
+          default: 0
+          title: Resumablebatches
+          type: integer
+        retryableBatches:
+          default: 0
+          title: Retryablebatches
+          type: integer
+        startableBatches:
+          default: 0
+          title: Startablebatches
+          type: integer
+        totalBatches:
+          default: 0
+          title: Totalbatches
+          type: integer
+        totalTasks:
+          default: 0
+          title: Totaltasks
+          type: integer
+      title: TranslationProgress
       type: object
     TranslationStageRead:
       properties:
@@ -7850,6 +7983,51 @@ paths:
           description: Validation Error
       summary: Login For Access Token
   /translation-jobs:
+    get:
+      operationId: list_jobs_translation_jobs_get
+      parameters:
+      - in: query
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      - in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 5
+          maximum: 50
+          minimum: 1
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationJobPage'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: List Jobs
+      tags:
+      - translations
     post:
       operationId: create_translation_jobs_post
       requestBody:
@@ -7921,6 +8099,52 @@ paths:
       summary: Read
       tags:
       - translations
+  /translation-jobs/{jobId}/batches:
+    get:
+      operationId: list_batches_translation_jobs__jobId__batches_get
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          format: uuid
+          title: Jobid
+          type: string
+      - in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 5
+          maximum: 50
+          minimum: 1
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationBatchPage'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: List Batches
+      tags:
+      - translations
   /translation-jobs/{jobId}/batches/{batchId}/cancel:
     post:
       operationId: cancel_translation_jobs__jobId__batches__batchId__cancel_post
@@ -7957,6 +8181,42 @@ paths:
       summary: Cancel
       tags:
       - translations
+  /translation-jobs/{jobId}/batches/{batchId}/resume:
+    post:
+      operationId: resume_batch_translation_jobs__jobId__batches__batchId__resume_post
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          format: uuid
+          title: Jobid
+          type: string
+      - in: path
+        name: batchId
+        required: true
+        schema:
+          format: uuid
+          title: Batchid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationControlResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Resume Batch
+      tags:
+      - translations
   /translation-jobs/{jobId}/batches/{batchId}/retry:
     post:
       operationId: retry_translation_jobs__jobId__batches__batchId__retry_post
@@ -7991,6 +8251,42 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Retry
+      tags:
+      - translations
+  /translation-jobs/{jobId}/batches/{batchId}/start:
+    post:
+      operationId: start_batch_translation_jobs__jobId__batches__batchId__start_post
+      parameters:
+      - in: path
+        name: jobId
+        required: true
+        schema:
+          format: uuid
+          title: Jobid
+          type: string
+      - in: path
+        name: batchId
+        required: true
+        schema:
+          format: uuid
+          title: Batchid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationControlResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Start Batch
       tags:
       - translations
   /translation-jobs/{jobId}/cancel-all:

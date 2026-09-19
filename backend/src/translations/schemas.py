@@ -299,3 +299,39 @@ class TranslationJobRead(Model):
     stages: list[TranslationStageRead]
     batches: list[TranslationBatchRead]
     tasks: list[TranslationTaskRead]
+
+
+class TranslationProgress(Model):
+    total_tasks: int = 0
+    completed_tasks: int = 0
+    total_batches: int = 0
+    completed_batches: int = 0
+    failed_batches: int = 0
+    cancelled_batches: int = 0
+    active_batches: int = 0
+    startable_batches: int = 0
+    resumable_batches: int = 0
+    retryable_batches: int = 0
+
+
+class TranslationJobSummary(Model):
+    job_id: uuid.UUID
+    config: dict[str, Any]
+    stages: list[TranslationStageRead]
+    progress: TranslationProgress
+
+
+class TranslationJobPage(Model):
+    items: list[TranslationJobSummary]
+    total: int
+
+
+class TranslationBatchDetail(TranslationBatchRead):
+    tasks: list[TranslationTaskRead]
+
+
+class TranslationBatchPage(Model):
+    job: TranslationJobSummary
+    items: list[TranslationBatchDetail]
+    total: int
+    observed_at: datetime

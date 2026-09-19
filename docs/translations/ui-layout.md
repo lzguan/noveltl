@@ -12,20 +12,25 @@ real job. Chapter bounds default to the current novel's chapter range; the UI's
 inclusive end is converted to an exclusive end in the request. Schema validation
 and server validation errors preserve the draft for correction.
 
-Created jobs appear separately with read-only server details and a reload button.
-Creation does not start translation. Their IDs stay in the current editor session
-even if loading details fails, so reloading does not resubmit creation. Listing
-previous jobs, live controls, and conversion remain to be connected.
+The viewer lists persisted jobs for the current novel, five per page. Job cards
+show SQL-aggregated task and batch progress; opening the info dialog fetches only
+five batches' task details at a time. Neither read loads chapter associations.
+Reads poll sequentially every five seconds, abort when their page unmounts, and
+retain the last snapshot with an error message if a refresh fails.
 
-The sample viewer still uses local jobs. Open “Sample viewer · simulated controls”
-to advance those jobs, reset them, clear the samples, or simulate a dispatch failure.
-These controls never act on real created jobs.
+Creation does not start translation. A newly created job opens directly in its
+batch dialog, retaining the job ID if reads fail. Start, Resume, Retry and Cancel
+are connected at job and batch scope. Controls wait for their request and then
+refresh progress; partial queue failures show a Resume message. The local sample
+viewer has been removed. Conversion remains future work.
+
+Jobs currently have no creation timestamp, so list pagination uses stable UUID
+ordering rather than claiming chronological history.
 
 ## Placement
 
-Proposed location: a **Translations** tab in the edit page's right sidebar,
-alongside Autolabels, Filters, Memories, and Memory Agent. This location remains
-to be confirmed. The panel is scoped to the novel being edited.
+Location: a **Translations** tab in the edit page's right sidebar,
+alongside Autolabels, Filters, Memories, and Memory Agent. The panel is scoped to the novel being edited.
 
 The panel contains a job list and a button at the top that opens the creation
 dialog. Batch details open in a dialog; creation uses a separate dialog.
@@ -73,8 +78,11 @@ processing while no worker holds a claim.
 Distinguish not started, running, interrupted/resumable, failed, cancelled, and
 complete states. Do not show a spinner merely because unfinished tasks exist.
 Mixed jobs can show counts and both a running indicator and a failure warning.
-Exact aggregate status rules and how to distinguish interruption from queued
-work remain integration decisions.
+A live lease or provider-processing state contributes to the processing count.
+Unclaimed unfinished work is shown as ready or pending/resumable; the database
+cannot reliably distinguish a lost queue message from work still in the queue.
+Failures take precedence over processing for a batch. Cancellation is identified
+by the existing “Cancelled by user” failure marker.
 
 ### Job and batch controls
 
@@ -279,13 +287,7 @@ in the metadata and supported by the renderer before adding differing contracts.
 ## Backend integration follow-up
 
 Creation is connected to action metadata, memory groups, and the creation endpoint.
-Remaining viewer and conversion work:
-
-- Add a novel-scoped, paginated job-list endpoint with aggregated progress counts.
-- Provide batch details on demand with pagination. The current job-detail endpoint
-  already returns stages, batches, task statuses, and errors, but returns them all.
-- Add per-batch Start and Resume routes. Job-level controls and per-batch Cancel
-  and Retry already exist.
+The paginated viewer and job/batch controls are connected. Remaining work:
 - Add conversion of completed chapter outputs into a novel. Decide completeness
   requirements, chapter numbering/title handling, and duplicate-conversion behavior.
   Only pipelines ending in chapter output can support this action.

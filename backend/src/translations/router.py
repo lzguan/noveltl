@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
@@ -12,10 +12,12 @@ from src.database import get_db
 from src.translations.metadata import read_action_metadata
 from src.translations.schemas import (
     TranslationActionsRead,
+    TranslationBatchPage,
     TranslationControlResult,
     TranslationJobCreate,
     TranslationJobCreated,
     TranslationJobCreateRequest,
+    TranslationJobPage,
     TranslationJobRead,
 )
 from src.translations.service import (
@@ -25,6 +27,7 @@ from src.translations.service import (
     create_translation_job,
     read_translation_job,
 )
+from src.translations.viewer import list_translation_jobs, read_translation_batches
 
 router = APIRouter(prefix="/translation-jobs", tags=["translations"])
 type DB = Annotated[Session, Depends(get_db)]
@@ -52,6 +55,34 @@ def create(request: TranslationJobCreateRequest, db: DB, current_user: CurrentUs
 def list_actions(current_user: CurrentUser) -> TranslationActionsRead:
     """Return action compatibility and standalone configuration JSON Schemas."""
     return read_action_metadata()
+
+
+@router.get("", response_model=TranslationJobPage)
+def list_jobs(
+    db: DB,
+    current_user: CurrentUser,
+    novel_id: Annotated[UUID, Query(alias="novelId")],
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=50)] = 5,
+) -> TranslationJobPage:
+    try:
+        return list_translation_jobs(db, current_user, novel_id, offset=offset, limit=limit)
+    except TranslationNotFoundError as error:
+        raise HTTPException(404, str(error)) from error
+
+
+@router.get("/{jobId}/batches", response_model=TranslationBatchPage)
+def list_batches(
+    job_id: JobId,
+    db: DB,
+    current_user: CurrentUser,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=50)] = 5,
+) -> TranslationBatchPage:
+    try:
+        return read_translation_batches(db, current_user, job_id, offset=offset, limit=limit)
+    except TranslationNotFoundError as error:
+        raise HTTPException(404, str(error)) from error
 
 
 @router.get("/{jobId}", response_model=TranslationJobRead)
@@ -101,3 +132,13 @@ def cancel(job_id: JobId, batch_id: BatchId, db: DB, current_user: CurrentUser) 
 @router.post("/{jobId}/batches/{batchId}/retry", response_model=TranslationControlResult)
 def retry(job_id: JobId, batch_id: BatchId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
     return _control(db, current_user, job_id, "retry", batch_id)
+
+
+@router.post("/{jobId}/batches/{batchId}/start", response_model=TranslationControlResult)
+def start_batch(job_id: JobId, batch_id: BatchId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
+    return _control(db, current_user, job_id, "start", batch_id)
+
+
+@router.post("/{jobId}/batches/{batchId}/resume", response_model=TranslationControlResult)
+def resume_batch(job_id: JobId, batch_id: BatchId, db: DB, current_user: CurrentUser) -> TranslationControlResult:
+    return _control(db, current_user, job_id, "resume", batch_id)

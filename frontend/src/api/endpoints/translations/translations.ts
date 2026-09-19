@@ -6,14 +6,67 @@
  */
 import type {
   HTTPValidationError,
+  ListBatchesTranslationJobsJobIdBatchesGetParams,
+  ListJobsTranslationJobsGetParams,
   TranslationActionsRead,
+  TranslationBatchPage,
   TranslationControlResult,
   TranslationJobCreateRequest,
   TranslationJobCreated,
+  TranslationJobPage,
   TranslationJobRead
 } from '../../models';
 
 import { customFetch } from '../../custom-fetch';
+
+export type listJobsTranslationJobsGetResponse200 = {
+  data: TranslationJobPage
+  status: 200
+}
+
+export type listJobsTranslationJobsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listJobsTranslationJobsGetResponseSuccess = (listJobsTranslationJobsGetResponse200) & {
+  headers: Headers;
+};
+export type listJobsTranslationJobsGetResponseError = (listJobsTranslationJobsGetResponse422) & {
+  headers: Headers;
+};
+
+export type listJobsTranslationJobsGetResponse = (listJobsTranslationJobsGetResponseSuccess | listJobsTranslationJobsGetResponseError)
+
+export const getListJobsTranslationJobsGetUrl = (params: ListJobsTranslationJobsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/translation-jobs?${stringifiedParams}` : `/api/translation-jobs`
+}
+
+/**
+ * @summary List Jobs
+ */
+export const listJobsTranslationJobsGet = async (params: ListJobsTranslationJobsGetParams, options?: Parameters<typeof customFetch>[1]): Promise<listJobsTranslationJobsGetResponse> => {
+
+  return customFetch<listJobsTranslationJobsGetResponse>(getListJobsTranslationJobsGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
 
 export type createTranslationJobsPostResponse201 = {
   data: TranslationJobCreated
@@ -149,6 +202,57 @@ export const readTranslationJobsJobIdGet = async (jobId: string, options?: Param
 );}
 
 
+export type listBatchesTranslationJobsJobIdBatchesGetResponse200 = {
+  data: TranslationBatchPage
+  status: 200
+}
+
+export type listBatchesTranslationJobsJobIdBatchesGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listBatchesTranslationJobsJobIdBatchesGetResponseSuccess = (listBatchesTranslationJobsJobIdBatchesGetResponse200) & {
+  headers: Headers;
+};
+export type listBatchesTranslationJobsJobIdBatchesGetResponseError = (listBatchesTranslationJobsJobIdBatchesGetResponse422) & {
+  headers: Headers;
+};
+
+export type listBatchesTranslationJobsJobIdBatchesGetResponse = (listBatchesTranslationJobsJobIdBatchesGetResponseSuccess | listBatchesTranslationJobsJobIdBatchesGetResponseError)
+
+export const getListBatchesTranslationJobsJobIdBatchesGetUrl = (jobId: string,
+    params?: ListBatchesTranslationJobsJobIdBatchesGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/translation-jobs/${jobId}/batches?${stringifiedParams}` : `/api/translation-jobs/${jobId}/batches`
+}
+
+/**
+ * @summary List Batches
+ */
+export const listBatchesTranslationJobsJobIdBatchesGet = async (jobId: string,
+    params?: ListBatchesTranslationJobsJobIdBatchesGetParams, options?: Parameters<typeof customFetch>[1]): Promise<listBatchesTranslationJobsJobIdBatchesGetResponse> => {
+
+  return customFetch<listBatchesTranslationJobsJobIdBatchesGetResponse>(getListBatchesTranslationJobsJobIdBatchesGetUrl(jobId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
 export type cancelTranslationJobsJobIdBatchesBatchIdCancelPostResponse200 = {
   data: TranslationControlResult
   status: 200
@@ -193,6 +297,50 @@ export const cancelTranslationJobsJobIdBatchesBatchIdCancelPost = async (jobId: 
 );}
 
 
+export type resumeBatchTranslationJobsJobIdBatchesBatchIdResumePostResponse200 = {
+  data: TranslationControlResult
+  status: 200
+}
+
+export type resumeBatchTranslationJobsJobIdBatchesBatchIdResumePostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type resumeBatchTranslationJobsJobIdBatchesBatchIdResumePostResponseSuccess = (resumeBatchTranslationJobsJobIdBatchesBatchIdResumePostResponse200) & {
+  headers: Headers;
+};
+export type resumeBatchTranslationJobsJobIdBatchesBatchIdResumePostResponseError = (resumeBatchTranslationJobsJobIdBatchesBatchIdResumePostResponse422) & {
+  headers: Headers;
+};
+
+export type resumeBatchTranslationJobsJobIdBatchesBatchIdResumePostResponse = (resumeBatchTranslationJobsJobIdBatchesBatchIdResumePostResponseSuccess | resumeBatchTranslationJobsJobIdBatchesBatchIdResumePostResponseError)
+
+export const getResumeBatchTranslationJobsJobIdBatchesBatchIdResumePostUrl = (jobId: string,
+    batchId: string,) => {
+
+
+
+
+  return `/api/translation-jobs/${jobId}/batches/${batchId}/resume`
+}
+
+/**
+ * @summary Resume Batch
+ */
+export const resumeBatchTranslationJobsJobIdBatchesBatchIdResumePost = async (jobId: string,
+    batchId: string, options?: Parameters<typeof customFetch>[1]): Promise<resumeBatchTranslationJobsJobIdBatchesBatchIdResumePostResponse> => {
+
+  return customFetch<resumeBatchTranslationJobsJobIdBatchesBatchIdResumePostResponse>(getResumeBatchTranslationJobsJobIdBatchesBatchIdResumePostUrl(jobId,batchId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
 export type retryTranslationJobsJobIdBatchesBatchIdRetryPostResponse200 = {
   data: TranslationControlResult
   status: 200
@@ -228,6 +376,50 @@ export const retryTranslationJobsJobIdBatchesBatchIdRetryPost = async (jobId: st
     batchId: string, options?: Parameters<typeof customFetch>[1]): Promise<retryTranslationJobsJobIdBatchesBatchIdRetryPostResponse> => {
 
   return customFetch<retryTranslationJobsJobIdBatchesBatchIdRetryPostResponse>(getRetryTranslationJobsJobIdBatchesBatchIdRetryPostUrl(jobId,batchId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+export type startBatchTranslationJobsJobIdBatchesBatchIdStartPostResponse200 = {
+  data: TranslationControlResult
+  status: 200
+}
+
+export type startBatchTranslationJobsJobIdBatchesBatchIdStartPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type startBatchTranslationJobsJobIdBatchesBatchIdStartPostResponseSuccess = (startBatchTranslationJobsJobIdBatchesBatchIdStartPostResponse200) & {
+  headers: Headers;
+};
+export type startBatchTranslationJobsJobIdBatchesBatchIdStartPostResponseError = (startBatchTranslationJobsJobIdBatchesBatchIdStartPostResponse422) & {
+  headers: Headers;
+};
+
+export type startBatchTranslationJobsJobIdBatchesBatchIdStartPostResponse = (startBatchTranslationJobsJobIdBatchesBatchIdStartPostResponseSuccess | startBatchTranslationJobsJobIdBatchesBatchIdStartPostResponseError)
+
+export const getStartBatchTranslationJobsJobIdBatchesBatchIdStartPostUrl = (jobId: string,
+    batchId: string,) => {
+
+
+
+
+  return `/api/translation-jobs/${jobId}/batches/${batchId}/start`
+}
+
+/**
+ * @summary Start Batch
+ */
+export const startBatchTranslationJobsJobIdBatchesBatchIdStartPost = async (jobId: string,
+    batchId: string, options?: Parameters<typeof customFetch>[1]): Promise<startBatchTranslationJobsJobIdBatchesBatchIdStartPostResponse> => {
+
+  return customFetch<startBatchTranslationJobsJobIdBatchesBatchIdStartPostResponse>(getStartBatchTranslationJobsJobIdBatchesBatchIdStartPostUrl(jobId,batchId),
   {
     ...options,
     method: 'POST'

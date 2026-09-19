@@ -5,7 +5,7 @@ from pydantic import ConfigDict, Field, model_validator
 
 from src.schemas import Model
 
-type ModelName = Literal["deepseek:deepseek-v4-flash-none", "deepseek:deepseek-v4-flash-low"]
+type ModelName = Literal["deepseek:deepseek-v4-flash-none", "deepseek:deepseek-v4-flash-low", "mercury-2.5"]
 MODEL_NAMES: tuple[ModelName, ...] = get_args(ModelName.__value__)
 type ToolsetName = Literal[
     "continuity_summary",

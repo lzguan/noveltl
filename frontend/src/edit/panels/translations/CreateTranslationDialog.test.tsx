@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { MemoryGroupsProvider } from "@/memory/context/MemoryGroupsContext";
 import { TranslationsPanel } from "./TranslationsPanel";
@@ -169,17 +169,26 @@ function setup({
 					);
 				return Response.json({ jobId: "created-1" }, { status: 201 });
 			}
-			if (url.endsWith("/created-1"))
+			if (url.includes("/created-1/batches"))
 				return detailsFail
 					? Response.json({ detail: "Read failed" }, { status: 503 })
 					: Response.json({
-							jobId: "created-1",
-							novelId: "novel-1",
-							config: {},
-							stages: [{}],
-							batches: [{}],
-							tasks: [{ status: "ready", failedAt: null }],
+							job: {
+								jobId: "created-1",
+								config: {},
+								stages: [],
+								progress: {
+									totalTasks: 1,
+									completedTasks: 0,
+									totalBatches: 1,
+									startableBatches: 1,
+								},
+							},
+							items: [],
+							total: 0,
+							observedAt: "2026-09-18T00:00:00Z",
 						});
+			if (url.includes("/translation-jobs?")) return Response.json({ items: [], total: 0 });
 			throw new Error(`Unexpected request: ${url}`);
 		}),
 	);
@@ -213,7 +222,7 @@ it("submits runtime action names, inclusive bounds, and the selected memory grou
 	expect(screen.getByLabelText("From chapter")).toHaveValue(3);
 	expect(screen.getByLabelText("To chapter (inclusive)")).toHaveValue(8);
 	fireEvent.click(screen.getByRole("button", { name: "Create job" }));
-	await screen.findByRole("heading", { name: "Created translation job" });
+	await screen.findByRole("dialog", { name: /Job created-.*Batches/ });
 	expect(payloads).toEqual([
 		{
 			novelId: "novel-1",
@@ -236,10 +245,8 @@ it("submits runtime action names, inclusive bounds, and the selected memory grou
 			],
 		},
 	]);
-	const card = within(
-		screen.getByRole("heading", { name: "Created translation job" }).closest("article")!,
-	);
-	expect(card.queryByRole("button", { name: "Start" })).not.toBeInTheDocument();
+	// Creation opens the viewer, but does not send a Start request.
+	expect(payloads).toHaveLength(1);
 });
 it("retains configuration after server rejection and shows its stage error", async () => {
 	const payloads = setup({ reject: true });
@@ -249,7 +256,7 @@ it("retains configuration after server rejection and shows its stage error", asy
 	expect(screen.getByText("qwen-plus · French · Custom instructions")).toBeInTheDocument();
 	expect(screen.getByRole("dialog")).toBeInTheDocument();
 	fireEvent.click(screen.getByRole("button", { name: "Create job" }));
-	await screen.findByRole("heading", { name: "Created translation job" });
+	await screen.findByRole("dialog", { name: /Job created-.*Batches/ });
 	expect(payloads).toHaveLength(2);
 	expect(payloads[0]).toEqual(payloads[1]);
 });
@@ -259,7 +266,8 @@ it("retries metadata loading and retains a created job ID when detail loading fa
 	fireEvent.click(screen.getByRole("button", { name: "Retry loading" }));
 	await configure();
 	fireEvent.click(screen.getByRole("button", { name: "Create job" }));
-	await screen.findByText(/Job was created, but its details could not be loaded/);
+	await screen.findByText("Read failed");
+	expect(screen.getByText("created-1")).toBeInTheDocument();
 	fireEvent.click(screen.getByRole("button", { name: "Reload details" }));
 	await waitFor(() =>
 		expect(screen.getByRole("button", { name: "Reload details" })).toBeEnabled(),
@@ -290,7 +298,7 @@ it("prevents duplicate submission while creation is pending", async () => {
 	fireEvent.click(pendingButton);
 	expect(payloads).toHaveLength(1);
 	finishCreation();
-	await screen.findByRole("heading", { name: "Created translation job" });
+	await screen.findByRole("dialog", { name: /Job created-.*Batches/ });
 });
 
 it("renders nullable numbers as labeled inputs and preserves numeric values and clearing", async () => {
@@ -315,7 +323,7 @@ it("renders nullable numbers as labeled inputs and preserves numeric values and 
 	});
 	fireEvent.submit(screen.getByRole("button", { name: "Save configuration" }).closest("form")!);
 	fireEvent.click(screen.getByRole("button", { name: "Create job" }));
-	await screen.findByRole("heading", { name: "Created translation job" });
+	await screen.findByRole("dialog", { name: /Job created-.*Batches/ });
 	expect(payloads[0]).toMatchObject({ stages: [{ config: { temperature: 0 } }] });
 	expect(JSON.stringify(payloads[0])).not.toContain('"maxOutputTokens":2048');
 });
@@ -352,7 +360,7 @@ it("waits for a model and renders nullable filters with explicit all and selecte
 	expect(screen.getByLabelText("glossary")).toBeChecked();
 	fireEvent.submit(screen.getByRole("button", { name: "Save configuration" }).closest("form")!);
 	fireEvent.click(screen.getByRole("button", { name: "Create job" }));
-	await screen.findByRole("heading", { name: "Created translation job" });
+	await screen.findByRole("dialog", { name: /Job created-.*Batches/ });
 	expect(payloads[0]).toMatchObject({
 		stages: [{ config: { model: "qwen-flash", pluginNames: ["glossary"], memoryTypes: [] } }],
 	});

@@ -19,12 +19,12 @@ it("renders annotated controls and dependencies independently of property names"
 						type: "string",
 						title: "Engine choice",
 						enum: ["one", "two"],
-						"x-ui": { control: "select" },
+						...{ "x-ui": { control: "select" } },
 					},
 					notes: {
 						type: "string",
 						title: "Custom notes",
-						"x-ui": { control: "textarea", showAfter: "engine" },
+						...{ "x-ui": { control: "textarea", showAfter: "engine" } },
 					},
 				},
 			}}

@@ -117,8 +117,13 @@ def create_agent(model_name: ModelName, toolsets: ParsedToolsets) -> Agent[MemAg
     """
     if model_name == "deepseek:deepseek-v4-flash-none":
         model_settings: OpenAIChatModelSettings = {"extra_body": {"thinking": {"type": "disabled"}}}
-    else:  # deepseek:deepseek-v4-flash-low
+        model = "deepseek:deepseek-v4-flash"
+    elif model_name == "deepseek:deepseek-v4-flash-low":
+        model = "deepseek:deepseek-v4-flash"
         model_settings = {"thinking": "low"}
+    elif model_name == "mercury-2.5":
+        model = "mercury-2.5"
+        model_settings = {"thinking": "high"}
     resolved_capabilities = resolve_capabilities(toolsets)
     glossary_enabled = any(toolset in GLOSSARY_TOOLSET_NAMES for toolset in toolsets.selected_names())
     instructions = (
@@ -127,7 +132,7 @@ def create_agent(model_name: ModelName, toolsets: ParsedToolsets) -> Agent[MemAg
         else MEMORY_AGENT_PROMPT
     )
     return Agent(
-        model="deepseek:deepseek-v4-flash",
+        model=model,
         model_settings=model_settings,
         capabilities=resolved_capabilities,
         instructions=instructions,

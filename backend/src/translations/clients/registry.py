@@ -9,8 +9,8 @@ from src.translations.types import ModelName
 def _qwen_client_factory() -> BatchJobClient:
     # API processes import the registry to dispatch tasks, but only workers
     # resolving a client need the provider SDK and credentials.
+    from src.config import qwen_settings
     from src.translations.clients.qwen_client import QwenClient
-    from src.translations.settings import qwen_settings
 
     return QwenClient(api_key=qwen_settings.QWEN_API_KEY, base_url=qwen_settings.QWEN_API_URL)
 

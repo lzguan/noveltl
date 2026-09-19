@@ -113,6 +113,7 @@ services:
       UV_COMPILE_BYTECODE: false
       SECRET_KEY: ${SECRET_KEY} # purely to not crash on startup
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      INCEPTION_API_KEY: ${INCEPTION_API_KEY:-}
       MEMORY_AGENT_LOG_DIR: ${MEMORY_AGENT_LOG_DIR:-logs}
       MEMORY_AGENT_LOG_FILENAME: ${MEMORY_AGENT_LOG_FILENAME}
     volumes:

@@ -57,7 +57,7 @@
 		"jiti": "^2.7.0",
 		"jsdom": "^28.1.0",
 		"orval": "^8.30.0",
-		"oxfmt": "^0.51.0",
+		"oxfmt": "^0.75.0",
 		"oxlint": "^1.82.0",
 		"oxlint-tsgolint": "^7.0.2001",
 		"typescript": "^7.0.2",

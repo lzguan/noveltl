@@ -20,7 +20,7 @@ RUN pnpm runtime set node ${NODE_VERSION} -g
 
 WORKDIR ${PROJECT_ROOT}
 
-COPY --chown=vscode:vscode e2e/package.json e2e/pnpm-lock.yaml e2e/playwright.config.ts ./e2e/
+COPY --chown=vscode:vscode e2e/package.json e2e/pnpm-lock.yaml e2e/pnpm-workspace.yaml e2e/playwright.config.ts ./e2e/
 WORKDIR ${PROJECT_ROOT}/e2e
 RUN pnpm install --frozen-lockfile \
     && pnpm exec playwright install --with-deps chromium \

@@ -50,6 +50,21 @@ fallback to arbitrary earlier stage outputs.
 
 ## Provider boundary and implementation status
 
+Translation stages support `qwen-plus`, `qwen-flash`, and
+`deepseek/deepseek-v4.1-flash` through OpenRouter. Configure `OPENROUTER_API_KEY`
+on the translations worker; `OPENROUTER_API_URL` defaults to
+`https://openrouter.ai/api/v1`. The stage model uses the normal model slug,
+without the catalog's `:batch` suffix.
+
+OpenRouter reuses the OpenAI chat batch codec. Its client streams the prepared
+JSONL requests into the provider's inline batch envelope, with metadata before
+the request array. A completed batch remains pending until its results are
+available. The batch ID doubles as the persisted output handle; finalization
+retrieves the batch again and emits its result entries as JSONL. Retrieval
+currently buffers OpenRouter's inline response before yielding the entries.
+No provider response or client instance must survive between worker processes.
+OpenRouter retains results for 30 days; finalize completed jobs before expiry.
+
 Provider request keys identify individual inference calls and may include
 request or chunk identifiers. `BatchLineCodec[KeyT]` remains generic; it does
 not require request keys to equal stored component keys. Provider input JSONL
@@ -306,6 +321,11 @@ the [Chat Completions batch format](https://developers.openai.com/api/docs/guide
 Construct it with `TypeAdapter(TranslationDataKey)` for translation components,
 or another Pydantic key adapter for other request keys. The key is serialized as
 JSON inside `custom_id`; decoding needs no in-memory request mapping.
+The OpenRouter model uses a compact `uuidhex_data_type` string (for example,
+`22bca258bac44fc48cc3da3999fbaa69_memories`) to fit providers' 64-character
+ID limit and `[a-z0-9_-]` character restriction. Its decoder also accepts the
+older JSON object and array representations; prepared files with those IDs
+must be regenerated before submitting them to providers with these restrictions.
 
 The codec emits one UTF-8 JSONL request for `/v1/chat/completions` and reads one
 complete result line. It handles batch errors, HTTP/API errors, and refusals.

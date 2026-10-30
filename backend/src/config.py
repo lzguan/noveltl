@@ -71,6 +71,13 @@ class QwenSettings(BaseConfig):
     QWEN_API_URL: str = Field(default="")
 
 
+class OpenRouterSettings(BaseConfig):
+    """Settings for OpenRouter batch translation."""
+
+    OPENROUTER_API_KEY: str = Field(default="")
+    OPENROUTER_API_URL: str = Field(default="https://openrouter.ai/api/v1")
+
+
 class DeepseekSettings(BaseConfig):
     """Settings for the Deepseek model."""
 
@@ -86,6 +93,7 @@ class InceptionSettings(BaseConfig):
 
 
 qwen_settings = QwenSettings()
+openrouter_settings = OpenRouterSettings()
 deepseek_settings = DeepseekSettings()
 inception_settings = InceptionSettings()
 

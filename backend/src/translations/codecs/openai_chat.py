@@ -49,9 +49,11 @@ class _ResultLine(_WireModel):
 class OpenAIChatBatchCodec[KeyT]:
     """Encode text requests and decode single-choice chat batch results.
 
-    Keys are JSON-serialized inside custom_id, so another worker can recover
-    them with the same TypeAdapter without request history. Provider-specific
-    ID limits and model capabilities remain the backend's responsibility.
+    Keys are JSON-serialized inside custom_id by default. String format uses
+    the adapter's serialized string directly, without JSON quotes, for providers
+    with restricted ID alphabets. Another worker can recover keys with the same
+    adapter and format without request history. Provider-specific ID limits and
+    model capabilities remain the backend's responsibility.
 
     max_completion_tokens is the OpenAI default; compatible backends may select
     max_tokens explicitly. This codec does not implement the Responses API.
@@ -62,9 +64,11 @@ class OpenAIChatBatchCodec[KeyT]:
         key_adapter: TypeAdapter[KeyT],
         *,
         max_tokens_field: Literal["max_completion_tokens", "max_tokens"] = "max_completion_tokens",
+        custom_id_format: Literal["json", "string"] = "json",
     ) -> None:
         self._key_adapter = key_adapter
         self._max_tokens_field = max_tokens_field
+        self._custom_id_format = custom_id_format
 
     def encode_request(self, item: BatchItem[KeyT]) -> bytes:
         request = item.request
@@ -76,8 +80,14 @@ class OpenAIChatBatchCodec[KeyT]:
             body["temperature"] = request.temperature
         if request.max_output_tokens is not None:
             body[self._max_tokens_field] = request.max_output_tokens
+        if self._custom_id_format == "string":
+            custom_id = self._key_adapter.dump_python(item.key, mode="json", by_alias=False, warnings="error")
+            if not isinstance(custom_id, str):
+                raise ValueError("String custom_id format requires a key adapter that serializes to a string")
+        else:
+            custom_id = self._key_adapter.dump_json(item.key, by_alias=False, warnings="error").decode("utf-8")
         line = {
-            "custom_id": self._key_adapter.dump_json(item.key, by_alias=False, warnings="error").decode("utf-8"),
+            "custom_id": custom_id,
             "method": "POST",
             "url": "/v1/chat/completions",
             "body": body,
@@ -86,7 +96,11 @@ class OpenAIChatBatchCodec[KeyT]:
 
     def decode_result(self, line: bytes) -> BatchItemResult[KeyT]:
         result = _ResultLine.model_validate_json(line)
-        key = self._key_adapter.validate_json(result.custom_id)
+        key = (
+            self._key_adapter.validate_python(result.custom_id)
+            if self._custom_id_format == "string"
+            else self._key_adapter.validate_json(result.custom_id)
+        )
         if result.error is not None:
             return BatchItemFailure(key=key, error=result.error.message, code=result.error.code)
         response = result.response

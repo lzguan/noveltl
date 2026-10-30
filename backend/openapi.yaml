@@ -2175,6 +2175,7 @@ components:
       enum:
       - deepseek:deepseek-v4-flash-none
       - deepseek:deepseek-v4-flash-low
+      - inception:mercury-2.5-low
       type: string
     ModifyChapterContentResponse:
       description: "Pydantic schema for the response after modifying chapter content.\n\

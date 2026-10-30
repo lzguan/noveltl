@@ -10528,7 +10528,8 @@
         "type": "string",
         "enum": [
           "deepseek:deepseek-v4-flash-none",
-          "deepseek:deepseek-v4-flash-low"
+          "deepseek:deepseek-v4-flash-low",
+          "inception:mercury-2.5-low"
         ]
       },
       "ModifyChapterContentResponse": {

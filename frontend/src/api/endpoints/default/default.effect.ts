@@ -1650,7 +1650,7 @@ export const ReadMemoryAgentConfigMemoryAgentConfigGet200Response = S.Struct({
   "models": S.Array(S.Struct({
   "description": S.String,
   "label": S.String,
-  "name": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low')
+  "name": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low')
 })),
   "toolsets": S.Array(S.Struct({
   "configSchema": S.Record({ key: S.String, value: S.Unknown }),
@@ -1693,7 +1693,7 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet200Response = S.Str
   "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
   "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1750,7 +1750,7 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200Respons
   "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
   "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1793,7 +1793,7 @@ export const ReadMemoryJobsMemoryAgentJobsGet200ResponseItem = S.Struct({
   "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
   "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1831,7 +1831,7 @@ export const AddMemoryJobMemoryAgentJobsPostBody = S.Struct({
   "endChapterNum": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyEndChapterNumOneMin)), S.Null)),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "params": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
   "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "startChapterNum": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyStartChapterNumOneMin)), S.Null))
@@ -1841,7 +1841,7 @@ export const AddMemoryJobMemoryAgentJobsPost201Response = S.Struct({
   "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
   "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1903,7 +1903,7 @@ export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet200Response = S.Struct({
   "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
   "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1938,7 +1938,7 @@ export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200Response = S.St
   "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
   "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -1973,7 +1973,7 @@ export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost202Response = S.St
   "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
   "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low'),
+  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
   "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
 }),
   "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),

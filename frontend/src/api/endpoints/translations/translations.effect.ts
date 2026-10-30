@@ -10,6 +10,72 @@ import {
 
 
 /**
+ * @summary List Jobs
+ */
+export const listJobsTranslationJobsGetQueryOffsetDefault = 0;
+export const listJobsTranslationJobsGetQueryOffsetMin = 0;
+
+export const listJobsTranslationJobsGetQueryLimitDefault = 5;
+export const listJobsTranslationJobsGetQueryLimitMax = 50;
+
+
+
+export const ListJobsTranslationJobsGetQueryParams = S.Struct({
+  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "offset": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(listJobsTranslationJobsGetQueryOffsetMin)), { default: () => listJobsTranslationJobsGetQueryOffsetDefault }),
+  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(listJobsTranslationJobsGetQueryLimitMax)), { default: () => listJobsTranslationJobsGetQueryLimitDefault })
+})
+
+export const listJobsTranslationJobsGet200ResponseItemsItemProgressActiveBatchesDefault = 0;
+export const listJobsTranslationJobsGet200ResponseItemsItemProgressCancelledBatchesDefault = 0;
+export const listJobsTranslationJobsGet200ResponseItemsItemProgressCompletedBatchesDefault = 0;
+export const listJobsTranslationJobsGet200ResponseItemsItemProgressCompletedTasksDefault = 0;
+export const listJobsTranslationJobsGet200ResponseItemsItemProgressFailedBatchesDefault = 0;
+export const listJobsTranslationJobsGet200ResponseItemsItemProgressResumableBatchesDefault = 0;
+export const listJobsTranslationJobsGet200ResponseItemsItemProgressRetryableBatchesDefault = 0;
+export const listJobsTranslationJobsGet200ResponseItemsItemProgressStartableBatchesDefault = 0;
+export const listJobsTranslationJobsGet200ResponseItemsItemProgressTotalBatchesDefault = 0;
+export const listJobsTranslationJobsGet200ResponseItemsItemProgressTotalTasksDefault = 0;
+
+export const ListJobsTranslationJobsGet200Response = S.Struct({
+  "items": S.Array(S.Struct({
+  "config": S.Record({ key: S.String, value: S.Unknown }),
+  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "progress": S.Struct({
+  "activeBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressActiveBatchesDefault }),
+  "cancelledBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressCancelledBatchesDefault }),
+  "completedBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressCompletedBatchesDefault }),
+  "completedTasks": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressCompletedTasksDefault }),
+  "failedBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressFailedBatchesDefault }),
+  "resumableBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressResumableBatchesDefault }),
+  "retryableBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressRetryableBatchesDefault }),
+  "startableBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressStartableBatchesDefault }),
+  "totalBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressTotalBatchesDefault }),
+  "totalTasks": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressTotalTasksDefault })
+}),
+  "stages": S.Array(S.Struct({
+  "action": S.String,
+  "config": S.Record({ key: S.String, value: S.Unknown }),
+  "stageId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "stageNum": S.Number
+}))
+})),
+  "total": S.Number
+})
+
+export const ListJobsTranslationJobsGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.extend(S.Struct({
+
+}), S.Record({ key: S.String, value: S.Unknown }))),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * @summary Create
  */
 export const createTranslationJobsPostBodyConfigBatchSizeExclusiveMin = 0;
@@ -20,27 +86,6 @@ export const createTranslationJobsPostBodyConfigStartChapterNumOneMin = 0;
 
 export const createTranslationJobsPostBodyStagesMax = 5;
 
-export const createTranslationJobsPostBodyStagesItemOneConfigExcludeCurrentChapterDefault = true;
-export const createTranslationJobsPostBodyStagesItemOneConfigInstructionsDefault = '';
-export const createTranslationJobsPostBodyStagesItemOneConfigMaxOutputTokensOneExclusiveMin = 0;
-
-export const createTranslationJobsPostBodyStagesItemOneConfigTemperatureOneMin = 0;
-
-export const createTranslationJobsPostBodyStagesItemThreeConfigExcludeCurrentChapterDefault = true;
-export const createTranslationJobsPostBodyStagesItemThreeConfigInstructionsDefault = '';
-export const createTranslationJobsPostBodyStagesItemThreeConfigMaxOutputTokensOneExclusiveMin = 0;
-
-export const createTranslationJobsPostBodyStagesItemThreeConfigTargetLanguageDefault = 'English';
-
-export const createTranslationJobsPostBodyStagesItemThreeConfigTemperatureOneMin = 0;
-
-export const createTranslationJobsPostBodyStagesItemFourConfigInstructionsDefault = '';
-export const createTranslationJobsPostBodyStagesItemFourConfigMaxOutputTokensOneExclusiveMin = 0;
-
-export const createTranslationJobsPostBodyStagesItemFourConfigTargetLanguageDefault = 'English';
-
-export const createTranslationJobsPostBodyStagesItemFourConfigTemperatureOneMin = 0;
-
 
 
 export const CreateTranslationJobsPostBody = S.Struct({
@@ -50,45 +95,11 @@ export const CreateTranslationJobsPostBody = S.Struct({
   "startChapterNum": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(createTranslationJobsPostBodyConfigStartChapterNumOneMin)), S.Null))
 }),
   "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "stages": S.Array(S.Union(S.Struct({
-  "action": S.Literal('prune_memories'),
-  "config": S.Struct({
-  "excludeCurrentChapter": S.optionalWith(S.Boolean, { default: () => createTranslationJobsPostBodyStagesItemOneConfigExcludeCurrentChapterDefault }),
-  "instructions": S.optionalWith(S.String, { default: () => createTranslationJobsPostBodyStagesItemOneConfigInstructionsDefault }),
-  "maxOutputTokens": S.optional(S.Union(S.Number.pipe(S.greaterThan(createTranslationJobsPostBodyStagesItemOneConfigMaxOutputTokensOneExclusiveMin)), S.Null)),
-  "memoryGroupId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null)),
-  "model": S.Literal('qwen-plus', 'qwen-flash'),
-  "pluginNames": S.optional(S.Union(S.Array(S.Literal('glossary', 'continuity')), S.Null)),
-  "temperature": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(createTranslationJobsPostBodyStagesItemOneConfigTemperatureOneMin)), S.Null))
-})
-}), S.Struct({
-  "action": S.Literal('combine_chapter'),
+  "stages": S.Array(S.Struct({
+  "action": S.String,
   "config": S.optional(S.Record({ key: S.String, value: S.Unknown }))
-}), S.Struct({
-  "action": S.Literal('translate_with_memories'),
-  "config": S.Struct({
-  "excludeCurrentChapter": S.optionalWith(S.Boolean, { default: () => createTranslationJobsPostBodyStagesItemThreeConfigExcludeCurrentChapterDefault }),
-  "instructions": S.optionalWith(S.String, { default: () => createTranslationJobsPostBodyStagesItemThreeConfigInstructionsDefault }),
-  "maxOutputTokens": S.optional(S.Union(S.Number.pipe(S.greaterThan(createTranslationJobsPostBodyStagesItemThreeConfigMaxOutputTokensOneExclusiveMin)), S.Null)),
-  "memoryGroupId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null)),
-  "model": S.Literal('qwen-plus', 'qwen-flash'),
-  "pluginNames": S.optional(S.Union(S.Array(S.Literal('glossary', 'continuity')), S.Null)),
-  "targetLanguage": S.optionalWith(S.String.pipe(S.minLength(1)), { default: () => createTranslationJobsPostBodyStagesItemThreeConfigTargetLanguageDefault }),
-  "temperature": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(createTranslationJobsPostBodyStagesItemThreeConfigTemperatureOneMin)), S.Null))
-})
-}), S.Struct({
-  "action": S.Literal('translate'),
-  "config": S.Struct({
-  "instructions": S.optionalWith(S.String, { default: () => createTranslationJobsPostBodyStagesItemFourConfigInstructionsDefault }),
-  "maxOutputTokens": S.optional(S.Union(S.Number.pipe(S.greaterThan(createTranslationJobsPostBodyStagesItemFourConfigMaxOutputTokensOneExclusiveMin)), S.Null)),
-  "model": S.Literal('qwen-plus', 'qwen-flash'),
-  "targetLanguage": S.optionalWith(S.String.pipe(S.minLength(1)), { default: () => createTranslationJobsPostBodyStagesItemFourConfigTargetLanguageDefault }),
-  "temperature": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(createTranslationJobsPostBodyStagesItemFourConfigTemperatureOneMin)), S.Null))
-})
-}))).pipe(S.minItems(1), S.maxItems(createTranslationJobsPostBodyStagesMax))
-})
+})).pipe(S.minItems(1), S.maxItems(createTranslationJobsPostBodyStagesMax))
+}).annotations({ description: 'Public envelope; action-specific validation happens before job creation.' })
 
 export const CreateTranslationJobsPost201Response = S.Struct({
   "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
@@ -104,6 +115,21 @@ export const CreateTranslationJobsPost422Response = S.Struct({
   "msg": S.String,
   "type": S.String
 })))
+})
+
+/**
+ * Return action compatibility and standalone configuration JSON Schemas.
+ * @summary List Actions
+ */
+export const ListActionsTranslationJobsActionsGet200Response = S.Struct({
+  "actions": S.Array(S.Struct({
+  "allowedAsFirstStage": S.Boolean,
+  "configSchema": S.Record({ key: S.String, value: S.Unknown }),
+  "inputTypes": S.Array(S.Literal('chapter', 'memories')),
+  "label": S.String,
+  "name": S.String,
+  "outputTypes": S.Array(S.Literal('chapter', 'memories'))
+}))
 })
 
 /**
@@ -154,6 +180,92 @@ export const ReadTranslationJobsJobIdGet422Response = S.Struct({
 })
 
 /**
+ * @summary List Batches
+ */
+export const ListBatchesTranslationJobsJobIdBatchesGetParams = S.Struct({
+  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const listBatchesTranslationJobsJobIdBatchesGetQueryOffsetDefault = 0;
+export const listBatchesTranslationJobsJobIdBatchesGetQueryOffsetMin = 0;
+
+export const listBatchesTranslationJobsJobIdBatchesGetQueryLimitDefault = 5;
+export const listBatchesTranslationJobsJobIdBatchesGetQueryLimitMax = 50;
+
+
+
+export const ListBatchesTranslationJobsJobIdBatchesGetQueryParams = S.Struct({
+  "offset": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(listBatchesTranslationJobsJobIdBatchesGetQueryOffsetMin)), { default: () => listBatchesTranslationJobsJobIdBatchesGetQueryOffsetDefault }),
+  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(listBatchesTranslationJobsJobIdBatchesGetQueryLimitMax)), { default: () => listBatchesTranslationJobsJobIdBatchesGetQueryLimitDefault })
+})
+
+export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressActiveBatchesDefault = 0;
+export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressCancelledBatchesDefault = 0;
+export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressCompletedBatchesDefault = 0;
+export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressCompletedTasksDefault = 0;
+export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressFailedBatchesDefault = 0;
+export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressResumableBatchesDefault = 0;
+export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressRetryableBatchesDefault = 0;
+export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressStartableBatchesDefault = 0;
+export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressTotalBatchesDefault = 0;
+export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressTotalTasksDefault = 0;
+
+export const ListBatchesTranslationJobsJobIdBatchesGet200Response = S.Struct({
+  "items": S.Array(S.Struct({
+  "batchId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "batchNum": S.Number,
+  "initialFileId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
+  "tasks": S.Array(S.Struct({
+  "batchId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
+  "error": S.Union(S.String, S.Null),
+  "failedAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
+  "inputFileId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
+  "outputFileId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
+  "stageId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "status": S.Literal('waiting', 'ready', 'preparing', 'prepared', 'submitting', 'processing', 'processed', 'finalizing', 'complete'),
+  "taskId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}))
+})),
+  "job": S.Struct({
+  "config": S.Record({ key: S.String, value: S.Unknown }),
+  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "progress": S.Struct({
+  "activeBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressActiveBatchesDefault }),
+  "cancelledBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressCancelledBatchesDefault }),
+  "completedBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressCompletedBatchesDefault }),
+  "completedTasks": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressCompletedTasksDefault }),
+  "failedBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressFailedBatchesDefault }),
+  "resumableBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressResumableBatchesDefault }),
+  "retryableBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressRetryableBatchesDefault }),
+  "startableBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressStartableBatchesDefault }),
+  "totalBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressTotalBatchesDefault }),
+  "totalTasks": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressTotalTasksDefault })
+}),
+  "stages": S.Array(S.Struct({
+  "action": S.String,
+  "config": S.Record({ key: S.String, value: S.Unknown }),
+  "stageId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "stageNum": S.Number
+}))
+}),
+  "observedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "total": S.Number
+})
+
+export const ListBatchesTranslationJobsJobIdBatchesGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.extend(S.Struct({
+
+}), S.Record({ key: S.String, value: S.Unknown }))),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * @summary Cancel
  */
 export const CancelTranslationJobsJobIdBatchesBatchIdCancelPostParams = S.Struct({
@@ -180,6 +292,32 @@ export const CancelTranslationJobsJobIdBatchesBatchIdCancelPost422Response = S.S
 })
 
 /**
+ * @summary Resume Batch
+ */
+export const ResumeBatchTranslationJobsJobIdBatchesBatchIdResumePostParams = S.Struct({
+  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "batchId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const ResumeBatchTranslationJobsJobIdBatchesBatchIdResumePost200Response = S.Struct({
+  "affectedBatchIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchFailedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
+})
+
+export const ResumeBatchTranslationJobsJobIdBatchesBatchIdResumePost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.extend(S.Struct({
+
+}), S.Record({ key: S.String, value: S.Unknown }))),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * @summary Retry
  */
 export const RetryTranslationJobsJobIdBatchesBatchIdRetryPostParams = S.Struct({
@@ -194,6 +332,32 @@ export const RetryTranslationJobsJobIdBatchesBatchIdRetryPost200Response = S.Str
 })
 
 export const RetryTranslationJobsJobIdBatchesBatchIdRetryPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.extend(S.Struct({
+
+}), S.Record({ key: S.String, value: S.Unknown }))),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union(S.String, S.Number)),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Start Batch
+ */
+export const StartBatchTranslationJobsJobIdBatchesBatchIdStartPostParams = S.Struct({
+  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "batchId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const StartBatchTranslationJobsJobIdBatchesBatchIdStartPost200Response = S.Struct({
+  "affectedBatchIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchFailedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
+})
+
+export const StartBatchTranslationJobsJobIdBatchesBatchIdStartPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "ctx": S.optional(S.extend(S.Struct({
 

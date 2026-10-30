@@ -2,8 +2,12 @@ from collections.abc import Callable
 
 from pydantic_ai import Agent, AgentRunResult, FunctionToolset
 from pydantic_ai.capabilities import AbstractCapability, Toolset
-from pydantic_ai.models.openai import OpenAIChatModelSettings
+from pydantic_ai.models import Model
+from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
+from pydantic_ai.profiles.openai import OpenAIJsonSchemaTransformer, OpenAIModelProfile
+from pydantic_ai.providers.openai import OpenAIProvider
 
+from src.config import inception_settings
 from src.memory.agent.capabilities.continuity import ContinuitySummaryCapability, ContinuitySummaryOutput
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
@@ -93,6 +97,18 @@ GLOSSARY_TOOLSET_NAMES: frozenset[ToolsetName] = frozenset(
     name for name in TOOLSET_NAMES if name != "continuity_summary"
 )
 
+MERCURY_PROFILE = OpenAIModelProfile(
+    json_schema_transformer=OpenAIJsonSchemaTransformer,
+    supports_json_schema_output=True,  # response_format json_schema returned valid JSON
+    supports_json_object_output=True,  # json_object mode likewise
+    supports_thinking=True,  # REQUIRED - see below
+    openai_supports_strict_tool_definition=True,
+    openai_supports_tool_choice_required=True,  # "required" and named forcing both accepted
+    openai_reasoning_enabled_by_default=True,  # omitting the param spends ~200-260 reasoning tokens
+    openai_chat_supports_multiple_system_messages=True,
+    context_window=260_000,
+)
+
 
 def resolve_capabilities(toolsets: ParsedToolsets) -> list[AbstractCapability[MemAgentDeps]]:
     """Resolve configured capabilities in canonical order for stable prompt caching."""
@@ -106,19 +122,26 @@ def resolve_capabilities(toolsets: ParsedToolsets) -> list[AbstractCapability[Me
 
 
 def create_agent(model_name: ModelName, toolsets: ParsedToolsets) -> Agent[MemAgentDeps, str | ContinuitySummaryOutput]:
-    """Create a Pydantic AI agent with the specified model and toolsets.
-
-    The model name's suffix selects the reasoning level. DeepSeek V4 does not
-    accept `reasoning_effort="none"` (it 400s); non-thinking mode is requested
-    via its native `thinking: {"type": "disabled"}` body flag instead. So the
-    "-none" variant passes that through `extra_body` and leaves `thinking`
-    unset, rather than using pydantic-ai's `thinking=False` (which would map to
-    the rejected `reasoning_effort="none"`).
-    """
+    """Create a Pydantic AI agent with the specified model and toolsets."""
+    model: Model | str
+    model_settings: OpenAIChatModelSettings
     if model_name == "deepseek:deepseek-v4-flash-none":
-        model_settings: OpenAIChatModelSettings = {"extra_body": {"thinking": {"type": "disabled"}}}
-    else:  # deepseek:deepseek-v4-flash-low
+        model = "deepseek:deepseek-v4-flash"
+        model_settings = {"extra_body": {"thinking": {"type": "disabled"}}}
+    elif model_name == "deepseek:deepseek-v4-flash-low":
+        model = "deepseek:deepseek-v4-flash"
         model_settings = {"thinking": "low"}
+    elif model_name == "inception:mercury-2.5-low":
+        model = OpenAIChatModel(
+            "mercury-2.5",
+            provider=OpenAIProvider(
+                api_key=inception_settings.INCEPTION_API_KEY, base_url=inception_settings.INCEPTION_API_URL
+            ),
+            profile=MERCURY_PROFILE,
+        )
+        model_settings = {"thinking": "low"}
+    else:
+        raise ValueError(f"Unknown model name {model_name!r}")
     resolved_capabilities = resolve_capabilities(toolsets)
     glossary_enabled = any(toolset in GLOSSARY_TOOLSET_NAMES for toolset in toolsets.selected_names())
     instructions = (
@@ -127,7 +150,7 @@ def create_agent(model_name: ModelName, toolsets: ParsedToolsets) -> Agent[MemAg
         else MEMORY_AGENT_PROMPT
     )
     return Agent(
-        model="deepseek:deepseek-v4-flash",
+        model=model,
         model_settings=model_settings,
         capabilities=resolved_capabilities,
         instructions=instructions,

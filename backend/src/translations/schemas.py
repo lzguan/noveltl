@@ -7,24 +7,90 @@ from pydantic import ConfigDict, Field, model_validator
 
 from src.memory.types import MemoryType, PluginName
 from src.schemas import Model
-from src.translations.types import ACTIONS, ModelName, TranslationTaskStatus
+from src.translations.types import ACTIONS, DataName, ModelName, TranslationTaskStatus
+from src.translations.ui import UIHints
 
 
-class TranslationStageCreateBase(Model):
-    config: dict[str, Any] = Field(default_factory=dict)
+class TranslationActionMetadata(Model):
+    name: str
+    label: str
+    input_types: list[DataName]
+    output_types: list[DataName]
+    allowed_as_first_stage: bool
+    config_schema: dict[str, Any]
+
+
+class TranslationActionsRead(Model):
+    actions: list[TranslationActionMetadata]
+
+
+class CombineChapterConfig(Model):
+    model_config = ConfigDict(extra="forbid")
 
 
 class PruneMemoriesConfig(Model):
     model_config = ConfigDict(extra="forbid")
 
-    model: ModelName
-    instructions: str = ""
-    temperature: float | None = Field(default=None, ge=0, allow_inf_nan=False)
-    max_output_tokens: int | None = Field(default=None, gt=0)
-    memory_group_id: uuid.UUID | None = None
-    plugin_names: list[PluginName] | None = None
-    memory_types: list[MemoryType] | None = None
-    exclude_current_chapter: bool = True
+    model: ModelName = Field(title="Model", json_schema_extra=UIHints(control="select").schema_extra())
+    instructions: str = Field(
+        default="",
+        title="Instructions",
+        json_schema_extra=UIHints(control="textarea", show_after="model").schema_extra(),
+    )
+    temperature: float | None = Field(
+        default=None,
+        ge=0,
+        allow_inf_nan=False,
+        title="Temperature",
+        description="Leave blank to use the provider default.",
+        json_schema_extra=UIHints(control="number", show_after="model", placeholder="Provider default").schema_extra(),
+    )
+    max_output_tokens: int | None = Field(
+        default=None,
+        gt=0,
+        title="Max output tokens",
+        description="Leave blank to use the provider default.",
+        json_schema_extra=UIHints(control="number", show_after="model", placeholder="Provider default").schema_extra(),
+    )
+    memory_group_id: uuid.UUID | None = Field(
+        default=None,
+        title="Memory group",
+        json_schema_extra=UIHints(
+            control="resource-picker",
+            resource="memory-group",
+            scope="current-novel",
+            placement="job-inputs",
+            stage_scope="first",
+            null_label="None",
+        ).schema_extra(),
+    )
+    plugin_names: list[PluginName] | None = Field(
+        default=None,
+        title="Plugin names",
+        json_schema_extra=UIHints(
+            control="filter-checklist",
+            stage_scope="first",
+            show_after="model",
+            null_label="All plugin names",
+            empty_label="Selecting none excludes all memories.",
+        ).schema_extra(),
+    )
+    memory_types: list[MemoryType] | None = Field(
+        default=None,
+        title="Memory types",
+        json_schema_extra=UIHints(
+            control="filter-checklist",
+            stage_scope="first",
+            show_after="model",
+            null_label="All memory types",
+            empty_label="Selecting none excludes all memories.",
+        ).schema_extra(),
+    )
+    exclude_current_chapter: bool = Field(
+        default=True,
+        title="Exclude current chapter",
+        json_schema_extra=UIHints(control="checkbox", stage_scope="first", show_after="model").schema_extra(),
+    )
 
 
 class PruneMemoriesStageCreate(Model):
@@ -32,25 +98,83 @@ class PruneMemoriesStageCreate(Model):
     config: PruneMemoriesConfig
 
 
-class CombineChapterStageCreate(TranslationStageCreateBase):
+class CombineChapterStageCreate(Model):
     action: Literal["combine_chapter"]
+    config: CombineChapterConfig = Field(default_factory=CombineChapterConfig)
 
 
 class TranslateConfig(Model):
     model_config = ConfigDict(extra="forbid")
 
-    model: ModelName
-    target_language: str = Field(default="English", min_length=1)
-    instructions: str = ""
-    temperature: float | None = Field(default=None, ge=0, allow_inf_nan=False)
-    max_output_tokens: int | None = Field(default=None, gt=0)
+    model: ModelName = Field(title="Model", json_schema_extra=UIHints(control="select").schema_extra())
+    target_language: str = Field(
+        default="English",
+        min_length=1,
+        title="Target language",
+        json_schema_extra=UIHints(control="text", show_after="model").schema_extra(),
+    )
+    instructions: str = Field(
+        default="",
+        title="Instructions",
+        json_schema_extra=UIHints(control="textarea", show_after="model").schema_extra(),
+    )
+    temperature: float | None = Field(
+        default=None,
+        ge=0,
+        allow_inf_nan=False,
+        title="Temperature",
+        description="Leave blank to use the provider default.",
+        json_schema_extra=UIHints(control="number", show_after="model", placeholder="Provider default").schema_extra(),
+    )
+    max_output_tokens: int | None = Field(
+        default=None,
+        gt=0,
+        title="Max output tokens",
+        description="Leave blank to use the provider default.",
+        json_schema_extra=UIHints(control="number", show_after="model", placeholder="Provider default").schema_extra(),
+    )
 
 
 class TranslateWithMemoriesConfig(TranslateConfig):
-    memory_group_id: uuid.UUID | None = None
-    plugin_names: list[PluginName] | None = None
-    memory_types: list[MemoryType] | None = None
-    exclude_current_chapter: bool = True
+    memory_group_id: uuid.UUID | None = Field(
+        default=None,
+        title="Memory group",
+        json_schema_extra=UIHints(
+            control="resource-picker",
+            resource="memory-group",
+            scope="current-novel",
+            placement="job-inputs",
+            stage_scope="first",
+            null_label="None",
+        ).schema_extra(),
+    )
+    plugin_names: list[PluginName] | None = Field(
+        default=None,
+        title="Plugin names",
+        json_schema_extra=UIHints(
+            control="filter-checklist",
+            stage_scope="first",
+            show_after="model",
+            null_label="All plugin names",
+            empty_label="Selecting none excludes all memories.",
+        ).schema_extra(),
+    )
+    memory_types: list[MemoryType] | None = Field(
+        default=None,
+        title="Memory types",
+        json_schema_extra=UIHints(
+            control="filter-checklist",
+            stage_scope="first",
+            show_after="model",
+            null_label="All memory types",
+            empty_label="Selecting none excludes all memories.",
+        ).schema_extra(),
+    )
+    exclude_current_chapter: bool = Field(
+        default=True,
+        title="Exclude current chapter",
+        json_schema_extra=UIHints(control="checkbox", stage_scope="first", show_after="model").schema_extra(),
+    )
 
 
 class TranslateWithMemoriesStageCreate(Model):
@@ -85,7 +209,22 @@ class TranslationJobConfig(Model):
         return self
 
 
+class TranslationStageRequest(Model):
+    action: str
+    config: dict[str, Any] = Field(default_factory=dict)
+
+
+class TranslationJobCreateRequest(Model):
+    """Public envelope; action-specific validation happens before job creation."""
+
+    novel_id: uuid.UUID
+    config: TranslationJobConfig
+    stages: list[TranslationStageRequest] = Field(min_length=1, max_length=5)
+
+
 class TranslationJobCreate(Model):
+    """Validated internal request used by job creation and persistence."""
+
     novel_id: uuid.UUID
     config: TranslationJobConfig
     stages: list[TranslationStageCreate] = Field(min_length=1, max_length=5)
@@ -160,3 +299,39 @@ class TranslationJobRead(Model):
     stages: list[TranslationStageRead]
     batches: list[TranslationBatchRead]
     tasks: list[TranslationTaskRead]
+
+
+class TranslationProgress(Model):
+    total_tasks: int = 0
+    completed_tasks: int = 0
+    total_batches: int = 0
+    completed_batches: int = 0
+    failed_batches: int = 0
+    cancelled_batches: int = 0
+    active_batches: int = 0
+    startable_batches: int = 0
+    resumable_batches: int = 0
+    retryable_batches: int = 0
+
+
+class TranslationJobSummary(Model):
+    job_id: uuid.UUID
+    config: dict[str, Any]
+    stages: list[TranslationStageRead]
+    progress: TranslationProgress
+
+
+class TranslationJobPage(Model):
+    items: list[TranslationJobSummary]
+    total: int
+
+
+class TranslationBatchDetail(TranslationBatchRead):
+    tasks: list[TranslationTaskRead]
+
+
+class TranslationBatchPage(Model):
+    job: TranslationJobSummary
+    items: list[TranslationBatchDetail]
+    total: int
+    observed_at: datetime

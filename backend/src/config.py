@@ -64,6 +64,39 @@ class LogSettings(BaseConfig):
         return filename
 
 
+class QwenSettings(BaseConfig):
+    """Settings for the Qwen model."""
+
+    QWEN_API_KEY: str = Field(default="")
+    QWEN_API_URL: str = Field(default="")
+
+
+class OpenRouterSettings(BaseConfig):
+    """Settings for OpenRouter batch translation."""
+
+    OPENROUTER_API_KEY: str = Field(default="")
+    OPENROUTER_API_URL: str = Field(default="https://openrouter.ai/api/v1")
+
+
+class DeepseekSettings(BaseConfig):
+    """Settings for the Deepseek model."""
+
+    DEEPSEEK_API_KEY: str = Field(default="")
+    DEEPSEEK_API_URL: str = Field(default="https://api.deepseek.com")
+
+
+class InceptionSettings(BaseConfig):
+    """Settings for the Mercury model."""
+
+    INCEPTION_API_KEY: str = Field(default="")
+    INCEPTION_API_URL: str = Field(default="https://api.inceptionlabs.ai/v1")
+
+
+qwen_settings = QwenSettings()
+openrouter_settings = OpenRouterSettings()
+deepseek_settings = DeepseekSettings()
+inception_settings = InceptionSettings()
+
 database_settings = DatabaseSettings()
 auth_settings = AuthSettings()
 redis_settings = RedisSettings()

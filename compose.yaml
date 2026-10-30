@@ -113,6 +113,7 @@ services:
       UV_COMPILE_BYTECODE: false
       SECRET_KEY: ${SECRET_KEY} # purely to not crash on startup
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      INCEPTION_API_KEY: ${INCEPTION_API_KEY:-}
       MEMORY_AGENT_LOG_DIR: ${MEMORY_AGENT_LOG_DIR:-logs}
       MEMORY_AGENT_LOG_FILENAME: ${MEMORY_AGENT_LOG_FILENAME}
     volumes:
@@ -135,6 +136,8 @@ services:
       SECRET_KEY: ${SECRET_KEY} # shared config validates this on startup
       QWEN_API_KEY: ${QWEN_API_KEY:-}
       QWEN_API_URL: ${QWEN_API_URL:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_API_URL: ${OPENROUTER_API_URL:-https://openrouter.ai/api/v1}
     volumes:
       - ./backend:/home/newuser/backend
       - /home/newuser/backend/.venv

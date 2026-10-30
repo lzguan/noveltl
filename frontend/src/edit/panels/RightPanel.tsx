@@ -82,9 +82,12 @@ export function RightPanel({
 				onKeyDown={resizeWithKeyboard}
 			/>
 			<Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-				<TabsList variant="line" className="w-full px-1 pt-1">
+				<TabsList
+					variant="line"
+					className="w-full shrink-0 justify-start overflow-x-auto overflow-y-hidden px-1 pt-1 pb-2 group-data-horizontal/tabs:h-auto"
+				>
 					{tabs.map((tab) => (
-						<TabsTrigger key={tab.value} value={tab.value}>
+						<TabsTrigger key={tab.value} value={tab.value} className="flex-none">
 							{tab.label}
 						</TabsTrigger>
 					))}

@@ -5,7 +5,9 @@ from pydantic import ConfigDict, Field, model_validator
 
 from src.schemas import Model
 
-type ModelName = Literal["deepseek:deepseek-v4-flash-none", "deepseek:deepseek-v4-flash-low"]
+type ModelName = Literal[
+    "deepseek:deepseek-v4-flash-none", "deepseek:deepseek-v4-flash-low", "inception:mercury-2.5-low"
+]
 MODEL_NAMES: tuple[ModelName, ...] = get_args(ModelName.__value__)
 type ToolsetName = Literal[
     "continuity_summary",
@@ -50,6 +52,11 @@ MODEL_METADATA: tuple[ModelMetadata, ...] = (
         "deepseek:deepseek-v4-flash-low",
         "DeepSeek V4 Flash (Low thinking)",
         "DeepSeek V4 Flash with low thinking effort.",
+    ),
+    ModelMetadata(
+        "inception:mercury-2.5-low",
+        "Mercury 2.5",
+        "Mercury 2.5 with low thinking effort.",
     ),
 )
 

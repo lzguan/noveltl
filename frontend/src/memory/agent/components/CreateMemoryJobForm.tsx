@@ -7,7 +7,6 @@ import type {
 	JobParamsToolsets,
 	MemoryAgentConfig,
 	MemoryAgentToolsetOption,
-	SrcMemoryAgentTypesModelName,
 } from "@/api/models";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,7 @@ import { ToolsetConfigDialog, toolsetHasConfig } from "./ToolsetConfigDialog";
 type MemoryJobFormValues = {
 	startChapterNum: string;
 	endChapterNum: string;
-	modelName: SrcMemoryAgentTypesModelName;
+	modelName: CreateMemoryJob["params"]["modelName"];
 	toolsets: JobParamsToolsets;
 };
 

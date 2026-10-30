@@ -75,6 +75,7 @@ export function MemoryBrowser({
 							<SelectItem value={MemoryType.event}>Event</SelectItem>
 							<SelectItem value={MemoryType.def}>Definition</SelectItem>
 							<SelectItem value={MemoryType.rel}>Relation</SelectItem>
+							<SelectItem value={MemoryType.summary}>Summary</SelectItem>
 						</SelectContent>
 					</Select>
 					<Button

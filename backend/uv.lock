@@ -743,6 +743,7 @@ dev = [
     { name = "types-pyyaml" },
 ]
 tagent = [
+    { name = "httpx2" },
     { name = "openai" },
 ]
 worker = [
@@ -786,7 +787,10 @@ dev = [
     { name = "types-psycopg2", specifier = ">=2.9.21.20260408" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20260518" },
 ]
-tagent = [{ name = "openai", specifier = ">=3.11.0" }]
+tagent = [
+    { name = "httpx2", specifier = ">=2.12.0" },
+    { name = "openai", specifier = ">=3.11.0" },
+]
 worker = [
     { name = "hf", specifier = ">=1.27.0" },
     { name = "torch", specifier = ">=2.9.1", index = "https://download.pytorch.org/whl/cpu" },

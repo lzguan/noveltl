@@ -6,7 +6,7 @@ from uuid import UUID
 type DataName = Literal["chapter", "memories"]
 type DataT = frozenset[DataName]
 type ActionName = Literal["prune_memories", "combine_chapter", "translate_with_memories", "translate"]
-type ModelName = Literal["qwen-plus", "qwen-flash"]
+type ModelName = Literal["qwen-plus", "qwen-flash", "deepseek/deepseek-v4.1-flash"]
 
 
 @dataclass(frozen=True)
@@ -15,7 +15,7 @@ class TranslationDataKey:
 
     Keys must be unique within the artifact. The owning task supplies job,
     batch, and stage scope. Provider request/chunk identifiers are separate.
-    See docs/translations.md for the producer/consumer contract.
+    See docs/translations/README.md for the producer/consumer contract.
     """
 
     chapter_id: UUID

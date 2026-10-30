@@ -1,4 +1,9 @@
-# Translation stage artifact contract
+# Translations
+
+- [UI layout](ui-layout.md): Proposed editor panel, job creation dialog, and batch controls.
+- The sections below describe the implemented backend pipeline and artifact contract.
+
+## Translation stage artifact contract
 
 Normalized stage artifacts use JSONL records keyed by `TranslationDataKey`
 (`backend/src/translations/types.py`). Every key contains:
@@ -45,6 +50,21 @@ fallback to arbitrary earlier stage outputs.
 
 ## Provider boundary and implementation status
 
+Translation stages support `qwen-plus`, `qwen-flash`, and
+`deepseek/deepseek-v4.1-flash` through OpenRouter. Configure `OPENROUTER_API_KEY`
+on the translations worker; `OPENROUTER_API_URL` defaults to
+`https://openrouter.ai/api/v1`. The stage model uses the normal model slug,
+without the catalog's `:batch` suffix.
+
+OpenRouter reuses the OpenAI chat batch codec. Its client streams the prepared
+JSONL requests into the provider's inline batch envelope, with metadata before
+the request array. A completed batch remains pending until its results are
+available. The batch ID doubles as the persisted output handle; finalization
+retrieves the batch again and emits its result entries as JSONL. Retrieval
+currently buffers OpenRouter's inline response before yielding the entries.
+No provider response or client instance must survive between worker processes.
+OpenRouter retains results for 30 days; finalize completed jobs before expiry.
+
 Provider request keys identify individual inference calls and may include
 request or chunk identifiers. `BatchLineCodec[KeyT]` remains generic; it does
 not require request keys to equal stored component keys. Provider input JSONL
@@ -76,13 +96,46 @@ only at exhaustion. Source errors propagate to the caller.
 
 ## Job control API
 
+`GET /translation-jobs/actions` requires authentication and returns an `actions`
+list for the pipeline builder. Each entry includes `name`, `label`, `inputTypes`,
+`outputTypes`, `allowedAsFirstStage`, and `configSchema`. Input and output lists
+come from the action signatures; configuration JSON Schemas come from the actual
+stage config types in validation mode, with camelCase property names. Any `$defs`
+and local references remain within the returned standalone schema.
+
+Compatibility requires the next action's inputs to be a subset of the preceding
+outputs. First-stage eligibility is a separate restriction: `combine_chapter`
+requires a predecessor. Memory-consuming first stages also require a selected
+memory group, as enforced by job creation. The metadata does not encode this
+cross-field rule in the config schema. `combine_chapter` currently accepts an
+empty config object and rejects extra properties, so its form has no configurable fields.
+
 Translation jobs are exposed under `/translation-jobs`. Creation (`POST`) and
 job progress (`GET /{jobId}`) require edit access to the source novel, as do all
 controls. Progress includes stages, batches, task states, errors, and lease expiry;
 claim tokens remain internal.
 
 Job controls are `POST /{jobId}/start`, `/resume-all`, `/cancel-all`, and `/retry-all`.
-Individual batch controls are `POST /{jobId}/batches/{batchId}/cancel` and `/retry`.
+The public creation request uses stages shaped as `{action: string, config: object}`
+so clients can build forms from action metadata without a generated action union.
+The route validates this envelope into the internal `TranslationJobCreate` model
+before calling the creation service. Action-specific defaults, config validation,
+and pipeline compatibility remain enforced; validation errors return HTTP 422.
+The top-level novel ID, chapter range, batch size, and one-to-five stage limit
+remain typed in OpenAPI. An omitted stage config defaults to an empty object,
+which still has to pass that action's config validation.
+
+The viewer uses `GET /translation-jobs?novelId=...&offset=0&limit=5` for a
+novel-scoped job page with SQL-aggregated progress and stage configurations.
+`GET /{jobId}/batches?offset=0&limit=5` returns the job summary, a page of batches
+with their task details, and the server observation time for lease comparisons.
+Both endpoints require novel edit access, return `{items, total, ...}`, and bound
+`limit` to 1–50. They never load individual chapter associations. UUID ordering
+is stable but not chronological; jobs currently have no creation timestamp.
+The existing full-detail endpoint remains available to other consumers.
+
+Individual batch controls are `POST /{jobId}/batches/{batchId}/start`, `/resume`,
+`/cancel`, and `/retry`.
 Start queues first-stage READY tasks. Resume locates the first unfinished task in
 each nonfailed batch, skipping live leases. Retry skips live leases and completed
 batches, clears failures on unfinished tasks, and restores the current step's
@@ -268,6 +321,11 @@ the [Chat Completions batch format](https://developers.openai.com/api/docs/guide
 Construct it with `TypeAdapter(TranslationDataKey)` for translation components,
 or another Pydantic key adapter for other request keys. The key is serialized as
 JSON inside `custom_id`; decoding needs no in-memory request mapping.
+The OpenRouter model uses a compact `uuidhex_data_type` string (for example,
+`22bca258bac44fc48cc3da3999fbaa69_memories`) to fit providers' 64-character
+ID limit and `[a-z0-9_-]` character restriction. Its decoder also accepts the
+older JSON object and array representations; prepared files with those IDs
+must be regenerated before submitting them to providers with these restrictions.
 
 The codec emits one UTF-8 JSONL request for `/v1/chat/completions` and reads one
 complete result line. It handles batch errors, HTTP/API errors, and refusals.

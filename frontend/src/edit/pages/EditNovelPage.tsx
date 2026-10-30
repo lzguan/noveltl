@@ -28,6 +28,7 @@ import type { LabelEditing, LabelSink } from "../labeling/types";
 import { AutoLabelPanel } from "../panels/autoLabels/AutoLabelPanel";
 import { EditorPanel } from "../panels/EditorPanel";
 import { LeftPanel } from "../panels/LeftPanel";
+import { TranslationsPanel } from "../panels/translations/TranslationsPanel";
 import { RightPanel } from "../panels/RightPanel";
 import { ToolbarPanel } from "../panels/ToolbarPanel";
 import type { Role } from "@/api/models/role";
@@ -399,6 +400,20 @@ export function EditNovelPage() {
 										value: "memory-agent",
 										label: "Agent Jobs",
 										content: <MemoryAgentPanel novelId={novel.novel.novelId} />,
+									},
+									{
+										value: "translations",
+										label: "Translations",
+										keepMounted: true,
+										content: (
+											<TranslationsPanel
+												key={novel.novel.novelId}
+												novelId={novel.novel.novelId}
+												chapterNumbers={chapterState.chapterList.map(
+													(chapter) => chapter.chapterNum,
+												)}
+											/>
+										),
 									},
 								]}
 							/>

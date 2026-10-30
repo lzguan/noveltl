@@ -20,3 +20,4 @@ This folder contains the documentation for this project. Documentation is primar
 - [Agent evaluations](../agent-evals/README.md): Harness usage and abstract design history
 - [editor/](editor/README.md): Editor synchronization, controller, managers, and rendering
 - [filters/](filters/README.md): Current filter implementation and future workflow design
+- [translations/](translations/README.md): Translation pipeline, job controls, and proposed UI layout

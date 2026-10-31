@@ -34,7 +34,7 @@ export function gatherLabelData(
 		for (const [labelGroupId, groupStatus] of trackedLabelGroups) {
 			const slotResult = yield* chapterGetter.data.chapterGetters
 				.labelDataSlot(labelGroupId)
-				.pipe(Effect.catchAll(() => Effect.succeed({ status: "error" as const })));
+				.pipe(Effect.catch(() => Effect.succeed({ status: "error" as const })));
 			if (!slotResult || slotResult.status !== "ready" || !slotResult.data) {
 				couldNotLoad.push(labelGroupId);
 				continue;

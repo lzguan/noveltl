@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  Effect,
   Schema as S
 } from 'effect';
 
@@ -21,9 +22,9 @@ export const listJobsTranslationJobsGetQueryLimitMax = 50;
 
 
 export const ListJobsTranslationJobsGetQueryParams = S.Struct({
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "offset": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(listJobsTranslationJobsGetQueryOffsetMin)), { default: () => listJobsTranslationJobsGetQueryOffsetDefault }),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(listJobsTranslationJobsGetQueryLimitMax)), { default: () => listJobsTranslationJobsGetQueryLimitDefault })
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "offset": S.Number.check(S.isGreaterThanOrEqualTo(listJobsTranslationJobsGetQueryOffsetMin)).pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGetQueryOffsetDefault))),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(listJobsTranslationJobsGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGetQueryLimitDefault)))
 })
 
 export const listJobsTranslationJobsGet200ResponseItemsItemProgressActiveBatchesDefault = 0;
@@ -39,24 +40,24 @@ export const listJobsTranslationJobsGet200ResponseItemsItemProgressTotalTasksDef
 
 export const ListJobsTranslationJobsGet200Response = S.Struct({
   "items": S.Array(S.Struct({
-  "config": S.Record({ key: S.String, value: S.Unknown }),
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "config": S.Record(S.String, S.Unknown),
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "progress": S.Struct({
-  "activeBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressActiveBatchesDefault }),
-  "cancelledBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressCancelledBatchesDefault }),
-  "completedBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressCompletedBatchesDefault }),
-  "completedTasks": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressCompletedTasksDefault }),
-  "failedBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressFailedBatchesDefault }),
-  "resumableBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressResumableBatchesDefault }),
-  "retryableBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressRetryableBatchesDefault }),
-  "startableBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressStartableBatchesDefault }),
-  "totalBatches": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressTotalBatchesDefault }),
-  "totalTasks": S.optionalWith(S.Number, { default: () => listJobsTranslationJobsGet200ResponseItemsItemProgressTotalTasksDefault })
+  "activeBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGet200ResponseItemsItemProgressActiveBatchesDefault))),
+  "cancelledBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGet200ResponseItemsItemProgressCancelledBatchesDefault))),
+  "completedBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGet200ResponseItemsItemProgressCompletedBatchesDefault))),
+  "completedTasks": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGet200ResponseItemsItemProgressCompletedTasksDefault))),
+  "failedBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGet200ResponseItemsItemProgressFailedBatchesDefault))),
+  "resumableBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGet200ResponseItemsItemProgressResumableBatchesDefault))),
+  "retryableBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGet200ResponseItemsItemProgressRetryableBatchesDefault))),
+  "startableBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGet200ResponseItemsItemProgressStartableBatchesDefault))),
+  "totalBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGet200ResponseItemsItemProgressTotalBatchesDefault))),
+  "totalTasks": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listJobsTranslationJobsGet200ResponseItemsItemProgressTotalTasksDefault)))
 }),
   "stages": S.Array(S.Struct({
   "action": S.String,
-  "config": S.Record({ key: S.String, value: S.Unknown }),
-  "stageId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "config": S.Record(S.String, S.Unknown),
+  "stageId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "stageNum": S.Number
 }))
 })),
@@ -65,11 +66,11 @@ export const ListJobsTranslationJobsGet200Response = S.Struct({
 
 export const ListJobsTranslationJobsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -90,28 +91,28 @@ export const createTranslationJobsPostBodyStagesMax = 5;
 
 export const CreateTranslationJobsPostBody = S.Struct({
   "config": S.Struct({
-  "batchSize": S.Number.pipe(S.greaterThan(createTranslationJobsPostBodyConfigBatchSizeExclusiveMin)),
-  "endChapterNum": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(createTranslationJobsPostBodyConfigEndChapterNumOneMin)), S.Null)),
-  "startChapterNum": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(createTranslationJobsPostBodyConfigStartChapterNumOneMin)), S.Null))
+  "batchSize": S.Number.check(S.isGreaterThan(createTranslationJobsPostBodyConfigBatchSizeExclusiveMin)),
+  "endChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(createTranslationJobsPostBodyConfigEndChapterNumOneMin)), S.Null])),
+  "startChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(createTranslationJobsPostBodyConfigStartChapterNumOneMin)), S.Null]))
 }),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "stages": S.Array(S.Struct({
   "action": S.String,
-  "config": S.optional(S.Record({ key: S.String, value: S.Unknown }))
-})).pipe(S.minItems(1), S.maxItems(createTranslationJobsPostBodyStagesMax))
-}).annotations({ description: 'Public envelope; action-specific validation happens before job creation.' })
+  "config": S.optional(S.Record(S.String, S.Unknown))
+})).check(S.isMinLength(1), S.isMaxLength(createTranslationJobsPostBodyStagesMax))
+}).annotate({ description: 'Public envelope; action-specific validation happens before job creation.' })
 
 export const CreateTranslationJobsPost201Response = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const CreateTranslationJobsPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -124,11 +125,11 @@ export const CreateTranslationJobsPost422Response = S.Struct({
 export const ListActionsTranslationJobsActionsGet200Response = S.Struct({
   "actions": S.Array(S.Struct({
   "allowedAsFirstStage": S.Boolean,
-  "configSchema": S.Record({ key: S.String, value: S.Unknown }),
-  "inputTypes": S.Array(S.Literal('chapter', 'memories')),
+  "configSchema": S.Record(S.String, S.Unknown),
+  "inputTypes": S.Array(S.Literals(['chapter', 'memories'])),
   "label": S.String,
   "name": S.String,
-  "outputTypes": S.Array(S.Literal('chapter', 'memories'))
+  "outputTypes": S.Array(S.Literals(['chapter', 'memories']))
 }))
 })
 
@@ -136,44 +137,44 @@ export const ListActionsTranslationJobsActionsGet200Response = S.Struct({
  * @summary Read
  */
 export const ReadTranslationJobsJobIdGetParams = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadTranslationJobsJobIdGet200Response = S.Struct({
   "batches": S.Array(S.Struct({
-  "batchId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "batchId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "batchNum": S.Number,
-  "initialFileId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)
+  "initialFileId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null])
 })),
-  "config": S.Record({ key: S.String, value: S.Unknown }),
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "config": S.Record(S.String, S.Unknown),
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "stages": S.Array(S.Struct({
   "action": S.String,
-  "config": S.Record({ key: S.String, value: S.Unknown }),
-  "stageId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "config": S.Record(S.String, S.Unknown),
+  "stageId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "stageNum": S.Number
 })),
   "tasks": S.Array(S.Struct({
-  "batchId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
-  "error": S.Union(S.String, S.Null),
-  "failedAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
-  "inputFileId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
-  "outputFileId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
-  "stageId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "status": S.Literal('waiting', 'ready', 'preparing', 'prepared', 'submitting', 'processing', 'processed', 'finalizing', 'complete'),
-  "taskId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "batchId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
+  "error": S.Union([S.String, S.Null]),
+  "failedAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
+  "inputFileId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "outputFileId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "stageId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "status": S.Literals(['waiting', 'ready', 'preparing', 'prepared', 'submitting', 'processing', 'processed', 'finalizing', 'complete']),
+  "taskId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 }))
 })
 
 export const ReadTranslationJobsJobIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -183,7 +184,7 @@ export const ReadTranslationJobsJobIdGet422Response = S.Struct({
  * @summary List Batches
  */
 export const ListBatchesTranslationJobsJobIdBatchesGetParams = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const listBatchesTranslationJobsJobIdBatchesGetQueryOffsetDefault = 0;
@@ -195,8 +196,8 @@ export const listBatchesTranslationJobsJobIdBatchesGetQueryLimitMax = 50;
 
 
 export const ListBatchesTranslationJobsJobIdBatchesGetQueryParams = S.Struct({
-  "offset": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(listBatchesTranslationJobsJobIdBatchesGetQueryOffsetMin)), { default: () => listBatchesTranslationJobsJobIdBatchesGetQueryOffsetDefault }),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(listBatchesTranslationJobsJobIdBatchesGetQueryLimitMax)), { default: () => listBatchesTranslationJobsJobIdBatchesGetQueryLimitDefault })
+  "offset": S.Number.check(S.isGreaterThanOrEqualTo(listBatchesTranslationJobsJobIdBatchesGetQueryOffsetMin)).pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGetQueryOffsetDefault))),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(listBatchesTranslationJobsJobIdBatchesGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGetQueryLimitDefault)))
 })
 
 export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressActiveBatchesDefault = 0;
@@ -212,54 +213,54 @@ export const listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressTota
 
 export const ListBatchesTranslationJobsJobIdBatchesGet200Response = S.Struct({
   "items": S.Array(S.Struct({
-  "batchId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "batchId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "batchNum": S.Number,
-  "initialFileId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
+  "initialFileId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
   "tasks": S.Array(S.Struct({
-  "batchId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
-  "error": S.Union(S.String, S.Null),
-  "failedAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
-  "inputFileId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
-  "outputFileId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
-  "stageId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "status": S.Literal('waiting', 'ready', 'preparing', 'prepared', 'submitting', 'processing', 'processed', 'finalizing', 'complete'),
-  "taskId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "batchId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
+  "error": S.Union([S.String, S.Null]),
+  "failedAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
+  "inputFileId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "outputFileId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "stageId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "status": S.Literals(['waiting', 'ready', 'preparing', 'prepared', 'submitting', 'processing', 'processed', 'finalizing', 'complete']),
+  "taskId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 }))
 })),
   "job": S.Struct({
-  "config": S.Record({ key: S.String, value: S.Unknown }),
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "config": S.Record(S.String, S.Unknown),
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "progress": S.Struct({
-  "activeBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressActiveBatchesDefault }),
-  "cancelledBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressCancelledBatchesDefault }),
-  "completedBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressCompletedBatchesDefault }),
-  "completedTasks": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressCompletedTasksDefault }),
-  "failedBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressFailedBatchesDefault }),
-  "resumableBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressResumableBatchesDefault }),
-  "retryableBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressRetryableBatchesDefault }),
-  "startableBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressStartableBatchesDefault }),
-  "totalBatches": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressTotalBatchesDefault }),
-  "totalTasks": S.optionalWith(S.Number, { default: () => listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressTotalTasksDefault })
+  "activeBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressActiveBatchesDefault))),
+  "cancelledBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressCancelledBatchesDefault))),
+  "completedBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressCompletedBatchesDefault))),
+  "completedTasks": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressCompletedTasksDefault))),
+  "failedBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressFailedBatchesDefault))),
+  "resumableBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressResumableBatchesDefault))),
+  "retryableBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressRetryableBatchesDefault))),
+  "startableBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressStartableBatchesDefault))),
+  "totalBatches": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressTotalBatchesDefault))),
+  "totalTasks": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(listBatchesTranslationJobsJobIdBatchesGet200ResponseJobProgressTotalTasksDefault)))
 }),
   "stages": S.Array(S.Struct({
   "action": S.String,
-  "config": S.Record({ key: S.String, value: S.Unknown }),
-  "stageId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "config": S.Record(S.String, S.Unknown),
+  "stageId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "stageNum": S.Number
 }))
 }),
-  "observedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "observedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "total": S.Number
 })
 
 export const ListBatchesTranslationJobsJobIdBatchesGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -269,23 +270,23 @@ export const ListBatchesTranslationJobsJobIdBatchesGet422Response = S.Struct({
  * @summary Cancel
  */
 export const CancelTranslationJobsJobIdBatchesBatchIdCancelPostParams = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "batchId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "batchId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const CancelTranslationJobsJobIdBatchesBatchIdCancelPost200Response = S.Struct({
-  "affectedBatchIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchFailedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
+  "affectedBatchIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchFailedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
 })
 
 export const CancelTranslationJobsJobIdBatchesBatchIdCancelPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -295,23 +296,23 @@ export const CancelTranslationJobsJobIdBatchesBatchIdCancelPost422Response = S.S
  * @summary Resume Batch
  */
 export const ResumeBatchTranslationJobsJobIdBatchesBatchIdResumePostParams = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "batchId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "batchId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ResumeBatchTranslationJobsJobIdBatchesBatchIdResumePost200Response = S.Struct({
-  "affectedBatchIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchFailedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
+  "affectedBatchIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchFailedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
 })
 
 export const ResumeBatchTranslationJobsJobIdBatchesBatchIdResumePost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -321,23 +322,23 @@ export const ResumeBatchTranslationJobsJobIdBatchesBatchIdResumePost422Response 
  * @summary Retry
  */
 export const RetryTranslationJobsJobIdBatchesBatchIdRetryPostParams = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "batchId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "batchId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const RetryTranslationJobsJobIdBatchesBatchIdRetryPost200Response = S.Struct({
-  "affectedBatchIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchFailedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
+  "affectedBatchIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchFailedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
 })
 
 export const RetryTranslationJobsJobIdBatchesBatchIdRetryPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -347,23 +348,23 @@ export const RetryTranslationJobsJobIdBatchesBatchIdRetryPost422Response = S.Str
  * @summary Start Batch
  */
 export const StartBatchTranslationJobsJobIdBatchesBatchIdStartPostParams = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "batchId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "batchId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const StartBatchTranslationJobsJobIdBatchesBatchIdStartPost200Response = S.Struct({
-  "affectedBatchIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchFailedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
+  "affectedBatchIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchFailedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
 })
 
 export const StartBatchTranslationJobsJobIdBatchesBatchIdStartPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -373,22 +374,22 @@ export const StartBatchTranslationJobsJobIdBatchesBatchIdStartPost422Response = 
  * @summary Cancel All
  */
 export const CancelAllTranslationJobsJobIdCancelAllPostParams = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const CancelAllTranslationJobsJobIdCancelAllPost200Response = S.Struct({
-  "affectedBatchIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchFailedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
+  "affectedBatchIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchFailedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
 })
 
 export const CancelAllTranslationJobsJobIdCancelAllPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -398,22 +399,22 @@ export const CancelAllTranslationJobsJobIdCancelAllPost422Response = S.Struct({
  * @summary Resume All
  */
 export const ResumeAllTranslationJobsJobIdResumeAllPostParams = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ResumeAllTranslationJobsJobIdResumeAllPost200Response = S.Struct({
-  "affectedBatchIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchFailedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
+  "affectedBatchIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchFailedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
 })
 
 export const ResumeAllTranslationJobsJobIdResumeAllPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -423,22 +424,22 @@ export const ResumeAllTranslationJobsJobIdResumeAllPost422Response = S.Struct({
  * @summary Retry All
  */
 export const RetryAllTranslationJobsJobIdRetryAllPostParams = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const RetryAllTranslationJobsJobIdRetryAllPost200Response = S.Struct({
-  "affectedBatchIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchFailedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
+  "affectedBatchIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchFailedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
 })
 
 export const RetryAllTranslationJobsJobIdRetryAllPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -448,22 +449,22 @@ export const RetryAllTranslationJobsJobIdRetryAllPost422Response = S.Struct({
  * @summary Start
  */
 export const StartTranslationJobsJobIdStartPostParams = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const StartTranslationJobsJobIdStartPost200Response = S.Struct({
-  "affectedBatchIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchFailedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
-  "dispatchedTaskIds": S.optional(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
+  "affectedBatchIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchFailedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))),
+  "dispatchedTaskIds": S.optional(S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
 })
 
 export const StartTranslationJobsJobIdStartPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))

@@ -6,7 +6,7 @@ import {
 	FatalException,
 	NotFoundException,
 } from "./types/errors";
-import { UnknownException } from "effect/Cause";
+import { UnknownError } from "effect/Cause";
 import type { TriggerEvent } from "./types/controllerTypes";
 import {
 	CCServId,
@@ -49,23 +49,23 @@ export const buildChapterDataManager = (
 	raiseTriggerEvent: (event: TriggerEvent) => Effect.Effect<void>,
 	idRepo: IDRepository,
 	getters: {
-		labelGroupIds: () => Effect.Effect<LGProvId[], UnknownException>;
+		labelGroupIds: () => Effect.Effect<LGProvId[], UnknownError>;
 		labelGroup: (labelGroupId: LGProvId) => Effect.Effect<LabelGroupSlot, NotFoundException>;
 		novel: () => Effect.Effect<Novel>;
 		role: () => Effect.Effect<Role>;
 	},
-): Effect.Effect<ChapterDataManager, UnknownException> =>
+): Effect.Effect<ChapterDataManager, UnknownError> =>
 	Effect.gen(function* () {
 		let chapterContentId = yield* idRepo
 			.newIdAndBindId({
 				kind: "chapterContent",
 				servId: CCServId(editChapterData.chapterContent.chapterContentId),
 			})
-			.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+			.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 		let text = editChapterData.chapterContent.chapterContentText;
 
 		const labelDataIndex = yield* buildLabelDataIndex().pipe(
-			Effect.mapError((err) => new UnknownException({ orig: err })),
+			Effect.mapError((err) => new UnknownError({ orig: err })),
 		);
 		// scoped for initialization
 		{
@@ -73,7 +73,7 @@ export const buildChapterDataManager = (
 			for (const lgProvId of labelGroupProvIds) {
 				const lgSlot = yield* getters
 					.labelGroup(lgProvId)
-					.pipe(Effect.catchAll(() => Effect.succeed(null)));
+					.pipe(Effect.catch(() => Effect.succeed(null)));
 				if (!lgSlot) {
 					continue;
 				}
@@ -82,10 +82,10 @@ export const buildChapterDataManager = (
 						kind: "labelGroup",
 						provId: lgSlot.meta.labelGroup.labelGroupId,
 					})
-					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+					.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 				if (lgServId === null) {
 					return yield* Effect.fail(
-						new UnknownException({
+						new UnknownError({
 							message: `Unexpected: label group ${lgProvId} does not have a server id`,
 						}),
 					);
@@ -98,7 +98,7 @@ export const buildChapterDataManager = (
 						kind: "labelData",
 						servId: LDServId(entry.labelData.labelDataId),
 					})
-					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+					.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 				const provLabels: ProvLabel[] = entry.labels
 					.map((l) => {
 						const provLabelId = Effect.runSync(
@@ -115,7 +115,7 @@ export const buildChapterDataManager = (
 				const lgProvId = yield* idRepo.queryProvId({ kind: "labelGroup", servId });
 				if (!lgProvId) {
 					return yield* Effect.fail(
-						new UnknownException({
+						new UnknownError({
 							message: `Unexpected: label group with server id ${servId} not found in label group index`,
 						}),
 					);
@@ -128,13 +128,13 @@ export const buildChapterDataManager = (
 							chapterContentId: chapterContentId,
 						}),
 					})
-					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+					.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 				yield* labelDataIndex
 					.setData(lgProvId, {
 						status: "ready",
 						data: { labels: provLabels },
 					})
-					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+					.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 			}
 
 			for (const entry of editChapterData.lazyLabelData) {
@@ -143,12 +143,12 @@ export const buildChapterDataManager = (
 						kind: "labelData",
 						servId: LDServId(entry.labelData.labelDataId),
 					})
-					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+					.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 				const servId = LGServId(entry.labelGroup.labelGroupId);
 				const lgProvId = yield* idRepo.queryProvId({ kind: "labelGroup", servId });
 				if (!lgProvId) {
 					return yield* Effect.fail(
-						new UnknownException({
+						new UnknownError({
 							message: `Unexpected: label group with server id ${servId} not found in label group index`,
 						}),
 					);
@@ -161,7 +161,7 @@ export const buildChapterDataManager = (
 							chapterContentId: chapterContentId,
 						}),
 					})
-					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+					.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 			}
 		}
 
@@ -280,7 +280,7 @@ export const buildChapterDataManager = (
 			return batches;
 		};
 
-		const _flush = (): Effect.Effect<RequestEvent[], UnknownException> =>
+		const _flush = (): Effect.Effect<RequestEvent[], UnknownError> =>
 			Effect.gen(function* () {
 				if (opQueue.tag === "label") {
 					const events: RequestEvent[] = [];
@@ -289,7 +289,7 @@ export const buildChapterDataManager = (
 						const slot = yield* labelDataIndex.get(labelGroupProvId).pipe(
 							Effect.mapError(
 								() =>
-									new UnknownException({
+									new UnknownError({
 										message: "Label group not found in index",
 									}),
 							),
@@ -384,7 +384,7 @@ export const buildChapterDataManager = (
 									}),
 								postSend: (data) =>
 									Effect.gen(function* () {
-										const decoded = yield* Schema.decodeUnknown(
+										const decoded = yield* Schema.decodeUnknownEffect(
 											UpdateLabelDataStreamLabelDatasLabelDataIdPatch200Response,
 										)(data).pipe(
 											Effect.mapError(
@@ -439,7 +439,7 @@ export const buildChapterDataManager = (
 					for (const labelGroupProvId of yield* labelDataIndex.getIds()) {
 						const slot = yield* labelDataIndex
 							.get(labelGroupProvId)
-							.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+							.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 						trackedLabelData.push({
 							labelGroupProvId,
 							labelDataProvId: slot.meta.labelData.labelDataId,
@@ -447,10 +447,10 @@ export const buildChapterDataManager = (
 						if (slot.status !== "ready" || !slot.data) continue;
 						const labelGroupServId = yield* idRepo
 							.getServerId({ kind: "labelGroup", provId: labelGroupProvId })
-							.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+							.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 						if (labelGroupServId === null) {
 							return yield* Effect.fail(
-								new UnknownException({
+								new UnknownError({
 									message: `Label group ${labelGroupProvId} has no server ID`,
 								}),
 							);
@@ -587,7 +587,7 @@ export const buildChapterDataManager = (
 							}),
 						postSend: (data) =>
 							Effect.gen(function* () {
-								const validated = yield* Schema.decodeUnknown(
+								const validated = yield* Schema.decodeUnknownEffect(
 									UpdateChapterContentChaptersChapterIdContentPatch200Response,
 								)(data).pipe(
 									Effect.mapError((err) => new FatalException({ orig: err })),
@@ -609,7 +609,7 @@ export const buildChapterDataManager = (
 											kind: "labelData",
 											provId: labelDataProvId,
 										})
-										.pipe(Effect.catchAll(() => Effect.succeed(null)));
+										.pipe(Effect.catch(() => Effect.succeed(null)));
 									const replacementServId =
 										oldServId && validated.labelDataIdMap[oldServId];
 									if (!replacementServId) {
@@ -726,7 +726,7 @@ export const buildChapterDataManager = (
 							}),
 						postSend: (data) =>
 							Effect.gen(function* () {
-								const validated = yield* Schema.decodeUnknown(
+								const validated = yield* Schema.decodeUnknownEffect(
 									ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200Response,
 								)(data).pipe(
 									Effect.mapError((err) => new FatalException({ orig: err })),
@@ -816,7 +816,7 @@ export const buildChapterDataManager = (
 
 		const autoFlushIfTagMismatch = (
 			incomingTag: "label" | "text" | "neither",
-		): Effect.Effect<RequestEvent[], UnknownException> =>
+		): Effect.Effect<RequestEvent[], UnknownError> =>
 			Effect.gen(function* () {
 				if (opQueue.tag !== "neither" && opQueue.tag !== incomingTag) {
 					return yield* _flush();
@@ -829,13 +829,13 @@ export const buildChapterDataManager = (
 			editOnly: boolean = false,
 		): Effect.Effect<
 			{ labelDataProvId: LDProvId; labels: readonly ProvLabel[] },
-			UnknownException
+			UnknownError
 		> =>
 			Effect.gen(function* () {
 				const labelGroupSlot = yield* getters.labelGroup(labelGroupId).pipe(
 					Effect.mapError(
 						(err) =>
-							new UnknownException({
+							new UnknownError({
 								message: `Label group ${labelGroupId} not found in getters, error: ${err}`,
 							}),
 					),
@@ -843,32 +843,30 @@ export const buildChapterDataManager = (
 				const slot = yield* labelDataIndex
 					.get(labelGroupId)
 					.pipe(
-						Effect.catch("_tag", {
-							failure: "NotFoundException",
-							onFailure: () =>
-								Effect.gen(function* () {
-									yield* labelDataIndex.new(labelGroupId, {
-										labelData: Prov({
-											labelDataId: idRepo.newId("labelData"),
-											chapterContentId,
-											labelGroupId,
-										}),
-									});
-									return yield* labelDataIndex.get(labelGroupId);
-								}),
-						}),
+						Effect.catchTag("NotFoundException", () =>
+							Effect.gen(function* () {
+								yield* labelDataIndex.new(labelGroupId, {
+									labelData: Prov({
+										labelDataId: idRepo.newId("labelData"),
+										chapterContentId,
+										labelGroupId,
+									}),
+								});
+								return yield* labelDataIndex.get(labelGroupId);
+							}),
+						),
 					)
-					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+					.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 				if (slot.status !== "ready" || !slot.data) {
 					return yield* Effect.fail(
-						new UnknownException({
+						new UnknownError({
 							message: `Labels for group ${labelGroupId} not loaded`,
 						}),
 					);
 				}
 				if (editOnly && labelGroupSlot.meta.role === "viewer") {
 					return yield* Effect.fail(
-						new UnknownException({ message: "Viewer role cannot edit labels" }),
+						new UnknownError({ message: "Viewer role cannot edit labels" }),
 					);
 				}
 
@@ -885,24 +883,22 @@ export const buildChapterDataManager = (
 			entityGroup?: string,
 			score?: number,
 			dirty?: boolean,
-		): Effect.Effect<RequestEvent[], UnknownException> =>
+		): Effect.Effect<RequestEvent[], UnknownError> =>
 			Effect.gen(function* () {
 				if (destroyed)
 					return yield* Effect.fail(
-						new UnknownException({ message: "Chapter is destroyed" }),
+						new UnknownError({ message: "Chapter is destroyed" }),
 					);
 
 				const { labelDataProvId, labels } = yield* getReadyLabels(labelGroupId, true);
 
 				if (startPos < 0 || startPos >= endPos || endPos > text.length) {
 					return yield* Effect.fail(
-						new UnknownException({ message: "Label bounds are out of range" }),
+						new UnknownError({ message: "Label bounds are out of range" }),
 					);
 				}
 				if (endPos - startPos > 128) {
-					return yield* Effect.fail(
-						new UnknownException({ message: "Label is too long" }),
-					);
+					return yield* Effect.fail(new UnknownError({ message: "Label is too long" }));
 				}
 				if (
 					labels.some(
@@ -910,12 +906,12 @@ export const buildChapterDataManager = (
 					)
 				) {
 					return yield* Effect.fail(
-						new UnknownException({ message: "Label overlaps with existing label" }),
+						new UnknownError({ message: "Label overlaps with existing label" }),
 					);
 				}
 				if (score != null && (score < 0 || score > 1)) {
 					return yield* Effect.fail(
-						new UnknownException({ message: "Label score must be between 0 and 1" }),
+						new UnknownError({ message: "Label score must be between 0 and 1" }),
 					);
 				}
 				const flushedEvents = yield* autoFlushIfTagMismatch("label");
@@ -937,7 +933,7 @@ export const buildChapterDataManager = (
 					.setData(labelGroupId, { status: "ready", data: { labels: newLabels } })
 					.pipe(
 						Effect.mapError(
-							() => new UnknownException({ message: "Failed to update label data" }),
+							() => new UnknownError({ message: "Failed to update label data" }),
 						),
 					);
 				if (opQueue.tag === "neither") {
@@ -980,11 +976,11 @@ export const buildChapterDataManager = (
 		const _deleteLabel = (
 			labelGroupId: LGProvId,
 			labelId: LProvId,
-		): Effect.Effect<RequestEvent[], UnknownException> =>
+		): Effect.Effect<RequestEvent[], UnknownError> =>
 			Effect.gen(function* () {
 				if (destroyed)
 					return yield* Effect.fail(
-						new UnknownException({ message: "Chapter is destroyed" }),
+						new UnknownError({ message: "Chapter is destroyed" }),
 					);
 
 				const { labels } = yield* getReadyLabels(labelGroupId, true);
@@ -992,7 +988,7 @@ export const buildChapterDataManager = (
 				const labelIndex = labels.findIndex((l) => l.labelId === labelId);
 				if (labelIndex === -1) {
 					return yield* Effect.fail(
-						new UnknownException({
+						new UnknownError({
 							message: `Label [${labelId}] not found`,
 						}),
 					);
@@ -1004,7 +1000,7 @@ export const buildChapterDataManager = (
 					.setData(labelGroupId, { status: "ready", data: { labels: newLabels } })
 					.pipe(
 						Effect.mapError(
-							() => new UnknownException({ message: "Failed to update label data" }),
+							() => new UnknownError({ message: "Failed to update label data" }),
 						),
 					);
 
@@ -1041,11 +1037,11 @@ export const buildChapterDataManager = (
 			entityGroup?: string,
 			score?: number,
 			dirty?: boolean,
-		): Effect.Effect<RequestEvent[], UnknownException> =>
+		): Effect.Effect<RequestEvent[], UnknownError> =>
 			Effect.gen(function* () {
 				if (destroyed)
 					return yield* Effect.fail(
-						new UnknownException({ message: "Chapter is destroyed" }),
+						new UnknownError({ message: "Chapter is destroyed" }),
 					);
 
 				const { labels } = yield* getReadyLabels(labelGroupId, true);
@@ -1053,7 +1049,7 @@ export const buildChapterDataManager = (
 				const labelIndex = labels.findIndex((l) => l.labelId === labelId);
 				if (labelIndex === -1) {
 					return yield* Effect.fail(
-						new UnknownException({
+						new UnknownError({
 							message: `Label [${startPos}, ${endPos}) not found`,
 						}),
 					);
@@ -1064,12 +1060,12 @@ export const buildChapterDataManager = (
 
 				if (nextEnd - nextStart > 128) {
 					return yield* Effect.fail(
-						new UnknownException({ message: "Updated label is too long" }),
+						new UnknownError({ message: "Updated label is too long" }),
 					);
 				}
 				if (nextStart >= nextEnd || nextStart < 0 || nextEnd > text.length) {
 					return yield* Effect.fail(
-						new UnknownException({ message: "Updated label bounds out of range" }),
+						new UnknownError({ message: "Updated label bounds out of range" }),
 					);
 				}
 
@@ -1079,7 +1075,7 @@ export const buildChapterDataManager = (
 				});
 				if (overlaps) {
 					return yield* Effect.fail(
-						new UnknownException({
+						new UnknownError({
 							message: "Updated label overlaps with existing label",
 						}),
 					);
@@ -1102,7 +1098,7 @@ export const buildChapterDataManager = (
 					.setData(labelGroupId, { status: "ready", data: { labels: newLabels } })
 					.pipe(
 						Effect.mapError(
-							() => new UnknownException({ message: "Failed to update label data" }),
+							() => new UnknownError({ message: "Failed to update label data" }),
 						),
 					);
 				if (opQueue.tag === "neither") {
@@ -1146,23 +1142,23 @@ export const buildChapterDataManager = (
 		const _insertTextAt = (
 			pos: number,
 			insertedText: string,
-		): Effect.Effect<RequestEvent[], UnknownException> =>
+		): Effect.Effect<RequestEvent[], UnknownError> =>
 			Effect.gen(function* () {
 				if (destroyed)
 					return yield* Effect.fail(
-						new UnknownException({ message: "Chapter is destroyed" }),
+						new UnknownError({ message: "Chapter is destroyed" }),
 					);
 
 				const role = yield* getters.role();
 				if (role === "viewer") {
 					return yield* Effect.fail(
-						new UnknownException({ message: "Viewer role cannot edit text" }),
+						new UnknownError({ message: "Viewer role cannot edit text" }),
 					);
 				}
 
 				if (pos < 0 || pos > text.length) {
 					return yield* Effect.fail(
-						new UnknownException({ message: "Insert position out of bounds" }),
+						new UnknownError({ message: "Insert position out of bounds" }),
 					);
 				}
 				const flushedEvents = yield* autoFlushIfTagMismatch("text");
@@ -1173,7 +1169,7 @@ export const buildChapterDataManager = (
 				for (const ldId of insertIds) {
 					const slot = yield* labelDataIndex
 						.get(ldId)
-						.pipe(Effect.catchAll(() => Effect.succeed(null)));
+						.pipe(Effect.catch(() => Effect.succeed(null)));
 					if (!slot || slot.status !== "ready" || !slot.data) continue;
 					for (const label of slot.data.labels) {
 						if (label.labelStart < pos && label.labelEnd > pos) {
@@ -1198,7 +1194,7 @@ export const buildChapterDataManager = (
 						.pipe(
 							Effect.mapError(
 								(err) =>
-									new UnknownException({
+									new UnknownError({
 										message: `Failed to update label data, error: ${String(err)}`,
 									}),
 							),
@@ -1225,23 +1221,23 @@ export const buildChapterDataManager = (
 		const _deleteTextAt = (
 			startPos: number,
 			endPos: number,
-		): Effect.Effect<RequestEvent[], UnknownException> =>
+		): Effect.Effect<RequestEvent[], UnknownError> =>
 			Effect.gen(function* () {
 				if (destroyed)
 					return yield* Effect.fail(
-						new UnknownException({ message: "Chapter is destroyed" }),
+						new UnknownError({ message: "Chapter is destroyed" }),
 					);
 
 				const role = yield* getters.role();
 				if (role === "viewer") {
 					return yield* Effect.fail(
-						new UnknownException({ message: "Viewer role cannot edit text" }),
+						new UnknownError({ message: "Viewer role cannot edit text" }),
 					);
 				}
 
 				if (startPos < 0 || endPos > text.length || startPos >= endPos) {
 					return yield* Effect.fail(
-						new UnknownException({ message: "Delete range out of bounds" }),
+						new UnknownError({ message: "Delete range out of bounds" }),
 					);
 				}
 				const deletedText = text.slice(startPos, endPos);
@@ -1253,7 +1249,7 @@ export const buildChapterDataManager = (
 				for (const ldId of deleteIds) {
 					const slot = yield* labelDataIndex
 						.get(ldId)
-						.pipe(Effect.catchAll(() => Effect.succeed(null)));
+						.pipe(Effect.catch(() => Effect.succeed(null)));
 					if (!slot || slot.status !== "ready" || !slot.data) continue;
 					for (const label of slot.data.labels) {
 						if (label.labelEnd > startPos && label.labelStart < endPos) {
@@ -1278,7 +1274,7 @@ export const buildChapterDataManager = (
 						.pipe(
 							Effect.mapError(
 								(err) =>
-									new UnknownException({
+									new UnknownError({
 										message: `Failed to update label data, error: ${String(err)}`,
 										orig: err,
 									}),
@@ -1305,20 +1301,20 @@ export const buildChapterDataManager = (
 
 		const _reloadGroup = (
 			labelGroupId: LGProvId,
-		): Effect.Effect<RequestEvent[], UnknownException> =>
+		): Effect.Effect<RequestEvent[], UnknownError> =>
 			Effect.gen(function* () {
 				if (destroyed)
 					return yield* Effect.fail(
-						new UnknownException({ message: "Chapter is destroyed" }),
+						new UnknownError({ message: "Chapter is destroyed" }),
 					);
 				// Check if label group still exists in getters. If not, delete from index and raise event.
-				const labelGroupSlotEither = yield* Effect.either(getters.labelGroup(labelGroupId));
-				if (labelGroupSlotEither._tag === "Left") {
-					const slot = yield* Effect.either(labelDataIndex.get(labelGroupId));
-					if (slot._tag === "Right") {
+				const labelGroupSlotResult = yield* Effect.result(getters.labelGroup(labelGroupId));
+				if (labelGroupSlotResult._tag === "Failure") {
+					const slot = yield* Effect.result(labelDataIndex.get(labelGroupId));
+					if (slot._tag === "Success") {
 						yield* labelDataIndex
 							.delete(labelGroupId)
-							.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+							.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 					}
 					yield* raiseTriggerEvent({
 						eventType: "labelDataLoaded",
@@ -1329,8 +1325,8 @@ export const buildChapterDataManager = (
 					return [];
 				}
 				// label group exists, proceed with reload
-				const slotEither = yield* Effect.either(labelDataIndex.get(labelGroupId));
-				if (slotEither._tag === "Left") {
+				const slotResult = yield* Effect.result(labelDataIndex.get(labelGroupId));
+				if (slotResult._tag === "Failure") {
 					yield* labelDataIndex
 						.new(labelGroupId, {
 							labelData: Prov({
@@ -1339,16 +1335,14 @@ export const buildChapterDataManager = (
 								labelGroupId,
 							}),
 						})
-						.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+						.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 				}
 				const slot =
-					slotEither._tag === "Right"
-						? slotEither.right
+					slotResult._tag === "Success"
+						? slotResult.success
 						: yield* labelDataIndex
 								.get(labelGroupId)
-								.pipe(
-									Effect.mapError((err) => new UnknownException({ orig: err })),
-								);
+								.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 				if (slot.status === "loading") return [];
 				yield* raiseTriggerEvent({
 					eventType: "labelDataReloading",
@@ -1358,7 +1352,7 @@ export const buildChapterDataManager = (
 				yield* labelDataIndex.setData(labelGroupId, { status: "loading" }).pipe(
 					Effect.mapError(
 						(err) =>
-							new UnknownException({
+							new UnknownError({
 								message: `Failed to set label data index to loading for group ${labelGroupId}`,
 								orig: err,
 							}),
@@ -1367,7 +1361,7 @@ export const buildChapterDataManager = (
 				yield* labelDataIndex.increment(labelGroupId).pipe(
 					Effect.mapError(
 						(err) =>
-							new UnknownException({
+							new UnknownError({
 								message: `Failed to increment label data index for group ${labelGroupId}`,
 								orig: err,
 							}),
@@ -1402,7 +1396,7 @@ export const buildChapterDataManager = (
 				const onError = () =>
 					Effect.gen(function* () {
 						yield* labelDataIndex.setData(labelGroupId, { status: "error" }).pipe(
-							Effect.catchAll((err) => {
+							Effect.catch((err) => {
 								Effect.logError(
 									`Failed to set label data index to error for group ${labelGroupId}, error: ${err}`,
 								);
@@ -1410,7 +1404,7 @@ export const buildChapterDataManager = (
 							}),
 						);
 						yield* labelDataIndex.decrement(labelGroupId).pipe(
-							Effect.catchAll((err) => {
+							Effect.catch((err) => {
 								Effect.logError(
 									`Failed to decrement label data index for group ${labelGroupId}, error: ${err}`,
 								);
@@ -1501,7 +1495,7 @@ export const buildChapterDataManager = (
 						}),
 					postSend: (data: unknown) =>
 						Effect.gen(function* () {
-							const validated = yield* Schema.decodeUnknown(
+							const validated = yield* Schema.decodeUnknownEffect(
 								ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200Response,
 							)(data).pipe(
 								Effect.mapError((err) => new FatalException({ orig: err })),
@@ -1672,7 +1666,7 @@ export const buildChapterDataManager = (
 				return requestEvents;
 			});
 
-		const destroy = (): Effect.Effect<RequestEvent[], UnknownException> =>
+		const destroy = (): Effect.Effect<RequestEvent[], UnknownError> =>
 			Effect.gen(function* () {
 				if (destroyed) return [];
 				destroyed = true;

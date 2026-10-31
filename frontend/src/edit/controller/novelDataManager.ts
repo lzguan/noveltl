@@ -14,7 +14,7 @@ import {
 	LoadingException,
 	NotFoundException,
 } from "./types/errors";
-import { TimeoutException, UnknownException } from "effect/Cause";
+import { TimeoutError, UnknownError } from "effect/Cause";
 import type { NovelGetters, TriggerEvent } from "./types/controllerTypes";
 import {
 	ALRProvId,
@@ -54,10 +54,10 @@ export type NovelData = {
 };
 
 export const buildNovelDataManager = (
-	fetchNovelData: () => Effect.Effect<NovelData, ConnectionException | TimeoutException>,
+	fetchNovelData: () => Effect.Effect<NovelData, ConnectionException | TimeoutError>,
 	raiseTriggerEvent: (getters: NovelGetters, event: TriggerEvent) => Effect.Effect<void>,
 	idRepo: IDRepository,
-): Effect.Effect<NovelDataManager, ConnectionException | TimeoutException | FatalException> =>
+): Effect.Effect<NovelDataManager, ConnectionException | TimeoutError | FatalException> =>
 	Effect.gen(function* () {
 		const novelData = yield* fetchNovelData();
 
@@ -106,13 +106,13 @@ export const buildNovelDataManager = (
 
 		const { decorate, flush: _flush } = buildRequestQueueDispatcher<RequestEvent>();
 
-		const flush: () => Effect.Effect<RequestEvent[], UnknownException> = () =>
+		const flush: () => Effect.Effect<RequestEvent[], UnknownError> = () =>
 			Effect.gen(function* () {
 				const events = yield* _flush();
 				for (const chapterId of yield* chaptersIndex.getIds()) {
 					const slot = yield* chaptersIndex
 						.get(chapterId)
-						.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+						.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 					if (slot.status === "ready") {
 						if (slot.data.chapterData.getters.isDestroyed()) continue;
 						const flushResult = yield* slot.data.chapterData.flush();
@@ -132,7 +132,7 @@ export const buildNovelDataManager = (
 			chapterServerId: (chapterId) =>
 				idRepo
 					.getServerId({ kind: "chapter", provId: chapterId })
-					.pipe(Effect.catchAll(() => Effect.succeed(null))),
+					.pipe(Effect.catch(() => Effect.succeed(null))),
 			chapterContentServerId: (chapterId) =>
 				Effect.gen(function* () {
 					const slot = yield* chaptersIndex.get(chapterId);
@@ -145,7 +145,7 @@ export const buildNovelDataManager = (
 						kind: "chapterContent",
 						provId: chapterContentId,
 					});
-				}).pipe(Effect.catchAll(() => Effect.succeed(null))),
+				}).pipe(Effect.catch(() => Effect.succeed(null))),
 			chapterContentIdFromServerId: (chapterContentId) =>
 				idRepo.queryProvId({ kind: "chapterContent", servId: chapterContentId }),
 			labelIdFromServerId: (labelId) =>
@@ -170,7 +170,7 @@ export const buildNovelDataManager = (
 
 		const _addLabelGroup = (
 			labelGroupName: string,
-		): Effect.Effect<RequestEvent[], UnknownException> =>
+		): Effect.Effect<RequestEvent[], UnknownError> =>
 			Effect.gen(function* () {
 				const newId = idRepo.newId("labelGroup");
 				const newLabelGroup: ProvLabelGroup = Prov({
@@ -183,7 +183,7 @@ export const buildNovelDataManager = (
 					.pipe(
 						Effect.mapError(
 							() =>
-								new UnknownException({
+								new UnknownError({
 									message: "Failed to add label group to index",
 								}),
 						),
@@ -191,7 +191,7 @@ export const buildNovelDataManager = (
 				yield* labelGroupsIndex.increment(newId).pipe(
 					Effect.mapError(
 						() =>
-							new UnknownException({
+							new UnknownError({
 								message: "Failed to increment label group index",
 							}),
 					),
@@ -203,7 +203,7 @@ export const buildNovelDataManager = (
 				const onError = (): Effect.Effect<void> => {
 					return labelGroupsIndex
 						.decrement(newId)
-						.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+						.pipe(Effect.catch(() => Effect.succeed(void 0)));
 				};
 
 				return [
@@ -261,8 +261,8 @@ export const buildNovelDataManager = (
 							}),
 						postSend: (data) =>
 							Effect.gen(function* () {
-								const validated = yield* Schema.validate(
-									CreateLabelGroupLabelGroupsPost200Response,
+								const validated = yield* Schema.decodeUnknownEffect(
+									Schema.toType(CreateLabelGroupLabelGroupsPost200Response),
 								)(data);
 								yield* idRepo.bindServerId({
 									kind: "labelGroup",
@@ -280,7 +280,7 @@ export const buildNovelDataManager = (
 			chapterNum: number,
 			chapterTitle: string,
 			chapterIsPublic: boolean,
-		): Effect.Effect<RequestEvent[], UnknownException | DuplicateChapterNumException> =>
+		): Effect.Effect<RequestEvent[], UnknownError | DuplicateChapterNumException> =>
 			Effect.gen(function* () {
 				const newId = idRepo.newId("chapter");
 				const newChapter: ProvChapter = Prov({
@@ -292,19 +292,19 @@ export const buildNovelDataManager = (
 				});
 				if (novelData.novelRole === "viewer") {
 					return yield* Effect.fail(
-						new UnknownException({ message: "Viewer role cannot add chapter" }),
+						new UnknownError({ message: "Viewer role cannot add chapter" }),
 					);
 				}
 				yield* chaptersIndex.new(newId, { chapter: newChapter }).pipe(
 					Effect.mapError((err) => {
 						if (err._tag === "DuplicateChapterNumException") return err;
-						return new UnknownException({ message: "Failed to add chapter to index" });
+						return new UnknownError({ message: "Failed to add chapter to index" });
 					}),
 				);
 				yield* chaptersIndex.increment(newId).pipe(
 					Effect.mapError(
 						() =>
-							new UnknownException({
+							new UnknownError({
 								message: "Failed to increment chapter index",
 							}),
 					),
@@ -316,7 +316,7 @@ export const buildNovelDataManager = (
 				const onError = (): Effect.Effect<void> => {
 					return chaptersIndex
 						.decrement(newId)
-						.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+						.pipe(Effect.catch(() => Effect.succeed(void 0)));
 				};
 				return [
 					{
@@ -375,8 +375,10 @@ export const buildNovelDataManager = (
 							}),
 						postSend: (data) =>
 							Effect.gen(function* () {
-								const validated = yield* Schema.validate(
-									CreateChapterNovelsNovelIdChaptersPost200Response,
+								const validated = yield* Schema.decodeUnknownEffect(
+									Schema.toType(
+										CreateChapterNovelsNovelIdChaptersPost200Response,
+									),
 								)(data);
 								yield* idRepo.bindServerId({
 									kind: "chapter",
@@ -397,7 +399,7 @@ export const buildNovelDataManager = (
 			highlight?: { start: number; end: number; desiredCCId?: CCServId },
 		): Effect.Effect<
 			RequestEvent[],
-			AlreadyOpenException | NotFoundException | LoadingException | UnknownException
+			AlreadyOpenException | NotFoundException | LoadingException | UnknownError
 		> =>
 			Effect.gen(function* () {
 				const chapter = yield* chaptersIndex.get(chapterId);
@@ -418,7 +420,7 @@ export const buildNovelDataManager = (
 							eventType: "chapterOpenFailed",
 							chapterId,
 						});
-					}).pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+					}).pipe(Effect.catch(() => Effect.succeed(void 0)));
 				return [
 					{
 						cached: false,
@@ -490,8 +492,10 @@ export const buildNovelDataManager = (
 							}),
 						postSend: (resp: unknown) =>
 							Effect.gen(function* () {
-								const validated = yield* Schema.validate(
-									ReadEditChapterDataEditChapterDataChapterIdPost200Response,
+								const validated = yield* Schema.decodeUnknownEffect(
+									Schema.toType(
+										ReadEditChapterDataEditChapterDataChapterIdPost200Response,
+									),
 								)(resp).pipe(
 									Effect.mapError((err) => new FatalException({ orig: err })),
 								);
@@ -572,62 +576,61 @@ export const buildNovelDataManager = (
 				}
 				return reqEvents;
 			});
-			return Effect.if(
-				Effect.gen(function* () {
-					const chapterSlot = yield* chaptersIndex.get(chapterId);
-					return (
-						chapterSlot.status === "ready" &&
-						!chapterSlot.data.chapterData.getters.isDestroyed() &&
-						flags.fromCached
-					);
-				}),
-				{
-					onTrue: () =>
-						Effect.gen(function* () {
-							const chapterSlot = yield* chaptersIndex.get(chapterId);
-							let validHighlight: boolean;
-							if (chapterSlot.status !== "ready") {
-								validHighlight = false;
-							} else {
-								const ccId =
-									yield* chapterSlot.data.chapterData.getters.chapterContentId();
-								const servId = yield* idRepo.getServerId({
-									kind: "chapterContent",
-									provId: ccId,
-								});
-								validHighlight =
-									flags.forEditor &&
-									flags.highlight !== undefined &&
-									(flags.highlight.desiredCCId === undefined ||
-										flags.highlight.desiredCCId === servId);
-							}
+			return Effect.gen(function* () {
+				const chapterSlot = yield* chaptersIndex.get(chapterId);
+				return (
+					chapterSlot.status === "ready" &&
+					!chapterSlot.data.chapterData.getters.isDestroyed() &&
+					flags.fromCached
+				);
+			}).pipe(
+				Effect.flatMap((fromCache) =>
+					fromCache
+						? Effect.gen(function* () {
+								const chapterSlot = yield* chaptersIndex.get(chapterId);
+								let validHighlight: boolean;
+								if (chapterSlot.status !== "ready") {
+									validHighlight = false;
+								} else {
+									const ccId =
+										yield* chapterSlot.data.chapterData.getters.chapterContentId();
+									const servId = yield* idRepo.getServerId({
+										kind: "chapterContent",
+										provId: ccId,
+									});
+									validHighlight =
+										flags.forEditor &&
+										flags.highlight !== undefined &&
+										(flags.highlight.desiredCCId === undefined ||
+											flags.highlight.desiredCCId === servId);
+								}
 
-							return yield* raiseTriggerEvent(getters, {
-								eventType: "chapterOpened",
-								chapterId,
-								flags: flags.forEditor
-									? {
-											forEditor: true,
-											highlight: validHighlight
-												? {
-														start: flags.highlight!.start,
-														end: flags.highlight!.end,
-														validCCId: true,
-													}
-												: flags.highlight
-													? { validCCId: false }
-													: undefined,
-										}
-									: { forEditor: false },
-							}).pipe(Effect.andThen(() => Effect.succeed<RequestEvent[]>([])));
-						}),
-					onFalse: () => noCachedEffect,
-				},
+								return yield* raiseTriggerEvent(getters, {
+									eventType: "chapterOpened",
+									chapterId,
+									flags: flags.forEditor
+										? {
+												forEditor: true,
+												highlight: validHighlight
+													? {
+															start: flags.highlight!.start,
+															end: flags.highlight!.end,
+															validCCId: true,
+														}
+													: flags.highlight
+														? { validCCId: false }
+														: undefined,
+											}
+										: { forEditor: false },
+								}).pipe(Effect.andThen(() => Effect.succeed<RequestEvent[]>([])));
+							})
+						: noCachedEffect,
+				),
 			);
 		};
 		const getChapterDM = (id: CProvId): ChapterDataManager | null => {
 			const slot = Effect.runSync(
-				chaptersIndex.get(id).pipe(Effect.catchAll(() => Effect.succeed(null))),
+				chaptersIndex.get(id).pipe(Effect.catch(() => Effect.succeed(null))),
 			);
 			if (!slot || slot.status !== "ready" || !slot.data) return null;
 			if (slot.data.chapterData.getters.isDestroyed()) return null;
@@ -636,7 +639,7 @@ export const buildNovelDataManager = (
 
 		const closeChapter = (
 			chapterId: CProvId,
-		): Effect.Effect<RequestEvent[], NotFoundException | UnknownException> =>
+		): Effect.Effect<RequestEvent[], NotFoundException | UnknownError> =>
 			Effect.gen(function* () {
 				const slot = yield* chaptersIndex.get(chapterId);
 				let chapterDataManager: ChapterDataManager | null = null;
@@ -678,7 +681,7 @@ export const buildNovelDataManager = (
 							const current = Effect.runSync(
 								chaptersIndex
 									.get(chapterId)
-									.pipe(Effect.catchAll(() => Effect.succeed(null))),
+									.pipe(Effect.catch(() => Effect.succeed(null))),
 							);
 							return current === null || current.status === "idle";
 						},
@@ -694,7 +697,7 @@ export const buildNovelDataManager = (
 								eventType: "chapterClosed",
 								chapterId,
 							});
-						}).pipe(Effect.catchAll(() => Effect.succeed(void 0))),
+						}).pipe(Effect.catch(() => Effect.succeed(void 0))),
 					send: () => Effect.succeed(void 0),
 					postSend: () => Effect.succeed(void 0),
 				});

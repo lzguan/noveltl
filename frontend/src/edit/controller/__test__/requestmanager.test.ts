@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Effect, Fiber } from "effect";
+import { Effect, Fiber, Scheduler } from "effect";
 import { buildRequestManager } from "../requestmanager";
 import { buildIdRepository } from "../idRepository";
 import { IdempotentCallable } from "../types/helperTypes";
@@ -306,6 +306,8 @@ describe("buildRequestManager", () => {
 				yield* requestManager.start();
 				yield* Effect.never;
 			}),
+			// Keep fiber dispatch on microtasks while fake timers control polling deadlines.
+			{ scheduler: new Scheduler.MixedScheduler("sync") },
 		);
 		await vi.advanceTimersByTimeAsync(11_001);
 		expect(getCachedResultMock).toHaveBeenCalledTimes(1);

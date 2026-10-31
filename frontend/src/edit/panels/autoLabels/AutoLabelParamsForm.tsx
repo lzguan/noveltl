@@ -3,7 +3,7 @@ import type { IChangeEvent } from "@rjsf/core";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { Form } from "@rjsf/shadcn";
 import validator from "@rjsf/validator-ajv8";
-import { Either, JSONSchema, Schema } from "effect";
+import { JsonSchema, Result, Schema, SchemaAST, SchemaRepresentation } from "effect";
 import { CreateAutolabelsAutoLabelsPostBody } from "@/api/endpoints/default/default.effect";
 import type { CreateAutoLabels } from "@/api/models";
 import { autoLabelCustomParamFields } from "./autoLabelParamFields";
@@ -17,7 +17,12 @@ export interface AutoLabelParamModel {
 }
 
 const paramsEffectSchema = CreateAutolabelsAutoLabelsPostBody.fields.params;
-const paramsJsonSchema = JSONSchema.make(paramsEffectSchema);
+const paramsJsonSchema: RJSFSchema = JsonSchema.toDocumentDraft07(
+	SchemaRepresentation.toJsonSchemaDocument(
+		Schema.toRepresentation(Schema.toType(paramsEffectSchema)),
+		{ onExcessProperty: "error" },
+	),
+).schema;
 
 function readModelName(schema: unknown): string | null {
 	if (
@@ -48,16 +53,23 @@ function readModelName(schema: unknown): string | null {
 }
 
 function extractParamModels(): AutoLabelParamModel[] {
-	if (!("anyOf" in paramsJsonSchema)) {
+	if (!paramsJsonSchema.anyOf) {
 		throw new Error("The generated autolabel params schema must be a union");
 	}
 
-	return paramsJsonSchema.anyOf.map((schema) => {
+	return paramsJsonSchema.anyOf.map((schema, index) => {
+		if (typeof schema === "boolean") {
+			throw new Error("Every autolabel params branch must be an object schema");
+		}
 		const name = readModelName(schema);
 		if (!name) {
 			throw new Error("Every autolabel params branch must have one modelName literal");
 		}
-		return { name, schema };
+		// Render decoded values while retaining the input's optional/defaulted keys.
+		const required = Object.entries(paramsEffectSchema.members[index].fields)
+			.filter(([, field]) => !SchemaAST.isOptional(Schema.toEncoded(field).ast))
+			.map(([name]) => name);
+		return { name, schema: { ...schema, required } };
 	});
 }
 
@@ -80,13 +92,32 @@ function propertyValue(value: object, name: string): unknown {
 	return objectEntries(value).find(([property]) => property === name)?.[1];
 }
 
+function makeStandardProperty(schema: RJSFSchema | boolean): RJSFSchema | boolean {
+	if (typeof schema === "boolean" || schema.anyOf?.length !== 2) return schema;
+	const [number, nonFinite] = schema.anyOf;
+	if (
+		typeof number === "boolean" ||
+		number.type !== "number" ||
+		typeof nonFinite === "boolean" ||
+		nonFinite.type !== "string" ||
+		nonFinite.enum?.length !== 3 ||
+		!nonFinite.enum.every(
+			(value) => value === "NaN" || value === "Infinity" || value === "-Infinity",
+		)
+	)
+		return schema;
+	// Effect models non-finite JS numbers as strings; JSON API form inputs stay numeric.
+	const { anyOf: _anyOf, ...constraints } = schema;
+	return { ...constraints, ...number };
+}
+
 function makeStandardSchema(schema: RJSFSchema): RJSFSchema {
 	const schemaWithoutModelDescription = { ...schema };
 	delete schemaWithoutModelDescription.description;
 	const properties = Object.fromEntries(
-		Object.entries(schema.properties ?? {}).filter(
-			([name]) => name !== "modelName" && !autoLabelCustomParamFields[name],
-		),
+		Object.entries(schema.properties ?? {})
+			.filter(([name]) => name !== "modelName" && !autoLabelCustomParamFields[name])
+			.map(([name, property]) => [name, makeStandardProperty(property)]),
 	);
 	return {
 		...schemaWithoutModelDescription,
@@ -119,8 +150,8 @@ function makeStandardFormData(value: AutoLabelParams) {
 }
 
 function decodeParams(value: unknown): AutoLabelParams | null {
-	const decoded = Schema.decodeUnknownEither(paramsEffectSchema)(value);
-	return Either.isRight(decoded) ? decoded.right : null;
+	const decoded = Schema.decodeUnknownResult(paramsEffectSchema)(value);
+	return Result.isSuccess(decoded) ? decoded.success : null;
 }
 
 export function modelHasAdvancedSettings(model: AutoLabelParamModel) {

@@ -32,7 +32,7 @@ export function createErrorManager(): ErrorManager {
 		for (const sub of subscribers) {
 			Effect.runSync(
 				sub(getters, { eventType: "errorOccured", error }).pipe(
-					Effect.catchAll(() => Effect.succeed(undefined)),
+					Effect.catch(() => Effect.succeed(undefined)),
 				),
 			);
 		}

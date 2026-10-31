@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  Effect,
   Schema as S
 } from 'effect';
 
@@ -20,8 +21,8 @@ import {
 export const readAutoLabelRunsAutoLabelRunsGetQueryMineDefault = false;
 
 export const ReadAutoLabelRunsAutoLabelRunsGetQueryParams = S.Struct({
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "mine": S.optionalWith(S.Boolean, { default: () => readAutoLabelRunsAutoLabelRunsGetQueryMineDefault })
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "mine": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readAutoLabelRunsAutoLabelRunsGetQueryMineDefault)))
 })
 
 export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneChunkSizeDefault = 500;
@@ -34,29 +35,29 @@ export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneSeparator
 export const readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsTwoModelNameDefault = 'do_nothing';
 
 export const ReadAutoLabelRunsAutoLabelRunsGet200ResponseItem = S.Struct({
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "modelName": S.String,
-  "modelParams": S.Union(S.Struct({
-  "chunkSize": S.optionalWith(S.Number.pipe(S.greaterThan(readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneChunkSizeExclusiveMin), S.lessThanOrEqualTo(readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneChunkSizeMax)), { default: () => readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneChunkSizeDefault }),
-  "forceChunk": S.optionalWith(S.Boolean, { default: () => readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneForceChunkDefault }),
-  "modelName": S.optionalWith(S.Literal("cluener"), { default: () => readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneModelNameDefault }),
-  "separators": S.optionalWith(S.Record({ key: S.String, value: S.Union(S.Literal(1), S.Literal(2), S.Literal(3)) }), { default: () => readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneSeparatorsDefault })
-}).annotations({ description: 'Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size: Integer between 1 and 512. Determines max size of chunks passed to NER model. Has default value 500.\n    separators: Dictionary of the form `char : SepPriority`. The predict algorithm will prioritize chunks ending in higher priority separators. Has default value (read the code to see what it is.)\n    force_chunk: If no separators found in some interval, force the chunker to chunk mid-sentence. Has default value False.\n\nNotes:\n    To validate this model without injecting default values, call `CluenerModelParams.model_validate(..., context={\'skip_default_values\' : True})`.' }), S.Struct({
-  "modelName": S.optionalWith(S.Literal("do_nothing"), { default: () => readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsTwoModelNameDefault })
-}).annotations({ description: 'Pydantic schema for a DoNothing model.\n\nAttributes:\n    model_name: Literal \"do_nothing\".' })),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "runId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "triggeredBy": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for an autolabel run (batch).\n\nA run groups autolabels created together in a single request.\n\nAttributes:\n    run_id: UUID identifier for this run.\n    triggered_by: UUID of user who triggered the run, or None.\n    model_name: Name of the NER model used.\n    model_params: Parameters for the NER model.\n    created_at: When the run was created.' })
+  "modelParams": S.Union([S.Struct({
+  "chunkSize": S.Number.check(S.isGreaterThan(readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneChunkSizeExclusiveMin), S.isLessThanOrEqualTo(readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneChunkSizeMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneChunkSizeDefault))),
+  "forceChunk": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneForceChunkDefault))),
+  "modelName": S.Literal("cluener").pipe(S.withDecodingDefaultType(Effect.succeed(readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneModelNameDefault))),
+  "separators": S.Record(S.String, S.Union([S.Literal(1), S.Literal(2), S.Literal(3)])).pipe(S.withDecodingDefaultType(Effect.succeed(readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsOneSeparatorsDefault)))
+}).annotate({ description: 'Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size: Integer between 1 and 512. Determines max size of chunks passed to NER model. Has default value 500.\n    separators: Dictionary of the form `char : SepPriority`. The predict algorithm will prioritize chunks ending in higher priority separators. Has default value (read the code to see what it is.)\n    force_chunk: If no separators found in some interval, force the chunker to chunk mid-sentence. Has default value False.\n\nNotes:\n    To validate this model without injecting default values, call `CluenerModelParams.model_validate(..., context={\'skip_default_values\' : True})`.' }), S.Struct({
+  "modelName": S.Literal("do_nothing").pipe(S.withDecodingDefaultType(Effect.succeed(readAutoLabelRunsAutoLabelRunsGet200ResponseModelParamsTwoModelNameDefault)))
+}).annotate({ description: 'Pydantic schema for a DoNothing model.\n\nAttributes:\n    model_name: Literal \"do_nothing\".' })]),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "runId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "triggeredBy": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for an autolabel run (batch).\n\nA run groups autolabels created together in a single request.\n\nAttributes:\n    run_id: UUID identifier for this run.\n    triggered_by: UUID of user who triggered the run, or None.\n    model_name: Name of the NER model used.\n    model_params: Parameters for the NER model.\n    created_at: When the run was created.' })
 export const ReadAutoLabelRunsAutoLabelRunsGet200Response = S.Array(ReadAutoLabelRunsAutoLabelRunsGet200ResponseItem)
 
 export const ReadAutoLabelRunsAutoLabelRunsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -72,34 +73,34 @@ export const ReadAutoLabelRunsAutoLabelRunsGet422Response = S.Struct({
  * @summary Read Auto Labels By Run
  */
 export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetParams = S.Struct({
-  "runId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "runId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetQueryParams = S.Struct({
-  "start": S.optional(S.Union(S.Number, S.Null)),
-  "end": S.optional(S.Union(S.Number, S.Null))
+  "start": S.optional(S.Union([S.Number, S.Null])),
+  "end": S.optional(S.Union([S.Number, S.Null]))
 })
 
 export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet200ResponseItem = S.Struct({
   "autoLabelMeta": S.Struct({
-  "autoLabelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "autoLabelLastJobId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
-  "autoLabelMessage": S.optional(S.Union(S.String, S.Null)),
-  "autoLabelStatus": S.Literal('failed', 'pending', 'processing', 'done').annotations({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "runId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for auto-label metadata (no label data payload).\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to.' }),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "autoLabelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "autoLabelLastJobId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null])),
+  "autoLabelMessage": S.optional(S.Union([S.String, S.Null])),
+  "autoLabelStatus": S.Literals(['failed', 'pending', 'processing', 'done']).annotate({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "runId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for auto-label metadata (no label data payload).\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to.' }),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet200Response = S.Array(ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet200ResponseItem)
 
 export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -113,7 +114,7 @@ export const ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet422Response = S.S
  * @summary Create Autolabels
  */
 export const CreateAutolabelsAutoLabelsPostQueryParams = S.Struct({
-  "requestKey": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+  "requestKey": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
 })
 
 export const createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeDefault = 500;
@@ -126,20 +127,20 @@ export const createAutolabelsAutoLabelsPostBodyParamsOneSeparatorsDefault = { "\
 export const createAutolabelsAutoLabelsPostBodyParamsTwoModelNameDefault = 'do_nothing';
 
 export const CreateAutolabelsAutoLabelsPostBody = S.Struct({
-  "chapterIds": S.optional(S.Union(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))), S.Null)),
-  "end": S.optional(S.Union(S.Number, S.Null)),
-  "isPublic": S.optional(S.Union(S.Boolean, S.Null)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "params": S.Union(S.Struct({
-  "chunkSize": S.optionalWith(S.Number.pipe(S.greaterThan(createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeExclusiveMin), S.lessThanOrEqualTo(createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeMax)), { default: () => createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeDefault }),
-  "forceChunk": S.optionalWith(S.Boolean, { default: () => createAutolabelsAutoLabelsPostBodyParamsOneForceChunkDefault }),
-  "modelName": S.optionalWith(S.Literal("cluener"), { default: () => createAutolabelsAutoLabelsPostBodyParamsOneModelNameDefault }),
-  "separators": S.optionalWith(S.Record({ key: S.String, value: S.Union(S.Literal(1), S.Literal(2), S.Literal(3)) }), { default: () => createAutolabelsAutoLabelsPostBodyParamsOneSeparatorsDefault })
-}).annotations({ description: 'Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size: Integer between 1 and 512. Determines max size of chunks passed to NER model. Has default value 500.\n    separators: Dictionary of the form `char : SepPriority`. The predict algorithm will prioritize chunks ending in higher priority separators. Has default value (read the code to see what it is.)\n    force_chunk: If no separators found in some interval, force the chunker to chunk mid-sentence. Has default value False.\n\nNotes:\n    To validate this model without injecting default values, call `CluenerModelParams.model_validate(..., context={\'skip_default_values\' : True})`.' }), S.Struct({
-  "modelName": S.optionalWith(S.Literal("do_nothing"), { default: () => createAutolabelsAutoLabelsPostBodyParamsTwoModelNameDefault })
-}).annotations({ description: 'Pydantic schema for a DoNothing model.\n\nAttributes:\n    model_name: Literal \"do_nothing\".' })),
-  "start": S.optional(S.Union(S.Number, S.Null))
-}).annotations({ description: 'Pydantic schema for creating a new autolabel run.\n\nAttributes:\n    novel_id: UUID of novel to create auto labels for.\n    params: Parameters for the NER model. Discriminated by model_name attribute.\n    chapter_ids: Optional. Restrict to specific chapter UUIDs.\n    start: Optional. Restrict to chapters with number >= start.\n    end: Optional. Restrict to chapters with number < end.\n    is_public: Optional. Restrict to chapters with this specific public flag.' })
+  "chapterIds": S.optional(S.Union([S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))), S.Null])),
+  "end": S.optional(S.Union([S.Number, S.Null])),
+  "isPublic": S.optional(S.Union([S.Boolean, S.Null])),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "params": S.Union([S.Struct({
+  "chunkSize": S.Number.check(S.isGreaterThan(createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeExclusiveMin), S.isLessThanOrEqualTo(createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeMax)).pipe(S.withDecodingDefaultType(Effect.succeed(createAutolabelsAutoLabelsPostBodyParamsOneChunkSizeDefault))),
+  "forceChunk": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(createAutolabelsAutoLabelsPostBodyParamsOneForceChunkDefault))),
+  "modelName": S.Literal("cluener").pipe(S.withDecodingDefaultType(Effect.succeed(createAutolabelsAutoLabelsPostBodyParamsOneModelNameDefault))),
+  "separators": S.Record(S.String, S.Union([S.Literal(1), S.Literal(2), S.Literal(3)])).pipe(S.withDecodingDefaultType(Effect.succeed(createAutolabelsAutoLabelsPostBodyParamsOneSeparatorsDefault)))
+}).annotate({ description: 'Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size: Integer between 1 and 512. Determines max size of chunks passed to NER model. Has default value 500.\n    separators: Dictionary of the form `char : SepPriority`. The predict algorithm will prioritize chunks ending in higher priority separators. Has default value (read the code to see what it is.)\n    force_chunk: If no separators found in some interval, force the chunker to chunk mid-sentence. Has default value False.\n\nNotes:\n    To validate this model without injecting default values, call `CluenerModelParams.model_validate(..., context={\'skip_default_values\' : True})`.' }), S.Struct({
+  "modelName": S.Literal("do_nothing").pipe(S.withDecodingDefaultType(Effect.succeed(createAutolabelsAutoLabelsPostBodyParamsTwoModelNameDefault)))
+}).annotate({ description: 'Pydantic schema for a DoNothing model.\n\nAttributes:\n    model_name: Literal \"do_nothing\".' })]),
+  "start": S.optional(S.Union([S.Number, S.Null]))
+}).annotate({ description: 'Pydantic schema for creating a new autolabel run.\n\nAttributes:\n    novel_id: UUID of novel to create auto labels for.\n    params: Parameters for the NER model. Discriminated by model_name attribute.\n    chapter_ids: Optional. Restrict to specific chapter UUIDs.\n    start: Optional. Restrict to chapters with number >= start.\n    end: Optional. Restrict to chapters with number < end.\n    is_public: Optional. Restrict to chapters with this specific public flag.' })
 
 export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneChunkSizeDefault = 500;
 export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneChunkSizeExclusiveMin = 0;
@@ -153,54 +154,54 @@ export const createAutolabelsAutoLabelsPost200ResponseRunModelParamsTwoModelName
 export const CreateAutolabelsAutoLabelsPost200Response = S.Struct({
   "autolabels": S.Array(S.Struct({
   "autoLabelMeta": S.Struct({
-  "autoLabelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "autoLabelLastJobId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
-  "autoLabelMessage": S.optional(S.Union(S.String, S.Null)),
-  "autoLabelStatus": S.Literal('failed', 'pending', 'processing', 'done').annotations({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "runId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for auto-label metadata (no label data payload).\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to.' }),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "autoLabelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "autoLabelLastJobId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null])),
+  "autoLabelMessage": S.optional(S.Union([S.String, S.Null])),
+  "autoLabelStatus": S.Literals(['failed', 'pending', 'processing', 'done']).annotate({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "runId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for auto-label metadata (no label data payload).\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status.\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to.' }),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })),
   "run": S.Struct({
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "modelName": S.String,
-  "modelParams": S.Union(S.Struct({
-  "chunkSize": S.optionalWith(S.Number.pipe(S.greaterThan(createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneChunkSizeExclusiveMin), S.lessThanOrEqualTo(createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneChunkSizeMax)), { default: () => createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneChunkSizeDefault }),
-  "forceChunk": S.optionalWith(S.Boolean, { default: () => createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneForceChunkDefault }),
-  "modelName": S.optionalWith(S.Literal("cluener"), { default: () => createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneModelNameDefault }),
-  "separators": S.optionalWith(S.Record({ key: S.String, value: S.Union(S.Literal(1), S.Literal(2), S.Literal(3)) }), { default: () => createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneSeparatorsDefault })
-}).annotations({ description: 'Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size: Integer between 1 and 512. Determines max size of chunks passed to NER model. Has default value 500.\n    separators: Dictionary of the form `char : SepPriority`. The predict algorithm will prioritize chunks ending in higher priority separators. Has default value (read the code to see what it is.)\n    force_chunk: If no separators found in some interval, force the chunker to chunk mid-sentence. Has default value False.\n\nNotes:\n    To validate this model without injecting default values, call `CluenerModelParams.model_validate(..., context={\'skip_default_values\' : True})`.' }), S.Struct({
-  "modelName": S.optionalWith(S.Literal("do_nothing"), { default: () => createAutolabelsAutoLabelsPost200ResponseRunModelParamsTwoModelNameDefault })
-}).annotations({ description: 'Pydantic schema for a DoNothing model.\n\nAttributes:\n    model_name: Literal \"do_nothing\".' })),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "runId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "triggeredBy": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for an autolabel run (batch).\n\nA run groups autolabels created together in a single request.\n\nAttributes:\n    run_id: UUID identifier for this run.\n    triggered_by: UUID of user who triggered the run, or None.\n    model_name: Name of the NER model used.\n    model_params: Parameters for the NER model.\n    created_at: When the run was created.' })
-}).annotations({ description: 'Pydantic schema for the response after creating autolabels.\n\nAttributes:\n    run: The autolabel run that was created.\n    autolabels: The list of autolabel entries created in this run.' })
+  "modelParams": S.Union([S.Struct({
+  "chunkSize": S.Number.check(S.isGreaterThan(createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneChunkSizeExclusiveMin), S.isLessThanOrEqualTo(createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneChunkSizeMax)).pipe(S.withDecodingDefaultType(Effect.succeed(createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneChunkSizeDefault))),
+  "forceChunk": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneForceChunkDefault))),
+  "modelName": S.Literal("cluener").pipe(S.withDecodingDefaultType(Effect.succeed(createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneModelNameDefault))),
+  "separators": S.Record(S.String, S.Union([S.Literal(1), S.Literal(2), S.Literal(3)])).pipe(S.withDecodingDefaultType(Effect.succeed(createAutolabelsAutoLabelsPost200ResponseRunModelParamsOneSeparatorsDefault)))
+}).annotate({ description: 'Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size: Integer between 1 and 512. Determines max size of chunks passed to NER model. Has default value 500.\n    separators: Dictionary of the form `char : SepPriority`. The predict algorithm will prioritize chunks ending in higher priority separators. Has default value (read the code to see what it is.)\n    force_chunk: If no separators found in some interval, force the chunker to chunk mid-sentence. Has default value False.\n\nNotes:\n    To validate this model without injecting default values, call `CluenerModelParams.model_validate(..., context={\'skip_default_values\' : True})`.' }), S.Struct({
+  "modelName": S.Literal("do_nothing").pipe(S.withDecodingDefaultType(Effect.succeed(createAutolabelsAutoLabelsPost200ResponseRunModelParamsTwoModelNameDefault)))
+}).annotate({ description: 'Pydantic schema for a DoNothing model.\n\nAttributes:\n    model_name: Literal \"do_nothing\".' })]),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "runId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "triggeredBy": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for an autolabel run (batch).\n\nA run groups autolabels created together in a single request.\n\nAttributes:\n    run_id: UUID identifier for this run.\n    triggered_by: UUID of user who triggered the run, or None.\n    model_name: Name of the NER model used.\n    model_params: Parameters for the NER model.\n    created_at: When the run was created.' })
+}).annotate({ description: 'Pydantic schema for the response after creating autolabels.\n\nAttributes:\n    run: The autolabel run that was created.\n    autolabels: The list of autolabel entries created in this run.' })
 
 export const CreateAutolabelsAutoLabelsPost400Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const CreateAutolabelsAutoLabelsPost404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const CreateAutolabelsAutoLabelsPost409Response = S.Struct({
   "detail": S.Struct({
   "cacheConflict": S.Boolean,
   "detail": S.String
-}).annotations({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
-}).annotations({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
+}).annotate({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
+}).annotate({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
 
 export const CreateAutolabelsAutoLabelsPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -214,7 +215,7 @@ export const CreateAutolabelsAutoLabelsPost422Response = S.Struct({
  * @summary Read Autolabel By Id
  */
 export const ReadAutolabelByIdAutoLabelsAutoLabelIdGetParams = S.Struct({
-  "autoLabelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "autoLabelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOneItemLabelEndMin = 0;
@@ -231,29 +232,29 @@ export const readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOn
 
 
 export const ReadAutolabelByIdAutoLabelsAutoLabelIdGet200Response = S.Struct({
-  "autoLabelData": S.optional(S.Union(S.Array(S.Struct({
+  "autoLabelData": S.optional(S.Union([S.Array(S.Struct({
   "labelDirty": S.Boolean,
-  "labelEnd": S.Number.pipe(S.greaterThanOrEqualTo(readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOneItemLabelEndMin)),
-  "labelEntityGroup": S.Union(S.String.pipe(S.maxLength(readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOneItemLabelEntityGroupOneMax)), S.Null),
-  "labelScore": S.Number.pipe(S.greaterThanOrEqualTo(readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOneItemLabelScoreMin), S.lessThanOrEqualTo(readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOneItemLabelScoreMax)),
-  "labelStart": S.Number.pipe(S.greaterThanOrEqualTo(readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOneItemLabelStartMin)),
-  "labelWord": S.String.pipe(S.maxLength(readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOneItemLabelWordMax))
-}).annotations({ description: 'Pydantic schema for a single label without a parent LabelData reference.\nUsed by autolabels and other contexts where labels exist independently of a LabelData.\n\nAttributes:\n    label_entity_group: Some arbitrary string denoting the entity group this label belongs to (e.g. PERSON, LOCATION, etc.).\n    label_score: Some float corresponding to how likely a label is to be correct. Used by label autogeneration modules (TBD).\n    label_word: Word that this label is labeling.\n    label_start: Start position of this label in text.\n    label_end: End position of this label in text.\n    label_dirty: Use TBD, most likely will be for score calculations in LabelData aggregate operations.\n\nNote:\n    label_start must be strictly less than label_end. Otherwise a ValueError will occur.\n    label_word must have length label_end - label_start. Otherwise a ValueError will occur.' })), S.Null)),
-  "autoLabelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "autoLabelLastJobId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
-  "autoLabelMessage": S.optional(S.Union(S.String, S.Null)),
-  "autoLabelStatus": S.Literal('failed', 'pending', 'processing', 'done').annotations({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "runId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a single auto-labeled data entry with its label data.\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_data: List of labels produced by the NER model, or None if not yet complete.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status (e.g. failure reason).\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to.' })
+  "labelEnd": S.Number.check(S.isGreaterThanOrEqualTo(readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOneItemLabelEndMin)),
+  "labelEntityGroup": S.Union([S.String.check(S.isMaxLength(readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOneItemLabelEntityGroupOneMax)), S.Null]),
+  "labelScore": S.Number.check(S.isGreaterThanOrEqualTo(readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOneItemLabelScoreMin), S.isLessThanOrEqualTo(readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOneItemLabelScoreMax)),
+  "labelStart": S.Number.check(S.isGreaterThanOrEqualTo(readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOneItemLabelStartMin)),
+  "labelWord": S.String.check(S.isMaxLength(readAutolabelByIdAutoLabelsAutoLabelIdGet200ResponseAutoLabelDataOneItemLabelWordMax))
+}).annotate({ description: 'Pydantic schema for a single label without a parent LabelData reference.\nUsed by autolabels and other contexts where labels exist independently of a LabelData.\n\nAttributes:\n    label_entity_group: Some arbitrary string denoting the entity group this label belongs to (e.g. PERSON, LOCATION, etc.).\n    label_score: Some float corresponding to how likely a label is to be correct. Used by label autogeneration modules (TBD).\n    label_word: Word that this label is labeling.\n    label_start: Start position of this label in text.\n    label_end: End position of this label in text.\n    label_dirty: Use TBD, most likely will be for score calculations in LabelData aggregate operations.\n\nNote:\n    label_start must be strictly less than label_end. Otherwise a ValueError will occur.\n    label_word must have length label_end - label_start. Otherwise a ValueError will occur.' })), S.Null])),
+  "autoLabelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "autoLabelLastJobId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null])),
+  "autoLabelMessage": S.optional(S.Union([S.String, S.Null])),
+  "autoLabelStatus": S.Literals(['failed', 'pending', 'processing', 'done']).annotate({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "runId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a single auto-labeled data entry with its label data.\n\nAttributes:\n    auto_label_id: UUID identifier for this AutoLabel.\n    auto_label_data: List of labels produced by the NER model, or None if not yet complete.\n    auto_label_status: Labeling progress for this autolabel.\n    auto_label_message: Details on status (e.g. failure reason).\n    auto_label_last_job_id: Job id of last request to autogenerate.\n    chapter_content_id: UUID of chapter content this AutoLabel is for.\n    run_id: UUID of the AutoLabelRun this autolabel belongs to.' })
 
 export const ReadAutolabelByIdAutoLabelsAutoLabelIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -263,30 +264,30 @@ export const ReadAutolabelByIdAutoLabelsAutoLabelIdGet422Response = S.Struct({
  * @summary Get Cached Result
  */
 export const GetCachedResultCachedCachedIdGetParams = S.Struct({
-  "cachedId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "cachedId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const GetCachedResultCachedCachedIdGet200Response = S.Struct({
-  "error": S.Union(S.Struct({
+  "error": S.Union([S.Struct({
   "cacheConflict": S.Boolean,
   "detail": S.String
-}), S.Null),
-  "response": S.Union(S.Record({ key: S.String, value: S.Unknown }), S.Null),
-  "status": S.Literal('pending', 'success', 'failure'),
-  "status_code": S.Union(S.Number, S.Null)
+}), S.Null]),
+  "response": S.Union([S.Record(S.String, S.Unknown), S.Null]),
+  "status": S.Literals(['pending', 'success', 'failure']),
+  "status_code": S.Union([S.Number, S.Null])
 })
 
 export const GetCachedResultCachedCachedIdGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const GetCachedResultCachedCachedIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -300,22 +301,22 @@ export const GetCachedResultCachedCachedIdGet422Response = S.Struct({
  * @summary Read Chapter Content By Id
  */
 export const ReadChapterContentByIdChapterContentsChapterContentIdGetParams = S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadChapterContentByIdChapterContentsChapterContentIdGet200Response = S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterContentText": S.String,
   "chapterContentVersion": S.Number
-}).annotations({ description: 'Pydantic schema for the text content of a chapter.\n\nAttributes:\n    chapter_content_text: The full text content of the chapter.\n    chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.' })
+}).annotate({ description: 'Pydantic schema for the text content of a chapter.\n\nAttributes:\n    chapter_content_text: The full text content of the chapter.\n    chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.' })
 
 export const ReadChapterContentByIdChapterContentsChapterContentIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -329,27 +330,27 @@ export const ReadChapterContentByIdChapterContentsChapterContentIdGet422Response
  * @summary Read Chapters By Novel
  */
 export const ReadChaptersByNovelChaptersGetQueryParams = S.Struct({
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "start": S.optional(S.Union(S.Number, S.Null)),
-  "end": S.optional(S.Union(S.Number, S.Null))
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "start": S.optional(S.Union([S.Number, S.Null])),
+  "end": S.optional(S.Union([S.Number, S.Null]))
 })
 
 export const ReadChaptersByNovelChaptersGet200ResponseItem = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterIsPublic": S.Boolean,
   "chapterNum": S.Number,
   "chapterTitle": S.String,
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for chapter metadata. Represents a single \"chapter\" entry, which groups all its revisions.\n\nAttributes:\n    chapter_id: UUID primary key identifier.\n    chapter_num: The chapter number.\n    novel_id: UUID foreign key to the novel this chapter belongs to.' })
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for chapter metadata. Represents a single \"chapter\" entry, which groups all its revisions.\n\nAttributes:\n    chapter_id: UUID primary key identifier.\n    chapter_num: The chapter number.\n    novel_id: UUID foreign key to the novel this chapter belongs to.' })
 export const ReadChaptersByNovelChaptersGet200Response = S.Array(ReadChaptersByNovelChaptersGet200ResponseItem)
 
 export const ReadChaptersByNovelChaptersGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -367,42 +368,42 @@ export const ReadChaptersByNovelChaptersGet422Response = S.Struct({
  */
 export const CreateChaptersByUploadChaptersUploadPostBody = S.Struct({
   "file": S.instanceOf(File),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "version": S.Literal("v1")
 })
 
 export const CreateChaptersByUploadChaptersUploadPost200ResponseItem = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterIsPublic": S.Boolean,
   "chapterNum": S.Number,
   "chapterTitle": S.String,
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for chapter metadata. Represents a single \"chapter\" entry, which groups all its revisions.\n\nAttributes:\n    chapter_id: UUID primary key identifier.\n    chapter_num: The chapter number.\n    novel_id: UUID foreign key to the novel this chapter belongs to.' })
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for chapter metadata. Represents a single \"chapter\" entry, which groups all its revisions.\n\nAttributes:\n    chapter_id: UUID primary key identifier.\n    chapter_num: The chapter number.\n    novel_id: UUID foreign key to the novel this chapter belongs to.' })
 export const CreateChaptersByUploadChaptersUploadPost200Response = S.Array(CreateChaptersByUploadChaptersUploadPost200ResponseItem)
 
 export const CreateChaptersByUploadChaptersUploadPost400Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const CreateChaptersByUploadChaptersUploadPost401Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const CreateChaptersByUploadChaptersUploadPost404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const CreateChaptersByUploadChaptersUploadPost409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const CreateChaptersByUploadChaptersUploadPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -418,21 +419,21 @@ export const CreateChaptersByUploadChaptersUploadPost422Response = S.Struct({
  * @summary Delete Chapter
  */
 export const DeleteChapterChaptersChapterIdDeleteParams = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const DeleteChapterChaptersChapterIdDelete200Response = S.Struct({
-  "detail": S.optional(S.Union(S.String, S.Null)),
-  "status": S.Literal('success', 'fail')
-}).annotations({ description: 'Pydantic model to signal return status of operation.\n\nAttributes:\n    status: One of \"success\", \"fail\".\n    detail: Details on operation.\n\nNotes:\n    Unless under exceptional circumstances, should not return fail and just raise an exception.' })
+  "detail": S.optional(S.Union([S.String, S.Null])),
+  "status": S.Literals(['success', 'fail'])
+}).annotate({ description: 'Pydantic model to signal return status of operation.\n\nAttributes:\n    status: One of \"success\", \"fail\".\n    detail: Details on operation.\n\nNotes:\n    Unless under exceptional circumstances, should not return fail and just raise an exception.' })
 
 export const DeleteChapterChaptersChapterIdDelete422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -446,24 +447,24 @@ export const DeleteChapterChaptersChapterIdDelete422Response = S.Struct({
  * @summary Read Chapter By Id
  */
 export const ReadChapterByIdChaptersChapterIdGetParams = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadChapterByIdChaptersChapterIdGet200Response = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterIsPublic": S.Boolean,
   "chapterNum": S.Number,
   "chapterTitle": S.String,
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for chapter metadata. Represents a single \"chapter\" entry, which groups all its revisions.\n\nAttributes:\n    chapter_id: UUID primary key identifier.\n    chapter_num: The chapter number.\n    novel_id: UUID foreign key to the novel this chapter belongs to.' })
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for chapter metadata. Represents a single \"chapter\" entry, which groups all its revisions.\n\nAttributes:\n    chapter_id: UUID primary key identifier.\n    chapter_num: The chapter number.\n    novel_id: UUID foreign key to the novel this chapter belongs to.' })
 
 export const ReadChapterByIdChaptersChapterIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -479,28 +480,28 @@ export const ReadChapterByIdChaptersChapterIdGet422Response = S.Struct({
  * @summary Update Chapter
  */
 export const UpdateChapterChaptersChapterIdPatchParams = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const UpdateChapterChaptersChapterIdPatchBody = S.Struct({
   "chapterTitle": S.String
-}).annotations({ description: 'Pydantic schema to validate data for updating chapter metadata.\n\nAttributes:\n    chapter_title: The new title for the chapter.' })
+}).annotate({ description: 'Pydantic schema to validate data for updating chapter metadata.\n\nAttributes:\n    chapter_title: The new title for the chapter.' })
 
 export const UpdateChapterChaptersChapterIdPatch200Response = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterIsPublic": S.Boolean,
   "chapterNum": S.Number,
   "chapterTitle": S.String,
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for chapter metadata. Represents a single \"chapter\" entry, which groups all its revisions.\n\nAttributes:\n    chapter_id: UUID primary key identifier.\n    chapter_num: The chapter number.\n    novel_id: UUID foreign key to the novel this chapter belongs to.' })
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for chapter metadata. Represents a single \"chapter\" entry, which groups all its revisions.\n\nAttributes:\n    chapter_id: UUID primary key identifier.\n    chapter_num: The chapter number.\n    novel_id: UUID foreign key to the novel this chapter belongs to.' })
 
 export const UpdateChapterChaptersChapterIdPatch422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -514,22 +515,22 @@ export const UpdateChapterChaptersChapterIdPatch422Response = S.Struct({
  * @summary Read Chapter Content
  */
 export const ReadChapterContentChaptersChapterIdContentGetParams = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadChapterContentChaptersChapterIdContentGet200Response = S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterContentText": S.String,
   "chapterContentVersion": S.Number
-}).annotations({ description: 'Pydantic schema for the text content of a chapter.\n\nAttributes:\n    chapter_content_text: The full text content of the chapter.\n    chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.' })
+}).annotate({ description: 'Pydantic schema for the text content of a chapter.\n\nAttributes:\n    chapter_content_text: The full text content of the chapter.\n    chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.' })
 
 export const ReadChapterContentChaptersChapterIdContentGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -547,50 +548,50 @@ export const ReadChapterContentChaptersChapterIdContentGet422Response = S.Struct
  * @summary Update Chapter Content
  */
 export const UpdateChapterContentChaptersChapterIdContentPatchParams = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const UpdateChapterContentChaptersChapterIdContentPatchQueryParams = S.Struct({
-  "requestKey": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+  "requestKey": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
 })
 
 export const UpdateChapterContentChaptersChapterIdContentPatchBody = S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "textOps": S.Array(S.Struct({
-  "op": S.Literal('insert', 'delete'),
+  "op": S.Literals(['insert', 'delete']),
   "start": S.Number,
   "text": S.String
-}).annotations({ description: 'Pydantic schema to update text content of a chapter.\n\nAttributes:\n    op: The text operation, either \"insert\" or \"delete\".\n    start: The starting index in the text content where the operation should be applied.\n    text: The text to insert (for insert operations) or the text to delete (for delete operations).' }))
-}).annotations({ description: 'Pydantic schema to validate data for updating the text content of a chapter. The chapter_id is expected to be passed via the URL path.\n\nAttributes:\n    text_ops: A list of text operations (insertions or deletions) to apply to the existing text content.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.' })
+}).annotate({ description: 'Pydantic schema to update text content of a chapter.\n\nAttributes:\n    op: The text operation, either \"insert\" or \"delete\".\n    start: The starting index in the text content where the operation should be applied.\n    text: The text to insert (for insert operations) or the text to delete (for delete operations).' }))
+}).annotate({ description: 'Pydantic schema to validate data for updating the text content of a chapter. The chapter_id is expected to be passed via the URL path.\n\nAttributes:\n    text_ops: A list of text operations (insertions or deletions) to apply to the existing text content.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.' })
 
 export const UpdateChapterContentChaptersChapterIdContentPatch200Response = S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterContentVersion": S.Number,
-  "labelDataIdMap": S.Record({ key: S.String, value: S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)) })
-}).annotations({ description: 'Pydantic schema for the response after modifying chapter content.\n\nAttributes:\n    chapter_content_version: The new version number of the text content after applying the modifications.\n    chapter_content_id: The UUID of the text content that was modified.\n    label_data_id_map: A mapping from label data IDs before the text modification to label data IDs after the text modification' })
+  "labelDataIdMap": S.Record(S.String, S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))
+}).annotate({ description: 'Pydantic schema for the response after modifying chapter content.\n\nAttributes:\n    chapter_content_version: The new version number of the text content after applying the modifications.\n    chapter_content_id: The UUID of the text content that was modified.\n    label_data_id_map: A mapping from label data IDs before the text modification to label data IDs after the text modification' })
 
 export const UpdateChapterContentChaptersChapterIdContentPatch401Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const UpdateChapterContentChaptersChapterIdContentPatch404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const UpdateChapterContentChaptersChapterIdContentPatch409Response = S.Struct({
   "detail": S.Struct({
   "cacheConflict": S.Boolean,
   "detail": S.String
-}).annotations({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
-}).annotations({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
+}).annotate({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
+}).annotate({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
 
 export const UpdateChapterContentChaptersChapterIdContentPatch422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -605,22 +606,22 @@ export const UpdateChapterContentChaptersChapterIdContentPatch422Response = S.St
  * @summary Read Chapter Content Status
  */
 export const ReadChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGetParams = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGet200Response = S.Struct({
-  "detail": S.optional(S.Union(S.String, S.Null)),
-  "status": S.Literal('success', 'fail')
-}).annotations({ description: 'Pydantic model to signal return status of operation.\n\nAttributes:\n    status: One of \"success\", \"fail\".\n    detail: Details on operation.\n\nNotes:\n    Unless under exceptional circumstances, should not return fail and just raise an exception.' })
+  "detail": S.optional(S.Union([S.String, S.Null])),
+  "status": S.Literals(['success', 'fail'])
+}).annotate({ description: 'Pydantic model to signal return status of operation.\n\nAttributes:\n    status: One of \"success\", \"fail\".\n    detail: Details on operation.\n\nNotes:\n    Unless under exceptional circumstances, should not return fail and just raise an exception.' })
 
 export const ReadChapterContentStatusChaptersChapterIdContentStatusChapterContentIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -632,22 +633,22 @@ export const ReadChapterContentStatusChaptersChapterIdContentStatusChapterConten
  * @summary Read Chapter Content Versions
  */
 export const ReadChapterContentVersionsChaptersChapterIdContentVersionsGetParams = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadChapterContentVersionsChaptersChapterIdContentVersionsGet200ResponseItem = S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterContentVersion": S.Number
-}).annotations({ description: 'Metadata for a ChapterContent.\n\nAttributes:\n    chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.' })
+}).annotate({ description: 'Metadata for a ChapterContent.\n\nAttributes:\n    chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.' })
 export const ReadChapterContentVersionsChaptersChapterIdContentVersionsGet200Response = S.Array(ReadChapterContentVersionsChaptersChapterIdContentVersionsGet200ResponseItem)
 
 export const ReadChapterContentVersionsChaptersChapterIdContentVersionsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -662,24 +663,24 @@ export const ReadChapterContentVersionsChaptersChapterIdContentVersionsGet422Res
  * @summary Action Publish Chapter
  */
 export const ActionPublishChapterChaptersChapterIdPublishPostParams = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ActionPublishChapterChaptersChapterIdPublishPost200Response = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterIsPublic": S.Boolean,
   "chapterNum": S.Number,
   "chapterTitle": S.String,
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for chapter metadata. Represents a single \"chapter\" entry, which groups all its revisions.\n\nAttributes:\n    chapter_id: UUID primary key identifier.\n    chapter_num: The chapter number.\n    novel_id: UUID foreign key to the novel this chapter belongs to.' })
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for chapter metadata. Represents a single \"chapter\" entry, which groups all its revisions.\n\nAttributes:\n    chapter_id: UUID primary key identifier.\n    chapter_num: The chapter number.\n    novel_id: UUID foreign key to the novel this chapter belongs to.' })
 
 export const ActionPublishChapterChaptersChapterIdPublishPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -698,14 +699,14 @@ export const ActionPublishChapterChaptersChapterIdPublishPost422Response = S.Str
  * @summary Read Edit Chapter Data
  */
 export const ReadEditChapterDataEditChapterDataChapterIdPostParams = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadEditChapterDataEditChapterDataChapterIdPostQueryParams = S.Struct({
-  "subjectId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+  "subjectId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
 })
 
-export const ReadEditChapterDataEditChapterDataChapterIdPostBodyItem = S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+export const ReadEditChapterDataEditChapterDataChapterIdPostBodyItem = S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 export const ReadEditChapterDataEditChapterDataChapterIdPostBody = S.Array(ReadEditChapterDataEditChapterDataChapterIdPostBodyItem)
 
 export const readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelGroupLabelGroupNameMax = 31;
@@ -729,58 +730,58 @@ export const readEditChapterDataEditChapterDataChapterIdPost200ResponseNoLabelDa
 
 export const ReadEditChapterDataEditChapterDataChapterIdPost200Response = S.Struct({
   "chapterContent": S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterContentText": S.String,
   "chapterContentVersion": S.Number
-}).annotations({ description: 'Pydantic schema for the text content of a chapter.\n\nAttributes:\n    chapter_content_text: The full text content of the chapter.\n    chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.' }),
+}).annotate({ description: 'Pydantic schema for the text content of a chapter.\n\nAttributes:\n    chapter_content_text: The full text content of the chapter.\n    chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.' }),
   "eagerLabelData": S.Array(S.Struct({
   "labelData": S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' }),
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' }),
   "labelGroup": S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupName": S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelGroupLabelGroupNameMax)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' }),
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupName": S.String.check(S.isMaxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelGroupLabelGroupNameMax)),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' }),
   "labels": S.Array(S.Struct({
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "labelDirty": S.Boolean,
-  "labelEnd": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelEndMin)),
-  "labelEntityGroup": S.Union(S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelEntityGroupOneMax)), S.Null),
-  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelScore": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelScoreMin), S.lessThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelScoreMax)),
-  "labelStart": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelStartMin)),
-  "labelWord": S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelWordMax))
-}).annotations({ description: 'Pydantic schema for a label that belongs to a LabelData.\nExtends LabelBase with a label_data_id foreign key and label_id pkey.' }))
+  "labelEnd": S.Number.check(S.isGreaterThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelEndMin)),
+  "labelEntityGroup": S.Union([S.String.check(S.isMaxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelEntityGroupOneMax)), S.Null]),
+  "labelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelScore": S.Number.check(S.isGreaterThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelScoreMin), S.isLessThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelScoreMax)),
+  "labelStart": S.Number.check(S.isGreaterThanOrEqualTo(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelStartMin)),
+  "labelWord": S.String.check(S.isMaxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseEagerLabelDataItemLabelsItemLabelWordMax))
+}).annotate({ description: 'Pydantic schema for a label that belongs to a LabelData.\nExtends LabelBase with a label_data_id foreign key and label_id pkey.' }))
 })),
   "lazyLabelData": S.Array(S.Struct({
   "labelData": S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' }),
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' }),
   "labelGroup": S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupName": S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseLazyLabelDataItemLabelGroupLabelGroupNameMax)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' })
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupName": S.String.check(S.isMaxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseLazyLabelDataItemLabelGroupLabelGroupNameMax)),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' })
 })),
   "noLabelData": S.Array(S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupName": S.String.pipe(S.maxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseNoLabelDataItemLabelGroupNameMax)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' }))
-}).annotations({ description: 'Pydantic schema for the data needed to edit a chapter.\n\nAttributes:\n    chapter_content: ChapterContent being edited.\n    no_label_data: List of LabelGroup objects that have no label data associated with them.' })
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupName": S.String.check(S.isMaxLength(readEditChapterDataEditChapterDataChapterIdPost200ResponseNoLabelDataItemLabelGroupNameMax)),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' }))
+}).annotate({ description: 'Pydantic schema for the data needed to edit a chapter.\n\nAttributes:\n    chapter_content: ChapterContent being edited.\n    no_label_data: List of LabelGroup objects that have no label data associated with them.' })
 
 export const ReadEditChapterDataEditChapterDataChapterIdPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -796,14 +797,14 @@ export const ReadEditChapterDataEditChapterDataChapterIdPost422Response = S.Stru
  * @summary Read Edit Chapter Label Data
  */
 export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostParams = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostQueryParams = S.Struct({
-  "subjectId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+  "subjectId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
 })
 
-export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostBodyItem = S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostBodyItem = S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostBody = S.Array(ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostBodyItem)
 
 export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelGroupLabelGroupNameMax = 31;
@@ -823,35 +824,35 @@ export const readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200Res
 
 export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseItem = S.Struct({
   "labelData": S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' }),
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' }),
   "labelGroup": S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupName": S.String.pipe(S.maxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelGroupLabelGroupNameMax)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' }),
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupName": S.String.check(S.isMaxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelGroupLabelGroupNameMax)),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' }),
   "labels": S.Array(S.Struct({
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "labelDirty": S.Boolean,
-  "labelEnd": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelEndMin)),
-  "labelEntityGroup": S.Union(S.String.pipe(S.maxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelEntityGroupOneMax)), S.Null),
-  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelScore": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelScoreMin), S.lessThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelScoreMax)),
-  "labelStart": S.Number.pipe(S.greaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelStartMin)),
-  "labelWord": S.String.pipe(S.maxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelWordMax))
-}).annotations({ description: 'Pydantic schema for a label that belongs to a LabelData.\nExtends LabelBase with a label_data_id foreign key and label_id pkey.' }))
+  "labelEnd": S.Number.check(S.isGreaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelEndMin)),
+  "labelEntityGroup": S.Union([S.String.check(S.isMaxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelEntityGroupOneMax)), S.Null]),
+  "labelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelScore": S.Number.check(S.isGreaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelScoreMin), S.isLessThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelScoreMax)),
+  "labelStart": S.Number.check(S.isGreaterThanOrEqualTo(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelStartMin)),
+  "labelWord": S.String.check(S.isMaxLength(readEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseLabelsItemLabelWordMax))
+}).annotate({ description: 'Pydantic schema for a label that belongs to a LabelData.\nExtends LabelBase with a label_data_id foreign key and label_id pkey.' }))
 })
 export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200Response = S.Array(ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost200ResponseItem)
 
 export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -862,25 +863,25 @@ export const ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPost422Res
  * @summary Read Label Datas By Group Chapters
  */
 export const ReadLabelDatasByGroupChaptersLabelDatasGetQueryParams = S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "start": S.optional(S.Union(S.Number, S.Null)),
-  "end": S.optional(S.Union(S.Number, S.Null))
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "start": S.optional(S.Union([S.Number, S.Null])),
+  "end": S.optional(S.Union([S.Number, S.Null]))
 })
 
 export const ReadLabelDatasByGroupChaptersLabelDatasGet200ResponseItem = S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' })
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' })
 export const ReadLabelDatasByGroupChaptersLabelDatasGet200Response = S.Array(ReadLabelDatasByGroupChaptersLabelDatasGet200ResponseItem)
 
 export const ReadLabelDatasByGroupChaptersLabelDatasGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -894,22 +895,22 @@ export const ReadLabelDatasByGroupChaptersLabelDatasGet422Response = S.Struct({
  * @summary Read Label Data
  */
 export const ReadLabelDataLabelDatasLabelDataIdGetParams = S.Struct({
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadLabelDataLabelDatasLabelDataIdGet200Response = S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' })
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' })
 
 export const ReadLabelDataLabelDatasLabelDataIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -925,11 +926,11 @@ export const ReadLabelDataLabelDatasLabelDataIdGet422Response = S.Struct({
  * @summary Update Label Data Stream
  */
 export const UpdateLabelDataStreamLabelDatasLabelDataIdPatchParams = S.Struct({
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const UpdateLabelDataStreamLabelDatasLabelDataIdPatchQueryParams = S.Struct({
-  "requestKey": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+  "requestKey": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
 })
 
 export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneDirtyDefault = true;
@@ -955,53 +956,53 @@ export const updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeStar
 
 
 export const UpdateLabelDataStreamLabelDatasLabelDataIdPatchBody = S.Struct({
-  "ops": S.Array(S.Union(S.Struct({
-  "dirty": S.optionalWith(S.Boolean, { default: () => updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneDirtyDefault }),
-  "endPos": S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneEndPosMin)),
-  "entityGroup": S.optional(S.Union(S.String.pipe(S.maxLength(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneEntityGroupOneMax)), S.Null)),
-  "op": S.Literal('add'),
-  "score": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneScoreMin), S.lessThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneScoreMax)), { default: () => updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneScoreDefault }),
-  "startPos": S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneStartPosMin))
-}).annotations({ description: 'Pydantic schema for a label add operation. Adds a new label to the label data with the given parameters.\n\nAttributes:\n    op: The string literal \'add\'.\n    dirty: Boolean whether to mark the label as dirty.\n    entity_group: Optional entity group assigned to the label.\n    score: Float score between 0.0 and 1.0 representing how likely this label is to be an entity.\n    start_pos: Inclusive start position in the chapter text.\n    end_pos: Exclusive end position in the chapter text.' }), S.Struct({
-  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "op": S.Literal('delete')
-}).annotations({ description: 'Pydantic schema for a label delete operation. Deletes the label with label_id.\n\nAttributes:\n    op: The string literal \'delete\'.\n    label_id: ID of the label to delete.' }), S.Struct({
-  "dirty": S.optional(S.Union(S.Boolean, S.Null)),
-  "endPos": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeEndPosOneMin)), S.Null)),
-  "entityGroup": S.optional(S.Union(S.String.pipe(S.maxLength(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeEntityGroupOneMax)), S.Null)),
-  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "op": S.Literal('update'),
-  "score": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeScoreOneMin), S.lessThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeScoreOneMax)), S.Null)),
-  "startPos": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeStartPosOneMin)), S.Null))
-}).annotations({ description: 'Pydantic schema for a label update operation. Partial updates performed on label with label_id.\n\nAttributes:\n    op: The string literal \'update\'.\n    label_id: ID of the label to update.\n    start_pos: Optional parameter. The new start position of the label.\n    end_pos: Optional parameter. The new end position of the label.\n    dirty: Optional parameter. Value to change the current label\'s dirty value to.\n    entity_group: Optional parameter. New entity group for this label.\n    score: Optional parameter. New score for the entity.' })))
-}).annotations({ description: 'Pydantic schema for an atomic stream of label operations.\n\nAttributes:\n    ops: A list of label operations.' })
+  "ops": S.Array(S.Union([S.Struct({
+  "dirty": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneDirtyDefault))),
+  "endPos": S.Number.check(S.isGreaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneEndPosMin)),
+  "entityGroup": S.optional(S.Union([S.String.check(S.isMaxLength(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneEntityGroupOneMax)), S.Null])),
+  "op": S.Literals(['add']),
+  "score": S.Number.check(S.isGreaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneScoreMin), S.isLessThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneScoreMax)).pipe(S.withDecodingDefaultType(Effect.succeed(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneScoreDefault))),
+  "startPos": S.Number.check(S.isGreaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemOneStartPosMin))
+}).annotate({ description: 'Pydantic schema for a label add operation. Adds a new label to the label data with the given parameters.\n\nAttributes:\n    op: The string literal \'add\'.\n    dirty: Boolean whether to mark the label as dirty.\n    entity_group: Optional entity group assigned to the label.\n    score: Float score between 0.0 and 1.0 representing how likely this label is to be an entity.\n    start_pos: Inclusive start position in the chapter text.\n    end_pos: Exclusive end position in the chapter text.' }), S.Struct({
+  "labelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "op": S.Literals(['delete'])
+}).annotate({ description: 'Pydantic schema for a label delete operation. Deletes the label with label_id.\n\nAttributes:\n    op: The string literal \'delete\'.\n    label_id: ID of the label to delete.' }), S.Struct({
+  "dirty": S.optional(S.Union([S.Boolean, S.Null])),
+  "endPos": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeEndPosOneMin)), S.Null])),
+  "entityGroup": S.optional(S.Union([S.String.check(S.isMaxLength(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeEntityGroupOneMax)), S.Null])),
+  "labelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "op": S.Literals(['update']),
+  "score": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeScoreOneMin), S.isLessThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeScoreOneMax)), S.Null])),
+  "startPos": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(updateLabelDataStreamLabelDatasLabelDataIdPatchBodyOpsItemThreeStartPosOneMin)), S.Null]))
+}).annotate({ description: 'Pydantic schema for a label update operation. Partial updates performed on label with label_id.\n\nAttributes:\n    op: The string literal \'update\'.\n    label_id: ID of the label to update.\n    start_pos: Optional parameter. The new start position of the label.\n    end_pos: Optional parameter. The new end position of the label.\n    dirty: Optional parameter. Value to change the current label\'s dirty value to.\n    entity_group: Optional parameter. New entity group for this label.\n    score: Optional parameter. New score for the entity.' })]))
+}).annotate({ description: 'Pydantic schema for an atomic stream of label operations.\n\nAttributes:\n    ops: A list of label operations.' })
 
 export const UpdateLabelDataStreamLabelDatasLabelDataIdPatch200Response = S.Struct({
-  "results": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))
-}).annotations({ description: 'Pydantic schema for a list of label operation results.\n\nAttributes:\n    results: A list of UUIDs corresponding to the results of each label operation.' })
+  "results": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))
+}).annotate({ description: 'Pydantic schema for a list of label operation results.\n\nAttributes:\n    results: A list of UUIDs corresponding to the results of each label operation.' })
 
 export const UpdateLabelDataStreamLabelDatasLabelDataIdPatch400Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const UpdateLabelDataStreamLabelDatasLabelDataIdPatch404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const UpdateLabelDataStreamLabelDatasLabelDataIdPatch409Response = S.Struct({
   "detail": S.Struct({
   "cacheConflict": S.Boolean,
   "detail": S.String
-}).annotations({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
-}).annotations({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
+}).annotate({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
+}).annotate({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
 
 export const UpdateLabelDataStreamLabelDatasLabelDataIdPatch422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1012,7 +1013,7 @@ export const UpdateLabelDataStreamLabelDatasLabelDataIdPatch422Response = S.Stru
  * @summary Read Labels By Label Data
  */
 export const ReadLabelsByLabelDataLabelDatasLabelDataIdLabelsGetParams = S.Struct({
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseLabelEndMin = 0;
@@ -1029,24 +1030,24 @@ export const readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseLabel
 
 
 export const ReadLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseItem = S.Struct({
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "labelDirty": S.Boolean,
-  "labelEnd": S.Number.pipe(S.greaterThanOrEqualTo(readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseLabelEndMin)),
-  "labelEntityGroup": S.Union(S.String.pipe(S.maxLength(readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseLabelEntityGroupOneMax)), S.Null),
-  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelScore": S.Number.pipe(S.greaterThanOrEqualTo(readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseLabelScoreMin), S.lessThanOrEqualTo(readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseLabelScoreMax)),
-  "labelStart": S.Number.pipe(S.greaterThanOrEqualTo(readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseLabelStartMin)),
-  "labelWord": S.String.pipe(S.maxLength(readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseLabelWordMax))
-}).annotations({ description: 'Pydantic schema for a label that belongs to a LabelData.\nExtends LabelBase with a label_data_id foreign key and label_id pkey.' })
+  "labelEnd": S.Number.check(S.isGreaterThanOrEqualTo(readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseLabelEndMin)),
+  "labelEntityGroup": S.Union([S.String.check(S.isMaxLength(readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseLabelEntityGroupOneMax)), S.Null]),
+  "labelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelScore": S.Number.check(S.isGreaterThanOrEqualTo(readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseLabelScoreMin), S.isLessThanOrEqualTo(readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseLabelScoreMax)),
+  "labelStart": S.Number.check(S.isGreaterThanOrEqualTo(readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseLabelStartMin)),
+  "labelWord": S.String.check(S.isMaxLength(readLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseLabelWordMax))
+}).annotate({ description: 'Pydantic schema for a label that belongs to a LabelData.\nExtends LabelBase with a label_data_id foreign key and label_id pkey.' })
 export const ReadLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200Response = S.Array(ReadLabelsByLabelDataLabelDatasLabelDataIdLabelsGet200ResponseItem)
 
 export const ReadLabelsByLabelDataLabelDatasLabelDataIdLabelsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1057,7 +1058,7 @@ export const ReadLabelsByLabelDataLabelDatasLabelDataIdLabelsGet422Response = S.
  * @summary Read Label Groups
  */
 export const ReadLabelGroupsLabelGroupsGetQueryParams = S.Struct({
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readLabelGroupsLabelGroupsGet200ResponseLabelGroupNameMax = 31;
@@ -1065,19 +1066,19 @@ export const readLabelGroupsLabelGroupsGet200ResponseLabelGroupNameMax = 31;
 
 
 export const ReadLabelGroupsLabelGroupsGet200ResponseItem = S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupName": S.String.pipe(S.maxLength(readLabelGroupsLabelGroupsGet200ResponseLabelGroupNameMax)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' })
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupName": S.String.check(S.isMaxLength(readLabelGroupsLabelGroupsGet200ResponseLabelGroupNameMax)),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' })
 export const ReadLabelGroupsLabelGroupsGet200Response = S.Array(ReadLabelGroupsLabelGroupsGet200ResponseItem)
 
 export const ReadLabelGroupsLabelGroupsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1092,7 +1093,7 @@ export const ReadLabelGroupsLabelGroupsGet422Response = S.Struct({
  * @summary Create Label Group
  */
 export const CreateLabelGroupLabelGroupsPostQueryParams = S.Struct({
-  "requestKey": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+  "requestKey": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
 })
 
 export const createLabelGroupLabelGroupsPostBodyLabelGroupNameMax = 31;
@@ -1100,42 +1101,42 @@ export const createLabelGroupLabelGroupsPostBodyLabelGroupNameMax = 31;
 
 
 export const CreateLabelGroupLabelGroupsPostBody = S.Struct({
-  "labelGroupName": S.String.pipe(S.maxLength(createLabelGroupLabelGroupsPostBodyLabelGroupNameMax)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for validating forms for creating a label group.\n\nAttributes:\n    label_group_name: Name of label group to create.\n    novel_id: UUID of novel this label group belongs to.' })
+  "labelGroupName": S.String.check(S.isMaxLength(createLabelGroupLabelGroupsPostBodyLabelGroupNameMax)),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for validating forms for creating a label group.\n\nAttributes:\n    label_group_name: Name of label group to create.\n    novel_id: UUID of novel this label group belongs to.' })
 
 export const createLabelGroupLabelGroupsPost200ResponseLabelGroupNameMax = 31;
 
 
 
 export const CreateLabelGroupLabelGroupsPost200Response = S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupName": S.String.pipe(S.maxLength(createLabelGroupLabelGroupsPost200ResponseLabelGroupNameMax)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' })
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupName": S.String.check(S.isMaxLength(createLabelGroupLabelGroupsPost200ResponseLabelGroupNameMax)),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' })
 
 export const CreateLabelGroupLabelGroupsPost400Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const CreateLabelGroupLabelGroupsPost404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const CreateLabelGroupLabelGroupsPost409Response = S.Struct({
   "detail": S.Struct({
   "cacheConflict": S.Boolean,
   "detail": S.String
-}).annotations({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
-}).annotations({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
+}).annotate({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
+}).annotate({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
 
 export const CreateLabelGroupLabelGroupsPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1146,7 +1147,7 @@ export const CreateLabelGroupLabelGroupsPost422Response = S.Struct({
  * @summary Read Label Groups With Role
  */
 export const ReadLabelGroupsWithRoleLabelGroupsWithRoleGetQueryParams = S.Struct({
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readLabelGroupsWithRoleLabelGroupsWithRoleGet200ResponseLabelGroupLabelGroupNameMax = 31;
@@ -1155,21 +1156,21 @@ export const readLabelGroupsWithRoleLabelGroupsWithRoleGet200ResponseLabelGroupL
 
 export const ReadLabelGroupsWithRoleLabelGroupsWithRoleGet200ResponseItem = S.Struct({
   "labelGroup": S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupName": S.String.pipe(S.maxLength(readLabelGroupsWithRoleLabelGroupsWithRoleGet200ResponseLabelGroupLabelGroupNameMax)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' }),
-  "role": S.Literal('owner', 'viewer', 'editor')
-}).annotations({ description: 'Pydantic schema for a label group with a user\'s role in that label group.\n\nAttributes:\n    label_group: LabelGroup object.\n    role: Role of the user in this label group.' })
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupName": S.String.check(S.isMaxLength(readLabelGroupsWithRoleLabelGroupsWithRoleGet200ResponseLabelGroupLabelGroupNameMax)),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' }),
+  "role": S.Literals(['owner', 'viewer', 'editor'])
+}).annotate({ description: 'Pydantic schema for a label group with a user\'s role in that label group.\n\nAttributes:\n    label_group: LabelGroup object.\n    role: Role of the user in this label group.' })
 export const ReadLabelGroupsWithRoleLabelGroupsWithRoleGet200Response = S.Array(ReadLabelGroupsWithRoleLabelGroupsWithRoleGet200ResponseItem)
 
 export const ReadLabelGroupsWithRoleLabelGroupsWithRoleGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1183,7 +1184,7 @@ export const ReadLabelGroupsWithRoleLabelGroupsWithRoleGet422Response = S.Struct
  * @summary Read Label Group
  */
 export const ReadLabelGroupLabelGroupsLabelGroupIdGetParams = S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readLabelGroupLabelGroupsLabelGroupIdGet200ResponseLabelGroupNameMax = 31;
@@ -1191,18 +1192,18 @@ export const readLabelGroupLabelGroupsLabelGroupIdGet200ResponseLabelGroupNameMa
 
 
 export const ReadLabelGroupLabelGroupsLabelGroupIdGet200Response = S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupName": S.String.pipe(S.maxLength(readLabelGroupLabelGroupsLabelGroupIdGet200ResponseLabelGroupNameMax)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' })
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupName": S.String.check(S.isMaxLength(readLabelGroupLabelGroupsLabelGroupIdGet200ResponseLabelGroupNameMax)),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' })
 
 export const ReadLabelGroupLabelGroupsLabelGroupIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1217,7 +1218,7 @@ export const ReadLabelGroupLabelGroupsLabelGroupIdGet422Response = S.Struct({
  * @summary Update Label Group
  */
 export const UpdateLabelGroupLabelGroupsLabelGroupIdPatchParams = S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const updateLabelGroupLabelGroupsLabelGroupIdPatchBodyLabelGroupNameMax = 31;
@@ -1225,26 +1226,26 @@ export const updateLabelGroupLabelGroupsLabelGroupIdPatchBodyLabelGroupNameMax =
 
 
 export const UpdateLabelGroupLabelGroupsLabelGroupIdPatchBody = S.Struct({
-  "labelGroupName": S.String.pipe(S.maxLength(updateLabelGroupLabelGroupsLabelGroupIdPatchBodyLabelGroupNameMax))
-}).annotations({ description: 'Pydantic schema for validating forms for updating a label group.\n\nAttributes:\n    label_group_name: New name of label group.' })
+  "labelGroupName": S.String.check(S.isMaxLength(updateLabelGroupLabelGroupsLabelGroupIdPatchBodyLabelGroupNameMax))
+}).annotate({ description: 'Pydantic schema for validating forms for updating a label group.\n\nAttributes:\n    label_group_name: New name of label group.' })
 
 export const updateLabelGroupLabelGroupsLabelGroupIdPatch200ResponseLabelGroupNameMax = 31;
 
 
 
 export const UpdateLabelGroupLabelGroupsLabelGroupIdPatch200Response = S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupName": S.String.pipe(S.maxLength(updateLabelGroupLabelGroupsLabelGroupIdPatch200ResponseLabelGroupNameMax)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' })
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupName": S.String.check(S.isMaxLength(updateLabelGroupLabelGroupsLabelGroupIdPatch200ResponseLabelGroupNameMax)),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a label group.\n\nAttributes:\n    label_group_id: UUID identifier for this label group.\n    label_group_name: Name of this label group.\n    novel_id: UUID of novel this label group belongs to.' })
 
 export const UpdateLabelGroupLabelGroupsLabelGroupIdPatch422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1255,23 +1256,23 @@ export const UpdateLabelGroupLabelGroupsLabelGroupIdPatch422Response = S.Struct(
  * @summary Read Label Contributors
  */
 export const ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGetParams = S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGet200ResponseItem = S.Struct({
-  "labelContributorRole": S.Literal('owner', 'viewer', 'editor'),
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "userId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a label contributor, which can be either a user or an autolabel model.\n\nAttributes:\n    label_contributor_role: Role of the contributor, either a user or an autolabel model.\n    label_group_id: UUID of label group this contributor belongs to.\n    user_id: UUID of user' })
+  "labelContributorRole": S.Literals(['owner', 'viewer', 'editor']),
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "userId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a label contributor, which can be either a user or an autolabel model.\n\nAttributes:\n    label_contributor_role: Role of the contributor, either a user or an autolabel model.\n    label_group_id: UUID of label group this contributor belongs to.\n    user_id: UUID of user' })
 export const ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGet200Response = S.Array(ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGet200ResponseItem)
 
 export const ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1286,41 +1287,41 @@ export const ReadLabelContributorsLabelGroupsLabelGroupIdContributorsGet422Respo
  * @summary Create Label Data
  */
 export const CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostParams = S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostQueryParams = S.Struct({
-  "requestKey": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+  "requestKey": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
 })
 
 export const CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPostBody = S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for validating create requests for label data.\n\nAttributes:\n    chapter_content_id: UUID of chapter content being labelled.' })
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for validating create requests for label data.\n\nAttributes:\n    chapter_content_id: UUID of chapter content being labelled.' })
 
 export const CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPost200Response = S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' })
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a list of labels in some text.\n\nAttributes:\n    label_data_id: UUID identifier for this LabelData.\n    label_group_id: UUID of label group this LabelData belongs to.\n    chapter_content_id: UUID of chapter content this LabelData is labelling.' })
 
 export const CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPost404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPost409Response = S.Struct({
   "detail": S.Struct({
   "cacheConflict": S.Boolean,
   "detail": S.String
-}).annotations({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
-}).annotations({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
+}).annotate({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
+}).annotate({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
 
 export const CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1331,43 +1332,43 @@ export const CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPost422Response = S
  * @summary Create Label Datas By Auto Labels
  */
 export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostParams = S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostQueryParams = S.Struct({
-  "requestKey": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+  "requestKey": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
 })
 
 export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBody = S.Struct({
-  "chapterIds": S.optional(S.Union(S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))), S.Null)),
-  "end": S.optional(S.Union(S.Number, S.Null)),
-  "runId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "start": S.optional(S.Union(S.Number, S.Null))
-}).annotations({ description: 'Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.\n\nAttributes:\n    run_id: UUID of the autolabel run whose results should be promoted.\n    chapter_ids: Optional filter on what chapters to include.\n    start: Optional filter on the least chapter number to include.\n    end: Optional filter on the greatest chapter number to include.' })
+  "chapterIds": S.optional(S.Union([S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))), S.Null])),
+  "end": S.optional(S.Union([S.Number, S.Null])),
+  "runId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "start": S.optional(S.Union([S.Number, S.Null]))
+}).annotate({ description: 'Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.\n\nAttributes:\n    run_id: UUID of the autolabel run whose results should be promoted.\n    chapter_ids: Optional filter on what chapters to include.\n    start: Optional filter on the least chapter number to include.\n    end: Optional filter on the greatest chapter number to include.' })
 
 export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost200Response = S.Struct({
-  "errors": S.Array(S.Tuple(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.String)),
-  "success": S.Array(S.Tuple(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))))
-}).annotations({ description: 'Return message for CreateLabelDataByAutoLabel.\n\nAttributes:\n    success: List of tuples of (chapter_id, chapter_content_id) for successful inserts.\n    errors: List of tuples of (chapter_id, chapter_content_id, error message) for failed inserts.' })
+  "errors": S.Array(S.Tuple([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.String])),
+  "success": S.Array(S.Tuple([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))]))
+}).annotate({ description: 'Return message for CreateLabelDataByAutoLabel.\n\nAttributes:\n    success: List of tuples of (chapter_id, chapter_content_id) for successful inserts.\n    errors: List of tuples of (chapter_id, chapter_content_id, error message) for failed inserts.' })
 
 export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost409Response = S.Struct({
   "detail": S.Struct({
   "cacheConflict": S.Boolean,
   "detail": S.String
-}).annotations({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
-}).annotations({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
+}).annotate({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
+}).annotate({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
 
 export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1378,7 +1379,7 @@ export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLa
  * @summary Read Label
  */
 export const ReadLabelLabelsLabelIdGetParams = S.Struct({
-  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "labelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readLabelLabelsLabelIdGet200ResponseLabelEndMin = 0;
@@ -1395,23 +1396,23 @@ export const readLabelLabelsLabelIdGet200ResponseLabelWordMax = 128;
 
 
 export const ReadLabelLabelsLabelIdGet200Response = S.Struct({
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "labelDirty": S.Boolean,
-  "labelEnd": S.Number.pipe(S.greaterThanOrEqualTo(readLabelLabelsLabelIdGet200ResponseLabelEndMin)),
-  "labelEntityGroup": S.Union(S.String.pipe(S.maxLength(readLabelLabelsLabelIdGet200ResponseLabelEntityGroupOneMax)), S.Null),
-  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelScore": S.Number.pipe(S.greaterThanOrEqualTo(readLabelLabelsLabelIdGet200ResponseLabelScoreMin), S.lessThanOrEqualTo(readLabelLabelsLabelIdGet200ResponseLabelScoreMax)),
-  "labelStart": S.Number.pipe(S.greaterThanOrEqualTo(readLabelLabelsLabelIdGet200ResponseLabelStartMin)),
-  "labelWord": S.String.pipe(S.maxLength(readLabelLabelsLabelIdGet200ResponseLabelWordMax))
-}).annotations({ description: 'Pydantic schema for a label that belongs to a LabelData.\nExtends LabelBase with a label_data_id foreign key and label_id pkey.' })
+  "labelEnd": S.Number.check(S.isGreaterThanOrEqualTo(readLabelLabelsLabelIdGet200ResponseLabelEndMin)),
+  "labelEntityGroup": S.Union([S.String.check(S.isMaxLength(readLabelLabelsLabelIdGet200ResponseLabelEntityGroupOneMax)), S.Null]),
+  "labelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelScore": S.Number.check(S.isGreaterThanOrEqualTo(readLabelLabelsLabelIdGet200ResponseLabelScoreMin), S.isLessThanOrEqualTo(readLabelLabelsLabelIdGet200ResponseLabelScoreMax)),
+  "labelStart": S.Number.check(S.isGreaterThanOrEqualTo(readLabelLabelsLabelIdGet200ResponseLabelStartMin)),
+  "labelWord": S.String.check(S.isMaxLength(readLabelLabelsLabelIdGet200ResponseLabelWordMax))
+}).annotate({ description: 'Pydantic schema for a label that belongs to a LabelData.\nExtends LabelBase with a label_data_id foreign key and label_id pkey.' })
 
 export const ReadLabelLabelsLabelIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1427,7 +1428,7 @@ export const ReadLabelLabelsLabelIdGet422Response = S.Struct({
 export const ReadAllLanguagesLanguagesGet200ResponseItem = S.Struct({
   "languageCode": S.String,
   "languageName": S.String
-}).annotations({ description: 'Pydantic schema for language.\n\nAttributes:\n    language_code: String code key to language.\n    language_name: String name of language.' })
+}).annotate({ description: 'Pydantic schema for language.\n\nAttributes:\n    language_code: String code key to language.\n    language_name: String name of language.' })
 export const ReadAllLanguagesLanguagesGet200Response = S.Array(ReadAllLanguagesLanguagesGet200ResponseItem)
 
 /**
@@ -1445,15 +1446,15 @@ export const ReadLanguageByCodeLanguagesLanguageCodeGetParams = S.Struct({
 export const ReadLanguageByCodeLanguagesLanguageCodeGet200Response = S.Struct({
   "languageCode": S.String,
   "languageName": S.String
-}).annotations({ description: 'Pydantic schema for language.\n\nAttributes:\n    language_code: String code key to language.\n    language_name: String name of language.' })
+}).annotate({ description: 'Pydantic schema for language.\n\nAttributes:\n    language_code: String code key to language.\n    language_name: String name of language.' })
 
 export const ReadLanguageByCodeLanguagesLanguageCodeGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1463,20 +1464,20 @@ export const ReadLanguageByCodeLanguagesLanguageCodeGet422Response = S.Struct({
  * @summary Remove Memory
  */
 export const RemoveMemoryMemoriesMemoryIdDeleteParams = S.Struct({
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const RemoveMemoryMemoriesMemoryIdDelete404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RemoveMemoryMemoriesMemoryIdDelete422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1486,33 +1487,33 @@ export const RemoveMemoryMemoriesMemoryIdDelete422Response = S.Struct({
  * @summary Read Memory
  */
 export const ReadMemoryMemoriesMemoryIdGetParams = S.Struct({
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadMemoryMemoriesMemoryIdGet200Response = S.Struct({
-  "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
-  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
-  "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
-  "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
-  "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
-  "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
-  "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
-}).annotations({ description: 'Memory schema' })
+  "creatorType": S.Literals(['user', 'workflow', 'agent']).annotate({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union([S.String, S.Null]).annotate({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
+  "memoryContent": S.String.annotate({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
+  "memoryEndNum": S.Union([S.Number, S.Null]).annotate({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
+  "memoryReviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
+  "memoryStartNum": S.Number.annotate({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
+  "memoryType": S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literals(['glossary', 'continuity']).annotate({ description: 'Name of the plugin that owns the memory.' }),
+  "supersedesMemoryId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]).annotate({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
+}).annotate({ description: 'Memory schema' })
 
 export const ReadMemoryMemoriesMemoryIdGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadMemoryMemoriesMemoryIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1522,7 +1523,7 @@ export const ReadMemoryMemoriesMemoryIdGet422Response = S.Struct({
  * @summary Edit Memory Content
  */
 export const EditMemoryContentMemoriesMemoryIdContentPatchParams = S.Struct({
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 
@@ -1530,34 +1531,34 @@ export const EditMemoryContentMemoriesMemoryIdContentPatchParams = S.Struct({
 
 
 export const EditMemoryContentMemoriesMemoryIdContentPatchBody = S.Struct({
-  "mark": S.Union(S.String.pipe(S.minLength(1)), S.Null),
-  "memoryContent": S.String.pipe(S.minLength(1))
+  "mark": S.Union([S.String.check(S.isMinLength(1)), S.Null]),
+  "memoryContent": S.String.check(S.isMinLength(1))
 })
 
 export const EditMemoryContentMemoriesMemoryIdContentPatch200Response = S.Struct({
-  "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
-  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
-  "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
-  "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
-  "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
-  "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
-  "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
-}).annotations({ description: 'Memory schema' })
+  "creatorType": S.Literals(['user', 'workflow', 'agent']).annotate({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union([S.String, S.Null]).annotate({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
+  "memoryContent": S.String.annotate({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
+  "memoryEndNum": S.Union([S.Number, S.Null]).annotate({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
+  "memoryReviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
+  "memoryStartNum": S.Number.annotate({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
+  "memoryType": S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literals(['glossary', 'continuity']).annotate({ description: 'Name of the plugin that owns the memory.' }),
+  "supersedesMemoryId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]).annotate({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
+}).annotate({ description: 'Memory schema' })
 
 export const EditMemoryContentMemoriesMemoryIdContentPatch404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const EditMemoryContentMemoriesMemoryIdContentPatch422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1567,37 +1568,37 @@ export const EditMemoryContentMemoriesMemoryIdContentPatch422Response = S.Struct
  * @summary Edit Memory Expiration
  */
 export const EditMemoryExpirationMemoriesMemoryIdExpirationPatchParams = S.Struct({
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const EditMemoryExpirationMemoriesMemoryIdExpirationPatchBody = S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const EditMemoryExpirationMemoriesMemoryIdExpirationPatch200Response = S.Struct({
-  "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
-  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
-  "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
-  "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
-  "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
-  "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
-  "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
-}).annotations({ description: 'Memory schema' })
+  "creatorType": S.Literals(['user', 'workflow', 'agent']).annotate({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union([S.String, S.Null]).annotate({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
+  "memoryContent": S.String.annotate({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
+  "memoryEndNum": S.Union([S.Number, S.Null]).annotate({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
+  "memoryReviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
+  "memoryStartNum": S.Number.annotate({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
+  "memoryType": S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literals(['glossary', 'continuity']).annotate({ description: 'Name of the plugin that owns the memory.' }),
+  "supersedesMemoryId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]).annotate({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
+}).annotate({ description: 'Memory schema' })
 
 export const EditMemoryExpirationMemoriesMemoryIdExpirationPatch404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const EditMemoryExpirationMemoriesMemoryIdExpirationPatch422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1607,37 +1608,37 @@ export const EditMemoryExpirationMemoriesMemoryIdExpirationPatch422Response = S.
  * @summary Edit Memory Review Status
  */
 export const EditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchParams = S.Struct({
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const EditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatchBody = S.Struct({
-  "reviewStatus": S.Literal('pending', 'approved', 'rejected')
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected'])
 })
 
 export const EditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch200Response = S.Struct({
-  "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
-  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
-  "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
-  "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
-  "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
-  "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
-  "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
-}).annotations({ description: 'Memory schema' })
+  "creatorType": S.Literals(['user', 'workflow', 'agent']).annotate({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union([S.String, S.Null]).annotate({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
+  "memoryContent": S.String.annotate({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
+  "memoryEndNum": S.Union([S.Number, S.Null]).annotate({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
+  "memoryReviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
+  "memoryStartNum": S.Number.annotate({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
+  "memoryType": S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literals(['glossary', 'continuity']).annotate({ description: 'Name of the plugin that owns the memory.' }),
+  "supersedesMemoryId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]).annotate({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
+}).annotate({ description: 'Memory schema' })
 
 export const EditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const EditMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1650,14 +1651,14 @@ export const ReadMemoryAgentConfigMemoryAgentConfigGet200Response = S.Struct({
   "models": S.Array(S.Struct({
   "description": S.String,
   "label": S.String,
-  "name": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low')
+  "name": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 })),
   "toolsets": S.Array(S.Struct({
-  "configSchema": S.Record({ key: S.String, value: S.Unknown }),
+  "configSchema": S.Record(S.String, S.Unknown),
   "defaultEnabled": S.Boolean,
   "description": S.String,
   "excludes": S.Array(S.String),
-  "kind": S.Literal('memory', 'guidance'),
+  "kind": S.Literals(['memory', 'guidance']),
   "label": S.String,
   "name": S.String,
   "requires": S.Array(S.String)
@@ -1666,13 +1667,13 @@ export const ReadMemoryAgentConfigMemoryAgentConfigGet200Response = S.Struct({
 
 export const ReadMemoryAgentConfigMemoryAgentConfigGet401Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 /**
  * @summary Read Memory Job Summaries
  */
 export const ReadMemoryJobSummariesMemoryAgentJobSummariesGetQueryParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsCompletedMin = 0;
@@ -1686,40 +1687,40 @@ export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummarie
 
 
 export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet200Response = S.Struct({
-  "serverTime": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "serverTime": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "summaries": S.Array(S.Struct({
   "isClaimed": S.Boolean,
   "job": S.Struct({
-  "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
-  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }),
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 }),
   "taskCounts": S.Struct({
-  "completed": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsCompletedMin)),
-  "failed": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsFailedMin)),
-  "pending": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsPendingMin)),
-  "processing": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsProcessingMin))
+  "completed": S.Number.check(S.isGreaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsCompletedMin)),
+  "failed": S.Number.check(S.isGreaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsFailedMin)),
+  "pending": S.Number.check(S.isGreaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsPendingMin)),
+  "processing": S.Number.check(S.isGreaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsProcessingMin))
 })
 }))
 })
 
 export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1729,7 +1730,7 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet422Response = S.Str
  * @summary Read Memory Job Summary
  */
 export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetParams = S.Struct({
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsCompletedMin = 0;
@@ -1743,40 +1744,40 @@ export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200Respons
 
 
 export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200Response = S.Struct({
-  "serverTime": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "serverTime": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "summary": S.Struct({
   "isClaimed": S.Boolean,
   "job": S.Struct({
-  "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
-  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }),
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 }),
   "taskCounts": S.Struct({
-  "completed": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsCompletedMin)),
-  "failed": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsFailedMin)),
-  "pending": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsPendingMin)),
-  "processing": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsProcessingMin))
+  "completed": S.Number.check(S.isGreaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsCompletedMin)),
+  "failed": S.Number.check(S.isGreaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsFailedMin)),
+  "pending": S.Number.check(S.isGreaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsPendingMin)),
+  "processing": S.Number.check(S.isGreaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsProcessingMin))
 })
 })
 })
 
 export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1786,33 +1787,33 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet422Respons
  * @summary Read Memory Jobs
  */
 export const ReadMemoryJobsMemoryAgentJobsGetQueryParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadMemoryJobsMemoryAgentJobsGet200ResponseItem = S.Struct({
-  "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
-  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }),
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 })
 export const ReadMemoryJobsMemoryAgentJobsGet200Response = S.Array(ReadMemoryJobsMemoryAgentJobsGet200ResponseItem)
 
 export const ReadMemoryJobsMemoryAgentJobsGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadMemoryJobsMemoryAgentJobsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1828,38 +1829,38 @@ export const addMemoryJobMemoryAgentJobsPostBodyStartChapterNumOneMin = 0;
 
 
 export const AddMemoryJobMemoryAgentJobsPostBody = S.Struct({
-  "endChapterNum": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyEndChapterNumOneMin)), S.Null)),
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "endChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyEndChapterNumOneMin)), S.Null])),
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "params": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
-  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }),
-  "startChapterNum": S.optional(S.Union(S.Number.pipe(S.greaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyStartChapterNumOneMin)), S.Null))
+  "startChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyStartChapterNumOneMin)), S.Null]))
 })
 
 export const AddMemoryJobMemoryAgentJobsPost201Response = S.Struct({
-  "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
-  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }),
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 })
 
 export const AddMemoryJobMemoryAgentJobsPost404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const AddMemoryJobMemoryAgentJobsPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1869,24 +1870,24 @@ export const AddMemoryJobMemoryAgentJobsPost422Response = S.Struct({
  * @summary Remove Memory Job
  */
 export const RemoveMemoryJobMemoryAgentJobsMemoryJobIdDeleteParams = S.Struct({
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const RemoveMemoryJobMemoryAgentJobsMemoryJobIdDelete404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RemoveMemoryJobMemoryAgentJobsMemoryJobIdDelete409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RemoveMemoryJobMemoryAgentJobsMemoryJobIdDelete422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1896,32 +1897,32 @@ export const RemoveMemoryJobMemoryAgentJobsMemoryJobIdDelete422Response = S.Stru
  * @summary Read Memory Job
  */
 export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGetParams = S.Struct({
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet200Response = S.Struct({
-  "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
-  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }),
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 })
 
 export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1931,32 +1932,32 @@ export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet422Response = S.Struct({
  * @summary Abort Memory Job
  */
 export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostParams = S.Struct({
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200Response = S.Struct({
-  "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
-  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }),
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 })
 
 export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1966,36 +1967,36 @@ export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost422Response = S.St
  * @summary Start Memory Job
  */
 export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPostParams = S.Struct({
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost202Response = S.Struct({
-  "claimExpiresAt": S.Union(S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null),
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "jobParams": S.Struct({
-  "modelName": S.Literal('deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'),
-  "toolsets": S.Record({ key: S.String, value: S.Record({ key: S.String, value: S.Unknown }) })
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }),
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 })
 
 export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2003,13 +2004,13 @@ export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost422Response = S.St
 
 export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost503Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 /**
  * @summary Read Memory Tasks
  */
 export const ReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetParams = S.Struct({
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetQuerySkipDefault = 0;
@@ -2021,8 +2022,8 @@ export const readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetQueryLimitMax = 10
 
 
 export const ReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetQueryParams = S.Struct({
-  "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetQuerySkipMin)), { default: () => readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetQuerySkipDefault }),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetQueryLimitMax)), { default: () => readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetQueryLimitDefault })
+  "skip": S.Number.check(S.isGreaterThanOrEqualTo(readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetQuerySkipMin)).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetQuerySkipDefault))),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetQueryLimitDefault)))
 })
 
 export const readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGet200ResponseCountMin = 0;
@@ -2030,29 +2031,29 @@ export const readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGet200ResponseCountMi
 
 
 export const ReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGet200Response = S.Struct({
-  "count": S.Number.pipe(S.greaterThanOrEqualTo(readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGet200ResponseCountMin)),
+  "count": S.Number.check(S.isGreaterThanOrEqualTo(readMemoryTasksMemoryAgentJobsMemoryJobIdTasksGet200ResponseCountMin)),
   "rows": S.Array(S.Struct({
   "attemptCount": S.Number,
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterNum": S.Number,
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "taskStatus": S.Literal('pending', 'processing', 'completed', 'failed'),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "taskStatus": S.Literals(['pending', 'processing', 'completed', 'failed']),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 }))
 })
 
 export const ReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2062,25 +2063,25 @@ export const ReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGet422Response = S.St
  * @summary Remove Memory Task
  */
 export const RemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteParams = S.Struct({
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const RemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDelete404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDelete409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDelete422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2090,31 +2091,31 @@ export const RemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDelete422Re
  * @summary Read Memory Task
  */
 export const ReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetParams = S.Struct({
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGet200Response = S.Struct({
   "attemptCount": S.Number,
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterNum": S.Number,
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "taskStatus": S.Literal('pending', 'processing', 'completed', 'failed'),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "taskStatus": S.Literals(['pending', 'processing', 'completed', 'failed']),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 })
 
 export const ReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2124,35 +2125,35 @@ export const ReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGet422Respons
  * @summary Retry Memory Task
  */
 export const RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostParams = S.Struct({
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPost202Response = S.Struct({
   "attemptCount": S.Number,
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterNum": S.Number,
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "taskStatus": S.Literal('pending', 'processing', 'completed', 'failed'),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "taskStatus": S.Literals(['pending', 'processing', 'completed', 'failed']),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 })
 
 export const RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPost404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPost409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2160,41 +2161,41 @@ export const RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPost422
 
 export const RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPost503Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 /**
  * @summary Start Memory Task
  */
 export const StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostParams = S.Struct({
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPost202Response = S.Struct({
   "attemptCount": S.Number,
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterNum": S.Number,
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "memoryJobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "taskStatus": S.Literal('pending', 'processing', 'completed', 'failed'),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "taskStatus": S.Literals(['pending', 'processing', 'completed', 'failed']),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 })
 
 export const StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPost404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPost409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2202,30 +2203,30 @@ export const StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPost422
 
 export const StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPost503Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 /**
  * @summary Read Memory Groups
  */
 export const ReadMemoryGroupsMemoryGroupsGetQueryParams = S.Struct({
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadMemoryGroupsMemoryGroupsGet200ResponseItem = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when referring to this memory group.' }),
-  "memoryGroupName": S.String.annotations({ description: 'Human-readable name of the memory group.' }),
-  "memoryLanguage": S.String.annotations({ description: 'Language in which memory content should be written.' }),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Identifier of the novel to which this memory group belongs.' })
-}).annotations({ description: 'Memory group schema' })
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier to use when referring to this memory group.' }),
+  "memoryGroupName": S.String.annotate({ description: 'Human-readable name of the memory group.' }),
+  "memoryLanguage": S.String.annotate({ description: 'Language in which memory content should be written.' }),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Identifier of the novel to which this memory group belongs.' })
+}).annotate({ description: 'Memory group schema' })
 export const ReadMemoryGroupsMemoryGroupsGet200Response = S.Array(ReadMemoryGroupsMemoryGroupsGet200ResponseItem)
 
 export const ReadMemoryGroupsMemoryGroupsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2242,29 +2243,29 @@ export const addMemoryGroupMemoryGroupsPostBodyMemoryLanguageMax = 2;
 
 
 export const AddMemoryGroupMemoryGroupsPostBody = S.Struct({
-  "memoryGroupName": S.String.pipe(S.minLength(1), S.maxLength(addMemoryGroupMemoryGroupsPostBodyMemoryGroupNameMax)),
-  "memoryLanguage": S.String.pipe(S.minLength(addMemoryGroupMemoryGroupsPostBodyMemoryLanguageMin), S.maxLength(addMemoryGroupMemoryGroupsPostBodyMemoryLanguageMax)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupName": S.String.check(S.isMinLength(1), S.isMaxLength(addMemoryGroupMemoryGroupsPostBodyMemoryGroupNameMax)),
+  "memoryLanguage": S.String.check(S.isMinLength(addMemoryGroupMemoryGroupsPostBodyMemoryLanguageMin), S.isMaxLength(addMemoryGroupMemoryGroupsPostBodyMemoryLanguageMax)),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const AddMemoryGroupMemoryGroupsPost200Response = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when referring to this memory group.' }),
-  "memoryGroupName": S.String.annotations({ description: 'Human-readable name of the memory group.' }),
-  "memoryLanguage": S.String.annotations({ description: 'Language in which memory content should be written.' }),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Identifier of the novel to which this memory group belongs.' })
-}).annotations({ description: 'Memory group schema' })
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier to use when referring to this memory group.' }),
+  "memoryGroupName": S.String.annotate({ description: 'Human-readable name of the memory group.' }),
+  "memoryLanguage": S.String.annotate({ description: 'Language in which memory content should be written.' }),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Identifier of the novel to which this memory group belongs.' })
+}).annotate({ description: 'Memory group schema' })
 
 export const AddMemoryGroupMemoryGroupsPost404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const AddMemoryGroupMemoryGroupsPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2274,8 +2275,8 @@ export const AddMemoryGroupMemoryGroupsPost422Response = S.Struct({
  * @summary Read Memories At Chapter
  */
 export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQuerySkipDefault = 0;
@@ -2287,11 +2288,11 @@ export const readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemo
 export const readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQueryCreatedExactlyAtChapterDefault = false;
 
 export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQueryParams = S.Struct({
-  "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQuerySkipMin)), { default: () => readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQuerySkipDefault }),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQueryLimitMax)), { default: () => readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQueryLimitDefault }),
-  "createdExactlyAtChapter": S.optionalWith(S.Boolean, { default: () => readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQueryCreatedExactlyAtChapterDefault }),
-  "pluginNames": S.optional(S.Union(S.Array(S.Literal('glossary', 'continuity')), S.Null)),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
+  "skip": S.Number.check(S.isGreaterThanOrEqualTo(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQuerySkipMin)).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQuerySkipDefault))),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQueryLimitDefault))),
+  "createdExactlyAtChapter": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetQueryCreatedExactlyAtChapterDefault))),
+  "pluginNames": S.optional(S.Union([S.Array(S.Literals(['glossary', 'continuity'])), S.Null])),
+  "memoryTypes": S.optional(S.Union([S.Array(S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null]))
 })
 
 export const readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet200ResponseCountMin = 0;
@@ -2299,32 +2300,32 @@ export const readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemo
 
 
 export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet200Response = S.Struct({
-  "count": S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet200ResponseCountMin)),
+  "count": S.Number.check(S.isGreaterThanOrEqualTo(readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet200ResponseCountMin)),
   "rows": S.Array(S.Struct({
-  "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
-  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
-  "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
-  "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
-  "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
-  "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
-  "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
-}).annotations({ description: 'Memory schema' }))
+  "creatorType": S.Literals(['user', 'workflow', 'agent']).annotate({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union([S.String, S.Null]).annotate({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
+  "memoryContent": S.String.annotate({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
+  "memoryEndNum": S.Union([S.Number, S.Null]).annotate({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
+  "memoryReviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
+  "memoryStartNum": S.Number.annotate({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
+  "memoryType": S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literals(['glossary', 'continuity']).annotate({ description: 'Name of the plugin that owns the memory.' }),
+  "supersedesMemoryId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]).annotate({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
+}).annotate({ description: 'Memory schema' }))
 })
 
 export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2334,8 +2335,8 @@ export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemo
  * @summary Read Glossary Memories At Chapter
  */
 export const ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQuerySkipDefault = 0;
@@ -2347,10 +2348,10 @@ export const readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChapt
 export const readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQueryCreatedExactlyAtChapterDefault = false;
 
 export const ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQueryParams = S.Struct({
-  "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQuerySkipMin)), { default: () => readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQuerySkipDefault }),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQueryLimitMax)), { default: () => readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQueryLimitDefault }),
-  "createdExactlyAtChapter": S.optionalWith(S.Boolean, { default: () => readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQueryCreatedExactlyAtChapterDefault }),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
+  "skip": S.Number.check(S.isGreaterThanOrEqualTo(readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQuerySkipMin)).pipe(S.withDecodingDefaultType(Effect.succeed(readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQuerySkipDefault))),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQueryLimitDefault))),
+  "createdExactlyAtChapter": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetQueryCreatedExactlyAtChapterDefault))),
+  "memoryTypes": S.optional(S.Union([S.Array(S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null]))
 })
 
 export const readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGet200ResponseCountMin = 0;
@@ -2358,40 +2359,40 @@ export const readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChapt
 
 
 export const ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGet200Response = S.Struct({
-  "count": S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGet200ResponseCountMin)),
+  "count": S.Number.check(S.isGreaterThanOrEqualTo(readGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGet200ResponseCountMin)),
   "rows": S.Array(S.Struct({
   "memory": S.Struct({
-  "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
-  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
-  "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
-  "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
-  "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
-  "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
-  "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
-}).annotations({ description: 'The memory that describes the glossary terms.' }),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']).annotate({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union([S.String, S.Null]).annotate({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
+  "memoryContent": S.String.annotate({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
+  "memoryEndNum": S.Union([S.Number, S.Null]).annotate({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
+  "memoryReviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
+  "memoryStartNum": S.Number.annotate({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
+  "memoryType": S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literals(['glossary', 'continuity']).annotate({ description: 'Name of the plugin that owns the memory.' }),
+  "supersedesMemoryId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]).annotate({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
+}).annotate({ description: 'The memory that describes the glossary terms.' }),
   "terms": S.Array(S.Struct({
-  "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
-  "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
-  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
-}).annotations({ description: 'A glossary term represented as context for an agent.' })).annotations({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
-}).annotations({ description: 'A memory together with the glossary terms it describes.' }))
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
+  "term": S.String.annotate({ description: 'Term exactly as it appears in the novel\'s source text.' }),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union([S.Literals(['person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other']), S.Null]).annotate({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
+}).annotate({ description: 'A glossary term represented as context for an agent.' })).annotate({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
+}).annotate({ description: 'A memory together with the glossary terms it describes.' }))
 })
 
 export const ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2401,7 +2402,7 @@ export const ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChapt
  * @summary Read Glossary Memories
  */
 export const ReadGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQuerySkipDefault = 0;
@@ -2413,9 +2414,9 @@ export const readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQue
 
 
 export const ReadGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQueryParams = S.Struct({
-  "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQuerySkipMin)), { default: () => readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQuerySkipDefault }),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQueryLimitMax)), { default: () => readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQueryLimitDefault }),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
+  "skip": S.Number.check(S.isGreaterThanOrEqualTo(readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQuerySkipMin)).pipe(S.withDecodingDefaultType(Effect.succeed(readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQuerySkipDefault))),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetQueryLimitDefault))),
+  "memoryTypes": S.optional(S.Union([S.Array(S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null]))
 })
 
 export const readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGet200ResponseCountMin = 0;
@@ -2423,36 +2424,36 @@ export const readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGet200
 
 
 export const ReadGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGet200Response = S.Struct({
-  "count": S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGet200ResponseCountMin)),
+  "count": S.Number.check(S.isGreaterThanOrEqualTo(readGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGet200ResponseCountMin)),
   "rows": S.Array(S.Struct({
   "memory": S.Struct({
-  "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
-  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
-  "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
-  "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
-  "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
-  "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
-  "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
-}).annotations({ description: 'The memory that describes the glossary terms.' }),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']).annotate({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union([S.String, S.Null]).annotate({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
+  "memoryContent": S.String.annotate({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
+  "memoryEndNum": S.Union([S.Number, S.Null]).annotate({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
+  "memoryReviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
+  "memoryStartNum": S.Number.annotate({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
+  "memoryType": S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literals(['glossary', 'continuity']).annotate({ description: 'Name of the plugin that owns the memory.' }),
+  "supersedesMemoryId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]).annotate({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
+}).annotate({ description: 'The memory that describes the glossary terms.' }),
   "terms": S.Array(S.Struct({
-  "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
-  "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
-  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
-}).annotations({ description: 'A glossary term represented as context for an agent.' })).annotations({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
-}).annotations({ description: 'A memory together with the glossary terms it describes.' }))
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
+  "term": S.String.annotate({ description: 'Term exactly as it appears in the novel\'s source text.' }),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union([S.Literals(['person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other']), S.Null]).annotate({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
+}).annotate({ description: 'A glossary term represented as context for an agent.' })).annotate({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
+}).annotate({ description: 'A memory together with the glossary terms it describes.' }))
 })
 
 export const ReadGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2462,7 +2463,7 @@ export const ReadGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGet422
  * @summary Add Glossary Memory
  */
 export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 
@@ -2471,51 +2472,51 @@ export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostParam
 
 
 export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPostBody = S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "mark": S.optional(S.Union(S.String.pipe(S.minLength(1)), S.Null)),
-  "memoryContent": S.String.pipe(S.minLength(1)),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' }),
-  "scope": S.optional(S.Union(S.Literal('local', 'recent', 'persist').annotations({ description: 'The scope of a memory (i.e. how long it should be retained).\n\nLOCAL: Memory is only relevant to the current chapter.\nRECENT: Memory is relevant to the current chapter and a few subsequent chapters.\nPERSIST: Memory is relevant to all chapters and should be retained indefinitely until explicitly superseded or expired.' }), S.Null)),
-  "termIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))).pipe(S.minItems(1))
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "mark": S.optional(S.Union([S.String.check(S.isMinLength(1)), S.Null])),
+  "memoryContent": S.String.check(S.isMinLength(1)),
+  "memoryType": S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' }),
+  "scope": S.optional(S.Union([S.Literals(['local', 'recent', 'persist']).annotate({ description: 'The scope of a memory (i.e. how long it should be retained).\n\nLOCAL: Memory is only relevant to the current chapter.\nRECENT: Memory is relevant to the current chapter and a few subsequent chapters.\nPERSIST: Memory is relevant to all chapters and should be retained indefinitely until explicitly superseded or expired.' }), S.Null])),
+  "termIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))).check(S.isMinLength(1))
 })
 
 export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost200Response = S.Struct({
   "memory": S.Struct({
-  "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
-  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
-  "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
-  "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
-  "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
-  "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
-  "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
-}).annotations({ description: 'The memory that describes the glossary terms.' }),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']).annotate({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union([S.String, S.Null]).annotate({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
+  "memoryContent": S.String.annotate({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
+  "memoryEndNum": S.Union([S.Number, S.Null]).annotate({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
+  "memoryReviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
+  "memoryStartNum": S.Number.annotate({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
+  "memoryType": S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literals(['glossary', 'continuity']).annotate({ description: 'Name of the plugin that owns the memory.' }),
+  "supersedesMemoryId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]).annotate({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
+}).annotate({ description: 'The memory that describes the glossary terms.' }),
   "terms": S.Array(S.Struct({
-  "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
-  "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
-  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
-}).annotations({ description: 'A glossary term represented as context for an agent.' })).annotations({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
-}).annotations({ description: 'A memory together with the glossary terms it describes.' })
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
+  "term": S.String.annotate({ description: 'Term exactly as it appears in the novel\'s source text.' }),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union([S.Literals(['person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other']), S.Null]).annotate({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
+}).annotate({ description: 'A glossary term represented as context for an agent.' })).annotate({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
+}).annotate({ description: 'A memory together with the glossary terms it describes.' })
 
 export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost400Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2525,29 +2526,29 @@ export const AddGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost422Re
  * @summary Read Terms For Memory
  */
 export const ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsGetParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsGet200ResponseItem = S.Struct({
-  "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
-  "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
-  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
-}).annotations({ description: 'A glossary term represented as context for an agent.' })
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
+  "term": S.String.annotate({ description: 'Term exactly as it appears in the novel\'s source text.' }),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union([S.Literals(['person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other']), S.Null]).annotate({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
+}).annotate({ description: 'A glossary term represented as context for an agent.' })
 export const ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsGet200Response = S.Array(ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsGet200ResponseItem)
 
 export const ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2557,33 +2558,33 @@ export const ReadTermsForMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryId
  * @summary Replace Glossary Memory Terms
  */
 export const ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPutParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPutBody = S.Struct({
-  "termIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))
+  "termIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)))
 })
 
 export const ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut200ResponseItem = S.Struct({
-  "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
-  "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
-  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
-}).annotations({ description: 'A glossary term represented as context for an agent.' })
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
+  "term": S.String.annotate({ description: 'Term exactly as it appears in the novel\'s source text.' }),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union([S.Literals(['person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other']), S.Null]).annotate({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
+}).annotate({ description: 'A glossary term represented as context for an agent.' })
 export const ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut200Response = S.Array(ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut200ResponseItem)
 
 export const ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2593,7 +2594,7 @@ export const ReplaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemories
  * @summary Read Glossary Terms
  */
 export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQuerySkipDefault = 0;
@@ -2605,11 +2606,11 @@ export const readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQueryLimi
 
 
 export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQueryParams = S.Struct({
-  "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQuerySkipMin)), { default: () => readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQuerySkipDefault }),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQueryLimitMax)), { default: () => readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQueryLimitDefault }),
-  "chapterId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
-  "search": S.optional(S.Union(S.String, S.Null)),
-  "reviewStatuses": S.optional(S.Union(S.Array(S.Literal('pending', 'approved', 'rejected')), S.Null))
+  "skip": S.Number.check(S.isGreaterThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQuerySkipMin)).pipe(S.withDecodingDefaultType(Effect.succeed(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQuerySkipDefault))),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetQueryLimitDefault))),
+  "chapterId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null])),
+  "search": S.optional(S.Union([S.String, S.Null])),
+  "reviewStatuses": S.optional(S.Union([S.Array(S.Literals(['pending', 'approved', 'rejected'])), S.Null]))
 })
 
 export const readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseCountMin = 0;
@@ -2619,27 +2620,27 @@ export const readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200Respon
 
 
 export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200Response = S.Struct({
-  "count": S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseCountMin)),
+  "count": S.Number.check(S.isGreaterThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseCountMin)),
   "rows": S.Array(S.Struct({
-  "associatedMemoryCount": S.Number.pipe(S.greaterThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseRowsItemAssociatedMemoryCountMin)),
-  "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
-  "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
-  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
-}).annotations({ description: 'A glossary term together with its associated-memory count in the requested scope.' }))
+  "associatedMemoryCount": S.Number.check(S.isGreaterThanOrEqualTo(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet200ResponseRowsItemAssociatedMemoryCountMin)),
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
+  "term": S.String.annotate({ description: 'Term exactly as it appears in the novel\'s source text.' }),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union([S.Literals(['person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other']), S.Null]).annotate({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
+}).annotate({ description: 'A glossary term together with its associated-memory count in the requested scope.' }))
 })
 
 export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2649,7 +2650,7 @@ export const ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet422Respon
  * @summary Add Glossary Term
  */
 export const AddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostBodyTermMax = 100;
@@ -2657,32 +2658,32 @@ export const addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostBodyTermMa
 
 
 export const AddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostBody = S.Struct({
-  "term": S.String.pipe(S.minLength(1), S.maxLength(addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostBodyTermMax)),
-  "termKind": S.optional(S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null))
+  "term": S.String.check(S.isMinLength(1), S.isMaxLength(addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPostBodyTermMax)),
+  "termKind": S.optional(S.Union([S.Literals(['person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other']), S.Null]))
 })
 
 export const AddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost200Response = S.Struct({
-  "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
-  "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
-  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
-}).annotations({ description: 'A glossary term represented as context for an agent.' })
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
+  "term": S.String.annotate({ description: 'Term exactly as it appears in the novel\'s source text.' }),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union([S.Literals(['person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other']), S.Null]).annotate({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
+}).annotate({ description: 'A glossary term represented as context for an agent.' })
 
 export const AddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const AddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const AddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2692,21 +2693,21 @@ export const AddGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost422Respons
  * @summary Remove Glossary Term
  */
 export const RemoveGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdDeleteParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const RemoveGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdDelete404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RemoveGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdDelete422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2716,8 +2717,8 @@ export const RemoveGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdDelet
  * @summary Edit Glossary Term
  */
 export const EditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchBodyTermMax = 100;
@@ -2725,32 +2726,32 @@ export const editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchBo
 
 
 export const EditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchBody = S.Struct({
-  "term": S.String.pipe(S.minLength(1), S.maxLength(editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchBodyTermMax)),
-  "termKind": S.optional(S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null))
+  "term": S.String.check(S.isMinLength(1), S.isMaxLength(editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatchBodyTermMax)),
+  "termKind": S.optional(S.Union([S.Literals(['person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other']), S.Null]))
 })
 
 export const EditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch200Response = S.Struct({
-  "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
-  "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
-  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
-}).annotations({ description: 'A glossary term represented as context for an agent.' })
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
+  "term": S.String.annotate({ description: 'Term exactly as it appears in the novel\'s source text.' }),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union([S.Literals(['person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other']), S.Null]).annotate({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
+}).annotate({ description: 'A glossary term represented as context for an agent.' })
 
 export const EditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const EditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const EditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2760,8 +2761,8 @@ export const EditGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch42
  * @summary Read Memories For Term
  */
 export const ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQuerySkipDefault = 0;
@@ -2773,9 +2774,9 @@ export const readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemo
 
 
 export const ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryParams = S.Struct({
-  "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQuerySkipMin)), { default: () => readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQuerySkipDefault }),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryLimitMax)), { default: () => readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryLimitDefault }),
-  "chapterId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+  "skip": S.Number.check(S.isGreaterThanOrEqualTo(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQuerySkipMin)).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQuerySkipDefault))),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetQueryLimitDefault))),
+  "chapterId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
 })
 
 export const readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet200ResponseCountMin = 0;
@@ -2783,40 +2784,40 @@ export const readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemo
 
 
 export const ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet200Response = S.Struct({
-  "count": S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet200ResponseCountMin)),
+  "count": S.Number.check(S.isGreaterThanOrEqualTo(readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet200ResponseCountMin)),
   "rows": S.Array(S.Struct({
   "memory": S.Struct({
-  "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
-  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
-  "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
-  "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
-  "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
-  "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
-  "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
-}).annotations({ description: 'The memory that describes the glossary terms.' }),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']).annotate({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union([S.String, S.Null]).annotate({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
+  "memoryContent": S.String.annotate({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
+  "memoryEndNum": S.Union([S.Number, S.Null]).annotate({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
+  "memoryReviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
+  "memoryStartNum": S.Number.annotate({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
+  "memoryType": S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literals(['glossary', 'continuity']).annotate({ description: 'Name of the plugin that owns the memory.' }),
+  "supersedesMemoryId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]).annotate({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
+}).annotate({ description: 'The memory that describes the glossary terms.' }),
   "terms": S.Array(S.Struct({
-  "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
-  "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
-  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
-}).annotations({ description: 'A glossary term represented as context for an agent.' })).annotations({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
-}).annotations({ description: 'A memory together with the glossary terms it describes.' }))
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
+  "term": S.String.annotate({ description: 'Term exactly as it appears in the novel\'s source text.' }),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union([S.Literals(['person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other']), S.Null]).annotate({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
+}).annotate({ description: 'A glossary term represented as context for an agent.' })).annotate({ description: 'Glossary terms described by this memory; one memory may apply to multiple related terms.' })
+}).annotate({ description: 'A memory together with the glossary terms it describes.' }))
 })
 
 export const ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2826,32 +2827,32 @@ export const ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemo
  * @summary Edit Glossary Term Review Status
  */
 export const EditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatchParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const EditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatchBody = S.Struct({
-  "reviewStatus": S.Literal('pending', 'approved', 'rejected')
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected'])
 })
 
 export const EditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch200Response = S.Struct({
-  "reviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
-  "term": S.String.annotations({ description: 'Term exactly as it appears in the novel\'s source text.' }),
-  "termId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier for the glossary term.' }),
-  "termKind": S.Union(S.Literal('person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other'), S.Null).annotations({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
-}).annotations({ description: 'A glossary term represented as context for an agent.' })
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the term. Pending terms are unverified; approved terms are verified.' }),
+  "term": S.String.annotate({ description: 'Term exactly as it appears in the novel\'s source text.' }),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier for the glossary term.' }),
+  "termKind": S.Union([S.Literals(['person', 'place', 'organization', 'technique', 'item', 'concept', 'title', 'species', 'other']), S.Null]).annotate({ description: 'Semantic kind of the glossary term, or null when it has not been categorized.' })
+}).annotate({ description: 'A glossary term represented as context for an agent.' })
 
 export const EditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const EditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2861,7 +2862,7 @@ export const EditGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsT
  * @summary Read Memories
  */
 export const ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGetParams = S.Struct({
-  "memoryGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQuerySkipDefault = 0;
@@ -2873,10 +2874,10 @@ export const readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQueryLimitMax = 100
 
 
 export const ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQueryParams = S.Struct({
-  "skip": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQuerySkipMin)), { default: () => readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQuerySkipDefault }),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQueryLimitMax)), { default: () => readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQueryLimitDefault }),
-  "pluginNames": S.optional(S.Union(S.Array(S.Literal('glossary', 'continuity')), S.Null)),
-  "memoryTypes": S.optional(S.Union(S.Array(S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null))
+  "skip": S.Number.check(S.isGreaterThanOrEqualTo(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQuerySkipMin)).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQuerySkipDefault))),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGetQueryLimitDefault))),
+  "pluginNames": S.optional(S.Union([S.Array(S.Literals(['glossary', 'continuity'])), S.Null])),
+  "memoryTypes": S.optional(S.Union([S.Array(S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null]))
 })
 
 export const readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet200ResponseCountMin = 0;
@@ -2884,28 +2885,28 @@ export const readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet200ResponseCountMin
 
 
 export const ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGet200Response = S.Struct({
-  "count": S.Number.pipe(S.greaterThanOrEqualTo(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet200ResponseCountMin)),
+  "count": S.Number.check(S.isGreaterThanOrEqualTo(readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet200ResponseCountMin)),
   "rows": S.Array(S.Struct({
-  "creatorType": S.Literal('user', 'workflow', 'agent').annotations({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
-  "mark": S.Union(S.String, S.Null).annotations({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
-  "memoryContent": S.String.annotations({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
-  "memoryEndNum": S.Union(S.Number, S.Null).annotations({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
-  "memoryId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
-  "memoryReviewStatus": S.Literal('pending', 'approved', 'rejected').annotations({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
-  "memoryStartNum": S.Number.annotations({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
-  "memoryType": S.Literal('fact', 'event', 'def', 'rel', 'summary').annotations({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
-  "pluginName": S.Literal('glossary', 'continuity').annotations({ description: 'Name of the plugin that owns the memory.' }),
-  "supersedesMemoryId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null).annotations({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
-}).annotations({ description: 'Memory schema' }))
+  "creatorType": S.Literals(['user', 'workflow', 'agent']).annotate({ description: 'Type of entity that created the memory: a human, an AI agent, or a workflow.' }),
+  "mark": S.Union([S.String, S.Null]).annotate({ description: 'Optional application-defined category used to narrow memory retrieval.' }),
+  "memoryContent": S.String.annotate({ description: 'The contextual information that should inform glossary maintenance and novel continuity.' }),
+  "memoryEndNum": S.Union([S.Number, S.Null]).annotate({ description: 'Exclusive ending chapter number stored by the database, or null when the memory does not expire.' }),
+  "memoryId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Stable identifier to use when superseding, expiring, or otherwise referring to this memory.' }),
+  "memoryReviewStatus": S.Literals(['pending', 'approved', 'rejected']).annotate({ description: 'Human-review state of the memory. Pending memories are unverified; approved memories are verified.' }),
+  "memoryStartNum": S.Number.annotate({ description: 'First chapter number for which this memory is applicable; larger values indicate newer information.' }),
+  "memoryType": S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'Kind of information stored: a fact, event, definition, or relation.' }),
+  "pluginName": S.Literals(['glossary', 'continuity']).annotate({ description: 'Name of the plugin that owns the memory.' }),
+  "supersedesMemoryId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]).annotate({ description: 'Identifier of the memory that this memory supersedes, or null when this memory is not a superseding memory.' })
+}).annotate({ description: 'Memory schema' }))
 })
 
 export const ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2916,28 +2917,28 @@ export const ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGet422Response = S.Str
  * @summary Read Novels
  */
 export const ReadNovelsNovelsGetQueryParams = S.Struct({
-  "titleContains": S.optional(S.Union(S.String, S.Null))
+  "titleContains": S.optional(S.Union([S.String, S.Null]))
 })
 
 export const ReadNovelsNovelsGet200ResponseItem = S.Struct({
   "languageCode": S.String,
-  "novelAuthor": S.optional(S.Union(S.String, S.Null)),
-  "novelDescription": S.optional(S.Union(S.String, S.Null)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "novelAuthor": S.optional(S.Union([S.String, S.Null])),
+  "novelDescription": S.optional(S.Union([S.String, S.Null])),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "novelTitle": S.String,
-  "novelType": S.Literal('original', 'translation', 'other'),
-  "novelVisibility": S.Union(S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)),
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' })
+  "novelType": S.Literals(['original', 'translation', 'other']),
+  "novelVisibility": S.Union([S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)]),
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' })
 export const ReadNovelsNovelsGet200Response = S.Array(ReadNovelsNovelsGet200ResponseItem)
 
 export const ReadNovelsNovelsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2953,32 +2954,32 @@ export const ReadNovelsNovelsGet422Response = S.Struct({
  */
 export const CreateNovelNovelsPostBody = S.Struct({
   "languageCode": S.String,
-  "novelAuthor": S.optional(S.Union(S.String, S.Null)),
-  "novelDescription": S.optional(S.Union(S.String, S.Null)),
+  "novelAuthor": S.optional(S.Union([S.String, S.Null])),
+  "novelDescription": S.optional(S.Union([S.String, S.Null])),
   "novelTitle": S.String,
-  "novelType": S.Literal('original', 'translation', 'other'),
-  "novelVisibility": S.Union(S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)),
-  "sourceWorkId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
-}).annotations({ description: 'Pydantic schema to validate forms for creating a novel.\n\nAttributes:\n    novel_title: Novel title to create.\n    novel_description: Description of novel we are creating.\n    novel_author: Author of novel we are creating.\n    novel_visibility: Visibility level of novel we are creating.\n    novel_type: Type of novel we are creating.\n    language_code: String code key to language of novel we are creating.\n    source_work_id: Optional source work to attach to. If None, a new source work is auto-created.' })
+  "novelType": S.Literals(['original', 'translation', 'other']),
+  "novelVisibility": S.Union([S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)]),
+  "sourceWorkId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
+}).annotate({ description: 'Pydantic schema to validate forms for creating a novel.\n\nAttributes:\n    novel_title: Novel title to create.\n    novel_description: Description of novel we are creating.\n    novel_author: Author of novel we are creating.\n    novel_visibility: Visibility level of novel we are creating.\n    novel_type: Type of novel we are creating.\n    language_code: String code key to language of novel we are creating.\n    source_work_id: Optional source work to attach to. If None, a new source work is auto-created.' })
 
 export const CreateNovelNovelsPost200Response = S.Struct({
   "languageCode": S.String,
-  "novelAuthor": S.optional(S.Union(S.String, S.Null)),
-  "novelDescription": S.optional(S.Union(S.String, S.Null)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "novelAuthor": S.optional(S.Union([S.String, S.Null])),
+  "novelDescription": S.optional(S.Union([S.String, S.Null])),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "novelTitle": S.String,
-  "novelType": S.Literal('original', 'translation', 'other'),
-  "novelVisibility": S.Union(S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)),
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' })
+  "novelType": S.Literals(['original', 'translation', 'other']),
+  "novelVisibility": S.Union([S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)]),
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' })
 
 export const CreateNovelNovelsPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -2991,29 +2992,29 @@ export const CreateNovelNovelsPost422Response = S.Struct({
 export const readNovelsMineNovelsMineGetQueryEditableDefault = false;
 
 export const ReadNovelsMineNovelsMineGetQueryParams = S.Struct({
-  "editable": S.optionalWith(S.Boolean, { default: () => readNovelsMineNovelsMineGetQueryEditableDefault }),
-  "titleContains": S.optional(S.Union(S.String, S.Null))
+  "editable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readNovelsMineNovelsMineGetQueryEditableDefault))),
+  "titleContains": S.optional(S.Union([S.String, S.Null]))
 })
 
 export const ReadNovelsMineNovelsMineGet200ResponseItem = S.Struct({
   "languageCode": S.String,
-  "novelAuthor": S.optional(S.Union(S.String, S.Null)),
-  "novelDescription": S.optional(S.Union(S.String, S.Null)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "novelAuthor": S.optional(S.Union([S.String, S.Null])),
+  "novelDescription": S.optional(S.Union([S.String, S.Null])),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "novelTitle": S.String,
-  "novelType": S.Literal('original', 'translation', 'other'),
-  "novelVisibility": S.Union(S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)),
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' })
+  "novelType": S.Literals(['original', 'translation', 'other']),
+  "novelVisibility": S.Union([S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)]),
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' })
 export const ReadNovelsMineNovelsMineGet200Response = S.Array(ReadNovelsMineNovelsMineGet200ResponseItem)
 
 export const ReadNovelsMineNovelsMineGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -3027,27 +3028,27 @@ export const ReadNovelsMineNovelsMineGet422Response = S.Struct({
  * @summary Read Novel
  */
 export const ReadNovelNovelsNovelIdGetParams = S.Struct({
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadNovelNovelsNovelIdGet200Response = S.Struct({
   "languageCode": S.String,
-  "novelAuthor": S.optional(S.Union(S.String, S.Null)),
-  "novelDescription": S.optional(S.Union(S.String, S.Null)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "novelAuthor": S.optional(S.Union([S.String, S.Null])),
+  "novelDescription": S.optional(S.Union([S.String, S.Null])),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "novelTitle": S.String,
-  "novelType": S.Literal('original', 'translation', 'other'),
-  "novelVisibility": S.Union(S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)),
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' })
+  "novelType": S.Literals(['original', 'translation', 'other']),
+  "novelVisibility": S.Union([S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)]),
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' })
 
 export const ReadNovelNovelsNovelIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -3063,35 +3064,35 @@ export const ReadNovelNovelsNovelIdGet422Response = S.Struct({
  * @summary Update Novel
  */
 export const UpdateNovelNovelsNovelIdPatchParams = S.Struct({
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const UpdateNovelNovelsNovelIdPatchBody = S.Struct({
-  "novelAuthor": S.optional(S.Union(S.String, S.Null)),
-  "novelDescription": S.optional(S.Union(S.String, S.Null)),
-  "novelTitle": S.optional(S.Union(S.String, S.Null)),
-  "novelType": S.optional(S.Union(S.Literal('original', 'translation', 'other'), S.Null)),
-  "novelVisibility": S.optional(S.Union(S.Union(S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)), S.Null))
-}).annotations({ description: 'Pydantic schema to validate forms for updating a novel. The novel id will be passed into the router endpoint.\n\nAttributes:\n    novel_title: Updated title to novel we are updating. If None, then do not update.\n    novel_description: Updated description of novel we are updating. If None, then do not update.\n    novel_author: Author of novel we are creating. If None, then do not update.\n    novel_visibility: Updated visibility level of novel we are updating. If None, then do not update.\n    novel_type: Updated novel type. If None, then do not update.' })
+  "novelAuthor": S.optional(S.Union([S.String, S.Null])),
+  "novelDescription": S.optional(S.Union([S.String, S.Null])),
+  "novelTitle": S.optional(S.Union([S.String, S.Null])),
+  "novelType": S.optional(S.Union([S.Literals(['original', 'translation', 'other']), S.Null])),
+  "novelVisibility": S.optional(S.Union([S.Union([S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)]), S.Null]))
+}).annotate({ description: 'Pydantic schema to validate forms for updating a novel. The novel id will be passed into the router endpoint.\n\nAttributes:\n    novel_title: Updated title to novel we are updating. If None, then do not update.\n    novel_description: Updated description of novel we are updating. If None, then do not update.\n    novel_author: Author of novel we are creating. If None, then do not update.\n    novel_visibility: Updated visibility level of novel we are updating. If None, then do not update.\n    novel_type: Updated novel type. If None, then do not update.' })
 
 export const UpdateNovelNovelsNovelIdPatch200Response = S.Struct({
   "languageCode": S.String,
-  "novelAuthor": S.optional(S.Union(S.String, S.Null)),
-  "novelDescription": S.optional(S.Union(S.String, S.Null)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "novelAuthor": S.optional(S.Union([S.String, S.Null])),
+  "novelDescription": S.optional(S.Union([S.String, S.Null])),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "novelTitle": S.String,
-  "novelType": S.Literal('original', 'translation', 'other'),
-  "novelVisibility": S.Union(S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)),
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' })
+  "novelType": S.Literals(['original', 'translation', 'other']),
+  "novelVisibility": S.Union([S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)]),
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' })
 
 export const UpdateNovelNovelsNovelIdPatch422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -3107,40 +3108,40 @@ export const UpdateNovelNovelsNovelIdPatch422Response = S.Struct({
  * @summary Create Chapter
  */
 export const CreateChapterNovelsNovelIdChaptersPostParams = S.Struct({
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const createChapterNovelsNovelIdChaptersPostBodyChapterIsPublicDefault = false;
 export const createChapterNovelsNovelIdChaptersPostBodyChapterTitleDefault = '';
 
 export const CreateChapterNovelsNovelIdChaptersPostBody = S.Struct({
-  "chapterIsPublic": S.optionalWith(S.Boolean, { default: () => createChapterNovelsNovelIdChaptersPostBodyChapterIsPublicDefault }),
+  "chapterIsPublic": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(createChapterNovelsNovelIdChaptersPostBodyChapterIsPublicDefault))),
   "chapterNum": S.Number,
-  "chapterTitle": S.optionalWith(S.String, { default: () => createChapterNovelsNovelIdChaptersPostBodyChapterTitleDefault })
-}).annotations({ description: 'Pydantic schema to validate data for creating a new chapter. The novel_id is expected to be passed via the URL path.\n\nAttributes:\n    chapter_num: The chapter number to create.\n    chapter_title: Title of the chapter. Defaults to empty string.\n    chapter_is_public: Whether the chapter is publicly visible. Defaults to False.' })
+  "chapterTitle": S.String.pipe(S.withDecodingDefaultType(Effect.succeed(createChapterNovelsNovelIdChaptersPostBodyChapterTitleDefault)))
+}).annotate({ description: 'Pydantic schema to validate data for creating a new chapter. The novel_id is expected to be passed via the URL path.\n\nAttributes:\n    chapter_num: The chapter number to create.\n    chapter_title: Title of the chapter. Defaults to empty string.\n    chapter_is_public: Whether the chapter is publicly visible. Defaults to False.' })
 
 export const CreateChapterNovelsNovelIdChaptersPost200Response = S.Struct({
   "content": S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterContentText": S.String,
   "chapterContentVersion": S.Number
-}).annotations({ description: 'Pydantic schema for the text content of a chapter.\n\nAttributes:\n    chapter_content_text: The full text content of the chapter.\n    chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.' }),
+}).annotate({ description: 'Pydantic schema for the text content of a chapter.\n\nAttributes:\n    chapter_content_text: The full text content of the chapter.\n    chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text.' }),
   "metadata": S.Struct({
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterIsPublic": S.Boolean,
   "chapterNum": S.Number,
   "chapterTitle": S.String,
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for chapter metadata. Represents a single \"chapter\" entry, which groups all its revisions.\n\nAttributes:\n    chapter_id: UUID primary key identifier.\n    chapter_num: The chapter number.\n    novel_id: UUID foreign key to the novel this chapter belongs to.' })
-}).annotations({ description: 'Pydantic schema for aggregating a ChapterContent and a Chapter together.\n\nAttributes:\n    metadata: The metadata of the chapter, such as title and whether it\'s primary.\n    content: The text content of the chapter.' })
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for chapter metadata. Represents a single \"chapter\" entry, which groups all its revisions.\n\nAttributes:\n    chapter_id: UUID primary key identifier.\n    chapter_num: The chapter number.\n    novel_id: UUID foreign key to the novel this chapter belongs to.' })
+}).annotate({ description: 'Pydantic schema for aggregating a ChapterContent and a Chapter together.\n\nAttributes:\n    metadata: The metadata of the chapter, such as title and whether it\'s primary.\n    content: The text content of the chapter.' })
 
 export const CreateChapterNovelsNovelIdChaptersPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -3154,34 +3155,34 @@ export const CreateChapterNovelsNovelIdChaptersPost422Response = S.Struct({
  * @summary Read Novel With Contributors
  */
 export const ReadNovelWithContributorsNovelsNovelIdWithContributorsGetParams = S.Struct({
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadNovelWithContributorsNovelsNovelIdWithContributorsGet200Response = S.Struct({
   "novel": S.Struct({
   "languageCode": S.String,
-  "novelAuthor": S.optional(S.Union(S.String, S.Null)),
-  "novelDescription": S.optional(S.Union(S.String, S.Null)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "novelAuthor": S.optional(S.Union([S.String, S.Null])),
+  "novelDescription": S.optional(S.Union([S.String, S.Null])),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "novelTitle": S.String,
-  "novelType": S.Literal('original', 'translation', 'other'),
-  "novelVisibility": S.Union(S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)),
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' }),
+  "novelType": S.Literals(['original', 'translation', 'other']),
+  "novelVisibility": S.Union([S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)]),
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' }),
   "users": S.Array(S.Struct({
-  "contributorRole": S.Literal('owner', 'viewer', 'editor'),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "userId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for a novel contributor.\n\nAttributes:\n    user_id: UUID of the user.\n    novel_id: UUID of the novel.\n    contributor_role: Role of the user in the novel.' }))
-}).annotations({ description: 'Pydantic schema for novel and its associated users.\n\nAttributes:\n    novel: The novel metadata.\n    users: A list of users associated with this novel.' })
+  "contributorRole": S.Literals(['owner', 'viewer', 'editor']),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "userId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for a novel contributor.\n\nAttributes:\n    user_id: UUID of the user.\n    novel_id: UUID of the novel.\n    contributor_role: Role of the user in the novel.' }))
+}).annotate({ description: 'Pydantic schema for novel and its associated users.\n\nAttributes:\n    novel: The novel metadata.\n    users: A list of users associated with this novel.' })
 
 export const ReadNovelWithContributorsNovelsNovelIdWithContributorsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -3199,22 +3200,22 @@ export const ReadNovelWithContributorsNovelsNovelIdWithContributorsGet422Respons
 export const RegisterUserRegisterPostBody = S.Struct({
   "userName": S.String,
   "userPassword": S.String,
-  "userType": S.Literal('user', 'admin').annotations({ description: 'Enum of possible user types.' })
-}).annotations({ description: 'Pydantic schema to validate data required to create a user.\n\nAttributes:\n    user_name: Username of user being created.\n    user_password: Unhashed password of user being create.\n    user_type: UserType type of user to be created.\nNotes:' })
+  "userType": S.Literals(['user', 'admin']).annotate({ description: 'Enum of possible user types.' })
+}).annotate({ description: 'Pydantic schema to validate data required to create a user.\n\nAttributes:\n    user_name: Username of user being created.\n    user_password: Unhashed password of user being create.\n    user_type: UserType type of user to be created.\nNotes:' })
 
 export const RegisterUserRegisterPost200Response = S.Struct({
-  "userId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "userId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "userName": S.String,
-  "userType": S.Literal('user', 'admin').annotations({ description: 'Enum of possible user types.' })
-}).annotations({ description: 'Pydantic model for user information.\n\nAttributes:\n    user_id: id of this user.\n    user_name: Username for this user.\n    user_type: A value in UserType (e.g. \'admin\', or \'user\')' })
+  "userType": S.Literals(['user', 'admin']).annotate({ description: 'Enum of possible user types.' })
+}).annotate({ description: 'Pydantic model for user information.\n\nAttributes:\n    user_id: id of this user.\n    user_name: Username for this user.\n    user_type: A value in UserType (e.g. \'admin\', or \'user\')' })
 
 export const RegisterUserRegisterPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -3227,36 +3228,36 @@ export const RegisterUserRegisterPost422Response = S.Struct({
 export const readSourceWorksSourceWorksGetQueryRetNovelsDefault = false;
 
 export const ReadSourceWorksSourceWorksGetQueryParams = S.Struct({
-  "titleContains": S.optional(S.Union(S.String, S.Null)),
-  "retNovels": S.optionalWith(S.Boolean, { default: () => readSourceWorksSourceWorksGetQueryRetNovelsDefault })
+  "titleContains": S.optional(S.Union([S.String, S.Null])),
+  "retNovels": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readSourceWorksSourceWorksGetQueryRetNovelsDefault)))
 })
 
 export const ReadSourceWorksSourceWorksGet200ResponseItem = S.Struct({
   "novels": S.Array(S.Struct({
   "languageCode": S.String,
-  "novelAuthor": S.optional(S.Union(S.String, S.Null)),
-  "novelDescription": S.optional(S.Union(S.String, S.Null)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "novelAuthor": S.optional(S.Union([S.String, S.Null])),
+  "novelDescription": S.optional(S.Union([S.String, S.Null])),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "novelTitle": S.String,
-  "novelType": S.Literal('original', 'translation', 'other'),
-  "novelVisibility": S.Union(S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)),
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' })),
+  "novelType": S.Literals(['original', 'translation', 'other']),
+  "novelVisibility": S.Union([S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)]),
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' })),
   "sourceWork": S.Struct({
-  "sourceWorkDescription": S.optional(S.Union(S.String, S.Null)),
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "sourceWorkDescription": S.optional(S.Union([S.String, S.Null])),
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "sourceWorkTitle": S.String
-}).annotations({ description: 'Pydantic schema for a source work.\n\nAttributes:\n    source_work_id: UUID id of source work in db.\n    source_work_title: Title of the source work.\n    source_work_description: Optional description of the source work.' })
-}).annotations({ description: 'Pydantic schema to represent a source work and all its associated novels.\n\nAttributes:\n    source_work: The source work metadata.\n    novels: A list of novels associated with this source work.' })
+}).annotate({ description: 'Pydantic schema for a source work.\n\nAttributes:\n    source_work_id: UUID id of source work in db.\n    source_work_title: Title of the source work.\n    source_work_description: Optional description of the source work.' })
+}).annotate({ description: 'Pydantic schema to represent a source work and all its associated novels.\n\nAttributes:\n    source_work: The source work metadata.\n    novels: A list of novels associated with this source work.' })
 export const ReadSourceWorksSourceWorksGet200Response = S.Array(ReadSourceWorksSourceWorksGet200ResponseItem)
 
 export const ReadSourceWorksSourceWorksGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -3270,23 +3271,23 @@ export const ReadSourceWorksSourceWorksGet422Response = S.Struct({
  * @summary Create Source Work
  */
 export const CreateSourceWorkSourceWorksPostBody = S.Struct({
-  "sourceWorkDescription": S.optional(S.Union(S.String, S.Null)),
+  "sourceWorkDescription": S.optional(S.Union([S.String, S.Null])),
   "sourceWorkTitle": S.String
-}).annotations({ description: 'Pydantic schema to validate forms for creating a source work.\n\nAttributes:\n    source_work_title: Title of the source work to create.\n    source_work_description: Optional description.' })
+}).annotate({ description: 'Pydantic schema to validate forms for creating a source work.\n\nAttributes:\n    source_work_title: Title of the source work to create.\n    source_work_description: Optional description.' })
 
 export const CreateSourceWorkSourceWorksPost200Response = S.Struct({
-  "sourceWorkDescription": S.optional(S.Union(S.String, S.Null)),
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "sourceWorkDescription": S.optional(S.Union([S.String, S.Null])),
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "sourceWorkTitle": S.String
-}).annotations({ description: 'Pydantic schema for a source work.\n\nAttributes:\n    source_work_id: UUID id of source work in db.\n    source_work_title: Title of the source work.\n    source_work_description: Optional description of the source work.' })
+}).annotate({ description: 'Pydantic schema for a source work.\n\nAttributes:\n    source_work_id: UUID id of source work in db.\n    source_work_title: Title of the source work.\n    source_work_description: Optional description of the source work.' })
 
 export const CreateSourceWorkSourceWorksPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -3300,22 +3301,22 @@ export const CreateSourceWorkSourceWorksPost422Response = S.Struct({
  * @summary Read Source Work
  */
 export const ReadSourceWorkSourceWorksSourceWorkIdGetParams = S.Struct({
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadSourceWorkSourceWorksSourceWorkIdGet200Response = S.Struct({
-  "sourceWorkDescription": S.optional(S.Union(S.String, S.Null)),
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "sourceWorkDescription": S.optional(S.Union([S.String, S.Null])),
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "sourceWorkTitle": S.String
-}).annotations({ description: 'Pydantic schema for a source work.\n\nAttributes:\n    source_work_id: UUID id of source work in db.\n    source_work_title: Title of the source work.\n    source_work_description: Optional description of the source work.' })
+}).annotate({ description: 'Pydantic schema for a source work.\n\nAttributes:\n    source_work_id: UUID id of source work in db.\n    source_work_title: Title of the source work.\n    source_work_description: Optional description of the source work.' })
 
 export const ReadSourceWorkSourceWorksSourceWorkIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -3331,27 +3332,27 @@ export const ReadSourceWorkSourceWorksSourceWorkIdGet422Response = S.Struct({
  * @summary Update Source Work
  */
 export const UpdateSourceWorkSourceWorksSourceWorkIdPatchParams = S.Struct({
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const UpdateSourceWorkSourceWorksSourceWorkIdPatchBody = S.Struct({
-  "sourceWorkDescription": S.optional(S.Union(S.String, S.Null)),
-  "sourceWorkTitle": S.optional(S.Union(S.String, S.Null))
-}).annotations({ description: 'Pydantic schema to validate forms for updating a source work.\n\nAttributes:\n    source_work_title: Updated title. If None, do not update.\n    source_work_description: Updated description. If None, do not update.' })
+  "sourceWorkDescription": S.optional(S.Union([S.String, S.Null])),
+  "sourceWorkTitle": S.optional(S.Union([S.String, S.Null]))
+}).annotate({ description: 'Pydantic schema to validate forms for updating a source work.\n\nAttributes:\n    source_work_title: Updated title. If None, do not update.\n    source_work_description: Updated description. If None, do not update.' })
 
 export const UpdateSourceWorkSourceWorksSourceWorkIdPatch200Response = S.Struct({
-  "sourceWorkDescription": S.optional(S.Union(S.String, S.Null)),
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "sourceWorkDescription": S.optional(S.Union([S.String, S.Null])),
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "sourceWorkTitle": S.String
-}).annotations({ description: 'Pydantic schema for a source work.\n\nAttributes:\n    source_work_id: UUID id of source work in db.\n    source_work_title: Title of the source work.\n    source_work_description: Optional description of the source work.' })
+}).annotate({ description: 'Pydantic schema for a source work.\n\nAttributes:\n    source_work_id: UUID id of source work in db.\n    source_work_title: Title of the source work.\n    source_work_description: Optional description of the source work.' })
 
 export const UpdateSourceWorkSourceWorksSourceWorkIdPatch422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -3365,28 +3366,28 @@ export const UpdateSourceWorkSourceWorksSourceWorkIdPatch422Response = S.Struct(
  * @summary Read Novels By Source Work
  */
 export const ReadNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGetParams = S.Struct({
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGet200ResponseItem = S.Struct({
   "languageCode": S.String,
-  "novelAuthor": S.optional(S.Union(S.String, S.Null)),
-  "novelDescription": S.optional(S.Union(S.String, S.Null)),
-  "novelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "novelAuthor": S.optional(S.Union([S.String, S.Null])),
+  "novelDescription": S.optional(S.Union([S.String, S.Null])),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "novelTitle": S.String,
-  "novelType": S.Literal('original', 'translation', 'other'),
-  "novelVisibility": S.Union(S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)),
-  "sourceWorkId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-}).annotations({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' })
+  "novelType": S.Literals(['original', 'translation', 'other']),
+  "novelVisibility": S.Union([S.Literal(0), S.Literal(1), S.Literal(2), S.Literal(3)]),
+  "sourceWorkId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+}).annotate({ description: 'Pydantic schema for novel.\n\nAttributes:\n    novel_id: UUID id of novel in db.\n    novel_title: String title of novel.\n    novel_description: String summary or description of novel.\n    novel_author: String author or description of novel.\n    novel_visibility: Visibility enum of novel.\n    novel_type: NovelType enum of novel.\n    language_code: String code key to language of the novel.\n    source_work_id: UUID foreign key to source work of the novel.' })
 export const ReadNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGet200Response = S.Array(ReadNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGet200ResponseItem)
 
 export const ReadNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -3403,15 +3404,15 @@ export const ReadNovelsBySourceWorkSourceWorksSourceWorkIdNovelsGet422Response =
 export const LoginForAccessTokenTokenPost200Response = S.Struct({
   "access_token": S.String,
   "token_type": S.String
-}).annotations({ description: 'Pydantic schema for a JWT\n\nAttributes:\n    access_token: Payload.\n    token_type: Type of token.' })
+}).annotate({ description: 'Pydantic schema for a JWT\n\nAttributes:\n    access_token: Payload.\n    token_type: Type of token.' })
 
 export const LoginForAccessTokenTokenPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -3429,22 +3430,22 @@ export const LoginForAccessTokenTokenPost422Response = S.Struct({
 export const CreateUserUsersPostBody = S.Struct({
   "userName": S.String,
   "userPassword": S.String,
-  "userType": S.Literal('user', 'admin').annotations({ description: 'Enum of possible user types.' })
-}).annotations({ description: 'Pydantic schema to validate data required to create a user.\n\nAttributes:\n    user_name: Username of user being created.\n    user_password: Unhashed password of user being create.\n    user_type: UserType type of user to be created.\nNotes:' })
+  "userType": S.Literals(['user', 'admin']).annotate({ description: 'Enum of possible user types.' })
+}).annotate({ description: 'Pydantic schema to validate data required to create a user.\n\nAttributes:\n    user_name: Username of user being created.\n    user_password: Unhashed password of user being create.\n    user_type: UserType type of user to be created.\nNotes:' })
 
 export const CreateUserUsersPost200Response = S.Struct({
-  "userId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "userId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "userName": S.String,
-  "userType": S.Literal('user', 'admin').annotations({ description: 'Enum of possible user types.' })
-}).annotations({ description: 'Pydantic model for user information.\n\nAttributes:\n    user_id: id of this user.\n    user_name: Username for this user.\n    user_type: A value in UserType (e.g. \'admin\', or \'user\')' })
+  "userType": S.Literals(['user', 'admin']).annotate({ description: 'Enum of possible user types.' })
+}).annotate({ description: 'Pydantic model for user information.\n\nAttributes:\n    user_id: id of this user.\n    user_name: Username for this user.\n    user_type: A value in UserType (e.g. \'admin\', or \'user\')' })
 
 export const CreateUserUsersPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -3455,9 +3456,9 @@ export const CreateUserUsersPost422Response = S.Struct({
  * @summary Delete User Me
  */
 export const DeleteUserMeUsersMeDelete200Response = S.Struct({
-  "detail": S.optional(S.Union(S.String, S.Null)),
-  "status": S.Literal('success', 'fail', 'verify')
-}).annotations({ description: 'Pydantic schema to return status after deleting a user\n\nAttributes:\n    status: One of \'success\', \'fail\', \'verify\'.\n    detail: String denoting details of operation.' })
+  "detail": S.optional(S.Union([S.String, S.Null])),
+  "status": S.Literals(['success', 'fail', 'verify'])
+}).annotate({ description: 'Pydantic schema to return status after deleting a user\n\nAttributes:\n    status: One of \'success\', \'fail\', \'verify\'.\n    detail: String denoting details of operation.' })
 
 /**
  * Return the current logged in user.
@@ -3467,31 +3468,31 @@ export const DeleteUserMeUsersMeDelete200Response = S.Struct({
  * @summary Read User Me
  */
 export const ReadUserMeUsersMeGet200Response = S.Struct({
-  "userId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "userId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "userName": S.String,
-  "userType": S.Literal('user', 'admin').annotations({ description: 'Enum of possible user types.' })
-}).annotations({ description: 'Pydantic model for user information.\n\nAttributes:\n    user_id: id of this user.\n    user_name: Username for this user.\n    user_type: A value in UserType (e.g. \'admin\', or \'user\')' })
+  "userType": S.Literals(['user', 'admin']).annotate({ description: 'Enum of possible user types.' })
+}).annotate({ description: 'Pydantic model for user information.\n\nAttributes:\n    user_id: id of this user.\n    user_name: Username for this user.\n    user_type: A value in UserType (e.g. \'admin\', or \'user\')' })
 
 /**
  * Delete the user with user_id if the current user has sufficient permissions to perform this action. Throw an exception if the user currently logged in has insufficient permissions.
  * @summary Delete User
  */
 export const DeleteUserUsersUserIdDeleteParams = S.Struct({
-  "userId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "userId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const DeleteUserUsersUserIdDelete200Response = S.Struct({
-  "detail": S.optional(S.Union(S.String, S.Null)),
-  "status": S.Literal('success', 'fail', 'verify')
-}).annotations({ description: 'Pydantic schema to return status after deleting a user\n\nAttributes:\n    status: One of \'success\', \'fail\', \'verify\'.\n    detail: String denoting details of operation.' })
+  "detail": S.optional(S.Union([S.String, S.Null])),
+  "status": S.Literals(['success', 'fail', 'verify'])
+}).annotate({ description: 'Pydantic schema to return status after deleting a user\n\nAttributes:\n    status: One of \'success\', \'fail\', \'verify\'.\n    detail: String denoting details of operation.' })
 
 export const DeleteUserUsersUserIdDelete422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -3510,18 +3511,18 @@ export const ReadUserUsersUserNameGetParams = S.Struct({
 })
 
 export const ReadUserUsersUserNameGet200Response = S.Struct({
-  "userId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "userId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "userName": S.String,
-  "userType": S.Literal('user', 'admin').annotations({ description: 'Enum of possible user types.' })
-}).annotations({ description: 'Pydantic model for user information.\n\nAttributes:\n    user_id: id of this user.\n    user_name: Username for this user.\n    user_type: A value in UserType (e.g. \'admin\', or \'user\')' })
+  "userType": S.Literals(['user', 'admin']).annotate({ description: 'Enum of possible user types.' })
+}).annotate({ description: 'Pydantic model for user information.\n\nAttributes:\n    user_id: id of this user.\n    user_name: Username for this user.\n    user_type: A value in UserType (e.g. \'admin\', or \'user\')' })
 
 export const ReadUserUsersUserNameGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))

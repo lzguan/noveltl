@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  Effect,
   Schema as S
 } from 'effect';
 
@@ -19,14 +20,14 @@ export const readFunctionsFiltersFunctionsGetQueryLimitMax = 100;
 
 
 export const ReadFunctionsFiltersFunctionsGetQueryParams = S.Struct({
-  "search": S.optional(S.Union(S.String, S.Null)),
-  "namespace": S.optional(S.Union(S.String, S.Null)),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readFunctionsFiltersFunctionsGetQueryLimitMax)), { default: () => readFunctionsFiltersFunctionsGetQueryLimitDefault }),
-  "cursor": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+  "search": S.optional(S.Union([S.String, S.Null])),
+  "namespace": S.optional(S.Union([S.String, S.Null])),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readFunctionsFiltersFunctionsGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readFunctionsFiltersFunctionsGetQueryLimitDefault))),
+  "cursor": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
 })
 
 export const ReadFunctionsFiltersFunctionsGet200ResponseItem = S.Struct({
-  "functionDefinitionId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "functionDefinitionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "functionName": S.String,
   "namespace": S.String
 })
@@ -34,11 +35,11 @@ export const ReadFunctionsFiltersFunctionsGet200Response = S.Array(ReadFunctions
 
 export const ReadFunctionsFiltersFunctionsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -55,31 +56,31 @@ export const createFilterFunctionBodyNamespaceMax = 100;
 
 
 export const CreateFilterFunctionBody = S.Struct({
-  "functionDefinition": S.Record({ key: S.String, value: S.Unknown }),
-  "functionName": S.String.pipe(S.minLength(1), S.maxLength(createFilterFunctionBodyFunctionNameMax)),
-  "namespace": S.String.pipe(S.minLength(1), S.maxLength(createFilterFunctionBodyNamespaceMax))
+  "functionDefinition": S.Record(S.String, S.Unknown),
+  "functionName": S.String.check(S.isMinLength(1), S.isMaxLength(createFilterFunctionBodyFunctionNameMax)),
+  "namespace": S.String.check(S.isMinLength(1), S.isMaxLength(createFilterFunctionBodyNamespaceMax))
 })
 
 export const CreateFilterFunction201Response = S.Struct({
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "functionDefinition": S.Record({ key: S.String, value: S.Unknown }),
-  "functionDefinitionId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "functionDefinition": S.Record(S.String, S.Unknown),
+  "functionDefinitionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "functionName": S.String,
   "namespace": S.String,
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 })
 
 export const CreateFilterFunction409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const CreateFilterFunction422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -90,7 +91,7 @@ export const CreateFilterFunction422Response = S.Struct({
  * @summary Validate Filter Function
  */
 export const ValidateFilterFunctionBody = S.Struct({
-  "functionDefinition": S.Record({ key: S.String, value: S.Unknown })
+  "functionDefinition": S.Record(S.String, S.Unknown)
 })
 
 export const validateFilterFunction200ResponseSignatureArgsDefault = [];
@@ -171,128 +172,168 @@ export const validateFilterFunction200ResponseSignatureOutputTwoSixTypeDefault =
 
 export const ValidateFilterFunction200Response = S.Struct({
   "signature": S.Struct({
-  "args": S.optionalWith(S.Array(S.Union(S.Struct({
-  "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneMutableDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoMutableDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeMutableDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourMutableDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveMutableDefault }),
-  "type": S.optionalWith(S.Literal('labelRef'), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixMutableDefault }),
-  "type": S.optionalWith(S.Literal('textSpan'), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixTypeDefault })
-})), S.Struct({
-  "kind": S.Literal('field')
-})) })),
-  "kind": S.optionalWith(S.Literal('schema'), { default: () => validateFilterFunction200ResponseSignatureArgsItemOneKindDefault })
-}), S.extend(S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoOneKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoOneMutableDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoOneTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoTwoKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoTwoMutableDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoTwoTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoThreeKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoThreeMutableDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoThreeTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoFourKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoFourMutableDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoFourTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoFiveKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoFiveMutableDefault }),
-  "type": S.optionalWith(S.Literal('labelRef'), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoFiveTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoSixKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoSixMutableDefault }),
-  "type": S.optionalWith(S.Literal('textSpan'), { default: () => validateFilterFunction200ResponseSignatureArgsItemTwoSixTypeDefault })
-})), S.Struct({
-  "kind": S.Literal('field')
-})))), { default: () => validateFilterFunction200ResponseSignatureArgsDefault }),
-  "output": S.Union(S.Struct({
-  "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsOneKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsOneMutableDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsOneTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsTwoKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsTwoMutableDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsTwoTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsThreeKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsThreeMutableDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsThreeTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsFourKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsFourMutableDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsFourTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsFiveKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsFiveMutableDefault }),
-  "type": S.optionalWith(S.Literal('labelRef'), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsFiveTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsSixKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsSixMutableDefault }),
-  "type": S.optionalWith(S.Literal('textSpan'), { default: () => validateFilterFunction200ResponseSignatureOutputOneFieldsSixTypeDefault })
-})), S.Struct({
-  "kind": S.Literal('field')
-})) })),
-  "kind": S.optionalWith(S.Literal('schema'), { default: () => validateFilterFunction200ResponseSignatureOutputOneKindDefault })
-}), S.extend(S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputTwoOneKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoOneMutableDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => validateFilterFunction200ResponseSignatureOutputTwoOneTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputTwoTwoKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoTwoMutableDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => validateFilterFunction200ResponseSignatureOutputTwoTwoTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputTwoThreeKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoThreeMutableDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => validateFilterFunction200ResponseSignatureOutputTwoThreeTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputTwoFourKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoFourMutableDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => validateFilterFunction200ResponseSignatureOutputTwoFourTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputTwoFiveKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoFiveMutableDefault }),
-  "type": S.optionalWith(S.Literal('labelRef'), { default: () => validateFilterFunction200ResponseSignatureOutputTwoFiveTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => validateFilterFunction200ResponseSignatureOutputTwoSixKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => validateFilterFunction200ResponseSignatureOutputTwoSixMutableDefault }),
-  "type": S.optionalWith(S.Literal('textSpan'), { default: () => validateFilterFunction200ResponseSignatureOutputTwoSixTypeDefault })
-})), S.Struct({
-  "kind": S.Literal('field')
-})))
-}).annotations({ description: 'The input and output schemas of a function.' })
+  "args": S.Array(S.Union([S.Struct({
+  "fields": S.optional(S.Record(S.String, S.Union([S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneMutableDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsOneTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoMutableDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsTwoTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeMutableDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsThreeTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourMutableDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsFourTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveMutableDefault))),
+  "type": S.Literals(['labelRef']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsFiveTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixMutableDefault))),
+  "type": S.Literals(['textSpan']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneFieldsSixTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields))]))),
+  "kind": S.Literals(['schema']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemOneKindDefault)))
+}), S.Union([S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoOneKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoOneMutableDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoOneTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoTwoKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoTwoMutableDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoTwoTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoThreeKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoThreeMutableDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoThreeTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoFourKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoFourMutableDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoFourTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoFiveKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoFiveMutableDefault))),
+  "type": S.Literals(['labelRef']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoFiveTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoSixKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoSixMutableDefault))),
+  "type": S.Literals(['textSpan']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsItemTwoSixTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields))])])).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureArgsDefault))),
+  "output": S.Union([S.Struct({
+  "fields": S.optional(S.Record(S.String, S.Union([S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsOneKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsOneMutableDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsOneTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsTwoKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsTwoMutableDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsTwoTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsThreeKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsThreeMutableDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsThreeTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsFourKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsFourMutableDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsFourTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsFiveKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsFiveMutableDefault))),
+  "type": S.Literals(['labelRef']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsFiveTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsSixKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsSixMutableDefault))),
+  "type": S.Literals(['textSpan']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneFieldsSixTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields))]))),
+  "kind": S.Literals(['schema']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputOneKindDefault)))
+}), S.Union([S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoOneKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoOneMutableDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoOneTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoTwoKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoTwoMutableDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoTwoTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoThreeKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoThreeMutableDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoThreeTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoFourKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoFourMutableDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoFourTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoFiveKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoFiveMutableDefault))),
+  "type": S.Literals(['labelRef']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoFiveTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoSixKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoSixMutableDefault))),
+  "type": S.Literals(['textSpan']).pipe(S.withDecodingDefaultType(Effect.succeed(validateFilterFunction200ResponseSignatureOutputTwoSixTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields))])])
+}).annotate({ description: 'The input and output schemas of a function.' })
 })
 
 export const ValidateFilterFunction422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -303,29 +344,29 @@ export const ValidateFilterFunction422Response = S.Struct({
  * @summary Read Function
  */
 export const ReadFunctionFiltersFunctionsFunctionDefinitionIdGetParams = S.Struct({
-  "functionDefinitionId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "functionDefinitionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadFunctionFiltersFunctionsFunctionDefinitionIdGet200Response = S.Struct({
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "functionDefinition": S.Record({ key: S.String, value: S.Unknown }),
-  "functionDefinitionId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "functionDefinition": S.Record(S.String, S.Unknown),
+  "functionDefinitionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "functionName": S.String,
   "namespace": S.String,
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 })
 
 export const ReadFunctionFiltersFunctionsFunctionDefinitionIdGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadFunctionFiltersFunctionsFunctionDefinitionIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -336,37 +377,37 @@ export const ReadFunctionFiltersFunctionsFunctionDefinitionIdGet422Response = S.
  * @summary Read Grouping
  */
 export const ReadGroupingFiltersGroupingsGroupingIdGetParams = S.Struct({
-  "groupingId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "groupingId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadGroupingFiltersGroupingsGroupingIdGet200Response = S.Struct({
   "assignmentCount": S.Number,
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "functionDefinition": S.Struct({
-  "functionDefinitionId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "functionDefinitionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "functionName": S.String,
   "namespace": S.String
 }),
-  "groupingId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "groupingMessage": S.Union(S.String, S.Null),
-  "groupingStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed'),
-  "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
-  "outputType": S.Literal('string', 'int', 'bool'),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "groupingId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "groupingMessage": S.Union([S.String, S.Null]),
+  "groupingStatus": S.Literals(['new', 'pending', 'processing', 'complete', 'failed']),
+  "jobId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "outputType": S.Literals(['string', 'int', 'bool']),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const ReadGroupingFiltersGroupingsGroupingIdGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadGroupingFiltersGroupingsGroupingIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -377,7 +418,7 @@ export const ReadGroupingFiltersGroupingsGroupingIdGet422Response = S.Struct({
  * @summary Read Grouping Values
  */
 export const ReadGroupingValuesFiltersGroupingsGroupingIdValuesGetParams = S.Struct({
-  "groupingId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "groupingId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryLimitDefault = 50;
@@ -389,9 +430,9 @@ export const readGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryOffsetMin
 
 
 export const ReadGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryParams = S.Struct({
-  "search": S.optional(S.Union(S.String, S.Null)),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryLimitMax)), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryLimitDefault }),
-  "offset": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(readGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryOffsetMin)), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryOffsetDefault })
+  "search": S.optional(S.Union([S.String, S.Null])),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryLimitDefault))),
+  "offset": S.Number.check(S.isGreaterThanOrEqualTo(readGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryOffsetMin)).pipe(S.withDecodingDefaultType(Effect.succeed(readGroupingValuesFiltersGroupingsGroupingIdValuesGetQueryOffsetDefault)))
 })
 
 export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneKindDefault = 'value';
@@ -403,41 +444,41 @@ export const readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseVal
 
 export const ReadGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseItem = S.Struct({
   "count": S.Number,
-  "value": S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneKindDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneTypeDefault }),
+  "value": S.Union([S.Struct({
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneKindDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueOneTypeDefault))),
   "value": S.String
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueTwoKindDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueTwoTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueTwoKindDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueTwoTypeDefault))),
   "value": S.Number
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueThreeKindDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueThreeTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueThreeKindDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(readGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseValueThreeTypeDefault))),
   "value": S.Boolean
-}))
+})])
 })
 export const ReadGroupingValuesFiltersGroupingsGroupingIdValuesGet200Response = S.Array(ReadGroupingValuesFiltersGroupingsGroupingIdValuesGet200ResponseItem)
 
 export const ReadGroupingValuesFiltersGroupingsGroupingIdValuesGet400Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadGroupingValuesFiltersGroupingsGroupingIdValuesGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadGroupingValuesFiltersGroupingsGroupingIdValuesGet409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadGroupingValuesFiltersGroupingsGroupingIdValuesGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -469,31 +510,31 @@ export const readInstancesAdvancedFiltersInstancesQueryPostBodyLimitMax = 100;
 
 
 export const ReadInstancesAdvancedFiltersInstancesQueryPostBody = S.Struct({
-  "cursor": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)).annotations({ description: 'Cursor for pagination. If provided, must be a valid instance id. The query will return results after this cursor according to the sort keys.' }),
+  "cursor": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null])).annotate({ description: 'Cursor for pagination. If provided, must be a valid instance id. The query will return results after this cursor according to the sort keys.' }),
   "frame": S.Struct({
   "groupFilters": S.Array(S.Struct({
-  "groupingId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "values": S.Array(S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemOneKindDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemOneTypeDefault }),
+  "groupingId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "values": S.Array(S.Union([S.Struct({
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemOneKindDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemOneTypeDefault))),
   "value": S.String
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemTwoKindDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemTwoTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemTwoKindDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemTwoTypeDefault))),
   "value": S.Number
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemThreeKindDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemThreeTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemThreeKindDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesItemThreeTypeDefault))),
   "value": S.Boolean
-}))).pipe(S.maxItems(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesMax))
-})).pipe(S.maxItems(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersMax)),
+})])).check(S.isMaxLength(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersItemValuesMax))
+})).check(S.isMaxLength(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameGroupFiltersMax)),
   "sortKeys": S.optional(S.Array(S.Struct({
-  "direction": S.Literal('asc', 'desc'),
-  "fieldName": S.String.pipe(S.minLength(1), S.maxLength(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameSortKeysItemFieldNameMax), S.pattern(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameSortKeysItemFieldNameRegExp))
-})).pipe(S.maxItems(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameSortKeysMax))),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "direction": S.Literals(['asc', 'desc']),
+  "fieldName": S.String.check(S.isMinLength(1), S.isMaxLength(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameSortKeysItemFieldNameMax), S.isPattern(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameSortKeysItemFieldNameRegExp))
+})).check(S.isMaxLength(readInstancesAdvancedFiltersInstancesQueryPostBodyFrameSortKeysMax))),
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 }),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readInstancesAdvancedFiltersInstancesQueryPostBodyLimitMax)), { default: () => readInstancesAdvancedFiltersInstancesQueryPostBodyLimitDefault })
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readInstancesAdvancedFiltersInstancesQueryPostBodyLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPostBodyLimitDefault)))
 })
 
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneKindDefault = 'value';
@@ -521,84 +562,84 @@ export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceVa
 export const readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueKindDefault = 'object';
 
 export const ReadInstancesAdvancedFiltersInstancesQueryPost200ResponseItem = S.Struct({
-  "groupValues": S.Record({ key: S.String, value: S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneKindDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneTypeDefault }),
+  "groupValues": S.Record(S.String, S.Union([S.Struct({
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneKindDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesOneTypeDefault))),
   "value": S.String
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesTwoKindDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesTwoTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesTwoKindDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesTwoTypeDefault))),
   "value": S.Number
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesThreeKindDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesThreeTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesThreeKindDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseGroupValuesThreeTypeDefault))),
   "value": S.Boolean
-})) }),
+})])),
   "instance": S.Struct({
-  "instanceId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "instanceId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "value": S.Struct({
-  "fields": S.optional(S.Record({ key: S.String, value: S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsOneKindDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsOneTypeDefault }),
+  "fields": S.optional(S.Record(S.String, S.Union([S.Struct({
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsOneKindDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsOneTypeDefault))),
   "value": S.String
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsTwoKindDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsTwoTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsTwoKindDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsTwoTypeDefault))),
   "value": S.Number
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsThreeKindDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsThreeTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsThreeKindDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsThreeTypeDefault))),
   "value": S.Number
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFourKindDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFourTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFourKindDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFourTypeDefault))),
   "value": S.Boolean
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveKindDefault }),
-  "type": S.optionalWith(S.Literal('textSpan'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveKindDefault))),
+  "type": S.Literals(['textSpan']).pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveTypeDefault))),
   "value": S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "end": S.Number.pipe(S.greaterThanOrEqualTo(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveValueEndMin)),
-  "start": S.Number.pipe(S.greaterThanOrEqualTo(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveValueStartMin))
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "end": S.Number.check(S.isGreaterThanOrEqualTo(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveValueEndMin)),
+  "start": S.Number.check(S.isGreaterThanOrEqualTo(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsFiveValueStartMin))
 })
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsSixKindDefault }),
-  "type": S.optionalWith(S.Literal('labelRef'), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsSixTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsSixKindDefault))),
+  "type": S.Literals(['labelRef']).pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueFieldsSixTypeDefault))),
   "value": S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
-})) })),
-  "kind": S.optionalWith(S.Literal("object"), { default: () => readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueKindDefault })
+})]))),
+  "kind": S.Literal("object").pipe(S.withDecodingDefaultType(Effect.succeed(readInstancesAdvancedFiltersInstancesQueryPost200ResponseInstanceValueKindDefault)))
 }),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 })
 export const ReadInstancesAdvancedFiltersInstancesQueryPost200Response = S.Array(ReadInstancesAdvancedFiltersInstancesQueryPost200ResponseItem)
 
 export const ReadInstancesAdvancedFiltersInstancesQueryPost400Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadInstancesAdvancedFiltersInstancesQueryPost404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadInstancesAdvancedFiltersInstancesQueryPost409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadInstancesAdvancedFiltersInstancesQueryPost422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -609,7 +650,7 @@ export const ReadInstancesAdvancedFiltersInstancesQueryPost422Response = S.Struc
  * @summary Update Filter Instance
  */
 export const UpdateFilterInstanceParams = S.Struct({
-  "instanceId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "instanceId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const updateFilterInstanceBodyFieldsOneKindDefault = 'value';
@@ -622,23 +663,23 @@ export const updateFilterInstanceBodyFieldsFourKindDefault = 'value';
 export const updateFilterInstanceBodyFieldsFourTypeDefault = 'bool';
 
 export const UpdateFilterInstanceBody = S.Struct({
-  "fields": S.Record({ key: S.String, value: S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstanceBodyFieldsOneKindDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => updateFilterInstanceBodyFieldsOneTypeDefault }),
+  "fields": S.Record(S.String, S.Union([S.Struct({
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstanceBodyFieldsOneKindDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstanceBodyFieldsOneTypeDefault))),
   "value": S.String
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstanceBodyFieldsTwoKindDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => updateFilterInstanceBodyFieldsTwoTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstanceBodyFieldsTwoKindDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstanceBodyFieldsTwoTypeDefault))),
   "value": S.Number
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstanceBodyFieldsThreeKindDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => updateFilterInstanceBodyFieldsThreeTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstanceBodyFieldsThreeKindDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstanceBodyFieldsThreeTypeDefault))),
   "value": S.Number
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstanceBodyFieldsFourKindDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => updateFilterInstanceBodyFieldsFourTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstanceBodyFieldsFourKindDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstanceBodyFieldsFourTypeDefault))),
   "value": S.Boolean
-})) })
+})]))
 })
 
 export const updateFilterInstance200ResponseValueFieldsOneKindDefault = 'value';
@@ -660,68 +701,68 @@ export const updateFilterInstance200ResponseValueFieldsSixTypeDefault = 'labelRe
 export const updateFilterInstance200ResponseValueKindDefault = 'object';
 
 export const UpdateFilterInstance200Response = S.Struct({
-  "instanceId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "instanceId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "value": S.Struct({
-  "fields": S.optional(S.Record({ key: S.String, value: S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstance200ResponseValueFieldsOneKindDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => updateFilterInstance200ResponseValueFieldsOneTypeDefault }),
+  "fields": S.optional(S.Record(S.String, S.Union([S.Struct({
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstance200ResponseValueFieldsOneKindDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstance200ResponseValueFieldsOneTypeDefault))),
   "value": S.String
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstance200ResponseValueFieldsTwoKindDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => updateFilterInstance200ResponseValueFieldsTwoTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstance200ResponseValueFieldsTwoKindDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstance200ResponseValueFieldsTwoTypeDefault))),
   "value": S.Number
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstance200ResponseValueFieldsThreeKindDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => updateFilterInstance200ResponseValueFieldsThreeTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstance200ResponseValueFieldsThreeKindDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstance200ResponseValueFieldsThreeTypeDefault))),
   "value": S.Number
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstance200ResponseValueFieldsFourKindDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => updateFilterInstance200ResponseValueFieldsFourTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstance200ResponseValueFieldsFourKindDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstance200ResponseValueFieldsFourTypeDefault))),
   "value": S.Boolean
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstance200ResponseValueFieldsFiveKindDefault }),
-  "type": S.optionalWith(S.Literal('textSpan'), { default: () => updateFilterInstance200ResponseValueFieldsFiveTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstance200ResponseValueFieldsFiveKindDefault))),
+  "type": S.Literals(['textSpan']).pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstance200ResponseValueFieldsFiveTypeDefault))),
   "value": S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "end": S.Number.pipe(S.greaterThanOrEqualTo(updateFilterInstance200ResponseValueFieldsFiveValueEndMin)),
-  "start": S.Number.pipe(S.greaterThanOrEqualTo(updateFilterInstance200ResponseValueFieldsFiveValueStartMin))
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "end": S.Number.check(S.isGreaterThanOrEqualTo(updateFilterInstance200ResponseValueFieldsFiveValueEndMin)),
+  "start": S.Number.check(S.isGreaterThanOrEqualTo(updateFilterInstance200ResponseValueFieldsFiveValueStartMin))
 })
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => updateFilterInstance200ResponseValueFieldsSixKindDefault }),
-  "type": S.optionalWith(S.Literal('labelRef'), { default: () => updateFilterInstance200ResponseValueFieldsSixTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstance200ResponseValueFieldsSixKindDefault))),
+  "type": S.Literals(['labelRef']).pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstance200ResponseValueFieldsSixTypeDefault))),
   "value": S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
-})) })),
-  "kind": S.optionalWith(S.Literal("object"), { default: () => updateFilterInstance200ResponseValueKindDefault })
+})]))),
+  "kind": S.Literal("object").pipe(S.withDecodingDefaultType(Effect.succeed(updateFilterInstance200ResponseValueKindDefault)))
 }),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const UpdateFilterInstance400Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const UpdateFilterInstance404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const UpdateFilterInstance409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const UpdateFilterInstance422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -737,20 +778,20 @@ export const runPythonAnnotationBodyNewFieldsThreeDefaultValueDefault = 0;
 export const runPythonAnnotationBodyNewFieldsFourDefaultValueDefault = false;
 
 export const RunPythonAnnotationBody = S.Struct({
-  "newFields": S.Record({ key: S.String, value: S.Union(S.Struct({
-  "defaultValue": S.optionalWith(S.String, { default: () => runPythonAnnotationBodyNewFieldsOneDefaultValueDefault }),
-  "type": S.Literal('string')
+  "newFields": S.Record(S.String, S.Union([S.Struct({
+  "defaultValue": S.String.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotationBodyNewFieldsOneDefaultValueDefault))),
+  "type": S.Literals(['string'])
 }), S.Struct({
-  "defaultValue": S.optionalWith(S.Number, { default: () => runPythonAnnotationBodyNewFieldsTwoDefaultValueDefault }),
-  "type": S.Literal('int')
+  "defaultValue": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotationBodyNewFieldsTwoDefaultValueDefault))),
+  "type": S.Literals(['int'])
 }), S.Struct({
-  "defaultValue": S.optionalWith(S.Number, { default: () => runPythonAnnotationBodyNewFieldsThreeDefaultValueDefault }),
-  "type": S.Literal('float')
+  "defaultValue": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotationBodyNewFieldsThreeDefaultValueDefault))),
+  "type": S.Literals(['float'])
 }), S.Struct({
-  "defaultValue": S.optionalWith(S.Boolean, { default: () => runPythonAnnotationBodyNewFieldsFourDefaultValueDefault }),
-  "type": S.Literal('bool')
-})) }),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Completed workflow whose instances will receive the new fields.' })
+  "defaultValue": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotationBodyNewFieldsFourDefaultValueDefault))),
+  "type": S.Literals(['bool'])
+})])),
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Completed workflow whose instances will receive the new fields.' })
 })
 
 export const runPythonAnnotation202ResponseWorkflowSchemaFieldsOneKindDefault = 'field';
@@ -774,71 +815,81 @@ export const runPythonAnnotation202ResponseWorkflowSchemaFieldsSixTypeDefault = 
 export const runPythonAnnotation202ResponseWorkflowSchemaKindDefault = 'schema';
 
 export const RunPythonAnnotation202Response = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "workflow": S.Struct({
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "instanceCount": S.Number,
-  "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
-  "labelGroupIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
-  "novelIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
+  "jobId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "labelGroupIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
+  "novelIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
   "schema": S.Struct({
-  "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsOneKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsOneMutableDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsOneTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoMutableDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeMutableDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsFourKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsFourMutableDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsFourTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveMutableDefault }),
-  "type": S.optionalWith(S.Literal('labelRef'), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsSixKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsSixMutableDefault }),
-  "type": S.optionalWith(S.Literal('textSpan'), { default: () => runPythonAnnotation202ResponseWorkflowSchemaFieldsSixTypeDefault })
-})), S.Struct({
-  "kind": S.Literal('field')
-})) })),
-  "kind": S.optionalWith(S.Literal('schema'), { default: () => runPythonAnnotation202ResponseWorkflowSchemaKindDefault })
+  "fields": S.optional(S.Record(S.String, S.Union([S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsOneKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsOneMutableDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsOneTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoMutableDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsTwoTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeMutableDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsThreeTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsFourKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsFourMutableDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsFourTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveMutableDefault))),
+  "type": S.Literals(['labelRef']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsFiveTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsSixKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsSixMutableDefault))),
+  "type": S.Literals(['textSpan']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaFieldsSixTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields))]))),
+  "kind": S.Literals(['schema']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonAnnotation202ResponseWorkflowSchemaKindDefault)))
 }),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "useCase": S.Literal('advanced', 'glossary'),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "workflowMessage": S.Union(S.String, S.Null),
-  "workflowName": S.Union(S.String, S.Null),
-  "workflowStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed')
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "useCase": S.Literals(['advanced', 'glossary']),
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "workflowMessage": S.Union([S.String, S.Null]),
+  "workflowName": S.Union([S.String, S.Null]),
+  "workflowStatus": S.Literals(['new', 'pending', 'processing', 'complete', 'failed'])
 })
 })
 
 export const RunPythonAnnotation400Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RunPythonAnnotation404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RunPythonAnnotation409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RunPythonAnnotation422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -846,7 +897,7 @@ export const RunPythonAnnotation422Response = S.Struct({
 
 export const RunPythonAnnotation503Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 /**
  * Create and enqueue a filtered workflow.
@@ -857,9 +908,9 @@ export const runPythonFilterBodyOutputNameOneMax = 100;
 
 
 export const RunPythonFilterBody = S.Struct({
-  "functionDefinitionId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Saved object-to-boolean function to execute.' }),
-  "outputName": S.optional(S.Union(S.String.pipe(S.maxLength(runPythonFilterBodyOutputNameOneMax)), S.Null)),
-  "sourceWorkflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Completed workflow whose instances will be filtered.' })
+  "functionDefinitionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Saved object-to-boolean function to execute.' }),
+  "outputName": S.optional(S.Union([S.String.check(S.isMaxLength(runPythonFilterBodyOutputNameOneMax)), S.Null])),
+  "sourceWorkflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Completed workflow whose instances will be filtered.' })
 })
 
 export const runPythonFilter202ResponseWorkflowSchemaFieldsOneKindDefault = 'field';
@@ -883,71 +934,81 @@ export const runPythonFilter202ResponseWorkflowSchemaFieldsSixTypeDefault = 'tex
 export const runPythonFilter202ResponseWorkflowSchemaKindDefault = 'schema';
 
 export const RunPythonFilter202Response = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "workflow": S.Struct({
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "instanceCount": S.Number,
-  "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
-  "labelGroupIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
-  "novelIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
+  "jobId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "labelGroupIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
+  "novelIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
   "schema": S.Struct({
-  "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsOneKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsOneMutableDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsOneTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsTwoKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsTwoMutableDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsTwoTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsThreeKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsThreeMutableDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsThreeTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsFourKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsFourMutableDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsFourTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsFiveKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsFiveMutableDefault }),
-  "type": S.optionalWith(S.Literal('labelRef'), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsFiveTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsSixKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsSixMutableDefault }),
-  "type": S.optionalWith(S.Literal('textSpan'), { default: () => runPythonFilter202ResponseWorkflowSchemaFieldsSixTypeDefault })
-})), S.Struct({
-  "kind": S.Literal('field')
-})) })),
-  "kind": S.optionalWith(S.Literal('schema'), { default: () => runPythonFilter202ResponseWorkflowSchemaKindDefault })
+  "fields": S.optional(S.Record(S.String, S.Union([S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsOneKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsOneMutableDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsOneTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsTwoKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsTwoMutableDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsTwoTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsThreeKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsThreeMutableDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsThreeTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsFourKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsFourMutableDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsFourTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsFiveKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsFiveMutableDefault))),
+  "type": S.Literals(['labelRef']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsFiveTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsSixKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsSixMutableDefault))),
+  "type": S.Literals(['textSpan']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaFieldsSixTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields))]))),
+  "kind": S.Literals(['schema']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonFilter202ResponseWorkflowSchemaKindDefault)))
 }),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "useCase": S.Literal('advanced', 'glossary'),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "workflowMessage": S.Union(S.String, S.Null),
-  "workflowName": S.Union(S.String, S.Null),
-  "workflowStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed')
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "useCase": S.Literals(['advanced', 'glossary']),
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "workflowMessage": S.Union([S.String, S.Null]),
+  "workflowName": S.Union([S.String, S.Null]),
+  "workflowStatus": S.Literals(['new', 'pending', 'processing', 'complete', 'failed'])
 })
 })
 
 export const RunPythonFilter400Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RunPythonFilter404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RunPythonFilter409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RunPythonFilter422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -955,56 +1016,56 @@ export const RunPythonFilter422Response = S.Struct({
 
 export const RunPythonFilter503Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 /**
  * Create and enqueue grouping assignments for a workflow.
  * @summary Run Python Group
  */
 export const RunPythonGroupBody = S.Struct({
-  "functionDefinitionId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Saved object-to-scalar grouping function to execute.' }),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Completed workflow whose instances will be grouped.' })
+  "functionDefinitionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Saved object-to-scalar grouping function to execute.' }),
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Completed workflow whose instances will be grouped.' })
 })
 
 export const RunPythonGroup202Response = S.Struct({
   "grouping": S.Struct({
   "assignmentCount": S.Number,
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "functionDefinition": S.Struct({
-  "functionDefinitionId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "functionDefinitionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "functionName": S.String,
   "namespace": S.String
 }),
-  "groupingId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "groupingMessage": S.Union(S.String, S.Null),
-  "groupingStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed'),
-  "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
-  "outputType": S.Literal('string', 'int', 'bool'),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "groupingId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "groupingMessage": S.Union([S.String, S.Null]),
+  "groupingStatus": S.Literals(['new', 'pending', 'processing', 'complete', 'failed']),
+  "jobId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "outputType": S.Literals(['string', 'int', 'bool']),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 }),
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const RunPythonGroup400Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RunPythonGroup404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RunPythonGroup409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RunPythonGroup422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1012,7 +1073,7 @@ export const RunPythonGroup422Response = S.Struct({
 
 export const RunPythonGroup503Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 /**
  * Create and enqueue a workflow from the current labels in a group.
@@ -1023,8 +1084,8 @@ export const runPythonLabelSourceBodyOutputNameOneMax = 100;
 
 
 export const RunPythonLabelSourceBody = S.Struct({
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Label group whose current labels will seed the workflow.' }),
-  "outputName": S.optional(S.Union(S.String.pipe(S.maxLength(runPythonLabelSourceBodyOutputNameOneMax)), S.Null))
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Label group whose current labels will seed the workflow.' }),
+  "outputName": S.optional(S.Union([S.String.check(S.isMaxLength(runPythonLabelSourceBodyOutputNameOneMax)), S.Null]))
 })
 
 export const runPythonLabelSource202ResponseWorkflowSchemaFieldsOneKindDefault = 'field';
@@ -1048,63 +1109,73 @@ export const runPythonLabelSource202ResponseWorkflowSchemaFieldsSixTypeDefault =
 export const runPythonLabelSource202ResponseWorkflowSchemaKindDefault = 'schema';
 
 export const RunPythonLabelSource202Response = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "workflow": S.Struct({
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "instanceCount": S.Number,
-  "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
-  "labelGroupIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
-  "novelIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
+  "jobId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "labelGroupIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
+  "novelIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
   "schema": S.Struct({
-  "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsOneKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsOneMutableDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsOneTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoMutableDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeMutableDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsFourKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsFourMutableDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsFourTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveMutableDefault }),
-  "type": S.optionalWith(S.Literal('labelRef'), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsSixKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsSixMutableDefault }),
-  "type": S.optionalWith(S.Literal('textSpan'), { default: () => runPythonLabelSource202ResponseWorkflowSchemaFieldsSixTypeDefault })
-})), S.Struct({
-  "kind": S.Literal('field')
-})) })),
-  "kind": S.optionalWith(S.Literal('schema'), { default: () => runPythonLabelSource202ResponseWorkflowSchemaKindDefault })
+  "fields": S.optional(S.Record(S.String, S.Union([S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsOneKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsOneMutableDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsOneTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoMutableDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsTwoTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeMutableDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsThreeTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsFourKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsFourMutableDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsFourTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveMutableDefault))),
+  "type": S.Literals(['labelRef']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsFiveTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsSixKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsSixMutableDefault))),
+  "type": S.Literals(['textSpan']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaFieldsSixTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields))]))),
+  "kind": S.Literals(['schema']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonLabelSource202ResponseWorkflowSchemaKindDefault)))
 }),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "useCase": S.Literal('advanced', 'glossary'),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "workflowMessage": S.Union(S.String, S.Null),
-  "workflowName": S.Union(S.String, S.Null),
-  "workflowStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed')
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "useCase": S.Literals(['advanced', 'glossary']),
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "workflowMessage": S.Union([S.String, S.Null]),
+  "workflowName": S.Union([S.String, S.Null]),
+  "workflowStatus": S.Literals(['new', 'pending', 'processing', 'complete', 'failed'])
 })
 })
 
 export const RunPythonLabelSource404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RunPythonLabelSource422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1112,7 +1183,7 @@ export const RunPythonLabelSource422Response = S.Struct({
 
 export const RunPythonLabelSource503Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 /**
  * Create and enqueue a mapped workflow.
@@ -1123,9 +1194,9 @@ export const runPythonMapBodyOutputNameOneMax = 100;
 
 
 export const RunPythonMapBody = S.Struct({
-  "functionDefinitionId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Saved object-to-object function to execute.' }),
-  "outputName": S.optional(S.Union(S.String.pipe(S.maxLength(runPythonMapBodyOutputNameOneMax)), S.Null)),
-  "sourceWorkflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotations({ description: 'Completed workflow whose instances will be mapped.' })
+  "functionDefinitionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Saved object-to-object function to execute.' }),
+  "outputName": S.optional(S.Union([S.String.check(S.isMaxLength(runPythonMapBodyOutputNameOneMax)), S.Null])),
+  "sourceWorkflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)).annotate({ description: 'Completed workflow whose instances will be mapped.' })
 })
 
 export const runPythonMap202ResponseWorkflowSchemaFieldsOneKindDefault = 'field';
@@ -1149,71 +1220,81 @@ export const runPythonMap202ResponseWorkflowSchemaFieldsSixTypeDefault = 'textSp
 export const runPythonMap202ResponseWorkflowSchemaKindDefault = 'schema';
 
 export const RunPythonMap202Response = S.Struct({
-  "jobId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "workflow": S.Struct({
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "instanceCount": S.Number,
-  "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
-  "labelGroupIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
-  "novelIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
+  "jobId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "labelGroupIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
+  "novelIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
   "schema": S.Struct({
-  "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsOneKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsOneMutableDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsOneTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsTwoKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsTwoMutableDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsTwoTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsThreeKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsThreeMutableDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsThreeTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsFourKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsFourMutableDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsFourTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsFiveKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsFiveMutableDefault }),
-  "type": S.optionalWith(S.Literal('labelRef'), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsFiveTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsSixKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => runPythonMap202ResponseWorkflowSchemaFieldsSixMutableDefault }),
-  "type": S.optionalWith(S.Literal('textSpan'), { default: () => runPythonMap202ResponseWorkflowSchemaFieldsSixTypeDefault })
-})), S.Struct({
-  "kind": S.Literal('field')
-})) })),
-  "kind": S.optionalWith(S.Literal('schema'), { default: () => runPythonMap202ResponseWorkflowSchemaKindDefault })
+  "fields": S.optional(S.Record(S.String, S.Union([S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsOneKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsOneMutableDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsOneTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsTwoKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsTwoMutableDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsTwoTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsThreeKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsThreeMutableDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsThreeTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsFourKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsFourMutableDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsFourTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsFiveKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsFiveMutableDefault))),
+  "type": S.Literals(['labelRef']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsFiveTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsSixKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsSixMutableDefault))),
+  "type": S.Literals(['textSpan']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaFieldsSixTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields))]))),
+  "kind": S.Literals(['schema']).pipe(S.withDecodingDefaultType(Effect.succeed(runPythonMap202ResponseWorkflowSchemaKindDefault)))
 }),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "useCase": S.Literal('advanced', 'glossary'),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "workflowMessage": S.Union(S.String, S.Null),
-  "workflowName": S.Union(S.String, S.Null),
-  "workflowStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed')
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "useCase": S.Literals(['advanced', 'glossary']),
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "workflowMessage": S.Union([S.String, S.Null]),
+  "workflowName": S.Union([S.String, S.Null]),
+  "workflowStatus": S.Literals(['new', 'pending', 'processing', 'complete', 'failed'])
 })
 })
 
 export const RunPythonMap400Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RunPythonMap404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RunPythonMap409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RunPythonMap422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1221,7 +1302,7 @@ export const RunPythonMap422Response = S.Struct({
 
 export const RunPythonMap503Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 /**
  * List workflows accessible to the current user.
@@ -1233,13 +1314,13 @@ export const readWorkflowsFiltersWorkflowsGetQueryLimitMax = 100;
 
 
 export const ReadWorkflowsFiltersWorkflowsGetQueryParams = S.Struct({
-  "novelId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
-  "labelGroupId": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null)),
-  "useCase": S.optional(S.Union(S.Literal('advanced', 'glossary'), S.Null)),
-  "status": S.optional(S.Union(S.Literal('new', 'pending', 'processing', 'complete', 'failed'), S.Null)),
-  "search": S.optional(S.Union(S.String, S.Null)),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readWorkflowsFiltersWorkflowsGetQueryLimitMax)), { default: () => readWorkflowsFiltersWorkflowsGetQueryLimitDefault }),
-  "cursor": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+  "novelId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null])),
+  "labelGroupId": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null])),
+  "useCase": S.optional(S.Union([S.Literals(['advanced', 'glossary']), S.Null])),
+  "status": S.optional(S.Union([S.Literals(['new', 'pending', 'processing', 'complete', 'failed']), S.Null])),
+  "search": S.optional(S.Union([S.String, S.Null])),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readWorkflowsFiltersWorkflowsGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGetQueryLimitDefault))),
+  "cursor": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
 })
 
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneKindDefault = 'field';
@@ -1263,54 +1344,64 @@ export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixTypeDefau
 export const readWorkflowsFiltersWorkflowsGet200ResponseSchemaKindDefault = 'schema';
 
 export const ReadWorkflowsFiltersWorkflowsGet200ResponseItem = S.Struct({
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "jobId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
   "schema": S.Struct({
-  "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneMutableDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoMutableDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeMutableDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourMutableDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveMutableDefault }),
-  "type": S.optionalWith(S.Literal('labelRef'), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixMutableDefault }),
-  "type": S.optionalWith(S.Literal('textSpan'), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixTypeDefault })
-})), S.Struct({
-  "kind": S.Literal('field')
-})) })),
-  "kind": S.optionalWith(S.Literal('schema'), { default: () => readWorkflowsFiltersWorkflowsGet200ResponseSchemaKindDefault })
+  "fields": S.optional(S.Record(S.String, S.Union([S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneMutableDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsOneTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoMutableDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsTwoTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeMutableDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsThreeTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourMutableDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFourTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveMutableDefault))),
+  "type": S.Literals(['labelRef']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsFiveTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixMutableDefault))),
+  "type": S.Literals(['textSpan']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaFieldsSixTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields))]))),
+  "kind": S.Literals(['schema']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowsFiltersWorkflowsGet200ResponseSchemaKindDefault)))
 }),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "useCase": S.Literal('advanced', 'glossary'),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "workflowMessage": S.Union(S.String, S.Null),
-  "workflowName": S.Union(S.String, S.Null),
-  "workflowStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed')
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "useCase": S.Literals(['advanced', 'glossary']),
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "workflowMessage": S.Union([S.String, S.Null]),
+  "workflowName": S.Union([S.String, S.Null]),
+  "workflowStatus": S.Literals(['new', 'pending', 'processing', 'complete', 'failed'])
 })
 export const ReadWorkflowsFiltersWorkflowsGet200Response = S.Array(ReadWorkflowsFiltersWorkflowsGet200ResponseItem)
 
 export const ReadWorkflowsFiltersWorkflowsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1321,7 +1412,7 @@ export const ReadWorkflowsFiltersWorkflowsGet422Response = S.Struct({
  * @summary Read Workflow
  */
 export const ReadWorkflowFiltersWorkflowsWorkflowIdGetParams = S.Struct({
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneKindDefault = 'field';
@@ -1345,60 +1436,70 @@ export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSix
 export const readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaKindDefault = 'schema';
 
 export const ReadWorkflowFiltersWorkflowsWorkflowIdGet200Response = S.Struct({
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "instanceCount": S.Number,
-  "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
-  "labelGroupIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
-  "novelIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
+  "jobId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "labelGroupIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
+  "novelIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
   "schema": S.Struct({
-  "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneMutableDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoMutableDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeMutableDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourMutableDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveMutableDefault }),
-  "type": S.optionalWith(S.Literal('labelRef'), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixMutableDefault }),
-  "type": S.optionalWith(S.Literal('textSpan'), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixTypeDefault })
-})), S.Struct({
-  "kind": S.Literal('field')
-})) })),
-  "kind": S.optionalWith(S.Literal('schema'), { default: () => readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaKindDefault })
+  "fields": S.optional(S.Record(S.String, S.Union([S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneMutableDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsOneTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoMutableDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsTwoTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeMutableDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsThreeTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourMutableDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFourTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveMutableDefault))),
+  "type": S.Literals(['labelRef']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsFiveTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixMutableDefault))),
+  "type": S.Literals(['textSpan']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaFieldsSixTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields))]))),
+  "kind": S.Literals(['schema']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowFiltersWorkflowsWorkflowIdGet200ResponseSchemaKindDefault)))
 }),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "useCase": S.Literal('advanced', 'glossary'),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "workflowMessage": S.Union(S.String, S.Null),
-  "workflowName": S.Union(S.String, S.Null),
-  "workflowStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed')
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "useCase": S.Literals(['advanced', 'glossary']),
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "workflowMessage": S.Union([S.String, S.Null]),
+  "workflowName": S.Union([S.String, S.Null]),
+  "workflowStatus": S.Literals(['new', 'pending', 'processing', 'complete', 'failed'])
 })
 
 export const ReadWorkflowFiltersWorkflowsWorkflowIdGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadWorkflowFiltersWorkflowsWorkflowIdGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1409,7 +1510,7 @@ export const ReadWorkflowFiltersWorkflowsWorkflowIdGet422Response = S.Struct({
  * @summary Rename Filter Workflow
  */
 export const RenameFilterWorkflowParams = S.Struct({
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const renameFilterWorkflowBodyWorkflowNameOneMax = 100;
@@ -1417,7 +1518,7 @@ export const renameFilterWorkflowBodyWorkflowNameOneMax = 100;
 
 
 export const RenameFilterWorkflowBody = S.Struct({
-  "workflowName": S.Union(S.String.pipe(S.maxLength(renameFilterWorkflowBodyWorkflowNameOneMax)), S.Null)
+  "workflowName": S.Union([S.String.check(S.isMaxLength(renameFilterWorkflowBodyWorkflowNameOneMax)), S.Null])
 })
 
 export const renameFilterWorkflow200ResponseSchemaFieldsOneKindDefault = 'field';
@@ -1441,60 +1542,70 @@ export const renameFilterWorkflow200ResponseSchemaFieldsSixTypeDefault = 'textSp
 export const renameFilterWorkflow200ResponseSchemaKindDefault = 'schema';
 
 export const RenameFilterWorkflow200Response = S.Struct({
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "instanceCount": S.Number,
-  "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
-  "labelGroupIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
-  "novelIds": S.Array(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
+  "jobId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "labelGroupIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
+  "novelIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))),
   "schema": S.Struct({
-  "fields": S.optional(S.Record({ key: S.String, value: S.extend(S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => renameFilterWorkflow200ResponseSchemaFieldsOneKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsOneMutableDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => renameFilterWorkflow200ResponseSchemaFieldsOneTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => renameFilterWorkflow200ResponseSchemaFieldsTwoKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsTwoMutableDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => renameFilterWorkflow200ResponseSchemaFieldsTwoTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => renameFilterWorkflow200ResponseSchemaFieldsThreeKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsThreeMutableDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => renameFilterWorkflow200ResponseSchemaFieldsThreeTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => renameFilterWorkflow200ResponseSchemaFieldsFourKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsFourMutableDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => renameFilterWorkflow200ResponseSchemaFieldsFourTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => renameFilterWorkflow200ResponseSchemaFieldsFiveKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsFiveMutableDefault }),
-  "type": S.optionalWith(S.Literal('labelRef'), { default: () => renameFilterWorkflow200ResponseSchemaFieldsFiveTypeDefault })
-}), S.Struct({
-  "kind": S.optionalWith(S.Literal("field"), { default: () => renameFilterWorkflow200ResponseSchemaFieldsSixKindDefault }),
-  "mutable": S.optionalWith(S.Boolean, { default: () => renameFilterWorkflow200ResponseSchemaFieldsSixMutableDefault }),
-  "type": S.optionalWith(S.Literal('textSpan'), { default: () => renameFilterWorkflow200ResponseSchemaFieldsSixTypeDefault })
-})), S.Struct({
-  "kind": S.Literal('field')
-})) })),
-  "kind": S.optionalWith(S.Literal('schema'), { default: () => renameFilterWorkflow200ResponseSchemaKindDefault })
+  "fields": S.optional(S.Record(S.String, S.Union([S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsOneKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsOneMutableDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsOneTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsTwoKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsTwoMutableDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsTwoTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsThreeKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsThreeMutableDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsThreeTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsFourKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsFourMutableDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsFourTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsFiveKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsFiveMutableDefault))),
+  "type": S.Literals(['labelRef']).pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsFiveTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields)), S.Struct({
+  "kind": S.Literal("field").pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsSixKindDefault))),
+  "mutable": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsSixMutableDefault))),
+  "type": S.Literals(['textSpan']).pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaFieldsSixTypeDefault)))
+}).pipe(S.fieldsAssign(S.Struct({
+  "kind": S.Literals(['field'])
+}).fields))]))),
+  "kind": S.Literals(['schema']).pipe(S.withDecodingDefaultType(Effect.succeed(renameFilterWorkflow200ResponseSchemaKindDefault)))
 }),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "useCase": S.Literal('advanced', 'glossary'),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "workflowMessage": S.Union(S.String, S.Null),
-  "workflowName": S.Union(S.String, S.Null),
-  "workflowStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed')
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "useCase": S.Literals(['advanced', 'glossary']),
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "workflowMessage": S.Union([S.String, S.Null]),
+  "workflowName": S.Union([S.String, S.Null]),
+  "workflowStatus": S.Literals(['new', 'pending', 'processing', 'complete', 'failed'])
 })
 
 export const RenameFilterWorkflow404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const RenameFilterWorkflow422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1505,7 +1616,7 @@ export const RenameFilterWorkflow422Response = S.Struct({
  * @summary Read Workflow Groupings
  */
 export const ReadWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGetParams = S.Struct({
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGetQueryLimitDefault = 50;
@@ -1514,34 +1625,34 @@ export const readWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGetQueryLim
 
 
 export const ReadWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGetQueryParams = S.Struct({
-  "status": S.optional(S.Union(S.Literal('new', 'pending', 'processing', 'complete', 'failed'), S.Null)),
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGetQueryLimitMax)), { default: () => readWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGetQueryLimitDefault }),
-  "cursor": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+  "status": S.optional(S.Union([S.Literals(['new', 'pending', 'processing', 'complete', 'failed']), S.Null])),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGetQueryLimitDefault))),
+  "cursor": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
 })
 
 export const ReadWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGet200ResponseItem = S.Struct({
-  "createdAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "functionDefinitionId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "groupingId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "groupingMessage": S.Union(S.String, S.Null),
-  "groupingStatus": S.Literal('new', 'pending', 'processing', 'complete', 'failed'),
-  "jobId": S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null),
-  "updatedAt": S.String.pipe(S.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "functionDefinitionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "groupingId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "groupingMessage": S.Union([S.String, S.Null]),
+  "groupingStatus": S.Literals(['new', 'pending', 'processing', 'complete', 'failed']),
+  "jobId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 export const ReadWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGet200Response = S.Array(ReadWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGet200ResponseItem)
 
 export const ReadWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))
@@ -1552,7 +1663,7 @@ export const ReadWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGet422Respo
  * @summary Read Workflow Instances
  */
 export const ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGetParams = S.Struct({
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
 export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGetQueryLimitDefault = 50;
@@ -1561,8 +1672,8 @@ export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGetQueryLim
 
 
 export const ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGetQueryParams = S.Struct({
-  "limit": S.optionalWith(S.Number.pipe(S.greaterThanOrEqualTo(1), S.lessThanOrEqualTo(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGetQueryLimitMax)), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGetQueryLimitDefault }),
-  "cursor": S.optional(S.Union(S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null))
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGetQueryLimitDefault))),
+  "cursor": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
 })
 
 export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneKindDefault = 'value';
@@ -1584,65 +1695,65 @@ export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200Respo
 export const readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueKindDefault = 'object';
 
 export const ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseItem = S.Struct({
-  "instanceId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "instanceId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "value": S.Struct({
-  "fields": S.optional(S.Record({ key: S.String, value: S.Union(S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneKindDefault }),
-  "type": S.optionalWith(S.Literal('string'), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneTypeDefault }),
+  "fields": S.optional(S.Record(S.String, S.Union([S.Struct({
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneKindDefault))),
+  "type": S.Literals(['string']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsOneTypeDefault))),
   "value": S.String
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsTwoKindDefault }),
-  "type": S.optionalWith(S.Literal('int'), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsTwoTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsTwoKindDefault))),
+  "type": S.Literals(['int']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsTwoTypeDefault))),
   "value": S.Number
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsThreeKindDefault }),
-  "type": S.optionalWith(S.Literal('float'), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsThreeTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsThreeKindDefault))),
+  "type": S.Literals(['float']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsThreeTypeDefault))),
   "value": S.Number
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFourKindDefault }),
-  "type": S.optionalWith(S.Literal('bool'), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFourTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFourKindDefault))),
+  "type": S.Literals(['bool']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFourTypeDefault))),
   "value": S.Boolean
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveKindDefault }),
-  "type": S.optionalWith(S.Literal('textSpan'), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveKindDefault))),
+  "type": S.Literals(['textSpan']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveTypeDefault))),
   "value": S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "end": S.Number.pipe(S.greaterThanOrEqualTo(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveValueEndMin)),
-  "start": S.Number.pipe(S.greaterThanOrEqualTo(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveValueStartMin))
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "end": S.Number.check(S.isGreaterThanOrEqualTo(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveValueEndMin)),
+  "start": S.Number.check(S.isGreaterThanOrEqualTo(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsFiveValueStartMin))
 })
 }), S.Struct({
-  "kind": S.optionalWith(S.Literal("value"), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsSixKindDefault }),
-  "type": S.optionalWith(S.Literal('labelRef'), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsSixTypeDefault }),
+  "kind": S.Literal("value").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsSixKindDefault))),
+  "type": S.Literals(['labelRef']).pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueFieldsSixTypeDefault))),
   "value": S.Struct({
-  "chapterContentId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "chapterId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelDataId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelGroupId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "labelId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelDataId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "labelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
-})) })),
-  "kind": S.optionalWith(S.Literal("object"), { default: () => readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueKindDefault })
+})]))),
+  "kind": S.Literal("object").pipe(S.withDecodingDefaultType(Effect.succeed(readWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseValueKindDefault)))
 }),
-  "workflowId": S.String.pipe(S.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+  "workflowId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 export const ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200Response = S.Array(ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet200ResponseItem)
 
 export const ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet404Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet409Response = S.Struct({
   "detail": S.String
-}).annotations({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.extend(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
 
-}), S.Record({ key: S.String, value: S.Unknown }))),
+}), [S.Record(S.String, S.Unknown)])),
   "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union(S.String, S.Number)),
+  "loc": S.Array(S.Union([S.String, S.Number])),
   "msg": S.String,
   "type": S.String
 })))

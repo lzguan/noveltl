@@ -1,6 +1,6 @@
 import { Data } from "effect";
 import type { RequestKey } from "./requestTypes";
-import type { TimeoutException } from "effect/Cause";
+import type { TimeoutError } from "effect/Cause";
 import type { CProvId, IdStatus, LGProvId, ProvId, ServId } from "./idTypes";
 
 /**
@@ -92,6 +92,6 @@ export type AnyError =
 	| NoCacheEntryException
 	| NotFoundException
 	| NotReserveableException
-	| TimeoutException
+	| TimeoutError
 	| PendingException
 	| DuplicateChapterNumException;

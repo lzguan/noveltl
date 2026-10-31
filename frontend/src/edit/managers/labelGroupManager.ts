@@ -52,10 +52,10 @@ export function createLabelGroupManager({
 		transition: LabelGroupTransition,
 	): Effect.Effect<void> =>
 		Effect.gen(function* () {
-			const labelGroupExists = yield* Effect.either(
+			const labelGroupExists = yield* Effect.result(
 				controllerGetters.labelGroupSlot(labelGroupId),
 			);
-			if (labelGroupExists._tag === "Left") {
+			if (labelGroupExists._tag === "Failure") {
 				trackedLabelGroups.removeLabelGroup(labelGroupId);
 				return;
 			}
@@ -64,7 +64,7 @@ export function createLabelGroupManager({
 			if (!groupStatus) {
 				const nameSlot = yield* controllerGetters
 					.labelGroupSlot(labelGroupId)
-					.pipe(Effect.catchAll(() => Effect.succeed(null)));
+					.pipe(Effect.catch(() => Effect.succeed(null)));
 				groupStatus = {
 					labelGroup: Prov({
 						labelGroupName: nameSlot?.meta?.labelGroup?.labelGroupName ?? "???",
@@ -85,14 +85,14 @@ export function createLabelGroupManager({
 
 			const chapterGetter = yield* controllerGetters
 				.chapterGetterSlot(cid)
-				.pipe(Effect.catchAll(() => Effect.succeed(null)));
+				.pipe(Effect.catch(() => Effect.succeed(null)));
 			if (!chapterGetter || chapterGetter.status !== "ready") return;
 
 			if (transition === "startLoading") {
 				const sm = current.segmentManager;
 				const oldSlot = yield* chapterGetter.data.chapterGetters
 					.labelDataSlot(labelGroupId)
-					.pipe(Effect.catchAll(() => Effect.succeed(null)));
+					.pipe(Effect.catch(() => Effect.succeed(null)));
 				if (oldSlot && oldSlot.status === "ready") {
 					for (const label of oldSlot.data.labels) {
 						try {
@@ -110,7 +110,7 @@ export function createLabelGroupManager({
 				const sm = current.segmentManager;
 				const labelDataSlot = yield* chapterGetter.data.chapterGetters
 					.labelDataSlot(labelGroupId)
-					.pipe(Effect.catchAll(() => Effect.succeed(null)));
+					.pipe(Effect.catch(() => Effect.succeed(null)));
 
 				if (!labelDataSlot || labelDataSlot.status !== "ready") {
 					trackedLabelGroups.setLabelGroup(labelGroupId, {
@@ -182,7 +182,7 @@ export function createLabelGroupManager({
 			if (!chapterId) return ActionHappened(false);
 			const chapterSlot = yield* controllerGetters
 				.chapterGetterSlot(chapterId)
-				.pipe(Effect.catchAll(() => Effect.succeed(null)));
+				.pipe(Effect.catch(() => Effect.succeed(null)));
 			if (!chapterSlot || chapterSlot.status !== "ready") return ActionHappened(false);
 			for (const [
 				labelGroupId,
@@ -190,7 +190,7 @@ export function createLabelGroupManager({
 			] of trackedLabelGroups.labelGroupsRef.current.entries()) {
 				const labelDataSlot = yield* chapterSlot.data.chapterGetters
 					.labelDataSlot(labelGroupId)
-					.pipe(Effect.catchAll(() => Effect.succeed(null)));
+					.pipe(Effect.catch(() => Effect.succeed(null)));
 				if (!labelDataSlot) {
 					trackedLabelGroups.setLabelGroup(labelGroupId, {
 						...groupView,
@@ -233,12 +233,12 @@ export function createLabelGroupManager({
 
 			const chapterGetter = yield* controllerGetters
 				.chapterGetterSlot(cid)
-				.pipe(Effect.catchAll(() => Effect.succeed(null)));
+				.pipe(Effect.catch(() => Effect.succeed(null)));
 			if (!chapterGetter || chapterGetter.status !== "ready") return;
 
 			const labelDataSlot = yield* chapterGetter.data.chapterGetters
 				.labelDataSlot(labelGroupId)
-				.pipe(Effect.catchAll(() => Effect.succeed(null)));
+				.pipe(Effect.catch(() => Effect.succeed(null)));
 			if (!labelDataSlot || labelDataSlot.status !== "ready") return;
 
 			const sm = current.segmentManager;
@@ -275,7 +275,7 @@ export function createLabelGroupManager({
 			const nameSlot = Effect.runSync(
 				controllerGetters
 					.labelGroupSlot(labelGroupId)
-					.pipe(Effect.catchAll(() => Effect.succeed(null))),
+					.pipe(Effect.catch(() => Effect.succeed(null))),
 			);
 			trackedLabelGroups.setLabelGroup(labelGroupId, {
 				labelGroup: Prov({

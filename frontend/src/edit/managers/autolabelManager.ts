@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import { Effect } from "effect";
-import { UnknownException } from "effect/Cause";
+import { UnknownError } from "effect/Cause";
 import type { ALRProvId, CCProvId, CProvId, LGProvId } from "../controller/types/idTypes";
 import type { AutoLabelRunGetterSlot } from "../controller/types/helperTypes";
 import { Prov } from "../controller/types/helperTypes";
@@ -141,14 +141,14 @@ export function createAutoLabelManager({
 
 			const chapterSlot = yield* controllerGetters
 				.chapterGetterSlot(chapterId)
-				.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+				.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 			if (chapterSlot.status !== "ready") {
 				autoLabelPreview.setPreview(null);
 				return;
 			}
 			const chapterContentId = yield* chapterSlot.data.chapterGetters
 				.chapterContentId()
-				.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+				.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 
 			const invalidatedContentId = invalidatedContentIds.get(chapterId);
 			if (invalidatedContentId === chapterContentId) {
@@ -159,7 +159,7 @@ export function createAutoLabelManager({
 
 			const runSlot = yield* controllerGetters
 				.autoLabelRunSlot(runId)
-				.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+				.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 			if (runSlot.status !== "ready") {
 				autoLabelPreview.setPreview(null);
 				return;
@@ -191,7 +191,7 @@ export function createAutoLabelManager({
 				flags: { now: true, forPreview: true },
 			});
 		}).pipe(
-			Effect.catchAll((err) => {
+			Effect.catch((err) => {
 				autoLabelPreview.setPreview(null);
 				console.error("Failed to synchronize autolabel preview:", err);
 				return Effect.succeed(void 0);
@@ -217,11 +217,11 @@ export function createAutoLabelManager({
 				for (const al of run.autolabels) {
 					const slot = yield* getters
 						.chapterGetterSlot(al.chapterId)
-						.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+						.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 					if (slot.status !== "ready") continue;
 					const currentCC = yield* slot.data.chapterGetters
 						.chapterContentId()
-						.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+						.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 					runMap.set(
 						al.chapterId,
 						currentCC === al.chapterContentId ? "match" : "outdated",
@@ -230,18 +230,18 @@ export function createAutoLabelManager({
 				result.set(run.run.runId, runMap);
 			}
 			return result;
-		}).pipe(Effect.catchAll(() => Effect.succeed(new Map())));
+		}).pipe(Effect.catch(() => Effect.succeed(new Map())));
 	}
 
 	function refreshSelectedRunAndMatches(
 		getters: NovelGetters,
-	): Effect.Effect<void, UnknownException> {
+	): Effect.Effect<void, UnknownError> {
 		return Effect.gen(function* () {
 			const selectedRunId = autoLabels.selectedRunIdRef.current;
 			if (selectedRunId !== null) {
 				const runSlot = yield* controllerGetters
 					.autoLabelRunSlot(selectedRunId)
-					.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+					.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 				autoLabels.setRun(selectedRunId, makeView(runSlot));
 			}
 			autoLabels.setChapterMatchMap(
@@ -259,7 +259,7 @@ export function createAutoLabelManager({
 				case "autoLabelRunCreated": {
 					const runSlot = yield* controllerGetters
 						.autoLabelRunSlot(event.run.runId)
-						.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+						.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 					const view = makeView(runSlot);
 					autoLabels.addRun(view);
 					autoLabels.setSelected(event.run.runId);
@@ -275,12 +275,12 @@ export function createAutoLabelManager({
 				case "autoLabelRunsRefreshed": {
 					const runIds = yield* controllerGetters
 						.autoLabelRunIds()
-						.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+						.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 					const views: AutoLabelRunView[] = [];
 					for (const runId of runIds) {
 						const runSlot = yield* controllerGetters
 							.autoLabelRunSlot(runId)
-							.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+							.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 						views.push(makeView(runSlot));
 					}
 					autoLabels.setRunsList(views);
@@ -293,7 +293,7 @@ export function createAutoLabelManager({
 				case "autoLabelRunReloaded": {
 					const runSlot = yield* controllerGetters
 						.autoLabelRunSlot(event.runId)
-						.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+						.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 					const view = makeView(runSlot);
 					autoLabels.setRun(event.runId, view);
 					const matchMap = yield* rebuildChapterMatchMap(
@@ -323,7 +323,7 @@ export function createAutoLabelManager({
 					autoLabelPreview.setPreview(null);
 					const chapterSlot = yield* controllerGetters
 						.chapterGetterSlot(event.chapterId)
-						.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+						.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 					if (chapterSlot.status !== "ready") break;
 					invalidatedContentIds.set(
 						event.chapterId,
@@ -354,7 +354,7 @@ export function createAutoLabelManager({
 				}
 			}
 		}).pipe(
-			Effect.catchAll((err) => {
+			Effect.catch((err) => {
 				if (autoLabels.refreshingRef.current) {
 					autoLabels.setRefreshing(false);
 				}

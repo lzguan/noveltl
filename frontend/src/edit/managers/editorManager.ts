@@ -54,7 +54,7 @@ export function createEditorManager({
 				case "chapterOpened": {
 					if (!event.flags.forEditor) break;
 					if (activeChapterIdRef.current !== event.chapterId) break;
-					const done = yield* Effect.either(
+					const done = yield* Effect.result(
 						Effect.gen(function* () {
 							const chapterGetter = yield* novelGetters.chapterGetterSlot(
 								event.chapterId,
@@ -78,8 +78,8 @@ export function createEditorManager({
 							};
 						}),
 					);
-					if (done._tag === "Left") break;
-					const { text, chapterContentId, labelData, couldNotLoad } = done.right;
+					if (done._tag === "Failure") break;
+					const { text, chapterContentId, labelData, couldNotLoad } = done.success;
 					const flatLabelData = Array.from(labelData.values()).flat();
 					const highlight = event.flags.highlight;
 

@@ -2,7 +2,7 @@ import type { CProvId, LGProvId, LProvId, ALRProvId, AProvId, CCServId } from ".
 import type { RequestEvent } from "./requestTypes";
 import type { AddLabelOp, DeleteLabelOp, UpdateLabelOp } from "@/api/models";
 import type { Effect } from "effect";
-import type { UnknownException } from "effect/Cause";
+import type { UnknownError } from "effect/Cause";
 import type {
 	AlreadyOpenException,
 	DuplicateChapterNumException,
@@ -47,7 +47,7 @@ export type NovelDataManager = DataManager<
 		/**
 		 * @param labelGroupName - Display name for the new group. Backend enforces max 31 chars; frontend validation TODO.
 		 */
-		addLabelGroup: (labelGroupName: string) => Effect.Effect<RequestEvent[], UnknownException>;
+		addLabelGroup: (labelGroupName: string) => Effect.Effect<RequestEvent[], UnknownError>;
 		/**
 		 * @param chapterNum - Must be unique across the novel.
 		 * @param chapterTitle - Display title.
@@ -57,7 +57,7 @@ export type NovelDataManager = DataManager<
 			chapterNum: number,
 			chapterTitle: string,
 			chapterIsPublic: boolean,
-		) => Effect.Effect<RequestEvent[], UnknownException | DuplicateChapterNumException>;
+		) => Effect.Effect<RequestEvent[], UnknownError | DuplicateChapterNumException>;
 
 		/**
 		 * Loads chapter data from server. On success, the chapter becomes accessible via getChapterDM().
@@ -84,18 +84,18 @@ export type NovelDataManager = DataManager<
 			},
 		) => Effect.Effect<
 			RequestEvent[],
-			NotFoundException | LoadingException | AlreadyOpenException | UnknownException
+			NotFoundException | LoadingException | AlreadyOpenException | UnknownError
 		>;
 		/**
 		 * Flushes pending chapter work and queues chapter data eviction after it.
 		 */
 		closeChapter: (
 			chapterId: CProvId,
-		) => Effect.Effect<RequestEvent[], NotFoundException | UnknownException>;
+		) => Effect.Effect<RequestEvent[], NotFoundException | UnknownError>;
 		/**
 		 * Returns any deferred passive request events that have been queued but not yet dispatched.
 		 */
-		flush: () => Effect.Effect<RequestEvent[], UnknownException>;
+		flush: () => Effect.Effect<RequestEvent[], UnknownError>;
 		/**
 		 * @param chapterId - Returns null if chapter is not open or still loading.
 		 */
@@ -106,7 +106,7 @@ export type NovelDataManager = DataManager<
 		createAutoLabelRun: (
 			params: CluenerParams | DoNothingParams,
 			chapterFilter: ChapterFilter,
-		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
 		/**
 		 * Promotes autolabel results from a run into a label group.
 		 * Locks both the run and the label group to prevent concurrent modification.
@@ -115,13 +115,13 @@ export type NovelDataManager = DataManager<
 			runId: ALRProvId,
 			labelGroupId: LGProvId,
 			chapterFilter: ChapterFilter,
-		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
 		/**
 		 * Reloads the autolabel run list from the server and replaces the local index.
 		 */
 		refreshAutoLabelRuns: (flags?: {
 			now: boolean;
-		}) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		}) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
 		/**
 		 * Reloads autolabel metadata for a single run from the server.
 		 */
@@ -130,7 +130,7 @@ export type NovelDataManager = DataManager<
 			flags?: {
 				now: boolean;
 			},
-		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
 		/**
 		 * Loads autolabel data (the label payload) for a single autolabel.
 		 */
@@ -140,7 +140,7 @@ export type NovelDataManager = DataManager<
 				now: boolean;
 				forPreview: boolean;
 			},
-		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
 	},
 	NovelGetters
 >;
@@ -163,28 +163,28 @@ export type AutolabelDataManager = DataManager<
 		createAutoLabelRun: (
 			params: CluenerParams | DoNothingParams,
 			chapterFilter: ChapterFilter,
-		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
 		promoteAutoLabelRun: (
 			runId: ALRProvId,
 			labelGroupId: LGProvId,
 			chapterFilter: ChapterFilter,
-		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
 		refreshAutoLabelRuns: (flags?: {
 			now: boolean;
-		}) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		}) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
 		reloadAutoLabelRun: (
 			runId: ALRProvId,
 			flags?: {
 				now: boolean;
 			},
-		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
 		loadAutoLabelData: (
 			autoLabelId: AProvId,
 			flags?: {
 				now: boolean;
 				forPreview: boolean;
 			},
-		) => Effect.Effect<RequestEvent[], UnknownException | FatalException>;
+		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
 	},
 	AutolabelGetters
 >;
@@ -218,7 +218,7 @@ export type ChapterDataManager = DataManager<
 			entityGroup?: string,
 			score?: number,
 			dirty?: boolean,
-		) => Effect.Effect<RequestEvent[], UnknownException>;
+		) => Effect.Effect<RequestEvent[], UnknownError>;
 		/**
 		 * Fails if: label group not loaded, or no label exists at [startPos, endPos).
 		 * @param labelGroupId - Target label group.
@@ -227,7 +227,7 @@ export type ChapterDataManager = DataManager<
 		deleteLabel: (
 			labelGroupId: LGProvId,
 			labelId: LProvId,
-		) => Effect.Effect<RequestEvent[], UnknownException>;
+		) => Effect.Effect<RequestEvent[], UnknownError>;
 		/**
 		 * Updates a label keyed by its current [startPos, endPos). Pass null/undefined to keep a field unchanged. If bounds change, newWord is required. Fails if newWord is provided without changing bounds.
 		 * Fails if: label group not loaded, label not found, new bounds invalid, or new position overlaps.
@@ -246,16 +246,13 @@ export type ChapterDataManager = DataManager<
 			entityGroup?: string,
 			score?: number,
 			dirty?: boolean,
-		) => Effect.Effect<RequestEvent[], UnknownException>;
+		) => Effect.Effect<RequestEvent[], UnknownError>;
 		/**
 		 * Labels straddling the insertion point are dropped; labels after are shifted. Affects all label groups. No-ops if text is empty.
 		 * @param pos - Insertion index. Must satisfy 0 <= pos <= text.length.
 		 * @param text - Text to insert.
 		 */
-		insertTextAt: (
-			pos: number,
-			text: string,
-		) => Effect.Effect<RequestEvent[], UnknownException>;
+		insertTextAt: (pos: number, text: string) => Effect.Effect<RequestEvent[], UnknownError>;
 		/**
 		 * Labels overlapping [startPos, endPos) are dropped; labels after are shifted backward. Affects all label groups.
 		 * @param startPos - Inclusive start of deletion range.
@@ -264,11 +261,11 @@ export type ChapterDataManager = DataManager<
 		deleteTextAt: (
 			startPos: number,
 			endPos: number,
-		) => Effect.Effect<RequestEvent[], UnknownException>;
+		) => Effect.Effect<RequestEvent[], UnknownError>;
 		/**
 		 * Flushes any pending operations into RequestEvents. Returns [] if nothing is pending.
 		 */
-		flush: () => Effect.Effect<RequestEvent[], UnknownException>;
+		flush: () => Effect.Effect<RequestEvent[], UnknownError>;
 		/**
 		 * Fetches fresh label data + labels from server for a label group. Read-only (does not modify backend state).
 		 * @param labelGroupId - Label group to reload.
@@ -277,11 +274,11 @@ export type ChapterDataManager = DataManager<
 		reloadGroup(
 			labelGroupId: LGProvId,
 			now: boolean,
-		): Effect.Effect<RequestEvent[], UnknownException>;
+		): Effect.Effect<RequestEvent[], UnknownError>;
 		/**
 		 * Blocks new actions and flushes buffered work into request events.
 		 */
-		destroy: () => Effect.Effect<RequestEvent[], UnknownException>;
+		destroy: () => Effect.Effect<RequestEvent[], UnknownError>;
 	},
 	ChapterGetters
 >;

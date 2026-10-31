@@ -2,11 +2,11 @@
 name = "noveltl-agent-evals"
 version = "0.1.0"
 description = "Local evaluation tools for the NovelTL memory agent"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.15,<3.16"
 dependencies = [
     "noveltl-dev",
     "pydantic>=2.10.0",
-    "pydantic-ai-slim[openai]>=2.31.0",
+    "pydantic-ai-slim[openai]>=2.64.0",
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0.3",
     "textual>=0.89.0",

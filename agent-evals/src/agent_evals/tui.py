@@ -264,12 +264,28 @@ class MetricEditScreen(ModalScreen[ExpectedMemory | None]):
         with VerticalScroll(classes="dialog", id="metric-dialog"):
             yield Static("Expected memory", classes="screen-title")
             yield Input(value=memory.id if memory else "", placeholder="Metric ID", id="metric-id")
-            yield Input(value=memory.memory_type if memory else "", placeholder="Memory type: fact, rel, def…", id="metric-type")
-            yield Input(value=memory.category or "" if memory else "", placeholder="Category (optional)", id="metric-category")
-            yield Input(value=", ".join(memory.terms) if memory else "", placeholder="Original-language terms, comma-separated", id="metric-terms")
-            yield Input(value=memory.content if memory else "", placeholder="Expected memory content", id="metric-content")
-            yield Input(value=memory.expected_state if memory else "active", placeholder="active or ended", id="metric-state")
-            yield Input(value=memory.lifecycle if memory else "any", placeholder="any, create, supersede, or expire", id="metric-lifecycle")
+            yield Input(
+                value=memory.memory_type if memory else "", placeholder="Memory type: fact, rel, def…", id="metric-type"
+            )
+            yield Input(
+                value=memory.category or "" if memory else "", placeholder="Category (optional)", id="metric-category"
+            )
+            yield Input(
+                value=", ".join(memory.terms) if memory else "",
+                placeholder="Original-language terms, comma-separated",
+                id="metric-terms",
+            )
+            yield Input(
+                value=memory.content if memory else "", placeholder="Expected memory content", id="metric-content"
+            )
+            yield Input(
+                value=memory.expected_state if memory else "active", placeholder="active or ended", id="metric-state"
+            )
+            yield Input(
+                value=memory.lifecycle if memory else "any",
+                placeholder="any, create, supersede, or expire",
+                id="metric-lifecycle",
+            )
             yield Label("", id="metric-status")
             with Horizontal(classes="actions"):
                 yield Button("Apply", id="apply-metric", variant="primary")
@@ -335,8 +351,16 @@ class CheckpointEditScreen(ModalScreen[Checkpoint | None]):
                 id="checkpoint-end",
                 type="integer",
             )
-            yield Input(value=checkpoint.activity if checkpoint else "normal", placeholder="normal, busy, or quiet", id="checkpoint-activity")
-            yield Input(value=checkpoint.notes or "" if checkpoint else "", placeholder="Notes (optional)", id="checkpoint-notes")
+            yield Input(
+                value=checkpoint.activity if checkpoint else "normal",
+                placeholder="normal, busy, or quiet",
+                id="checkpoint-activity",
+            )
+            yield Input(
+                value=checkpoint.notes or "" if checkpoint else "",
+                placeholder="Notes (optional)",
+                id="checkpoint-notes",
+            )
             yield Static("Expected memories", classes="section-title")
             with Horizontal(classes="actions"):
                 yield Button("Add", id="add-metric")
@@ -530,7 +554,9 @@ class ConfigEditScreen(ModalScreen[RunConfig | None]):
         with VerticalScroll(classes="dialog", id="config-dialog"):
             yield Static("Edit run config" if config else "Create run config", classes="screen-title")
             yield Input(value=config.id if config else "", placeholder="Config ID", id="config-id")
-            yield Input(value=config.change if config else "", placeholder="Change under evaluation", id="config-change")
+            yield Input(
+                value=config.change if config else "", placeholder="Change under evaluation", id="config-change"
+            )
             yield Input(value=config.corpus if config else "", placeholder="Corpus ID", id="config-corpus")
             yield Input(
                 value=str(config.chapters.start_inclusive) if config else "",
@@ -555,7 +581,7 @@ class ConfigEditScreen(ModalScreen[RunConfig | None]):
                     yield RadioButton(
                         name,
                         value=config is not None and config.agent.model_name == name,
-                        id=f"config-model-{name.replace(':', '-').replace('_', '-')}",
+                        id=f"config-model-{name.replace(':', '-').replace('_', '-').replace('.', '-')}",
                     )
             yield Static("Backend toolsets", classes="section-title")
             for name in self.available_toolsets:
@@ -626,9 +652,7 @@ class ConfigEditScreen(ModalScreen[RunConfig | None]):
 
     def save(self) -> None:
         checkpoint_ids = [
-            value.strip()
-            for value in self.query_one("#config-checkpoints", Input).value.split(",")
-            if value.strip()
+            value.strip() for value in self.query_one("#config-checkpoints", Input).value.split(",") if value.strip()
         ]
         existing_settings = (
             {toolset.name: toolset.settings for toolset in self.config.agent.toolsets}
@@ -682,7 +706,9 @@ class ConfigEditScreen(ModalScreen[RunConfig | None]):
         selected = [
             name
             for name in discover_model_names()
-            if self.query_one(f"#config-model-{name.replace(':', '-').replace('_', '-')}", RadioButton).value
+            if self.query_one(
+                f"#config-model-{name.replace(':', '-').replace('_', '-').replace('.', '-')}", RadioButton
+            ).value
         ]
         if len(selected) != 1:
             raise ValueError("Select exactly one backend model")

@@ -93,6 +93,8 @@ The Redis connection used by the request cache lives in [`requests/redis_conn.py
 
 Background jobs run in separate worker processes rather than in the FastAPI process. Each worker class is its own Celery application with its own broker, so a saturated or crashed worker of one kind cannot stall the other.
 
+For a current evaluation of whether to replace Celery (including memory-agent and translation workers), see [background-jobs-queue-evaluation.md](background-jobs-queue-evaluation.md).
+
 | Worker | Celery app | Redis database | Dockerfile target |
 | --- | --- | --- | --- |
 | Autolabels | [`src/autolabels/celery_app.py`](../backend/src/autolabels/celery_app.py) | `AUTOLABELS_DATABASE` (default 1) | `autolabels-worker` |

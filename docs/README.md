@@ -10,6 +10,7 @@ This folder contains the documentation for this project. Documentation is primar
 - [coding-agents.md](coding-agents.md): Setting up and using coding agents
 - [scripts.md](scripts.md): List of potentially useful scripts in this project
 - [project-structure.md](project-structure.md): High-level overview of the structure in this project
+- [background-jobs-queue-evaluation.md](background-jobs-queue-evaluation.md): Celery replacement evaluation and rollout plan
 
 ## Domain guides
 

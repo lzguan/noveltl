@@ -222,7 +222,7 @@ export function EditNovelPage() {
 				for (const id of ids) {
 					const slot = yield* ctrl.getters
 						.labelGroupSlot(id)
-						.pipe(Effect.catchAll(() => Effect.succeed(null)));
+						.pipe(Effect.catch(() => Effect.succeed(null)));
 					if (!slot) continue;
 					trackedLabelGroups.setLabelGroup(id, {
 						labelGroup: Prov({

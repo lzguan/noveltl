@@ -90,12 +90,9 @@ export const isAllReserveable = (
 					if (!reserveable) return yield* Effect.fail(new NotReserveableException());
 					return true;
 				}).pipe(
-					Effect.catch("_tag", {
-						failure: "NotReserveableException",
-						onFailure: () => {
-							out = false;
-							return Effect.succeed(void 0);
-						},
+					Effect.catchTag("NotReserveableException", () => {
+						out = false;
+						return Effect.succeed(void 0);
 					}),
 				),
 			kinds,

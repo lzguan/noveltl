@@ -1,4 +1,4 @@
-import { Either, Schema } from "effect";
+import { Result, Schema } from "effect";
 
 const MAX_CHAPTERS = 10_000;
 const MAX_CHAPTER_TITLE_LENGTH = 255;
@@ -6,16 +6,16 @@ const MAX_CHAPTER_TITLE_LENGTH = 255;
 const ChapterUploadV1Schema = Schema.Struct({
 	chapterContentText: Schema.String,
 	chapterIsPublic: Schema.optional(Schema.Boolean),
-	chapterNum: Schema.Number.pipe(Schema.int()),
+	chapterNum: Schema.Number.check(Schema.isInt()),
 	chapterTitle: Schema.optional(
-		Schema.NullOr(Schema.String.pipe(Schema.maxLength(MAX_CHAPTER_TITLE_LENGTH))),
+		Schema.NullOr(Schema.String.check(Schema.isMaxLength(MAX_CHAPTER_TITLE_LENGTH))),
 	),
 });
 
 const BulkChapterUploadV1Schema = Schema.Struct({
-	chapters: Schema.Array(ChapterUploadV1Schema).pipe(
-		Schema.minItems(1),
-		Schema.maxItems(MAX_CHAPTERS),
+	chapters: Schema.Array(ChapterUploadV1Schema).check(
+		Schema.isMinLength(1),
+		Schema.isMaxLength(MAX_CHAPTERS),
 	),
 });
 
@@ -39,24 +39,24 @@ function parseChapterUploadV1(text: string): ChapterUploadParseResult {
 		return { error: "The selected file is not valid JSON.", ok: false };
 	}
 
-	const decoded = Schema.decodeUnknownEither(BulkChapterUploadV1Schema)(value);
-	if (Either.isLeft(decoded)) {
+	const decoded = Schema.decodeUnknownResult(BulkChapterUploadV1Schema)(value);
+	if (Result.isFailure(decoded)) {
 		return {
 			error: "The selected file does not match the V1 chapter upload format.",
 			ok: false,
 		};
 	}
 
-	const chapterNumbers = decoded.right.chapters.map((chapter) => chapter.chapterNum);
-	const publicCount = decoded.right.chapters.filter(
+	const chapterNumbers = decoded.success.chapters.map((chapter) => chapter.chapterNum);
+	const publicCount = decoded.success.chapters.filter(
 		(chapter) => chapter.chapterIsPublic === true,
 	).length;
 
 	return {
 		ok: true,
 		summary: {
-			chapterCount: decoded.right.chapters.length,
-			draftCount: decoded.right.chapters.length - publicCount,
+			chapterCount: decoded.success.chapters.length,
+			draftCount: decoded.success.chapters.length - publicCount,
 			maxChapterNum: Math.max(...chapterNumbers),
 			minChapterNum: Math.min(...chapterNumbers),
 			publicCount,

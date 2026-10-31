@@ -10,12 +10,12 @@ import { buildRequestManager } from "./requestmanager";
 import { buildIdRepository } from "./idRepository";
 import type { RequestEvent } from "./types/requestTypes";
 import type { ConnectionException, FatalException } from "./types/errors";
-import type { TimeoutException, UnknownException } from "effect/Cause";
+import type { TimeoutError, UnknownError } from "effect/Cause";
 import { buildPubSub } from "../utils/pubsub";
 
 export const buildController = (
 	novelData: NovelData,
-): Effect.Effect<NovelController, ConnectionException | FatalException | TimeoutException> =>
+): Effect.Effect<NovelController, ConnectionException | FatalException | TimeoutError> =>
 	Effect.gen(function* () {
 		const idRepo = buildIdRepository();
 
@@ -36,7 +36,7 @@ export const buildController = (
 		const dispatch = (effect: Effect.Effect<RequestEvent[], unknown>): Effect.Effect<void> =>
 			Effect.gen(function* () {
 				const result = yield* effect.pipe(
-					Effect.catchAll((err) => {
+					Effect.catch((err) => {
 						return raiseTriggerEvent(novelDM.getters, {
 							eventType: "errorOccured",
 							from: "dataManager",
@@ -203,7 +203,7 @@ export const buildController = (
 				yield* requestManager.debounce();
 			});
 
-		const start = (): Effect.Effect<void, UnknownException> => {
+		const start = (): Effect.Effect<void, UnknownError> => {
 			running = true;
 			return Effect.gen(function* () {
 				yield* requestManager.start();
@@ -216,9 +216,11 @@ export const buildController = (
 									from: "dataManager",
 									error: err,
 								}).pipe(
-									Effect.andThen(() => {
-										running = false;
-									}),
+									Effect.andThen(
+										Effect.sync(() => {
+											running = false;
+										}),
+									),
 								),
 							),
 						);
@@ -233,7 +235,7 @@ export const buildController = (
 			running = false;
 
 			return requestManager.waitFlush().pipe(
-				Effect.catchAll((err) => {
+				Effect.catch((err) => {
 					return raiseTriggerEvent(novelDM.getters, {
 						eventType: "errorOccured",
 						from: "dataManager",

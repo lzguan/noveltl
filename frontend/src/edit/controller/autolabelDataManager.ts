@@ -10,7 +10,7 @@ import {
 	FatalException,
 	NotFoundException,
 } from "./types/errors";
-import { UnknownException } from "effect/Cause";
+import { UnknownError } from "effect/Cause";
 import type { ChapterFilter, TriggerEvent } from "./types/controllerTypes";
 import type { AutoLabelRun, CluenerParams, DoNothingParams } from "@/api/models";
 import {
@@ -96,7 +96,7 @@ export const buildAutolabelDataManager = (
 	raiseTriggerEvent: (event: TriggerEvent) => Effect.Effect<void>,
 	idRepo: IDRepository,
 	getters: {
-		chapterIds: () => Effect.Effect<readonly CProvId[], UnknownException>;
+		chapterIds: () => Effect.Effect<readonly CProvId[], UnknownError>;
 		chapter: (chapterId: CProvId) => Effect.Effect<
 			{
 				chapterNum: number;
@@ -131,14 +131,14 @@ export const buildAutolabelDataManager = (
 
 		const resolveChapterContentIds = (
 			filter: ChapterFilter,
-		): Effect.Effect<CCProvId[], UnknownException> =>
+		): Effect.Effect<CCProvId[], UnknownError> =>
 			Effect.gen(function* () {
 				const ids = yield* getters.chapterIds();
 				const result: CCProvId[] = [];
 				for (const chId of ids) {
 					const data = yield* getters
 						.chapter(chId)
-						.pipe(Effect.mapError((err) => new UnknownException({ orig: err })));
+						.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 					const num = data.chapterNum;
 					if (filter.start != null && num < filter.start) continue;
 					if (filter.end != null && num >= filter.end) continue;
@@ -155,7 +155,7 @@ export const buildAutolabelDataManager = (
 		const _createAutoLabelRun = (
 			params: CluenerParams | DoNothingParams,
 			chapterFilter: ChapterFilter,
-		): Effect.Effect<RequestEvent[], UnknownException | FatalException> =>
+		): Effect.Effect<RequestEvent[], UnknownError | FatalException> =>
 			Effect.sync(() => {
 				const reserveList = (): ReserveList => ({
 					autoLabelRun: [],
@@ -181,20 +181,20 @@ export const buildAutolabelDataManager = (
 						if (runProvId) {
 							yield* autoLabelRunIndex
 								.delete(runProvId)
-								.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+								.pipe(Effect.catch(() => Effect.succeed(void 0)));
 							yield* idRepo
 								.reserveIdObjState({
 									kind: "autoLabelRun",
 									id: runProvId,
 									desiredState: "detaching",
 								})
-								.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+								.pipe(Effect.catch(() => Effect.succeed(void 0)));
 							yield* idRepo
 								.releaseIdObjStateOnSuccess({
 									kind: "autoLabelRun",
 									id: runProvId,
 								})
-								.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+								.pipe(Effect.catch(() => Effect.succeed(void 0)));
 						}
 
 						for (const alId of newALIds) {
@@ -204,10 +204,10 @@ export const buildAutolabelDataManager = (
 									id: alId,
 									desiredState: "detaching",
 								})
-								.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+								.pipe(Effect.catch(() => Effect.succeed(void 0)));
 							yield* idRepo
 								.releaseIdObjStateOnSuccess({ kind: "autoLabel", id: alId })
-								.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+								.pipe(Effect.catch(() => Effect.succeed(void 0)));
 						}
 					});
 
@@ -265,7 +265,7 @@ export const buildAutolabelDataManager = (
 							}),
 						postSend: (data) =>
 							Effect.gen(function* () {
-								const validated = yield* Schema.decodeUnknown(
+								const validated = yield* Schema.decodeUnknownEffect(
 									CreateAutolabelsAutoLabelsPost200Response,
 								)(data).pipe(
 									Effect.mapError((err) => new FatalException({ orig: err })),
@@ -365,7 +365,7 @@ export const buildAutolabelDataManager = (
 			runId: ALRProvId,
 			labelGroupId: LGProvId,
 			chapterFilter: ChapterFilter,
-		): Effect.Effect<RequestEvent[], UnknownException | FatalException> => {
+		): Effect.Effect<RequestEvent[], UnknownError | FatalException> => {
 			const promotionFailed = (error: Error): Effect.Effect<void> =>
 				raiseTriggerEvent({
 					eventType: "autoLabelRunPromotionFinished",
@@ -465,7 +465,7 @@ export const buildAutolabelDataManager = (
 							}),
 						postSend: (data) =>
 							Effect.gen(function* () {
-								const validated = yield* Schema.decodeUnknown(
+								const validated = yield* Schema.decodeUnknownEffect(
 									CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost200Response,
 								)(data).pipe(
 									Effect.mapError((err) => new FatalException({ orig: err })),
@@ -565,13 +565,13 @@ export const buildAutolabelDataManager = (
 
 			return Effect.try({
 				try: buildRequests,
-				catch: (error) => new UnknownException({ orig: error }),
+				catch: (error) => new UnknownError({ orig: error }),
 			}).pipe(Effect.tapError(promotionFailed));
 		};
 
 		const _refreshAutoLabelRuns = (): Effect.Effect<
 			RequestEvent[],
-			UnknownException | FatalException
+			UnknownError | FatalException
 		> =>
 			Effect.gen(function* () {
 				const currentRunIds = yield* autoLabelRunIndex.getIds();
@@ -628,7 +628,7 @@ export const buildAutolabelDataManager = (
 							}),
 						postSend: (data) =>
 							Effect.gen(function* () {
-								const validated = yield* Schema.decodeUnknown(
+								const validated = yield* Schema.decodeUnknownEffect(
 									ReadAutoLabelRunsAutoLabelRunsGet200Response,
 								)(data).pipe(
 									Effect.mapError((err) => new FatalException({ orig: err })),
@@ -638,7 +638,7 @@ export const buildAutolabelDataManager = (
 								for (const id of existingIds) {
 									yield* autoLabelRunIndex
 										.delete(id)
-										.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+										.pipe(Effect.catch(() => Effect.succeed(void 0)));
 								}
 
 								for (const run of validated) {
@@ -675,7 +675,7 @@ export const buildAutolabelDataManager = (
 
 		const _reloadAutoLabelRun = (
 			runId: ALRProvId,
-		): Effect.Effect<RequestEvent[], UnknownException | FatalException> =>
+		): Effect.Effect<RequestEvent[], UnknownError | FatalException> =>
 			Effect.gen(function* () {
 				const slot = yield* autoLabelRunIndex
 					.get(runId)
@@ -688,10 +688,10 @@ export const buildAutolabelDataManager = (
 
 				yield* autoLabelRunIndex
 					.increment(runId)
-					.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+					.pipe(Effect.catch(() => Effect.succeed(void 0)));
 				yield* autoLabelRunIndex
 					.setData(runId, { status: "loading" })
-					.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+					.pipe(Effect.catch(() => Effect.succeed(void 0)));
 
 				let oldAutoLabelIds: AProvId[] = [];
 
@@ -704,10 +704,10 @@ export const buildAutolabelDataManager = (
 					Effect.gen(function* () {
 						yield* autoLabelRunIndex
 							.setData(runId, { status: "error" })
-							.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+							.pipe(Effect.catch(() => Effect.succeed(void 0)));
 						yield* autoLabelRunIndex
 							.decrement(runId)
-							.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+							.pipe(Effect.catch(() => Effect.succeed(void 0)));
 					});
 
 				const phaseOneReserveList = (): ReserveList => ({
@@ -772,7 +772,7 @@ export const buildAutolabelDataManager = (
 							}),
 						postSend: (data) =>
 							Effect.gen(function* () {
-								const validated = yield* Schema.decodeUnknown(
+								const validated = yield* Schema.decodeUnknownEffect(
 									ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet200Response,
 								)(data).pipe(
 									Effect.mapError(
@@ -830,7 +830,7 @@ export const buildAutolabelDataManager = (
 												chapterId: cId,
 											},
 										})
-										.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+										.pipe(Effect.catch(() => Effect.succeed(void 0)));
 								}
 								const refreshedAutoLabelIds = new Set(yield* newIndex.getIds());
 								oldAutoLabelIds = oldAutoLabelIds.filter(
@@ -851,13 +851,13 @@ export const buildAutolabelDataManager = (
 											id,
 											desiredState,
 										})
-										.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+										.pipe(Effect.catch(() => Effect.succeed(void 0)));
 									yield* idRepo
 										.releaseIdObjStateOnSuccess({
 											kind: "autoLabel",
 											id,
 										})
-										.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+										.pipe(Effect.catch(() => Effect.succeed(void 0)));
 								}
 
 								yield* autoLabelRunIndex.setData(runId, {
@@ -866,7 +866,7 @@ export const buildAutolabelDataManager = (
 								});
 								yield* autoLabelRunIndex
 									.decrement(runId)
-									.pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+									.pipe(Effect.catch(() => Effect.succeed(void 0)));
 
 								yield* raiseTriggerEvent({
 									eventType: "autoLabelRunReloaded",
@@ -888,7 +888,7 @@ export const buildAutolabelDataManager = (
 		const _loadAutoLabelData = (
 			autoLabelId: AProvId,
 			flags?: { now: boolean; forPreview: boolean },
-		): Effect.Effect<RequestEvent[], UnknownException | FatalException> =>
+		): Effect.Effect<RequestEvent[], UnknownError | FatalException> =>
 			Effect.gen(function* () {
 				let parentRunId: ALRProvId | null = null;
 				const runIds = yield* autoLabelRunIndex.getIds();
@@ -976,7 +976,7 @@ export const buildAutolabelDataManager = (
 				const onError = (): Effect.Effect<void> =>
 					Effect.gen(function* () {
 						yield* runSlot.data.index.setData(autoLabelId, { status: "error" });
-					}).pipe(Effect.catchAll(() => Effect.succeed(void 0)));
+					}).pipe(Effect.catch(() => Effect.succeed(void 0)));
 
 				return [
 					{
@@ -1030,7 +1030,7 @@ export const buildAutolabelDataManager = (
 							}),
 						postSend: (data) =>
 							Effect.gen(function* () {
-								const validated = yield* Schema.decodeUnknown(
+								const validated = yield* Schema.decodeUnknownEffect(
 									ReadAutolabelByIdAutoLabelsAutoLabelIdGet200Response,
 								)(data).pipe(
 									Effect.mapError(
@@ -1091,7 +1091,7 @@ export const buildAutolabelDataManager = (
 		function supportsNow<
 			Params extends unknown[],
 			FlagT extends { now: boolean } = { now: boolean },
-			E = FatalException | UnknownException,
+			E = FatalException | UnknownError,
 		>(fn: (...args: [...Params, FlagT | undefined]) => Effect.Effect<RequestEvent[], E>) {
 			function wrapped(...args: [...Params, FlagT | undefined]) {
 				return Effect.gen(function* () {

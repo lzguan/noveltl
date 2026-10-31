@@ -367,30 +367,30 @@ describe("buildChapterDataManager", () => {
 			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
 
 			const result = Effect.runSync(
-				chapterDM.addLabel(labelGroupId, 3, 8, "overlap").pipe(Effect.either),
+				chapterDM.addLabel(labelGroupId, 3, 8, "overlap").pipe(Effect.result),
 			);
 
-			expect(result._tag).toBe("Left");
+			expect(result._tag).toBe("Failure");
 		});
 
 		it("rejects out-of-bounds positions", () => {
 			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
 
 			const result = Effect.runSync(
-				chapterDM.addLabel(labelGroupId, -1, 5).pipe(Effect.either),
+				chapterDM.addLabel(labelGroupId, -1, 5).pipe(Effect.result),
 			);
 
-			expect(result._tag).toBe("Left");
+			expect(result._tag).toBe("Failure");
 		});
 
 		it("does not require the caller to provide the label word", () => {
 			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM());
 
 			const result = Effect.runSync(
-				chapterDM.addLabel(labelGroupId, 6, 9).pipe(Effect.either),
+				chapterDM.addLabel(labelGroupId, 6, 9).pipe(Effect.result),
 			);
 
-			expect(result._tag).toBe("Right");
+			expect(result._tag).toBe("Success");
 		});
 	});
 
@@ -415,10 +415,10 @@ describe("buildChapterDataManager", () => {
 			const missingLabelId = idRepo.newId("label");
 
 			const result = Effect.runSync(
-				chapterDM.deleteLabel(labelGroupId, missingLabelId).pipe(Effect.either),
+				chapterDM.deleteLabel(labelGroupId, missingLabelId).pipe(Effect.result),
 			);
 
-			expect(result._tag).toBe("Left");
+			expect(result._tag).toBe("Failure");
 		});
 	});
 
@@ -581,9 +581,9 @@ describe("buildChapterDataManager", () => {
 			Effect.runSync(chapterDM.flush());
 
 			const deleteResult = Effect.runSync(
-				chapterDM.deleteLabel(labelGroupId, bobId).pipe(Effect.either),
+				chapterDM.deleteLabel(labelGroupId, bobId).pipe(Effect.result),
 			);
-			expect(deleteResult._tag).toBe("Right");
+			expect(deleteResult._tag).toBe("Success");
 		});
 
 		it("drops labels straddling insertion point", () => {
@@ -593,9 +593,9 @@ describe("buildChapterDataManager", () => {
 			Effect.runSync(chapterDM.insertTextAt(2, "XX"));
 
 			const deleteResult = Effect.runSync(
-				chapterDM.deleteLabel(labelGroupId, aliceId).pipe(Effect.either),
+				chapterDM.deleteLabel(labelGroupId, aliceId).pipe(Effect.result),
 			);
-			expect(deleteResult._tag).toBe("Left");
+			expect(deleteResult._tag).toBe("Failure");
 		});
 
 		it("preserves labels before insertion point", () => {
@@ -605,9 +605,9 @@ describe("buildChapterDataManager", () => {
 			Effect.runSync(chapterDM.insertTextAt(14, " yesterday"));
 
 			const deleteResult = Effect.runSync(
-				chapterDM.deleteLabel(labelGroupId, aliceId).pipe(Effect.either),
+				chapterDM.deleteLabel(labelGroupId, aliceId).pipe(Effect.result),
 			);
-			expect(deleteResult._tag).toBe("Right");
+			expect(deleteResult._tag).toBe("Success");
 		});
 	});
 
@@ -621,9 +621,9 @@ describe("buildChapterDataManager", () => {
 			Effect.runSync(chapterDM.flush());
 
 			const deleteResult = Effect.runSync(
-				chapterDM.deleteLabel(labelGroupId, bobId).pipe(Effect.either),
+				chapterDM.deleteLabel(labelGroupId, bobId).pipe(Effect.result),
 			);
-			expect(deleteResult._tag).toBe("Right");
+			expect(deleteResult._tag).toBe("Success");
 		});
 
 		it("drops labels overlapping deletion range", () => {
@@ -633,9 +633,9 @@ describe("buildChapterDataManager", () => {
 			Effect.runSync(chapterDM.deleteTextAt(8, 14));
 
 			const deleteResult = Effect.runSync(
-				chapterDM.deleteLabel(labelGroupId, bobId).pipe(Effect.either),
+				chapterDM.deleteLabel(labelGroupId, bobId).pipe(Effect.result),
 			);
-			expect(deleteResult._tag).toBe("Left");
+			expect(deleteResult._tag).toBe("Failure");
 		});
 	});
 
@@ -646,9 +646,9 @@ describe("buildChapterDataManager", () => {
 			Effect.runSync(chapterDM.destroy());
 
 			const result = Effect.runSync(
-				chapterDM.addLabel(labelGroupId, 6, 9).pipe(Effect.either),
+				chapterDM.addLabel(labelGroupId, 6, 9).pipe(Effect.result),
 			);
-			expect(result._tag).toBe("Left");
+			expect(result._tag).toBe("Failure");
 			expect(chapterDM.getters.isDestroyed()).toBe(true);
 		});
 
@@ -861,10 +861,10 @@ describe("buildChapterDataManager", () => {
 				}
 
 				const flushResult = await Effect.runPromise(
-					Effect.either(requestManager.waitFlush().pipe(Effect.timeout("1 second"))),
+					Effect.result(requestManager.waitFlush().pipe(Effect.timeout("1 second"))),
 				);
 
-				expect(flushResult._tag).toBe("Right");
+				expect(flushResult._tag).toBe("Success");
 				expect(labelOpMock).toHaveBeenCalledWith(
 					newLabelDataId,
 					{
@@ -1090,10 +1090,10 @@ describe("buildChapterDataManager", () => {
 			}
 
 			const flushResult = await Effect.runPromise(
-				Effect.either(requestManager.waitFlush().pipe(Effect.timeout("500 millis"))),
+				Effect.result(requestManager.waitFlush().pipe(Effect.timeout("500 millis"))),
 			);
 
-			expect(flushResult._tag).toBe("Right");
+			expect(flushResult._tag).toBe("Success");
 			expect(requestManager.isQueueEmpty()).toBe(true);
 		});
 
@@ -1156,10 +1156,10 @@ describe("buildChapterDataManager", () => {
 			}
 
 			const flushResult = await Effect.runPromise(
-				Effect.either(requestManager.waitFlush().pipe(Effect.timeout("500 millis"))),
+				Effect.result(requestManager.waitFlush().pipe(Effect.timeout("500 millis"))),
 			);
 
-			expect(flushResult._tag).toBe("Right");
+			expect(flushResult._tag).toBe("Success");
 			expect(requestManager.isQueueEmpty()).toBe(true);
 			expect(labelOpMock).toHaveBeenCalledTimes(1);
 			expect(reloadMock).toHaveBeenCalledTimes(1);
@@ -1234,9 +1234,9 @@ describe("buildNovelDataManager chapter eviction", () => {
 						forEditor: true,
 						fromCached: true,
 					})
-					.pipe(Effect.either),
+					.pipe(Effect.result),
 			)._tag,
-		).toBe("Left");
+		).toBe("Failure");
 		expect(triggerEvents).not.toContainEqual({ eventType: "chapterClosed", chapterId });
 
 		Effect.runSync(closeEvents[0].preSend());

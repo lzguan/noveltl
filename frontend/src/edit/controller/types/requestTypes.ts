@@ -7,7 +7,7 @@ import type {
 	FatalException,
 	NotFoundException,
 } from "./errors";
-import type { UnknownException } from "effect/Cause";
+import type { UnknownError } from "effect/Cause";
 
 /**
  * Type indicating what a request event is used for. Mainly used for logging and debugging.
@@ -201,9 +201,9 @@ export type RequestManager = {
 	/**
 	 * Send requests until the queue is empty.
 	 */
-	start: () => Effect.Effect<void, UnknownException>;
+	start: () => Effect.Effect<void, UnknownError>;
 	/**
 	 * Lock and wait until all requests are finished. Effectively shuts down the request manager.
 	 */
-	waitFlush: () => Effect.Effect<void, UnknownException>; // await flush queue
+	waitFlush: () => Effect.Effect<void, UnknownError>; // await flush queue
 };

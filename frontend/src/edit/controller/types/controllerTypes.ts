@@ -25,7 +25,7 @@ import type {
 	AutoLabelRunGetterSlot,
 } from "./helperTypes";
 import type { Role } from "@/api/models/role";
-import type { UnknownException } from "effect/Cause";
+import type { UnknownError } from "effect/Cause";
 
 // Generics
 
@@ -241,9 +241,9 @@ export interface NovelController extends BaseController<
 	/**
 	 * Use Effect.runPromise to run the returned effect.
 	 */
-	start: () => Effect.Effect<void, UnknownException>;
+	start: () => Effect.Effect<void, UnknownError>;
 	/**
 	 * Use Effect.runPromise to run the returned promise.
 	 */
-	stop: () => Effect.Effect<void, UnknownException>;
+	stop: () => Effect.Effect<void, UnknownError>;
 }

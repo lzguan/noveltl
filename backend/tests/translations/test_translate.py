@@ -165,7 +165,7 @@ def test_prepare_uses_correct_input_and_persists_adapter_bytes(
             namespace="translations",
             content_type="application/jsonl",
         )
-        test_db.flush([previous_file])
+        test_db.flush()
         previous = test_db.get(TranslationTask, task_ids[0])
         current = test_db.get(TranslationTask, task_ids[1])
         assert previous is not None and current is not None

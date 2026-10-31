@@ -70,7 +70,7 @@ def workflow_access_condition(
     )
 
 
-def workflow_mod_access_select[T: Select[tuple[Any, ...]]](
+def workflow_mod_access_select[T: Select[*tuple[Any, ...]]](
     stmt: T,
     current_user: User,
     workflow_type: type[Workflow] = Workflow,
@@ -103,7 +103,7 @@ def workflow_mod_access_delete[T: Delete](
     return stmt.where(workflow_access_condition(current_user, workflow_type))
 
 
-def instance_mod_access_select[T: Select[tuple[Any, ...]]](
+def instance_mod_access_select[T: Select[*tuple[Any, ...]]](
     stmt: T, current_user: User, instance_type: type[Instance] = Instance
 ) -> T:
     """Restrict an instance select to instances accessible to the user."""
@@ -121,7 +121,7 @@ def instance_mod_access_select[T: Select[tuple[Any, ...]]](
     )
 
 
-def grouping_mod_access_select[T: Select[tuple[Any, ...]]](
+def grouping_mod_access_select[T: Select[*tuple[Any, ...]]](
     stmt: T, current_user: User, grouping_type: type[Grouping] = Grouping
 ) -> T:
     """Restrict a grouping select through the grouping's workflow scope."""

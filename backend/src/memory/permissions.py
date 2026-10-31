@@ -10,7 +10,7 @@ from src.novels.models import Novel
 from src.novels.permissions import novel_mod_access_select
 
 
-def memory_group_mod_access_select[T: Select[tuple[Any, ...]]](
+def memory_group_mod_access_select[T: Select[*tuple[Any, ...]]](
     stmt: T,
     current_user: User | None,
     aliased_type: type[MemoryGroup] = MemoryGroup,
@@ -31,7 +31,7 @@ def memory_group_mod_access_select[T: Select[tuple[Any, ...]]](
     return stmt.where(exists(novel_access))
 
 
-def memory_mod_access_select[T: Select[tuple[Any, ...]]](
+def memory_mod_access_select[T: Select[*tuple[Any, ...]]](
     stmt: T,
     current_user: User | None,
     aliased_type: type[Memory] = Memory,

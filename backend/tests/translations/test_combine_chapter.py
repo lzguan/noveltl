@@ -69,7 +69,7 @@ def test_combine_publishes_pinned_chapter_and_memories_before_advancing(
         namespace="translations",
         content_type="application/jsonl",
     )
-    test_db.flush([stored])
+    test_db.flush()
     previous.output_file_id = stored.file_id
     previous.status = State.FINALIZING if failure == "incomplete" else State.COMPLETE
     current.status = State.READY

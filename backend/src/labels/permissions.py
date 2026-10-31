@@ -19,7 +19,7 @@ from src.novels.constants import Visibility
 from src.novels.permissions import chapter_content_mod_access_select, novel_mod_access_select
 
 
-def label_group_mod_access_select[T: Select[tuple[Any, ...]]](
+def label_group_mod_access_select[T: Select[*tuple[Any, ...]]](
     q: T,
     current_user: User,
     aliased_type: type[LabelGroup] = LabelGroup,
@@ -67,7 +67,7 @@ def label_group_mod_access_select[T: Select[tuple[Any, ...]]](
     return q
 
 
-def label_group_mod_access_insert[T: Select[tuple[Any, ...]]](q: T, current_user: User, novel_id: uuid.UUID) -> T:
+def label_group_mod_access_insert[T: Select[*tuple[Any, ...]]](q: T, current_user: User, novel_id: uuid.UUID) -> T:
     """
     Takes a select statement used for an insert statement for label groups and returns a select statement that restricts permissions on q.
     """
@@ -109,7 +109,7 @@ def label_group_mod_access_update[T: Update](
     return q
 
 
-def label_data_mod_access_select[T: Select[tuple[Any, ...]]](
+def label_data_mod_access_select[T: Select[*tuple[Any, ...]]](
     q: T,
     current_user: User,
     aliased_type: type[LabelData] = LabelData,
@@ -186,7 +186,7 @@ def label_data_mod_access_update[T: Update](q: T, current_user: User, aliased_ty
     return q
 
 
-def label_data_mod_access_insert[T: Select[tuple[Any, ...]]](q: T, current_user: User, label_group_id: uuid.UUID) -> T:
+def label_data_mod_access_insert[T: Select[*tuple[Any, ...]]](q: T, current_user: User, label_group_id: uuid.UUID) -> T:
     """
     Takes a select statement used for an insert from select statement for label datas and returns a select statement for a label data that restricts permissions on q.
 
@@ -234,7 +234,7 @@ def label_data_mod_access_insert[T: Select[tuple[Any, ...]]](q: T, current_user:
     return q
 
 
-def label_mod_access_insert[T: Select[tuple[Any, ...]]](q: T, current_user: User, label_data_id: uuid.UUID) -> T:
+def label_mod_access_insert[T: Select[*tuple[Any, ...]]](q: T, current_user: User, label_data_id: uuid.UUID) -> T:
     """
     Takes a select statement used for an insert from select statement for labels and returns a select statement for a label that restricts permissions on q.
     """
@@ -348,7 +348,7 @@ def label_mod_access_delete[T: Delete](q: T, current_user: User, aliased_type: t
     return q
 
 
-def label_contributors_mod_access_select[T: Select[tuple[Any, ...]]](
+def label_contributors_mod_access_select[T: Select[*tuple[Any, ...]]](
     q: T, current_user: User, aliased_type: type[LabelContributor] = LabelContributor
 ) -> T:
     """

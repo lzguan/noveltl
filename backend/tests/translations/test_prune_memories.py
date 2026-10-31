@@ -135,7 +135,7 @@ def test_pruning_resolves_saved_candidates_and_advances_only_valid_output(
             namespace="translations",
             content_type="application/jsonl",
         )
-        test_db.flush([previous])
+        test_db.flush()
         tasks[0].status, tasks[0].output_file_id = State.COMPLETE, previous.file_id
         task.status = State.READY
     test_db.commit()

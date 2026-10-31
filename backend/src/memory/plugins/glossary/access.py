@@ -155,7 +155,7 @@ def inspect_terms(
         terms_query = terms_query.where(GlossaryTerm.review_status != ReviewStatus.REJECTED)
 
     terms_by_memory: dict[UUID, list[AgentGlossaryTerm]] = {memory_id: [] for memory_id in memory_ids}
-    for memory_id, term in db.execute(terms_query).tuples():
+    for memory_id, term in db.execute(terms_query):
         terms_by_memory[memory_id].append(AgentGlossaryTerm.model_validate(term))
     rows = [
         AgentGlossaryMemory[UUID](
@@ -194,7 +194,7 @@ def _agent_glossary_memories(
     if not include_rejected:
         query = query.where(GlossaryTerm.review_status != ReviewStatus.REJECTED)
     terms_by_memory: dict[UUID, list[AgentGlossaryTerm]] = {memory_id: [] for memory_id in memory_ids}
-    for memory_id, term in db.execute(query).tuples():
+    for memory_id, term in db.execute(query):
         terms_by_memory[memory_id].append(AgentGlossaryTerm.model_validate(term))
     return [
         AgentGlossaryMemory[UUID](memory=AgentMemory.model_validate(memory), terms=terms_by_memory[memory.memory_id])
@@ -245,7 +245,7 @@ def _expand_alias_terms(
                 GlossaryTerm.memory_group_id == ctx.memory_group_id,
             )
             .order_by(Memory.memory_start_num.desc(), Memory.memory_id, GlossaryTerm.term, GlossaryTerm.term_id)
-        ).tuples()
+        )
     )
     terms_by_alias: dict[UUID, list[GlossaryTerm]] = {}
     memories_by_id: dict[UUID, Memory] = {}

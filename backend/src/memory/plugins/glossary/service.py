@@ -1,6 +1,7 @@
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import Select, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 
@@ -146,7 +147,7 @@ def query_glossary_terms(
             raise ChapterNotFoundException from e
         chapter_content_id = query_chapter_content_by_most_recent(db, user, chapter_id).chapter_content_id
 
-    def apply_filters(query):
+    def apply_filters[T: Select[*tuple[Any, ...]]](query: T) -> T:
         query = query.where(GlossaryTerm.memory_group_id == memory_group_id)
         query = glossary_term_mod_access_select(query, user)
         if chapter_content_id is not None:

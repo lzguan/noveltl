@@ -1,6 +1,6 @@
 import hashlib
 import uuid
-from collections.abc import Iterator
+from collections.abc import Generator, Iterator
 from contextlib import contextmanager
 from io import BytesIO
 
@@ -45,7 +45,7 @@ class MemoryObjectStore:
         *,
         content_type: str,
         content_encoding: str | None = None,
-    ) -> Iterator[ObjectWriter]:
+    ) -> Generator[ObjectWriter]:
         writer = MemoryWriter(key)
         yield writer
         if self.upload_error is not None:

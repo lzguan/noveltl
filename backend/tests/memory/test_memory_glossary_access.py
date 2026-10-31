@@ -379,8 +379,7 @@ def test_memory_and_glossary_deletion_preserve_independent_records(test_db: Sess
     assert independent.mark == "trait"
 
     update_memory(test_db, admin, independent.memory_id, independent.memory_content, None)
-    test_db.refresh(independent)
-    assert independent.mark is None
+    assert test_db.execute(select(Memory.mark).where(Memory.memory_id == independent.memory_id)).scalar_one() is None
 
     expire_memory(test_db, admin, independent.memory_id, chapter_2.chapter_id)
     test_db.refresh(independent)

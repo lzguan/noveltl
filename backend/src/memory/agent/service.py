@@ -158,7 +158,7 @@ def query_job_summary(db: Session, user: User, memory_job_id: UUID) -> schemas.M
     )
     statement = memory_group_mod_access_select(statement, user)
     try:
-        job, pending, processing, completed, failed, is_claimed = db.execute(statement).one()._t
+        job, pending, processing, completed, failed, is_claimed = db.execute(statement).one()
     except NoResultFound as exc:
         raise MemoryJobNotFoundException(f"Memory job {memory_job_id} not found or not accessible.") from exc
     server_time = db.execute(select(func.now())).scalar_one()
@@ -309,7 +309,7 @@ def start_task(
     )
     statement = memory_group_mod_access_select(statement, user, edit_only=True)
     try:
-        task, chapter_num = db.execute(statement).one()._t
+        task, chapter_num = db.execute(statement).one()
     except NoResultFound as exc:
         raise MemoryChapterTaskNotFoundException(
             f"Memory task for job {memory_job_id} and chapter {chapter_id} not found or not accessible."

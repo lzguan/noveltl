@@ -16,6 +16,19 @@ Devcontainer configurations are found in [`../devcontainer`](../.devcontainer/).
 
 > Note for Windows users: make sure to clone this repository onto the WSL filesystem and not the mounted Windows filesystem. 
 
+### Tool versions
+
+CI reads Node.js from `engines.node` in `frontend/package.json`, uv from
+`tool.uv.required-version` in `backend/pyproject.toml`, and pnpm from
+`devEngines.packageManager` in the frontend and end-to-end package manifests.
+Update those declarations when changing tools; the workflow files do not need
+individual version edits. Commit the package-manager lockfile changes when
+updating pnpm.
+
+Container images still declare their tool versions in `.devcontainer/Dockerfile`,
+`backend/Dockerfile`, and `frontend/Dockerfile`. Keep those versions aligned and
+rebuild the devcontainer after upgrading its tools.
+
 ## Local
 
 Local setup not yet documented, we recommend using devcontainers for now.

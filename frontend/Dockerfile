@@ -1,10 +1,10 @@
-FROM ghcr.io/pnpm/pnpm:12.3.4 AS base
+FROM ghcr.io/pnpm/pnpm:12.16.1 AS base
 
 SHELL [ "/bin/bash", "-c" ]
 
 ARG GNAME=newgroup
 ARG UNAME=newuser
-ARG NODE_VERSION=24
+ARG NODE_VERSION=26
 ARG UID=1000
 ARG GID=1000
 
@@ -36,7 +36,7 @@ CMD pnpm run dev
 FROM base AS build
 RUN pnpm build
 
-FROM caddy:2.11.4-alpine AS production
+FROM caddy:2.11.7-alpine AS production
 
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /home/newuser/frontend/dist /srv

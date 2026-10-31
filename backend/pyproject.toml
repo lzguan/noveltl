@@ -59,7 +59,7 @@ default-groups = [
     "agent",
     "tagent"
 ]
-required-version = ">=0.10.0"
+required-version = "==0.13.6"
 
 [[tool.uv.index]]
 name = "torch-cpu"

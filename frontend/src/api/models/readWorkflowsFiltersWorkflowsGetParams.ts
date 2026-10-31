@@ -8,15 +8,15 @@ import type { WorkflowStatus } from './workflowStatus';
 import type { WorkflowUseCase } from './workflowUseCase';
 
 export type ReadWorkflowsFiltersWorkflowsGetParams = {
-novelId?: string | null;
-labelGroupId?: string | null;
-useCase?: WorkflowUseCase | null;
-status?: WorkflowStatus | null;
-search?: string | null;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-cursor?: string | null;
+  novelId?: string | null;
+  labelGroupId?: string | null;
+  useCase?: WorkflowUseCase | null;
+  status?: WorkflowStatus | null;
+  search?: string | null;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  cursor?: string | null;
 };

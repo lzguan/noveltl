@@ -6,10 +6,10 @@
  */
 
 export type ReadWorkflowInstancesFiltersWorkflowsWorkflowIdInstancesGetParams = {
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-cursor?: string | null;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  cursor?: string | null;
 };

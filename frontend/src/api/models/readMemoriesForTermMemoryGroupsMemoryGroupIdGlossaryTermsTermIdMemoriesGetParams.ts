@@ -6,14 +6,12 @@
  */
 
 export type ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetParams = {
-/**
- * @minimum 0
- */
-skip?: number;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-chapterId?: string | null;
+  /** @minimum 0 */
+  skip?: number;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  chapterId?: string | null;
 };

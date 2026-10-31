@@ -6,14 +6,12 @@
  */
 
 export type ReadGroupingValuesFiltersGroupingsGroupingIdValuesGetParams = {
-search?: string | null;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-/**
- * @minimum 0
- */
-offset?: number;
+  search?: string | null;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  /** @minimum 0 */
+  offset?: number;
 };

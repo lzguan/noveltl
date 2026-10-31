@@ -7,14 +7,12 @@
 import type { MemoryType } from './memoryType';
 
 export type ReadGlossaryMemoriesMemoryGroupsMemoryGroupIdGlossaryMemoriesGetParams = {
-/**
- * @minimum 0
- */
-skip?: number;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-memoryTypes?: MemoryType[] | null;
+  /** @minimum 0 */
+  skip?: number;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  memoryTypes?: MemoryType[] | null;
 };

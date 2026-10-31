@@ -8,15 +8,13 @@ import type { MemoryType } from './memoryType';
 import type { PluginName } from './pluginName';
 
 export type ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGetParams = {
-/**
- * @minimum 0
- */
-skip?: number;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-pluginNames?: PluginName[] | null;
-memoryTypes?: MemoryType[] | null;
+  /** @minimum 0 */
+  skip?: number;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  pluginNames?: PluginName[] | null;
+  memoryTypes?: MemoryType[] | null;
 };

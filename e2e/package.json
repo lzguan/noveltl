@@ -11,17 +11,17 @@
 		"test": "playwright test",
 		"test:headed": "playwright test --headed",
 		"test:ui": "playwright test --ui",
-		"check": "pnpm exec tsgo -b --noEmit",
+		"check": "pnpm exec tsc -b --noEmit",
 		"lint": "pnpm exec oxlint",
 		"lint:fix": "pnpm exec oxlint --fix",
 		"format": "pnpm exec oxfmt"
 	},
 	"devDependencies": {
-		"@playwright/test": "^1.63.0",
-		"@types/node": "^24.13.3",
-		"@typescript/native-preview": "7.0.0-dev.20260702.3",
+		"@playwright/test": "^1.64.1",
+		"@types/node": "^26.6.6",
 		"oxfmt": "^0.75.0",
-		"oxlint": "^1.82.0"
+		"oxlint": "^1.90.0",
+		"typescript": "^7.0.2"
 	},
 	"devEngines": {
 		"packageManager": {

@@ -6,6 +6,6 @@
  */
 
 export type ReadAutoLabelRunsAutoLabelRunsGetParams = {
-novelId: string;
-mine?: boolean;
+  novelId: string;
+  mine?: boolean;
 };

@@ -7,15 +7,13 @@
 import type { MemoryType } from './memoryType';
 
 export type ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetParams = {
-/**
- * @minimum 0
- */
-skip?: number;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-createdExactlyAtChapter?: boolean;
-memoryTypes?: MemoryType[] | null;
+  /** @minimum 0 */
+  skip?: number;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  createdExactlyAtChapter?: boolean;
+  memoryTypes?: MemoryType[] | null;
 };

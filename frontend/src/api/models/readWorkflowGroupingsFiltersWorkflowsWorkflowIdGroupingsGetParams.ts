@@ -7,11 +7,11 @@
 import type { GroupingStatus } from './groupingStatus';
 
 export type ReadWorkflowGroupingsFiltersWorkflowsWorkflowIdGroupingsGetParams = {
-status?: GroupingStatus | null;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-cursor?: string | null;
+  status?: GroupingStatus | null;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  cursor?: string | null;
 };

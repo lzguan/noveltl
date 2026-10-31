@@ -124,6 +124,36 @@ Cons:
 
 Fit: **Medium** long-term, **Low** near-term priority.
 
+### 5) Procrastinate (Postgres-backed queue)
+
+Pros:
+- Durable task persistence in Postgres with no separate broker dependency.
+- Operationally simpler in small deployments that already rely on Postgres.
+
+Cons:
+- Shares capacity/failure domain with application OLTP workload unless isolated.
+- Mismatch with current multi-worker isolation pattern (separate Redis DBs/apps).
+- Still does not remove the need for existing DB lifecycle semantics for claims,
+  staged handoffs, polling gates, and recovery logic.
+
+Fit: **Medium-Low** right now; interesting if we explicitly want broker
+consolidation into Postgres and accept the operational tradeoff.
+
+### 6) Taskiq
+
+Pros:
+- Modern async task framework with pluggable brokers.
+- Flexible for teams prioritizing async-first worker code.
+
+Cons:
+- Main value is framework ergonomics; lifecycle correctness would still remain
+  application-owned in our Postgres state machines.
+- Would require transport rewiring and test rewrites across all worker domains
+  for limited near-term semantic gain.
+- Async-first benefits are gated by a separate async-client/session decision.
+
+Fit: **Medium-Low** for current priorities.
+
 ## Selected direction
 
 **Do not migrate off Celery now.**

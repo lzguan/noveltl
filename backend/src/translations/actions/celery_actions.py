@@ -186,7 +186,7 @@ class CeleryActionCallbacks(ActionCallbacks):
             ).one_or_none()
             if next_task is None:
                 return
-            next_task_id, next_action = next_task._t
+            next_task_id, next_action = next_task
             ready_task_id = session.scalar(
                 update(TranslationTask)
                 .where(

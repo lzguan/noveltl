@@ -10,7 +10,7 @@ from src.novels.constants import Role, Visibility
 from src.novels.models import Chapter, ChapterContent, Novel, NovelContributor, SourceWork
 
 
-def novel_mod_access_select[T: Select[tuple[Any, ...]]](
+def novel_mod_access_select[T: Select[*tuple[Any, ...]]](
     q: T,
     current_user: User | None,
     aliased_type: type[Novel] = Novel,
@@ -85,7 +85,7 @@ def novel_mod_access_update[T: Update](stmt: T, current_user: User, aliased_type
     return stmt
 
 
-def source_work_mod_access_select[T: Select[tuple[Any, ...]]](
+def source_work_mod_access_select[T: Select[*tuple[Any, ...]]](
     q: T, current_user: User | None, aliased_type: type[SourceWork] = SourceWork
 ) -> T:
     """
@@ -131,7 +131,7 @@ def source_work_mod_access_update[T: Update](
     return stmt
 
 
-def chapter_mod_access_select[T: Select[tuple[Any, ...]]](
+def chapter_mod_access_select[T: Select[*tuple[Any, ...]]](
     q: T,
     current_user: User | None,
     aliased_type: type[Chapter] = Chapter,
@@ -201,7 +201,7 @@ def chapter_mod_access_update[T: Update](stmt: T, current_user: User, aliased_ty
     return stmt
 
 
-def chapter_mod_access_insert[T: Select[tuple[Any, ...]]](stmt: T, current_user: User, novel_id: uuid.UUID) -> T:
+def chapter_mod_access_insert[T: Select[*tuple[Any, ...]]](stmt: T, current_user: User, novel_id: uuid.UUID) -> T:
     """
     Takes an select statement used for an insert from select statement for chapter and returns a select statement for a chapter that restrict permissions on stmt.
     """
@@ -234,7 +234,7 @@ def chapter_mod_access_delete[T: Delete](stmt: T, current_user: User, aliased_ty
     return stmt
 
 
-def chapter_content_mod_access_select[T: Select[tuple[Any, ...]]](
+def chapter_content_mod_access_select[T: Select[*tuple[Any, ...]]](
     q: T,
     current_user: User | None,
     aliased_type: type[ChapterContent] = ChapterContent,
@@ -252,7 +252,7 @@ def chapter_content_mod_access_select[T: Select[tuple[Any, ...]]](
     return q.where(exists(subq))
 
 
-def chapter_content_mod_access_insert[T: Select[tuple[Any, ...]]](
+def chapter_content_mod_access_insert[T: Select[*tuple[Any, ...]]](
     stmt: T, current_user: User, chapter_id: uuid.UUID
 ) -> T:
     nc_alias = aliased(NovelContributor)

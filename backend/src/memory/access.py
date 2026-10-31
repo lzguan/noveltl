@@ -34,7 +34,7 @@ def check_mem_access_ctx(db: Session, ctx: MemAccessContext) -> tuple[int, UUID]
     except NoResultFound as e:
         raise ChapterContentNotFoundException(f"Chapter content with id {ctx.chapter_content_id} not found") from e
 
-    chapter_id, cur_chap_num, novel_id = row._t
+    chapter_id, cur_chap_num, novel_id = row
 
     if chapter_id != ctx.chapter_id:
         raise ValueError(f"Chapter content {ctx.chapter_content_id} does not belong to chapter {ctx.chapter_id}")

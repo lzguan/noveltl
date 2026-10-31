@@ -74,7 +74,7 @@ class SourceWork(Base):
     source_work_title: Mapped[str] = mapped_column(String(MAX_NOVEL_TITLE_LEN), nullable=False)
     source_work_description: Mapped[str] = mapped_column(Text, nullable=True)
 
-    novels_with_source_work: Mapped[list["Novel"]] = relationship(back_populates="source_work_of_novel")
+    novels_with_source_work: Mapped[list[Novel]] = relationship(back_populates="source_work_of_novel")
 
 
 class Novel(Base):
@@ -110,18 +110,16 @@ class Novel(Base):
     )
 
     source_work_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("source_works.source_work_id"), nullable=False)
-    source_work_of_novel: Mapped["SourceWork"] = relationship(back_populates="novels_with_source_work")
+    source_work_of_novel: Mapped[SourceWork] = relationship(back_populates="novels_with_source_work")
 
     language_code: Mapped[str] = mapped_column(
         ForeignKey("languages.language_code", name="fk_novels_language_code_languages"), nullable=False
     )
-    language_of_novel: Mapped["Language"] = relationship(back_populates="novels_with_language")
+    language_of_novel: Mapped[Language] = relationship(back_populates="novels_with_language")
 
-    chapters_with_novel: Mapped[list["Chapter"]] = relationship(back_populates="novel_of_chapter")
-    label_groups_with_novel: Mapped[list["LabelGroup"]] = relationship(back_populates="novel_of_label_group")
-    novel_contributors_with_novel: Mapped[list["NovelContributor"]] = relationship(
-        back_populates="novel_of_contributor"
-    )
+    chapters_with_novel: Mapped[list[Chapter]] = relationship(back_populates="novel_of_chapter")
+    label_groups_with_novel: Mapped[list[LabelGroup]] = relationship(back_populates="novel_of_label_group")
+    novel_contributors_with_novel: Mapped[list[NovelContributor]] = relationship(back_populates="novel_of_contributor")
 
 
 class NovelContributor(Base):
@@ -142,10 +140,10 @@ class NovelContributor(Base):
     )
 
     novel_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("novels.novel_id"), primary_key=True)
-    novel_of_contributor: Mapped["Novel"] = relationship(back_populates="novel_contributors_with_novel")
+    novel_of_contributor: Mapped[Novel] = relationship(back_populates="novel_contributors_with_novel")
 
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.user_id"), primary_key=True)
-    user_of_novel_contributor: Mapped["User"] = relationship(back_populates="novel_contributors_with_user")
+    user_of_novel_contributor: Mapped[User] = relationship(back_populates="novel_contributors_with_user")
 
 
 class Chapter(Base):
@@ -176,7 +174,7 @@ class Chapter(Base):
     )
     novel_of_chapter: Mapped[Novel] = relationship(back_populates="chapters_with_novel")
 
-    chapter_contents_with_chapter: Mapped[list["ChapterContent"]] = relationship(
+    chapter_contents_with_chapter: Mapped[list[ChapterContent]] = relationship(
         back_populates="chapter_of_chapter_content", cascade="all, delete-orphan"
     )
 
@@ -201,17 +199,17 @@ class ChapterContent(Base):
     chapter_content_text: Mapped[str] = mapped_column(Text, nullable=False)
     chapter_content_version: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    chapter_of_chapter_content: Mapped["Chapter"] = relationship(back_populates="chapter_contents_with_chapter")
+    chapter_of_chapter_content: Mapped[Chapter] = relationship(back_populates="chapter_contents_with_chapter")
     chapter_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("chapters.chapter_id", name="fk_chapter_contents_chapter_id_chapters", ondelete="CASCADE"),
         nullable=False,
     )
 
-    label_datas_with_chapter_content: Mapped[list["LabelData"]] = relationship(
+    label_datas_with_chapter_content: Mapped[list[LabelData]] = relationship(
         back_populates="chapter_content_of_label_data"
     )
 
-    auto_labels_with_chapter_content: Mapped[list["AutoLabel"]] = relationship(
+    auto_labels_with_chapter_content: Mapped[list[AutoLabel]] = relationship(
         back_populates="chapter_content_of_auto_label", cascade="all, delete-orphan"
     )
 

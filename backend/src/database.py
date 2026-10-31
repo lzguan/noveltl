@@ -13,7 +13,7 @@ engine: Engine = create_engine(database_settings.DB_URL)
 SessionLocal: sessionmaker[Session] = sessionmaker(autoflush=False, bind=engine)
 
 
-def get_db() -> Generator[Session, None, None]:
+def get_db() -> Generator[Session]:
     db: Session = SessionLocal()
     try:
         yield db

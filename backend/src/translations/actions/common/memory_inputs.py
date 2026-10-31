@@ -25,7 +25,7 @@ def iter_batch_memories(
     plugin_names: list[PluginName] | None = None,
     memory_types: list[MemoryType] | None = None,
     exclude_current_chapter: bool = True,
-) -> Generator[MemoriesRecord, None, None]:
+) -> Generator[MemoriesRecord]:
     """Read one ordered candidate list per chapter using a single SQL query.
 
     Include pending/approved memories active at N (end > N), optionally excluding
@@ -75,7 +75,7 @@ def iter_batch_memories(
     )
     result = db.execute(statement)
     try:
-        for chapter_id, rows in groupby(result, key=lambda row: row._t[0]):
+        for chapter_id, rows in groupby(result, key=lambda row: row[0]):
             yield MemoriesRecord(
                 chapter_id=chapter_id,
                 payload=[Memory.model_validate(memory) for _, memory in rows if memory is not None],

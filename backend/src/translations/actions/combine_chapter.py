@@ -39,19 +39,15 @@ def combine(context: ActionTaskContext) -> None:
         raise ValueError("Chapter combination requires a combine_chapter stage")
     if stage.stage_num == 0:
         raise ValueError("combine_chapter requires a previous stage's memories output")
-    previous, previous_stage = (
-        context.db.execute(
-            select(TranslationTask, TranslationStage)
-            .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
-            .where(
-                TranslationTask.batch_id == context.task.batch_id,
-                TranslationStage.job_id == stage.job_id,
-                TranslationStage.stage_num == stage.stage_num - 1,
-            )
+    previous, previous_stage = context.db.execute(
+        select(TranslationTask, TranslationStage)
+        .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
+        .where(
+            TranslationTask.batch_id == context.task.batch_id,
+            TranslationStage.job_id == stage.job_id,
+            TranslationStage.stage_num == stage.stage_num - 1,
         )
-        .one()
-        ._t
-    )
+    ).one()
     if (
         previous.status != TranslationTaskStatus.COMPLETE
         or previous.failed_at is not None
@@ -115,5 +111,5 @@ def combine(context: ActionTaskContext) -> None:
             namespace="translations",
             content_type="application/jsonl",
         )
-        context.db.flush([stored_file])
+        context.db.flush()
         context.task.output_file_id = stored_file.file_id

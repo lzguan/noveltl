@@ -14,7 +14,7 @@ from src.novels import models as novel_models
 from src.novels.permissions import chapter_content_mod_access_select
 
 
-def auto_label_mod_access_select[T: Select[tuple[Any, ...]]](
+def auto_label_mod_access_select[T: Select[*tuple[Any, ...]]](
     q: T,
     current_user: User,
     aliased_type: type[AutoLabel] = AutoLabel,
@@ -50,7 +50,7 @@ def auto_label_mod_access_select[T: Select[tuple[Any, ...]]](
     return q.where(exists(subq))
 
 
-def auto_label_mod_access_insert[T: Select[tuple[Any, ...]]](
+def auto_label_mod_access_insert[T: Select[*tuple[Any, ...]]](
     stmt: T,
     current_user: User,
     *,

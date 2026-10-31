@@ -10,7 +10,7 @@ from src.memory.permissions import memory_group_mod_access_select
 from src.memory.plugins.glossary.models import GlossaryTerm
 
 
-def glossary_term_mod_access_select[T: Select[tuple[Any, ...]]](
+def glossary_term_mod_access_select[T: Select[*tuple[Any, ...]]](
     stmt: T,
     current_user: User | None,
     aliased_type: type[GlossaryTerm] = GlossaryTerm,

@@ -205,7 +205,7 @@ def main() -> None:
         output = args.output or run_dir / "token-usage.svg"
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(_render_svg(chapters, run_dir.name), encoding="utf-8")
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         sys.exit(1)
 

@@ -48,12 +48,12 @@ class LabelGroup(Base):
     novel_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("novels.novel_id", name="fk_label_groups_novel_id_novels"), nullable=False
     )
-    novel_of_label_group: Mapped["Novel"] = relationship(back_populates="label_groups_with_novel")
+    novel_of_label_group: Mapped[Novel] = relationship(back_populates="label_groups_with_novel")
 
-    label_datas_with_label_group: Mapped[list["LabelData"]] = relationship(
+    label_datas_with_label_group: Mapped[list[LabelData]] = relationship(
         back_populates="label_group_of_label_data", cascade="all, delete-orphan"
     )
-    label_contributors_with_label_group: Mapped[list["LabelContributor"]] = relationship(
+    label_contributors_with_label_group: Mapped[list[LabelContributor]] = relationship(
         back_populates="label_group_of_label_contributor", cascade="all, delete-orphan"
     )
 
@@ -81,7 +81,7 @@ class LabelContributor(Base):
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.user_id"), primary_key=True)
-    user_of_label_contributor: Mapped["User"] = relationship(back_populates="label_contributors_with_user")
+    user_of_label_contributor: Mapped[User] = relationship(back_populates="label_contributors_with_user")
 
 
 class LabelData(Base):
@@ -111,11 +111,11 @@ class LabelData(Base):
         ForeignKey("chapter_contents.chapter_content_id", name="fk_label_datas_chapter_content_id_chapter_contents"),
         nullable=False,
     )
-    chapter_content_of_label_data: Mapped["ChapterContent"] = relationship(
+    chapter_content_of_label_data: Mapped[ChapterContent] = relationship(
         back_populates="label_datas_with_chapter_content"
     )
 
-    labels_with_label_data: Mapped[list["Label"]] = relationship(
+    labels_with_label_data: Mapped[list[Label]] = relationship(
         back_populates="label_data_of_label", cascade="all, delete-orphan"
     )
 
@@ -158,7 +158,7 @@ class Label(Base):
     label_data_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("label_datas.label_data_id", name="fk_labels_label_data_id_label_datas"), nullable=False
     )
-    label_data_of_label: Mapped["LabelData"] = relationship(back_populates="labels_with_label_data")
+    label_data_of_label: Mapped[LabelData] = relationship(back_populates="labels_with_label_data")
     version: Mapped[int] = mapped_column(Integer, server_default=text("1"), nullable=False)  # use as lock
 
     __table_args__ = (

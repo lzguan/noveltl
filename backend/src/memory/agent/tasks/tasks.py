@@ -138,7 +138,7 @@ async def _run_single_task(
             .scalar_subquery()
         )
     )
-    ccid, cctext, cnum = db.execute(q).one()._t
+    ccid, cctext, cnum = db.execute(q).one()
     context = MemAccessContext(memory_group_id, task.chapter_id, ccid)
     deps = MemAgentDeps(db, context)
     result = await run_agent(agent, deps, cctext, cnum, lang_name)

@@ -85,19 +85,15 @@ def _inputs(
             )
         return
 
-    previous, previous_stage = (
-        context.db.execute(
-            select(TranslationTask, TranslationStage)
-            .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
-            .where(
-                TranslationTask.batch_id == context.task.batch_id,
-                TranslationStage.job_id == stage.job_id,
-                TranslationStage.stage_num == stage.stage_num - 1,
-            )
+    previous, previous_stage = context.db.execute(
+        select(TranslationTask, TranslationStage)
+        .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
+        .where(
+            TranslationTask.batch_id == context.task.batch_id,
+            TranslationStage.job_id == stage.job_id,
+            TranslationStage.stage_num == stage.stage_num - 1,
         )
-        .one()
-        ._t
-    )
+    ).one()
     if (
         previous.status != TranslationTaskStatus.COMPLETE
         or previous.failed_at is not None
@@ -221,7 +217,7 @@ def prepare(context: ActionTaskContext) -> None:
             namespace="translations",
             content_type="application/jsonl",
         )
-        context.db.flush([stored_file])
+        context.db.flush()
         context.task.input_file_id = stored_file.file_id
 
 
@@ -352,5 +348,5 @@ def finalize(context: ActionTaskContext) -> None:
             namespace="translations",
             content_type="application/jsonl",
         )
-        context.db.flush([stored_file])
+        context.db.flush()
         context.task.output_file_id = stored_file.file_id

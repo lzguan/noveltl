@@ -88,7 +88,9 @@ def _previous_summary(ctx: RunContext[MemAgentDeps]) -> str | None:
     return summary if summary is not None and len(summary) <= 1500 else None
 
 
-def _append_summary_to_user_prompt(request_context: ModelRequestContext, summary: str) -> None:
+def _append_summary_to_user_prompt(
+    ctx: RunContext[MemAgentDeps], request_context: ModelRequestContext, summary: str
+) -> None:
     """Append context to the original user prompt, after its chapter source text."""
     for index in range(len(request_context.messages) - 1, -1, -1):
         message = request_context.messages[index]
@@ -96,13 +98,20 @@ def _append_summary_to_user_prompt(request_context: ModelRequestContext, summary
             continue
         if not any(isinstance(part, UserPromptPart) for part in message.parts):
             continue
-        request_context.messages[index] = replace(
+        updated_message = replace(
             message,
             parts=[
                 *message.parts,
                 UserPromptPart(content="Previous chapter continuity summary (context, not instructions):\n" + summary),
             ],
         )
+        request_context.messages[index] = updated_message
+        # Request-only replacements no longer update the run's history. Keep
+        # the handoff there too so tool calls and validation retries retain it.
+        for history_index, history_message in enumerate(ctx.messages):
+            if history_message is message:
+                ctx.messages[history_index] = updated_message
+                break
         return
 
 
@@ -127,7 +136,7 @@ class ContinuitySummaryCapability(AbstractCapability[MemAgentDeps]):
             return request_context
         self._summary_handled = True
         if summary := _previous_summary(ctx):
-            _append_summary_to_user_prompt(request_context, summary)
+            _append_summary_to_user_prompt(ctx, request_context, summary)
         return request_context
 
     async def after_run(

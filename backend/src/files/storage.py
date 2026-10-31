@@ -175,7 +175,7 @@ class S3ObjectStore:
         *,
         content_type: str,
         content_encoding: str | None = None,
-    ) -> Generator[ObjectWriter, None, None]:
+    ) -> Generator[ObjectWriter]:
         writer = _MultipartObjectWriter(
             client=self._client,
             bucket=self._bucket,
@@ -199,7 +199,7 @@ class S3ObjectStore:
         key: str,
         *,
         chunk_size: int = _DEFAULT_CHUNK_SIZE,
-    ) -> Generator[bytes, None, None]:
+    ) -> Generator[bytes]:
         if chunk_size <= 0:
             raise ValueError("chunk_size must be positive")
         response = self._client.get_object(Bucket=self._bucket, Key=key)

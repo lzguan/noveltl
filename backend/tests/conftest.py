@@ -96,7 +96,7 @@ def fake_ttl_cache_redis(monkeypatch: pytest.MonkeyPatch, ttl_cache_store: dict[
 
 
 @pytest.fixture
-def test_engine(test_url: str) -> Generator[Engine, None, None]:
+def test_engine(test_url: str) -> Generator[Engine]:
     engine = create_engine(test_url)
     try:
         yield engine
@@ -110,7 +110,7 @@ def testing_session_local(test_engine: Engine) -> sessionmaker[Session]:
 
 
 @pytest.fixture(scope="function")
-def test_db(test_engine: Engine, testing_session_local: sessionmaker[Session]) -> Generator[Session, None, None]:
+def test_db(test_engine: Engine, testing_session_local: sessionmaker[Session]) -> Generator[Session]:
     """Creates a new database session for a test."""
     with test_engine.connect() as connection:
         connection.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist"))

@@ -94,7 +94,7 @@ def query_memories_at_chapter(
     except NoResultFound as e:
         raise ChapterNotFoundException from e
 
-    def build_query[T: Select[tuple[Any, ...]]](base: T):
+    def build_query[T: Select[*tuple[Any, ...]]](base: T):
         query = base.where(
             Memory.memory_group_id == memory_group_id,
             or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chapter.chapter_num),
@@ -130,7 +130,7 @@ def query_memories(
 ):
     """Read all memories in a memory group."""
 
-    def build_query[T: Select[tuple[Any, ...]]](base: T):
+    def build_query[T: Select[*tuple[Any, ...]]](base: T):
         query = base.where(Memory.memory_group_id == memory_group_id)
         query = memory_mod_access_select(query, user)
         if plugin_names is not None:

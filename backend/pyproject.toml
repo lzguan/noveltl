@@ -3,13 +3,13 @@ name = "noveltl-dev"
 version = "0.1.0"
 description = "Novel translation backend"
 authors = [{ name = "Leo Guan", email = "leo.ziqi@gmail.com" }]
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.15,<3.16"
 readme = "README.md"
 dependencies = [
-    "sqlalchemy>=2.0.40",
+    "sqlalchemy>=2.1.6",
     "psycopg2-binary>=2.9.0",
-    "pydantic>=2.10.0",
-    "pydantic-settings>=2.2.0",
+    "pydantic>=2.14.0",
+    "pydantic-settings>=2.16.0",
     "alembic>=1.13.0",
     "celery[redis]>=5.6.3",
     "redis[hiredis]>=6.4.0",
@@ -18,24 +18,24 @@ dependencies = [
 
 [dependency-groups]
 backend = [
-    "fastapi>=0.141.0",
-    "uvicorn>=0.52.0",
-    "pyjwt>=2.9.0",
-    "argon2-cffi>=23.0.0",
+    "fastapi>=0.162.0",
+    "uvicorn>=0.54.0",
+    "pyjwt>=2.15.0",
+    "argon2-cffi>=25.1.0",
     "pwdlib>=0.3.0",
     "python-multipart>=0.0.32",
 ]
 worker = [
-    "transformers>=5.15.0",
-    "torch>=2.9.1",
-    "hf>=1.27.0",
+    "transformers>=5.22.1",
+    "torch>=2.15.0",
+    "hf>=2.4.0",
 ]
 dev = [
     "pytest>=9.0.0",
     "pytest-asyncio>=1.4.0",
-    "ruff>=0.14.11",
-    "coverage>=7.13.4",
-    "pyrefly>=1.2.0",
+    "ruff>=0.17.3",
+    "coverage>=7.0.0",
+    "pyrefly>=1.4.0",
     "types-psycopg2>=2.9.21.20260408",
     "pyyaml>=6.0.3",
     "types-pyyaml>=6.0.12.20260518",
@@ -43,11 +43,11 @@ dev = [
     "numpy>=2.5.2",
 ]
 agent = [
-    "pydantic-ai-slim[openai]>=2.31.0",
+    "pydantic-ai-slim[openai]>=2.64.0",
 ]
 tagent = [
-    "openai>=3.11.0",
-    "httpx2>=2.12.0",
+    "openai>=3.42.0",
+    "httpx2>=2.16.0",
 ]
 
 [tool.uv]
@@ -97,7 +97,7 @@ markers = [
 addopts = "-ra -q -m 'not slow and not agent and not integration'"
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py315"
 
 line-length = 120
 

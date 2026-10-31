@@ -83,19 +83,15 @@ def _artifact(context: ActionTaskContext, stage: TranslationStage) -> tuple[UUID
         if batch is None or batch.job_id != stage.job_id:
             raise ValueError("Batch does not belong to the pruning job")
         return batch.initial_file_id, ACTIONS["prune_memories"].input_types
-    previous, previous_stage = (
-        context.db.execute(
-            select(TranslationTask, TranslationStage)
-            .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
-            .where(
-                TranslationTask.batch_id == context.task.batch_id,
-                TranslationStage.job_id == stage.job_id,
-                TranslationStage.stage_num == stage.stage_num - 1,
-            )
+    previous, previous_stage = context.db.execute(
+        select(TranslationTask, TranslationStage)
+        .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
+        .where(
+            TranslationTask.batch_id == context.task.batch_id,
+            TranslationStage.job_id == stage.job_id,
+            TranslationStage.stage_num == stage.stage_num - 1,
         )
-        .one()
-        ._t
-    )
+    ).one()
     if previous.status != State.COMPLETE or previous.failed_at is not None or previous.output_file_id is None:
         raise ValueError("Previous translation task must have a completed output artifact")
     output_types = ACTIONS[TypeAdapter(ActionName).validate_python(previous_stage.action)].output_types
@@ -136,7 +132,7 @@ def _database_inputs(
     try:
         for row, memory in zip_longest(rows, memories):
             if row is not None:
-                chapter_id, content = row._t
+                chapter_id, content = row
                 yield ChapterRecord(chapter_id=chapter_id, payload=content)
             if memory is not None:
                 yield memory
@@ -231,7 +227,7 @@ def prepare(context: ActionTaskContext) -> None:
             namespace="translations",
             content_type="application/jsonl",
         )
-        context.db.flush([prepared] + ([snapshot] if snapshot is not None else []))
+        context.db.flush()
         if snapshot is not None:
             publish_initial_file(context.db, context.task.task_id, context.claim_token, snapshot.file_id)
         context.task.input_file_id = prepared.file_id
@@ -343,5 +339,5 @@ def finalize(context: ActionTaskContext) -> None:
             namespace="translations",
             content_type="application/jsonl",
         )
-        context.db.flush([stored])
+        context.db.flush()
         context.task.output_file_id = stored.file_id

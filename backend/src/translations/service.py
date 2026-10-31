@@ -140,27 +140,49 @@ def _restart_state_sql():
     )
 
 
-def _control_statement(job_id: UUID, operation: Control, batch_id: UUID | None):
+def _cancel_statement(job_id: UUID, batch_id: UUID | None):
+    """Cancel every unfinished task in scope and return affected batch IDs.
+
+    Revoke live claims and mark future tasks too, so neither an in-flight
+    worker nor a stage handoff can continue the cancelled pipeline. Direct
+    predicates are rechecked by PostgreSQL if a worker completes while the
+    UPDATE waits.
+    """
+    task = TranslationTask
+    statement = update(task).where(
+        task.stage_id == TranslationStage.stage_id,
+        TranslationStage.job_id == job_id,
+        task.status != State.COMPLETE,
+    )
+    if batch_id is not None:
+        statement = statement.where(task.batch_id == batch_id)
+    return (
+        statement.values(
+            failed_at=func.clock_timestamp(), error="Cancelled by user", claim_token=None, claim_expires_at=None
+        )
+        .returning(task.batch_id)
+        .execution_options(synchronize_session=False)
+    )
+
+
+def _restart_statement(job_id: UUID, operation: Literal["start", "resume", "retry"], batch_id: UUID | None):
     """
     Heavenly sql good luck reading ts
+
+    Build the UPDATE for job-wide or single-batch start/resume/retry.
+    Skip completed tasks and batches with live claims, then rank unfinished
+    tasks by stage to restart only the first task in each batch. Start requires
+    a ready first stage; resume preserves progress; retry clears failures on
+    later tasks too and uses available artifacts to choose the restart step.
+
+    Compare the target row with its snapshot before updating so concurrent
+    worker progress is not overwritten. Return affected tasks and polling
+    delays; the caller executes and commits before dispatching workers.
     """
     task = TranslationTask
     scope = [TranslationStage.job_id == job_id, task.status != State.COMPLETE]
     if batch_id is not None:
         scope.append(task.batch_id == batch_id)
-    if operation == "cancel":
-        # Direct predicates are rechecked by PostgreSQL if a worker completes while
-        # this UPDATE waits. Mark future tasks too, so handoff cannot undo cancel.
-        return (
-            update(task)
-            .where(task.stage_id == TranslationStage.stage_id, *scope)
-            .values(
-                failed_at=func.clock_timestamp(), error="Cancelled by user", claim_token=None, claim_expires_at=None
-            )
-            .returning(task.task_id, task.batch_id, TranslationStage.action, task.status)
-            .execution_options(synchronize_session=False)
-        )
-
     live = and_(task.claim_token.is_not(None), task.claim_expires_at > func.clock_timestamp())
     state = _restart_state_sql() if operation == "retry" else task.status
     # Rank only unfinished tasks. Retry also clears failures on later tasks, but
@@ -253,11 +275,13 @@ def control_translation_job(
             is None
         ):
             raise TranslationNotFoundError("Translation batch not found")
-        rows = db.execute(_control_statement(job_id, operation, batch_id)).all()
-        result.affected_batch_ids = list(dict.fromkeys(row._t[1] for row in rows))
-        if operation != "cancel":
+        if operation == "cancel":
+            result.affected_batch_ids = list(dict.fromkeys(db.scalars(_cancel_statement(job_id, batch_id))))
+        else:
+            rows = db.execute(_restart_statement(job_id, operation, batch_id)).all()
+            result.affected_batch_ids = list(dict.fromkeys(row[1] for row in rows))
             for row in rows:
-                task_id, _, name, state, position, poll_in = row._t
+                task_id, _, name, state, position, poll_in = row
                 if position != 1:
                     continue
                 action = TypeAdapter(ActionName).validate_python(name)

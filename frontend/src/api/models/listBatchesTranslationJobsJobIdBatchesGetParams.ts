@@ -6,13 +6,11 @@
  */
 
 export type ListBatchesTranslationJobsJobIdBatchesGetParams = {
-/**
- * @minimum 0
- */
-offset?: number;
-/**
- * @minimum 1
- * @maximum 50
- */
-limit?: number;
+  /** @minimum 0 */
+  offset?: number;
+  /**
+   * @minimum 1
+   * @maximum 50
+   */
+  limit?: number;
 };

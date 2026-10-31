@@ -6,12 +6,12 @@
  */
 
 export type ReadFunctionsFiltersFunctionsGetParams = {
-search?: string | null;
-namespace?: string | null;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-cursor?: string | null;
+  search?: string | null;
+  namespace?: string | null;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  cursor?: string | null;
 };

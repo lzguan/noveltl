@@ -6,5 +6,5 @@
  */
 
 export type ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostParams = {
-subjectId?: string | null;
+  subjectId?: string | null;
 };

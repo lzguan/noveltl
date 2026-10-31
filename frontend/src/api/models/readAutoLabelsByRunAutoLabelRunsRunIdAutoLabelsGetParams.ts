@@ -6,6 +6,6 @@
  */
 
 export type ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetParams = {
-start?: number | null;
-end?: number | null;
+  start?: number | null;
+  end?: number | null;
 };

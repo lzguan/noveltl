@@ -6,14 +6,12 @@
  */
 
 export type ListJobsTranslationJobsGetParams = {
-novelId: string;
-/**
- * @minimum 0
- */
-offset?: number;
-/**
- * @minimum 1
- * @maximum 50
- */
-limit?: number;
+  novelId: string;
+  /** @minimum 0 */
+  offset?: number;
+  /**
+   * @minimum 1
+   * @maximum 50
+   */
+  limit?: number;
 };

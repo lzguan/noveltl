@@ -7,16 +7,14 @@
 import type { ReviewStatus } from './reviewStatus';
 
 export type ReadGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGetParams = {
-/**
- * @minimum 0
- */
-skip?: number;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-chapterId?: string | null;
-search?: string | null;
-reviewStatuses?: ReviewStatus[] | null;
+  /** @minimum 0 */
+  skip?: number;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  chapterId?: string | null;
+  search?: string | null;
+  reviewStatuses?: ReviewStatus[] | null;
 };

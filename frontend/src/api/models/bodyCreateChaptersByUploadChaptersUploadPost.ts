@@ -6,7 +6,7 @@
  */
 
 export interface BodyCreateChaptersByUploadChaptersUploadPost {
-  file: Blob;
+  file: Blob | File;
   novelId: string;
   version: 'v1';
 }

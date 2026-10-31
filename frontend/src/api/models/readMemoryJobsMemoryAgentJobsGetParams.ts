@@ -6,5 +6,5 @@
  */
 
 export type ReadMemoryJobsMemoryAgentJobsGetParams = {
-memoryGroupId: string;
+  memoryGroupId: string;
 };

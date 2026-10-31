@@ -6,5 +6,5 @@
  */
 
 export type ReadMemoryJobSummariesMemoryAgentJobSummariesGetParams = {
-memoryGroupId: string;
+  memoryGroupId: string;
 };

@@ -6,5 +6,5 @@
  */
 
 export type ReadMemoryGroupsMemoryGroupsGetParams = {
-novelId: string;
+  novelId: string;
 };

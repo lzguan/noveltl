@@ -6,5 +6,5 @@
  */
 
 export type CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostParams = {
-requestKey?: string | null;
+  requestKey?: string | null;
 };

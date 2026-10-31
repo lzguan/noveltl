@@ -6,5 +6,5 @@
  */
 
 export type CreateAutolabelsAutoLabelsPostParams = {
-requestKey?: string | null;
+  requestKey?: string | null;
 };

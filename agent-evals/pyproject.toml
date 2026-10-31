@@ -27,7 +27,7 @@ dev = [
 [tool.uv]
 package = true
 default-groups = ["dev"]
-required-version = ">=0.10.0"
+required-version = ">=0.13.6"
 
 [tool.uv.sources]
 noveltl-dev = { path = "../backend", editable = true }

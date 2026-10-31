@@ -560,7 +560,7 @@ def _insert_label_datas_by_autolabels(
                     for autolabel, _ in batch
                     for label in autolabel.auto_label_data or []
                 )
-                for label_batch in batched(label_values, PROMOTION_LABEL_BATCH_SIZE):
+                for label_batch in batched(label_values, PROMOTION_LABEL_BATCH_SIZE, strict=False):
                     db.execute(insert(models.Label), list(label_batch))
         except (IntegrityError, DataError) as error:
             if len(batch) == 1:
@@ -675,7 +675,7 @@ def insert_label_datas_by_autolabels(
         return schemas.CreateLabelDataByAutoLabelStatus(success=success, errors=errors)
 
     autolabel_pairs = [(chapter_content_id, run_id) for chapter_content_id, run_id, _, _ in candidate_identifiers]
-    for autolabel_batch in batched(autolabel_pairs, PROMOTION_CANDIDATE_BATCH_SIZE):
+    for autolabel_batch in batched(autolabel_pairs, PROMOTION_CANDIDATE_BATCH_SIZE, strict=False):
         _insert_label_datas_by_autolabels(
             db,
             label_group_id,

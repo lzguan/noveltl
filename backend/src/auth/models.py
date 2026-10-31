@@ -38,12 +38,12 @@ class User(Base):
         nullable=False,
     )
 
-    novel_contributors_with_user: Mapped[list["NovelContributor"]] = relationship(
+    novel_contributors_with_user: Mapped[list[NovelContributor]] = relationship(
         back_populates="user_of_novel_contributor"
     )
-    label_contributors_with_user: Mapped[list["LabelContributor"]] = relationship(
+    label_contributors_with_user: Mapped[list[LabelContributor]] = relationship(
         back_populates="user_of_label_contributor"
     )
-    autolabel_runs: Mapped[list["AutoLabelRun"]] = relationship(back_populates="triggered_by_user")
+    autolabel_runs: Mapped[list[AutoLabelRun]] = relationship(back_populates="triggered_by_user")
 
     __table_args__ = (UniqueConstraint("user_name", name="uq_user_name"),)

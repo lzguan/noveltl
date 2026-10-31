@@ -5,9 +5,7 @@ from src.autolabels.exceptions import ChunkTooLargeException, TokenDoesNotExistE
 from src.autolabels.worker.interfaces import Tokenizer
 
 
-def _chunk_blocks(
-    text: str, separators: dict[str, SepPriority]
-) -> Generator[tuple[str, int, SepPriority | None], None, None]:
+def _chunk_blocks(text: str, separators: dict[str, SepPriority]) -> Generator[tuple[str, int, SepPriority | None]]:
     """
     Separates text into chunks ending with an element in separators. Only supports single character separators. Return format is a generator yielding tuples of (chunk_text, chunk_start_pos, separator_priority).
 
@@ -29,7 +27,7 @@ def _chunk_blocks(
 
 def _chunk_paragraph(
     text: str, max_chunk_size: int, start_pos: int, words: list[tuple[str, int]]
-) -> Generator[tuple[str, int], None, None]:
+) -> Generator[tuple[str, int]]:
     """
     Returns a generator that yields chunks of the original text, each chunk having no more than max_chunk_size tokens. Used as a helper function for chunk_text.
 
@@ -60,7 +58,7 @@ def _chunk_paragraph(
 
 def chunk_text(
     text: str, separators: dict[str, SepPriority], tokenizer: Tokenizer, max_chunk_size: int, force_chunk: bool = False
-) -> Generator[tuple[str, int], None, None]:
+) -> Generator[tuple[str, int]]:
     """
     Return a generator that returns chunks of the original text along with their start positions, each chunk having no more than max_chunk_size tokens.
 

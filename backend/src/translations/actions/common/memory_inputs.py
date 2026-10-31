@@ -25,7 +25,7 @@ def iter_batch_memories(
     plugin_names: list[PluginName] | None = None,
     memory_types: list[MemoryType] | None = None,
     exclude_current_chapter: bool = True,
-) -> Generator[MemoriesRecord, None, None]:
+) -> Generator[MemoriesRecord]:
     """Read one ordered candidate list per chapter using a single SQL query.
 
     Include pending/approved memories active at N (end > N), optionally excluding

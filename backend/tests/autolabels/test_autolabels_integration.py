@@ -41,7 +41,7 @@ def celery_worker(
     test_url: str,
     test_db: Session,
     monkeypatch: pytest.MonkeyPatch,
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     import src.autolabels.worker.tasks as worker_tasks
 
     redis_host = os.getenv("TEST_REDIS_HOST", "test_redis")

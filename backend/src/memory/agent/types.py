@@ -307,7 +307,7 @@ class ParsedToolsets(Model):
         return tuple(name for name in TOOLSET_NAMES if getattr(self, name) is not None)
 
     @model_validator(mode="after")
-    def validate_restrictions(self) -> "ParsedToolsets":
+    def validate_restrictions(self) -> ParsedToolsets:
         selected = set(self.selected_names())
         for restriction in TOOLSET_RESTRICTIONS:
             match restriction:

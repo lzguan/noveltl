@@ -36,7 +36,7 @@ MODEL = "deepseek/deepseek-v4.1-flash"
 
 
 @contextmanager
-def client_for(handler: Callable[[httpx2.Request], httpx2.Response]) -> Generator[OpenRouterClient, None, None]:
+def client_for(handler: Callable[[httpx2.Request], httpx2.Response]) -> Generator[OpenRouterClient]:
     client = OpenRouterClient(api_key="test-key", base_url="https://example.invalid/api/v1")
     client.client.close()
     with httpx2.Client(

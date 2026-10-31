@@ -33,7 +33,7 @@ class IterReader(io.RawIOBase):
     def readable(self) -> bool:
         return True
 
-    def readinto(self, buffer: "WriteableBuffer") -> int:
+    def readinto(self, buffer: WriteableBuffer) -> int:
         # Skip empty chunks; returning 0 for one would signal end of stream.
         while not self._pending:
             try:

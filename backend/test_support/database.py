@@ -26,7 +26,7 @@ def temporary_postgres_database(
     server_url: str,
     *,
     prefix: str = "noveltl_test",
-) -> Generator[TemporaryPostgresDatabase, None, None]:
+) -> Generator[TemporaryPostgresDatabase]:
     """Create an isolated PostgreSQL database and remove it on exit."""
     if not _DATABASE_PREFIX_PATTERN.fullmatch(prefix) or len(prefix) > 30:
         raise ValueError("prefix must be at most 30 lowercase letters, digits, and underscores")

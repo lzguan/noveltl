@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 def configured_autolabel_worker(
     test_url: str,
     monkeypatch: pytest.MonkeyPatch,
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     import src.autolabels.worker.tasks as worker_tasks
 
     engine = create_engine(test_url)

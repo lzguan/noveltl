@@ -105,7 +105,7 @@ class TextSpan(ChapterRef):
     end: NonNegativeIntegerValue
 
     @model_validator(mode="after")
-    def validate_range(self) -> "TextSpan":
+    def validate_range(self) -> TextSpan:
         if self.end < self.start:
             raise ValueError("Text span end must be greater than or equal to its start.")
         return self

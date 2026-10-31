@@ -41,8 +41,8 @@ class AutoLabelRun(Base):
     model_name: Mapped[str] = mapped_column(String(MAX_MODEL_NAME_LEN), nullable=False)
     model_params: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
 
-    triggered_by_user: Mapped["User"] = relationship(back_populates="autolabel_runs")
-    autolabels_with_run: Mapped[list["AutoLabel"]] = relationship(back_populates="run_of_autolabel")
+    triggered_by_user: Mapped[User] = relationship(back_populates="autolabel_runs")
+    autolabels_with_run: Mapped[list[AutoLabel]] = relationship(back_populates="run_of_autolabel")
 
 
 class AutoLabel(Base):
@@ -85,9 +85,9 @@ class AutoLabel(Base):
         nullable=False,
     )
 
-    chapter_content_of_auto_label: Mapped["ChapterContent"] = relationship(
+    chapter_content_of_auto_label: Mapped[ChapterContent] = relationship(
         back_populates="auto_labels_with_chapter_content"
     )
-    run_of_autolabel: Mapped["AutoLabelRun"] = relationship(back_populates="autolabels_with_run")
+    run_of_autolabel: Mapped[AutoLabelRun] = relationship(back_populates="autolabels_with_run")
 
     __table_args__ = (UniqueConstraint(chapter_content_id, run_id, name="uq_chapter_content_run_id"),)

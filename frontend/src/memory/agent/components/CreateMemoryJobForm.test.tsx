@@ -88,6 +88,7 @@ beforeEach(() => {
 			claimExpiresAt: null,
 			createdAt: "2026-09-03T00:00:00Z",
 			jobParams: {
+				version: 1,
 				modelName: "deepseek:deepseek-v4-flash-none",
 				toolsets: { reader: {}, writer: { retention: 4 } },
 			},
@@ -143,11 +144,47 @@ it("uses catalog defaults and submits dependencies with schema-driven configurat
 			endChapterNum: null,
 			memoryGroupId: "group-1",
 			params: {
-				modelName: "deepseek:deepseek-v4-flash-none",
-				toolsets: { reader: {}, writer: { retention: 4 } },
+				version: 2,
+				recordMemories: {
+					modelName: "deepseek:deepseek-v4-flash-none",
+					toolsets: { reader: {}, writer: { retention: 4 } },
+				},
+				translateTerms: { modelName: "deepseek:deepseek-v4-flash-none" },
 			},
 			startChapterNum: null,
 		}),
 	);
 	expect(onCreated).toHaveBeenCalledWith("job-1");
+});
+
+it("can create a naming-only job without submitting recording configuration", async () => {
+	render(
+		<CreateMemoryJobForm memoryGroupId="group-1" onCreated={vi.fn()} closeDialog={vi.fn()} />,
+	);
+	fireEvent.click(await screen.findByRole("checkbox", { name: "Record memories" }));
+	expect(screen.queryByRole("checkbox", { name: "legacy" })).not.toBeInTheDocument();
+	fireEvent.click(screen.getByRole("button", { name: "Create job" }));
+	await waitFor(() =>
+		expect(addMemoryJobMemoryAgentJobsPost).toHaveBeenCalledWith({
+			memoryGroupId: "group-1",
+			startChapterNum: null,
+			endChapterNum: null,
+			params: {
+				version: 2,
+				recordMemories: null,
+				translateTerms: { modelName: "deepseek:deepseek-v4-flash-none" },
+			},
+		}),
+	);
+});
+
+it("requires at least one stage", async () => {
+	render(
+		<CreateMemoryJobForm memoryGroupId="group-1" onCreated={vi.fn()} closeDialog={vi.fn()} />,
+	);
+	fireEvent.click(await screen.findByRole("checkbox", { name: "Record memories" }));
+	fireEvent.click(screen.getByRole("checkbox", { name: "Translate glossary terms" }));
+	fireEvent.click(screen.getByRole("button", { name: "Create job" }));
+	expect(await screen.findByText("Select at least one stage.")).toBeVisible();
+	expect(addMemoryJobMemoryAgentJobsPost).not.toHaveBeenCalled();
 });

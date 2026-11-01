@@ -22,6 +22,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiErrorMessage, requestErrorMessage } from "@/lib/apiErrors";
 import { useMemoryTasks } from "@/memory/agent/hooks/useMemoryTasks";
+import { memoryJobStageNames } from "@/memory/agent/stages";
 import { PageNavigation } from "@/memory/components/PageNavigation";
 import {
 	CheckCircle2Icon,
@@ -40,7 +41,7 @@ const TASK_POLL_INTERVAL_MS = 2_500;
 
 type PendingAction =
 	| { kind: "start-job" | "abort-job" | "delete-job" }
-	| { kind: "start-task" | "retry-task" | "delete-task"; chapterId: string };
+	| { kind: "start-task" | "retry-task" | "delete-task"; chapterId: string; stageNum: number };
 
 type DeleteTarget = { kind: "job" } | { kind: "task"; task: MemoryChapterTask };
 
@@ -72,19 +73,24 @@ export function MemoryJobCard({
 	const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 	const [actionError, setActionError] = useState<string | null>(null);
+	const params = summary.job.jobParams;
+	const stageNames = memoryJobStageNames(params);
+	const recordingConfig = params.version === 1 ? params : params.recordMemories;
+	const namingConfig = params.version === 2 ? params.translateTerms : null;
 	const counts = summary.taskCounts;
 	const total = counts.pending + counts.processing + counts.completed + counts.failed;
 	const progress = total === 0 ? 0 : Math.round((counts.completed / total) * 100);
 	const controlsDisabled = pendingAction !== null || refreshingSummary || tasksRefreshing;
-	const canStartJob = !claimed && (counts.pending > 0 || counts.processing > 0);
+	const canStartJob =
+		!claimed && counts.failed === 0 && (counts.pending > 0 || counts.processing > 0);
 	const statusLabel = claimed
 		? "Running"
 		: counts.processing > 0
 			? "Interrupted"
-			: counts.pending > 0
-				? "Ready"
-				: counts.failed > 0
-					? "Failed"
+			: counts.failed > 0
+				? "Failed"
+				: counts.pending > 0
+					? "Ready"
 					: "Complete";
 
 	useEffect(() => {
@@ -182,12 +188,17 @@ export function MemoryJobCard({
 	}
 
 	async function startTask(task: MemoryChapterTask) {
-		setPendingAction({ kind: "start-task", chapterId: task.chapterId });
+		setPendingAction({
+			kind: "start-task",
+			chapterId: task.chapterId,
+			stageNum: task.stageNum,
+		});
 		setActionError(null);
 		try {
 			const response = await startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPost(
 				summary.job.memoryJobId,
 				task.chapterId,
+				{ stageNum: task.stageNum },
 			);
 			if (response.status !== 202) {
 				setActionError(apiErrorMessage(response.data, "Could not start the task."));
@@ -203,12 +214,17 @@ export function MemoryJobCard({
 	}
 
 	async function retryTask(task: MemoryChapterTask) {
-		setPendingAction({ kind: "retry-task", chapterId: task.chapterId });
+		setPendingAction({
+			kind: "retry-task",
+			chapterId: task.chapterId,
+			stageNum: task.stageNum,
+		});
 		setActionError(null);
 		try {
 			const response = await retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPost(
 				summary.job.memoryJobId,
 				task.chapterId,
+				{ stageNum: task.stageNum },
 			);
 			if (response.status !== 202) {
 				setActionError(apiErrorMessage(response.data, "Could not retry the task."));
@@ -224,12 +240,17 @@ export function MemoryJobCard({
 	}
 
 	async function deleteTask(task: MemoryChapterTask) {
-		setPendingAction({ kind: "delete-task", chapterId: task.chapterId });
+		setPendingAction({
+			kind: "delete-task",
+			chapterId: task.chapterId,
+			stageNum: task.stageNum,
+		});
 		setActionError(null);
 		try {
 			const response = await removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDelete(
 				summary.job.memoryJobId,
 				task.chapterId,
+				{ stageNum: task.stageNum },
 			);
 			if (response.status !== 204) {
 				setActionError(apiErrorMessage(response.data, "Could not delete the task."));
@@ -244,9 +265,10 @@ export function MemoryJobCard({
 		}
 	}
 
-	function pendingTaskAction(chapterId: string) {
+	function pendingTaskAction(task: MemoryChapterTask) {
 		if (pendingAction === null || !("chapterId" in pendingAction)) return null;
-		if (pendingAction.chapterId !== chapterId) return null;
+		if (pendingAction.chapterId !== task.chapterId || pendingAction.stageNum !== task.stageNum)
+			return null;
 		if (pendingAction.kind === "start-task") return "start" as const;
 		if (pendingAction.kind === "retry-task") return "retry" as const;
 		return "delete" as const;
@@ -301,8 +323,8 @@ export function MemoryJobCard({
 								</Badge>
 							</div>
 							<p className="mt-1 text-xs text-muted-foreground">
-								{counts.completed} complete · {counts.pending} pending ·{" "}
-								{counts.processing} processing · {counts.failed} failed
+								Stage tasks: {counts.completed} complete · {counts.pending} pending
+								· {counts.processing} processing · {counts.failed} failed
 							</p>
 							<div
 								role="progressbar"
@@ -384,8 +406,15 @@ export function MemoryJobCard({
 				<CollapsibleContent>
 					<div className="border-t">
 						<div className="flex flex-wrap gap-1 border-b px-3 py-2">
-							<Badge variant="secondary">{summary.job.jobParams.modelName}</Badge>
-							{Object.keys(summary.job.jobParams.toolsets).map((toolset) => (
+							{recordingConfig && (
+								<Badge variant="secondary">
+									Recording: {recordingConfig.modelName}
+								</Badge>
+							)}
+							{namingConfig && (
+								<Badge variant="secondary">Naming: {namingConfig.modelName}</Badge>
+							)}
+							{Object.keys(recordingConfig?.toolsets ?? {}).map((toolset) => (
 								<Badge key={toolset} variant="outline">
 									{toolset}
 								</Badge>
@@ -423,11 +452,12 @@ export function MemoryJobCard({
 								<div className="divide-y">
 									{tasks.tasks.data.items.map((task) => (
 										<MemoryTaskRow
-											key={task.chapterId}
+											key={`${task.chapterId}:${task.stageNum}`}
 											task={task}
+											stageName={stageNames[task.stageNum]}
 											jobClaimed={claimed}
 											controlsDisabled={controlsDisabled}
-											pendingAction={pendingTaskAction(task.chapterId)}
+											pendingAction={pendingTaskAction(task)}
 											onStart={() => void startTask(task)}
 											onRetry={() => void retryTask(task)}
 											onDelete={() => setDeleteTarget({ kind: "task", task })}
@@ -466,7 +496,7 @@ export function MemoryJobCard({
 							<DialogDescription>
 								{deleteTarget.kind === "job"
 									? "This permanently deletes the job and all of its task records. Memories and chapters are not deleted."
-									: `This permanently removes chapter ${deleteTarget.task.chapterNum} from this job. The chapter and its memories are not deleted.`}
+									: `This permanently removes the ${stageNames[deleteTarget.task.stageNum] === "record_memories" ? "recording" : "term translation"} task for chapter ${deleteTarget.task.chapterNum}. The chapter and its memories are not deleted.`}
 							</DialogDescription>
 						</DialogHeader>
 						<DialogFooter>

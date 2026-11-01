@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import ConfigDict, Field
 
-from src.memory.agent.tasks.jobs import JobParams
+from src.memory.agent.config import JobParams
 from src.memory.agent.types import ModelName, ToolsetKind
 from src.memory.types import JobStatus
 from src.schemas import Model, Page
@@ -77,6 +77,7 @@ class MemoryChapterTask(Model):
     memory_job_id: UUID
     chapter_id: UUID
     chapter_num: int
+    stage_num: int
     task_status: JobStatus
     attempt_count: int
     created_at: datetime

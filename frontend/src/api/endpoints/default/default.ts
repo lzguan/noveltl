@@ -80,14 +80,18 @@ import type {
   ReadMemoryGroupsMemoryGroupsGetParams,
   ReadMemoryJobSummariesMemoryAgentJobSummariesGetParams,
   ReadMemoryJobsMemoryAgentJobsGetParams,
+  ReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetParams,
   ReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGetParams,
   ReadNovelsMineNovelsMineGetParams,
   ReadNovelsNovelsGetParams,
   ReadSourceWorksSourceWorksGetParams,
+  RemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteParams,
   ReplaceGlossaryAssociations,
   RequestConflictErrorResponse,
+  RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostParams,
   SourceWork,
   SourceWorkData,
+  StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostParams,
   Token,
   UpdateChapter,
   UpdateChapterContent,
@@ -2818,21 +2822,30 @@ export type removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteRespon
 export type removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse = (removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponseSuccess | removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponseError)
 
 export const getRemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteUrl = (memoryJobId: string,
-    chapterId: string,) => {
+    chapterId: string,
+    params?: RemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}`
+  return stringifiedParams.length > 0 ? `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}?${stringifiedParams}` : `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}`
 }
 
 /**
  * @summary Remove Memory Task
  */
 export const removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDelete = async (memoryJobId: string,
-    chapterId: string, options?: Parameters<typeof customFetch>[1]): Promise<removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse> => {
+    chapterId: string,
+    params?: RemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteParams, options?: Parameters<typeof customFetch>[1]): Promise<removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse> => {
 
-  return customFetch<removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse>(getRemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteUrl(memoryJobId,chapterId),
+  return customFetch<removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteResponse>(getRemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteUrl(memoryJobId,chapterId,params),
   {
     ...options,
     method: 'DELETE'
@@ -2867,21 +2880,30 @@ export type readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponseErr
 export type readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponse = (readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponseSuccess | readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponseError)
 
 export const getReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetUrl = (memoryJobId: string,
-    chapterId: string,) => {
+    chapterId: string,
+    params?: ReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}`
+  return stringifiedParams.length > 0 ? `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}?${stringifiedParams}` : `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}`
 }
 
 /**
  * @summary Read Memory Task
  */
 export const readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGet = async (memoryJobId: string,
-    chapterId: string, options?: Parameters<typeof customFetch>[1]): Promise<readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponse> => {
+    chapterId: string,
+    params?: ReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetParams, options?: Parameters<typeof customFetch>[1]): Promise<readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponse> => {
 
-  return customFetch<readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponse>(getReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetUrl(memoryJobId,chapterId),
+  return customFetch<readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetResponse>(getReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetUrl(memoryJobId,chapterId,params),
   {
     ...options,
     method: 'GET'
@@ -2926,21 +2948,30 @@ export type retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResp
 export type retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse = (retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponseSuccess | retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponseError)
 
 export const getRetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostUrl = (memoryJobId: string,
-    chapterId: string,) => {
+    chapterId: string,
+    params?: RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}/retry`
+  return stringifiedParams.length > 0 ? `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}/retry?${stringifiedParams}` : `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}/retry`
 }
 
 /**
  * @summary Retry Memory Task
  */
 export const retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPost = async (memoryJobId: string,
-    chapterId: string, options?: Parameters<typeof customFetch>[1]): Promise<retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse> => {
+    chapterId: string,
+    params?: RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostParams, options?: Parameters<typeof customFetch>[1]): Promise<retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse> => {
 
-  return customFetch<retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse>(getRetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostUrl(memoryJobId,chapterId),
+  return customFetch<retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostResponse>(getRetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostUrl(memoryJobId,chapterId,params),
   {
     ...options,
     method: 'POST'
@@ -2985,21 +3016,30 @@ export type startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResp
 export type startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse = (startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponseSuccess | startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponseError)
 
 export const getStartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostUrl = (memoryJobId: string,
-    chapterId: string,) => {
+    chapterId: string,
+    params?: StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}/start`
+  return stringifiedParams.length > 0 ? `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}/start?${stringifiedParams}` : `/api/memory-agent/jobs/${memoryJobId}/tasks/${chapterId}/start`
 }
 
 /**
  * @summary Start Memory Task
  */
 export const startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPost = async (memoryJobId: string,
-    chapterId: string, options?: Parameters<typeof customFetch>[1]): Promise<startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse> => {
+    chapterId: string,
+    params?: StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostParams, options?: Parameters<typeof customFetch>[1]): Promise<startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse> => {
 
-  return customFetch<startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse>(getStartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostUrl(memoryJobId,chapterId),
+  return customFetch<startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostResponse>(getStartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostUrl(memoryJobId,chapterId,params),
   {
     ...options,
     method: 'POST'

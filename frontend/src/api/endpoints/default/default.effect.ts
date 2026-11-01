@@ -1676,6 +1676,8 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGetQueryParams = S.Str
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsOneVersionDefault = 1;
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsTwoVersionDefault = 2;
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsCompletedMin = 0;
 
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsFailedMin = 0;
@@ -1693,10 +1695,20 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet200Response = S.Str
   "job": S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobParams": S.Struct({
+  "jobParams": S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
+  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsOneVersionDefault)))
+}), S.Struct({
+  "recordMemories": S.optional(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}),
+}), S.Null])),
+  "translateTerms": S.optional(S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
+}), S.Null])),
+  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsTwoVersionDefault)))
+})]),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
@@ -1733,6 +1745,8 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetParams = S
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsOneVersionDefault = 1;
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsTwoVersionDefault = 2;
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsCompletedMin = 0;
 
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsFailedMin = 0;
@@ -1750,10 +1764,20 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200Respons
   "job": S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobParams": S.Struct({
+  "jobParams": S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
+  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsOneVersionDefault)))
+}), S.Struct({
+  "recordMemories": S.optional(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}),
+}), S.Null])),
+  "translateTerms": S.optional(S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
+}), S.Null])),
+  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsTwoVersionDefault)))
+})]),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
@@ -1790,13 +1814,26 @@ export const ReadMemoryJobsMemoryAgentJobsGetQueryParams = S.Struct({
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
+export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsOneVersionDefault = 1;
+export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsTwoVersionDefault = 2;
+
 export const ReadMemoryJobsMemoryAgentJobsGet200ResponseItem = S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobParams": S.Struct({
+  "jobParams": S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
+  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsOneVersionDefault)))
+}), S.Struct({
+  "recordMemories": S.optional(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}),
+}), S.Null])),
+  "translateTerms": S.optional(S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
+}), S.Null])),
+  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsTwoVersionDefault)))
+})]),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
@@ -1824,6 +1861,8 @@ export const ReadMemoryJobsMemoryAgentJobsGet422Response = S.Struct({
  */
 export const addMemoryJobMemoryAgentJobsPostBodyEndChapterNumOneMin = 0;
 
+export const addMemoryJobMemoryAgentJobsPostBodyParamsOneVersionDefault = 1;
+export const addMemoryJobMemoryAgentJobsPostBodyParamsTwoVersionDefault = 2;
 export const addMemoryJobMemoryAgentJobsPostBodyStartChapterNumOneMin = 0;
 
 
@@ -1831,20 +1870,43 @@ export const addMemoryJobMemoryAgentJobsPostBodyStartChapterNumOneMin = 0;
 export const AddMemoryJobMemoryAgentJobsPostBody = S.Struct({
   "endChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyEndChapterNumOneMin)), S.Null])),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "params": S.Struct({
+  "params": S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
+  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsOneVersionDefault)))
+}), S.Struct({
+  "recordMemories": S.optional(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}),
+}), S.Null])),
+  "translateTerms": S.optional(S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
+}), S.Null])),
+  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsTwoVersionDefault)))
+})]),
   "startChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyStartChapterNumOneMin)), S.Null]))
 })
+
+export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsOneVersionDefault = 1;
+export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsTwoVersionDefault = 2;
 
 export const AddMemoryJobMemoryAgentJobsPost201Response = S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobParams": S.Struct({
+  "jobParams": S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
+  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsOneVersionDefault)))
+}), S.Struct({
+  "recordMemories": S.optional(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}),
+}), S.Null])),
+  "translateTerms": S.optional(S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
+}), S.Null])),
+  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsTwoVersionDefault)))
+})]),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
@@ -1900,13 +1962,26 @@ export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGetParams = S.Struct({
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
+export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsOneVersionDefault = 1;
+export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsTwoVersionDefault = 2;
+
 export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet200Response = S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobParams": S.Struct({
+  "jobParams": S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
+  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsOneVersionDefault)))
+}), S.Struct({
+  "recordMemories": S.optional(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}),
+}), S.Null])),
+  "translateTerms": S.optional(S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
+}), S.Null])),
+  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsTwoVersionDefault)))
+})]),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
@@ -1935,13 +2010,26 @@ export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostParams = S.Struct(
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
+export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsOneVersionDefault = 1;
+export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsTwoVersionDefault = 2;
+
 export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200Response = S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobParams": S.Struct({
+  "jobParams": S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
+  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsOneVersionDefault)))
+}), S.Struct({
+  "recordMemories": S.optional(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}),
+}), S.Null])),
+  "translateTerms": S.optional(S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
+}), S.Null])),
+  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsTwoVersionDefault)))
+})]),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
@@ -1970,13 +2058,26 @@ export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPostParams = S.Struct(
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
+export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsOneVersionDefault = 1;
+export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsTwoVersionDefault = 2;
+
 export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost202Response = S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobParams": S.Struct({
+  "jobParams": S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
+  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsOneVersionDefault)))
+}), S.Struct({
+  "recordMemories": S.optional(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}),
+}), S.Null])),
+  "translateTerms": S.optional(S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
+}), S.Null])),
+  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsTwoVersionDefault)))
+})]),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
@@ -2038,6 +2139,7 @@ export const ReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGet200Response = S.St
   "chapterNum": S.Number,
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "stageNum": S.Number,
   "taskStatus": S.Literals(['pending', 'processing', 'completed', 'failed']),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 }))
@@ -2065,6 +2167,12 @@ export const ReadMemoryTasksMemoryAgentJobsMemoryJobIdTasksGet422Response = S.St
 export const RemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteParams = S.Struct({
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteQueryStageNumDefault = 0;
+
+export const RemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteQueryParams = S.Struct({
+  "stageNum": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(removeMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteQueryStageNumDefault)))
 })
 
 export const RemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDelete404Response = S.Struct({
@@ -2095,12 +2203,19 @@ export const ReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetParams = S
   "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
+export const readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetQueryStageNumDefault = 0;
+
+export const ReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetQueryParams = S.Struct({
+  "stageNum": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGetQueryStageNumDefault)))
+})
+
 export const ReadMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdGet200Response = S.Struct({
   "attemptCount": S.Number,
   "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterNum": S.Number,
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "stageNum": S.Number,
   "taskStatus": S.Literals(['pending', 'processing', 'completed', 'failed']),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 })
@@ -2129,12 +2244,19 @@ export const RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostPar
   "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
+export const retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostQueryStageNumDefault = 0;
+
+export const RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostQueryParams = S.Struct({
+  "stageNum": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(retryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostQueryStageNumDefault)))
+})
+
 export const RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPost202Response = S.Struct({
   "attemptCount": S.Number,
   "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterNum": S.Number,
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "stageNum": S.Number,
   "taskStatus": S.Literals(['pending', 'processing', 'completed', 'failed']),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 })
@@ -2171,12 +2293,19 @@ export const StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostPar
   "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
+export const startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostQueryStageNumDefault = 0;
+
+export const StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostQueryParams = S.Struct({
+  "stageNum": S.Number.pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostQueryStageNumDefault)))
+})
+
 export const StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPost202Response = S.Struct({
   "attemptCount": S.Number,
   "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterNum": S.Number,
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "stageNum": S.Number,
   "taskStatus": S.Literals(['pending', 'processing', 'completed', 'failed']),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
 })

@@ -12,6 +12,7 @@ export interface MemoryChapterTask {
   chapterNum: number;
   createdAt: string;
   memoryJobId: string;
+  stageNum: number;
   taskStatus: JobStatus;
   updatedAt: string;
 }

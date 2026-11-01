@@ -4,10 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { JobParamsToolsets } from './jobParamsToolsets';
-import type { ModelName } from './modelName';
+import type { JobParamsV1 } from './jobParamsV1';
+import type { JobParamsV2 } from './jobParamsV2';
 
-export interface JobParams {
-  modelName: ModelName;
-  toolsets: JobParamsToolsets;
-}
+export type JobParams = JobParamsV1 | JobParamsV2;

@@ -39,7 +39,7 @@ def _create_job(client: TestClient, user: User, memory_group_id: UUID):
             "memoryGroupId": str(memory_group_id),
             "startChapterNum": None,
             "endChapterNum": None,
-            "params": {"modelName": "deepseek:deepseek-v4-flash-low", "toolsets": {}},
+            "params": {"version": 1, "modelName": "deepseek:deepseek-v4-flash-low", "toolsets": {}},
         },
     )
 
@@ -113,6 +113,7 @@ def test_memory_agent_router_exposes_authenticated_job_progress_and_dispatch(
     memory_job_id = UUID(job["memoryJobId"])
     assert job["memoryGroupId"] == str(group.memory_group_id)
     assert job["jobParams"] == {
+        "version": 1,
         "modelName": "deepseek:deepseek-v4-flash-low",
         "toolsets": {},
     }
@@ -174,7 +175,7 @@ def test_memory_agent_router_exposes_authenticated_job_progress_and_dispatch(
         == status.HTTP_202_ACCEPTED
     )
     assert recording_memory_agent_dispatcher.jobs == [memory_job_id]
-    assert recording_memory_agent_dispatcher.tasks == [(memory_job_id, chapter_id)]
+    assert recording_memory_agent_dispatcher.tasks == [(memory_job_id, chapter_id, 0)]
 
 
 def test_memory_agent_openapi_keeps_toolset_names_and_configs_opaque() -> None:
@@ -183,7 +184,7 @@ def test_memory_agent_openapi_keeps_toolset_names_and_configs_opaque() -> None:
 
     assert "ParsedToolsets" not in schemas
     assert "ToolsetName" not in schemas
-    assert schemas["JobParams"]["properties"]["toolsets"] == {
+    assert schemas["JobParamsV1"]["properties"]["toolsets"] == {
         "additionalProperties": {
             "additionalProperties": True,
             "type": "object",
@@ -226,3 +227,63 @@ def test_memory_agent_router_maps_access_state_and_publication_failures(
     )
     assert start_response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
     assert start_response.json() == {"detail": "broker unavailable"}
+
+
+def test_stage_controls_retry_only_naming_and_preserve_permissions(
+    client: TestClient,
+    test_db: Session,
+    novel_permission_scenario: DatabaseScenario,
+    recording_memory_agent_dispatcher: RecordingMemoryAgentDispatcher,
+) -> None:
+    from sqlalchemy import update
+
+    from src.memory.models import MemoryChapterTask
+    from src.memory.types import JobStatus
+
+    group = _create_group(test_db, novel_permission_scenario, "ov")
+    owner = novel_permission_scenario.users["owner"]
+    viewer = novel_permission_scenario.users["other"]
+    response = client.post(
+        "/memory-agent/jobs",
+        headers=_auth_headers(owner),
+        json={
+            "memoryGroupId": str(group.memory_group_id),
+            "params": {
+                "version": 2,
+                "recordMemories": {"modelName": "deepseek:deepseek-v4-flash-low", "toolsets": {}},
+                "translateTerms": {"modelName": "deepseek:deepseek-v4-flash-low"},
+            },
+        },
+    )
+    assert response.status_code == 201
+    job_id = UUID(response.json()["memoryJobId"])
+    tasks = client.get(f"/memory-agent/jobs/{job_id}/tasks", headers=_auth_headers(owner)).json()
+    assert [row["stageNum"] for row in tasks["rows"]] == [0, 1]
+    assert all("stageName" not in row for row in tasks["rows"])
+    chapter_id = UUID(tasks["rows"][0]["chapterId"])
+    url = f"/memory-agent/jobs/{job_id}/tasks/{chapter_id}"
+    assert client.post(url + "/start", params={"stageNum": 1}, headers=_auth_headers(owner)).status_code == 409
+    test_db.execute(
+        update(MemoryChapterTask)
+        .where(
+            MemoryChapterTask.memory_job_id == job_id,
+            MemoryChapterTask.stage_num == 0,
+        )
+        .values(task_status=JobStatus.COMPLETED)
+    )
+    test_db.execute(
+        update(MemoryChapterTask)
+        .where(
+            MemoryChapterTask.memory_job_id == job_id,
+            MemoryChapterTask.stage_num == 1,
+        )
+        .values(task_status=JobStatus.FAILED)
+    )
+    test_db.commit()
+    assert client.post(url + "/retry", params={"stageNum": 1}, headers=_auth_headers(viewer)).status_code == 404
+    retried = client.post(url + "/retry", params={"stageNum": 1}, headers=_auth_headers(owner))
+    assert retried.status_code == 202
+    assert retried.json()["stageNum"] == 1 and retried.json()["taskStatus"] == "pending"
+    assert recording_memory_agent_dispatcher.tasks == [(job_id, chapter_id, 1)]
+    recording = client.get(url, params={"stageNum": 0}, headers=_auth_headers(owner)).json()
+    assert recording["taskStatus"] == "completed"

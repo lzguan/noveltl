@@ -1510,6 +1510,16 @@ components:
     IntegerValue:
       type: integer
     JobParams:
+      discriminator:
+        mapping:
+          '1': '#/components/schemas/JobParamsV1'
+          '2': '#/components/schemas/JobParamsV2'
+        propertyName: version
+      oneOf:
+      - $ref: '#/components/schemas/JobParamsV1'
+      - $ref: '#/components/schemas/JobParamsV2'
+    JobParamsV1:
+      additionalProperties: false
       properties:
         modelName:
           $ref: '#/components/schemas/ModelName'
@@ -1519,10 +1529,33 @@ components:
             type: object
           title: Toolsets
           type: object
+        version:
+          const: 1
+          default: 1
+          title: Version
+          type: integer
       required:
       - modelName
       - toolsets
-      title: JobParams
+      title: JobParamsV1
+      type: object
+    JobParamsV2:
+      additionalProperties: false
+      properties:
+        recordMemories:
+          anyOf:
+          - $ref: '#/components/schemas/RecordMemoriesConfig'
+          - type: 'null'
+        translateTerms:
+          anyOf:
+          - $ref: '#/components/schemas/TranslateTermsConfig'
+          - type: 'null'
+        version:
+          const: 2
+          default: 2
+          title: Version
+          type: integer
+      title: JobParamsV2
       type: object
     JobStatus:
       enum:
@@ -2004,6 +2037,9 @@ components:
           format: uuid
           title: Memoryjobid
           type: string
+        stageNum:
+          title: Stagenum
+          type: integer
         taskStatus:
           $ref: '#/components/schemas/JobStatus'
         updatedAt:
@@ -2014,6 +2050,7 @@ components:
       - memoryJobId
       - chapterId
       - chapterNum
+      - stageNum
       - taskStatus
       - attemptCount
       - createdAt
@@ -2581,6 +2618,22 @@ components:
       - functionDefinitionId
       title: PythonMapRequest
       type: object
+    RecordMemoriesConfig:
+      additionalProperties: false
+      properties:
+        modelName:
+          $ref: '#/components/schemas/ModelName'
+        toolsets:
+          additionalProperties:
+            additionalProperties: true
+            type: object
+          title: Toolsets
+          type: object
+      required:
+      - modelName
+      - toolsets
+      title: RecordMemoriesConfig
+      type: object
     RenameWorkflowRequest:
       additionalProperties: false
       properties:
@@ -2944,6 +2997,15 @@ components:
       - memory
       - guidance
       type: string
+    TranslateTermsConfig:
+      additionalProperties: false
+      properties:
+        modelName:
+          $ref: '#/components/schemas/ModelName'
+      required:
+      - modelName
+      title: TranslateTermsConfig
+      type: object
     TranslationActionMetadata:
       properties:
         allowedAsFirstStage:
@@ -6575,6 +6637,13 @@ paths:
           format: uuid
           title: Chapterid
           type: string
+      - in: query
+        name: stageNum
+        required: false
+        schema:
+          default: 0
+          title: Stagenum
+          type: integer
       responses:
         '204':
           description: Successful Response
@@ -6616,6 +6685,13 @@ paths:
           format: uuid
           title: Chapterid
           type: string
+      - in: query
+        name: stageNum
+        required: false
+        schema:
+          default: 0
+          title: Stagenum
+          type: integer
       responses:
         '200':
           content:
@@ -6656,6 +6732,13 @@ paths:
           format: uuid
           title: Chapterid
           type: string
+      - in: query
+        name: stageNum
+        required: false
+        schema:
+          default: 0
+          title: Stagenum
+          type: integer
       responses:
         '202':
           content:
@@ -6708,6 +6791,13 @@ paths:
           format: uuid
           title: Chapterid
           type: string
+      - in: query
+        name: stageNum
+        required: false
+        schema:
+          default: 0
+          title: Stagenum
+          type: integer
       responses:
         '202':
           content:

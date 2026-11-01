@@ -220,9 +220,10 @@ def read_memory_task(
     chapter_id: Annotated[UUID, Path(alias="chapterId")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
+    stage_num: Annotated[int, Query(alias="stageNum")] = 0,
 ) -> MemoryChapterTask:
     try:
-        return query_task(db, current_user, memory_job_id, chapter_id)
+        return query_task(db, current_user, memory_job_id, chapter_id, stage_num)
     except MemoryChapterTaskNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
@@ -285,9 +286,10 @@ def start_memory_task(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     dispatcher: Annotated[MemoryAgentDispatcher, Depends(get_dispatcher)],
+    stage_num: Annotated[int, Query(alias="stageNum")] = 0,
 ) -> MemoryChapterTask:
     try:
-        return start_task(db, current_user, dispatcher, memory_job_id, chapter_id)
+        return start_task(db, current_user, dispatcher, memory_job_id, chapter_id, stage_num)
     except MemoryChapterTaskNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except MemoryChapterTaskStateException as exc:
@@ -312,9 +314,10 @@ def retry_memory_task(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     dispatcher: Annotated[MemoryAgentDispatcher, Depends(get_dispatcher)],
+    stage_num: Annotated[int, Query(alias="stageNum")] = 0,
 ) -> MemoryChapterTask:
     try:
-        return retry_task(db, current_user, dispatcher, memory_job_id, chapter_id)
+        return retry_task(db, current_user, dispatcher, memory_job_id, chapter_id, stage_num)
     except MemoryChapterTaskNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except MemoryChapterTaskStateException as exc:
@@ -336,9 +339,10 @@ def remove_memory_task(
     chapter_id: Annotated[UUID, Path(alias="chapterId")],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
+    stage_num: Annotated[int, Query(alias="stageNum")] = 0,
 ) -> Response:
     try:
-        delete_task(db, current_user, memory_job_id, chapter_id)
+        delete_task(db, current_user, memory_job_id, chapter_id, stage_num)
     except MemoryChapterTaskNotFoundException as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except MemoryChapterTaskStateException as exc:

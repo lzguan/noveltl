@@ -11,9 +11,9 @@ from sqlalchemy.orm import Session
 
 from src.memory.access import MemAccessContext
 from src.memory.agent.agent import GLOSSARY_TOOLSET_NAMES, resolve_capabilities
+from src.memory.agent.config import JobParamsV1 as JobParams
 from src.memory.agent.dependencies import MemAgentDeps
-from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
-from src.memory.agent.tasks.jobs import JobParams
+from src.memory.agent.prompts.recording import MEMORY_AGENT_PROMPT
 from src.memory.agent.toolsets.glossary import common as glossary_common
 from src.memory.agent.toolsets.glossary.character_state import (
     character_state_memories,

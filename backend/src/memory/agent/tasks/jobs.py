@@ -1,30 +1,14 @@
 import uuid
 from datetime import timedelta
-from typing import Any, Literal, Self
+from typing import Literal
 
-from pydantic import model_validator
-from sqlalchemy import and_, func, insert, literal, or_, select, update
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, func, insert, literal, or_, select, tuple_, update
+from sqlalchemy.orm import Session, aliased
 
-from src.memory.agent.types import ModelName, ParsedToolsets
+from src.memory.agent.config import JobParams, resolve_stages
 from src.memory.models import MemoryChapterTask, MemoryGroup, MemoryJob
 from src.memory.types import JobStatus
 from src.novels.models import Chapter
-from src.schemas import Model
-
-
-class JobParams(Model):
-    model_name: ModelName
-    toolsets: dict[str, dict[str, Any]]
-
-    def parse_toolsets(self) -> ParsedToolsets:
-        """Parse the public string-keyed selection into internal toolset configs."""
-        return ParsedToolsets.model_validate(self.toolsets)
-
-    @model_validator(mode="after")
-    def validate_toolsets(self) -> Self:
-        self.parse_toolsets()
-        return self
 
 
 def _owns_job_claim(memory_job_id: uuid.UUID, claim_token: uuid.UUID):
@@ -229,14 +213,19 @@ def make_job(
     if end_chapter_num is not None:
         chapter_query = chapter_query.where(Chapter.chapter_num < end_chapter_num)
 
-    task_stmt = insert(MemoryChapterTask).from_select(
-        [MemoryChapterTask.memory_job_id, MemoryChapterTask.chapter_id],
-        chapter_query,
-    )
-
     try:
         db.execute(job_stmt)
-        db.execute(task_stmt)
+        for stage_num, _ in enumerate(resolve_stages(params)):
+            db.execute(
+                insert(MemoryChapterTask).from_select(
+                    [
+                        MemoryChapterTask.memory_job_id,
+                        MemoryChapterTask.chapter_id,
+                        MemoryChapterTask.stage_num,
+                    ],
+                    chapter_query.add_columns(literal(stage_num)),
+                )
+            )
         db.commit()
     except Exception:
         db.rollback()
@@ -264,23 +253,24 @@ def claim_next_task(
         The claimed task, or None if there is no pending task or the job claim
         is not currently owned by the caller.
     """
-    next_chapter_id = (
-        select(MemoryChapterTask.chapter_id)
+    # Select the first unfinished stage, including failures. A failed stage
+    # blocks the sequence until explicitly retried, rather than being skipped.
+    next_task = (
+        select(MemoryChapterTask.chapter_id, MemoryChapterTask.stage_num)
         .join(Chapter, Chapter.chapter_id == MemoryChapterTask.chapter_id)
         .where(
             MemoryChapterTask.memory_job_id == memory_job_id,
-            MemoryChapterTask.task_status == JobStatus.PENDING,
+            MemoryChapterTask.task_status != JobStatus.COMPLETED,
             _owns_job_claim(memory_job_id, claim_token),
         )
-        .order_by(Chapter.chapter_num, Chapter.chapter_id)
+        .order_by(Chapter.chapter_num, MemoryChapterTask.stage_num)
         .limit(1)
-        .scalar_subquery()
     )
     claim_stmt = (
         update(MemoryChapterTask)
         .where(
             MemoryChapterTask.memory_job_id == memory_job_id,
-            MemoryChapterTask.chapter_id == next_chapter_id,
+            tuple_(MemoryChapterTask.chapter_id, MemoryChapterTask.stage_num).in_(next_task),
             MemoryChapterTask.task_status == JobStatus.PENDING,
         )
         .values(
@@ -304,6 +294,7 @@ def claim_task(
     memory_job_id: uuid.UUID,
     chapter_id: uuid.UUID,
     claim_token: uuid.UUID,
+    stage_num: int = 0,
 ) -> MemoryChapterTask | None:
     """Mark a specified pending task as processing while owning the job claim."""
     claim_stmt = (
@@ -311,8 +302,10 @@ def claim_task(
         .where(
             MemoryChapterTask.memory_job_id == memory_job_id,
             MemoryChapterTask.chapter_id == chapter_id,
+            MemoryChapterTask.stage_num == stage_num,
             MemoryChapterTask.task_status == JobStatus.PENDING,
             _owns_job_claim(memory_job_id, claim_token),
+            ~unfinished_preceding_stage(memory_job_id, chapter_id, stage_num),
         )
         .values(
             task_status=JobStatus.PROCESSING,
@@ -336,6 +329,7 @@ def release_task(
     chapter_id: uuid.UUID,
     claim_token: uuid.UUID,
     task_status: Literal[JobStatus.COMPLETED, JobStatus.FAILED],
+    stage_num: int = 0,
 ) -> bool:
     """Finish a processing task and commit if the caller still owns the job claim."""
 
@@ -344,6 +338,7 @@ def release_task(
         .where(
             MemoryChapterTask.memory_job_id == memory_job_id,
             MemoryChapterTask.chapter_id == chapter_id,
+            MemoryChapterTask.stage_num == stage_num,
             MemoryChapterTask.task_status == JobStatus.PROCESSING,
             _owns_job_claim(memory_job_id, claim_token),
         )
@@ -367,6 +362,7 @@ def reset_failed_task(
     db: Session,
     memory_job_id: uuid.UUID,
     chapter_id: uuid.UUID,
+    stage_num: int = 0,
 ) -> bool:
     """Return a failed task to pending so a worker can claim it again."""
     reset_chapter_id = db.scalar(
@@ -374,6 +370,7 @@ def reset_failed_task(
         .where(
             MemoryChapterTask.memory_job_id == memory_job_id,
             MemoryChapterTask.chapter_id == chapter_id,
+            MemoryChapterTask.stage_num == stage_num,
             MemoryChapterTask.task_status == JobStatus.FAILED,
         )
         .values(task_status=JobStatus.PENDING)
@@ -384,3 +381,18 @@ def reset_failed_task(
         return False
     db.commit()
     return True
+
+
+def unfinished_preceding_stage(memory_job_id: uuid.UUID, chapter_id: uuid.UUID, stage_num: int):
+    """A directly requested stage cannot bypass its own chapter's prerequisites."""
+    preceding = aliased(MemoryChapterTask)
+    return (
+        select(preceding.memory_job_id)
+        .where(
+            preceding.memory_job_id == memory_job_id,
+            preceding.chapter_id == chapter_id,
+            preceding.stage_num < stage_num,
+            preceding.task_status != JobStatus.COMPLETED,
+        )
+        .exists()
+    )

@@ -2708,6 +2708,16 @@ components:
       oneOf:
       - $ref: '#/components/schemas/Schema'
       - $ref: '#/components/schemas/SchemaField'
+    SaveTermTranslation:
+      properties:
+        translation:
+          minLength: 1
+          title: Translation
+          type: string
+      required:
+      - translation
+      title: SaveTermTranslation
+      type: object
     Schema:
       additionalProperties: false
       properties:
@@ -2891,6 +2901,36 @@ components:
       - other
       title: TermKind
       type: string
+    TermTranslationRead:
+      properties:
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        creatorType:
+          $ref: '#/components/schemas/Creator'
+        reviewStatus:
+          $ref: '#/components/schemas/ReviewStatus'
+        termId:
+          format: uuid
+          title: Termid
+          type: string
+        translation:
+          title: Translation
+          type: string
+        updatedAt:
+          format: date-time
+          title: Updatedat
+          type: string
+      required:
+      - termId
+      - translation
+      - reviewStatus
+      - creatorType
+      - createdAt
+      - updatedAt
+      title: TermTranslationRead
+      type: object
     TextOp:
       description: "Pydantic schema to update text content of a chapter.\n\nAttributes:\n\
         \    op: The text operation, either \"insert\" or \"delete\".\n    start:\
@@ -7625,6 +7665,100 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Read Memories
+  /memory-groups/{memoryGroupId}/translations:
+    get:
+      operationId: read_term_translations_memory_groups__memoryGroupId__translations_get
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: query
+        name: termIds
+        required: true
+        schema:
+          items:
+            format: uuid
+            type: string
+          maxItems: 100
+          minItems: 1
+          title: Termids
+          type: array
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/TermTranslationRead'
+                title: Response Read Term Translations Memory Groups  Memorygroupid  Translations
+                  Get
+                type: array
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Term Translations
+  /memory-groups/{memoryGroupId}/translations/{termId}:
+    put:
+      operationId: put_term_translation_memory_groups__memoryGroupId__translations__termId__put
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: termId
+        required: true
+        schema:
+          format: uuid
+          title: Termid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveTermTranslation'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TermTranslationRead'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Put Term Translation
   /novels:
     get:
       description: Endpoint for retrieving novels in bulk.

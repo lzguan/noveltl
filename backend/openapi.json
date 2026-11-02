@@ -6069,6 +6069,155 @@
         }
       }
     },
+    "/memory-groups/{memoryGroupId}/translations": {
+      "get": {
+        "summary": "Read Term Translations",
+        "operationId": "read_term_translations_memory_groups__memoryGroupId__translations_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "termIds",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "minItems": 1,
+              "maxItems": 100,
+              "title": "Termids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TermTranslationRead"
+                  },
+                  "title": "Response Read Term Translations Memory Groups  Memorygroupid  Translations Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory-groups/{memoryGroupId}/translations/{termId}": {
+      "put": {
+        "summary": "Put Term Translation",
+        "operationId": "put_term_translation_memory_groups__memoryGroupId__translations__termId__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "termId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Termid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveTermTranslation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermTranslationRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/memory-agent/config": {
       "get": {
         "summary": "Read Memory Agent Config",
@@ -11310,6 +11459,20 @@
           }
         }
       },
+      "SaveTermTranslation": {
+        "properties": {
+          "translation": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Translation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "translation"
+        ],
+        "title": "SaveTermTranslation"
+      },
       "Schema": {
         "properties": {
           "kind": {
@@ -11550,6 +11713,45 @@
           "other"
         ],
         "title": "TermKind"
+      },
+      "TermTranslationRead": {
+        "properties": {
+          "termId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Termid"
+          },
+          "translation": {
+            "type": "string",
+            "title": "Translation"
+          },
+          "reviewStatus": {
+            "$ref": "#/components/schemas/ReviewStatus"
+          },
+          "creatorType": {
+            "$ref": "#/components/schemas/Creator"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "termId",
+          "translation",
+          "reviewStatus",
+          "creatorType",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "TermTranslationRead"
       },
       "TextOp": {
         "properties": {

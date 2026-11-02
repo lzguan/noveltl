@@ -85,13 +85,16 @@ import type {
   ReadNovelsMineNovelsMineGetParams,
   ReadNovelsNovelsGetParams,
   ReadSourceWorksSourceWorksGetParams,
+  ReadTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetParams,
   RemoveMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdDeleteParams,
   ReplaceGlossaryAssociations,
   RequestConflictErrorResponse,
   RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostParams,
+  SaveTermTranslation,
   SourceWork,
   SourceWorkData,
   StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostParams,
+  TermTranslationRead,
   Token,
   UpdateChapter,
   UpdateChapterContent,
@@ -3956,6 +3959,132 @@ export const readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet = async (memoryGro
     method: 'GET'
 
 
+  }
+);}
+
+
+export type readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetResponse200 = {
+  data: TermTranslationRead[]
+  status: 200
+}
+
+export type readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetResponseSuccess = (readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetResponse200) & {
+  headers: Headers;
+};
+export type readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetResponseError = (readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetResponse404 | readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetResponse422) & {
+  headers: Headers;
+};
+
+export type readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetResponse = (readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetResponseSuccess | readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetResponseError)
+
+export const getReadTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetUrl = (memoryGroupId: string,
+    params: ReadTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["termIds"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
+
+
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/memory-groups/${memoryGroupId}/translations?${stringifiedParams}` : `/api/memory-groups/${memoryGroupId}/translations`
+}
+
+/**
+ * @summary Read Term Translations
+ */
+export const readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet = async (memoryGroupId: string,
+    params: ReadTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetParams, options?: Parameters<typeof customFetch>[1]): Promise<readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetResponse> => {
+
+  return customFetch<readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetResponse>(getReadTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetUrl(memoryGroupId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+export type putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutResponse200 = {
+  data: TermTranslationRead
+  status: 200
+}
+
+export type putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutResponseSuccess = (putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutResponse200) & {
+  headers: Headers;
+};
+export type putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutResponseError = (putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutResponse404 | putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutResponse422) & {
+  headers: Headers;
+};
+
+export type putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutResponse = (putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutResponseSuccess | putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutResponseError)
+
+export const getPutTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutUrl = (memoryGroupId: string,
+    termId: string,) => {
+
+
+
+
+  return `/api/memory-groups/${memoryGroupId}/translations/${termId}`
+}
+
+/**
+ * @summary Put Term Translation
+ */
+export const putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPut = async (memoryGroupId: string,
+    termId: string,
+    saveTermTranslation: SaveTermTranslation, options?: Parameters<typeof customFetch>[1]): Promise<putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutResponse>(getPutTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutUrl(memoryGroupId,termId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(saveTermTranslation)
   }
 );}
 

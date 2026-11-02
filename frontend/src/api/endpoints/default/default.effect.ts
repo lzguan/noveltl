@@ -3042,6 +3042,87 @@ export const ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGet422Response = S.Str
 })
 
 /**
+ * @summary Read Term Translations
+ */
+export const ReadTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetParams = S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetQueryTermIdsMax = 100;
+
+
+
+export const ReadTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetQueryParams = S.Struct({
+  "termIds": S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))).check(S.isMinLength(1), S.isMaxLength(readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGetQueryTermIdsMax))
+})
+
+export const ReadTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet200ResponseItem = S.Struct({
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']),
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "translation": S.String,
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+})
+export const ReadTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet200Response = S.Array(ReadTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet200ResponseItem)
+
+export const ReadTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet404Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const ReadTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Put Term Translation
+ */
+export const PutTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutParams = S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+
+
+
+export const PutTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutBody = S.Struct({
+  "translation": S.String.check(S.isMinLength(1))
+})
+
+export const PutTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPut200Response = S.Struct({
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']),
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "translation": S.String,
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+})
+
+export const PutTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPut404Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const PutTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPut422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * Endpoint for retrieving novels in bulk.
  * @summary Read Novels
  */

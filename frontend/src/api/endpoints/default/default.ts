@@ -4025,6 +4025,55 @@ export const readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet = asyn
 );}
 
 
+export type removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteResponse204 = {
+  data: void
+  status: 204
+}
+
+export type removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteResponseSuccess = (removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteResponse204) & {
+  headers: Headers;
+};
+export type removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteResponseError = (removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteResponse404 | removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteResponse422) & {
+  headers: Headers;
+};
+
+export type removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteResponse = (removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteResponseSuccess | removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteResponseError)
+
+export const getRemoveTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteUrl = (memoryGroupId: string,
+    termId: string,) => {
+
+
+
+
+  return `/api/memory-groups/${memoryGroupId}/translations/${termId}`
+}
+
+/**
+ * @summary Remove Term Translation
+ */
+export const removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDelete = async (memoryGroupId: string,
+    termId: string, options?: Parameters<typeof customFetch>[1]): Promise<removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteResponse> => {
+
+  return customFetch<removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteResponse>(getRemoveTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteUrl(memoryGroupId,termId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
 export type putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutResponse200 = {
   data: TermTranslationRead
   status: 200
@@ -4085,6 +4134,70 @@ return customFetch<putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermId
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(saveTermTranslation)
+  }
+);}
+
+
+export type editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchResponse200 = {
+  data: TermTranslationRead
+  status: 200
+}
+
+export type editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchResponseSuccess = (editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchResponse200) & {
+  headers: Headers;
+};
+export type editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchResponseError = (editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchResponse404 | editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchResponse422) & {
+  headers: Headers;
+};
+
+export type editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchResponse = (editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchResponseSuccess | editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchResponseError)
+
+export const getEditTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchUrl = (memoryGroupId: string,
+    termId: string,) => {
+
+
+
+
+  return `/api/memory-groups/${memoryGroupId}/translations/${termId}/review-status`
+}
+
+/**
+ * @summary Edit Term Translation Review Status
+ */
+export const editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatch = async (memoryGroupId: string,
+    termId: string,
+    updateReviewStatus: UpdateReviewStatus, options?: Parameters<typeof customFetch>[1]): Promise<editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchResponse>(getEditTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchUrl(memoryGroupId,termId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateReviewStatus)
   }
 );}
 

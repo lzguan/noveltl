@@ -7714,6 +7714,41 @@ paths:
       - OAuth2PasswordBearer: []
       summary: Read Term Translations
   /memory-groups/{memoryGroupId}/translations/{termId}:
+    delete:
+      operationId: remove_term_translation_memory_groups__memoryGroupId__translations__termId__delete
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: termId
+        required: true
+        schema:
+          format: uuid
+          title: Termid
+          type: string
+      responses:
+        '204':
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Remove Term Translation
     put:
       operationId: put_term_translation_memory_groups__memoryGroupId__translations__termId__put
       parameters:
@@ -7759,6 +7794,52 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Put Term Translation
+  /memory-groups/{memoryGroupId}/translations/{termId}/review-status:
+    patch:
+      operationId: edit_term_translation_review_status_memory_groups__memoryGroupId__translations__termId__review_status_patch
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: termId
+        required: true
+        schema:
+          format: uuid
+          title: Termid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReviewStatus'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TermTranslationRead'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Edit Term Translation Review Status
   /novels:
     get:
       description: Endpoint for retrieving novels in bulk.

@@ -3083,6 +3083,30 @@ export const ReadTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet422Resp
 })
 
 /**
+ * @summary Remove Term Translation
+ */
+export const RemoveTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDeleteParams = S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const RemoveTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDelete404Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const RemoveTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDelete422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * @summary Put Term Translation
  */
 export const PutTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPutParams = S.Struct({
@@ -3111,6 +3135,43 @@ export const PutTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPut404
 }).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const PutTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPut422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Edit Term Translation Review Status
+ */
+export const EditTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchParams = S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const EditTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatchBody = S.Struct({
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected'])
+})
+
+export const EditTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatch200Response = S.Struct({
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']),
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']),
+  "termId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "translation": S.String,
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+})
+
+export const EditTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatch404Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const EditTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatch422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "ctx": S.optional(S.StructWithRest(S.Struct({
 

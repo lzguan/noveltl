@@ -262,7 +262,7 @@ function LoadedCreateMemoryJobForm({
 									<FieldError errors={[errors.endChapterNum]} />
 								</Field>
 							</div>
-							<Field className="flex-row items-center">
+							<Field orientation="horizontal">
 								<Controller
 									control={control}
 									name="recordMemories"
@@ -279,7 +279,7 @@ function LoadedCreateMemoryJobForm({
 								/>
 								<FieldLabel htmlFor="memory-job-record">Record memories</FieldLabel>
 							</Field>
-							<Field className="flex-row items-center">
+							<Field orientation="horizontal">
 								<Controller
 									control={control}
 									name="translateTerms"

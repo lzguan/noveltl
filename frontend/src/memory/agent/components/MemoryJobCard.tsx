@@ -81,8 +81,7 @@ export function MemoryJobCard({
 	const total = counts.pending + counts.processing + counts.completed + counts.failed;
 	const progress = total === 0 ? 0 : Math.round((counts.completed / total) * 100);
 	const controlsDisabled = pendingAction !== null || refreshingSummary || tasksRefreshing;
-	const canStartJob =
-		!claimed && counts.failed === 0 && (counts.pending > 0 || counts.processing > 0);
+	const canStartJob = !claimed && (counts.pending > 0 || counts.processing > 0);
 	const statusLabel = claimed
 		? "Running"
 		: counts.processing > 0

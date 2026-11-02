@@ -3,7 +3,6 @@
 This folder documents the memory feature.
 
 - [data-model.md](data-model.md): Memory and plugin data models
-- [jobs.md](jobs.md): Recording and term-translation stages, configuration, and retries
 - [ui-overview.md](ui-overview.md): Proposed memory-panel hierarchy and wireframes
 - [agent-evals/](agent-evals/): Memory-agent evaluation protocol, change log, and run reports
 

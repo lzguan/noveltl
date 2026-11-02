@@ -1,5 +1,5 @@
 import { editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch } from "@/api/endpoints/default/default";
-import { ReviewStatus, type GlossaryTermSummary } from "@/api/models";
+import { ReviewStatus, type GlossaryTermSummary, type TermTranslationRead } from "@/api/models";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -35,6 +35,7 @@ import { EditGlossaryTermDialog } from "./EditGlossaryTermDialog";
 import { GlossaryMemoryRow } from "./GlossaryMemoryRow";
 import { PageNavigation } from "./PageNavigation";
 import { termKindLabel } from "@/memory/termKinds";
+import { TermTranslationEditor } from "./TermTranslationEditor";
 
 function GlossaryTermRow({
 	memoryGroupId,
@@ -47,6 +48,8 @@ function GlossaryTermRow({
 	memoryCreationDisabled,
 	reloadTerms,
 	reloadTermsAfterDelete,
+	translations,
+	onTranslationSaved,
 }: {
 	memoryGroupId: string;
 	term: GlossaryTermSummary;
@@ -58,6 +61,8 @@ function GlossaryTermRow({
 	memoryCreationDisabled: boolean;
 	reloadTerms: () => void;
 	reloadTermsAfterDelete: () => void;
+	translations: Loadable<ReadonlyMap<string, TermTranslationRead>>;
+	onTranslationSaved: (translation: TermTranslationRead) => void;
 }) {
 	const termMemories = useTermMemories(memoryGroupId, term.termId, chapterId);
 	const [editOpen, setEditOpen] = useState(false);
@@ -99,18 +104,33 @@ function GlossaryTermRow({
 
 	return (
 		<Collapsible open={open} onOpenChange={changeOpen} className="border-b">
-			<div className="flex items-center hover:bg-muted/50">
-				<CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-left text-sm">
+			<div className="flex items-start hover:bg-muted/50">
+				<CollapsibleTrigger className="flex min-w-0 flex-1 items-start gap-2 px-2 py-2 text-left text-sm">
 					<ChevronDownIcon
-						className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")}
+						className={cn(
+							"mt-0.5 size-4 shrink-0 transition-transform",
+							open && "rotate-180",
+						)}
 					/>
-					<span className="min-w-0 flex-1 truncate font-medium">{term.term}</span>
-					<span className="whitespace-nowrap text-xs text-muted-foreground">
-						{term.associatedMemoryCount}{" "}
-						{term.associatedMemoryCount === 1 ? "memory" : "memories"}
+					<span className="min-w-0 flex-1 space-y-1">
+						<span className="block wrap-break-word font-medium">{term.term}</span>
+						<span className="block wrap-break-word text-xs text-muted-foreground">
+							{translations.status === "ready"
+								? (translations.data.get(term.termId)?.translation ??
+									"Not translated")
+								: translations.status === "error"
+									? "Translation unavailable"
+									: "Loading translation…"}
+						</span>
+						<span className="flex flex-wrap items-center gap-1">
+							<span className="text-xs text-muted-foreground">
+								{term.associatedMemoryCount}{" "}
+								{term.associatedMemoryCount === 1 ? "memory" : "memories"}
+							</span>
+							<Badge variant="secondary">{termKindLabel(term.termKind)}</Badge>
+							<Badge variant="outline">{term.reviewStatus}</Badge>
+						</span>
 					</span>
-					<Badge variant="secondary">{termKindLabel(term.termKind)}</Badge>
-					<Badge variant="outline">{term.reviewStatus}</Badge>
 				</CollapsibleTrigger>
 				{open && (
 					<Button
@@ -197,6 +217,16 @@ function GlossaryTermRow({
 				</p>
 			)}
 			<CollapsibleContent className="border-t bg-muted/20">
+				{translations.status === "ready" && (
+					<div className="border-b p-3">
+						<TermTranslationEditor
+							memoryGroupId={memoryGroupId}
+							term={term}
+							translation={translations.data.get(term.termId) ?? null}
+							onSaved={onTranslationSaved}
+						/>
+					</div>
+				)}
 				{termMemories.memories.status === "idle" ||
 				termMemories.memories.status === "loading" ? (
 					<div aria-busy="true" className="flex flex-col gap-2 p-2">
@@ -269,6 +299,8 @@ export function GlossaryTermList({
 	memoryCreationDisabled,
 	reloadTerms,
 	reloadTermsAfterDelete,
+	translations,
+	onTranslationSaved,
 }: {
 	terms: Loadable<Page<GlossaryTermSummary>>;
 	memoryGroupId: string;
@@ -280,6 +312,8 @@ export function GlossaryTermList({
 	memoryCreationDisabled: boolean;
 	reloadTerms: () => void;
 	reloadTermsAfterDelete: () => void;
+	translations: Loadable<ReadonlyMap<string, TermTranslationRead>>;
+	onTranslationSaved: (translation: TermTranslationRead) => void;
 }) {
 	if (terms.status === "idle" || terms.status === "loading") {
 		return (
@@ -319,6 +353,8 @@ export function GlossaryTermList({
 					memoryCreationDisabled={memoryCreationDisabled}
 					reloadTerms={reloadTerms}
 					reloadTermsAfterDelete={reloadTermsAfterDelete}
+					translations={translations}
+					onTranslationSaved={onTranslationSaved}
 				/>
 			))}
 		</div>

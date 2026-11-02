@@ -12,6 +12,8 @@ import { useEffect, useState } from "react";
 import { GlossaryTermList } from "./GlossaryTermList";
 import { PageNavigation } from "./PageNavigation";
 import { PluginSelector, type MemoryView } from "./PluginSelector";
+import { TermTranslationEditor } from "./TermTranslationEditor";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function GlossaryBrowser({
 	memoryGroupId,
@@ -28,7 +30,8 @@ export function GlossaryBrowser({
 	view: MemoryView;
 	onViewChange: (view: MemoryView) => void;
 }) {
-	const glossary = useGlossaryTerms(memoryGroupId, chapterId);
+	const translationsView = view === "translations";
+	const glossary = useGlossaryTerms(memoryGroupId, chapterId, translationsView);
 	const [openTermId, setOpenTermId] = useState<string | null>(null);
 	const [createTermOpen, setCreateTermOpen] = useState(false);
 	const [memorySeedTerm, setMemorySeedTerm] = useState<GlossaryTermSummary | null>(null);
@@ -106,6 +109,18 @@ export function GlossaryBrowser({
 				</div>
 			</div>
 
+			{glossary.translations.status === "error" && (
+				<div role="alert" className="border-b p-2 text-sm text-destructive">
+					<p>{glossary.translations.message}</p>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => runOuterQuery(glossary.reloadTerms)}
+					>
+						Retry translations
+					</Button>
+				</div>
+			)}
 			{glossary.terms.status === "idle" && chapterId === null && !glossary.showAllTerms ? (
 				<Empty>
 					<EmptyHeader>
@@ -128,18 +143,57 @@ export function GlossaryBrowser({
 				</div>
 			) : (
 				<>
-					<GlossaryTermList
-						terms={glossary.terms}
-						memoryGroupId={memoryGroupId}
-						chapterId={nestedChapterId}
-						chapterNum={chapterNum}
-						openTermId={openTermId}
-						onOpenTermIdChange={setOpenTermId}
-						onAddMemory={setMemorySeedTerm}
-						memoryCreationDisabled={chapterId === null || chapterContentId === null}
-						reloadTerms={reloadTerms}
-						reloadTermsAfterDelete={glossary.reloadTermsAfterDelete}
-					/>
+					{translationsView ? (
+						<div className="min-h-0 flex-1 overflow-y-auto">
+							{glossary.terms.status !== "ready" ? (
+								<Skeleton className="m-2 h-24" />
+							) : glossary.terms.data.items.length === 0 ? (
+								<p className="p-3 text-sm text-muted-foreground">
+									No terms match this search.
+								</p>
+							) : (
+								glossary.terms.data.items.map((term) => (
+									<div key={term.termId} className="space-y-2 border-b p-3">
+										<p className="wrap-break-word text-sm font-medium">
+											{term.term}
+										</p>
+										{glossary.translations.status === "ready" ? (
+											<TermTranslationEditor
+												memoryGroupId={memoryGroupId}
+												term={term}
+												translation={
+													glossary.translations.data.get(term.termId) ??
+													null
+												}
+												onSaved={glossary.translationSaved}
+											/>
+										) : (
+											<p className="text-xs text-muted-foreground">
+												{glossary.translations.status === "error"
+													? "Translation unavailable"
+													: "Loading translation…"}
+											</p>
+										)}
+									</div>
+								))
+							)}
+						</div>
+					) : (
+						<GlossaryTermList
+							terms={glossary.terms}
+							memoryGroupId={memoryGroupId}
+							chapterId={nestedChapterId}
+							chapterNum={chapterNum}
+							openTermId={openTermId}
+							onOpenTermIdChange={setOpenTermId}
+							onAddMemory={setMemorySeedTerm}
+							memoryCreationDisabled={chapterId === null || chapterContentId === null}
+							reloadTerms={reloadTerms}
+							reloadTermsAfterDelete={glossary.reloadTermsAfterDelete}
+							translations={glossary.translations}
+							onTranslationSaved={glossary.translationSaved}
+						/>
+					)}
 					{glossary.terms.status === "ready" && glossary.terms.data.items.length > 0 && (
 						<PageNavigation
 							start={glossary.terms.data.start}

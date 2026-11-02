@@ -1,8 +1,11 @@
-import { readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet } from "@/api/endpoints/default/default";
-import type { GlossaryTermSummary } from "@/api/models";
+import {
+	readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
+	readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet,
+} from "@/api/endpoints/default/default";
+import type { GlossaryTermSummary, TermTranslationRead } from "@/api/models";
 import { apiErrorMessage, requestErrorMessage } from "@/lib/apiErrors";
 import { pageFromOffset, type Loadable, type Page } from "@/lib/loadable";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export const GLOSSARY_TERM_PAGE_SIZE = 20;
 
@@ -19,18 +22,29 @@ const INITIAL_QUERY: GlossaryTermQuery = {
 };
 
 /** Owns filtering and pagination for the glossary term list. */
-export function useGlossaryTerms(memoryGroupId: string, chapterId: string | null) {
-	const [query, setQuery] = useState<GlossaryTermQuery>(INITIAL_QUERY);
+export function useGlossaryTerms(
+	memoryGroupId: string,
+	chapterId: string | null,
+	initialShowAllTerms = false,
+) {
+	const initialQuery = { ...INITIAL_QUERY, showAllTerms: initialShowAllTerms };
+	const [query, setQuery] = useState<GlossaryTermQuery>(initialQuery);
 	const [terms, setTerms] = useState<Loadable<Page<GlossaryTermSummary>>>({ status: "idle" });
+	const [translations, setTranslations] = useState<
+		Loadable<ReadonlyMap<string, TermTranslationRead>>
+	>({ status: "idle" });
 	const activeRequest = useRef<AbortController | null>(null);
-	const latestQueryRef = useRef<GlossaryTermQuery>(INITIAL_QUERY);
+	const latestQueryRef = useRef<GlossaryTermQuery>(initialQuery);
 	const lastPageRef = useRef<{ itemsLength: number; hasPrevious: boolean } | null>(null);
+
+	useEffect(() => () => activeRequest.current?.abort(), []);
 
 	const runQuery = useCallback(
 		(nextQuery: GlossaryTermQuery) => {
 			activeRequest.current?.abort();
 			latestQueryRef.current = nextQuery;
 			setQuery(nextQuery);
+			setTranslations({ status: "idle" });
 
 			if (!nextQuery.showAllTerms && chapterId === null) {
 				activeRequest.current = null;
@@ -52,7 +66,7 @@ export function useGlossaryTerms(memoryGroupId: string, chapterId: string | null
 				},
 				{ signal: controller.signal },
 			)
-				.then((response) => {
+				.then(async (response) => {
 					if (controller.signal.aborted) return;
 					if (response.status !== 200) {
 						setTerms({
@@ -74,6 +88,40 @@ export function useGlossaryTerms(memoryGroupId: string, chapterId: string | null
 						hasPrevious: data.hasPrevious,
 					};
 					setTerms({ status: "ready", data });
+					if (data.items.length === 0) {
+						setTranslations({ status: "ready", data: new Map() });
+						return;
+					}
+					setTranslations({ status: "loading" });
+					try {
+						const translated =
+							await readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet(
+								memoryGroupId,
+								{ termIds: data.items.map((term) => term.termId) },
+								{ signal: controller.signal },
+							);
+						if (controller.signal.aborted) return;
+						if (translated.status !== 200) {
+							setTranslations({
+								status: "error",
+								message: apiErrorMessage(
+									translated.data,
+									"Could not load term translations.",
+								),
+							});
+							return;
+						}
+						setTranslations({
+							status: "ready",
+							data: new Map(translated.data.map((item) => [item.termId, item])),
+						});
+					} catch (error) {
+						if (!controller.signal.aborted)
+							setTranslations({
+								status: "error",
+								message: requestErrorMessage(error),
+							});
+					}
 				})
 				.catch((error: unknown) => {
 					if (!controller.signal.aborted) {
@@ -123,10 +171,23 @@ export function useGlossaryTerms(memoryGroupId: string, chapterId: string | null
 		runQuery({ ...latestQuery, skip: nextSkip });
 	}, [runQuery]);
 
+	const translationSaved = useCallback((translation: TermTranslationRead) => {
+		setTranslations((current) =>
+			current.status === "ready"
+				? {
+						status: "ready",
+						data: new Map(current.data).set(translation.termId, translation),
+					}
+				: current,
+		);
+	}, []);
+
 	return {
 		showAllTerms: query.showAllTerms,
 		search: query.search,
 		terms,
+		translations,
+		translationSaved,
 		loadTerms,
 		reloadTerms: loadTerms,
 		reloadTermsAfterDelete,

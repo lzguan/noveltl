@@ -268,6 +268,11 @@ creator type, and timestamps. The target language comes from the term's memory
 group. A separate optional naming stage fills missing mappings after recording
 commits.
 
+The glossary shows each term's translation beneath its source form. The memory
+panel's **Term translations** view supports source-term search and editing the
+same mappings. Manual edits preserve the mapping's review status and record the
+creator as a user; new manual mappings start pending review.
+
 ## Continuity summaries
 
 The optional continuity capability records one `summary` memory with plugin

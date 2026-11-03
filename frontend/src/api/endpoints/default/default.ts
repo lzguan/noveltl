@@ -15,6 +15,7 @@ import type {
   ChapterContent,
   ChapterContentMeta,
   ChapterData,
+  ConventionRead,
   CreateAutoLabels,
   CreateAutoLabelsResponse,
   CreateAutolabelsAutoLabelsPostParams,
@@ -59,6 +60,7 @@ import type {
   NovelAndUsers,
   OperationStatus,
   OpsResult,
+  PageConventionRead,
   PageGlossaryMemory,
   PageGlossaryTermSummary,
   PageMemory,
@@ -66,6 +68,7 @@ import type {
   ReadAutoLabelRunsAutoLabelRunsGetParams,
   ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGetParams,
   ReadChaptersByNovelChaptersGetParams,
+  ReadConventionsMemoryGroupsMemoryGroupIdConventionsGetParams,
   ReadEditChapterDataEditChapterDataChapterIdPostParams,
   ReadEditChapterLabelDataEditChapterDataChapterIdLabelDataPostParams,
   ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetParams,
@@ -90,6 +93,7 @@ import type {
   ReplaceGlossaryAssociations,
   RequestConflictErrorResponse,
   RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostParams,
+  SaveConvention,
   SaveTermTranslation,
   SourceWork,
   SourceWorkData,
@@ -3224,6 +3228,304 @@ export const readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemo
     method: 'GET'
 
 
+  }
+);}
+
+
+export type readConventionsMemoryGroupsMemoryGroupIdConventionsGetResponse200 = {
+  data: PageConventionRead
+  status: 200
+}
+
+export type readConventionsMemoryGroupsMemoryGroupIdConventionsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readConventionsMemoryGroupsMemoryGroupIdConventionsGetResponseSuccess = (readConventionsMemoryGroupsMemoryGroupIdConventionsGetResponse200) & {
+  headers: Headers;
+};
+export type readConventionsMemoryGroupsMemoryGroupIdConventionsGetResponseError = (readConventionsMemoryGroupsMemoryGroupIdConventionsGetResponse422) & {
+  headers: Headers;
+};
+
+export type readConventionsMemoryGroupsMemoryGroupIdConventionsGetResponse = (readConventionsMemoryGroupsMemoryGroupIdConventionsGetResponseSuccess | readConventionsMemoryGroupsMemoryGroupIdConventionsGetResponseError)
+
+export const getReadConventionsMemoryGroupsMemoryGroupIdConventionsGetUrl = (memoryGroupId: string,
+    params?: ReadConventionsMemoryGroupsMemoryGroupIdConventionsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["reviewStatuses"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/memory-groups/${memoryGroupId}/conventions?${stringifiedParams}` : `/api/memory-groups/${memoryGroupId}/conventions`
+}
+
+/**
+ * @summary Read Conventions
+ */
+export const readConventionsMemoryGroupsMemoryGroupIdConventionsGet = async (memoryGroupId: string,
+    params?: ReadConventionsMemoryGroupsMemoryGroupIdConventionsGetParams, options?: Parameters<typeof customFetch>[1]): Promise<readConventionsMemoryGroupsMemoryGroupIdConventionsGetResponse> => {
+
+  return customFetch<readConventionsMemoryGroupsMemoryGroupIdConventionsGetResponse>(getReadConventionsMemoryGroupsMemoryGroupIdConventionsGetUrl(memoryGroupId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+export type addConventionMemoryGroupsMemoryGroupIdConventionsPostResponse201 = {
+  data: ConventionRead
+  status: 201
+}
+
+export type addConventionMemoryGroupsMemoryGroupIdConventionsPostResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type addConventionMemoryGroupsMemoryGroupIdConventionsPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type addConventionMemoryGroupsMemoryGroupIdConventionsPostResponseSuccess = (addConventionMemoryGroupsMemoryGroupIdConventionsPostResponse201) & {
+  headers: Headers;
+};
+export type addConventionMemoryGroupsMemoryGroupIdConventionsPostResponseError = (addConventionMemoryGroupsMemoryGroupIdConventionsPostResponse404 | addConventionMemoryGroupsMemoryGroupIdConventionsPostResponse422) & {
+  headers: Headers;
+};
+
+export type addConventionMemoryGroupsMemoryGroupIdConventionsPostResponse = (addConventionMemoryGroupsMemoryGroupIdConventionsPostResponseSuccess | addConventionMemoryGroupsMemoryGroupIdConventionsPostResponseError)
+
+export const getAddConventionMemoryGroupsMemoryGroupIdConventionsPostUrl = (memoryGroupId: string,) => {
+
+
+
+
+  return `/api/memory-groups/${memoryGroupId}/conventions`
+}
+
+/**
+ * @summary Add Convention
+ */
+export const addConventionMemoryGroupsMemoryGroupIdConventionsPost = async (memoryGroupId: string,
+    saveConvention: SaveConvention, options?: Parameters<typeof customFetch>[1]): Promise<addConventionMemoryGroupsMemoryGroupIdConventionsPostResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<addConventionMemoryGroupsMemoryGroupIdConventionsPostResponse>(getAddConventionMemoryGroupsMemoryGroupIdConventionsPostUrl(memoryGroupId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(saveConvention)
+  }
+);}
+
+
+export type removeConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteResponse204 = {
+  data: void
+  status: 204
+}
+
+export type removeConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type removeConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type removeConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteResponseSuccess = (removeConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteResponse204) & {
+  headers: Headers;
+};
+export type removeConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteResponseError = (removeConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteResponse404 | removeConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteResponse422) & {
+  headers: Headers;
+};
+
+export type removeConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteResponse = (removeConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteResponseSuccess | removeConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteResponseError)
+
+export const getRemoveConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteUrl = (memoryGroupId: string,
+    conventionId: string,) => {
+
+
+
+
+  return `/api/memory-groups/${memoryGroupId}/conventions/${conventionId}`
+}
+
+/**
+ * @summary Remove Convention
+ */
+export const removeConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDelete = async (memoryGroupId: string,
+    conventionId: string, options?: Parameters<typeof customFetch>[1]): Promise<removeConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteResponse> => {
+
+  return customFetch<removeConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteResponse>(getRemoveConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteUrl(memoryGroupId,conventionId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+export type putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutResponse200 = {
+  data: ConventionRead
+  status: 200
+}
+
+export type putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutResponseSuccess = (putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutResponse200) & {
+  headers: Headers;
+};
+export type putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutResponseError = (putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutResponse404 | putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutResponse422) & {
+  headers: Headers;
+};
+
+export type putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutResponse = (putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutResponseSuccess | putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutResponseError)
+
+export const getPutConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutUrl = (memoryGroupId: string,
+    conventionId: string,) => {
+
+
+
+
+  return `/api/memory-groups/${memoryGroupId}/conventions/${conventionId}`
+}
+
+/**
+ * @summary Put Convention
+ */
+export const putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPut = async (memoryGroupId: string,
+    conventionId: string,
+    saveConvention: SaveConvention, options?: Parameters<typeof customFetch>[1]): Promise<putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutResponse>(getPutConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutUrl(memoryGroupId,conventionId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(saveConvention)
+  }
+);}
+
+
+export type editConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchResponse200 = {
+  data: ConventionRead
+  status: 200
+}
+
+export type editConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type editConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type editConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchResponseSuccess = (editConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchResponse200) & {
+  headers: Headers;
+};
+export type editConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchResponseError = (editConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchResponse404 | editConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchResponse422) & {
+  headers: Headers;
+};
+
+export type editConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchResponse = (editConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchResponseSuccess | editConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchResponseError)
+
+export const getEditConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchUrl = (memoryGroupId: string,
+    conventionId: string,) => {
+
+
+
+
+  return `/api/memory-groups/${memoryGroupId}/conventions/${conventionId}/review-status`
+}
+
+/**
+ * @summary Edit Convention Review Status
+ */
+export const editConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatch = async (memoryGroupId: string,
+    conventionId: string,
+    updateReviewStatus: UpdateReviewStatus, options?: Parameters<typeof customFetch>[1]): Promise<editConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<editConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchResponse>(getEditConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchUrl(memoryGroupId,conventionId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateReviewStatus)
   }
 );}
 

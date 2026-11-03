@@ -2461,6 +2461,224 @@ export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemo
 })
 
 /**
+ * @summary Read Conventions
+ */
+export const ReadConventionsMemoryGroupsMemoryGroupIdConventionsGetParams = S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const readConventionsMemoryGroupsMemoryGroupIdConventionsGetQuerySkipDefault = 0;
+export const readConventionsMemoryGroupsMemoryGroupIdConventionsGetQuerySkipMin = 0;
+
+export const readConventionsMemoryGroupsMemoryGroupIdConventionsGetQueryLimitDefault = 100;
+export const readConventionsMemoryGroupsMemoryGroupIdConventionsGetQueryLimitMax = 100;
+
+
+
+export const ReadConventionsMemoryGroupsMemoryGroupIdConventionsGetQueryParams = S.Struct({
+  "skip": S.Number.check(S.isGreaterThanOrEqualTo(readConventionsMemoryGroupsMemoryGroupIdConventionsGetQuerySkipMin)).pipe(S.withDecodingDefaultType(Effect.succeed(readConventionsMemoryGroupsMemoryGroupIdConventionsGetQuerySkipDefault))),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readConventionsMemoryGroupsMemoryGroupIdConventionsGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readConventionsMemoryGroupsMemoryGroupIdConventionsGetQueryLimitDefault))),
+  "category": S.optional(S.Union([S.Literals(['naming', 'style']).annotate({ description: 'Which translation step a convention guides.' }), S.Null])),
+  "reviewStatuses": S.optional(S.Union([S.Array(S.Literals(['pending', 'approved', 'rejected'])), S.Null]))
+})
+
+export const readConventionsMemoryGroupsMemoryGroupIdConventionsGet200ResponseCountMin = 0;
+
+
+
+export const ReadConventionsMemoryGroupsMemoryGroupIdConventionsGet200Response = S.Struct({
+  "count": S.Number.check(S.isGreaterThanOrEqualTo(readConventionsMemoryGroupsMemoryGroupIdConventionsGet200ResponseCountMin)),
+  "rows": S.Array(S.Struct({
+  "category": S.Literals(['naming', 'style']).annotate({ description: 'Which translation step a convention guides.' }),
+  "conventionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']),
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "rationale": S.Union([S.String, S.Null]),
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']),
+  "rule": S.String,
+  "title": S.String,
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+}))
+})
+
+export const ReadConventionsMemoryGroupsMemoryGroupIdConventionsGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Add Convention
+ */
+export const AddConventionMemoryGroupsMemoryGroupIdConventionsPostParams = S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+
+
+export const addConventionMemoryGroupsMemoryGroupIdConventionsPostBodyTitleMax = 200;
+
+
+
+export const AddConventionMemoryGroupsMemoryGroupIdConventionsPostBody = S.Struct({
+  "category": S.Literals(['naming', 'style']).annotate({ description: 'Which translation step a convention guides.' }),
+  "rationale": S.optional(S.Union([S.String.check(S.isMinLength(1)), S.Null])),
+  "rule": S.String.check(S.isMinLength(1)),
+  "title": S.String.check(S.isMinLength(1), S.isMaxLength(addConventionMemoryGroupsMemoryGroupIdConventionsPostBodyTitleMax))
+}).annotate({ description: 'Full convention content, used for both creation and replacement.' })
+
+export const AddConventionMemoryGroupsMemoryGroupIdConventionsPost201Response = S.Struct({
+  "category": S.Literals(['naming', 'style']).annotate({ description: 'Which translation step a convention guides.' }),
+  "conventionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']),
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "rationale": S.Union([S.String, S.Null]),
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']),
+  "rule": S.String,
+  "title": S.String,
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+})
+
+export const AddConventionMemoryGroupsMemoryGroupIdConventionsPost404Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const AddConventionMemoryGroupsMemoryGroupIdConventionsPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Remove Convention
+ */
+export const RemoveConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteParams = S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "conventionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const RemoveConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDelete404Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const RemoveConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDelete422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Put Convention
+ */
+export const PutConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutParams = S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "conventionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+
+
+export const putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutBodyTitleMax = 200;
+
+
+
+export const PutConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutBody = S.Struct({
+  "category": S.Literals(['naming', 'style']).annotate({ description: 'Which translation step a convention guides.' }),
+  "rationale": S.optional(S.Union([S.String.check(S.isMinLength(1)), S.Null])),
+  "rule": S.String.check(S.isMinLength(1)),
+  "title": S.String.check(S.isMinLength(1), S.isMaxLength(putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutBodyTitleMax))
+}).annotate({ description: 'Full convention content, used for both creation and replacement.' })
+
+export const PutConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPut200Response = S.Struct({
+  "category": S.Literals(['naming', 'style']).annotate({ description: 'Which translation step a convention guides.' }),
+  "conventionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']),
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "rationale": S.Union([S.String, S.Null]),
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']),
+  "rule": S.String,
+  "title": S.String,
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+})
+
+export const PutConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPut404Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const PutConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPut422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Edit Convention Review Status
+ */
+export const EditConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchParams = S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "conventionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const EditConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchBody = S.Struct({
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected'])
+})
+
+export const EditConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatch200Response = S.Struct({
+  "category": S.Literals(['naming', 'style']).annotate({ description: 'Which translation step a convention guides.' }),
+  "conventionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']),
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "rationale": S.Union([S.String, S.Null]),
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']),
+  "rule": S.String,
+  "title": S.String,
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+})
+
+export const EditConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatch404Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const EditConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatch422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * @summary Read Glossary Memories At Chapter
  */
 export const ReadGlossaryMemoriesAtChapterMemoryGroupsMemoryGroupIdGlossaryChaptersChapterIdMemoriesGetParams = S.Struct({

@@ -43,3 +43,7 @@ class TermTranslationNotFoundException(NotFoundException):
 
 class GlossaryTermAlreadyExistsException(DuplicateException):
     pass
+
+
+class ConventionNotFoundException(NotFoundException):
+    pass

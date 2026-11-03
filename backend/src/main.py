@@ -14,6 +14,7 @@ from src.filters.router import router as filter_router
 from src.labels.router import router as label_router
 from src.languages.router import router as language_router
 from src.memory.agent.router import router as memory_agent_router
+from src.memory.plugins.conventions.router import router as conventions_router
 from src.memory.plugins.glossary.router import router as glossary_memory_router
 from src.memory.plugins.translations.router import router as term_translations_router
 from src.memory.router import router as memory_router
@@ -60,6 +61,7 @@ app.include_router(filter_router)
 app.include_router(memory_router)
 app.include_router(glossary_memory_router)
 app.include_router(term_translations_router)
+app.include_router(conventions_router)
 app.include_router(memory_agent_router)
 app.include_router(translations_router)
 

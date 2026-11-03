@@ -1,20 +1,29 @@
 import logging
 import uuid
-from collections.abc import AsyncGenerator, Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable, Mapping
 from contextlib import aclosing
 from dataclasses import dataclass
 from datetime import timedelta
 
-from pydantic_ai import Agent, AgentRunResult
+from pydantic_ai import AgentRunResult
 from sqlalchemy import select
 from sqlalchemy.orm import Session, aliased, sessionmaker
 
 from src.languages.models import Language
 from src.memory.access import MemAccessContext
-from src.memory.agent.agent import ContinuitySummaryOutput, create_agent, run_agent
+from src.memory.agent.capabilities.continuity import ContinuitySummaryOutput
+from src.memory.agent.capabilities.term_translation import TermTranslationOutput
+from src.memory.agent.config import (
+    RecordMemoriesStageConfig,
+    StageConfig,
+    TranslateTermsStageConfig,
+    job_params_adapter,
+    resolve_stages,
+)
 from src.memory.agent.dependencies import MemAgentDeps
+from src.memory.agent.stages.recording import run_recording_stage
+from src.memory.agent.stages.term_translation import run_term_translation_stage
 from src.memory.agent.tasks.jobs import (
-    JobParams,
     claim_job,
     claim_next_task,
     claim_task,
@@ -22,9 +31,10 @@ from src.memory.agent.tasks.jobs import (
     release_job,
     release_task,
 )
+from src.memory.agent.toolsets.translations.tools import term_translation_context
 from src.memory.exceptions import MemoryJobClaimLostException
 from src.memory.models import MemoryChapterTask, MemoryGroup
-from src.memory.types import JobStatus
+from src.memory.types import JobStatus, StageName
 from src.novels.models import Chapter, ChapterContent
 
 logger = logging.getLogger(__name__)
@@ -35,6 +45,7 @@ DEFAULT_CLAIM_DURATION = timedelta(minutes=30)
 class ClaimedTask:
     memory_job_id: uuid.UUID
     chapter_id: uuid.UUID
+    stage_num: int = 0
 
 
 @dataclass(frozen=True)
@@ -44,7 +55,9 @@ class CompletedMemoryTask:
     chapter_id: uuid.UUID
     chapter_content_id: uuid.UUID
     chapter_num: int
-    result: AgentRunResult[str | ContinuitySummaryOutput]
+    result: AgentRunResult[str | ContinuitySummaryOutput] | AgentRunResult[TermTranslationOutput] | None
+    stage_num: int = 0
+    stage_name: StageName = "record_memories"
 
 
 async def aiterate_tasks(
@@ -61,7 +74,7 @@ async def aiterate_tasks(
             task = claim_next_task(db, claim_token)
             if task is None:
                 return
-            claimed_task = ClaimedTask(task.memory_job_id, task.chapter_id)
+            claimed_task = ClaimedTask(task.memory_job_id, task.chapter_id, task.stage_num)
         yield claimed_task
 
 
@@ -83,9 +96,11 @@ async def arun_tasks[T](
         try:
             with db_factory() as db:
                 result = await process_task(db, task)
-                if not release_task(db, task.memory_job_id, task.chapter_id, claim_token, JobStatus.COMPLETED):
+                if not release_task(
+                    db, task.memory_job_id, task.chapter_id, claim_token, JobStatus.COMPLETED, task.stage_num
+                ):
                     raise MemoryJobClaimLostException(
-                        f"Lost claim while completing memory task for chapter {task.chapter_id}"
+                        f"Lost claim while completing memory task for chapter {task.chapter_id}, stage {task.stage_num}"
                     )
         except MemoryJobClaimLostException:
             raise
@@ -98,18 +113,21 @@ async def arun_tasks[T](
                         task.chapter_id,
                         claim_token,
                         JobStatus.FAILED,
+                        task.stage_num,
                     )
                 if not released:
                     logger.warning(
-                        "Could not mark memory task failed after losing its claim job_id=%s chapter_id=%s",
+                        "Could not mark memory task failed after losing its claim job_id=%s chapter_id=%s stage_num=%s",
                         task.memory_job_id,
                         task.chapter_id,
+                        task.stage_num,
                     )
             except Exception:
                 logger.exception(
-                    "Could not mark memory task failed job_id=%s chapter_id=%s",
+                    "Could not mark memory task failed job_id=%s chapter_id=%s stage_num=%s",
                     task.memory_job_id,
                     task.chapter_id,
+                    task.stage_num,
                 )
             raise
         yield result
@@ -117,7 +135,7 @@ async def arun_tasks[T](
 
 async def _run_single_task(
     db: Session,
-    agent: Agent[MemAgentDeps, str | ContinuitySummaryOutput],
+    stages: Mapping[int, StageConfig],
     memory_group_id: uuid.UUID,
     task: ClaimedTask,
     lang_name: str,
@@ -141,7 +159,17 @@ async def _run_single_task(
     ccid, cctext, cnum = db.execute(q).one()
     context = MemAccessContext(memory_group_id, task.chapter_id, ccid)
     deps = MemAgentDeps(db, context)
-    result = await run_agent(agent, deps, cctext, cnum, lang_name)
+    stage = stages[task.stage_num]
+    match stage:
+        case RecordMemoriesStageConfig():
+            result = await run_recording_stage(deps, cctext, cnum, lang_name, stage)
+        case TranslateTermsStageConfig():
+            glossary_context = term_translation_context(db, context)
+            result = (
+                await run_term_translation_stage(deps, cctext, cnum, lang_name, stage, glossary_context)
+                if glossary_context is not None
+                else None
+            )
     return CompletedMemoryTask(
         memory_job_id=task.memory_job_id,
         memory_group_id=memory_group_id,
@@ -149,6 +177,8 @@ async def _run_single_task(
         chapter_content_id=ccid,
         chapter_num=cnum,
         result=result,
+        stage_num=task.stage_num,
+        stage_name=stage.stage_name,
     )
 
 
@@ -166,7 +196,6 @@ async def run_tasks(
 
     Claim job and copy its configuration
     Fetch the memory group's language
-    Create one agent
     For each claimed task:
         Run and finalize the task
         Refresh the job claim
@@ -183,7 +212,8 @@ async def run_tasks(
                 return
             owns_claim = True
             memory_group_id = job.memory_group_id
-            params = JobParams.model_validate(job.job_params)
+            params = job_params_adapter.validate_python(job.job_params)
+            stages = dict(enumerate(resolve_stages(params)))
             lang_name = db.scalar(
                 select(Language.language_name)
                 .select_from(MemoryGroup)
@@ -193,18 +223,16 @@ async def run_tasks(
             if lang_name is None:
                 raise RuntimeError(f"Memory group {memory_group_id} has no configured language")
 
-        agent = create_agent(params.model_name, params.parse_toolsets())
-        async with agent:
-            async for completed_task in arun_tasks(
-                db_factory,
-                claim_token,
-                claim_next_task,
-                lambda db, task: _run_single_task(db, agent, memory_group_id, task, lang_name),
-            ):
-                with db_factory() as db:
-                    if not refresh_job(db, memory_job_id, claim_token, claim_duration):
-                        raise MemoryJobClaimLostException(f"Lost claim while refreshing memory job {memory_job_id}")
-                yield completed_task
+        async for completed_task in arun_tasks(
+            db_factory,
+            claim_token,
+            claim_next_task,
+            lambda db, task: _run_single_task(db, stages, memory_group_id, task, lang_name),
+        ):
+            with db_factory() as db:
+                if not refresh_job(db, memory_job_id, claim_token, claim_duration):
+                    raise MemoryJobClaimLostException(f"Lost claim while refreshing memory job {memory_job_id}")
+            yield completed_task
     finally:
         if owns_claim:
             with db_factory() as db:
@@ -216,10 +244,11 @@ async def run_tasks(
                     )
 
 
-async def run_task(
+async def run_one_task(
     db_factory: sessionmaker[Session],
     memory_job_id: uuid.UUID,
     chapter_id: uuid.UUID,
+    stage_num: int = 0,
     *,
     claim_duration: timedelta = DEFAULT_CLAIM_DURATION,
 ) -> CompletedMemoryTask | None:
@@ -228,7 +257,7 @@ async def run_task(
     async for task_result in run_tasks(
         db_factory,
         memory_job_id,
-        lambda db, claim_token: claim_task(db, memory_job_id, chapter_id, claim_token),
+        lambda db, claim_token: claim_task(db, memory_job_id, chapter_id, claim_token, stage_num),
         claim_duration=claim_duration,
     ):
         result = task_result

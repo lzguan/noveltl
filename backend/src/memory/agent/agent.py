@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from pydantic_ai import Agent, AgentRunResult, FunctionToolset
+from pydantic_ai import Agent, FunctionToolset, ModelRetry
 from pydantic_ai.capabilities import AbstractCapability, Toolset
 from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
@@ -9,8 +9,10 @@ from pydantic_ai.providers.openai import OpenAIProvider
 
 from src.config import inception_settings
 from src.memory.agent.capabilities.continuity import ContinuitySummaryCapability, ContinuitySummaryOutput
+from src.memory.agent.capabilities.term_translation import TermTranslationCapability, TermTranslationOutput
 from src.memory.agent.dependencies import MemAgentDeps
-from src.memory.agent.prompts.prompt import MEMORY_AGENT_PROMPT
+from src.memory.agent.prompts.recording import MEMORY_AGENT_PROMPT
+from src.memory.agent.prompts.term_translation import TERM_TRANSLATION_INSTRUCTIONS
 from src.memory.agent.toolsets.glossary.aliases import glossary_aliases_write_toolset
 from src.memory.agent.toolsets.glossary.appearance import glossary_appearance_write_toolset
 from src.memory.agent.toolsets.glossary.character_state import glossary_character_state_read_toolset
@@ -42,6 +44,7 @@ from src.memory.agent.toolsets.glossary.relations import (
     glossary_relations_write_toolset,
 )
 from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
+from src.memory.agent.toolsets.translations.tools import translations_read_toolset
 from src.memory.agent.types import (
     TOOLSET_NAMES,
     ModelName,
@@ -121,8 +124,8 @@ def resolve_capabilities(toolsets: ParsedToolsets) -> list[AbstractCapability[Me
     return resolved
 
 
-def create_agent(model_name: ModelName, toolsets: ParsedToolsets) -> Agent[MemAgentDeps, str | ContinuitySummaryOutput]:
-    """Create a Pydantic AI agent with the specified model and toolsets."""
+def model_configuration(model_name: ModelName) -> tuple[Model | str, OpenAIChatModelSettings]:
+    """Resolve provider configuration shared by the two agent factories."""
     model: Model | str
     model_settings: OpenAIChatModelSettings
     if model_name == "deepseek:deepseek-v4-flash-none":
@@ -142,6 +145,13 @@ def create_agent(model_name: ModelName, toolsets: ParsedToolsets) -> Agent[MemAg
         model_settings = {"thinking": "low"}
     else:
         raise ValueError(f"Unknown model name {model_name!r}")
+    return model, model_settings
+
+
+def create_recording_agent(
+    model_name: ModelName, toolsets: ParsedToolsets
+) -> Agent[MemAgentDeps, str | ContinuitySummaryOutput]:
+    model, model_settings = model_configuration(model_name)
     resolved_capabilities = resolve_capabilities(toolsets)
     glossary_enabled = any(toolset in GLOSSARY_TOOLSET_NAMES for toolset in toolsets.selected_names())
     instructions = (
@@ -159,17 +169,28 @@ def create_agent(model_name: ModelName, toolsets: ParsedToolsets) -> Agent[MemAg
     )
 
 
-async def run_agent(
-    agent: Agent[MemAgentDeps, str | ContinuitySummaryOutput],
-    deps: MemAgentDeps,
-    chapter_text: str,
-    chapter_num: int,
-    language_name: str,
-) -> AgentRunResult[str | ContinuitySummaryOutput]:
-    """Run the agent with the given input text and dependencies."""
-
-    prompt = f"Record memories with content written in {language_name} from the following chapter text (chapter {chapter_num}):\n\n{chapter_text}"
-    return await agent.run(
-        prompt,
-        deps=deps,
+def create_term_translation_agent(
+    model_name: ModelName, required_terms: tuple[str, ...]
+) -> Agent[MemAgentDeps, TermTranslationOutput]:
+    model, model_settings = model_configuration(model_name)
+    agent = Agent(
+        model=model,
+        model_settings=model_settings,
+        deps_type=MemAgentDeps,
+        output_type=TermTranslationOutput,
+        instructions=TERM_TRANSLATION_INSTRUCTIONS,
+        capabilities=[
+            TermTranslationCapability(),
+            Toolset(translations_read_toolset),
+            Toolset(glossary_definitions_read_toolset),
+            Toolset(glossary_relations_read_toolset),
+        ],
     )
+
+    @agent.output_validator
+    def validate_requested_terms(output: TermTranslationOutput) -> TermTranslationOutput:
+        if {item.term for item in output.translations} != set(required_terms):
+            raise ModelRetry("Return each requested source term exactly once, with no additional terms")
+        return output
+
+    return agent

@@ -83,7 +83,7 @@ export function MemoryPanel({
 						</>
 					) : (
 						<GlossaryBrowser
-							key={browserKey}
+							key={`${browserKey}:${view}`}
 							memoryGroupId={selectedGroupId}
 							chapterId={chapterId}
 							chapterNum={chapterNum}

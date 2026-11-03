@@ -8,9 +8,10 @@ from sqlalchemy.orm import Session
 
 from src.auth.models import User
 from src.memory.agent import schemas
+from src.memory.agent.config import JobParams
 from src.memory.agent.dispatch.dispatcher import MemoryAgentDispatcher
-from src.memory.agent.tasks.jobs import JobParams, make_job, reset_failed_task
 from src.memory.agent.tasks.jobs import abort_job as abort_job_claim
+from src.memory.agent.tasks.jobs import make_job, reset_failed_task, unfinished_preceding_stage
 from src.memory.exceptions import (
     MemoryAgentEnqueueFailedException,
     MemoryChapterTaskNotFoundException,
@@ -200,6 +201,7 @@ def query_tasks(
         select(
             MemoryChapterTaskModel.memory_job_id,
             MemoryChapterTaskModel.chapter_id,
+            MemoryChapterTaskModel.stage_num,
             Chapter.chapter_num,
             MemoryChapterTaskModel.task_status,
             MemoryChapterTaskModel.attempt_count,
@@ -208,7 +210,7 @@ def query_tasks(
         )
         .join(Chapter, Chapter.chapter_id == MemoryChapterTaskModel.chapter_id)
         .where(MemoryChapterTaskModel.memory_job_id == memory_job_id)
-        .order_by(Chapter.chapter_num, Chapter.chapter_id)
+        .order_by(Chapter.chapter_num, Chapter.chapter_id, MemoryChapterTaskModel.stage_num)
         .offset(skip)
         .limit(limit)
     ).mappings()
@@ -228,12 +230,14 @@ def query_task(
     user: User,
     memory_job_id: UUID,
     chapter_id: UUID,
+    stage_num: int = 0,
 ) -> schemas.MemoryChapterTask:
     """Return one accessible chapter task."""
     statement = (
         select(
             MemoryChapterTaskModel.memory_job_id,
             MemoryChapterTaskModel.chapter_id,
+            MemoryChapterTaskModel.stage_num,
             Chapter.chapter_num,
             MemoryChapterTaskModel.task_status,
             MemoryChapterTaskModel.attempt_count,
@@ -246,6 +250,7 @@ def query_task(
         .where(
             MemoryChapterTaskModel.memory_job_id == memory_job_id,
             MemoryChapterTaskModel.chapter_id == chapter_id,
+            MemoryChapterTaskModel.stage_num == stage_num,
         )
     )
     statement = memory_group_mod_access_select(statement, user)
@@ -285,6 +290,18 @@ def start_job(
     )
     if has_runnable_task is None:
         raise MemoryJobStateException(f"Memory job {memory_job_id} has no runnable tasks.")
+    first_unfinished = db.scalar(
+        select(MemoryChapterTaskModel.task_status)
+        .join(Chapter, Chapter.chapter_id == MemoryChapterTaskModel.chapter_id)
+        .where(
+            MemoryChapterTaskModel.memory_job_id == memory_job_id,
+            MemoryChapterTaskModel.task_status != JobStatus.COMPLETED,
+        )
+        .order_by(Chapter.chapter_num, Chapter.chapter_id, MemoryChapterTaskModel.stage_num)
+        .limit(1)
+    )
+    if first_unfinished == JobStatus.FAILED:
+        raise MemoryJobStateException("Retry the failed stage before starting remaining work.")
     dispatcher.enqueue_job(memory_job_id)
     return schemas.MemoryJob.model_validate(job)
 
@@ -295,6 +312,7 @@ def start_task(
     dispatcher: MemoryAgentDispatcher,
     memory_job_id: UUID,
     chapter_id: UUID,
+    stage_num: int = 0,
 ) -> schemas.MemoryChapterTask:
     """Publish one pending chapter task after checking edit access."""
     statement = (
@@ -305,6 +323,7 @@ def start_task(
         .where(
             MemoryChapterTaskModel.memory_job_id == memory_job_id,
             MemoryChapterTaskModel.chapter_id == chapter_id,
+            MemoryChapterTaskModel.stage_num == stage_num,
         )
     )
     statement = memory_group_mod_access_select(statement, user, edit_only=True)
@@ -317,11 +336,14 @@ def start_task(
 
     if task.task_status != JobStatus.PENDING:
         raise MemoryChapterTaskStateException(f"Memory task for chapter {chapter_id} is not pending.")
-    dispatcher.enqueue_task(memory_job_id, chapter_id)
+    if db.scalar(select(unfinished_preceding_stage(memory_job_id, chapter_id, stage_num))):
+        raise MemoryChapterTaskStateException("Complete preceding chapter stages first.")
+    dispatcher.enqueue_task(memory_job_id, chapter_id, stage_num)
     return schemas.MemoryChapterTask(
         memory_job_id=task.memory_job_id,
         chapter_id=task.chapter_id,
         chapter_num=chapter_num,
+        stage_num=task.stage_num,
         task_status=task.task_status,
         attempt_count=task.attempt_count,
         created_at=task.created_at,
@@ -335,6 +357,7 @@ def retry_task(
     dispatcher: MemoryAgentDispatcher,
     memory_job_id: UUID,
     chapter_id: UUID,
+    stage_num: int = 0,
 ) -> schemas.MemoryChapterTask:
     """Reset one failed task to pending and publish it again."""
     statement = (
@@ -344,6 +367,7 @@ def retry_task(
         .where(
             MemoryChapterTaskModel.memory_job_id == memory_job_id,
             MemoryChapterTaskModel.chapter_id == chapter_id,
+            MemoryChapterTaskModel.stage_num == stage_num,
         )
     )
     statement = memory_group_mod_access_select(statement, user, edit_only=True)
@@ -354,24 +378,25 @@ def retry_task(
             f"Memory task for job {memory_job_id} and chapter {chapter_id} not found or not accessible."
         ) from exc
 
-    if not reset_failed_task(db, memory_job_id, chapter_id):
+    if not reset_failed_task(db, memory_job_id, chapter_id, stage_num):
         raise MemoryChapterTaskStateException(f"Memory task for chapter {chapter_id} is not failed.")
 
     try:
-        dispatcher.enqueue_task(memory_job_id, chapter_id)
+        dispatcher.enqueue_task(memory_job_id, chapter_id, stage_num)
     except MemoryAgentEnqueueFailedException:
         db.execute(
             update(MemoryChapterTaskModel)
             .where(
                 MemoryChapterTaskModel.memory_job_id == memory_job_id,
                 MemoryChapterTaskModel.chapter_id == chapter_id,
+                MemoryChapterTaskModel.stage_num == stage_num,
                 MemoryChapterTaskModel.task_status == JobStatus.PENDING,
             )
             .values(task_status=JobStatus.FAILED)
         )
         db.commit()
         raise
-    return query_task(db, user, memory_job_id, chapter_id)
+    return query_task(db, user, memory_job_id, chapter_id, stage_num)
 
 
 def abort_job(db: Session, user: User, memory_job_id: UUID) -> schemas.MemoryJob:
@@ -392,7 +417,7 @@ def abort_job(db: Session, user: User, memory_job_id: UUID) -> schemas.MemoryJob
     return query_job(db, user, memory_job_id)
 
 
-def delete_task(db: Session, user: User, memory_job_id: UUID, chapter_id: UUID) -> None:
+def delete_task(db: Session, user: User, memory_job_id: UUID, chapter_id: UUID, stage_num: int = 0) -> None:
     """Delete a non-processing chapter task."""
     statement = (
         select(MemoryChapterTaskModel)
@@ -401,6 +426,7 @@ def delete_task(db: Session, user: User, memory_job_id: UUID, chapter_id: UUID) 
         .where(
             MemoryChapterTaskModel.memory_job_id == memory_job_id,
             MemoryChapterTaskModel.chapter_id == chapter_id,
+            MemoryChapterTaskModel.stage_num == stage_num,
         )
     )
     statement = memory_group_mod_access_select(statement, user, edit_only=True)
@@ -418,6 +444,7 @@ def delete_task(db: Session, user: User, memory_job_id: UUID, chapter_id: UUID) 
         .where(
             MemoryChapterTaskModel.memory_job_id == memory_job_id,
             MemoryChapterTaskModel.chapter_id == chapter_id,
+            MemoryChapterTaskModel.stage_num == stage_num,
             MemoryChapterTaskModel.task_status != JobStatus.PROCESSING,
         )
         .returning(MemoryChapterTaskModel.chapter_id)

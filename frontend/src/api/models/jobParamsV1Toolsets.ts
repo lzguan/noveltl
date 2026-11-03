@@ -5,4 +5,4 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type JobParamsToolsets = {[key: string]: { [key: string]: unknown }};
+export type JobParamsV1Toolsets = {[key: string]: { [key: string]: unknown }};

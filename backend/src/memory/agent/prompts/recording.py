@@ -86,3 +86,10 @@ After considering all applicable enabled toolsets, finish with a concise
 account of the records you changed, or state that no memory changes were
 needed.
 """.strip()
+
+
+def recording_request_prompt(chapter_text: str, chapter_num: int, language_name: str) -> str:
+    return (
+        f"Record memories with content written in {language_name} from the following chapter text "
+        f"(chapter {chapter_num}):\n\n{chapter_text}"
+    )

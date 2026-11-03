@@ -5,6 +5,8 @@ import pytest
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
+from src.memory.agent.config import JobParamsV1 as JobParams
+from src.memory.agent.config import JobParamsV2, TranslateTermsConfig
 from src.memory.agent.service import (
     create_job,
     delete_job,
@@ -19,7 +21,7 @@ from src.memory.agent.service import (
     start_job,
     start_task,
 )
-from src.memory.agent.tasks.jobs import JobParams, claim_job
+from src.memory.agent.tasks.jobs import claim_job
 from src.memory.exceptions import (
     MemoryAgentEnqueueFailedException,
     MemoryChapterTaskStateException,
@@ -45,18 +47,26 @@ def _create_group(db: Session, scenario: DatabaseScenario, novel_key: str) -> Me
     return group
 
 
+@pytest.mark.parametrize(
+    "params",
+    [
+        PARAMS,
+        JobParamsV2(translate_terms=TranslateTermsConfig(model_name="deepseek:deepseek-v4-flash-low")),
+    ],
+)
 def test_create_and_query_job_respect_memory_group_permissions(
     test_db: Session,
     novel_permission_scenario: DatabaseScenario,
+    params: JobParams | JobParamsV2,
 ) -> None:
     group = _create_group(test_db, novel_permission_scenario, "ov")
     owner = novel_permission_scenario.users["owner"]
     viewer = novel_permission_scenario.users["other"]
 
     with pytest.raises(MemoryGroupNotFoundException):
-        create_job(test_db, viewer, group.memory_group_id, None, None, PARAMS)
+        create_job(test_db, viewer, group.memory_group_id, None, None, params)
 
-    job = create_job(test_db, owner, group.memory_group_id, None, None, PARAMS)
+    job = create_job(test_db, owner, group.memory_group_id, None, None, params)
 
     assert query_job(test_db, viewer, job.memory_job_id) == job
     assert query_jobs(test_db, viewer, group.memory_group_id) == [job]
@@ -71,6 +81,9 @@ def test_create_and_query_job_respect_memory_group_permissions(
     assert page.count == 1
     assert page.rows[0].chapter_num == 1
     assert page.rows[0].task_status == JobStatus.PENDING
+    task = page.rows[0]
+    assert query_task(test_db, viewer, job.memory_job_id, task.chapter_id) == task
+    assert start_task(test_db, owner, RecordingMemoryAgentDispatcher(), job.memory_job_id, task.chapter_id) == task
 
     test_db.execute(
         update(MemoryChapterTask)
@@ -97,7 +110,7 @@ def test_start_and_retry_publish_only_runnable_work(
     start_task(test_db, editor, dispatcher, job.memory_job_id, chapter_id)
 
     assert dispatcher.jobs == [job.memory_job_id]
-    assert dispatcher.tasks == [(job.memory_job_id, chapter_id)]
+    assert dispatcher.tasks == [(job.memory_job_id, chapter_id, 0)]
 
     test_db.execute(
         update(MemoryChapterTask)
@@ -113,8 +126,8 @@ def test_start_and_retry_publish_only_runnable_work(
 
     assert retried.task_status == JobStatus.PENDING
     assert dispatcher.tasks == [
-        (job.memory_job_id, chapter_id),
-        (job.memory_job_id, chapter_id),
+        (job.memory_job_id, chapter_id, 0),
+        (job.memory_job_id, chapter_id, 0),
     ]
     with pytest.raises(MemoryChapterTaskStateException):
         retry_task(test_db, editor, dispatcher, job.memory_job_id, chapter_id)

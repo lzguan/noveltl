@@ -18,7 +18,8 @@ from src.datasets.domain import NovelDataset
 from src.datasets.materializer import make_novel, materialize_novel_contents
 from src.languages.models import Language
 from src.memory.agent.capabilities.continuity import ContinuitySummaryOutput
-from src.memory.agent.tasks.jobs import JobParams, make_job, reset_failed_task
+from src.memory.agent.config import JobParamsV1 as JobParams
+from src.memory.agent.tasks.jobs import make_job, reset_failed_task
 from src.memory.agent.tasks.tasks import run_all_tasks
 from src.memory.models import Memory, MemoryChapterTask, MemoryGroup
 from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
@@ -379,6 +380,8 @@ async def execute_live_replica(context: RunContext, index: int, replica_dir: Pat
                             )
                         attempt_finished = _utc_now()
                         chapter_result = completed_task.result
+                        if chapter_result is None:
+                            raise RuntimeError("Recording evaluation yielded no agent result")
                         chapter_usage: Any = chapter_result.usage
                         usage.incr(chapter_usage)
                         run_cost = await context.budget.add_usage(chapter_usage)

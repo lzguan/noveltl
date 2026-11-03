@@ -8,6 +8,7 @@ import {
 	editMemoryExpirationMemoriesMemoryIdExpirationPatch,
 	editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch,
 	readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
+	readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet,
 	readAllLanguagesLanguagesGet,
 	readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet,
 	readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet,
@@ -41,6 +42,8 @@ vi.mock("@/api/endpoints/default/default", () => ({
 	editMemoryExpirationMemoriesMemoryIdExpirationPatch: vi.fn(),
 	editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch: vi.fn(),
 	readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet: vi.fn(),
+	readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet: vi.fn(),
+	putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPut: vi.fn(),
 	readAllLanguagesLanguagesGet: vi.fn(),
 	readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet: vi.fn(),
 	readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet: vi.fn(),
@@ -122,6 +125,11 @@ function render(element: ReactElement) {
 describe("MemoryPanel", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.mocked(readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet).mockResolvedValue({
+			status: 200,
+			data: [],
+			headers: new Headers(),
+		});
 		vi.mocked(readMemoryGroupsMemoryGroupsGet).mockResolvedValue({
 			status: 200,
 			data: [group],

@@ -5,12 +5,13 @@ import json
 import logging
 from uuid import UUID
 
+from pydantic import BaseModel
+
 from src.config import log_settings
 from src.database import SessionLocal
-from src.memory.agent.capabilities.continuity import ContinuitySummaryOutput
 from src.memory.agent.celery_app import app
 from src.memory.agent.task_names import RUN_MEMORY_JOB, RUN_MEMORY_TASK
-from src.memory.agent.tasks.tasks import CompletedMemoryTask, run_all_tasks, run_task
+from src.memory.agent.tasks.tasks import CompletedMemoryTask, run_all_tasks, run_one_task
 
 logger = logging.getLogger(__name__)
 AGENT_RESULT_LOG_MARKER = "MEMORY_AGENT_RESULT "
@@ -22,6 +23,15 @@ AGENT_RESULT_JSONL_PATH = log_settings.MEMORY_AGENT_LOG_DIR / log_settings.MEMOR
 
 def _build_agent_result_payload(completed_task: CompletedMemoryTask) -> dict:
     result = completed_task.result
+    if result is None:
+        return {
+            "event": "memoryAgent.skipped",
+            "memoryJobId": str(completed_task.memory_job_id),
+            "chapterId": str(completed_task.chapter_id),
+            "stageNum": completed_task.stage_num,
+            "stageName": completed_task.stage_name,
+            "reason": "No terms need translation",
+        }
     usage = result.usage
     return {
         "event": "memoryAgent.result",
@@ -30,13 +40,11 @@ def _build_agent_result_payload(completed_task: CompletedMemoryTask) -> dict:
         "chapterId": str(completed_task.chapter_id),
         "chapterContentId": str(completed_task.chapter_content_id),
         "chapterNum": completed_task.chapter_num,
+        "stageNum": completed_task.stage_num,
+        "stageName": completed_task.stage_name,
         "runId": result.run_id,
         "timestamp": result.timestamp.isoformat(),
-        "output": (
-            result.output.model_dump(mode="json")
-            if isinstance(result.output, ContinuitySummaryOutput)
-            else result.output
-        ),
+        "output": (result.output.model_dump(mode="json") if isinstance(result.output, BaseModel) else result.output),
         "usage": {
             "requests": usage.requests,
             "toolCalls": usage.tool_calls,
@@ -89,8 +97,8 @@ def run_memory_job(memory_job_id: str) -> None:
 
 
 @app.task(name=RUN_MEMORY_TASK)
-def run_memory_task(memory_job_id: str, chapter_id: str) -> None:
+def run_memory_task(memory_job_id: str, chapter_id: str, stage_num: int = 0) -> None:
     """Celery entry point for processing one pending chapter task."""
-    completed_task = asyncio.run(run_task(SessionLocal, UUID(memory_job_id), UUID(chapter_id)))
+    completed_task = asyncio.run(run_one_task(SessionLocal, UUID(memory_job_id), UUID(chapter_id), stage_num))
     if completed_task is not None:
         _log_agent_result(completed_task)

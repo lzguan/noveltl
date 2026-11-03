@@ -28,13 +28,13 @@ class CeleryMemoryAgentDispatcher(MemoryAgentDispatcher):
             logger.exception("Memory-agent job enqueue failed job_id=%s", memory_job_id)
             raise MemoryAgentEnqueueFailedException(f"Celery enqueue failed: {exc}") from exc
 
-    def enqueue_task(self, memory_job_id: UUID, chapter_id: UUID) -> None:
+    def enqueue_task(self, memory_job_id: UUID, chapter_id: UUID, stage_num: int = 0) -> None:
         try:
             logger.info("Enqueuing memory-agent task job_id=%s chapter_id=%s", memory_job_id, chapter_id)
             app.send_task(
                 RUN_MEMORY_TASK,
-                args=(str(memory_job_id), str(chapter_id)),
-                task_id=f"{memory_job_id}:{chapter_id}",
+                args=(str(memory_job_id), str(chapter_id), stage_num),
+                task_id=f"{memory_job_id}:{chapter_id}:{stage_num}",
             )
         except Exception as exc:
             logger.exception("Memory-agent task enqueue failed job_id=%s chapter_id=%s", memory_job_id, chapter_id)
@@ -43,5 +43,5 @@ class CeleryMemoryAgentDispatcher(MemoryAgentDispatcher):
     async def aenqueue_job(self, memory_job_id: UUID) -> None:
         await asyncio.to_thread(self.enqueue_job, memory_job_id)
 
-    async def aenqueue_task(self, memory_job_id: UUID, chapter_id: UUID) -> None:
-        await asyncio.to_thread(self.enqueue_task, memory_job_id, chapter_id)
+    async def aenqueue_task(self, memory_job_id: UUID, chapter_id: UUID, stage_num: int = 0) -> None:
+        await asyncio.to_thread(self.enqueue_task, memory_job_id, chapter_id, stage_num)

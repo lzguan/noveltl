@@ -19,11 +19,15 @@ from src.memory.agent.capabilities.continuity import (
     ContinuitySummaryOutput,
     _previous_summary,
 )
+from src.memory.agent.config import JobParamsV1 as JobParams
+from src.memory.agent.config import JobParamsV2
 from src.memory.agent.dependencies import MemAgentDeps
+from src.memory.agent.stages import recording
 from src.memory.agent.tasks import tasks as agent_tasks
-from src.memory.agent.tasks.jobs import JobParams, claim_job, claim_task, make_job
+from src.memory.agent.tasks.jobs import claim_job, claim_task, make_job
 from src.memory.exceptions import MemoryJobClaimLostException
 from src.memory.models import Memory, MemoryChapterTask, MemoryGroup, MemoryJob
+from src.memory.plugins.translations.models import TermTranslation
 from src.memory.types import Creator, JobStatus, MemoryType, ReviewStatus
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, ChapterContent, Novel, SourceWork
@@ -33,6 +37,7 @@ def _make_memory_job(
     test_db: Session,
     chapter_count: int = 2,
     toolsets: dict[str, dict] | None = None,
+    params: JobParams | JobParamsV2 | None = None,
 ) -> tuple[uuid.UUID, list[uuid.UUID]]:
     language = Language(language_name="Chinese", language_code="zh")
     source_work = SourceWork(source_work_title="Memory agent task source")
@@ -84,7 +89,7 @@ def _make_memory_job(
         memory_group.memory_group_id,
         None,
         None,
-        JobParams(model_name="deepseek:deepseek-v4-flash-low", toolsets=toolsets or {}),
+        params or JobParams(model_name="deepseek:deepseek-v4-flash-low", toolsets=toolsets or {}),
     )
     return memory_job_id, [chapter.chapter_id for chapter in chapters]
 
@@ -136,7 +141,7 @@ def test_arun_tasks_raises_when_completion_claim_is_lost(
         asyncio.run(consume_tasks())
 
     test_db.expire_all()
-    task = test_db.get(MemoryChapterTask, (memory_job_id, chapter_id))
+    task = test_db.get(MemoryChapterTask, (memory_job_id, chapter_id, 0))
     assert task is not None
     assert task.task_status == JobStatus.PROCESSING
 
@@ -172,7 +177,7 @@ def test_arun_tasks_preserves_processing_error_when_failure_claim_is_lost(
         asyncio.run(consume_tasks())
 
     test_db.expire_all()
-    task = test_db.get(MemoryChapterTask, (memory_job_id, chapter_id))
+    task = test_db.get(MemoryChapterTask, (memory_job_id, chapter_id, 0))
     assert task is not None
     assert task.task_status == JobStatus.PROCESSING
 
@@ -184,7 +189,7 @@ def test_run_all_tasks_completes_tasks_refreshes_and_releases_job(
 ) -> None:
     memory_job_id, chapter_ids = _make_memory_job(test_db)
     test_agent = Agent(TestModel(call_tools=[], custom_output_text="recorded"), deps_type=MemAgentDeps)
-    monkeypatch.setattr(agent_tasks, "create_agent", lambda _model_name, _toolsets: test_agent)
+    monkeypatch.setattr(recording, "create_recording_agent", lambda _model_name, _toolsets: test_agent)
 
     async def consume_tasks():
         return [
@@ -196,7 +201,10 @@ def test_run_all_tasks_completes_tasks_refreshes_and_releases_job(
         ]
 
     completed_tasks = asyncio.run(consume_tasks())
-    assert [completed_task.result.output for completed_task in completed_tasks] == ["recorded", "recorded"]
+    assert all(completed_task.result is not None for completed_task in completed_tasks)
+    assert [
+        completed_task.result.output for completed_task in completed_tasks if completed_task.result is not None
+    ] == ["recorded", "recorded"]
     assert {completed_task.chapter_id for completed_task in completed_tasks} == set(chapter_ids)
     assert [completed_task.chapter_num for completed_task in completed_tasks] == [1, 2]
     assert all(completed_task.memory_job_id == memory_job_id for completed_task in completed_tasks)
@@ -219,7 +227,7 @@ def test_run_all_tasks_releases_job_when_closed_early(
 ) -> None:
     memory_job_id, _chapter_ids = _make_memory_job(test_db)
     test_agent = Agent(TestModel(call_tools=[], custom_output_text="recorded"), deps_type=MemAgentDeps)
-    monkeypatch.setattr(agent_tasks, "create_agent", lambda _model_name, _toolsets: test_agent)
+    monkeypatch.setattr(recording, "create_recording_agent", lambda _model_name, _toolsets: test_agent)
 
     async def consume_one_task_and_close() -> None:
         completed_tasks = agent_tasks.run_all_tasks(testing_session_local, memory_job_id)
@@ -268,7 +276,7 @@ def test_continuity_summary_is_committed_with_task_and_handed_to_immediate_next_
         capabilities=[ContinuitySummaryCapability()],
         retries=1,
     )
-    monkeypatch.setattr(agent_tasks, "create_agent", lambda _model_name, _toolsets: test_agent)
+    monkeypatch.setattr(recording, "create_recording_agent", lambda _model_name, _toolsets: test_agent)
 
     async def consume_tasks():
         return [
@@ -282,6 +290,7 @@ def test_continuity_summary_is_committed_with_task_and_handed_to_immediate_next_
     ).all()
     assert [len(summary.memory_content) for summary in summaries] == [1500, 1500]
     assert request_summary_counts == [0, 0, 1, 1]
+    assert completed[1].result is not None
     second_messages = completed[1].result.all_messages()
     summary_parts = [
         part.content
@@ -318,7 +327,7 @@ def test_continuity_summary_is_rolled_back_when_task_completion_claim_is_lost(
         output_type=ContinuitySummaryOutput,
         capabilities=[ContinuitySummaryCapability()],
     )
-    monkeypatch.setattr(agent_tasks, "create_agent", lambda _model_name, _toolsets: test_agent)
+    monkeypatch.setattr(recording, "create_recording_agent", lambda _model_name, _toolsets: test_agent)
 
     async def consume_tasks():
         return [
@@ -442,7 +451,7 @@ def test_continuity_rerun_updates_only_pending_agent_summary(
         output_type=ContinuitySummaryOutput,
         capabilities=[ContinuitySummaryCapability()],
     )
-    monkeypatch.setattr(agent_tasks, "create_agent", lambda _model_name, _toolsets: test_agent)
+    monkeypatch.setattr(recording, "create_recording_agent", lambda _model_name, _toolsets: test_agent)
 
     async def consume_tasks():
         return [
@@ -458,3 +467,132 @@ def test_continuity_rerun_updates_only_pending_agent_summary(
         ("Human-reviewed handoff.", ReviewStatus.APPROVED),
         ("Replacement handoff.", ReviewStatus.PENDING),
     ]
+
+
+def test_naming_failure_preserves_recording_and_retry_runs_only_naming(
+    test_db: Session,
+    testing_session_local: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A user can retry naming without paying for or rolling back successful recording.
+
+    FunctionModel replaces paid, nondeterministic provider inference. All task
+    claims, glossary writes, stage boundaries, and transactions use PostgreSQL.
+    """
+    from src.memory.agent import agent as agent_factory
+    from src.memory.agent.config import RecordMemoriesConfig, TranslateTermsConfig
+    from src.memory.agent.tasks.jobs import reset_failed_task
+    from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
+    from src.memory.plugins.glossary.models import GlossaryTerm
+
+    job_id, [chapter_id] = _make_memory_job(
+        test_db,
+        chapter_count=1,
+        params=JobParamsV2(
+            record_memories=RecordMemoriesConfig(
+                model_name="deepseek:deepseek-v4-flash-low", toolsets={"glossary_terms": {}}
+            ),
+            translate_terms=TranslateTermsConfig(model_name="deepseek:deepseek-v4-flash-low"),
+        ),
+    )
+    content = test_db.scalars(select(ChapterContent).where(ChapterContent.chapter_id == chapter_id)).one()
+    content.chapter_content_text = "林昀 entered the room."
+    test_db.commit()
+    recording_calls = 0
+
+    def record(messages, info):
+        nonlocal recording_calls
+        recording_calls += 1
+        if recording_calls == 1:
+            return ModelResponse(parts=[ToolCallPart("add_term", {"term_name": "林昀", "term_kind": "person"})])
+        from pydantic_ai.messages import TextPart
+
+        return ModelResponse(parts=[TextPart("Recorded.")])
+
+    recording_agent = Agent(FunctionModel(record), deps_type=MemAgentDeps, toolsets=[glossary_term_toolset])
+    monkeypatch.setattr(recording, "create_recording_agent", lambda *_: recording_agent)
+    fail_naming = True
+    naming_requests = 0
+
+    def name(_messages, info):
+        nonlocal naming_requests
+        if fail_naming:
+            raise RuntimeError("Provider unavailable")
+        naming_requests += 1
+        if naming_requests == 1:
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"translations": []})])
+        return ModelResponse(
+            parts=[
+                ToolCallPart(info.output_tools[0].name, {"translations": [{"term": "林昀", "translation": "Lin Yun"}]})
+            ]
+        )
+
+    monkeypatch.setattr(agent_factory, "model_configuration", lambda _: (FunctionModel(name), {}))
+
+    async def consume():
+        return [item async for item in agent_tasks.run_all_tasks(testing_session_local, job_id)]
+
+    with pytest.raises(RuntimeError, match="Provider unavailable"):
+        asyncio.run(consume())
+    test_db.expire_all()
+    record_task = test_db.get(MemoryChapterTask, (job_id, chapter_id, 0))
+    naming_task = test_db.get(MemoryChapterTask, (job_id, chapter_id, 1))
+    assert record_task is not None and record_task.task_status == JobStatus.COMPLETED
+    assert naming_task is not None and naming_task.task_status == JobStatus.FAILED
+    assert test_db.scalar(select(GlossaryTerm.term).where(GlossaryTerm.term == "林昀")) == "林昀"
+    assert test_db.scalar(select(TermTranslation)) is None
+    calls_after_recording = recording_calls
+
+    # Starting again must not skip a failed stage and silently advance.
+    assert asyncio.run(consume()) == []
+    assert reset_failed_task(test_db, job_id, chapter_id, 1)
+    fail_naming = False
+    completed = asyncio.run(agent_tasks.run_one_task(testing_session_local, job_id, chapter_id, 1))
+    assert completed is not None and completed.stage_name == "translate_terms"
+    assert naming_requests == 2  # The typed output validator retries the incomplete response.
+    assert recording_calls == calls_after_recording
+    test_db.expire_all()
+    record_task = test_db.get(MemoryChapterTask, (job_id, chapter_id, 0))
+    naming_task = test_db.get(MemoryChapterTask, (job_id, chapter_id, 1))
+    assert record_task is not None and record_task.attempt_count == 1
+    assert naming_task is not None and naming_task.attempt_count == 2
+    translation = test_db.scalars(select(TermTranslation)).one()
+    assert translation.translation == "Lin Yun"
+    assert translation.review_status == ReviewStatus.PENDING
+
+
+def test_naming_only_no_work_completes_without_creating_an_agent(
+    test_db: Session, testing_session_local: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from src.memory.agent.config import TranslateTermsConfig
+    from src.memory.agent.stages import term_translation
+    from src.memory.plugins.glossary import access
+
+    job_id, [chapter_id] = _make_memory_job(
+        test_db,
+        chapter_count=1,
+        params=JobParamsV2(translate_terms=TranslateTermsConfig(model_name="deepseek:deepseek-v4-flash-low")),
+    )
+    job = test_db.get(MemoryJob, job_id)
+    assert job is not None
+    content = test_db.scalars(select(ChapterContent).where(ChapterContent.chapter_id == chapter_id)).one()
+    content.chapter_content_text = "林昀 entered the room."
+    term = access.create_term(test_db, job.memory_group_id, "林昀")
+    test_db.add(
+        TermTranslation(
+            term_id=term.term_id, translation="Lin Yun", creator_type=Creator.USER, review_status=ReviewStatus.APPROVED
+        )
+    )
+    test_db.commit()
+
+    def unexpected_agent(*_):
+        raise AssertionError("No-work naming must not create or run an agent")
+
+    monkeypatch.setattr(term_translation, "create_term_translation_agent", unexpected_agent)
+    completed = asyncio.run(agent_tasks.run_one_task(testing_session_local, job_id, chapter_id))
+    assert completed is not None and completed.result is None
+    assert completed.stage_num == 0 and completed.stage_name == "translate_terms"
+    test_db.expire_all()
+    task = test_db.get(MemoryChapterTask, (job_id, chapter_id, 0))
+    assert task is not None and task.task_status == JobStatus.COMPLETED
+    assert test_db.scalars(select(TermTranslation)).one().translation == "Lin Yun"

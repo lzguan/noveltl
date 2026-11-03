@@ -147,6 +147,7 @@ class MemoryChapterTask(Base):
         ),
         primary_key=True,
     )
+    stage_num: Mapped[int] = mapped_column(types.Integer, primary_key=True)
     task_status: Mapped[JobStatus] = mapped_column(
         Enum(
             JobStatus,

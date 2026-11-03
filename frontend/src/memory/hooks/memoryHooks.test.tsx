@@ -26,6 +26,11 @@ import { TERM_MEMORY_PAGE_SIZE, useTermMemories } from "./useTermMemories";
 
 vi.mock("@/api/endpoints/default/default", () => ({
 	readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet: vi.fn(),
+	readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet: vi.fn().mockResolvedValue({
+		status: 200,
+		data: [],
+		headers: new Headers(),
+	}),
 	readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet: vi.fn(),
 	readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet: vi.fn(),
 	readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet: vi.fn(),

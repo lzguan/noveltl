@@ -143,10 +143,8 @@ class ContinuitySummaryCapability(AbstractCapability[MemAgentDeps]):
         self,
         ctx: RunContext[MemAgentDeps],
         *,
-        result: AgentRunResult[object],
-    ) -> AgentRunResult[object]:
-        if not isinstance(result.output, ContinuitySummaryOutput):
-            raise TypeError("Continuity summaries require ContinuitySummaryOutput")
+        result: AgentRunResult[ContinuitySummaryOutput],
+    ) -> AgentRunResult[ContinuitySummaryOutput]:
         chapter_num, _ = check_mem_access_ctx(ctx.deps.db, ctx.deps.mem_access_context)
         stmt = insert(Memory).values(
             memory_group_id=ctx.deps.mem_access_context.memory_group_id,

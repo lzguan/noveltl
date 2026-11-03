@@ -4,7 +4,8 @@ import {
 } from "@/api/endpoints/default/default";
 import type {
 	CreateMemoryJob,
-	JobParamsToolsets,
+	RecordMemoriesConfigToolsets,
+	ModelName,
 	MemoryAgentConfig,
 	MemoryAgentToolsetOption,
 } from "@/api/models";
@@ -37,8 +38,11 @@ import { ToolsetConfigDialog, toolsetHasConfig } from "./ToolsetConfigDialog";
 type MemoryJobFormValues = {
 	startChapterNum: string;
 	endChapterNum: string;
-	modelName: CreateMemoryJob["params"]["modelName"];
-	toolsets: JobParamsToolsets;
+	modelName: ModelName;
+	translationModelName: ModelName;
+	recordMemories: boolean;
+	translateTerms: boolean;
+	toolsets: RecordMemoriesConfigToolsets;
 };
 
 type CreateMemoryJobFormProps = {
@@ -47,7 +51,7 @@ type CreateMemoryJobFormProps = {
 	closeDialog: () => void;
 };
 
-function defaultToolsets(config: MemoryAgentConfig): JobParamsToolsets {
+function defaultToolsets(config: MemoryAgentConfig): RecordMemoriesConfigToolsets {
 	return Object.fromEntries(
 		config.toolsets
 			.filter((toolset) => toolset.defaultEnabled)
@@ -123,9 +127,14 @@ function LoadedCreateMemoryJobForm({
 			startChapterNum: "",
 			endChapterNum: "",
 			modelName: config.models[0].name,
+			translationModelName: config.models[0].name,
+			recordMemories: true,
+			translateTerms: true,
 			toolsets: defaultToolsets(config),
 		},
 	});
+	const recordMemories = useWatch({ control, name: "recordMemories" });
+	const translateTerms = useWatch({ control, name: "translateTerms" });
 	const toolsets = useWatch({ control, name: "toolsets" });
 	const toolsetsByName = new Map(config.toolsets.map((toolset) => [toolset.name, toolset]));
 
@@ -149,13 +158,22 @@ function LoadedCreateMemoryJobForm({
 
 	async function submit(values: MemoryJobFormValues) {
 		setSubmitError(null);
+		if (!values.recordMemories && !values.translateTerms) {
+			setSubmitError("Select at least one stage.");
+			return;
+		}
 		const payload: CreateMemoryJob = {
 			memoryGroupId,
 			startChapterNum: values.startChapterNum === "" ? null : Number(values.startChapterNum),
 			endChapterNum: values.endChapterNum === "" ? null : Number(values.endChapterNum),
 			params: {
-				modelName: values.modelName,
-				toolsets: values.toolsets,
+				version: 2,
+				recordMemories: values.recordMemories
+					? { modelName: values.modelName, toolsets: values.toolsets }
+					: null,
+				translateTerms: values.translateTerms
+					? { modelName: values.translationModelName }
+					: null,
 			},
 		};
 
@@ -244,77 +262,169 @@ function LoadedCreateMemoryJobForm({
 									<FieldError errors={[errors.endChapterNum]} />
 								</Field>
 							</div>
-							<Field>
-								<FieldLabel htmlFor="memory-job-model">Model</FieldLabel>
+							<Field orientation="horizontal">
 								<Controller
 									control={control}
-									name="modelName"
+									name="recordMemories"
 									render={({ field }) => (
-										<Select
-											value={field.value}
+										<Checkbox
+											id="memory-job-record"
+											checked={field.value}
 											disabled={isSubmitting}
-											onValueChange={field.onChange}
-										>
-											<SelectTrigger id="memory-job-model" className="w-full">
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												{config.models.map((model) => (
-													<SelectItem key={model.name} value={model.name}>
-														{model.label}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
+											onCheckedChange={(checked) =>
+												field.onChange(checked === true)
+											}
+										/>
 									)}
 								/>
+								<FieldLabel htmlFor="memory-job-record">Record memories</FieldLabel>
 							</Field>
-							<div className="grid grid-cols-1 gap-2">
-								{config.toolsets.map((toolset) => {
-									const id = `memory-job-${toolset.name}-toolset`;
-									const selected = Object.hasOwn(toolsets, toolset.name);
-									return (
-										<div
-											className="flex items-start gap-3 rounded-md border border-border p-3"
-											key={toolset.name}
-										>
-											<Checkbox
-												id={id}
-												checked={selected}
-												disabled={isSubmitting}
-												onCheckedChange={(checked) =>
-													changeToolset(toolset.name, checked === true)
-												}
-											/>
-											<div className="min-w-0 flex-1">
-												<FieldLabel htmlFor={id}>
-													{toolset.label}
-												</FieldLabel>
-												<p className="text-xs text-muted-foreground">
-													{toolset.description}
-												</p>
-											</div>
-											{toolsetHasConfig(toolset) && (
-												<Button
-													type="button"
-													aria-label={`Configure ${toolset.label}`}
-													variant="outline"
-													size="sm"
-													disabled={!selected || isSubmitting}
-													onClick={() => setConfiguringToolset(toolset)}
+							<Field orientation="horizontal">
+								<Controller
+									control={control}
+									name="translateTerms"
+									render={({ field }) => (
+										<Checkbox
+											id="memory-job-translate"
+											checked={field.value}
+											disabled={isSubmitting}
+											onCheckedChange={(checked) =>
+												field.onChange(checked === true)
+											}
+										/>
+									)}
+								/>
+								<FieldLabel htmlFor="memory-job-translate">
+									Translate glossary terms
+								</FieldLabel>
+							</Field>
+							{recordMemories && (
+								<>
+									<Field>
+										<FieldLabel htmlFor="memory-job-model">
+											Recording model
+										</FieldLabel>
+										<Controller
+											control={control}
+											name="modelName"
+											render={({ field }) => (
+												<Select
+													value={field.value}
+													disabled={isSubmitting}
+													onValueChange={field.onChange}
 												>
-													<Settings2Icon />
-													Configure
-												</Button>
+													<SelectTrigger
+														id="memory-job-model"
+														className="w-full"
+													>
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent>
+														{config.models.map((model) => (
+															<SelectItem
+																key={model.name}
+																value={model.name}
+															>
+																{model.label}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
 											)}
-										</div>
-									);
-								})}
-							</div>
-							<p className="text-xs text-muted-foreground">
-								Selecting a toolset also selects its requirements. Removing a
-								requirement removes dependent toolsets.
-							</p>
+										/>
+									</Field>
+									<div className="grid grid-cols-1 gap-2">
+										{config.toolsets.map((toolset) => {
+											const id = `memory-job-${toolset.name}-toolset`;
+											const selected = Object.hasOwn(toolsets, toolset.name);
+											return (
+												<div
+													className="flex items-start gap-3 rounded-md border border-border p-3"
+													key={toolset.name}
+												>
+													<Checkbox
+														id={id}
+														checked={selected}
+														disabled={isSubmitting}
+														onCheckedChange={(checked) =>
+															changeToolset(
+																toolset.name,
+																checked === true,
+															)
+														}
+													/>
+													<div className="min-w-0 flex-1">
+														<FieldLabel htmlFor={id}>
+															{toolset.label}
+														</FieldLabel>
+														<p className="text-xs text-muted-foreground">
+															{toolset.description}
+														</p>
+													</div>
+													{toolsetHasConfig(toolset) && (
+														<Button
+															type="button"
+															aria-label={`Configure ${toolset.label}`}
+															variant="outline"
+															size="sm"
+															disabled={!selected || isSubmitting}
+															onClick={() =>
+																setConfiguringToolset(toolset)
+															}
+														>
+															<Settings2Icon />
+															Configure
+														</Button>
+													)}
+												</div>
+											);
+										})}
+									</div>
+									<p className="text-xs text-muted-foreground">
+										Selecting a toolset also selects its requirements. Removing
+										a requirement removes dependent toolsets.
+									</p>
+								</>
+							)}
+							{translateTerms && (
+								<Field>
+									<FieldLabel htmlFor="memory-job-translation-model">
+										Term translation model
+									</FieldLabel>
+									<Controller
+										control={control}
+										name="translationModelName"
+										render={({ field }) => (
+											<Select
+												value={field.value}
+												disabled={isSubmitting}
+												onValueChange={field.onChange}
+											>
+												<SelectTrigger
+													id="memory-job-translation-model"
+													className="w-full"
+												>
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													{config.models.map((model) => (
+														<SelectItem
+															key={model.name}
+															value={model.name}
+														>
+															{model.label}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										)}
+									/>
+									<p className="text-xs text-muted-foreground">
+										Uses the memory group's language. Existing translations are
+										reused.
+									</p>
+								</Field>
+							)}
 						</FieldGroup>
 						<DialogFooter>
 							<Button

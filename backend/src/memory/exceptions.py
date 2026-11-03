@@ -37,5 +37,9 @@ class GlossaryTermNotFoundException(NotFoundException):
     pass
 
 
+class TermTranslationNotFoundException(NotFoundException):
+    pass
+
+
 class GlossaryTermAlreadyExistsException(DuplicateException):
     pass

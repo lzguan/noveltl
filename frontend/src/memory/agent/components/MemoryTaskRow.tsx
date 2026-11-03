@@ -1,6 +1,7 @@
 import { JobStatus, type MemoryChapterTask } from "@/api/models";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { MemoryStageName } from "@/memory/agent/stages";
 import {
 	CheckCircle2Icon,
 	Clock3Icon,
@@ -13,6 +14,7 @@ import {
 
 export function MemoryTaskRow({
 	task,
+	stageName,
 	jobClaimed,
 	controlsDisabled,
 	pendingAction,
@@ -21,6 +23,7 @@ export function MemoryTaskRow({
 	onDelete,
 }: {
 	task: MemoryChapterTask;
+	stageName: MemoryStageName;
 	jobClaimed: boolean;
 	controlsDisabled: boolean;
 	pendingAction: "start" | "retry" | "delete" | null;
@@ -51,7 +54,10 @@ export function MemoryTaskRow({
 			</div>
 
 			<div className="min-w-0 flex-1">
-				<p className="text-sm font-medium">Chapter {task.chapterNum}</p>
+				<p className="text-sm font-medium">
+					Chapter {task.chapterNum} ·{" "}
+					{stageName === "record_memories" ? "Record memories" : "Translate terms"}
+				</p>
 				<p className="text-xs text-muted-foreground">
 					{task.taskStatus === JobStatus.pending
 						? jobClaimed

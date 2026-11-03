@@ -47,6 +47,8 @@ class Scope(StrEnum):
 
 type PluginName = Literal["glossary", "continuity"]
 
+type StageName = Literal["record_memories", "translate_terms"]
+
 
 class JobStatus(StrEnum):
     PENDING = "pending"

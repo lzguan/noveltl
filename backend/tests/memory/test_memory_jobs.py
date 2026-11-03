@@ -5,8 +5,8 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from src.languages.models import Language
+from src.memory.agent.config import JobParamsV1 as JobParams
 from src.memory.agent.tasks.jobs import (
-    JobParams,
     abort_job,
     claim_job,
     claim_next_task,

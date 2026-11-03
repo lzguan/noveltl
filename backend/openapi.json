@@ -6069,6 +6069,286 @@
         }
       }
     },
+    "/memory-groups/{memoryGroupId}/translations": {
+      "get": {
+        "summary": "Read Term Translations",
+        "operationId": "read_term_translations_memory_groups__memoryGroupId__translations_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "termIds",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "minItems": 1,
+              "maxItems": 100,
+              "title": "Termids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TermTranslationRead"
+                  },
+                  "title": "Response Read Term Translations Memory Groups  Memorygroupid  Translations Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory-groups/{memoryGroupId}/translations/{termId}": {
+      "put": {
+        "summary": "Put Term Translation",
+        "operationId": "put_term_translation_memory_groups__memoryGroupId__translations__termId__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "termId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Termid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveTermTranslation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermTranslationRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove Term Translation",
+        "operationId": "remove_term_translation_memory_groups__memoryGroupId__translations__termId__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "termId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Termid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory-groups/{memoryGroupId}/translations/{termId}/review-status": {
+      "patch": {
+        "summary": "Edit Term Translation Review Status",
+        "operationId": "edit_term_translation_review_status_memory_groups__memoryGroupId__translations__termId__review_status_patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "memoryGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Memorygroupid"
+            }
+          },
+          {
+            "name": "termId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Termid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReviewStatus"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermTranslationRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/memory-agent/config": {
       "get": {
         "summary": "Read Memory Agent Config",
@@ -6540,6 +6820,16 @@
               "format": "uuid",
               "title": "Chapterid"
             }
+          },
+          {
+            "name": "stageNum",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Stagenum"
+            }
           }
         ],
         "responses": {
@@ -6602,6 +6892,16 @@
               "type": "string",
               "format": "uuid",
               "title": "Chapterid"
+            }
+          },
+          {
+            "name": "stageNum",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Stagenum"
             }
           }
         ],
@@ -6801,6 +7101,16 @@
               "format": "uuid",
               "title": "Chapterid"
             }
+          },
+          {
+            "name": "stageNum",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Stagenum"
+            }
           }
         ],
         "responses": {
@@ -6885,6 +7195,16 @@
               "type": "string",
               "format": "uuid",
               "title": "Chapterid"
+            }
+          },
+          {
+            "name": "stageNum",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Stagenum"
             }
           }
         ],
@@ -9680,6 +10000,23 @@
         "type": "integer"
       },
       "JobParams": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/JobParamsV1"
+          },
+          {
+            "$ref": "#/components/schemas/JobParamsV2"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "version",
+          "mapping": {
+            "1": "#/components/schemas/JobParamsV1",
+            "2": "#/components/schemas/JobParamsV2"
+          }
+        }
+      },
+      "JobParamsV1": {
         "properties": {
           "modelName": {
             "$ref": "#/components/schemas/ModelName"
@@ -9691,14 +10028,54 @@
             },
             "type": "object",
             "title": "Toolsets"
+          },
+          "version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Version",
+            "default": 1
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "modelName",
           "toolsets"
         ],
-        "title": "JobParams"
+        "title": "JobParamsV1"
+      },
+      "JobParamsV2": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "const": 2,
+            "title": "Version",
+            "default": 2
+          },
+          "recordMemories": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordMemoriesConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "translateTerms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TranslateTermsConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "JobParamsV2"
       },
       "JobStatus": {
         "type": "string",
@@ -10305,6 +10682,10 @@
             "type": "integer",
             "title": "Chapternum"
           },
+          "stageNum": {
+            "type": "integer",
+            "title": "Stagenum"
+          },
           "taskStatus": {
             "$ref": "#/components/schemas/JobStatus"
           },
@@ -10328,6 +10709,7 @@
           "memoryJobId",
           "chapterId",
           "chapterNum",
+          "stageNum",
           "taskStatus",
           "attemptCount",
           "createdAt",
@@ -11080,6 +11462,28 @@
         ],
         "title": "PythonMapRequest"
       },
+      "RecordMemoriesConfig": {
+        "properties": {
+          "modelName": {
+            "$ref": "#/components/schemas/ModelName"
+          },
+          "toolsets": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Toolsets"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "modelName",
+          "toolsets"
+        ],
+        "title": "RecordMemoriesConfig"
+      },
       "RenameWorkflowRequest": {
         "properties": {
           "workflowName": {
@@ -11185,6 +11589,20 @@
             "schema": "#/components/schemas/Schema"
           }
         }
+      },
+      "SaveTermTranslation": {
+        "properties": {
+          "translation": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Translation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "translation"
+        ],
+        "title": "SaveTermTranslation"
       },
       "Schema": {
         "properties": {
@@ -11427,6 +11845,45 @@
         ],
         "title": "TermKind"
       },
+      "TermTranslationRead": {
+        "properties": {
+          "termId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Termid"
+          },
+          "translation": {
+            "type": "string",
+            "title": "Translation"
+          },
+          "reviewStatus": {
+            "$ref": "#/components/schemas/ReviewStatus"
+          },
+          "creatorType": {
+            "$ref": "#/components/schemas/Creator"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "termId",
+          "translation",
+          "reviewStatus",
+          "creatorType",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "TermTranslationRead"
+      },
       "TextOp": {
         "properties": {
           "op": {
@@ -11559,6 +12016,19 @@
           "memory",
           "guidance"
         ]
+      },
+      "TranslateTermsConfig": {
+        "properties": {
+          "modelName": {
+            "$ref": "#/components/schemas/ModelName"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "modelName"
+        ],
+        "title": "TranslateTermsConfig"
       },
       "TranslationActionMetadata": {
         "properties": {

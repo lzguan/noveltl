@@ -1510,6 +1510,16 @@ components:
     IntegerValue:
       type: integer
     JobParams:
+      discriminator:
+        mapping:
+          '1': '#/components/schemas/JobParamsV1'
+          '2': '#/components/schemas/JobParamsV2'
+        propertyName: version
+      oneOf:
+      - $ref: '#/components/schemas/JobParamsV1'
+      - $ref: '#/components/schemas/JobParamsV2'
+    JobParamsV1:
+      additionalProperties: false
       properties:
         modelName:
           $ref: '#/components/schemas/ModelName'
@@ -1519,10 +1529,33 @@ components:
             type: object
           title: Toolsets
           type: object
+        version:
+          const: 1
+          default: 1
+          title: Version
+          type: integer
       required:
       - modelName
       - toolsets
-      title: JobParams
+      title: JobParamsV1
+      type: object
+    JobParamsV2:
+      additionalProperties: false
+      properties:
+        recordMemories:
+          anyOf:
+          - $ref: '#/components/schemas/RecordMemoriesConfig'
+          - type: 'null'
+        translateTerms:
+          anyOf:
+          - $ref: '#/components/schemas/TranslateTermsConfig'
+          - type: 'null'
+        version:
+          const: 2
+          default: 2
+          title: Version
+          type: integer
+      title: JobParamsV2
       type: object
     JobStatus:
       enum:
@@ -2004,6 +2037,9 @@ components:
           format: uuid
           title: Memoryjobid
           type: string
+        stageNum:
+          title: Stagenum
+          type: integer
         taskStatus:
           $ref: '#/components/schemas/JobStatus'
         updatedAt:
@@ -2014,6 +2050,7 @@ components:
       - memoryJobId
       - chapterId
       - chapterNum
+      - stageNum
       - taskStatus
       - attemptCount
       - createdAt
@@ -2581,6 +2618,22 @@ components:
       - functionDefinitionId
       title: PythonMapRequest
       type: object
+    RecordMemoriesConfig:
+      additionalProperties: false
+      properties:
+        modelName:
+          $ref: '#/components/schemas/ModelName'
+        toolsets:
+          additionalProperties:
+            additionalProperties: true
+            type: object
+          title: Toolsets
+          type: object
+      required:
+      - modelName
+      - toolsets
+      title: RecordMemoriesConfig
+      type: object
     RenameWorkflowRequest:
       additionalProperties: false
       properties:
@@ -2655,6 +2708,16 @@ components:
       oneOf:
       - $ref: '#/components/schemas/Schema'
       - $ref: '#/components/schemas/SchemaField'
+    SaveTermTranslation:
+      properties:
+        translation:
+          minLength: 1
+          title: Translation
+          type: string
+      required:
+      - translation
+      title: SaveTermTranslation
+      type: object
     Schema:
       additionalProperties: false
       properties:
@@ -2838,6 +2901,36 @@ components:
       - other
       title: TermKind
       type: string
+    TermTranslationRead:
+      properties:
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        creatorType:
+          $ref: '#/components/schemas/Creator'
+        reviewStatus:
+          $ref: '#/components/schemas/ReviewStatus'
+        termId:
+          format: uuid
+          title: Termid
+          type: string
+        translation:
+          title: Translation
+          type: string
+        updatedAt:
+          format: date-time
+          title: Updatedat
+          type: string
+      required:
+      - termId
+      - translation
+      - reviewStatus
+      - creatorType
+      - createdAt
+      - updatedAt
+      title: TermTranslationRead
+      type: object
     TextOp:
       description: "Pydantic schema to update text content of a chapter.\n\nAttributes:\n\
         \    op: The text operation, either \"insert\" or \"delete\".\n    start:\
@@ -2944,6 +3037,15 @@ components:
       - memory
       - guidance
       type: string
+    TranslateTermsConfig:
+      additionalProperties: false
+      properties:
+        modelName:
+          $ref: '#/components/schemas/ModelName'
+      required:
+      - modelName
+      title: TranslateTermsConfig
+      type: object
     TranslationActionMetadata:
       properties:
         allowedAsFirstStage:
@@ -6575,6 +6677,13 @@ paths:
           format: uuid
           title: Chapterid
           type: string
+      - in: query
+        name: stageNum
+        required: false
+        schema:
+          default: 0
+          title: Stagenum
+          type: integer
       responses:
         '204':
           description: Successful Response
@@ -6616,6 +6725,13 @@ paths:
           format: uuid
           title: Chapterid
           type: string
+      - in: query
+        name: stageNum
+        required: false
+        schema:
+          default: 0
+          title: Stagenum
+          type: integer
       responses:
         '200':
           content:
@@ -6656,6 +6772,13 @@ paths:
           format: uuid
           title: Chapterid
           type: string
+      - in: query
+        name: stageNum
+        required: false
+        schema:
+          default: 0
+          title: Stagenum
+          type: integer
       responses:
         '202':
           content:
@@ -6708,6 +6831,13 @@ paths:
           format: uuid
           title: Chapterid
           type: string
+      - in: query
+        name: stageNum
+        required: false
+        schema:
+          default: 0
+          title: Stagenum
+          type: integer
       responses:
         '202':
           content:
@@ -7535,6 +7665,181 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Read Memories
+  /memory-groups/{memoryGroupId}/translations:
+    get:
+      operationId: read_term_translations_memory_groups__memoryGroupId__translations_get
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: query
+        name: termIds
+        required: true
+        schema:
+          items:
+            format: uuid
+            type: string
+          maxItems: 100
+          minItems: 1
+          title: Termids
+          type: array
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/TermTranslationRead'
+                title: Response Read Term Translations Memory Groups  Memorygroupid  Translations
+                  Get
+                type: array
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Term Translations
+  /memory-groups/{memoryGroupId}/translations/{termId}:
+    delete:
+      operationId: remove_term_translation_memory_groups__memoryGroupId__translations__termId__delete
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: termId
+        required: true
+        schema:
+          format: uuid
+          title: Termid
+          type: string
+      responses:
+        '204':
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Remove Term Translation
+    put:
+      operationId: put_term_translation_memory_groups__memoryGroupId__translations__termId__put
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: termId
+        required: true
+        schema:
+          format: uuid
+          title: Termid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveTermTranslation'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TermTranslationRead'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Put Term Translation
+  /memory-groups/{memoryGroupId}/translations/{termId}/review-status:
+    patch:
+      operationId: edit_term_translation_review_status_memory_groups__memoryGroupId__translations__termId__review_status_patch
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: termId
+        required: true
+        schema:
+          format: uuid
+          title: Termid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReviewStatus'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TermTranslationRead'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Edit Term Translation Review Status
   /novels:
     get:
       description: Endpoint for retrieving novels in bulk.

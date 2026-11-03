@@ -42,6 +42,7 @@ type MemoryJobFormValues = {
 	translationModelName: ModelName;
 	recordMemories: boolean;
 	translateTerms: boolean;
+	includeConventions: boolean;
 	toolsets: RecordMemoriesConfigToolsets;
 };
 
@@ -130,6 +131,7 @@ function LoadedCreateMemoryJobForm({
 			translationModelName: config.models[0].name,
 			recordMemories: true,
 			translateTerms: true,
+			includeConventions: false,
 			toolsets: defaultToolsets(config),
 		},
 	});
@@ -172,7 +174,10 @@ function LoadedCreateMemoryJobForm({
 					? { modelName: values.modelName, toolsets: values.toolsets }
 					: null,
 				translateTerms: values.translateTerms
-					? { modelName: values.translationModelName }
+					? {
+							modelName: values.translationModelName,
+							includeConventions: values.includeConventions,
+						}
 					: null,
 			},
 		};
@@ -423,6 +428,27 @@ function LoadedCreateMemoryJobForm({
 										Uses the memory group's language. Existing translations are
 										reused.
 									</p>
+								</Field>
+							)}
+							{translateTerms && (
+								<Field orientation="horizontal">
+									<Controller
+										control={control}
+										name="includeConventions"
+										render={({ field }) => (
+											<Checkbox
+												id="memory-job-include-conventions"
+												checked={field.value}
+												disabled={isSubmitting}
+												onCheckedChange={(checked) =>
+													field.onChange(checked === true)
+												}
+											/>
+										)}
+									/>
+									<FieldLabel htmlFor="memory-job-include-conventions">
+										Follow naming conventions
+									</FieldLabel>
 								</Field>
 							)}
 						</FieldGroup>

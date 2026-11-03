@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConventionsBrowser } from "@/memory/components/ConventionsBrowser";
 import { CreateMemoryGroupDialog } from "@/memory/components/CreateMemoryGroupDialog";
 import { GlossaryBrowser } from "@/memory/components/GlossaryBrowser";
 import { MemoryBrowser } from "@/memory/components/MemoryBrowser";
@@ -79,6 +80,14 @@ export function MemoryPanel({
 								memoryGroupId={selectedGroupId}
 								chapterId={chapterId}
 								chapterNum={chapterNum}
+							/>
+						</>
+					) : view === "conventions" ? (
+						<>
+							<PluginSelector value={view} onChange={setView} />
+							<ConventionsBrowser
+								key={selectedGroupId}
+								memoryGroupId={selectedGroupId}
 							/>
 						</>
 					) : (

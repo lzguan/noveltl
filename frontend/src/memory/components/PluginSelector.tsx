@@ -8,10 +8,15 @@ import {
 } from "@/components/ui/select";
 import { useId } from "react";
 
-export type MemoryView = "memories" | "glossary" | "translations";
+export type MemoryView = "memories" | "glossary" | "translations" | "conventions";
 
 function isMemoryView(value: string): value is MemoryView {
-	return value === "memories" || value === "glossary" || value === "translations";
+	return (
+		value === "memories" ||
+		value === "glossary" ||
+		value === "translations" ||
+		value === "conventions"
+	);
 }
 
 export function PluginSelector({
@@ -47,6 +52,7 @@ export function PluginSelector({
 					<SelectItem value="memories">View all memories</SelectItem>
 					<SelectItem value="glossary">Glossary</SelectItem>
 					<SelectItem value="translations">Term translations</SelectItem>
+					<SelectItem value="conventions">Conventions</SelectItem>
 				</SelectContent>
 			</Select>
 		</div>

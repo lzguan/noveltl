@@ -166,6 +166,8 @@ export function GlossaryBrowser({
 													null
 												}
 												onSaved={glossary.translationSaved}
+												onDeleted={glossary.translationDeleted}
+												showReviewActions
 											/>
 										) : (
 											<p className="text-xs text-muted-foreground">

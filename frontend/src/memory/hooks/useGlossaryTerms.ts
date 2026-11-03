@@ -182,12 +182,22 @@ export function useGlossaryTerms(
 		);
 	}, []);
 
+	const translationDeleted = useCallback((termId: string) => {
+		setTranslations((current) => {
+			if (current.status !== "ready") return current;
+			const data = new Map(current.data);
+			data.delete(termId);
+			return { status: "ready", data };
+		});
+	}, []);
+
 	return {
 		showAllTerms: query.showAllTerms,
 		search: query.search,
 		terms,
 		translations,
 		translationSaved,
+		translationDeleted,
 		loadTerms,
 		reloadTerms: loadTerms,
 		reloadTermsAfterDelete,

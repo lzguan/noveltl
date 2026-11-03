@@ -4,6 +4,8 @@ import {
 	readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
 	readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet,
 	putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPut,
+	removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDelete,
+	editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatch,
 } from "@/api/endpoints/default/default";
 import type { GlossaryTermSummary, TermTranslationRead } from "@/api/models";
 import { GlossaryBrowser } from "./GlossaryBrowser";
@@ -14,6 +16,9 @@ vi.mock("@/api/endpoints/default/default", async (importOriginal) => ({
 	readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet: vi.fn(),
 	readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet: vi.fn(),
 	putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPut: vi.fn(),
+	removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDelete: vi.fn(),
+	editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatch:
+		vi.fn(),
 }));
 
 const term: GlossaryTermSummary = {
@@ -212,4 +217,66 @@ it("does not request translations for an empty term page", async () => {
 	browser();
 	expect(await screen.findByText("No terms match this search.")).toBeVisible();
 	expect(readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet).not.toHaveBeenCalled();
+});
+
+it("keeps a failed deletion visible and removes only the mapping after a successful retry", async () => {
+	vi.mocked(removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDelete)
+		.mockResolvedValueOnce({
+			status: 404,
+			data: { detail: "No edit permission" },
+			headers: new Headers(),
+		})
+		.mockResolvedValueOnce({ status: 204, data: undefined, headers: new Headers() });
+	browser();
+	const remove = await screen.findByRole("button", { name: "Delete translation for Alpha" });
+	fireEvent.click(remove);
+	expect(await screen.findByRole("alert")).toHaveTextContent("No edit permission");
+	expect(screen.getByText("Existing rendering")).toBeVisible();
+	fireEvent.click(remove);
+	expect(await screen.findByText("Not translated")).toBeVisible();
+	expect(screen.getByText("Alpha")).toBeVisible();
+	expect(screen.getByRole("button", { name: "Add translation for Alpha" })).toBeEnabled();
+	expect(
+		screen.queryByRole("button", { name: "Delete translation for Alpha" }),
+	).not.toBeInTheDocument();
+	expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+	expect(
+		removeTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdDelete,
+	).toHaveBeenLastCalledWith("group-1", "term-1");
+	expect(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet).toHaveBeenCalledOnce();
+	expect(readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet).toHaveBeenCalledOnce();
+});
+
+it("reviews translations locally and retains the current status when a review fails", async () => {
+	vi.mocked(
+		editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatch,
+	)
+		.mockResolvedValueOnce({
+			status: 404,
+			data: { detail: "No edit permission" },
+			headers: new Headers(),
+		})
+		.mockResolvedValueOnce(ok({ ...mapping, reviewStatus: "rejected" }))
+		.mockResolvedValueOnce(ok(mapping));
+	browser();
+	const approve = await screen.findByRole("button", { name: "Approve translation for Alpha" });
+	const reject = screen.getByRole("button", { name: "Reject translation for Alpha" });
+	expect(approve).toBeDisabled();
+	fireEvent.click(reject);
+	expect(await screen.findByRole("alert")).toHaveTextContent("No edit permission");
+	expect(screen.getByText("approved")).toBeVisible();
+	fireEvent.click(reject);
+	expect(await screen.findByText("rejected")).toBeVisible();
+	expect(reject).toBeDisabled();
+	expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+	expect(
+		editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatch,
+	).toHaveBeenLastCalledWith("group-1", "term-1", { reviewStatus: "rejected" });
+	fireEvent.click(approve);
+	expect(await screen.findByText("approved")).toBeVisible();
+	expect(
+		editTermTranslationReviewStatusMemoryGroupsMemoryGroupIdTranslationsTermIdReviewStatusPatch,
+	).toHaveBeenLastCalledWith("group-1", "term-1", { reviewStatus: "approved" });
+	expect(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet).toHaveBeenCalledOnce();
+	expect(readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet).toHaveBeenCalledOnce();
 });

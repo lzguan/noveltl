@@ -33,6 +33,11 @@
 	// Uncomment the next line if you want to keep your containers running after VS Code shuts down.
 	// "shutdownAction": "none",
 
+	// Keep Claude Code's .claude.json (per-project settings, local MCP servers) inside the persisted volume.
+	"containerEnv": {
+		"CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
+	},
+
 	"postCreateCommand": "mkdir -p /home/vscode/.claude /home/vscode/.codex /home/vscode/.local/share/opencode /home/vscode/.pi/agent && sudo chown -R vscode:vscode /home/vscode/.claude /home/vscode/.codex /home/vscode/.local/share/opencode /home/vscode/.pi && sudo chown -R vscode:vscode /home/vscode/.config/gh &&  sudo mkdir -p backend/.venv frontend/node_modules e2e/node_modules && sudo chown -R vscode:vscode backend/.venv frontend/node_modules e2e/node_modules && uv --directory backend sync --all-groups && pnpm --dir frontend install --prefer-offline --frozen-lockfile && pnpm --dir e2e install --prefer-offline --frozen-lockfile",
 
 	// Configure tool-specific properties.

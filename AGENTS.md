@@ -13,6 +13,7 @@ Core services are split by responsibility:
 - `backend/` - FastAPI application, database models, migrations, background-job logic, and tests
 - `frontend/` - React application, UI components, route pages, and generated API client code
 - `docs/` - technical documentation and design notes
+- `.agents/docs/` - agent-maintained implementation notes and code navigation
 - repo root config - local environment and multi-service setup such as `compose.yaml` and devcontainer files
 
 Depending on the user, this project may be developed inside a devcontainer. See [.devcontainer](.devcontainer/), [compose.yaml](compose.yaml), and the Dockerfiles for config info.
@@ -33,7 +34,13 @@ When debugging, if the issue turns out to be more subtle or require a broader fi
 
 ## Skills/Agents
 
-Skills are currently located in [.agents/skills/](.agents/skills/) and tracked in [skills-lock.json](skills-lock.json). There is no shared agents directory yet. If none of the above conventions fits the format that your tool expects, let the user know at the beginning of a session.
+Skills are currently located in [.agents/skills/](.agents/skills/) and tracked in [skills-lock.json](skills-lock.json).
+
+Agent-maintained implementation notes live in [.agents/docs/](.agents/docs/README.md). Read its index and the notes relevant to your task. Keep code maps, implementation decisions, and agent handoff context there; reserve `docs/` for human-facing documentation. Verify notes against the code before relying on them, and update affected notes when implementation changes. This directory is a project convention, not an automatically discovered agent feature.
+
+Do not create or modify human-facing documentation unless the user explicitly asks. Put agent-maintained implementation notes in `.agents/docs/` instead.
+
+Use the [maintain-agent-docs skill](.agents/skills/maintain-agent-docs/SKILL.md) when creating or updating those notes.
 
 Actively suggest ways for the user to improve their workflow, such as using plan mode, subagents, or various other features that you offer if they fit the task scope.
 

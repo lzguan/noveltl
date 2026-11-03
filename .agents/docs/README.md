@@ -9,6 +9,9 @@ they describe changes.
 
 | Task | Read |
 | --- | --- |
+| Change editor synchronization, content revisions, or label porting | [Editor persistence](editor-persistence.md) |
+| Change chapter-translation actions, artifacts, or recovery | [Chapter translation](chapter-translation.md) |
+| Find worker entry points or change object storage | [Background services and files](background-services.md) |
 | Change memory-job configuration, ordering, claims, or retries | [Memory jobs](memory-jobs.md) |
 | Change term naming, translation storage, or glossary review UI | [Term translations](term-translations.md) |
 | Investigate naming quality or choose a regression case | [Naming observations](naming-observations.md) |

@@ -12,7 +12,10 @@ from src.memory.agent.capabilities.continuity import ContinuitySummaryCapability
 from src.memory.agent.capabilities.term_translation import TermTranslationCapability, TermTranslationOutput
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.prompts.recording import MEMORY_AGENT_PROMPT
-from src.memory.agent.prompts.term_translation import TERM_TRANSLATION_INSTRUCTIONS
+from src.memory.agent.prompts.term_translation import (
+    TERM_TRANSLATION_CONVENTIONS_INSTRUCTIONS,
+    TERM_TRANSLATION_INSTRUCTIONS,
+)
 from src.memory.agent.toolsets.glossary.aliases import glossary_aliases_write_toolset
 from src.memory.agent.toolsets.glossary.appearance import glossary_appearance_write_toolset
 from src.memory.agent.toolsets.glossary.character_state import glossary_character_state_read_toolset
@@ -170,15 +173,20 @@ def create_recording_agent(
 
 
 def create_term_translation_agent(
-    model_name: ModelName, required_terms: tuple[str, ...]
+    model_name: ModelName, required_terms: tuple[str, ...], include_conventions: bool
 ) -> Agent[MemAgentDeps, TermTranslationOutput]:
     model, model_settings = model_configuration(model_name)
+    instructions = (
+        [TERM_TRANSLATION_INSTRUCTIONS, TERM_TRANSLATION_CONVENTIONS_INSTRUCTIONS]
+        if include_conventions
+        else TERM_TRANSLATION_INSTRUCTIONS
+    )
     agent = Agent(
         model=model,
         model_settings=model_settings,
         deps_type=MemAgentDeps,
         output_type=TermTranslationOutput,
-        instructions=TERM_TRANSLATION_INSTRUCTIONS,
+        instructions=instructions,
         capabilities=[
             TermTranslationCapability(),
             Toolset(translations_read_toolset),

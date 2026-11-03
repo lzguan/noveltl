@@ -1677,6 +1677,7 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGetQueryParams = S.Str
 })
 
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsOneVersionDefault = 1;
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsTwoVersionDefault = 2;
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsCompletedMin = 0;
 
@@ -1705,6 +1706,7 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet200Response = S.Str
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsTwoVersionDefault)))
@@ -1746,6 +1748,7 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetParams = S
 })
 
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsOneVersionDefault = 1;
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsTwoVersionDefault = 2;
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsCompletedMin = 0;
 
@@ -1774,6 +1777,7 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200Respons
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsTwoVersionDefault)))
@@ -1815,6 +1819,7 @@ export const ReadMemoryJobsMemoryAgentJobsGetQueryParams = S.Struct({
 })
 
 export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsOneVersionDefault = 1;
+export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsTwoVersionDefault = 2;
 
 export const ReadMemoryJobsMemoryAgentJobsGet200ResponseItem = S.Struct({
@@ -1830,6 +1835,7 @@ export const ReadMemoryJobsMemoryAgentJobsGet200ResponseItem = S.Struct({
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsTwoVersionDefault)))
@@ -1862,6 +1868,7 @@ export const ReadMemoryJobsMemoryAgentJobsGet422Response = S.Struct({
 export const addMemoryJobMemoryAgentJobsPostBodyEndChapterNumOneMin = 0;
 
 export const addMemoryJobMemoryAgentJobsPostBodyParamsOneVersionDefault = 1;
+export const addMemoryJobMemoryAgentJobsPostBodyParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const addMemoryJobMemoryAgentJobsPostBodyParamsTwoVersionDefault = 2;
 export const addMemoryJobMemoryAgentJobsPostBodyStartChapterNumOneMin = 0;
 
@@ -1880,6 +1887,7 @@ export const AddMemoryJobMemoryAgentJobsPostBody = S.Struct({
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsTwoVersionDefault)))
@@ -1888,6 +1896,7 @@ export const AddMemoryJobMemoryAgentJobsPostBody = S.Struct({
 })
 
 export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsOneVersionDefault = 1;
+export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsTwoVersionDefault = 2;
 
 export const AddMemoryJobMemoryAgentJobsPost201Response = S.Struct({
@@ -1903,6 +1912,7 @@ export const AddMemoryJobMemoryAgentJobsPost201Response = S.Struct({
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsTwoVersionDefault)))
@@ -1963,6 +1973,7 @@ export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGetParams = S.Struct({
 })
 
 export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsOneVersionDefault = 1;
+export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsTwoVersionDefault = 2;
 
 export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet200Response = S.Struct({
@@ -1978,6 +1989,7 @@ export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet200Response = S.Struct({
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsTwoVersionDefault)))
@@ -2011,6 +2023,7 @@ export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostParams = S.Struct(
 })
 
 export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsOneVersionDefault = 1;
+export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsTwoVersionDefault = 2;
 
 export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200Response = S.Struct({
@@ -2026,6 +2039,7 @@ export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200Response = S.St
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsTwoVersionDefault)))
@@ -2059,6 +2073,7 @@ export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPostParams = S.Struct(
 })
 
 export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsOneVersionDefault = 1;
+export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsTwoVersionDefault = 2;
 
 export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost202Response = S.Struct({
@@ -2074,6 +2089,7 @@ export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost202Response = S.St
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsTwoVersionDefault)))

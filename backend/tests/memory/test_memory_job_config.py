@@ -78,3 +78,8 @@ def test_empty_and_unknown_job_versions_are_rejected():
         job_params_adapter.validate_python({"version": 2})
     with pytest.raises(ValidationError):
         job_params_adapter.validate_python({"version": 99})
+
+
+def test_stored_naming_configs_without_conventions_flag_keep_conventions_off():
+    params = JobParamsV2.model_validate({"translate_terms": {"model_name": MODEL}})
+    assert params.translate_terms is not None and params.translate_terms.include_conventions is False

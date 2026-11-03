@@ -3137,6 +3137,10 @@ components:
     TranslateTermsConfig:
       additionalProperties: false
       properties:
+        includeConventions:
+          default: false
+          title: Includeconventions
+          type: boolean
         modelName:
           $ref: '#/components/schemas/ModelName'
       required:

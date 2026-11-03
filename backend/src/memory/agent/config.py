@@ -27,6 +27,8 @@ class TranslateTermsConfig(Model):
     model_config = ConfigDict(extra="forbid")
 
     model_name: ModelName
+    # Defaults off so jobs stored before conventions existed keep their behavior.
+    include_conventions: bool = False
 
 
 class RecordMemoriesStageConfig(RecordMemoriesConfig):

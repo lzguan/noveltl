@@ -16,12 +16,20 @@ context is needed, use the read-only glossary tools. Never invent identity
 links from similar spelling alone.
 """.strip()
 
+TERM_TRANSLATION_CONVENTIONS_INSTRUCTIONS = """
+The glossary context's conventions are the editor's novel-wide naming policy.
+Follow them when choosing renderings for terms they cover, including their
+examples. They do not override established translations.
+""".strip()
+
 
 def term_translation_request_prompt(
     chapter_text: str, chapter_num: int, language_name: str, glossary_context: TermTranslationContext
 ) -> str:
+    # Stages without conventions keep the context they had before conventions existed.
+    excluded = {"conventions"} if glossary_context.conventions is None else None
     return (
         f"Translate the requested glossary terms into {language_name}.\n\n"
-        f"Glossary context:\n{glossary_context.model_dump_json()}\n\n"
+        f"Glossary context:\n{glossary_context.model_dump_json(exclude=excluded)}\n\n"
         f"Source chapter {chapter_num}:\n{chapter_text}"
     )

@@ -12528,6 +12528,11 @@
         "properties": {
           "modelName": {
             "$ref": "#/components/schemas/ModelName"
+          },
+          "includeConventions": {
+            "type": "boolean",
+            "title": "Includeconventions",
+            "default": false
           }
         },
         "additionalProperties": false,

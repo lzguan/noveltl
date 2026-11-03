@@ -27,6 +27,16 @@ class ConventionRead(Model):
 ConventionPage = Page[ConventionRead]
 
 
+class AgentConvention(Model):
+    """Convention content as shown to agents; identifiers stay out of prompts."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    title: str
+    rule: str
+    rationale: str | None
+
+
 class SaveConvention(Model):
     """Full convention content, used for both creation and replacement."""
 

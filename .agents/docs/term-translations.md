@@ -46,6 +46,11 @@ aliases, plus bounded definition/relation context. Alias evidence does not make
 another source form's rendering an exact mapping. Alias traversal and accepted
 marks remain owned by glossary accessors.
 
+The accepted marks are centralized in `access.ALIAS_MARKS`: plain `alias`,
+`alias.spelling`, `alias.persona`, and `alias.transformation`. The plain mark
+is accepted for untyped alias edges; this does not establish that older rows
+exist. Do not scatter prefix matching or additional mark lists across callers.
+
 Context models live beside the helper in `tools.py`. Keep them typed through
 execution and serialize only in the prompt builder. The stage derives the exact
 required source names from `requested_terms` when creating the agent.
@@ -68,6 +73,8 @@ can be missed by naming. Terms absent from the glossary cannot be translated
 by this stage. Missing definition associations or abbreviation aliases can
 hide relevant older context even when it exists elsewhere in the group.
 Successful stage completion does not establish translation quality.
+See [naming observations](naming-observations.md) for source-backed examples
+and the distinction between missing context, missing source terms, and style.
 
 ## Tests
 

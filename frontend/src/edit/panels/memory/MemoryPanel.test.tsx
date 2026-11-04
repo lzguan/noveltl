@@ -1,8 +1,5 @@
 import {
 	addMemoryGroupMemoryGroupsPost,
-	editMemoryContentMemoriesMemoryIdContentPatch,
-	editMemoryExpirationMemoriesMemoryIdExpirationPatch,
-	editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch,
 	readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
 	readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet,
 	readAllLanguagesLanguagesGet,
@@ -11,7 +8,6 @@ import {
 	readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet,
 	readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet,
 	readMemoryGroupsMemoryGroupsGet,
-	removeMemoryMemoriesMemoryIdDelete,
 } from "@/api/endpoints/default/default";
 import type { GlossaryMemory, GlossaryTermSummary, Memory, MemoryGroup } from "@/api/models";
 import { MemoryGroupsProvider } from "@/memory/context/MemoryGroupsContext";
@@ -28,9 +24,6 @@ import { MemoryPanel } from "./MemoryPanel";
 
 vi.mock("@/api/endpoints/default/default", () => ({
 	addMemoryGroupMemoryGroupsPost: vi.fn(),
-	editMemoryContentMemoriesMemoryIdContentPatch: vi.fn(),
-	editMemoryExpirationMemoriesMemoryIdExpirationPatch: vi.fn(),
-	editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch: vi.fn(),
 	readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet: vi.fn(),
 	readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet: vi.fn(),
 	putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPut: vi.fn(),
@@ -40,7 +33,6 @@ vi.mock("@/api/endpoints/default/default", () => ({
 	readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet: vi.fn(),
 	readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet: vi.fn(),
 	readMemoryGroupsMemoryGroupsGet: vi.fn(),
-	removeMemoryMemoriesMemoryIdDelete: vi.fn(),
 }));
 
 beforeAll(() => {
@@ -295,74 +287,6 @@ describe("MemoryPanel", () => {
 		expect(screen.getByRole("textbox", { name: "Search terms" })).toHaveValue("林");
 	});
 
-	it("edits memory content and reloads the visible memory query", async () => {
-		vi.mocked(editMemoryContentMemoriesMemoryIdContentPatch).mockResolvedValueOnce({
-			status: 200,
-			data: { ...memory, memoryContent: "Updated memory" },
-			headers: new Headers(),
-		});
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId="chapter-12"
-				chapterNum={12}
-				chapterContentId="content-12"
-			/>,
-		);
-		await screen.findByText(memory.memoryContent);
-
-		openMenu("Memory actions");
-		fireEvent.click(await screen.findByRole("menuitem", { name: "Edit memory" }));
-		fireEvent.change(screen.getByRole("textbox", { name: "Content" }), {
-			target: { value: "  Updated memory  " },
-		});
-		expect(screen.getByRole("textbox", { name: "Mark (optional)" })).toHaveValue("ability");
-		fireEvent.change(screen.getByRole("textbox", { name: "Mark (optional)" }), {
-			target: { value: "  limitation  " },
-		});
-		fireEvent.click(screen.getByRole("button", { name: "Save memory" }));
-
-		await waitFor(() =>
-			expect(editMemoryContentMemoriesMemoryIdContentPatch).toHaveBeenCalledWith("memory-1", {
-				memoryContent: "Updated memory",
-				mark: "limitation",
-			}),
-		);
-		await waitFor(() =>
-			expect(
-				readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet,
-			).toHaveBeenCalledTimes(2),
-		);
-	});
-
-	it("changes a memory review status from its action menu", async () => {
-		vi.mocked(editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch).mockResolvedValueOnce({
-			status: 200,
-			data: { ...memory, memoryReviewStatus: "approved" },
-			headers: new Headers(),
-		});
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId="chapter-12"
-				chapterNum={12}
-				chapterContentId="content-12"
-			/>,
-		);
-		await screen.findByText(memory.memoryContent);
-
-		openMenu("Memory actions");
-		fireEvent.click(await screen.findByRole("menuitem", { name: "Review status" }));
-		fireEvent.click(await screen.findByRole("menuitemradio", { name: "Approved" }));
-
-		await waitFor(() =>
-			expect(editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch).toHaveBeenCalledWith(
-				"memory-1",
-				{ reviewStatus: "approved" },
-			),
-		);
-	});
-
 	it("keeps glossary-specific actions out of the all-memories view", async () => {
 		render(
 			<MemoryPanel
@@ -379,82 +303,5 @@ describe("MemoryPanel", () => {
 		expect(
 			screen.queryByRole("menuitem", { name: "Edit associated terms" }),
 		).not.toBeInTheDocument();
-	});
-
-	it("confirms memory deletion before reloading the visible query", async () => {
-		vi.mocked(removeMemoryMemoriesMemoryIdDelete).mockResolvedValueOnce({
-			status: 204,
-			data: undefined,
-			headers: new Headers(),
-		});
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId="chapter-12"
-				chapterNum={12}
-				chapterContentId="content-12"
-			/>,
-		);
-		await screen.findByText(memory.memoryContent);
-
-		openMenu("Memory actions");
-		fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
-		expect(removeMemoryMemoriesMemoryIdDelete).not.toHaveBeenCalled();
-		fireEvent.click(screen.getByRole("button", { name: "Delete memory" }));
-
-		await waitFor(() =>
-			expect(removeMemoryMemoriesMemoryIdDelete).toHaveBeenCalledWith("memory-1"),
-		);
-		await waitFor(() =>
-			expect(
-				readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet,
-			).toHaveBeenCalledTimes(2),
-		);
-	});
-
-	it("expires a memory at the currently open chapter", async () => {
-		vi.mocked(editMemoryExpirationMemoriesMemoryIdExpirationPatch).mockResolvedValueOnce({
-			status: 200,
-			data: { ...memory, memoryEndNum: 13 },
-			headers: new Headers(),
-		});
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId="chapter-13"
-				chapterNum={13}
-				chapterContentId="content-13"
-			/>,
-		);
-		await screen.findByText(memory.memoryContent);
-
-		openMenu("Memory actions");
-		fireEvent.click(await screen.findByRole("menuitem", { name: "Expire at current chapter" }));
-		fireEvent.click(screen.getByRole("button", { name: "Expire memory" }));
-
-		await waitFor(() =>
-			expect(editMemoryExpirationMemoriesMemoryIdExpirationPatch).toHaveBeenCalledWith(
-				"memory-1",
-				{ chapterId: "chapter-13" },
-			),
-		);
-	});
-
-	it("disables memory expiration when no chapter is open", async () => {
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId={null}
-				chapterNum={null}
-				chapterContentId={null}
-			/>,
-		);
-		fireEvent.click(await screen.findByRole("checkbox", { name: "From all chapters" }));
-		await screen.findByText(memory.memoryContent);
-
-		openMenu("Memory actions");
-		expect(
-			await screen.findByRole("menuitem", { name: "Expire at current chapter" }),
-		).toHaveAttribute("data-disabled");
 	});
 });

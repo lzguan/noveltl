@@ -6,9 +6,22 @@ import { CreateMemoryGroupDialog } from "@/memory/components/CreateMemoryGroupDi
 import { GlossaryBrowser } from "@/memory/components/GlossaryBrowser";
 import { MemoryBrowser } from "@/memory/components/MemoryBrowser";
 import { MemoryGroupSelector } from "@/memory/components/MemoryGroupSelector";
-import { PluginSelector, type MemoryView } from "@/memory/components/PluginSelector";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMemoryGroupsContext } from "@/memory/context/MemoryGroupsContext";
 import { useState } from "react";
+
+const MEMORY_VIEWS = [
+	{ value: "memories", label: "All" },
+	{ value: "glossary", label: "Glossary" },
+	{ value: "translations", label: "Terms" },
+	{ value: "conventions", label: "Conventions" },
+] as const;
+
+type MemoryView = (typeof MEMORY_VIEWS)[number]["value"];
+
+function isMemoryView(value: string): value is MemoryView {
+	return MEMORY_VIEWS.some((option) => option.value === value);
+}
 
 export function MemoryPanel({
 	novelId,
@@ -27,6 +40,10 @@ export function MemoryPanel({
 	const { groups, selectedGroupId, reloadGroups, selectGroup, addAndSelectGroup } =
 		useMemoryGroupsContext();
 	const [view, setView] = useState<MemoryView>("memories");
+	// Views are mounted on first visit rather than all at once.
+	const [visitedViews, setVisitedViews] = useState<ReadonlySet<MemoryView>>(
+		() => new Set(["memories"]),
+	);
 	const [createGroupOpen, setCreateGroupOpen] = useState(false);
 
 	if (groups.status === "idle" || groups.status === "loading") {
@@ -72,35 +89,67 @@ export function MemoryPanel({
 						onSelect={selectGroup}
 						onCreate={() => setCreateGroupOpen(true)}
 					/>
-					{view === "memories" ? (
-						<>
-							<PluginSelector value={view} onChange={setView} />
-							<MemoryBrowser
-								key={browserKey}
-								memoryGroupId={selectedGroupId}
-								chapterId={chapterId}
-								chapterNum={chapterNum}
-							/>
-						</>
-					) : view === "conventions" ? (
-						<>
-							<PluginSelector value={view} onChange={setView} />
-							<ConventionsBrowser
-								key={selectedGroupId}
-								memoryGroupId={selectedGroupId}
-							/>
-						</>
-					) : (
-						<GlossaryBrowser
-							key={`${browserKey}:${view}`}
-							memoryGroupId={selectedGroupId}
-							chapterId={chapterId}
-							chapterNum={chapterNum}
-							chapterContentId={chapterContentId}
-							view={view}
-							onViewChange={setView}
-						/>
-					)}
+					<Tabs
+						value={view}
+						onValueChange={(value) => {
+							if (!isMemoryView(value)) return;
+							setView(value);
+							setVisitedViews((visited) => new Set(visited).add(value));
+						}}
+						className="min-h-0 flex-1 gap-0"
+					>
+						<TabsList
+							variant="line"
+							className="w-full shrink-0 justify-start border-b px-1 group-data-horizontal/tabs:h-auto"
+						>
+							{MEMORY_VIEWS.map((option) => (
+								<TabsTrigger
+									key={option.value}
+									value={option.value}
+									className="flex-none"
+								>
+									{option.label}
+								</TabsTrigger>
+							))}
+						</TabsList>
+						{MEMORY_VIEWS.filter((option) => visitedViews.has(option.value)).map(
+							(option) => (
+								// Visited views stay mounted so their filters and pages
+								// survive switching tabs; the keys still reset them when the
+								// group or chapter changes.
+								<TabsContent
+									key={option.value}
+									value={option.value}
+									forceMount
+									hidden={view !== option.value}
+									className="flex min-h-0 flex-1 flex-col"
+								>
+									{option.value === "memories" ? (
+										<MemoryBrowser
+											key={browserKey}
+											memoryGroupId={selectedGroupId}
+											chapterId={chapterId}
+											chapterNum={chapterNum}
+										/>
+									) : option.value === "conventions" ? (
+										<ConventionsBrowser
+											key={selectedGroupId}
+											memoryGroupId={selectedGroupId}
+										/>
+									) : (
+										<GlossaryBrowser
+											key={browserKey}
+											memoryGroupId={selectedGroupId}
+											chapterId={chapterId}
+											chapterNum={chapterNum}
+											chapterContentId={chapterContentId}
+											view={option.value}
+										/>
+									)}
+								</TabsContent>
+							),
+						)}
+					</Tabs>
 				</>
 			)}
 			{createGroupOpen && (

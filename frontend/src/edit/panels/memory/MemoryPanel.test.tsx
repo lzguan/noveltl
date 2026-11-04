@@ -10,6 +10,7 @@ import {
 	readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
 	readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet,
 	readAllLanguagesLanguagesGet,
+	readConventionsMemoryGroupsMemoryGroupIdConventionsGet,
 	readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet,
 	readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet,
 	readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet,
@@ -45,6 +46,7 @@ vi.mock("@/api/endpoints/default/default", () => ({
 	readTermTranslationsMemoryGroupsMemoryGroupIdTranslationsGet: vi.fn(),
 	putTermTranslationMemoryGroupsMemoryGroupIdTranslationsTermIdPut: vi.fn(),
 	readAllLanguagesLanguagesGet: vi.fn(),
+	readConventionsMemoryGroupsMemoryGroupIdConventionsGet: vi.fn(),
 	readMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet: vi.fn(),
 	readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet: vi.fn(),
 	readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet: vi.fn(),
@@ -109,6 +111,10 @@ function selectOption(label: string, optionName: string) {
 	const select = screen.getByRole("combobox", { name: label });
 	fireEvent.pointerDown(select, { button: 0, ctrlKey: false, pointerType: "mouse" });
 	fireEvent.click(screen.getByRole("option", { name: optionName }));
+}
+
+async function selectView(name: string) {
+	fireEvent.mouseDown(await screen.findByRole("tab", { name }), { button: 0, ctrlKey: false });
 }
 
 function openMenu(label: string) {
@@ -230,8 +236,7 @@ describe("MemoryPanel", () => {
 				chapterContentId="content-12"
 			/>,
 		);
-		await screen.findByRole("combobox", { name: "Plugin" });
-		selectOption("Plugin", "Glossary");
+		await selectView("Glossary");
 
 		await screen.findByRole("button", { name: /14 memories/ });
 		expect(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet).toHaveBeenCalledWith(
@@ -368,8 +373,7 @@ describe("MemoryPanel", () => {
 				chapterContentId="content-12"
 			/>,
 		);
-		await screen.findByRole("combobox", { name: "Plugin" });
-		selectOption("Plugin", "Glossary");
+		await selectView("Glossary");
 		await screen.findByText("林凡");
 
 		fireEvent.click(screen.getByRole("button", { name: "New term" }));
@@ -405,8 +409,7 @@ describe("MemoryPanel", () => {
 				chapterContentId="content-12"
 			/>,
 		);
-		await screen.findByRole("combobox", { name: "Plugin" });
-		selectOption("Plugin", "Glossary");
+		await selectView("Glossary");
 		fireEvent.click(await screen.findByRole("button", { name: "Add memory for 林凡" }));
 
 		expect(screen.getByRole("button", { name: "Remove 林凡" })).toBeVisible();
@@ -436,6 +439,32 @@ describe("MemoryPanel", () => {
 		).not.toBeInTheDocument();
 	});
 
+	it("keeps a view's search when switching to another view and back", async () => {
+		vi.mocked(readConventionsMemoryGroupsMemoryGroupIdConventionsGet).mockResolvedValue({
+			data: { count: 0, rows: [] },
+			status: 200,
+			headers: new Headers(),
+		});
+		render(
+			<MemoryPanel
+				novelId="novel-1"
+				chapterId="chapter-12"
+				chapterNum={12}
+				chapterContentId="content-12"
+			/>,
+		);
+		await selectView("Glossary");
+		fireEvent.change(await screen.findByRole("textbox", { name: "Search terms" }), {
+			target: { value: "林" },
+		});
+
+		await selectView("Conventions");
+		expect(await screen.findByText("No conventions")).toBeVisible();
+		await selectView("Glossary");
+
+		expect(screen.getByRole("textbox", { name: "Search terms" })).toHaveValue("林");
+	});
+
 	it("keeps an unsuccessful glossary-memory draft open", async () => {
 		vi.mocked(
 			addGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost,
@@ -448,8 +477,7 @@ describe("MemoryPanel", () => {
 				chapterContentId="content-12"
 			/>,
 		);
-		await screen.findByRole("combobox", { name: "Plugin" });
-		selectOption("Plugin", "Glossary");
+		await selectView("Glossary");
 		fireEvent.click(await screen.findByRole("button", { name: "Add memory for 林凡" }));
 		fireEvent.change(screen.getByRole("textbox", { name: "Content" }), {
 			target: { value: "Keep this draft" },
@@ -470,8 +498,7 @@ describe("MemoryPanel", () => {
 				chapterContentId={null}
 			/>,
 		);
-		await screen.findByRole("combobox", { name: "Plugin" });
-		selectOption("Plugin", "Glossary");
+		await selectView("Glossary");
 
 		expect(await screen.findByRole("button", { name: "Add memory for 林凡" })).toBeDisabled();
 	});
@@ -497,8 +524,7 @@ describe("MemoryPanel", () => {
 				chapterContentId="content-12"
 			/>,
 		);
-		await screen.findByRole("combobox", { name: "Plugin" });
-		selectOption("Plugin", "Glossary");
+		await selectView("Glossary");
 		await screen.findByRole("button", { name: "Actions for 林凡" });
 
 		openMenu("Actions for 林凡");
@@ -543,8 +569,7 @@ describe("MemoryPanel", () => {
 				chapterContentId="content-12"
 			/>,
 		);
-		await screen.findByRole("combobox", { name: "Plugin" });
-		selectOption("Plugin", "Glossary");
+		await selectView("Glossary");
 		await screen.findByRole("button", { name: "Actions for 林凡" });
 
 		openMenu("Actions for 林凡");
@@ -571,8 +596,7 @@ describe("MemoryPanel", () => {
 				chapterContentId="content-12"
 			/>,
 		);
-		await screen.findByRole("combobox", { name: "Plugin" });
-		selectOption("Plugin", "Glossary");
+		await selectView("Glossary");
 		await screen.findByRole("button", { name: "Actions for 林凡" });
 
 		openMenu("Actions for 林凡");
@@ -610,8 +634,7 @@ describe("MemoryPanel", () => {
 				chapterContentId="content-12"
 			/>,
 		);
-		await screen.findByRole("combobox", { name: "Plugin" });
-		selectOption("Plugin", "Glossary");
+		await selectView("Glossary");
 		await screen.findByRole("button", { name: "Actions for 林凡" });
 
 		openMenu("Actions for 林凡");
@@ -734,8 +757,7 @@ describe("MemoryPanel", () => {
 				chapterContentId="content-12"
 			/>,
 		);
-		await screen.findByRole("combobox", { name: "Plugin" });
-		selectOption("Plugin", "Glossary");
+		await selectView("Glossary");
 		fireEvent.click(await screen.findByRole("button", { name: /14 memories/ }));
 		await screen.findByRole("button", { name: "Memory actions" });
 

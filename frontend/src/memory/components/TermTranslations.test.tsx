@@ -47,7 +47,6 @@ function browser(view: "glossary" | "translations" = "translations") {
 			chapterNum={null}
 			chapterContentId={null}
 			view={view}
-			onViewChange={() => {}}
 		/>,
 	);
 }

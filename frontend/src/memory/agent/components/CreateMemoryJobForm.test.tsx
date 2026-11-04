@@ -149,7 +149,10 @@ it("uses catalog defaults and submits dependencies with schema-driven configurat
 					modelName: "deepseek:deepseek-v4-flash-none",
 					toolsets: { reader: {}, writer: { retention: 4 } },
 				},
-				translateTerms: { modelName: "deepseek:deepseek-v4-flash-none" },
+				translateTerms: {
+					modelName: "deepseek:deepseek-v4-flash-none",
+					includeConventions: false,
+				},
 			},
 			startChapterNum: null,
 		}),
@@ -157,11 +160,12 @@ it("uses catalog defaults and submits dependencies with schema-driven configurat
 	expect(onCreated).toHaveBeenCalledWith("job-1");
 });
 
-it("can create a naming-only job without submitting recording configuration", async () => {
+it("can create a naming-only job that follows conventions without recording configuration", async () => {
 	render(
 		<CreateMemoryJobForm memoryGroupId="group-1" onCreated={vi.fn()} closeDialog={vi.fn()} />,
 	);
 	fireEvent.click(await screen.findByRole("checkbox", { name: "Record memories" }));
+	fireEvent.click(screen.getByRole("checkbox", { name: "Follow naming conventions" }));
 	expect(screen.queryByRole("checkbox", { name: "legacy" })).not.toBeInTheDocument();
 	fireEvent.click(screen.getByRole("button", { name: "Create job" }));
 	await waitFor(() =>
@@ -172,7 +176,10 @@ it("can create a naming-only job without submitting recording configuration", as
 			params: {
 				version: 2,
 				recordMemories: null,
-				translateTerms: { modelName: "deepseek:deepseek-v4-flash-none" },
+				translateTerms: {
+					modelName: "deepseek:deepseek-v4-flash-none",
+					includeConventions: true,
+				},
 			},
 		}),
 	);

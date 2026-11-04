@@ -36,3 +36,10 @@ actual schema before regenerating clients for such a change.
 For frontend behavior changes, use the
 [frontend-conventions skill](../skills/frontend-conventions/SKILL.md). Commands
 are listed in [frontend/package.json](../../frontend/package.json).
+
+Frontend tests default to jsdom. Files that never render or touch browser APIs
+start with `// @vitest-environment node` to skip jsdom setup; `setupTests.ts`
+only installs jsdom storage when jsdom exists. Component tests mount the
+narrowest owner (e.g. `GlossaryBrowser`, `MemoryBrowser`) rather than the whole
+`MemoryPanel`. On the 4-CPU devcontainer, near-5s tests can time out under load;
+check before re-running the suite.

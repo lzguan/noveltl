@@ -14,10 +14,14 @@ combined jobs interleave recording and naming per chapter. Merely adding another
 chapter stage would not let early naming see conventions learned from the whole
 range. Recording-only and naming-only jobs already provide two of the pieces.
 
-A conventions pass could produce persisted, editable guidance covering personal
-names, transformed identities, codenames, abbreviations, and terminology families.
-The naming agent would consume that output explicitly. Its storage, schema,
-review requirements, source range, and replacement behavior remain undecided.
+Storage, the review UI, and naming consumption now exist; see
+[translation conventions](translation-conventions.md). Still proposed (PR B): a
+conventions agent and a conventions-only job with one task anchored on the
+range's last chapter. Discussed shape: its tools mirror the user operations; it
+may modify only rows it created that are still pending; it refers to existing
+conventions by short handles; it needs range-wide memory reads, because current
+access helpers only show memories active at the anchor chapter. Flagging
+existing mappings that conflict with a convention is also deferred there.
 Do not assume a new free-text summary automatically fixes retrieval or source
 matching; see the separate [observed cases](naming-observations.md).
 
@@ -39,5 +43,19 @@ work. Useful guarantees to design for include:
   successful recording.
 - Invalid dependencies and cycles are rejected if the interface permits them.
 
-This does not require parallel execution or a general workflow editor. The user
-agreed to keep convention summarization and whole-job chaining outside PR #129.
+This does not require parallel execution or a general workflow editor. In-job
+"passes" (stage-first ordering) were considered and rejected in favor of
+chaining. A discussed sketch: `memory_job_dependencies(job_id,
+depends_on_job_id)` written only at creation (so no cycles), a completion check
+on every task-completion path, and a conditional update guarding dependent
+dispatch instead of locks. Planned as a separate PR.
+
+## Story arcs
+
+Quick-transmigration and infinite-flow novels need per-world scoping. Glossary
+terms are unique per `(group, term)`, so the same name in different worlds
+collapses into one term; that is the harder problem. A first-class arc concept
+could later scope glossary terms, memories, and conventions (e.g. a nullable
+`arc_id` where null means global). Chapter ranges alone fit contiguous worlds
+but not recurring instance types. One untested workaround is a memory group
+per world.

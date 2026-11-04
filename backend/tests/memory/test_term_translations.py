@@ -4,8 +4,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.memory.access import MemAccessContext
+from src.memory.agent.prompts.term_translation import term_translation_request_prompt
 from src.memory.agent.toolsets.translations.tools import term_translation_context
 from src.memory.models import MemoryGroup
+from src.memory.plugins.conventions.models import TranslationConvention
+from src.memory.plugins.conventions.types import ConventionCategory
 from src.memory.plugins.glossary import access
 from src.memory.plugins.glossary.models import GlossaryTerm
 from src.memory.plugins.translations.access import create_term_translation, read_term_translations
@@ -122,3 +125,44 @@ def test_rejected_mappings_can_be_regenerated_and_rejected_source_terms_are_excl
     term.review_status = ReviewStatus.REJECTED
     test_db.flush()
     assert read_term_translations(test_db, ctx, ["Alpha"]) == []
+
+
+def test_naming_context_includes_usable_naming_conventions_only_when_enabled(
+    test_db: Session, sample_scenario: DatabaseScenario
+):
+    """Naming jobs that opt in see the editor's naming policy; others keep their old prompt."""
+    source = sample_scenario.contents["chapter_1_v2"]
+    source.chapter_content_text = "Alpha appears."
+    group = MemoryGroup(
+        novel_id=sample_scenario.novels["novel_1"].novel_id, memory_group_name="Naming", memory_language="en"
+    )
+    test_db.add(group)
+    test_db.flush()
+    access.create_term(test_db, group.memory_group_id, "Alpha")
+    for title, category, review_status in [
+        ("Floral codenames", ConventionCategory.NAMING, ReviewStatus.APPROVED),
+        ("Pinyin names", ConventionCategory.NAMING, ReviewStatus.PENDING),
+        ("Discarded", ConventionCategory.NAMING, ReviewStatus.REJECTED),
+        ("Register", ConventionCategory.STYLE, ReviewStatus.APPROVED),
+    ]:
+        test_db.add(
+            TranslationConvention(
+                memory_group_id=group.memory_group_id,
+                category=category,
+                title=title,
+                rule=f"{title} rule",
+                review_status=review_status,
+                creator_type=Creator.USER,
+            )
+        )
+    test_db.flush()
+    ctx = MemAccessContext(group.memory_group_id, source.chapter_id, source.chapter_content_id)
+
+    enabled = term_translation_context(test_db, ctx, include_conventions=True)
+    assert enabled is not None and enabled.conventions is not None
+    assert sorted(convention.title for convention in enabled.conventions) == ["Floral codenames", "Pinyin names"]
+    assert "Floral codenames rule" in term_translation_request_prompt("Alpha appears.", 1, "English", enabled)
+
+    disabled = term_translation_context(test_db, ctx)
+    assert disabled is not None and disabled.conventions is None
+    assert '"conventions"' not in term_translation_request_prompt("Alpha appears.", 1, "English", disabled)

@@ -17,7 +17,7 @@ async def run_term_translation_stage(
     glossary_context: TermTranslationContext,
 ) -> AgentRunResult[TermTranslationOutput]:
     agent = create_term_translation_agent(
-        config.model_name, tuple(term.term for term in glossary_context.requested_terms)
+        config.model_name, tuple(term.term for term in glossary_context.requested_terms), config.include_conventions
     )
     async with agent:
         return await agent.run(

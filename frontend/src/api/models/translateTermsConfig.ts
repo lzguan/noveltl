@@ -7,5 +7,6 @@
 import type { ModelName } from './modelName';
 
 export interface TranslateTermsConfig {
+  includeConventions?: boolean;
   modelName: ModelName;
 }

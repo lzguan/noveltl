@@ -1677,6 +1677,7 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGetQueryParams = S.Str
 })
 
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsOneVersionDefault = 1;
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsTwoVersionDefault = 2;
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsCompletedMin = 0;
 
@@ -1705,6 +1706,7 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet200Response = S.Str
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsTwoVersionDefault)))
@@ -1746,6 +1748,7 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetParams = S
 })
 
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsOneVersionDefault = 1;
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsTwoVersionDefault = 2;
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsCompletedMin = 0;
 
@@ -1774,6 +1777,7 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200Respons
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsTwoVersionDefault)))
@@ -1815,6 +1819,7 @@ export const ReadMemoryJobsMemoryAgentJobsGetQueryParams = S.Struct({
 })
 
 export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsOneVersionDefault = 1;
+export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsTwoVersionDefault = 2;
 
 export const ReadMemoryJobsMemoryAgentJobsGet200ResponseItem = S.Struct({
@@ -1830,6 +1835,7 @@ export const ReadMemoryJobsMemoryAgentJobsGet200ResponseItem = S.Struct({
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsTwoVersionDefault)))
@@ -1862,6 +1868,7 @@ export const ReadMemoryJobsMemoryAgentJobsGet422Response = S.Struct({
 export const addMemoryJobMemoryAgentJobsPostBodyEndChapterNumOneMin = 0;
 
 export const addMemoryJobMemoryAgentJobsPostBodyParamsOneVersionDefault = 1;
+export const addMemoryJobMemoryAgentJobsPostBodyParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const addMemoryJobMemoryAgentJobsPostBodyParamsTwoVersionDefault = 2;
 export const addMemoryJobMemoryAgentJobsPostBodyStartChapterNumOneMin = 0;
 
@@ -1880,6 +1887,7 @@ export const AddMemoryJobMemoryAgentJobsPostBody = S.Struct({
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsTwoVersionDefault)))
@@ -1888,6 +1896,7 @@ export const AddMemoryJobMemoryAgentJobsPostBody = S.Struct({
 })
 
 export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsOneVersionDefault = 1;
+export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsTwoVersionDefault = 2;
 
 export const AddMemoryJobMemoryAgentJobsPost201Response = S.Struct({
@@ -1903,6 +1912,7 @@ export const AddMemoryJobMemoryAgentJobsPost201Response = S.Struct({
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsTwoVersionDefault)))
@@ -1963,6 +1973,7 @@ export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGetParams = S.Struct({
 })
 
 export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsOneVersionDefault = 1;
+export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsTwoVersionDefault = 2;
 
 export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet200Response = S.Struct({
@@ -1978,6 +1989,7 @@ export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet200Response = S.Struct({
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsTwoVersionDefault)))
@@ -2011,6 +2023,7 @@ export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostParams = S.Struct(
 })
 
 export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsOneVersionDefault = 1;
+export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsTwoVersionDefault = 2;
 
 export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200Response = S.Struct({
@@ -2026,6 +2039,7 @@ export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200Response = S.St
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsTwoVersionDefault)))
@@ -2059,6 +2073,7 @@ export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPostParams = S.Struct(
 })
 
 export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsOneVersionDefault = 1;
+export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsTwoVersionDefault = 2;
 
 export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost202Response = S.Struct({
@@ -2074,6 +2089,7 @@ export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost202Response = S.St
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsTwoVersionDefault)))
@@ -2449,6 +2465,224 @@ export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemo
 }).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
 
 export const ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Read Conventions
+ */
+export const ReadConventionsMemoryGroupsMemoryGroupIdConventionsGetParams = S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const readConventionsMemoryGroupsMemoryGroupIdConventionsGetQuerySkipDefault = 0;
+export const readConventionsMemoryGroupsMemoryGroupIdConventionsGetQuerySkipMin = 0;
+
+export const readConventionsMemoryGroupsMemoryGroupIdConventionsGetQueryLimitDefault = 100;
+export const readConventionsMemoryGroupsMemoryGroupIdConventionsGetQueryLimitMax = 100;
+
+
+
+export const ReadConventionsMemoryGroupsMemoryGroupIdConventionsGetQueryParams = S.Struct({
+  "skip": S.Number.check(S.isGreaterThanOrEqualTo(readConventionsMemoryGroupsMemoryGroupIdConventionsGetQuerySkipMin)).pipe(S.withDecodingDefaultType(Effect.succeed(readConventionsMemoryGroupsMemoryGroupIdConventionsGetQuerySkipDefault))),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readConventionsMemoryGroupsMemoryGroupIdConventionsGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readConventionsMemoryGroupsMemoryGroupIdConventionsGetQueryLimitDefault))),
+  "category": S.optional(S.Union([S.Literals(['naming', 'style']).annotate({ description: 'Which translation step a convention guides.' }), S.Null])),
+  "reviewStatuses": S.optional(S.Union([S.Array(S.Literals(['pending', 'approved', 'rejected'])), S.Null]))
+})
+
+export const readConventionsMemoryGroupsMemoryGroupIdConventionsGet200ResponseCountMin = 0;
+
+
+
+export const ReadConventionsMemoryGroupsMemoryGroupIdConventionsGet200Response = S.Struct({
+  "count": S.Number.check(S.isGreaterThanOrEqualTo(readConventionsMemoryGroupsMemoryGroupIdConventionsGet200ResponseCountMin)),
+  "rows": S.Array(S.Struct({
+  "category": S.Literals(['naming', 'style']).annotate({ description: 'Which translation step a convention guides.' }),
+  "conventionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']),
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "rationale": S.Union([S.String, S.Null]),
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']),
+  "rule": S.String,
+  "title": S.String,
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+}))
+})
+
+export const ReadConventionsMemoryGroupsMemoryGroupIdConventionsGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Add Convention
+ */
+export const AddConventionMemoryGroupsMemoryGroupIdConventionsPostParams = S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+
+
+export const addConventionMemoryGroupsMemoryGroupIdConventionsPostBodyTitleMax = 200;
+
+
+
+export const AddConventionMemoryGroupsMemoryGroupIdConventionsPostBody = S.Struct({
+  "category": S.Literals(['naming', 'style']).annotate({ description: 'Which translation step a convention guides.' }),
+  "rationale": S.optional(S.Union([S.String.check(S.isMinLength(1)), S.Null])),
+  "rule": S.String.check(S.isMinLength(1)),
+  "title": S.String.check(S.isMinLength(1), S.isMaxLength(addConventionMemoryGroupsMemoryGroupIdConventionsPostBodyTitleMax))
+}).annotate({ description: 'Full convention content, used for both creation and replacement.' })
+
+export const AddConventionMemoryGroupsMemoryGroupIdConventionsPost201Response = S.Struct({
+  "category": S.Literals(['naming', 'style']).annotate({ description: 'Which translation step a convention guides.' }),
+  "conventionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']),
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "rationale": S.Union([S.String, S.Null]),
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']),
+  "rule": S.String,
+  "title": S.String,
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+})
+
+export const AddConventionMemoryGroupsMemoryGroupIdConventionsPost404Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const AddConventionMemoryGroupsMemoryGroupIdConventionsPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Remove Convention
+ */
+export const RemoveConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDeleteParams = S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "conventionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const RemoveConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDelete404Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const RemoveConventionMemoryGroupsMemoryGroupIdConventionsConventionIdDelete422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Put Convention
+ */
+export const PutConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutParams = S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "conventionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+
+
+export const putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutBodyTitleMax = 200;
+
+
+
+export const PutConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutBody = S.Struct({
+  "category": S.Literals(['naming', 'style']).annotate({ description: 'Which translation step a convention guides.' }),
+  "rationale": S.optional(S.Union([S.String.check(S.isMinLength(1)), S.Null])),
+  "rule": S.String.check(S.isMinLength(1)),
+  "title": S.String.check(S.isMinLength(1), S.isMaxLength(putConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPutBodyTitleMax))
+}).annotate({ description: 'Full convention content, used for both creation and replacement.' })
+
+export const PutConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPut200Response = S.Struct({
+  "category": S.Literals(['naming', 'style']).annotate({ description: 'Which translation step a convention guides.' }),
+  "conventionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']),
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "rationale": S.Union([S.String, S.Null]),
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']),
+  "rule": S.String,
+  "title": S.String,
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+})
+
+export const PutConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPut404Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const PutConventionMemoryGroupsMemoryGroupIdConventionsConventionIdPut422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * @summary Edit Convention Review Status
+ */
+export const EditConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchParams = S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "conventionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const EditConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatchBody = S.Struct({
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected'])
+})
+
+export const EditConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatch200Response = S.Struct({
+  "category": S.Literals(['naming', 'style']).annotate({ description: 'Which translation step a convention guides.' }),
+  "conventionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "creatorType": S.Literals(['user', 'workflow', 'agent']),
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "rationale": S.Union([S.String, S.Null]),
+  "reviewStatus": S.Literals(['pending', 'approved', 'rejected']),
+  "rule": S.String,
+  "title": S.String,
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+})
+
+export const EditConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatch404Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const EditConventionReviewStatusMemoryGroupsMemoryGroupIdConventionsConventionIdReviewStatusPatch422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "ctx": S.optional(S.StructWithRest(S.Struct({
 

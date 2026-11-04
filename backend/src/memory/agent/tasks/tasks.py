@@ -164,7 +164,7 @@ async def _run_single_task(
         case RecordMemoriesStageConfig():
             result = await run_recording_stage(deps, cctext, cnum, lang_name, stage)
         case TranslateTermsStageConfig():
-            glossary_context = term_translation_context(db, context)
+            glossary_context = term_translation_context(db, context, include_conventions=stage.include_conventions)
             result = (
                 await run_term_translation_stage(deps, cctext, cnum, lang_name, stage, glossary_context)
                 if glossary_context is not None

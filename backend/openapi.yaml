@@ -471,6 +471,61 @@ components:
           type: object
       title: CluenerParams
       type: object
+    ConventionCategory:
+      description: Which translation step a convention guides.
+      enum:
+      - naming
+      - style
+      title: ConventionCategory
+      type: string
+    ConventionRead:
+      properties:
+        category:
+          $ref: '#/components/schemas/ConventionCategory'
+        conventionId:
+          format: uuid
+          title: Conventionid
+          type: string
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        creatorType:
+          $ref: '#/components/schemas/Creator'
+        memoryGroupId:
+          format: uuid
+          title: Memorygroupid
+          type: string
+        rationale:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Rationale
+        reviewStatus:
+          $ref: '#/components/schemas/ReviewStatus'
+        rule:
+          title: Rule
+          type: string
+        title:
+          title: Title
+          type: string
+        updatedAt:
+          format: date-time
+          title: Updatedat
+          type: string
+      required:
+      - conventionId
+      - memoryGroupId
+      - category
+      - title
+      - rule
+      - rationale
+      - reviewStatus
+      - creatorType
+      - createdAt
+      - updatedAt
+      title: ConventionRead
+      type: object
     CreateAutoLabels:
       description: "Pydantic schema for creating a new autolabel run.\n\nAttributes:\n\
         \    novel_id: UUID of novel to create auto labels for.\n    params: Parameters\
@@ -2443,6 +2498,22 @@ components:
       - results
       title: OpsResult
       type: object
+    Page_ConventionRead_:
+      properties:
+        count:
+          minimum: 0.0
+          title: Count
+          type: integer
+        rows:
+          items:
+            $ref: '#/components/schemas/ConventionRead'
+          title: Rows
+          type: array
+      required:
+      - count
+      - rows
+      title: Page[ConventionRead]
+      type: object
     Page_GlossaryMemory_:
       properties:
         count:
@@ -2708,6 +2779,32 @@ components:
       oneOf:
       - $ref: '#/components/schemas/Schema'
       - $ref: '#/components/schemas/SchemaField'
+    SaveConvention:
+      description: Full convention content, used for both creation and replacement.
+      properties:
+        category:
+          $ref: '#/components/schemas/ConventionCategory'
+        rationale:
+          anyOf:
+          - minLength: 1
+            type: string
+          - type: 'null'
+          title: Rationale
+        rule:
+          minLength: 1
+          title: Rule
+          type: string
+        title:
+          maxLength: 200
+          minLength: 1
+          title: Title
+          type: string
+      required:
+      - category
+      - title
+      - rule
+      title: SaveConvention
+      type: object
     SaveTermTranslation:
       properties:
         translation:
@@ -3040,6 +3137,10 @@ components:
     TranslateTermsConfig:
       additionalProperties: false
       properties:
+        includeConventions:
+          default: false
+          title: Includeconventions
+          type: boolean
         modelName:
           $ref: '#/components/schemas/ModelName'
       required:
@@ -7016,6 +7117,233 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Read Memories At Chapter
+  /memory-groups/{memoryGroupId}/conventions:
+    get:
+      operationId: read_conventions_memory_groups__memoryGroupId__conventions_get
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: query
+        name: skip
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Skip
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: category
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/ConventionCategory'
+          - type: 'null'
+          title: Category
+      - in: query
+        name: reviewStatuses
+        required: false
+        schema:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/ReviewStatus'
+            type: array
+          - type: 'null'
+          title: Reviewstatuses
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_ConventionRead_'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Conventions
+    post:
+      operationId: add_convention_memory_groups__memoryGroupId__conventions_post
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveConvention'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConventionRead'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Add Convention
+  /memory-groups/{memoryGroupId}/conventions/{conventionId}:
+    delete:
+      operationId: remove_convention_memory_groups__memoryGroupId__conventions__conventionId__delete
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: conventionId
+        required: true
+        schema:
+          format: uuid
+          title: Conventionid
+          type: string
+      responses:
+        '204':
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Remove Convention
+    put:
+      operationId: put_convention_memory_groups__memoryGroupId__conventions__conventionId__put
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: conventionId
+        required: true
+        schema:
+          format: uuid
+          title: Conventionid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveConvention'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConventionRead'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Put Convention
+  /memory-groups/{memoryGroupId}/conventions/{conventionId}/review-status:
+    patch:
+      operationId: edit_convention_review_status_memory_groups__memoryGroupId__conventions__conventionId__review_status_patch
+      parameters:
+      - in: path
+        name: memoryGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Memorygroupid
+          type: string
+      - in: path
+        name: conventionId
+        required: true
+        schema:
+          format: uuid
+          title: Conventionid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReviewStatus'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConventionRead'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Not Found
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Edit Convention Review Status
   /memory-groups/{memoryGroupId}/glossary/chapters/{chapterId}/memories:
     get:
       operationId: read_glossary_memories_at_chapter_memory_groups__memoryGroupId__glossary_chapters__chapterId__memories_get

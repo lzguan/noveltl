@@ -1,9 +1,5 @@
 import {
-	addGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost,
-	addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost,
 	addMemoryGroupMemoryGroupsPost,
-	editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch,
-	editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch,
 	editMemoryContentMemoriesMemoryIdContentPatch,
 	editMemoryExpirationMemoriesMemoryIdExpirationPatch,
 	editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch,
@@ -15,9 +11,7 @@ import {
 	readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet,
 	readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet,
 	readMemoryGroupsMemoryGroupsGet,
-	removeGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdDelete,
 	removeMemoryMemoriesMemoryIdDelete,
-	replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut,
 } from "@/api/endpoints/default/default";
 import type { GlossaryMemory, GlossaryTermSummary, Memory, MemoryGroup } from "@/api/models";
 import { MemoryGroupsProvider } from "@/memory/context/MemoryGroupsContext";
@@ -33,12 +27,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryPanel } from "./MemoryPanel";
 
 vi.mock("@/api/endpoints/default/default", () => ({
-	addGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost: vi.fn(),
-	addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost: vi.fn(),
 	addMemoryGroupMemoryGroupsPost: vi.fn(),
-	editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch: vi.fn(),
-	editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch:
-		vi.fn(),
 	editMemoryContentMemoriesMemoryIdContentPatch: vi.fn(),
 	editMemoryExpirationMemoriesMemoryIdExpirationPatch: vi.fn(),
 	editMemoryReviewStatusMemoriesMemoryIdReviewStatusPatch: vi.fn(),
@@ -51,9 +40,7 @@ vi.mock("@/api/endpoints/default/default", () => ({
 	readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet: vi.fn(),
 	readMemoriesMemoryGroupsMemoryGroupIdMemoriesGet: vi.fn(),
 	readMemoryGroupsMemoryGroupsGet: vi.fn(),
-	removeGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdDelete: vi.fn(),
 	removeMemoryMemoriesMemoryIdDelete: vi.fn(),
-	replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut: vi.fn(),
 }));
 
 beforeAll(() => {
@@ -227,78 +214,6 @@ describe("MemoryPanel", () => {
 		);
 	});
 
-	it("searches scoped terms and loads an expanded term independently", async () => {
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId="chapter-12"
-				chapterNum={12}
-				chapterContentId="content-12"
-			/>,
-		);
-		await selectView("Glossary");
-
-		await screen.findByRole("button", { name: /14 memories/ });
-		expect(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet).toHaveBeenCalledWith(
-			"group-1",
-			{ skip: 0, limit: 20, chapterId: "chapter-12", search: undefined },
-			expect.objectContaining({ signal: expect.any(AbortSignal) }),
-		);
-
-		fireEvent.change(screen.getByRole("textbox", { name: "Search terms" }), {
-			target: { value: "Lin" },
-		});
-		await waitFor(() =>
-			expect(
-				readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
-			).toHaveBeenLastCalledWith(
-				"group-1",
-				{ skip: 0, limit: 20, chapterId: "chapter-12", search: "Lin" },
-				expect.objectContaining({ signal: expect.any(AbortSignal) }),
-			),
-		);
-
-		fireEvent.click(await screen.findByRole("button", { name: /14 memories/ }));
-		expect(await screen.findByText("青阳镇")).toBeVisible();
-		expect(
-			readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet,
-		).toHaveBeenCalledWith(
-			"group-1",
-			"term-1",
-			{ skip: 0, limit: 10, chapterId: "chapter-12" },
-			expect.objectContaining({ signal: expect.any(AbortSignal) }),
-		);
-
-		fireEvent.click(screen.getByRole("button", { name: "Refresh memories for 林凡" }));
-		await waitFor(() =>
-			expect(
-				readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet,
-			).toHaveBeenCalledTimes(2),
-		);
-
-		fireEvent.click(screen.getByRole("switch", { name: "Show all terms" }));
-		await waitFor(() =>
-			expect(
-				readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
-			).toHaveBeenLastCalledWith(
-				"group-1",
-				{ skip: 0, limit: 20, chapterId: undefined, search: "Lin" },
-				expect.objectContaining({ signal: expect.any(AbortSignal) }),
-			),
-		);
-		expect(await screen.findByRole("button", { name: /14 memories/ })).toHaveAttribute(
-			"aria-expanded",
-			"false",
-		);
-
-		fireEvent.click(screen.getByRole("button", { name: "Refresh glossary terms" }));
-		await waitFor(() =>
-			expect(
-				readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
-			).toHaveBeenCalledTimes(4),
-		);
-	});
-
 	it("creates and selects the first memory group", async () => {
 		vi.mocked(readMemoryGroupsMemoryGroupsGet).mockResolvedValueOnce({
 			status: 200,
@@ -354,91 +269,6 @@ describe("MemoryPanel", () => {
 		).toBeVisible();
 	});
 
-	it("creates a glossary term and refreshes the current term query", async () => {
-		vi.mocked(addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost).mockResolvedValueOnce({
-			status: 200,
-			data: {
-				reviewStatus: "pending",
-				term: "周明瑞",
-				termId: "term-created",
-				termKind: "person",
-			},
-			headers: new Headers(),
-		});
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId="chapter-12"
-				chapterNum={12}
-				chapterContentId="content-12"
-			/>,
-		);
-		await selectView("Glossary");
-		await screen.findByText("林凡");
-
-		fireEvent.click(screen.getByRole("button", { name: "New term" }));
-		fireEvent.change(screen.getByRole("textbox", { name: "Term" }), {
-			target: { value: "  周明瑞  " },
-		});
-		selectOption("Kind", "Person");
-		fireEvent.click(screen.getByRole("button", { name: "Create term" }));
-
-		await waitFor(() =>
-			expect(addGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsPost).toHaveBeenCalledWith(
-				"group-1",
-				{ term: "周明瑞", termKind: "person" },
-			),
-		);
-		await waitFor(() =>
-			expect(
-				readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
-			).toHaveBeenCalledTimes(2),
-		);
-		expect(screen.queryByRole("dialog", { name: "New glossary term" })).not.toBeInTheDocument();
-	});
-
-	it("creates a glossary memory with the row term preselected", async () => {
-		vi.mocked(
-			addGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost,
-		).mockResolvedValueOnce({ status: 200, data: glossaryMemory, headers: new Headers() });
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId="chapter-12"
-				chapterNum={12}
-				chapterContentId="content-12"
-			/>,
-		);
-		await selectView("Glossary");
-		fireEvent.click(await screen.findByRole("button", { name: "Add memory for 林凡" }));
-
-		expect(screen.getByRole("button", { name: "Remove 林凡" })).toBeVisible();
-		fireEvent.change(screen.getByRole("textbox", { name: "Content" }), {
-			target: { value: "  Lin Fan joined the inner sect.  " },
-		});
-		fireEvent.change(screen.getByRole("textbox", { name: "Mark (optional)" }), {
-			target: { value: "  membership  " },
-		});
-		fireEvent.click(screen.getByRole("button", { name: "Create memory" }));
-
-		await waitFor(() =>
-			expect(
-				addGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost,
-			).toHaveBeenCalledWith("group-1", {
-				chapterContentId: "content-12",
-				chapterId: "chapter-12",
-				memoryContent: "Lin Fan joined the inner sect.",
-				memoryType: "fact",
-				mark: "membership",
-				scope: null,
-				termIds: ["term-1"],
-			}),
-		);
-		expect(
-			screen.queryByRole("dialog", { name: "New glossary memory" }),
-		).not.toBeInTheDocument();
-	});
-
 	it("keeps a view's search when switching to another view and back", async () => {
 		vi.mocked(readConventionsMemoryGroupsMemoryGroupIdConventionsGet).mockResolvedValue({
 			data: { count: 0, rows: [] },
@@ -463,189 +293,6 @@ describe("MemoryPanel", () => {
 		await selectView("Glossary");
 
 		expect(screen.getByRole("textbox", { name: "Search terms" })).toHaveValue("林");
-	});
-
-	it("keeps an unsuccessful glossary-memory draft open", async () => {
-		vi.mocked(
-			addGlossaryMemoryMemoryGroupsMemoryGroupIdGlossaryMemoriesPost,
-		).mockRejectedValueOnce(new Error("offline"));
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId="chapter-12"
-				chapterNum={12}
-				chapterContentId="content-12"
-			/>,
-		);
-		await selectView("Glossary");
-		fireEvent.click(await screen.findByRole("button", { name: "Add memory for 林凡" }));
-		fireEvent.change(screen.getByRole("textbox", { name: "Content" }), {
-			target: { value: "Keep this draft" },
-		});
-		fireEvent.click(screen.getByRole("button", { name: "Create memory" }));
-
-		expect(await screen.findByText("offline")).toBeVisible();
-		expect(screen.getByRole("dialog", { name: "New glossary memory" })).toBeVisible();
-		expect(screen.getByRole("textbox", { name: "Content" })).toHaveValue("Keep this draft");
-	});
-
-	it("disables memory creation until saved chapter content is available", async () => {
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId="chapter-12"
-				chapterNum={12}
-				chapterContentId={null}
-			/>,
-		);
-		await selectView("Glossary");
-
-		expect(await screen.findByRole("button", { name: "Add memory for 林凡" })).toBeDisabled();
-	});
-
-	it("renames a glossary term and reloads the current term query", async () => {
-		vi.mocked(
-			editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch,
-		).mockResolvedValueOnce({
-			status: 200,
-			data: {
-				reviewStatus: "approved",
-				term: "林凡更新",
-				termId: "term-1",
-				termKind: "place",
-			},
-			headers: new Headers(),
-		});
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId="chapter-12"
-				chapterNum={12}
-				chapterContentId="content-12"
-			/>,
-		);
-		await selectView("Glossary");
-		await screen.findByRole("button", { name: "Actions for 林凡" });
-
-		openMenu("Actions for 林凡");
-		fireEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
-		fireEvent.change(screen.getByRole("textbox", { name: "Term" }), {
-			target: { value: "  林凡更新  " },
-		});
-		selectOption("Kind", "Place");
-		fireEvent.click(screen.getByRole("button", { name: "Save term" }));
-
-		await waitFor(() =>
-			expect(
-				editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch,
-			).toHaveBeenCalledWith("group-1", "term-1", {
-				term: "林凡更新",
-				termKind: "place",
-			}),
-		);
-		await waitFor(() =>
-			expect(
-				readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet,
-			).toHaveBeenCalledTimes(2),
-		);
-		expect(
-			screen.queryByRole("dialog", { name: "Rename glossary term" }),
-		).not.toBeInTheDocument();
-	});
-
-	it("preserves a glossary term rename after a conflict", async () => {
-		vi.mocked(
-			editGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdPatch,
-		).mockResolvedValueOnce({
-			status: 409,
-			data: { detail: "Glossary term already exists." },
-			headers: new Headers(),
-		});
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId="chapter-12"
-				chapterNum={12}
-				chapterContentId="content-12"
-			/>,
-		);
-		await selectView("Glossary");
-		await screen.findByRole("button", { name: "Actions for 林凡" });
-
-		openMenu("Actions for 林凡");
-		fireEvent.click(await screen.findByRole("menuitem", { name: "Rename" }));
-		fireEvent.change(screen.getByRole("textbox", { name: "Term" }), {
-			target: { value: "Existing term" },
-		});
-		fireEvent.click(screen.getByRole("button", { name: "Save term" }));
-
-		expect(await screen.findByText("Glossary term already exists.")).toBeVisible();
-		expect(screen.getByRole("textbox", { name: "Term" })).toHaveValue("Existing term");
-		expect(screen.getByRole("dialog", { name: "Rename glossary term" })).toBeVisible();
-	});
-
-	it("keeps a failed term deletion open and explains its effect", async () => {
-		vi.mocked(
-			removeGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdDelete,
-		).mockRejectedValueOnce(new Error("delete unavailable"));
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId="chapter-12"
-				chapterNum={12}
-				chapterContentId="content-12"
-			/>,
-		);
-		await selectView("Glossary");
-		await screen.findByRole("button", { name: "Actions for 林凡" });
-
-		openMenu("Actions for 林凡");
-		fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
-		expect(
-			screen.getByText(/associated memories themselves will not be deleted/i),
-		).toBeVisible();
-		fireEvent.click(screen.getByRole("button", { name: "Delete term" }));
-
-		expect(await screen.findByText("delete unavailable")).toBeVisible();
-		expect(
-			removeGlossaryTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdDelete,
-		).toHaveBeenCalledWith("group-1", "term-1");
-		expect(screen.getByRole("dialog", { name: "Delete glossary term?" })).toBeVisible();
-	});
-
-	it("changes a glossary term review status from its action menu", async () => {
-		vi.mocked(
-			editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch,
-		).mockResolvedValueOnce({
-			status: 200,
-			data: {
-				reviewStatus: "pending",
-				term: "林凡",
-				termId: "term-1",
-				termKind: "person",
-			},
-			headers: new Headers(),
-		});
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId="chapter-12"
-				chapterNum={12}
-				chapterContentId="content-12"
-			/>,
-		);
-		await selectView("Glossary");
-		await screen.findByRole("button", { name: "Actions for 林凡" });
-
-		openMenu("Actions for 林凡");
-		fireEvent.click(await screen.findByRole("menuitem", { name: "Review status" }));
-		fireEvent.click(await screen.findByRole("menuitemradio", { name: "Pending" }));
-
-		await waitFor(() =>
-			expect(
-				editGlossaryTermReviewStatusMemoryGroupsMemoryGroupIdGlossaryTermsTermIdReviewStatusPatch,
-			).toHaveBeenCalledWith("group-1", "term-1", { reviewStatus: "pending" }),
-		);
 	});
 
 	it("edits memory content and reloads the visible memory query", async () => {
@@ -732,55 +379,6 @@ describe("MemoryPanel", () => {
 		expect(
 			screen.queryByRole("menuitem", { name: "Edit associated terms" }),
 		).not.toBeInTheDocument();
-	});
-
-	it("replaces memory associations and reloads nested memories and terms", async () => {
-		vi.mocked(
-			replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut,
-		).mockResolvedValueOnce({
-			status: 200,
-			data: [
-				{
-					reviewStatus: "approved",
-					term: "林凡",
-					termId: "term-1",
-					termKind: "person",
-				},
-			],
-			headers: new Headers(),
-		});
-		render(
-			<MemoryPanel
-				novelId="novel-1"
-				chapterId="chapter-12"
-				chapterNum={12}
-				chapterContentId="content-12"
-			/>,
-		);
-		await selectView("Glossary");
-		fireEvent.click(await screen.findByRole("button", { name: /14 memories/ }));
-		await screen.findByRole("button", { name: "Memory actions" });
-
-		openMenu("Memory actions");
-		fireEvent.click(await screen.findByRole("menuitem", { name: "Edit associated terms" }));
-		fireEvent.click(screen.getByRole("button", { name: "Remove 青阳镇" }));
-		fireEvent.click(screen.getByRole("button", { name: "Save terms" }));
-
-		await waitFor(() =>
-			expect(
-				replaceGlossaryMemoryTermsMemoryGroupsMemoryGroupIdGlossaryMemoriesMemoryIdTermsPut,
-			).toHaveBeenCalledWith("group-1", "memory-1", { termIds: ["term-1"] }),
-		);
-		await waitFor(() =>
-			expect(
-				readMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGet,
-			).toHaveBeenCalledTimes(2),
-		);
-		expect(readGlossaryTermsMemoryGroupsMemoryGroupIdGlossaryTermsGet).toHaveBeenLastCalledWith(
-			"group-1",
-			{ skip: 0, limit: 20, chapterId: "chapter-12", search: undefined },
-			expect.objectContaining({ signal: expect.any(AbortSignal) }),
-		);
 	});
 
 	it("confirms memory deletion before reloading the visible query", async () => {

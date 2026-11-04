@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import type { JobParams } from "@/api/models";
 import { memoryJobStageNames, type MemoryStageName } from "./stages";
 

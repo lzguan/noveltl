@@ -15,7 +15,8 @@ they describe changes.
 | Change memory-job configuration, ordering, claims, or retries | [Memory jobs](memory-jobs.md) |
 | Change term naming, translation storage, or glossary review UI | [Term translations](term-translations.md) |
 | Investigate naming quality or choose a regression case | [Naming observations](naming-observations.md) |
-| Explore conventions passes or dependencies between jobs | [Memory workflow follow-ups](memory-workflow-followups.md) |
+| Change translation conventions or their naming use | [Translation conventions](translation-conventions.md) |
+| Explore a conventions agent, job chaining, or story arcs | [Memory workflow follow-ups](memory-workflow-followups.md) |
 | Choose checks or regenerate API contracts | [Verification](verification.md) |
 
 The root [AGENTS.md](../../AGENTS.md) contains project instructions. This folder

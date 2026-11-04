@@ -42,7 +42,9 @@ missing usable translations. If none are missing, it returns `None`, and task
 execution skips the agent.
 
 Context also includes usable translations for chapter terms and their known
-aliases, plus bounded definition/relation context. Alias evidence does not make
+aliases, plus bounded definition/relation context. Stages with
+`include_conventions` also receive the group's naming
+[conventions](translation-conventions.md). Alias evidence does not make
 another source form's rendering an exact mapping. Alias traversal and accepted
 marks remain owned by glossary accessors.
 

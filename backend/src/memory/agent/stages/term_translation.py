@@ -1,6 +1,6 @@
 from pydantic_ai import AgentRunResult
 
-from src.memory.agent.agent import create_term_translation_agent
+from src.memory.agent.agents.term_translation import create_term_translation_agent
 from src.memory.agent.capabilities.term_translation import TermTranslationOutput
 from src.memory.agent.config import TranslateTermsStageConfig
 from src.memory.agent.dependencies import MemAgentDeps

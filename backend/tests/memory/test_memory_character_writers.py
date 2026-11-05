@@ -7,7 +7,7 @@ from pydantic_ai.models.test import TestModel
 from sqlalchemy.orm import Session
 
 from src.memory.access import MemAccessContext
-from src.memory.agent.agent import resolve_capabilities
+from src.memory.agent.agents.recording import resolve_capabilities
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary.appearance import (
     expire_appearance_memory,

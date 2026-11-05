@@ -480,7 +480,7 @@ def test_naming_failure_preserves_recording_and_retry_runs_only_naming(
     FunctionModel replaces paid, nondeterministic provider inference. All task
     claims, glossary writes, stage boundaries, and transactions use PostgreSQL.
     """
-    from src.memory.agent import agent as agent_factory
+    from src.memory.agent.agents import term_translation as naming_agent_factory
     from src.memory.agent.config import RecordMemoriesConfig, TranslateTermsConfig
     from src.memory.agent.tasks.jobs import reset_failed_task
     from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
@@ -528,7 +528,7 @@ def test_naming_failure_preserves_recording_and_retry_runs_only_naming(
             ]
         )
 
-    monkeypatch.setattr(agent_factory, "model_configuration", lambda _: (FunctionModel(name), {}))
+    monkeypatch.setattr(naming_agent_factory, "model_configuration", lambda _: (FunctionModel(name), {}))
 
     async def consume():
         return [item async for item in agent_tasks.run_all_tasks(testing_session_local, job_id)]

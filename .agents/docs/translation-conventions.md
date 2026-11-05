@@ -10,7 +10,7 @@ Novel-level guidance for one memory group's target language, written by users
 | Table and category enum | [plugins/conventions/models.py](../../backend/src/memory/plugins/conventions/models.py), [types.py](../../backend/src/memory/plugins/conventions/types.py) |
 | Shared data access (no permissions, no commits) | [plugins/conventions/access.py](../../backend/src/memory/plugins/conventions/access.py) |
 | Permission helpers, user service, HTTP routes | [permissions.py](../../backend/src/memory/plugins/conventions/permissions.py), [service.py](../../backend/src/memory/plugins/conventions/service.py), [router.py](../../backend/src/memory/plugins/conventions/router.py) |
-| Naming consumption | [toolsets/translations/tools.py](../../backend/src/memory/agent/toolsets/translations/tools.py), [prompts/term_translation.py](../../backend/src/memory/agent/prompts/term_translation.py), [agent.py](../../backend/src/memory/agent/agent.py) |
+| Naming consumption | [toolsets/translations/tools.py](../../backend/src/memory/agent/toolsets/translations/tools.py), [prompts/term_translation.py](../../backend/src/memory/agent/prompts/term_translation.py), [agents/term_translation.py](../../backend/src/memory/agent/agents/term_translation.py) |
 | Review UI | [ConventionsBrowser.tsx](../../frontend/src/memory/components/ConventionsBrowser.tsx), [useConventions.ts](../../frontend/src/memory/hooks/useConventions.ts) |
 | Job option | [CreateMemoryJobForm.tsx](../../frontend/src/memory/agent/components/CreateMemoryJobForm.tsx) |
 

@@ -8,7 +8,7 @@
 | Job/task rows | [models.py](../../backend/src/memory/models.py) |
 | Creation, claims, task status transitions | [tasks/jobs.py](../../backend/src/memory/agent/tasks/jobs.py) |
 | Execution and transaction boundaries | [tasks/tasks.py](../../backend/src/memory/agent/tasks/tasks.py) |
-| Agent construction and output validation | [agent.py](../../backend/src/memory/agent/agent.py) |
+| Agent construction and output validation | [agents/](../../backend/src/memory/agent/agents/) (one factory module per agent; recording owns the user-selectable toolset registry), [registry.py](../../backend/src/memory/agent/registry.py) (shared model configuration) |
 | Thin stage runners | [stages/](../../backend/src/memory/agent/stages/) |
 | Access checks, dispatch, response construction | [service.py](../../backend/src/memory/agent/service.py) |
 | Worker entry points and result logging | [dispatch/](../../backend/src/memory/agent/dispatch/) |
@@ -41,7 +41,7 @@ starts. The next task is claimed only if pending, so a failed task blocks later
 work until retried. One task executes at a time per claimed job.
 
 Ordering lives in a `TaskSchedule` ([schedule.py](../../backend/src/memory/agent/tasks/schedule.py))
-resolved from job params by `resolve_schedule`. It returns composable queries,
+resolved from job params by `get_schedule`. It returns composable queries,
 so claims stay single atomic statements: `next_unfinished` (used by
 `claim_next_task` and `service.start_job`'s blocking-failure check) and
 `unfinished_prerequisites` (used by `claim_task` and `service.start_task`).

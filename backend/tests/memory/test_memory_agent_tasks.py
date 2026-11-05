@@ -25,6 +25,7 @@ from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.stages import recording
 from src.memory.agent.tasks import tasks as agent_tasks
 from src.memory.agent.tasks.jobs import claim_job, claim_task, make_job
+from src.memory.agent.tasks.schedule import StageBarrierSchedule
 from src.memory.exceptions import MemoryJobClaimLostException
 from src.memory.models import Memory, MemoryChapterTask, MemoryGroup, MemoryJob
 from src.memory.plugins.translations.models import TermTranslation
@@ -107,7 +108,7 @@ def _claim_once(
         claimed = True
         if claim_job(db, memory_job_id, claim_token, timedelta(minutes=5)) is None:
             return None
-        return claim_task(db, memory_job_id, chapter_id, claim_token)
+        return claim_task(db, memory_job_id, chapter_id, claim_token, StageBarrierSchedule())
 
     return claim
 

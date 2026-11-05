@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from src.languages.models import Language
 from src.memory.agent.config import JobParamsV1 as JobParams
+from src.memory.agent.config import JobParamsV2
 from src.memory.agent.tasks.jobs import (
     abort_job,
     claim_job,
@@ -16,6 +17,7 @@ from src.memory.agent.tasks.jobs import (
     release_job,
     release_task,
 )
+from src.memory.agent.tasks.schedule import StageBarrierSchedule
 from src.memory.models import MemoryChapterTask, MemoryGroup, MemoryJob
 from src.memory.types import JobStatus
 from src.novels.constants import NovelType, Visibility
@@ -145,14 +147,14 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
     claimed_again = claim_job(test_db, memory_job_id, third_token, timedelta(minutes=5))
     assert claimed_again is not None
 
-    assert claim_next_task(test_db, memory_job_id, uuid.uuid4()) is None
+    assert claim_next_task(test_db, memory_job_id, uuid.uuid4(), StageBarrierSchedule()) is None
 
-    second_task = claim_task(test_db, memory_job_id, chapters[2].chapter_id, third_token)
+    second_task = claim_task(test_db, memory_job_id, chapters[2].chapter_id, third_token, StageBarrierSchedule())
     assert second_task is not None
     assert second_task.chapter_id == chapters[2].chapter_id
     assert second_task.task_status == JobStatus.PROCESSING
     assert second_task.attempt_count == 1
-    assert claim_task(test_db, memory_job_id, chapters[2].chapter_id, third_token) is None
+    assert claim_task(test_db, memory_job_id, chapters[2].chapter_id, third_token, StageBarrierSchedule()) is None
     assert (
         release_task(
             test_db,
@@ -176,7 +178,7 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
         is True
     )
 
-    first_task = claim_next_task(test_db, memory_job_id, third_token)
+    first_task = claim_next_task(test_db, memory_job_id, third_token, StageBarrierSchedule())
     assert first_task is not None
     assert first_task.chapter_id == chapters[1].chapter_id
     assert first_task.task_status == JobStatus.PROCESSING
@@ -200,7 +202,7 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
     test_db.commit()
 
     assert claim_job(test_db, memory_job_id, replacement_token, timedelta(minutes=5)) is not None
-    reclaimed_task = claim_next_task(test_db, memory_job_id, replacement_token)
+    reclaimed_task = claim_next_task(test_db, memory_job_id, replacement_token, StageBarrierSchedule())
     assert reclaimed_task is not None
     assert reclaimed_task.chapter_id == first_task.chapter_id
     assert reclaimed_task.task_status == JobStatus.PROCESSING
@@ -223,3 +225,57 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
         is False
     )
     assert claim_job(test_db, memory_job_id, uuid.uuid4(), timedelta(minutes=5)) is None
+
+
+def test_stages_run_as_job_wide_barriers(test_db: Session) -> None:
+    """Naming relies on every chapter being recorded first, for whole-range context."""
+    language = Language(language_name="Chinese", language_code="zh")
+    source_work = SourceWork(source_work_title="Barrier source")
+    test_db.add_all([language, source_work])
+    test_db.flush()
+    novel = Novel(
+        novel_title="Barrier novel",
+        novel_description=None,
+        novel_author=None,
+        novel_visibility=Visibility.PRIVATE,
+        novel_type=NovelType.ORIGINAL,
+        source_work_id=source_work.source_work_id,
+        language_code=language.language_code,
+    )
+    test_db.add(novel)
+    test_db.flush()
+    chapters = [
+        Chapter(chapter_num=number, chapter_title=f"Chapter {number}", chapter_is_public=False, novel_id=novel.novel_id)
+        for number in (1, 2)
+    ]
+    memory_group = MemoryGroup(
+        memory_group_name="Barrier group", novel_id=novel.novel_id, memory_language=language.language_code
+    )
+    test_db.add_all([*chapters, memory_group])
+    test_db.commit()
+    params = JobParamsV2.model_validate(
+        {
+            "record_memories": {"model_name": "deepseek:deepseek-v4-flash-low", "toolsets": {}},
+            "translate_terms": {"model_name": "deepseek:deepseek-v4-flash-low"},
+        }
+    )
+    memory_job_id = make_job(test_db, memory_group.memory_group_id, None, None, params)
+    token = uuid.uuid4()
+    assert claim_job(test_db, memory_job_id, token, timedelta(minutes=5)) is not None
+    first, second = (chapter.chapter_id for chapter in chapters)
+
+    # A direct naming run waits for recording of every chapter, not just its own.
+    record_first = claim_task(test_db, memory_job_id, first, token, StageBarrierSchedule(), stage_num=0)
+    assert record_first is not None
+    assert release_task(test_db, memory_job_id, first, token, JobStatus.COMPLETED, stage_num=0)
+    assert claim_task(test_db, memory_job_id, first, token, StageBarrierSchedule(), stage_num=1) is None
+
+    schedule = StageBarrierSchedule()
+    claimed = []
+    while (task := claim_next_task(test_db, memory_job_id, token, schedule)) is not None:
+        claimed.append((task.chapter_id, task.stage_num))
+        # Schedule invariant: the worker never claims a task that direct runs would refuse.
+        prerequisites = schedule.unfinished_prerequisites(memory_job_id, task.chapter_id, task.stage_num)
+        assert not test_db.scalar(select(prerequisites))
+        assert release_task(test_db, memory_job_id, task.chapter_id, token, JobStatus.COMPLETED, task.stage_num)
+    assert claimed == [(second, 0), (first, 1), (second, 1)]

@@ -2,16 +2,17 @@
 
 from uuid import UUID
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import delete, func, or_, select, tuple_, update
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
 from src.auth.models import User
 from src.memory.agent import schemas
-from src.memory.agent.config import JobParams
+from src.memory.agent.config import JobParams, job_params_adapter
 from src.memory.agent.dispatch.dispatcher import MemoryAgentDispatcher
 from src.memory.agent.tasks.jobs import abort_job as abort_job_claim
-from src.memory.agent.tasks.jobs import make_job, reset_failed_task, unfinished_preceding_stage
+from src.memory.agent.tasks.jobs import make_job, reset_failed_task
+from src.memory.agent.tasks.schedule import get_schedule
 from src.memory.exceptions import (
     MemoryAgentEnqueueFailedException,
     MemoryChapterTaskNotFoundException,
@@ -290,15 +291,14 @@ def start_job(
     )
     if has_runnable_task is None:
         raise MemoryJobStateException(f"Memory job {memory_job_id} has no runnable tasks.")
+    schedule = get_schedule(job_params_adapter.validate_python(job.job_params))
     first_unfinished = db.scalar(
-        select(MemoryChapterTaskModel.task_status)
-        .join(Chapter, Chapter.chapter_id == MemoryChapterTaskModel.chapter_id)
-        .where(
+        select(MemoryChapterTaskModel.task_status).where(
             MemoryChapterTaskModel.memory_job_id == memory_job_id,
-            MemoryChapterTaskModel.task_status != JobStatus.COMPLETED,
+            tuple_(MemoryChapterTaskModel.chapter_id, MemoryChapterTaskModel.stage_num).in_(
+                schedule.next_unfinished(memory_job_id)
+            ),
         )
-        .order_by(Chapter.chapter_num, Chapter.chapter_id, MemoryChapterTaskModel.stage_num)
-        .limit(1)
     )
     if first_unfinished == JobStatus.FAILED:
         raise MemoryJobStateException("Retry the failed stage before starting remaining work.")
@@ -316,7 +316,7 @@ def start_task(
 ) -> schemas.MemoryChapterTask:
     """Publish one pending chapter task after checking edit access."""
     statement = (
-        select(MemoryChapterTaskModel, Chapter.chapter_num)
+        select(MemoryChapterTaskModel, Chapter.chapter_num, MemoryJobModel.job_params)
         .join(MemoryJobModel, MemoryJobModel.memory_job_id == MemoryChapterTaskModel.memory_job_id)
         .join(MemoryGroup, MemoryGroup.memory_group_id == MemoryJobModel.memory_group_id)
         .join(Chapter, Chapter.chapter_id == MemoryChapterTaskModel.chapter_id)
@@ -328,7 +328,7 @@ def start_task(
     )
     statement = memory_group_mod_access_select(statement, user, edit_only=True)
     try:
-        task, chapter_num = db.execute(statement).one()
+        task, chapter_num, job_params = db.execute(statement).one()
     except NoResultFound as exc:
         raise MemoryChapterTaskNotFoundException(
             f"Memory task for job {memory_job_id} and chapter {chapter_id} not found or not accessible."
@@ -336,8 +336,9 @@ def start_task(
 
     if task.task_status != JobStatus.PENDING:
         raise MemoryChapterTaskStateException(f"Memory task for chapter {chapter_id} is not pending.")
-    if db.scalar(select(unfinished_preceding_stage(memory_job_id, chapter_id, stage_num))):
-        raise MemoryChapterTaskStateException("Complete preceding chapter stages first.")
+    schedule = get_schedule(job_params_adapter.validate_python(job_params))
+    if db.scalar(select(schedule.unfinished_prerequisites(memory_job_id, chapter_id, stage_num))):
+        raise MemoryChapterTaskStateException("Complete earlier stages of this job first.")
     dispatcher.enqueue_task(memory_job_id, chapter_id, stage_num)
     return schemas.MemoryChapterTask(
         memory_job_id=task.memory_job_id,

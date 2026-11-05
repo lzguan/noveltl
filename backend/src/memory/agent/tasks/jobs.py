@@ -3,9 +3,10 @@ from datetime import timedelta
 from typing import Literal
 
 from sqlalchemy import and_, func, insert, literal, or_, select, tuple_, update
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session
 
 from src.memory.agent.config import JobParams, resolve_stages
+from src.memory.agent.tasks.schedule import TaskSchedule
 from src.memory.models import MemoryChapterTask, MemoryGroup, MemoryJob
 from src.memory.types import JobStatus
 from src.novels.models import Chapter
@@ -238,6 +239,7 @@ def claim_next_task(
     db: Session,
     memory_job_id: uuid.UUID,
     claim_token: uuid.UUID,
+    schedule: TaskSchedule,
 ) -> MemoryChapterTask | None:
     """
     Mark and return the next pending task while the caller owns the job claim.
@@ -249,23 +251,12 @@ def claim_next_task(
         db: The database session.
         memory_job_id: The ID of the job.
         claim_token: The token proving ownership of the job claim.
+        schedule: Decides which task is next.
     Returns:
         The claimed task, or None if there is no pending task or the job claim
         is not currently owned by the caller.
     """
-    # Select the first unfinished stage, including failures. A failed stage
-    # blocks the sequence until explicitly retried, rather than being skipped.
-    next_task = (
-        select(MemoryChapterTask.chapter_id, MemoryChapterTask.stage_num)
-        .join(Chapter, Chapter.chapter_id == MemoryChapterTask.chapter_id)
-        .where(
-            MemoryChapterTask.memory_job_id == memory_job_id,
-            MemoryChapterTask.task_status != JobStatus.COMPLETED,
-            _owns_job_claim(memory_job_id, claim_token),
-        )
-        .order_by(Chapter.chapter_num, MemoryChapterTask.stage_num)
-        .limit(1)
-    )
+    next_task = schedule.next_unfinished(memory_job_id).where(_owns_job_claim(memory_job_id, claim_token))
     claim_stmt = (
         update(MemoryChapterTask)
         .where(
@@ -294,6 +285,7 @@ def claim_task(
     memory_job_id: uuid.UUID,
     chapter_id: uuid.UUID,
     claim_token: uuid.UUID,
+    schedule: TaskSchedule,
     stage_num: int = 0,
 ) -> MemoryChapterTask | None:
     """Mark a specified pending task as processing while owning the job claim."""
@@ -305,7 +297,7 @@ def claim_task(
             MemoryChapterTask.stage_num == stage_num,
             MemoryChapterTask.task_status == JobStatus.PENDING,
             _owns_job_claim(memory_job_id, claim_token),
-            ~unfinished_preceding_stage(memory_job_id, chapter_id, stage_num),
+            ~schedule.unfinished_prerequisites(memory_job_id, chapter_id, stage_num),
         )
         .values(
             task_status=JobStatus.PROCESSING,
@@ -381,18 +373,3 @@ def reset_failed_task(
         return False
     db.commit()
     return True
-
-
-def unfinished_preceding_stage(memory_job_id: uuid.UUID, chapter_id: uuid.UUID, stage_num: int):
-    """A directly requested stage cannot bypass its own chapter's prerequisites."""
-    preceding = aliased(MemoryChapterTask)
-    return (
-        select(preceding.memory_job_id)
-        .where(
-            preceding.memory_job_id == memory_job_id,
-            preceding.chapter_id == chapter_id,
-            preceding.stage_num < stage_num,
-            preceding.task_status != JobStatus.COMPLETED,
-        )
-        .exists()
-    )

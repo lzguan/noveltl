@@ -35,13 +35,25 @@ stages of the same type. Stage numbers are not fixed IDs for recording or naming
 ## Running and retrying
 
 `run_all_tasks` delegates to `run_tasks`, which acquires the job claim and uses
-`claim_next_task`. The query selects the first unfinished task ordered by chapter
-number, then stage number. It claims that task only if pending, so a failed task
-blocks later work until retried. One task executes at a time per claimed job.
+`claim_next_task`. Stages are job-wide barriers: tasks run ordered by stage
+number, then chapter number, so every chapter is recorded before any naming
+starts. The next task is claimed only if pending, so a failed task blocks later
+work until retried. One task executes at a time per claimed job.
+
+Ordering lives in a `TaskSchedule` ([schedule.py](../../backend/src/memory/agent/tasks/schedule.py))
+resolved from job params by `resolve_schedule`. It returns composable queries,
+so claims stay single atomic statements: `next_unfinished` (used by
+`claim_next_task` and `service.start_job`'s blocking-failure check) and
+`unfinished_prerequisites` (used by `claim_task` and `service.start_task`).
+`run_tasks` resolves the schedule beside the stages and passes it to the claim
+function. Invariant: the next task never has unfinished prerequisites. All
+current params use `StageBarrierSchedule`; configurable orders (e.g. windows of
+N chapters for conventions) are planned for job params V3; see
+[follow-ups](memory-workflow-followups.md).
 
 `run_one_task` uses the same orchestration with a specific task selector. Direct
-execution checks for unfinished preceding stages in that chapter; it does not
-enforce completion of all previous chapters.
+execution waits for lower stages across the job, but does not enforce chapter
+order within a stage.
 
 `arun_tasks` owns the session for a task's writes. `release_task` commits writes
 and completion together, conditional on continued claim ownership. Failure rolls

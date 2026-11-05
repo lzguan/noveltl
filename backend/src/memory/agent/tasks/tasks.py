@@ -31,6 +31,7 @@ from src.memory.agent.tasks.jobs import (
     release_job,
     release_task,
 )
+from src.memory.agent.tasks.schedule import TaskSchedule, get_schedule
 from src.memory.agent.toolsets.translations.tools import term_translation_context
 from src.memory.exceptions import MemoryJobClaimLostException
 from src.memory.models import MemoryChapterTask, MemoryGroup
@@ -185,12 +186,12 @@ async def _run_single_task(
 async def run_tasks(
     db_factory: sessionmaker[Session],
     memory_job_id: uuid.UUID,
-    claim_next_task: Callable[[Session, uuid.UUID], MemoryChapterTask | None],
+    claim_next_task: Callable[[Session, uuid.UUID, TaskSchedule], MemoryChapterTask | None],
     *,
     claim_duration: timedelta = DEFAULT_CLAIM_DURATION,
 ) -> AsyncGenerator[CompletedMemoryTask]:
     """
-    Claim a memory job and run tasks supplied by ``claim_next_task``.
+    Claim a memory job and run tasks supplied by ``claim_next_task`` under the job's schedule.
 
     Pseudocode:
 
@@ -214,6 +215,7 @@ async def run_tasks(
             memory_group_id = job.memory_group_id
             params = job_params_adapter.validate_python(job.job_params)
             stages = dict(enumerate(resolve_stages(params)))
+            schedule = get_schedule(params)
             lang_name = db.scalar(
                 select(Language.language_name)
                 .select_from(MemoryGroup)
@@ -226,7 +228,7 @@ async def run_tasks(
         async for completed_task in arun_tasks(
             db_factory,
             claim_token,
-            claim_next_task,
+            lambda db, token: claim_next_task(db, token, schedule),
             lambda db, task: _run_single_task(db, stages, memory_group_id, task, lang_name),
         ):
             with db_factory() as db:
@@ -257,7 +259,9 @@ async def run_one_task(
     async for task_result in run_tasks(
         db_factory,
         memory_job_id,
-        lambda db, claim_token: claim_task(db, memory_job_id, chapter_id, claim_token, stage_num),
+        lambda db, claim_token, schedule: claim_task(
+            db, memory_job_id, chapter_id, claim_token, schedule, stage_num=stage_num
+        ),
         claim_duration=claim_duration,
     ):
         result = task_result
@@ -275,7 +279,7 @@ async def run_all_tasks(
         run_tasks(
             db_factory,
             memory_job_id,
-            lambda db, claim_token: claim_next_task(db, memory_job_id, claim_token),
+            lambda db, claim_token, schedule: claim_next_task(db, memory_job_id, claim_token, schedule),
             claim_duration=claim_duration,
         )
     ) as tasks:

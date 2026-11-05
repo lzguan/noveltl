@@ -9,10 +9,12 @@ The user suggested a future workflow:
 
 `record memories → summarize conventions → translate terms`
 
-The useful distinction is a barrier across the selected chapter range. Current
-combined jobs interleave recording and naming per chapter. Merely adding another
-chapter stage would not let early naming see conventions learned from the whole
-range. Recording-only and naming-only jobs already provide two of the pieces.
+The useful distinction is a barrier across the selected chapter range. Stages
+now run as job-wide barriers ([memory jobs](memory-jobs.md)), so a conventions
+stage between recording and naming would see the whole range before any naming.
+Planned next: an order spec in job params V3 compiled into the schedule queries,
+e.g. windows of N chapters (record N, conventions, name N) so conventions cadence
+and barriers share one mechanism, reducing the need for job chaining.
 
 Storage, the review UI, and naming consumption now exist; see
 [translation conventions](translation-conventions.md). Still proposed (PR B): a
@@ -59,3 +61,15 @@ could later scope glossary terms, memories, and conventions (e.g. a nullable
 `arc_id` where null means global). Chapter ranges alone fit contiguous worlds
 but not recurring instance types. One untested workaround is a memory group
 per world.
+
+## Configuration defaults (far future)
+
+Discussed, not planned. Defaults such as toolsets, conventions cadence, and
+guidance could eventually come from novel features (genre, chapter length,
+chapter count, term density). Data is too scarce and noisy for a model now:
+identical naming runs differed on 9–21 of 82 terms (see
+[translation conventions](translation-conventions.md)). Suggested order:
+hand-curated genre presets; a structured per-job run summary (config, novel
+features, cost, failures, term counts, later eval scores) so data accumulates;
+per-novel calibration of a few configs on early chapters; cross-novel fitting
+only once enough scored runs exist.

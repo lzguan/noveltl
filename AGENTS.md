@@ -40,6 +40,8 @@ Agent-maintained implementation notes live in [.agents/docs/](.agents/docs/READM
 
 Do not create or modify human-facing documentation unless the user explicitly asks. Put agent-maintained implementation notes in `.agents/docs/` instead.
 
+Do not mention `.agents/docs/` changes in pull request descriptions or other reviewer-facing summaries. Those notes are for agents, not human readers.
+
 Use the [maintain-agent-docs skill](.agents/skills/maintain-agent-docs/SKILL.md) when creating or updating those notes.
 
 Actively suggest ways for the user to improve their workflow, such as using plan mode, subagents, or various other features that you offer if they fit the task scope.

@@ -35,6 +35,7 @@ import type { Role } from "@/api/models/role";
 import { LoaderCircle } from "lucide-react";
 import { ChapterTabs } from "../panels/chapters/ChapterTabs";
 import { FiltersPanel } from "../panels/filters/FiltersPanel";
+import type { GotoText } from "../panels/termSearch/TermSearchPanel";
 import { MemoryPanel } from "../panels/memory/MemoryPanel";
 import { MemoryGroupsProvider } from "@/memory/context/MemoryGroupsContext";
 import { MemoryAgentPanel } from "../panels/memoryAgent/MemoryAgentPanel";
@@ -287,6 +288,19 @@ export function EditNovelPage() {
 		currentChapterId === null
 			? null
 			: Effect.runSync(managers.controllerGetters.chapterContentServerId(currentChapterId));
+	// Opens a server chapter and highlights a range, only if it still has the given content version.
+	const gotoText: GotoText = (cServId, reference) => {
+		const pid = Effect.runSync(managers.controllerGetters.chapterIdFromServerId(cServId));
+		if (pid === null) {
+			console.warn(`Could not find chapter for server ID ${cServId}`);
+			return;
+		}
+		managers.chapterMgr.switchChapter(pid, {
+			start: reference.start,
+			end: reference.end,
+			desiredCCId: reference.ccServId,
+		});
+	};
 
 	return (
 		<div className="relative h-full min-h-0">
@@ -299,6 +313,8 @@ export function EditNovelPage() {
 				<div className="flex flex-1 min-h-0 overflow-hidden">
 					<div className="w-56 border-r shrink-0 flex flex-col min-h-0">
 						<LeftPanel
+							novelId={novel.novel.novelId}
+							gotoText={gotoText}
 							chapters={chapterState.chapterList}
 							currentChapterId={currentChapterId}
 							onSwitchChapter={managers.chapterMgr.switchChapter}
@@ -365,20 +381,7 @@ export function EditNovelPage() {
 											<FiltersPanel
 												key={novel.novel.novelId}
 												novelId={novel.novel.novelId}
-												gotoText={(cServId, ref) => {
-													const pid = Effect.runSync(
-														managers.controllerGetters.chapterIdFromServerId(
-															cServId,
-														),
-													);
-													if (pid === null) {
-														console.warn(
-															`Could not find chapter for server ID ${cServId}`,
-														);
-														return;
-													}
-													managers.chapterMgr.switchChapter(pid, ref);
-												}}
+												gotoText={gotoText}
 											/>
 										),
 									},

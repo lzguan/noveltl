@@ -59,6 +59,29 @@ queries have transport timeouts, and exhausted retries invoke failure handling
 and release reservations. Changing timing must preserve dependency ordering and
 the distinction between pending, cache conflict, and a failed mutation.
 
+## Jumping to a text range
+
+`chapterMgr.switchChapter(chapterId, { start, end, desiredCCId? })` opens a
+chapter and highlights a range. The highlight applies only when the loaded
+content's server ID equals `desiredCCId`; when `desiredCCId` is undefined
+(`novelDataManager` `openChapter`), it applies to whatever version loads, so
+offsets from an older version can highlight the wrong span. A mismatch raises
+`chapterOpened` with `validCCId: false`, which nothing surfaces to the user yet.
+
+Server-side callers should go through `gotoText` in `EditNovelPage`, shared by
+Filters and term search, which maps `ccServId` to `desiredCCId`. Until
+2026-11-06 Filters passed `{ start, end, ccServId }` directly, so the version
+check never ran; structural typing accepted the wrong field name because
+`desiredCCId` is optional.
+
+Proposed, not done (the user prefers not to change the controller for now):
+make `desiredCCId` required whenever a highlight is passed, so a missing or
+misnamed version fails the type check, and add a `chapterManager` test that a
+mismatched version opens without a highlight. Every current position source
+(filter results, term search, labels, memories) already carries a content
+version. The check compares server versions, so local edits not yet synced can
+still shift a highlight that passes it.
+
 ## Regression entry points
 
 - [Request manager](../../frontend/src/edit/controller/__test__/requestmanager.test.ts) and [ID repository](../../frontend/src/edit/controller/__test__/idRepository.test.ts).

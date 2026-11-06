@@ -3,8 +3,12 @@ import type { LabelGroupView } from "../hooks/useTrackedLabelGroups";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChapterPanel } from "./chapters/ChapterPanel";
 import { LabelGroupPanel } from "./labelGroups/LabelGroupPanel";
+import { TermSearchPanel, type GotoText } from "./termSearch/TermSearchPanel";
+import { useState } from "react";
 
 export function LeftPanel({
+	novelId,
+	gotoText,
 	chapters,
 	currentChapterId,
 	onSwitchChapter,
@@ -17,6 +21,8 @@ export function LeftPanel({
 	onAddLabelGroup,
 	onReloadLabelData,
 }: {
+	novelId: string;
+	gotoText: GotoText;
 	chapters: ProvChapter[];
 	currentChapterId: CProvId | null;
 	onSwitchChapter: (id: CProvId) => void;
@@ -29,11 +35,22 @@ export function LeftPanel({
 	onAddLabelGroup: (name: string) => void;
 	onReloadLabelData: (id: LGProvId) => void;
 }) {
+	const [tab, setTab] = useState("chapters");
 	return (
-		<Tabs defaultValue="chapters" className="h-full flex flex-col">
-			<TabsList variant="line" className="w-full px-1 pt-1">
-				<TabsTrigger value="chapters">Chapters</TabsTrigger>
-				<TabsTrigger value="label-groups">Label Groups</TabsTrigger>
+		<Tabs value={tab} onValueChange={setTab} className="h-full flex flex-col">
+			<TabsList
+				variant="line"
+				className="w-full shrink-0 justify-start overflow-x-auto overflow-y-hidden px-1 pt-1 group-data-horizontal/tabs:h-auto"
+			>
+				<TabsTrigger value="chapters" className="flex-none">
+					Chapters
+				</TabsTrigger>
+				<TabsTrigger value="label-groups" className="flex-none">
+					Labels
+				</TabsTrigger>
+				<TabsTrigger value="search" className="flex-none">
+					Search
+				</TabsTrigger>
 			</TabsList>
 			<TabsContent value="chapters" className="overflow-y-auto">
 				<ChapterPanel
@@ -53,6 +70,15 @@ export function LeftPanel({
 					onAddLabelGroup={onAddLabelGroup}
 					onReloadLabelData={onReloadLabelData}
 				/>
+			</TabsContent>
+			{/* Kept mounted so results survive switching tabs. */}
+			<TabsContent
+				value="search"
+				forceMount
+				hidden={tab !== "search"}
+				className="min-h-0 flex-1"
+			>
+				<TermSearchPanel novelId={novelId} chapters={chapters} gotoText={gotoText} />
 			</TabsContent>
 		</Tabs>
 	);

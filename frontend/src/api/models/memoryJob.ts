@@ -4,12 +4,12 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { JobParams } from './jobParams';
+import type { JobParamsV3 } from './jobParamsV3';
 
 export interface MemoryJob {
   claimExpiresAt: string | null;
   createdAt: string;
-  jobParams: JobParams;
+  jobParams: JobParamsV3;
   memoryGroupId: string;
   memoryJobId: string;
   updatedAt: string;

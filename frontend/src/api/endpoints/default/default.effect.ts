@@ -1676,9 +1676,12 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGetQueryParams = S.Str
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
-export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsOneVersionDefault = 1;
-export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
-export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsTwoVersionDefault = 2;
+
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemOneStageNameDefault = 'record_memories';
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemTwoStageNameDefault = 'summarize_conventions';
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemThreeIncludeConventionsDefault = false;
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemThreeStageNameDefault = 'translate_terms';
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsVersionDefault = 3;
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsCompletedMin = 0;
 
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemTaskCountsFailedMin = 0;
@@ -1696,24 +1699,21 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet200Response = S.Str
   "job": S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobParams": S.Union([S.Struct({
+  "jobParams": S.Struct({
+  "stages": S.Array(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
-  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
-  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsOneVersionDefault)))
-}), S.Struct({
-  "recordMemories": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['record_memories']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemOneStageNameDefault))),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}), S.Null])),
-  "summarizeConventions": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
-}).annotate({ description: 'Propose translation conventions once per job, anchored on the range\'s last chapter.' }), S.Null])),
-  "translateTerms": S.optional(S.Union([S.Struct({
-  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
-}), S.Null])),
-  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsTwoVersionDefault)))
-})]),
+}), S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemTwoStageNameDefault)))
+}), S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemThreeIncludeConventionsDefault))),
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['translate_terms']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemThreeStageNameDefault)))
+})])).check(S.isMinLength(1)),
+  "version": S.Literal(3).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsVersionDefault)))
+}),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
@@ -1750,9 +1750,12 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetParams = S
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
-export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsOneVersionDefault = 1;
-export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
-export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsTwoVersionDefault = 2;
+
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemOneStageNameDefault = 'record_memories';
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemTwoStageNameDefault = 'summarize_conventions';
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemThreeIncludeConventionsDefault = false;
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemThreeStageNameDefault = 'translate_terms';
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsVersionDefault = 3;
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsCompletedMin = 0;
 
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryTaskCountsFailedMin = 0;
@@ -1770,24 +1773,21 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200Respons
   "job": S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobParams": S.Union([S.Struct({
+  "jobParams": S.Struct({
+  "stages": S.Array(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
-  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
-  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsOneVersionDefault)))
-}), S.Struct({
-  "recordMemories": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['record_memories']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemOneStageNameDefault))),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}), S.Null])),
-  "summarizeConventions": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
-}).annotate({ description: 'Propose translation conventions once per job, anchored on the range\'s last chapter.' }), S.Null])),
-  "translateTerms": S.optional(S.Union([S.Struct({
-  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
-}), S.Null])),
-  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsTwoVersionDefault)))
-})]),
+}), S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemTwoStageNameDefault)))
+}), S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemThreeIncludeConventionsDefault))),
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['translate_terms']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemThreeStageNameDefault)))
+})])).check(S.isMinLength(1)),
+  "version": S.Literal(3).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsVersionDefault)))
+}),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
@@ -1824,31 +1824,31 @@ export const ReadMemoryJobsMemoryAgentJobsGetQueryParams = S.Struct({
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
-export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsOneVersionDefault = 1;
-export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
-export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsTwoVersionDefault = 2;
+
+export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemOneStageNameDefault = 'record_memories';
+export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemTwoStageNameDefault = 'summarize_conventions';
+export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemThreeIncludeConventionsDefault = false;
+export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemThreeStageNameDefault = 'translate_terms';
+export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsVersionDefault = 3;
 
 export const ReadMemoryJobsMemoryAgentJobsGet200ResponseItem = S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobParams": S.Union([S.Struct({
+  "jobParams": S.Struct({
+  "stages": S.Array(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
-  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
-  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsOneVersionDefault)))
-}), S.Struct({
-  "recordMemories": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['record_memories']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemOneStageNameDefault))),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}), S.Null])),
-  "summarizeConventions": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
-}).annotate({ description: 'Propose translation conventions once per job, anchored on the range\'s last chapter.' }), S.Null])),
-  "translateTerms": S.optional(S.Union([S.Struct({
-  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
-}), S.Null])),
-  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsTwoVersionDefault)))
-})]),
+}), S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemTwoStageNameDefault)))
+}), S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemThreeIncludeConventionsDefault))),
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['translate_terms']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemThreeStageNameDefault)))
+})])).check(S.isMinLength(1)),
+  "version": S.Literal(3).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsVersionDefault)))
+}),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
@@ -1879,6 +1879,11 @@ export const addMemoryJobMemoryAgentJobsPostBodyEndChapterNumOneMin = 0;
 export const addMemoryJobMemoryAgentJobsPostBodyParamsOneVersionDefault = 1;
 export const addMemoryJobMemoryAgentJobsPostBodyParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const addMemoryJobMemoryAgentJobsPostBodyParamsTwoVersionDefault = 2;
+export const addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemOneStageNameDefault = 'record_memories';
+export const addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemTwoStageNameDefault = 'summarize_conventions';
+export const addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemThreeIncludeConventionsDefault = false;
+export const addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemThreeStageNameDefault = 'translate_terms';
+export const addMemoryJobMemoryAgentJobsPostBodyParamsThreeVersionDefault = 3;
 export const addMemoryJobMemoryAgentJobsPostBodyStartChapterNumOneMin = 0;
 
 
@@ -1903,35 +1908,49 @@ export const AddMemoryJobMemoryAgentJobsPostBody = S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
 }), S.Null])),
   "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsTwoVersionDefault)))
+}), S.Struct({
+  "stages": S.Array(S.Union([S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['record_memories']).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemOneStageNameDefault))),
+  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
+}), S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemTwoStageNameDefault)))
+}), S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemThreeIncludeConventionsDefault))),
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['translate_terms']).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemThreeStageNameDefault)))
+})])).check(S.isMinLength(1)),
+  "version": S.Literal(3).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsThreeVersionDefault)))
 })]),
   "startChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyStartChapterNumOneMin)), S.Null]))
 })
 
-export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsOneVersionDefault = 1;
-export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
-export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsTwoVersionDefault = 2;
+
+export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemOneStageNameDefault = 'record_memories';
+export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemTwoStageNameDefault = 'summarize_conventions';
+export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemThreeIncludeConventionsDefault = false;
+export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemThreeStageNameDefault = 'translate_terms';
+export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsVersionDefault = 3;
 
 export const AddMemoryJobMemoryAgentJobsPost201Response = S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobParams": S.Union([S.Struct({
+  "jobParams": S.Struct({
+  "stages": S.Array(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
-  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
-  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsOneVersionDefault)))
-}), S.Struct({
-  "recordMemories": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['record_memories']).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemOneStageNameDefault))),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}), S.Null])),
-  "summarizeConventions": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
-}).annotate({ description: 'Propose translation conventions once per job, anchored on the range\'s last chapter.' }), S.Null])),
-  "translateTerms": S.optional(S.Union([S.Struct({
-  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
-}), S.Null])),
-  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsTwoVersionDefault)))
-})]),
+}), S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemTwoStageNameDefault)))
+}), S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemThreeIncludeConventionsDefault))),
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['translate_terms']).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemThreeStageNameDefault)))
+})])).check(S.isMinLength(1)),
+  "version": S.Literal(3).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsVersionDefault)))
+}),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
@@ -1987,31 +2006,31 @@ export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGetParams = S.Struct({
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
-export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsOneVersionDefault = 1;
-export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
-export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsTwoVersionDefault = 2;
+
+export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemOneStageNameDefault = 'record_memories';
+export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemTwoStageNameDefault = 'summarize_conventions';
+export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemThreeIncludeConventionsDefault = false;
+export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemThreeStageNameDefault = 'translate_terms';
+export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsVersionDefault = 3;
 
 export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet200Response = S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobParams": S.Union([S.Struct({
+  "jobParams": S.Struct({
+  "stages": S.Array(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
-  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
-  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsOneVersionDefault)))
-}), S.Struct({
-  "recordMemories": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['record_memories']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemOneStageNameDefault))),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}), S.Null])),
-  "summarizeConventions": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
-}).annotate({ description: 'Propose translation conventions once per job, anchored on the range\'s last chapter.' }), S.Null])),
-  "translateTerms": S.optional(S.Union([S.Struct({
-  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
-}), S.Null])),
-  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsTwoVersionDefault)))
-})]),
+}), S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemTwoStageNameDefault)))
+}), S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemThreeIncludeConventionsDefault))),
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['translate_terms']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemThreeStageNameDefault)))
+})])).check(S.isMinLength(1)),
+  "version": S.Literal(3).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsVersionDefault)))
+}),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
@@ -2040,31 +2059,31 @@ export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostParams = S.Struct(
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
-export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsOneVersionDefault = 1;
-export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
-export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsTwoVersionDefault = 2;
+
+export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemOneStageNameDefault = 'record_memories';
+export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemTwoStageNameDefault = 'summarize_conventions';
+export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemThreeIncludeConventionsDefault = false;
+export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemThreeStageNameDefault = 'translate_terms';
+export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsVersionDefault = 3;
 
 export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200Response = S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobParams": S.Union([S.Struct({
+  "jobParams": S.Struct({
+  "stages": S.Array(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
-  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
-  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsOneVersionDefault)))
-}), S.Struct({
-  "recordMemories": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['record_memories']).pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemOneStageNameDefault))),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}), S.Null])),
-  "summarizeConventions": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
-}).annotate({ description: 'Propose translation conventions once per job, anchored on the range\'s last chapter.' }), S.Null])),
-  "translateTerms": S.optional(S.Union([S.Struct({
-  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
-}), S.Null])),
-  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsTwoVersionDefault)))
-})]),
+}), S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemTwoStageNameDefault)))
+}), S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemThreeIncludeConventionsDefault))),
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['translate_terms']).pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemThreeStageNameDefault)))
+})])).check(S.isMinLength(1)),
+  "version": S.Literal(3).pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsVersionDefault)))
+}),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
@@ -2093,31 +2112,31 @@ export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPostParams = S.Struct(
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
 })
 
-export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsOneVersionDefault = 1;
-export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
-export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsTwoVersionDefault = 2;
+
+export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemOneStageNameDefault = 'record_memories';
+export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemTwoStageNameDefault = 'summarize_conventions';
+export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemThreeIncludeConventionsDefault = false;
+export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemThreeStageNameDefault = 'translate_terms';
+export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsVersionDefault = 3;
 
 export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost202Response = S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
-  "jobParams": S.Union([S.Struct({
+  "jobParams": S.Struct({
+  "stages": S.Array(S.Union([S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
-  "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown)),
-  "version": S.Literal(1).pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsOneVersionDefault)))
-}), S.Struct({
-  "recordMemories": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['record_memories']).pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemOneStageNameDefault))),
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
-}), S.Null])),
-  "summarizeConventions": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
-}).annotate({ description: 'Propose translation conventions once per job, anchored on the range\'s last chapter.' }), S.Null])),
-  "translateTerms": S.optional(S.Union([S.Struct({
-  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsTwoTranslateTermsOneIncludeConventionsDefault))),
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
-}), S.Null])),
-  "version": S.Literal(2).pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsTwoVersionDefault)))
-})]),
+}), S.Struct({
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemTwoStageNameDefault)))
+}), S.Struct({
+  "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemThreeIncludeConventionsDefault))),
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "stageName": S.Literals(['translate_terms']).pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemThreeStageNameDefault)))
+})])).check(S.isMinLength(1)),
+  "version": S.Literal(3).pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsVersionDefault)))
+}),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryJobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))

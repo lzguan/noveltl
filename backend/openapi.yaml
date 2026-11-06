@@ -406,6 +406,26 @@ components:
       - chapterContentId
       title: ChapterContentMeta
       type: object
+    ChapterContentTermSearch:
+      description: "Pydantic schema for a term search within one chapter content version.\n\
+        \nAttributes:\n    chapter_content_id: The UUID of the content version that\
+        \ was searched.\n    occurrences: Every occurrence of the term in that content,\
+        \ in order."
+      properties:
+        chapterContentId:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+        occurrences:
+          items:
+            $ref: '#/components/schemas/TermOccurrencePreview'
+          title: Occurrences
+          type: array
+      required:
+      - chapterContentId
+      - occurrences
+      title: ChapterContentTermSearch
+      type: object
     ChapterData:
       description: "Pydantic schema for aggregating a ChapterContent and a Chapter\
         \ together.\n\nAttributes:\n    metadata: The metadata of the chapter, such\
@@ -420,6 +440,30 @@ components:
       - metadata
       - content
       title: ChapterData
+      type: object
+    ChapterTermMatches:
+      description: "Pydantic schema for how often a searched term occurs in one chapter.\n\
+        \nAttributes:\n    chapter_id: The UUID of the chapter containing the term.\n\
+        \    chapter_content_id: The UUID of the content version that was counted;\
+        \ search it for offsets and previews.\n    match_count: The number of non-overlapping\
+        \ occurrences in that content."
+      properties:
+        chapterContentId:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+        chapterId:
+          format: uuid
+          title: Chapterid
+          type: string
+        matchCount:
+          title: Matchcount
+          type: integer
+      required:
+      - chapterId
+      - chapterContentId
+      - matchCount
+      title: ChapterTermMatches
       type: object
     CluenerParams:
       description: "Pydantic schema for a Cluener model.\n\nAttributes:\n    chunk_size:\
@@ -2478,6 +2522,37 @@ components:
       - contributorRole
       title: NovelContributor
       type: object
+    NovelTermSearch:
+      description: "Pydantic schema for one page of a term search across a novel's\
+        \ chapters.\n\nAttributes:\n    total_chapters: The number of chapters in\
+        \ the searched range that contain the term.\n    total_matches: The number\
+        \ of occurrences across all of those chapters.\n    next_offset: The offset\
+        \ of the next page of chapters, or None if this is the last page.\n    chapters:\
+        \ Matching chapters on this page, in chapter order."
+      properties:
+        chapters:
+          items:
+            $ref: '#/components/schemas/ChapterTermMatches'
+          title: Chapters
+          type: array
+        nextOffset:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Nextoffset
+        totalChapters:
+          title: Totalchapters
+          type: integer
+        totalMatches:
+          title: Totalmatches
+          type: integer
+      required:
+      - totalChapters
+      - totalMatches
+      - nextOffset
+      - chapters
+      title: NovelTermSearch
+      type: object
     NovelType:
       enum:
       - original
@@ -3091,6 +3166,28 @@ components:
       - other
       title: TermKind
       type: string
+    TermOccurrencePreview:
+      description: "Pydantic schema for one occurrence of a searched term with surrounding\
+        \ text.\n\nAttributes:\n    start: The start offset of the occurrence in the\
+        \ chapter text.\n    preview: Text around the occurrence, within its line.\n\
+        \    preview_start: The offset of the preview in the chapter text; the occurrence\
+        \ begins at start - preview_start."
+      properties:
+        preview:
+          title: Preview
+          type: string
+        previewStart:
+          title: Previewstart
+          type: integer
+        start:
+          title: Start
+          type: integer
+      required:
+      - start
+      - preview
+      - previewStart
+      title: TermOccurrencePreview
+      type: object
     TermTranslationRead:
       properties:
         createdAt:
@@ -4362,6 +4459,46 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Read Chapter Content By Id
+  /chapter-contents/{chapterContentId}/term-search:
+    get:
+      description: "Endpoint for finding every occurrence of a term in one chapter\
+        \ content version, with line previews.\n\nRaises:\n    404: Chapter content\
+        \ not found (or insufficient permissions)."
+      operationId: search_chapter_content_term_chapter_contents__chapterContentId__term_search_get
+      parameters:
+      - in: path
+        name: chapterContentId
+        required: true
+        schema:
+          format: uuid
+          title: Chaptercontentid
+          type: string
+      - description: Exact text to find.
+        in: query
+        name: term
+        required: true
+        schema:
+          description: Exact text to find.
+          maxLength: 200
+          minLength: 1
+          title: Term
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterContentTermSearch'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Search Chapter Content Term
   /chapters:
     get:
       description: "Endpoint for retrieving chapters by novel_id.\n\nRaises:\n   \
@@ -8478,6 +8615,82 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Create Chapter
+  /novels/{novelId}/term-search:
+    get:
+      description: "Endpoint for finding every occurrence of a term in the latest\
+        \ content of a novel's readable chapters.\n\nChapters are returned in chapter\
+        \ order, one page at a time; totals cover the whole range.\n\nRaises:\n  \
+        \  404: Novel not found (or insufficient permissions)."
+      operationId: search_novel_term_novels__novelId__term_search_get
+      parameters:
+      - in: path
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      - description: Exact text to find.
+        in: query
+        name: term
+        required: true
+        schema:
+          description: Exact text to find.
+          maxLength: 200
+          minLength: 1
+          title: Term
+          type: string
+      - in: query
+        name: startChapterNum
+        required: false
+        schema:
+          anyOf:
+          - minimum: 0
+            type: integer
+          - type: 'null'
+          title: Startchapternum
+      - in: query
+        name: endChapterNum
+        required: false
+        schema:
+          anyOf:
+          - minimum: 0
+            type: integer
+          - type: 'null'
+          title: Endchapternum
+      - in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NovelTermSearch'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Search Novel Term
   /novels/{novelId}/with-contributors:
     get:
       description: "Endpoint for retrieving a novel and its associated users.\n\n\

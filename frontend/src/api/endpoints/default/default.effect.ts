@@ -323,6 +323,46 @@ export const ReadChapterContentByIdChapterContentsChapterContentIdGet422Response
 })
 
 /**
+ * Endpoint for finding every occurrence of a term in one chapter content version, with line previews.
+ *
+ * Raises:
+ *     404: Chapter content not found (or insufficient permissions).
+ * @summary Search Chapter Content Term
+ */
+export const SearchChapterContentTermChapterContentsChapterContentIdTermSearchGetParams = S.Struct({
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const searchChapterContentTermChapterContentsChapterContentIdTermSearchGetQueryTermMax = 200;
+
+
+
+export const SearchChapterContentTermChapterContentsChapterContentIdTermSearchGetQueryParams = S.Struct({
+  "term": S.String.check(S.isMinLength(1), S.isMaxLength(searchChapterContentTermChapterContentsChapterContentIdTermSearchGetQueryTermMax)).annotate({ description: 'Exact text to find.' })
+})
+
+export const SearchChapterContentTermChapterContentsChapterContentIdTermSearchGet200Response = S.Struct({
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "occurrences": S.Array(S.Struct({
+  "preview": S.String,
+  "previewStart": S.Number,
+  "start": S.Number
+}).annotate({ description: 'Pydantic schema for one occurrence of a searched term with surrounding text.\n\nAttributes:\n    start: The start offset of the occurrence in the chapter text.\n    preview: Text around the occurrence, within its line.\n    preview_start: The offset of the preview in the chapter text; the occurrence begins at start - preview_start.' }))
+}).annotate({ description: 'Pydantic schema for a term search within one chapter content version.\n\nAttributes:\n    chapter_content_id: The UUID of the content version that was searched.\n    occurrences: Every occurrence of the term in that content, in order.' })
+
+export const SearchChapterContentTermChapterContentsChapterContentIdTermSearchGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * Endpoint for retrieving chapters by novel_id.
  *
  * Raises:
@@ -3711,6 +3751,64 @@ export const CreateChapterNovelsNovelIdChaptersPost200Response = S.Struct({
 }).annotate({ description: 'Pydantic schema for aggregating a ChapterContent and a Chapter together.\n\nAttributes:\n    metadata: The metadata of the chapter, such as title and whether it\'s primary.\n    content: The text content of the chapter.' })
 
 export const CreateChapterNovelsNovelIdChaptersPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * Endpoint for finding every occurrence of a term in the latest content of a novel's readable chapters.
+ *
+ * Chapters are returned in chapter order, one page at a time; totals cover the whole range.
+ *
+ * Raises:
+ *     404: Novel not found (or insufficient permissions).
+ * @summary Search Novel Term
+ */
+export const SearchNovelTermNovelsNovelIdTermSearchGetParams = S.Struct({
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const searchNovelTermNovelsNovelIdTermSearchGetQueryTermMax = 200;
+
+export const searchNovelTermNovelsNovelIdTermSearchGetQueryStartChapterNumOneMin = 0;
+
+export const searchNovelTermNovelsNovelIdTermSearchGetQueryEndChapterNumOneMin = 0;
+
+export const searchNovelTermNovelsNovelIdTermSearchGetQueryOffsetDefault = 0;
+export const searchNovelTermNovelsNovelIdTermSearchGetQueryOffsetMin = 0;
+
+export const searchNovelTermNovelsNovelIdTermSearchGetQueryLimitDefault = 50;
+export const searchNovelTermNovelsNovelIdTermSearchGetQueryLimitMax = 100;
+
+
+
+export const SearchNovelTermNovelsNovelIdTermSearchGetQueryParams = S.Struct({
+  "term": S.String.check(S.isMinLength(1), S.isMaxLength(searchNovelTermNovelsNovelIdTermSearchGetQueryTermMax)).annotate({ description: 'Exact text to find.' }),
+  "startChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(searchNovelTermNovelsNovelIdTermSearchGetQueryStartChapterNumOneMin)), S.Null])),
+  "endChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(searchNovelTermNovelsNovelIdTermSearchGetQueryEndChapterNumOneMin)), S.Null])),
+  "offset": S.Number.check(S.isGreaterThanOrEqualTo(searchNovelTermNovelsNovelIdTermSearchGetQueryOffsetMin)).pipe(S.withDecodingDefaultType(Effect.succeed(searchNovelTermNovelsNovelIdTermSearchGetQueryOffsetDefault))),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(searchNovelTermNovelsNovelIdTermSearchGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(searchNovelTermNovelsNovelIdTermSearchGetQueryLimitDefault)))
+})
+
+export const SearchNovelTermNovelsNovelIdTermSearchGet200Response = S.Struct({
+  "chapters": S.Array(S.Struct({
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "matchCount": S.Number
+}).annotate({ description: 'Pydantic schema for how often a searched term occurs in one chapter.\n\nAttributes:\n    chapter_id: The UUID of the chapter containing the term.\n    chapter_content_id: The UUID of the content version that was counted; search it for offsets and previews.\n    match_count: The number of non-overlapping occurrences in that content.' })),
+  "nextOffset": S.Union([S.Number, S.Null]),
+  "totalChapters": S.Number,
+  "totalMatches": S.Number
+}).annotate({ description: 'Pydantic schema for one page of a term search across a novel\'s chapters.\n\nAttributes:\n    total_chapters: The number of chapters in the searched range that contain the term.\n    total_matches: The number of occurrences across all of those chapters.\n    next_offset: The offset of the next page of chapters, or None if this is the last page.\n    chapters: Matching chapters on this page, in chapter order.' })
+
+export const SearchNovelTermNovelsNovelIdTermSearchGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "ctx": S.optional(S.StructWithRest(S.Struct({
 

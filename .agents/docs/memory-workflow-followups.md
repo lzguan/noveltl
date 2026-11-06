@@ -33,11 +33,13 @@ Decided with the user (2026-11-06), not yet implemented:
   terms were rejected as the precomputed input: checking that a term is absent
   from all earlier chapters costs a scan of the whole novel per term (about
   1.6 s for 85 terms over 856 chapters / 2.7M characters on the dev database).
-  Instead the agent asks for history per term. The data access exists in
-  [occurrences.py](../../backend/src/memory/plugins/glossary/occurrences.py)
-  (`get_terms_in_chapter_range`, `get_term_occurrences`, both on latest chapter
-  content and never past the anchor) and `access.search_terms`; agent tools for
-  them do not exist yet.
+  Instead the agent asks for history per term. Exact text search lives at the
+  novels level in [term_search.py](../../backend/src/novels/term_search.py)
+  (also served as `GET /novels/{novelId}/term-search` and
+  `GET /chapter-contents/{chapterContentId}/term-search`); an agent occurrence
+  tool should reuse it and pass the anchor chapter as the range end, which keeps
+  the no-spoiler rule on the memory side. `access.search_terms` searches term
+  names. No agent tools exist yet.
 - Output: structured create / revise / withdraw by short handle, with an output
   validator enforcing "agent-created and still pending" (retry otherwise), not
   write tools. Apply revisions and withdrawals with statements that repeat that

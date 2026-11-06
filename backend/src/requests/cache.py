@@ -39,7 +39,6 @@ class RedisCache(TTLCache):
     def get(self, key: uuid.UUID) -> CacheEntry | None:
         value = get_redis_for_ttl_cache_sync().get(str(key))
         if value is not None:
-            # pyrefly: ignore [bad-argument-type]
             return json.loads(value)
         return None
 

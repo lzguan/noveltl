@@ -30,8 +30,23 @@ aliases and titles, then let relation tools connect them when enabled.
 """.strip()
 
 
+# Paired marks a model may copy around a name, e.g. 【次元化身】 or “花园”.
+_ENCLOSING_MARKS = {"【": "】", "「": "」", "『": "』", "《": "》", "“": "”", "‘": "’", '"': '"', "'": "'"}
+
+
+def normalize_agent_term_name(term_name: str) -> str:
+    """Trim whitespace and marks that enclose the whole name; marks inside it are kept."""
+    name = term_name.strip()
+    while len(name) >= 2 and _ENCLOSING_MARKS.get(name[0]) == name[-1]:
+        name = name[1:-1].strip()
+    return name
+
+
 def add_term(ctx: RunContext[MemAgentDeps], term_name: str, term_kind: TermKind) -> str:
     """Add and classify one new exact source-language glossary term."""
+    term_name = normalize_agent_term_name(term_name)
+    if not term_name:
+        raise ModelRetry("The term name is empty once surrounding quotes and brackets are removed.")
     db = ctx.deps.db
     try:
         with db.begin_nested():

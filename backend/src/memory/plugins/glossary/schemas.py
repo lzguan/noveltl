@@ -1,8 +1,9 @@
 """Schemas for glossary context exposed to memory agents."""
 
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, StringConstraints
 
 from src.memory.plugins.glossary.types import TermKind
 from src.memory.schemas import AgentMemory, AgentModel, Memory
@@ -101,13 +102,17 @@ class CreateGlossaryMemory(Model):
     scope: Scope | None = None
 
 
+# User-entered terms are kept as typed apart from surrounding whitespace.
+UserTermName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+
+
 class CreateGlossaryTerm(Model):
-    term: str = Field(min_length=1, max_length=100)
+    term: UserTermName
     term_kind: TermKind | None = None
 
 
 class UpdateGlossaryTerm(Model):
-    term: str = Field(min_length=1, max_length=100)
+    term: UserTermName
     term_kind: TermKind | None = None
 
 

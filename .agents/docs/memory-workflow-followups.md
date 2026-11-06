@@ -25,25 +25,29 @@ one anchored task per job ([memory jobs](memory-jobs.md)), and stub
 `NotImplementedError`. The job form offers it, so such jobs fail at that task
 until the agent exists.
 
-Discussed direction (not settled):
+Decided with the user (2026-11-06), not yet implemented:
 
-- Input is term-centric, not chapter text: terms new in the range (kind, short
-  definition), existing conventions by short handles (rejected ones included so
-  they are not re-proposed), related translations, and a substring/morpheme
-  term search for families such as rank ladders. `inspect_terms` with
-  `active_only=False` already reads everything up to the anchor; a "terms new in
-  range" query does not exist yet.
-- Jobs do not store their chapter range, so a conventions-only job needs its
-  scope in the config (e.g. a since-chapter) or a different scope rule.
-- Leaning towards structured output (create / revise / withdraw by handle) with
-  an output validator enforcing "agent-created and still pending", instead of
+- Scope: a run covers terms first seen since a chapter stored in the stage
+  config (defaulting to the job's start), plus search over older terms. Jobs do
+  not store their chapter range, so the config must carry it. `inspect_terms`
+  with `active_only=False` already reads everything up to the anchor; a "terms
+  new in range" query does not exist yet.
+- Output: structured create / revise / withdraw by short handle, with an output
+  validator enforcing "agent-created and still pending" (retry otherwise), not
   write tools. `conventions/access.py` currently has only read and create.
-- Naming reads pending conventions, so agent proposals affect naming in the same
-  job without review unless an option restricts it.
-- Alternative input: a dry-run naming stage first, so the agent resolves observed
-  rendering variance. `term_translations` has no job provenance, so do not
-  persist and later clear the dry run; keep drafts out of the table. Two naming
-  stages in one job need an ordered stage list (V3).
+- Naming in the same job follows the agent's pending conventions (naming already
+  reads pending + approved).
+- First input is term-centric: new terms (kind, short definition), existing
+  conventions by handle (rejected ones included so they are not re-proposed),
+  related translations, and a substring/morpheme term search for families such
+  as rank ladders. The user wants room to add read tools later (chapter
+  excerpts, term occurrences, aliases, possibly selectable toolsets), so keep the
+  agent's tools pluggable rather than baking the context into one prompt.
+
+Alternative input considered: a dry-run naming stage first, so the agent
+resolves observed rendering variance. `term_translations` has no job
+provenance, so do not persist and later clear the dry run. V3 params allow two
+naming stages in one job.
 
 Flagging existing mappings that conflict with a convention is deferred.
 Do not assume a new free-text summary automatically fixes retrieval or source

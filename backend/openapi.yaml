@@ -1569,10 +1569,12 @@ components:
         mapping:
           '1': '#/components/schemas/JobParamsV1'
           '2': '#/components/schemas/JobParamsV2'
+          '3': '#/components/schemas/JobParamsV3'
         propertyName: version
       oneOf:
       - $ref: '#/components/schemas/JobParamsV1'
       - $ref: '#/components/schemas/JobParamsV2'
+      - $ref: '#/components/schemas/JobParamsV3'
     JobParamsV1:
       additionalProperties: false
       properties:
@@ -1601,6 +1603,10 @@ components:
           anyOf:
           - $ref: '#/components/schemas/RecordMemoriesConfig'
           - type: 'null'
+        summarizeConventions:
+          anyOf:
+          - $ref: '#/components/schemas/SummarizeConventionsConfig'
+          - type: 'null'
         translateTerms:
           anyOf:
           - $ref: '#/components/schemas/TranslateTermsConfig'
@@ -1611,6 +1617,24 @@ components:
           title: Version
           type: integer
       title: JobParamsV2
+      type: object
+    JobParamsV3:
+      additionalProperties: false
+      properties:
+        stages:
+          items:
+            $ref: '#/components/schemas/StageConfig'
+          minItems: 1
+          title: Stages
+          type: array
+        version:
+          const: 3
+          default: 3
+          title: Version
+          type: integer
+      required:
+      - stages
+      title: JobParamsV3
       type: object
     JobStatus:
       enum:
@@ -2178,7 +2202,7 @@ components:
           title: Createdat
           type: string
         jobParams:
-          $ref: '#/components/schemas/JobParams'
+          $ref: '#/components/schemas/JobParamsV3'
         memoryGroupId:
           format: uuid
           title: Memorygroupid
@@ -2705,6 +2729,27 @@ components:
       - toolsets
       title: RecordMemoriesConfig
       type: object
+    RecordMemoriesStageConfig:
+      additionalProperties: false
+      properties:
+        modelName:
+          $ref: '#/components/schemas/ModelName'
+        stageName:
+          const: record_memories
+          default: record_memories
+          title: Stagename
+          type: string
+        toolsets:
+          additionalProperties:
+            additionalProperties: true
+            type: object
+          title: Toolsets
+          type: object
+      required:
+      - modelName
+      - toolsets
+      title: RecordMemoriesStageConfig
+      type: object
     RenameWorkflowRequest:
       additionalProperties: false
       properties:
@@ -2945,6 +2990,17 @@ components:
       - novels
       title: SourceWorkData
       type: object
+    StageConfig:
+      discriminator:
+        mapping:
+          record_memories: '#/components/schemas/RecordMemoriesStageConfig'
+          summarize_conventions: '#/components/schemas/SummarizeConventionsStageConfig'
+          translate_terms: '#/components/schemas/TranslateTermsStageConfig'
+        propertyName: stageName
+      oneOf:
+      - $ref: '#/components/schemas/RecordMemoriesStageConfig'
+      - $ref: '#/components/schemas/SummarizeConventionsStageConfig'
+      - $ref: '#/components/schemas/TranslateTermsStageConfig'
     StringData:
       additionalProperties: false
       properties:
@@ -2985,6 +3041,31 @@ components:
       type: object
     StringValue:
       type: string
+    SummarizeConventionsConfig:
+      additionalProperties: false
+      description: Propose translation conventions once per job, anchored on the range's
+        last chapter.
+      properties:
+        modelName:
+          $ref: '#/components/schemas/ModelName'
+      required:
+      - modelName
+      title: SummarizeConventionsConfig
+      type: object
+    SummarizeConventionsStageConfig:
+      additionalProperties: false
+      properties:
+        modelName:
+          $ref: '#/components/schemas/ModelName'
+        stageName:
+          const: summarize_conventions
+          default: summarize_conventions
+          title: Stagename
+          type: string
+      required:
+      - modelName
+      title: SummarizeConventionsStageConfig
+      type: object
     TermKind:
       enum:
       - person
@@ -3146,6 +3227,24 @@ components:
       required:
       - modelName
       title: TranslateTermsConfig
+      type: object
+    TranslateTermsStageConfig:
+      additionalProperties: false
+      properties:
+        includeConventions:
+          default: false
+          title: Includeconventions
+          type: boolean
+        modelName:
+          $ref: '#/components/schemas/ModelName'
+        stageName:
+          const: translate_terms
+          default: translate_terms
+          title: Stagename
+          type: string
+      required:
+      - modelName
+      title: TranslateTermsStageConfig
       type: object
     TranslationActionMetadata:
       properties:

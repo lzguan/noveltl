@@ -88,9 +88,14 @@ beforeEach(() => {
 			claimExpiresAt: null,
 			createdAt: "2026-09-03T00:00:00Z",
 			jobParams: {
-				version: 1,
-				modelName: "deepseek:deepseek-v4-flash-none",
-				toolsets: { reader: {}, writer: { retention: 4 } },
+				version: 3,
+				stages: [
+					{
+						stageName: "record_memories",
+						modelName: "deepseek:deepseek-v4-flash-none",
+						toolsets: { reader: {}, writer: { retention: 4 } },
+					},
+				],
 			},
 			memoryGroupId: "group-1",
 			memoryJobId: "job-1",
@@ -122,7 +127,8 @@ it("uses catalog defaults and submits dependencies with schema-driven configurat
 		<CreateMemoryJobForm memoryGroupId="group-1" onCreated={onCreated} closeDialog={vi.fn()} />,
 	);
 
-	expect(await screen.findByRole("checkbox", { name: "legacy" })).toBeChecked();
+	fireEvent.click(await screen.findByRole("button", { name: "Toolsets (1 selected)" }));
+	expect(screen.getByRole("checkbox", { name: "legacy" })).toBeChecked();
 	const writer = screen.getByRole("checkbox", { name: "writer" });
 	fireEvent.click(writer);
 
@@ -144,15 +150,19 @@ it("uses catalog defaults and submits dependencies with schema-driven configurat
 			endChapterNum: null,
 			memoryGroupId: "group-1",
 			params: {
-				version: 2,
-				recordMemories: {
-					modelName: "deepseek:deepseek-v4-flash-none",
-					toolsets: { reader: {}, writer: { retention: 4 } },
-				},
-				translateTerms: {
-					modelName: "deepseek:deepseek-v4-flash-none",
-					includeConventions: false,
-				},
+				version: 3,
+				stages: [
+					{
+						stageName: "record_memories",
+						modelName: "deepseek:deepseek-v4-flash-none",
+						toolsets: { reader: {}, writer: { retention: 4 } },
+					},
+					{
+						stageName: "translate_terms",
+						modelName: "deepseek:deepseek-v4-flash-none",
+						includeConventions: false,
+					},
+				],
 			},
 			startChapterNum: null,
 		}),
@@ -174,12 +184,42 @@ it("can create a naming-only job that follows conventions without recording conf
 			startChapterNum: null,
 			endChapterNum: null,
 			params: {
-				version: 2,
-				recordMemories: null,
-				translateTerms: {
-					modelName: "deepseek:deepseek-v4-flash-none",
-					includeConventions: true,
-				},
+				version: 3,
+				stages: [
+					{
+						stageName: "translate_terms",
+						modelName: "deepseek:deepseek-v4-flash-none",
+						includeConventions: true,
+					},
+				],
+			},
+		}),
+	);
+});
+
+it("can create a conventions-only job with its own model", async () => {
+	render(
+		<CreateMemoryJobForm memoryGroupId="group-1" onCreated={vi.fn()} closeDialog={vi.fn()} />,
+	);
+	fireEvent.click(await screen.findByRole("checkbox", { name: "Record memories" }));
+	fireEvent.click(screen.getByRole("checkbox", { name: "Translate glossary terms" }));
+	expect(screen.queryByLabelText("Conventions model")).not.toBeInTheDocument();
+	fireEvent.click(screen.getByRole("checkbox", { name: "Summarize naming conventions" }));
+	expect(screen.getByLabelText("Conventions model")).toBeVisible();
+	fireEvent.click(screen.getByRole("button", { name: "Create job" }));
+	await waitFor(() =>
+		expect(addMemoryJobMemoryAgentJobsPost).toHaveBeenCalledWith({
+			memoryGroupId: "group-1",
+			startChapterNum: null,
+			endChapterNum: null,
+			params: {
+				version: 3,
+				stages: [
+					{
+						stageName: "summarize_conventions",
+						modelName: "deepseek:deepseek-v4-flash-none",
+					},
+				],
 			},
 		}),
 	);

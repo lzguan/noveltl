@@ -1,6 +1,6 @@
 from pydantic_ai import AgentRunResult
 
-from src.memory.agent.agent import create_recording_agent
+from src.memory.agent.agents.recording import create_recording_agent
 from src.memory.agent.capabilities.continuity import ContinuitySummaryOutput
 from src.memory.agent.config import RecordMemoriesStageConfig
 from src.memory.agent.dependencies import MemAgentDeps

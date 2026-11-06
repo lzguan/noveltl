@@ -89,4 +89,5 @@ class Cluener:
         )
         if self.pipeline.tokenizer is None:
             raise ValueError("Failed to load model")
-        self.model: NERModel[CluenerParams] = CluenerModel(self.pipeline)  # pyrefly: ignore
+        # pyrefly: ignore[bad-argument-type]
+        self.model: NERModel[CluenerParams] = CluenerModel(self.pipeline)

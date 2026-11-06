@@ -1,7 +1,7 @@
 import { JobStatus, type MemoryChapterTask } from "@/api/models";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { MemoryStageName } from "@/memory/agent/stages";
+import { MEMORY_STAGE_LABELS, type MemoryStageName } from "@/memory/agent/stages";
 import {
 	CheckCircle2Icon,
 	Clock3Icon,
@@ -55,8 +55,7 @@ export function MemoryTaskRow({
 
 			<div className="min-w-0 flex-1">
 				<p className="text-sm font-medium">
-					Chapter {task.chapterNum} ·{" "}
-					{stageName === "record_memories" ? "Record memories" : "Translate terms"}
+					Chapter {task.chapterNum} · {MEMORY_STAGE_LABELS[stageName]}
 				</p>
 				<p className="text-xs text-muted-foreground">
 					{task.taskStatus === JobStatus.pending

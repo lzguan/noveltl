@@ -10453,13 +10453,17 @@
           },
           {
             "$ref": "#/components/schemas/JobParamsV2"
+          },
+          {
+            "$ref": "#/components/schemas/JobParamsV3"
           }
         ],
         "discriminator": {
           "propertyName": "version",
           "mapping": {
             "1": "#/components/schemas/JobParamsV1",
-            "2": "#/components/schemas/JobParamsV2"
+            "2": "#/components/schemas/JobParamsV2",
+            "3": "#/components/schemas/JobParamsV3"
           }
         }
       },
@@ -10509,6 +10513,16 @@
               }
             ]
           },
+          "summarizeConventions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SummarizeConventionsConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "translateTerms": {
             "anyOf": [
               {
@@ -10523,6 +10537,30 @@
         "additionalProperties": false,
         "type": "object",
         "title": "JobParamsV2"
+      },
+      "JobParamsV3": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "const": 3,
+            "title": "Version",
+            "default": 3
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/StageConfig"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Stages"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stages"
+        ],
+        "title": "JobParamsV3"
       },
       "JobStatus": {
         "type": "string",
@@ -11244,7 +11282,7 @@
             "title": "Memorygroupid"
           },
           "jobParams": {
-            "$ref": "#/components/schemas/JobParams"
+            "$ref": "#/components/schemas/JobParamsV3"
           },
           "claimExpiresAt": {
             "anyOf": [
@@ -11953,6 +11991,34 @@
         ],
         "title": "RecordMemoriesConfig"
       },
+      "RecordMemoriesStageConfig": {
+        "properties": {
+          "modelName": {
+            "$ref": "#/components/schemas/ModelName"
+          },
+          "toolsets": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Toolsets"
+          },
+          "stageName": {
+            "type": "string",
+            "const": "record_memories",
+            "title": "Stagename",
+            "default": "record_memories"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "modelName",
+          "toolsets"
+        ],
+        "title": "RecordMemoriesStageConfig"
+      },
       "RenameWorkflowRequest": {
         "properties": {
           "workflowName": {
@@ -12285,6 +12351,27 @@
         "title": "SourceWorkData",
         "description": "Pydantic schema to represent a source work and all its associated novels.\n\nAttributes:\n    source_work: The source work metadata.\n    novels: A list of novels associated with this source work."
       },
+      "StageConfig": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RecordMemoriesStageConfig"
+          },
+          {
+            "$ref": "#/components/schemas/SummarizeConventionsStageConfig"
+          },
+          {
+            "$ref": "#/components/schemas/TranslateTermsStageConfig"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "stageName",
+          "mapping": {
+            "record_memories": "#/components/schemas/RecordMemoriesStageConfig",
+            "summarize_conventions": "#/components/schemas/SummarizeConventionsStageConfig",
+            "translate_terms": "#/components/schemas/TranslateTermsStageConfig"
+          }
+        }
+      },
       "StringData": {
         "properties": {
           "value": {
@@ -12336,6 +12423,39 @@
       },
       "StringValue": {
         "type": "string"
+      },
+      "SummarizeConventionsConfig": {
+        "properties": {
+          "modelName": {
+            "$ref": "#/components/schemas/ModelName"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "modelName"
+        ],
+        "title": "SummarizeConventionsConfig",
+        "description": "Propose translation conventions once per job, anchored on the range's last chapter."
+      },
+      "SummarizeConventionsStageConfig": {
+        "properties": {
+          "modelName": {
+            "$ref": "#/components/schemas/ModelName"
+          },
+          "stageName": {
+            "type": "string",
+            "const": "summarize_conventions",
+            "title": "Stagename",
+            "default": "summarize_conventions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "modelName"
+        ],
+        "title": "SummarizeConventionsStageConfig"
       },
       "TermKind": {
         "type": "string",
@@ -12541,6 +12661,30 @@
           "modelName"
         ],
         "title": "TranslateTermsConfig"
+      },
+      "TranslateTermsStageConfig": {
+        "properties": {
+          "modelName": {
+            "$ref": "#/components/schemas/ModelName"
+          },
+          "includeConventions": {
+            "type": "boolean",
+            "title": "Includeconventions",
+            "default": false
+          },
+          "stageName": {
+            "type": "string",
+            "const": "translate_terms",
+            "title": "Stagename",
+            "default": "translate_terms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "modelName"
+        ],
+        "title": "TranslateTermsStageConfig"
       },
       "TranslationActionMetadata": {
         "properties": {

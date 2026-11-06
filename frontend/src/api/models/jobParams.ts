@@ -6,5 +6,6 @@
  */
 import type { JobParamsV1 } from './jobParamsV1';
 import type { JobParamsV2 } from './jobParamsV2';
+import type { JobParamsV3 } from './jobParamsV3';
 
-export type JobParams = JobParamsV1 | JobParamsV2;
+export type JobParams = JobParamsV1 | JobParamsV2 | JobParamsV3;

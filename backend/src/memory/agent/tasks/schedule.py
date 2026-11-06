@@ -8,9 +8,9 @@ prerequisites. Otherwise workers would claim work that direct runs refuse.
 """
 
 import uuid
-from typing import Protocol
+from typing import Any, Protocol
 
-from sqlalchemy import Exists, Select, select
+from sqlalchemy import Exists, Select, SQLColumnExpression, select
 from sqlalchemy.orm import aliased
 
 from src.memory.agent.config import JobParams
@@ -20,6 +20,13 @@ from src.novels.models import Chapter
 
 
 class TaskSchedule(Protocol):
+    def run_order(self) -> tuple[SQLColumnExpression[Any], ...]:
+        """ORDER BY terms listing a job's tasks in the order they run.
+
+        Queries using them must join ``Chapter`` on the task's chapter.
+        """
+        ...
+
     def next_unfinished(self, memory_job_id: uuid.UUID) -> Select[uuid.UUID, int]:
         """Select the key (chapter_id, stage_num) of the job's next unfinished task.
 
@@ -36,6 +43,9 @@ class TaskSchedule(Protocol):
 class StageBarrierSchedule:
     """Stages run as job-wide barriers; chapters run in order within a stage."""
 
+    def run_order(self) -> tuple[SQLColumnExpression[Any], ...]:
+        return (MemoryChapterTask.stage_num, Chapter.chapter_num, MemoryChapterTask.chapter_id)
+
     def next_unfinished(self, memory_job_id: uuid.UUID) -> Select[uuid.UUID, int]:
         return (
             select(MemoryChapterTask.chapter_id, MemoryChapterTask.stage_num)
@@ -44,7 +54,7 @@ class StageBarrierSchedule:
                 MemoryChapterTask.memory_job_id == memory_job_id,
                 MemoryChapterTask.task_status != JobStatus.COMPLETED,
             )
-            .order_by(MemoryChapterTask.stage_num, Chapter.chapter_num, MemoryChapterTask.chapter_id)
+            .order_by(*self.run_order())
             .limit(1)
         )
 

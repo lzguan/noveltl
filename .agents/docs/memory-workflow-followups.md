@@ -17,13 +17,39 @@ e.g. windows of N chapters (record N, conventions, name N) so conventions cadenc
 and barriers share one mechanism, reducing the need for job chaining.
 
 Storage, the review UI, and naming consumption now exist; see
-[translation conventions](translation-conventions.md). Still proposed (PR B): a
-conventions agent and a conventions-only job with one task anchored on the
-range's last chapter. Discussed shape: its tools mirror the user operations; it
-may modify only rows it created that are still pending; it refers to existing
-conventions by short handles; it needs range-wide memory reads, because current
-access helpers only show memories active at the anchor chapter. Flagging
-existing mappings that conflict with a convention is also deferred there.
+[translation conventions](translation-conventions.md). The conventions stage is
+scaffolded but unimplemented: a `summarize_conventions` stage config,
+one anchored task per job ([memory jobs](memory-jobs.md)), and stub
+[agent](../../backend/src/memory/agent/agents/conventions.py) and
+[stage](../../backend/src/memory/agent/stages/conventions.py) modules that raise
+`NotImplementedError`. The job form offers it, so such jobs fail at that task
+until the agent exists.
+
+Decided with the user (2026-11-06), not yet implemented:
+
+- Scope: a run covers terms first seen since a chapter stored in the stage
+  config (defaulting to the job's start), plus search over older terms. Jobs do
+  not store their chapter range, so the config must carry it. `inspect_terms`
+  with `active_only=False` already reads everything up to the anchor; a "terms
+  new in range" query does not exist yet.
+- Output: structured create / revise / withdraw by short handle, with an output
+  validator enforcing "agent-created and still pending" (retry otherwise), not
+  write tools. `conventions/access.py` currently has only read and create.
+- Naming in the same job follows the agent's pending conventions (naming already
+  reads pending + approved).
+- First input is term-centric: new terms (kind, short definition), existing
+  conventions by handle (rejected ones included so they are not re-proposed),
+  related translations, and a substring/morpheme term search for families such
+  as rank ladders. The user wants room to add read tools later (chapter
+  excerpts, term occurrences, aliases, possibly selectable toolsets), so keep the
+  agent's tools pluggable rather than baking the context into one prompt.
+
+Alternative input considered: a dry-run naming stage first, so the agent
+resolves observed rendering variance. `term_translations` has no job
+provenance, so do not persist and later clear the dry run. V3 params allow two
+naming stages in one job.
+
+Flagging existing mappings that conflict with a convention is deferred.
 Do not assume a new free-text summary automatically fixes retrieval or source
 matching; see the separate [observed cases](naming-observations.md).
 

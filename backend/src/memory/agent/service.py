@@ -186,17 +186,18 @@ def query_tasks(
     skip: int = 0,
     limit: int = 100,
 ) -> schemas.MemoryChapterTaskPage:
-    """Return a page of a job's chapter tasks in chapter order."""
+    """Return a page of a job's chapter tasks in the order its schedule runs them."""
     job_statement = (
-        select(MemoryJobModel.memory_job_id)
+        select(MemoryJobModel.job_params)
         .join(MemoryGroup, MemoryGroup.memory_group_id == MemoryJobModel.memory_group_id)
         .where(MemoryJobModel.memory_job_id == memory_job_id)
     )
     job_statement = memory_group_mod_access_select(job_statement, user)
     try:
-        db.execute(job_statement).scalar_one()
+        job_params = db.execute(job_statement).scalar_one()
     except NoResultFound as exc:
         raise MemoryJobNotFoundException(f"Memory job {memory_job_id} not found or not accessible.") from exc
+    schedule = get_schedule(job_params_adapter.validate_python(job_params))
 
     rows = db.execute(
         select(
@@ -211,7 +212,7 @@ def query_tasks(
         )
         .join(Chapter, Chapter.chapter_id == MemoryChapterTaskModel.chapter_id)
         .where(MemoryChapterTaskModel.memory_job_id == memory_job_id)
-        .order_by(Chapter.chapter_num, Chapter.chapter_id, MemoryChapterTaskModel.stage_num)
+        .order_by(*schedule.run_order())
         .offset(skip)
         .limit(limit)
     ).mappings()

@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import ConfigDict, Field
+from pydantic import BeforeValidator, ConfigDict, Field
 
-from src.memory.agent.config import JobParams
+from src.memory.agent.config import JobParams, JobParamsV3, parse_job_params
 from src.memory.agent.types import ModelName, ToolsetKind
 from src.memory.types import JobStatus
 from src.schemas import Model, Page
@@ -44,7 +44,7 @@ class MemoryJob(Model):
 
     memory_job_id: UUID
     memory_group_id: UUID
-    job_params: JobParams
+    job_params: Annotated[JobParamsV3, BeforeValidator(parse_job_params)]
     claim_expires_at: datetime | None
     created_at: datetime
     updated_at: datetime

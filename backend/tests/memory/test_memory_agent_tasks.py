@@ -183,6 +183,32 @@ def test_arun_tasks_preserves_processing_error_when_failure_claim_is_lost(
     assert task.task_status == JobStatus.PROCESSING
 
 
+def test_conventions_stage_creates_one_task_on_the_last_chapter(test_db: Session) -> None:
+    """The range-wide stage sits between per-chapter stages, so barriers order it after all recording."""
+    from src.memory.agent.config import RecordMemoriesConfig, SummarizeConventionsConfig, TranslateTermsConfig
+
+    model = "deepseek:deepseek-v4-flash-low"
+    job_id, chapter_ids = _make_memory_job(
+        test_db,
+        chapter_count=3,
+        params=JobParamsV2(
+            record_memories=RecordMemoriesConfig(model_name=model, toolsets={}),
+            summarize_conventions=SummarizeConventionsConfig(model_name=model),
+            translate_terms=TranslateTermsConfig(model_name=model),
+        ),
+    )
+
+    tasks = test_db.execute(
+        select(MemoryChapterTask.stage_num, MemoryChapterTask.chapter_id).where(
+            MemoryChapterTask.memory_job_id == job_id
+        )
+    ).all()
+    chapters_by_stage: dict[int, set[uuid.UUID]] = {}
+    for stage_num, chapter_id in tasks:
+        chapters_by_stage.setdefault(stage_num, set()).add(chapter_id)
+    assert chapters_by_stage == {0: set(chapter_ids), 1: {chapter_ids[-1]}, 2: set(chapter_ids)}
+
+
 def test_run_all_tasks_completes_tasks_refreshes_and_releases_job(
     test_db: Session,
     testing_session_local: sessionmaker[Session],
@@ -480,7 +506,7 @@ def test_naming_failure_preserves_recording_and_retry_runs_only_naming(
     FunctionModel replaces paid, nondeterministic provider inference. All task
     claims, glossary writes, stage boundaries, and transactions use PostgreSQL.
     """
-    from src.memory.agent import agent as agent_factory
+    from src.memory.agent.agents import term_translation as naming_agent_factory
     from src.memory.agent.config import RecordMemoriesConfig, TranslateTermsConfig
     from src.memory.agent.tasks.jobs import reset_failed_task
     from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
@@ -528,7 +554,7 @@ def test_naming_failure_preserves_recording_and_retry_runs_only_naming(
             ]
         )
 
-    monkeypatch.setattr(agent_factory, "model_configuration", lambda _: (FunctionModel(name), {}))
+    monkeypatch.setattr(naming_agent_factory, "model_configuration", lambda _: (FunctionModel(name), {}))
 
     async def consume():
         return [item async for item in agent_tasks.run_all_tasks(testing_session_local, job_id)]

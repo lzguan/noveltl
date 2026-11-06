@@ -41,9 +41,15 @@ const summary: MemoryJobSummary = {
 		createdAt: recording.createdAt,
 		updatedAt: recording.updatedAt,
 		jobParams: {
-			version: 2,
-			recordMemories: { modelName: "deepseek:deepseek-v4-flash-low", toolsets: {} },
-			translateTerms: { modelName: "deepseek:deepseek-v4-flash-low" },
+			version: 3,
+			stages: [
+				{
+					stageName: "record_memories",
+					modelName: "deepseek:deepseek-v4-flash-low",
+					toolsets: {},
+				},
+				{ stageName: "translate_terms", modelName: "deepseek:deepseek-v4-flash-low" },
+			],
 		},
 	},
 	taskCounts: { completed: 1, pending: 0, processing: 0, failed: 1 },

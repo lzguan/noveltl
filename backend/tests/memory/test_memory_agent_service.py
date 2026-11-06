@@ -6,7 +6,13 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from src.memory.agent.config import JobParamsV1 as JobParams
-from src.memory.agent.config import JobParamsV2, TranslateTermsConfig
+from src.memory.agent.config import (
+    JobParamsV2,
+    JobParamsV3,
+    RecordMemoriesConfig,
+    TranslateTermsConfig,
+    TranslateTermsStageConfig,
+)
 from src.memory.agent.service import (
     create_job,
     delete_job,
@@ -30,6 +36,7 @@ from src.memory.exceptions import (
 )
 from src.memory.models import MemoryChapterTask, MemoryGroup, MemoryJob
 from src.memory.types import JobStatus
+from src.novels.models import Chapter
 from test_support.memory import RecordingMemoryAgentDispatcher
 from test_support.test_data.scenarios import DatabaseScenario
 
@@ -94,6 +101,55 @@ def test_create_and_query_job_respect_memory_group_permissions(
     failed_summary = query_job_summary(test_db, viewer, job.memory_job_id).summary
     assert failed_summary.task_counts.pending == 0
     assert failed_summary.task_counts.failed == 1
+
+
+def test_tasks_are_listed_in_the_order_the_schedule_runs_them(
+    test_db: Session,
+    novel_permission_scenario: DatabaseScenario,
+) -> None:
+    group = _create_group(test_db, novel_permission_scenario, "ov")
+    owner = novel_permission_scenario.users["owner"]
+    first = novel_permission_scenario.chapters["owner_viewer"]
+    second = Chapter(
+        chapter_num=first.chapter_num + 1,
+        chapter_title="Second",
+        chapter_is_public=False,
+        novel_id=first.novel_id,
+    )
+    test_db.add(second)
+    test_db.commit()
+    params = JobParamsV2(
+        record_memories=RecordMemoriesConfig(model_name="deepseek:deepseek-v4-flash-low", toolsets={}),
+        translate_terms=TranslateTermsConfig(model_name="deepseek:deepseek-v4-flash-low"),
+    )
+    job = create_job(test_db, owner, group.memory_group_id, None, None, params)
+
+    rows = query_tasks(test_db, owner, job.memory_job_id).rows
+
+    # Stage barriers: every recording task runs before any naming task.
+    assert [(row.stage_num, row.chapter_id) for row in rows] == [
+        (0, first.chapter_id),
+        (0, second.chapter_id),
+        (1, first.chapter_id),
+        (1, second.chapter_id),
+    ]
+
+
+def test_jobs_are_stored_as_written_and_returned_as_v3(
+    test_db: Session,
+    novel_permission_scenario: DatabaseScenario,
+) -> None:
+    group = _create_group(test_db, novel_permission_scenario, "ov")
+    owner = novel_permission_scenario.users["owner"]
+    params = JobParamsV2(translate_terms=TranslateTermsConfig(model_name="deepseek:deepseek-v4-flash-low"))
+
+    job = create_job(test_db, owner, group.memory_group_id, None, None, params)
+
+    stored = test_db.get(MemoryJob, job.memory_job_id)
+    assert stored is not None and stored.job_params == params.model_dump(mode="json")
+    assert job.job_params == JobParamsV3(
+        stages=[TranslateTermsStageConfig(model_name="deepseek:deepseek-v4-flash-low")]
+    )
 
 
 def test_start_and_retry_publish_only_runnable_work(

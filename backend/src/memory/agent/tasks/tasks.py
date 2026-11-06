@@ -11,16 +11,19 @@ from sqlalchemy.orm import Session, aliased, sessionmaker
 
 from src.languages.models import Language
 from src.memory.access import MemAccessContext
+from src.memory.agent.agents.conventions import ConventionsOutput
 from src.memory.agent.capabilities.continuity import ContinuitySummaryOutput
 from src.memory.agent.capabilities.term_translation import TermTranslationOutput
 from src.memory.agent.config import (
     RecordMemoriesStageConfig,
     StageConfig,
+    SummarizeConventionsStageConfig,
     TranslateTermsStageConfig,
     job_params_adapter,
     resolve_stages,
 )
 from src.memory.agent.dependencies import MemAgentDeps
+from src.memory.agent.stages.conventions import run_conventions_stage
 from src.memory.agent.stages.recording import run_recording_stage
 from src.memory.agent.stages.term_translation import run_term_translation_stage
 from src.memory.agent.tasks.jobs import (
@@ -56,7 +59,12 @@ class CompletedMemoryTask:
     chapter_id: uuid.UUID
     chapter_content_id: uuid.UUID
     chapter_num: int
-    result: AgentRunResult[str | ContinuitySummaryOutput] | AgentRunResult[TermTranslationOutput] | None
+    result: (
+        AgentRunResult[str | ContinuitySummaryOutput]
+        | AgentRunResult[ConventionsOutput]
+        | AgentRunResult[TermTranslationOutput]
+        | None
+    )
     stage_num: int = 0
     stage_name: StageName = "record_memories"
 
@@ -164,6 +172,8 @@ async def _run_single_task(
     match stage:
         case RecordMemoriesStageConfig():
             result = await run_recording_stage(deps, cctext, cnum, lang_name, stage)
+        case SummarizeConventionsStageConfig():
+            result = await run_conventions_stage(deps, cnum, lang_name, stage)
         case TranslateTermsStageConfig():
             glossary_context = term_translation_context(db, context, include_conventions=stage.include_conventions)
             result = (

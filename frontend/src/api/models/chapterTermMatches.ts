@@ -10,11 +10,13 @@
  *
  * Attributes:
  *     chapter_id: The UUID of the chapter containing the term.
+ *     chapter_num: The chapter's number in the novel.
  *     chapter_content_id: The UUID of the content version that was counted; search it for offsets and previews.
  *     match_count: The number of non-overlapping occurrences in that content.
  */
 export interface ChapterTermMatches {
   chapterContentId: string;
   chapterId: string;
+  chapterNum: number;
   matchCount: number;
 }

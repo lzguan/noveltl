@@ -3801,8 +3801,9 @@ export const SearchNovelTermNovelsNovelIdTermSearchGet200Response = S.Struct({
   "chapters": S.Array(S.Struct({
   "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterNum": S.Number,
   "matchCount": S.Number
-}).annotate({ description: 'Pydantic schema for how often a searched term occurs in one chapter.\n\nAttributes:\n    chapter_id: The UUID of the chapter containing the term.\n    chapter_content_id: The UUID of the content version that was counted; search it for offsets and previews.\n    match_count: The number of non-overlapping occurrences in that content.' })),
+}).annotate({ description: 'Pydantic schema for how often a searched term occurs in one chapter.\n\nAttributes:\n    chapter_id: The UUID of the chapter containing the term.\n    chapter_num: The chapter\'s number in the novel.\n    chapter_content_id: The UUID of the content version that was counted; search it for offsets and previews.\n    match_count: The number of non-overlapping occurrences in that content.' })),
   "nextOffset": S.Union([S.Number, S.Null]),
   "totalChapters": S.Number,
   "totalMatches": S.Number

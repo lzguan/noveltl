@@ -107,6 +107,7 @@ def search_novel(
     rows = db.execute(
         select(
             matches.c.chapter_id,
+            matches.c.chapter_num,
             matches.c.chapter_content_id,
             matches.c.match_count,
             func.count().over().label("total_chapters"),
@@ -135,7 +136,10 @@ def search_novel(
         next_offset=offset + limit if len(rows) > limit else None,
         chapters=[
             ChapterTermMatches(
-                chapter_id=row.chapter_id, chapter_content_id=row.chapter_content_id, match_count=row.match_count
+                chapter_id=row.chapter_id,
+                chapter_num=row.chapter_num,
+                chapter_content_id=row.chapter_content_id,
+                match_count=row.match_count,
             )
             for row in rows[:limit]
         ],

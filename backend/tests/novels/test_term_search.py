@@ -58,10 +58,16 @@ def test_novel_search_counts_matches_on_latest_content_in_chapter_order(
         "chapters": [
             {
                 "chapterId": str(ch3.chapter_id),
+                "chapterNum": 3,
                 "chapterContentId": str(ch3.chapter_content_id),
                 "matchCount": 3,
             },
-            {"chapterId": str(ch5.chapter_id), "chapterContentId": str(ch5.chapter_content_id), "matchCount": 1},
+            {
+                "chapterId": str(ch5.chapter_id),
+                "chapterNum": 5,
+                "chapterContentId": str(ch5.chapter_content_id),
+                "matchCount": 1,
+            },
         ],
     }
     assert ch2_latest.chapter_content_text == "Nothing here now."

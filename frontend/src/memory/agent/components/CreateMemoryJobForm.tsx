@@ -8,6 +8,7 @@ import type {
 	ModelName,
 	MemoryAgentConfig,
 	MemoryAgentToolsetOption,
+	StageConfig,
 } from "@/api/models";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -168,7 +169,29 @@ function LoadedCreateMemoryJobForm({
 
 	async function submit(values: MemoryJobFormValues) {
 		setSubmitError(null);
-		if (!values.recordMemories && !values.summarizeConventions && !values.translateTerms) {
+		// Listed in the order the stages run; a task's stage number indexes this list.
+		const stages: StageConfig[] = [];
+		if (values.recordMemories) {
+			stages.push({
+				stageName: "record_memories",
+				modelName: values.modelName,
+				toolsets: values.toolsets,
+			});
+		}
+		if (values.summarizeConventions) {
+			stages.push({
+				stageName: "summarize_conventions",
+				modelName: values.conventionsModelName,
+			});
+		}
+		if (values.translateTerms) {
+			stages.push({
+				stageName: "translate_terms",
+				modelName: values.translationModelName,
+				includeConventions: values.includeConventions,
+			});
+		}
+		if (stages.length === 0) {
 			setSubmitError("Select at least one stage.");
 			return;
 		}
@@ -176,21 +199,7 @@ function LoadedCreateMemoryJobForm({
 			memoryGroupId,
 			startChapterNum: values.startChapterNum === "" ? null : Number(values.startChapterNum),
 			endChapterNum: values.endChapterNum === "" ? null : Number(values.endChapterNum),
-			params: {
-				version: 2,
-				recordMemories: values.recordMemories
-					? { modelName: values.modelName, toolsets: values.toolsets }
-					: null,
-				summarizeConventions: values.summarizeConventions
-					? { modelName: values.conventionsModelName }
-					: null,
-				translateTerms: values.translateTerms
-					? {
-							modelName: values.translationModelName,
-							includeConventions: values.includeConventions,
-						}
-					: null,
-			},
+			params: { version: 3, stages },
 		};
 
 		try {

@@ -22,7 +22,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiErrorMessage, requestErrorMessage } from "@/lib/apiErrors";
 import { useMemoryTasks } from "@/memory/agent/hooks/useMemoryTasks";
-import { MEMORY_STAGE_TASK_NOUNS, memoryJobStageNames } from "@/memory/agent/stages";
+import { MEMORY_STAGE_LABELS, MEMORY_STAGE_TASK_NOUNS } from "@/memory/agent/stages";
 import { PageNavigation } from "@/memory/components/PageNavigation";
 import {
 	CheckCircle2Icon,
@@ -73,10 +73,11 @@ export function MemoryJobCard({
 	const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 	const [actionError, setActionError] = useState<string | null>(null);
-	const params = summary.job.jobParams;
-	const stageNames = memoryJobStageNames(params);
-	const recordingConfig = params.version === 1 ? params : params.recordMemories;
-	const namingConfig = params.version === 2 ? params.translateTerms : null;
+	// A task's stageNum indexes the job's ordered stages.
+	const stages = summary.job.jobParams.stages;
+	const toolsets = stages.flatMap((stage) =>
+		stage.stageName === "record_memories" ? Object.keys(stage.toolsets) : [],
+	);
 	const counts = summary.taskCounts;
 	const total = counts.pending + counts.processing + counts.completed + counts.failed;
 	const progress = total === 0 ? 0 : Math.round((counts.completed / total) * 100);
@@ -405,15 +406,12 @@ export function MemoryJobCard({
 				<CollapsibleContent>
 					<div className="border-t">
 						<div className="flex flex-wrap gap-1 border-b px-3 py-2">
-							{recordingConfig && (
-								<Badge variant="secondary">
-									Recording: {recordingConfig.modelName}
+							{stages.map((stage, stageNum) => (
+								<Badge key={stageNum} variant="secondary">
+									{MEMORY_STAGE_LABELS[stage.stageName]}: {stage.modelName}
 								</Badge>
-							)}
-							{namingConfig && (
-								<Badge variant="secondary">Naming: {namingConfig.modelName}</Badge>
-							)}
-							{Object.keys(recordingConfig?.toolsets ?? {}).map((toolset) => (
+							))}
+							{toolsets.map((toolset) => (
 								<Badge key={toolset} variant="outline">
 									{toolset}
 								</Badge>
@@ -453,7 +451,7 @@ export function MemoryJobCard({
 										<MemoryTaskRow
 											key={`${task.chapterId}:${task.stageNum}`}
 											task={task}
-											stageName={stageNames[task.stageNum]}
+											stageName={stages[task.stageNum].stageName}
 											jobClaimed={claimed}
 											controlsDisabled={controlsDisabled}
 											pendingAction={pendingTaskAction(task)}
@@ -495,7 +493,7 @@ export function MemoryJobCard({
 							<DialogDescription>
 								{deleteTarget.kind === "job"
 									? "This permanently deletes the job and all of its task records. Memories and chapters are not deleted."
-									: `This permanently removes the ${MEMORY_STAGE_TASK_NOUNS[stageNames[deleteTarget.task.stageNum]]} task for chapter ${deleteTarget.task.chapterNum}. The chapter and its memories are not deleted.`}
+									: `This permanently removes the ${MEMORY_STAGE_TASK_NOUNS[stages[deleteTarget.task.stageNum].stageName]} task for chapter ${deleteTarget.task.chapterNum}. The chapter and its memories are not deleted.`}
 							</DialogDescription>
 						</DialogHeader>
 						<DialogFooter>

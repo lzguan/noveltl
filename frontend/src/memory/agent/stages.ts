@@ -1,6 +1,6 @@
-import type { JobParams } from "@/api/models";
+import type { StageConfig } from "@/api/models";
 
-export type MemoryStageName = "record_memories" | "summarize_conventions" | "translate_terms";
+export type MemoryStageName = StageConfig["stageName"];
 
 export const MEMORY_STAGE_LABELS: Record<MemoryStageName, string> = {
 	record_memories: "Record memories",
@@ -14,13 +14,3 @@ export const MEMORY_STAGE_TASK_NOUNS: Record<MemoryStageName, string> = {
 	summarize_conventions: "conventions",
 	translate_terms: "term translation",
 };
-
-/** Mirrors backend `resolve_stages`: task stage numbers index this list. */
-export function memoryJobStageNames(params: JobParams): MemoryStageName[] {
-	if (params.version === 1) return ["record_memories"];
-	const stages: MemoryStageName[] = [];
-	if (params.recordMemories) stages.push("record_memories");
-	if (params.summarizeConventions) stages.push("summarize_conventions");
-	if (params.translateTerms) stages.push("translate_terms");
-	return stages;
-}

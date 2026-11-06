@@ -32,9 +32,9 @@ chapters: one task per chapter, except the conventions stage, which gets one
 task on the range's last chapter so barriers place it after all recording and
 before any naming. Chapter ranges have an inclusive start and exclusive end. A naming-only job has naming at stage 0. The task primary key is
 `(memory_job_id, chapter_id, stage_num)`. Tasks store neither a stage name nor
-a config. API responses expose `stage_num`; the frontend still derives stage
-names from V2-shaped params in [stages.ts](../../frontend/src/memory/agent/stages.ts)
-until it moves to V3 (`jobParams.stages[stageNum]`).
+a config. API responses expose `stage_num`, and the frontend names a task's
+stage with `jobParams.stages[stageNum].stageName` from the V3 response; it does
+not reproduce backend stage order.
 
 Execution builds `dict[int, StageConfig]` from the V3 stage list.
 `_run_single_task` uses the task's stage number to retrieve its config, then
@@ -55,10 +55,13 @@ resolved from job params by `get_schedule`. It returns composable queries,
 so claims stay single atomic statements: `next_unfinished` (used by
 `claim_next_task` and `service.start_job`'s blocking-failure check) and
 `unfinished_prerequisites` (used by `claim_task` and `service.start_task`).
+`run_order` gives the ORDER BY terms for execution order; `next_unfinished` and
+`service.query_tasks` both use it, so the task list shows tasks in the order
+they run.
 `run_tasks` resolves the schedule beside the stages and passes it to the claim
 function. Invariant: the next task never has unfinished prerequisites. All
 current params use `StageBarrierSchedule`; configurable orders (e.g. windows of
-N chapters for conventions) are planned for job params V3; see
+N chapters for conventions) are planned as a later params option; see
 [follow-ups](memory-workflow-followups.md).
 
 `run_one_task` uses the same orchestration with a specific task selector. Direct
@@ -105,16 +108,16 @@ API and frontend:
 
 - Regenerate OpenAPI and the client ([verification](verification.md)); the new
   `StageConfig` member is a public schema change.
-- [stages.ts](../../frontend/src/memory/agent/stages.ts): the stage name,
-  `MEMORY_STAGE_LABELS`, `MEMORY_STAGE_TASK_NOUNS`, and the same order as
-  `resolve_stages`. A mismatch silently mislabels tasks, because tasks only
-  store `stage_num`.
+- [stages.ts](../../frontend/src/memory/agent/stages.ts): entries in
+  `MEMORY_STAGE_LABELS` and `MEMORY_STAGE_TASK_NOUNS`. `MemoryStageName` comes
+  from the generated `StageConfig`, so a missing label fails the type check.
 - [CreateMemoryJobForm.tsx](../../frontend/src/memory/agent/components/CreateMemoryJobForm.tsx):
   a stage section (checkbox, then its settings indented under it), the form
-  values, the at-least-one-stage check, and the payload field.
+  values, the at-least-one-stage check, and a `stages` entry in run order in the submitted V3 params.
 
 Tests: stage order and discriminator cases in `test_memory_job_config.py`,
-task materialization in `test_memory_agent_tasks.py`, and `stages.test.ts`.
+task materialization in `test_memory_agent_tasks.py`, and the submitted
+stages in `CreateMemoryJobForm.test.tsx`.
 When stubbing inference, monkeypatch `model_configuration` on the `agents/<x>`
 module that imported it, not on `registry`.
 

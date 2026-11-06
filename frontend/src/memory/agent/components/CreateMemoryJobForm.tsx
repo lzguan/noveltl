@@ -12,6 +12,7 @@ import type {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
 	Dialog,
 	DialogContent,
@@ -30,7 +31,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { apiErrorMessage, requestErrorMessage } from "@/lib/apiErrors";
-import { LoaderCircleIcon, PlaySquareIcon, Settings2Icon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ChevronRightIcon, LoaderCircleIcon, PlaySquareIcon, Settings2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { ToolsetConfigDialog, toolsetHasConfig } from "./ToolsetConfigDialog";
@@ -40,7 +42,9 @@ type MemoryJobFormValues = {
 	endChapterNum: string;
 	modelName: ModelName;
 	translationModelName: ModelName;
+	conventionsModelName: ModelName;
 	recordMemories: boolean;
+	summarizeConventions: boolean;
 	translateTerms: boolean;
 	includeConventions: boolean;
 	toolsets: RecordMemoriesConfigToolsets;
@@ -113,6 +117,7 @@ function LoadedCreateMemoryJobForm({
 	closeDialog,
 }: CreateMemoryJobFormProps & { config: MemoryAgentConfig }) {
 	const [submitError, setSubmitError] = useState<string | null>(null);
+	const [toolsetsOpen, setToolsetsOpen] = useState(false);
 	const [configuringToolset, setConfiguringToolset] = useState<MemoryAgentToolsetOption | null>(
 		null,
 	);
@@ -129,13 +134,16 @@ function LoadedCreateMemoryJobForm({
 			endChapterNum: "",
 			modelName: config.models[0].name,
 			translationModelName: config.models[0].name,
+			conventionsModelName: config.models[0].name,
 			recordMemories: true,
+			summarizeConventions: false,
 			translateTerms: true,
 			includeConventions: false,
 			toolsets: defaultToolsets(config),
 		},
 	});
 	const recordMemories = useWatch({ control, name: "recordMemories" });
+	const summarizeConventions = useWatch({ control, name: "summarizeConventions" });
 	const translateTerms = useWatch({ control, name: "translateTerms" });
 	const toolsets = useWatch({ control, name: "toolsets" });
 	const toolsetsByName = new Map(config.toolsets.map((toolset) => [toolset.name, toolset]));
@@ -160,7 +168,7 @@ function LoadedCreateMemoryJobForm({
 
 	async function submit(values: MemoryJobFormValues) {
 		setSubmitError(null);
-		if (!values.recordMemories && !values.translateTerms) {
+		if (!values.recordMemories && !values.summarizeConventions && !values.translateTerms) {
 			setSubmitError("Select at least one stage.");
 			return;
 		}
@@ -172,6 +180,9 @@ function LoadedCreateMemoryJobForm({
 				version: 2,
 				recordMemories: values.recordMemories
 					? { modelName: values.modelName, toolsets: values.toolsets }
+					: null,
+				summarizeConventions: values.summarizeConventions
+					? { modelName: values.conventionsModelName }
 					: null,
 				translateTerms: values.translateTerms
 					? {
@@ -267,177 +278,14 @@ function LoadedCreateMemoryJobForm({
 									<FieldError errors={[errors.endChapterNum]} />
 								</Field>
 							</div>
-							<Field orientation="horizontal">
-								<Controller
-									control={control}
-									name="recordMemories"
-									render={({ field }) => (
-										<Checkbox
-											id="memory-job-record"
-											checked={field.value}
-											disabled={isSubmitting}
-											onCheckedChange={(checked) =>
-												field.onChange(checked === true)
-											}
-										/>
-									)}
-								/>
-								<FieldLabel htmlFor="memory-job-record">Record memories</FieldLabel>
-							</Field>
-							<Field orientation="horizontal">
-								<Controller
-									control={control}
-									name="translateTerms"
-									render={({ field }) => (
-										<Checkbox
-											id="memory-job-translate"
-											checked={field.value}
-											disabled={isSubmitting}
-											onCheckedChange={(checked) =>
-												field.onChange(checked === true)
-											}
-										/>
-									)}
-								/>
-								<FieldLabel htmlFor="memory-job-translate">
-									Translate glossary terms
-								</FieldLabel>
-							</Field>
-							{recordMemories && (
-								<>
-									<Field>
-										<FieldLabel htmlFor="memory-job-model">
-											Recording model
-										</FieldLabel>
-										<Controller
-											control={control}
-											name="modelName"
-											render={({ field }) => (
-												<Select
-													value={field.value}
-													disabled={isSubmitting}
-													onValueChange={field.onChange}
-												>
-													<SelectTrigger
-														id="memory-job-model"
-														className="w-full"
-													>
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent>
-														{config.models.map((model) => (
-															<SelectItem
-																key={model.name}
-																value={model.name}
-															>
-																{model.label}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-											)}
-										/>
-									</Field>
-									<div className="grid grid-cols-1 gap-2">
-										{config.toolsets.map((toolset) => {
-											const id = `memory-job-${toolset.name}-toolset`;
-											const selected = Object.hasOwn(toolsets, toolset.name);
-											return (
-												<div
-													className="flex items-start gap-3 rounded-md border border-border p-3"
-													key={toolset.name}
-												>
-													<Checkbox
-														id={id}
-														checked={selected}
-														disabled={isSubmitting}
-														onCheckedChange={(checked) =>
-															changeToolset(
-																toolset.name,
-																checked === true,
-															)
-														}
-													/>
-													<div className="min-w-0 flex-1">
-														<FieldLabel htmlFor={id}>
-															{toolset.label}
-														</FieldLabel>
-														<p className="text-xs text-muted-foreground">
-															{toolset.description}
-														</p>
-													</div>
-													{toolsetHasConfig(toolset) && (
-														<Button
-															type="button"
-															aria-label={`Configure ${toolset.label}`}
-															variant="outline"
-															size="sm"
-															disabled={!selected || isSubmitting}
-															onClick={() =>
-																setConfiguringToolset(toolset)
-															}
-														>
-															<Settings2Icon />
-															Configure
-														</Button>
-													)}
-												</div>
-											);
-										})}
-									</div>
-									<p className="text-xs text-muted-foreground">
-										Selecting a toolset also selects its requirements. Removing
-										a requirement removes dependent toolsets.
-									</p>
-								</>
-							)}
-							{translateTerms && (
-								<Field>
-									<FieldLabel htmlFor="memory-job-translation-model">
-										Term translation model
-									</FieldLabel>
-									<Controller
-										control={control}
-										name="translationModelName"
-										render={({ field }) => (
-											<Select
-												value={field.value}
-												disabled={isSubmitting}
-												onValueChange={field.onChange}
-											>
-												<SelectTrigger
-													id="memory-job-translation-model"
-													className="w-full"
-												>
-													<SelectValue />
-												</SelectTrigger>
-												<SelectContent>
-													{config.models.map((model) => (
-														<SelectItem
-															key={model.name}
-															value={model.name}
-														>
-															{model.label}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-										)}
-									/>
-									<p className="text-xs text-muted-foreground">
-										Uses the memory group's language. Existing translations are
-										reused.
-									</p>
-								</Field>
-							)}
-							{translateTerms && (
+							<div className="flex flex-col gap-3 rounded-md border border-border p-3">
 								<Field orientation="horizontal">
 									<Controller
 										control={control}
-										name="includeConventions"
+										name="recordMemories"
 										render={({ field }) => (
 											<Checkbox
-												id="memory-job-include-conventions"
+												id="memory-job-record"
 												checked={field.value}
 												disabled={isSubmitting}
 												onCheckedChange={(checked) =>
@@ -446,11 +294,275 @@ function LoadedCreateMemoryJobForm({
 											/>
 										)}
 									/>
-									<FieldLabel htmlFor="memory-job-include-conventions">
-										Follow naming conventions
+									<FieldLabel htmlFor="memory-job-record">
+										Record memories
 									</FieldLabel>
 								</Field>
-							)}
+								{recordMemories && (
+									<div className="flex flex-col gap-3 pl-7">
+										<Field>
+											<FieldLabel htmlFor="memory-job-model">
+												Recording model
+											</FieldLabel>
+											<Controller
+												control={control}
+												name="modelName"
+												render={({ field }) => (
+													<Select
+														value={field.value}
+														disabled={isSubmitting}
+														onValueChange={field.onChange}
+													>
+														<SelectTrigger
+															id="memory-job-model"
+															className="w-full"
+														>
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															{config.models.map((model) => (
+																<SelectItem
+																	key={model.name}
+																	value={model.name}
+																>
+																	{model.label}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												)}
+											/>
+										</Field>
+										<Collapsible
+											open={toolsetsOpen}
+											onOpenChange={setToolsetsOpen}
+										>
+											<CollapsibleTrigger asChild>
+												<Button
+													type="button"
+													variant="ghost"
+													size="sm"
+													className="self-start"
+												>
+													<ChevronRightIcon
+														className={cn(
+															"transition-transform",
+															toolsetsOpen && "rotate-90",
+														)}
+													/>
+													Toolsets ({Object.keys(toolsets).length}{" "}
+													selected)
+												</Button>
+											</CollapsibleTrigger>
+											<CollapsibleContent className="flex flex-col gap-2 pt-2">
+												<div className="grid grid-cols-1 gap-2">
+													{config.toolsets.map((toolset) => {
+														const id = `memory-job-${toolset.name}-toolset`;
+														const selected = Object.hasOwn(
+															toolsets,
+															toolset.name,
+														);
+														return (
+															<div
+																className="flex items-start gap-3 rounded-md border border-border p-3"
+																key={toolset.name}
+															>
+																<Checkbox
+																	id={id}
+																	checked={selected}
+																	disabled={isSubmitting}
+																	onCheckedChange={(checked) =>
+																		changeToolset(
+																			toolset.name,
+																			checked === true,
+																		)
+																	}
+																/>
+																<div className="min-w-0 flex-1">
+																	<FieldLabel htmlFor={id}>
+																		{toolset.label}
+																	</FieldLabel>
+																	<p className="text-xs text-muted-foreground">
+																		{toolset.description}
+																	</p>
+																</div>
+																{toolsetHasConfig(toolset) && (
+																	<Button
+																		type="button"
+																		aria-label={`Configure ${toolset.label}`}
+																		variant="outline"
+																		size="sm"
+																		disabled={
+																			!selected ||
+																			isSubmitting
+																		}
+																		onClick={() =>
+																			setConfiguringToolset(
+																				toolset,
+																			)
+																		}
+																	>
+																		<Settings2Icon />
+																		Configure
+																	</Button>
+																)}
+															</div>
+														);
+													})}
+												</div>
+												<p className="text-xs text-muted-foreground">
+													Selecting a toolset also selects its
+													requirements. Removing a requirement removes
+													dependent toolsets.
+												</p>
+											</CollapsibleContent>
+										</Collapsible>
+									</div>
+								)}
+							</div>
+							<div className="flex flex-col gap-3 rounded-md border border-border p-3">
+								<Field orientation="horizontal">
+									<Controller
+										control={control}
+										name="summarizeConventions"
+										render={({ field }) => (
+											<Checkbox
+												id="memory-job-conventions"
+												checked={field.value}
+												disabled={isSubmitting}
+												onCheckedChange={(checked) =>
+													field.onChange(checked === true)
+												}
+											/>
+										)}
+									/>
+									<FieldLabel htmlFor="memory-job-conventions">
+										Summarize naming conventions
+									</FieldLabel>
+								</Field>
+								{summarizeConventions && (
+									<div className="flex flex-col gap-3 pl-7">
+										<Field>
+											<FieldLabel htmlFor="memory-job-conventions-model">
+												Conventions model
+											</FieldLabel>
+											<Controller
+												control={control}
+												name="conventionsModelName"
+												render={({ field }) => (
+													<Select
+														value={field.value}
+														disabled={isSubmitting}
+														onValueChange={field.onChange}
+													>
+														<SelectTrigger
+															id="memory-job-conventions-model"
+															className="w-full"
+														>
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															{config.models.map((model) => (
+																<SelectItem
+																	key={model.name}
+																	value={model.name}
+																>
+																	{model.label}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												)}
+											/>
+											<p className="text-xs text-muted-foreground">
+												Runs once, after recording and before term
+												translation.
+											</p>
+										</Field>
+									</div>
+								)}
+							</div>
+							<div className="flex flex-col gap-3 rounded-md border border-border p-3">
+								<Field orientation="horizontal">
+									<Controller
+										control={control}
+										name="translateTerms"
+										render={({ field }) => (
+											<Checkbox
+												id="memory-job-translate"
+												checked={field.value}
+												disabled={isSubmitting}
+												onCheckedChange={(checked) =>
+													field.onChange(checked === true)
+												}
+											/>
+										)}
+									/>
+									<FieldLabel htmlFor="memory-job-translate">
+										Translate glossary terms
+									</FieldLabel>
+								</Field>
+								{translateTerms && (
+									<div className="flex flex-col gap-3 pl-7">
+										<Field>
+											<FieldLabel htmlFor="memory-job-translation-model">
+												Term translation model
+											</FieldLabel>
+											<Controller
+												control={control}
+												name="translationModelName"
+												render={({ field }) => (
+													<Select
+														value={field.value}
+														disabled={isSubmitting}
+														onValueChange={field.onChange}
+													>
+														<SelectTrigger
+															id="memory-job-translation-model"
+															className="w-full"
+														>
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															{config.models.map((model) => (
+																<SelectItem
+																	key={model.name}
+																	value={model.name}
+																>
+																	{model.label}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												)}
+											/>
+											<p className="text-xs text-muted-foreground">
+												Uses the memory group's language. Existing
+												translations are reused.
+											</p>
+										</Field>
+										<Field orientation="horizontal">
+											<Controller
+												control={control}
+												name="includeConventions"
+												render={({ field }) => (
+													<Checkbox
+														id="memory-job-include-conventions"
+														checked={field.value}
+														disabled={isSubmitting}
+														onCheckedChange={(checked) =>
+															field.onChange(checked === true)
+														}
+													/>
+												)}
+											/>
+											<FieldLabel htmlFor="memory-job-include-conventions">
+												Follow naming conventions
+											</FieldLabel>
+										</Field>
+									</div>
+								)}
+							</div>
 						</FieldGroup>
 						<DialogFooter>
 							<Button

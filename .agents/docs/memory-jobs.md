@@ -105,8 +105,9 @@ API and frontend:
   `MEMORY_STAGE_LABELS`, `MEMORY_STAGE_TASK_NOUNS`, and the same order as
   `resolve_stages`. A mismatch silently mislabels tasks, because tasks only
   store `stage_num`.
-- [CreateMemoryJobForm.tsx](../../frontend/src/memory/agent/components/CreateMemoryJobForm.tsx)
-  once the stage works; until then, the API accepts a stage that fails at run time.
+- [CreateMemoryJobForm.tsx](../../frontend/src/memory/agent/components/CreateMemoryJobForm.tsx):
+  a stage section (checkbox, then its settings indented under it), the form
+  values, the at-least-one-stage check, and the payload field.
 
 Tests: stage order and discriminator cases in `test_memory_job_config.py`,
 task materialization in `test_memory_agent_tasks.py`, and `stages.test.ts`.

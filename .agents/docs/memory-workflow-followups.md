@@ -17,13 +17,34 @@ e.g. windows of N chapters (record N, conventions, name N) so conventions cadenc
 and barriers share one mechanism, reducing the need for job chaining.
 
 Storage, the review UI, and naming consumption now exist; see
-[translation conventions](translation-conventions.md). Still proposed (PR B): a
-conventions agent and a conventions-only job with one task anchored on the
-range's last chapter. Discussed shape: its tools mirror the user operations; it
-may modify only rows it created that are still pending; it refers to existing
-conventions by short handles; it needs range-wide memory reads, because current
-access helpers only show memories active at the anchor chapter. Flagging
-existing mappings that conflict with a convention is also deferred there.
+[translation conventions](translation-conventions.md). The conventions stage is
+scaffolded but unimplemented: `summarize_conventions` in job params V2,
+one anchored task per job ([memory jobs](memory-jobs.md)), and stub
+[agent](../../backend/src/memory/agent/agents/conventions.py) and
+[stage](../../backend/src/memory/agent/stages/conventions.py) modules that raise
+`NotImplementedError`. The job form does not offer it yet.
+
+Discussed direction (not settled):
+
+- Input is term-centric, not chapter text: terms new in the range (kind, short
+  definition), existing conventions by short handles (rejected ones included so
+  they are not re-proposed), related translations, and a substring/morpheme
+  term search for families such as rank ladders. `inspect_terms` with
+  `active_only=False` already reads everything up to the anchor; a "terms new in
+  range" query does not exist yet.
+- Jobs do not store their chapter range, so a conventions-only job needs its
+  scope in the config (e.g. a since-chapter) or a different scope rule.
+- Leaning towards structured output (create / revise / withdraw by handle) with
+  an output validator enforcing "agent-created and still pending", instead of
+  write tools. `conventions/access.py` currently has only read and create.
+- Naming reads pending conventions, so agent proposals affect naming in the same
+  job without review unless an option restricts it.
+- Alternative input: a dry-run naming stage first, so the agent resolves observed
+  rendering variance. `term_translations` has no job provenance, so do not
+  persist and later clear the dry run; keep drafts out of the table. Two naming
+  stages in one job need an ordered stage list (V3).
+
+Flagging existing mappings that conflict with a convention is deferred.
 Do not assume a new free-text summary automatically fixes retrieval or source
 matching; see the separate [observed cases](naming-observations.md).
 

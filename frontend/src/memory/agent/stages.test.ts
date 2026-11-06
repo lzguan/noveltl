@@ -5,6 +5,7 @@ import { memoryJobStageNames, type MemoryStageName } from "./stages";
 
 const recording = { modelName: "deepseek:deepseek-v4-flash-low", toolsets: {} } as const;
 const naming = { modelName: "deepseek:deepseek-v4-flash-low" } as const;
+const conventions = { modelName: "deepseek:deepseek-v4-flash-low" } as const;
 const cases: { name: string; params: JobParams; expected: MemoryStageName[] }[] = [
 	{
 		name: "V1 recording",
@@ -25,6 +26,16 @@ const cases: { name: string; params: JobParams; expected: MemoryStageName[] }[] 
 		name: "V2 recording followed by naming",
 		params: { version: 2, recordMemories: recording, translateTerms: naming },
 		expected: ["record_memories", "translate_terms"],
+	},
+	{
+		name: "V2 conventions between recording and naming",
+		params: {
+			version: 2,
+			recordMemories: recording,
+			summarizeConventions: conventions,
+			translateTerms: naming,
+		},
+		expected: ["record_memories", "summarize_conventions", "translate_terms"],
 	},
 ];
 

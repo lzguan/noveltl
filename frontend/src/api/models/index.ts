@@ -228,6 +228,7 @@ export * from './stringDataType';
 export * from './stringField';
 export * from './stringFieldType';
 export * from './stringValue';
+export * from './summarizeConventionsConfig';
 export * from './termKind';
 export * from './termTranslationRead';
 export * from './textOp';

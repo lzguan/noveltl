@@ -22,7 +22,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiErrorMessage, requestErrorMessage } from "@/lib/apiErrors";
 import { useMemoryTasks } from "@/memory/agent/hooks/useMemoryTasks";
-import { memoryJobStageNames } from "@/memory/agent/stages";
+import { MEMORY_STAGE_TASK_NOUNS, memoryJobStageNames } from "@/memory/agent/stages";
 import { PageNavigation } from "@/memory/components/PageNavigation";
 import {
 	CheckCircle2Icon,
@@ -495,7 +495,7 @@ export function MemoryJobCard({
 							<DialogDescription>
 								{deleteTarget.kind === "job"
 									? "This permanently deletes the job and all of its task records. Memories and chapters are not deleted."
-									: `This permanently removes the ${stageNames[deleteTarget.task.stageNum] === "record_memories" ? "recording" : "term translation"} task for chapter ${deleteTarget.task.chapterNum}. The chapter and its memories are not deleted.`}
+									: `This permanently removes the ${MEMORY_STAGE_TASK_NOUNS[stageNames[deleteTarget.task.stageNum]]} task for chapter ${deleteTarget.task.chapterNum}. The chapter and its memories are not deleted.`}
 							</DialogDescription>
 						</DialogHeader>
 						<DialogFooter>

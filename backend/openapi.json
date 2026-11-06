@@ -10509,6 +10509,16 @@
               }
             ]
           },
+          "summarizeConventions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SummarizeConventionsConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "translateTerms": {
             "anyOf": [
               {
@@ -12336,6 +12346,20 @@
       },
       "StringValue": {
         "type": "string"
+      },
+      "SummarizeConventionsConfig": {
+        "properties": {
+          "modelName": {
+            "$ref": "#/components/schemas/ModelName"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "modelName"
+        ],
+        "title": "SummarizeConventionsConfig",
+        "description": "Propose translation conventions once per job, anchored on the range's last chapter."
       },
       "TermKind": {
         "type": "string",

@@ -1601,6 +1601,10 @@ components:
           anyOf:
           - $ref: '#/components/schemas/RecordMemoriesConfig'
           - type: 'null'
+        summarizeConventions:
+          anyOf:
+          - $ref: '#/components/schemas/SummarizeConventionsConfig'
+          - type: 'null'
         translateTerms:
           anyOf:
           - $ref: '#/components/schemas/TranslateTermsConfig'
@@ -2985,6 +2989,17 @@ components:
       type: object
     StringValue:
       type: string
+    SummarizeConventionsConfig:
+      additionalProperties: false
+      description: Propose translation conventions once per job, anchored on the range's
+        last chapter.
+      properties:
+        modelName:
+          $ref: '#/components/schemas/ModelName'
+      required:
+      - modelName
+      title: SummarizeConventionsConfig
+      type: object
     TermKind:
       enum:
       - person

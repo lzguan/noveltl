@@ -47,7 +47,7 @@ class Scope(StrEnum):
 
 type PluginName = Literal["glossary", "continuity"]
 
-type StageName = Literal["record_memories", "translate_terms"]
+type StageName = Literal["record_memories", "summarize_conventions", "translate_terms"]
 
 
 class JobStatus(StrEnum):

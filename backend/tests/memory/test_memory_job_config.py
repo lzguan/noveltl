@@ -6,6 +6,7 @@ from src.memory.agent.config import (
     JobParamsV2,
     RecordMemoriesStageConfig,
     StageConfig,
+    SummarizeConventionsStageConfig,
     TranslateTermsStageConfig,
     job_params_adapter,
     resolve_stages,
@@ -27,30 +28,35 @@ def test_persisted_versions_resolve_the_same_recording_interface():
         == resolve_stages(v2)
         == [RecordMemoriesStageConfig(model_name=MODEL, toolsets={"glossary_terms": {}})]
     )
+    assert v1.summarize_conventions is None
     assert v1.translate_terms is None
     assert original.model_dump() == {"version": 1, "model_name": MODEL, "toolsets": {"glossary_terms": {}}}
     assert "stage_name" not in v2.model_dump()["record_memories"]
 
 
 @pytest.mark.parametrize(
-    ("record", "translate", "expected"),
+    ("record", "conventions", "translate", "expected"),
     [
-        (True, False, ["record_memories"]),
-        (False, True, ["translate_terms"]),
-        (True, True, ["record_memories", "translate_terms"]),
+        (True, False, False, ["record_memories"]),
+        (False, False, True, ["translate_terms"]),
+        (True, False, True, ["record_memories", "translate_terms"]),
+        (False, True, False, ["summarize_conventions"]),
+        (True, True, True, ["record_memories", "summarize_conventions", "translate_terms"]),
     ],
 )
-def test_selected_stages_are_materialized_in_supported_order(record, translate, expected):
+def test_selected_stages_are_materialized_in_supported_order(record, conventions, translate, expected):
     params = JobParamsV2.model_validate(
         {
             "record_memories": {"model_name": MODEL, "toolsets": {}} if record else None,
+            "summarize_conventions": {"model_name": MODEL} if conventions else None,
             "translate_terms": {"model_name": MODEL} if translate else None,
         }
     )
     stages = resolve_stages(params)
     assert [stage.stage_name for stage in stages] == expected
+    configs = (params.record_memories, params.summarize_conventions, params.translate_terms)
     assert [stage.model_dump(exclude={"stage_name"}) for stage in stages] == [
-        config.model_dump() for config in (params.record_memories, params.translate_terms) if config is not None
+        config.model_dump() for config in configs if config is not None
     ]
 
 
@@ -58,6 +64,7 @@ def test_selected_stages_are_materialized_in_supported_order(record, translate, 
     ("stage_name", "fields", "stage_type"),
     [
         ("record_memories", {"toolsets": {}}, RecordMemoriesStageConfig),
+        ("summarize_conventions", {}, SummarizeConventionsStageConfig),
         ("translate_terms", {}, TranslateTermsStageConfig),
     ],
 )

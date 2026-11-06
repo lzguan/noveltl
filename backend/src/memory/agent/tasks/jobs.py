@@ -2,10 +2,17 @@ import uuid
 from datetime import timedelta
 from typing import Literal
 
-from sqlalchemy import and_, func, insert, literal, or_, select, tuple_, update
+from sqlalchemy import Select, and_, func, insert, literal, or_, select, tuple_, union_all, update
 from sqlalchemy.orm import Session
 
-from src.memory.agent.config import JobParams, resolve_stages
+from src.memory.agent.config import (
+    JobParams,
+    RecordMemoriesStageConfig,
+    StageConfig,
+    SummarizeConventionsStageConfig,
+    TranslateTermsStageConfig,
+    resolve_stages,
+)
 from src.memory.agent.tasks.schedule import TaskSchedule
 from src.memory.models import MemoryChapterTask, MemoryGroup, MemoryJob
 from src.memory.types import JobStatus
@@ -176,6 +183,17 @@ def refresh_job(
     return True
 
 
+def stage_task_chapters(stage: StageConfig, chapters: Select[uuid.UUID]) -> Select[uuid.UUID]:
+    """Narrow a job's chapter range to the chapters that get a task for this stage."""
+    match stage:
+        case RecordMemoriesStageConfig() | TranslateTermsStageConfig():
+            return chapters
+        case SummarizeConventionsStageConfig():
+            # One range-wide task on the last chapter. Stage barriers then order it
+            # after every lower-stage task and before every higher-stage task.
+            return chapters.order_by(Chapter.chapter_num.desc()).limit(1)
+
+
 def make_job(
     db: Session,
     memory_group_id: uuid.UUID,
@@ -204,8 +222,7 @@ def make_job(
     )
 
     chapter_query = (
-        select(literal(memory_job_id), Chapter.chapter_id)
-        .select_from(Chapter)
+        select(Chapter.chapter_id)
         .join(MemoryGroup, MemoryGroup.novel_id == Chapter.novel_id)
         .where(MemoryGroup.memory_group_id == memory_group_id)
     )
@@ -214,19 +231,30 @@ def make_job(
     if end_chapter_num is not None:
         chapter_query = chapter_query.where(Chapter.chapter_num < end_chapter_num)
 
+    task_rows = []
+    for stage_num, stage in enumerate(resolve_stages(params)):
+        stage_chapters = stage_task_chapters(stage, chapter_query).subquery()
+        task_rows.append(
+            select(
+                literal(memory_job_id).label("memory_job_id"),
+                stage_chapters.c.chapter_id,
+                literal(stage_num).label("stage_num"),
+            )
+        )
+    tasks = union_all(*task_rows).subquery()
+
     try:
         db.execute(job_stmt)
-        for stage_num, _ in enumerate(resolve_stages(params)):
-            db.execute(
-                insert(MemoryChapterTask).from_select(
-                    [
-                        MemoryChapterTask.memory_job_id,
-                        MemoryChapterTask.chapter_id,
-                        MemoryChapterTask.stage_num,
-                    ],
-                    chapter_query.add_columns(literal(stage_num)),
-                )
+        db.execute(
+            insert(MemoryChapterTask).from_select(
+                [
+                    MemoryChapterTask.memory_job_id,
+                    MemoryChapterTask.chapter_id,
+                    MemoryChapterTask.stage_num,
+                ],
+                select(tasks.c.memory_job_id, tasks.c.chapter_id, tasks.c.stage_num),
             )
+        )
         db.commit()
     except Exception:
         db.rollback()

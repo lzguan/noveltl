@@ -6,10 +6,12 @@
  */
 import type { JobParamsV2Version } from './jobParamsV2Version';
 import type { RecordMemoriesConfig } from './recordMemoriesConfig';
+import type { SummarizeConventionsConfig } from './summarizeConventionsConfig';
 import type { TranslateTermsConfig } from './translateTermsConfig';
 
 export interface JobParamsV2 {
   recordMemories?: RecordMemoriesConfig | null;
+  summarizeConventions?: SummarizeConventionsConfig | null;
   translateTerms?: TranslateTermsConfig | null;
   version: JobParamsV2Version;
 }

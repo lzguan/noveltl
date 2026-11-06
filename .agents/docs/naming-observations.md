@@ -30,7 +30,7 @@ Check the configured worker sink rather than assuming that filename elsewhere.
 | 种级 | Returned `Species-level`. Chapter 11 establishes 种、芽、叶、蕾、花 as seed-to-flower development. The correct older definition is linked to 开华, not 种级. | Delivery/retrieval of related definitions. The chapter-19 naming log queried 种级 definitions, mappings, and rank relations without finding that definition. |
 | 国度 | Returned `Nation` despite established 魔法国度 → `Magical Kingdom`; chapter 29 refers to the same realm. No abbreviation alias joins them. | Abbreviation links and relevant established mapping selection. |
 | Floral codenames | 翠雀 → `Larkspur`, 朝颜 → `Morning Glory`, 樱 → `Cherry Blossom`, but 白玫 → `Bai Mei`, 荼蘼 → `Tumi`, 小锦 → `Xiaojin`. | An explicit naming policy. Individual choices are not all objectively wrong; the mixed treatment is the issue. |
-| 花园防卫战 | Stored term has a chapter-46 event but no mapping. Source writes `‘花园’防卫战`. | Matching normalization: `contains_query` strips 『』《》【】, not those internal quotation marks. |
+| 花园防卫战 | Stored term has a chapter-46 event but no mapping. Source writes `‘花园’防卫战`. | Internal quotation marks: matching is exact on raw text, and the stored term dropped them. |
 | 矢车菊 | Chapter 25 and its recorded summary contain this old codename, but no glossary term/alias or mapping exists. | Recorder term coverage; naming cannot translate a term never requested. |
 | 国度审查 | Recorded as an organization and translated `Kingdom Censorship`; source chapter 6 merely says the kingdom may review an incantation. | Term qualification and classification before judging translation alone. |
 | 花牌 | Classified as an organization, though chapters 39/49 describe a certification distinction. | Upstream term kind accuracy. |

@@ -9,5 +9,6 @@ import type { SummarizeConventionsStageConfigStageName } from './summarizeConven
 
 export interface SummarizeConventionsStageConfig {
   modelName: ModelName;
+  sinceChapterNum?: number | null;
   stageName: SummarizeConventionsStageConfigStageName;
 }

@@ -37,6 +37,8 @@ class SummarizeConventionsConfig(Model):
     model_config = ConfigDict(extra="forbid")
 
     model_name: ModelName
+    # Inclusive start of the chapters whose terms the agent reviews; None means the first chapter.
+    since_chapter_num: int | None = Field(default=None, ge=0)
 
 
 class RecordMemoriesStageConfig(RecordMemoriesConfig):

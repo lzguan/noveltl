@@ -12428,6 +12428,18 @@
         "properties": {
           "modelName": {
             "$ref": "#/components/schemas/ModelName"
+          },
+          "sinceChapterNum": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sincechapternum"
           }
         },
         "additionalProperties": false,
@@ -12442,6 +12454,18 @@
         "properties": {
           "modelName": {
             "$ref": "#/components/schemas/ModelName"
+          },
+          "sinceChapterNum": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sincechapternum"
           },
           "stageName": {
             "type": "string",

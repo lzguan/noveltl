@@ -27,14 +27,21 @@ until the agent exists.
 
 Decided with the user (2026-11-06), not yet implemented:
 
-- Scope: a run covers terms first seen since a chapter stored in the stage
-  config (defaulting to the job's start), plus search over older terms. Jobs do
-  not store their chapter range, so the config must carry it. `inspect_terms`
-  with `active_only=False` already reads everything up to the anchor; a "terms
-  new in range" query does not exist yet.
+- Scope: a run covers terms occurring in chapters [`since_chapter_num`,
+  anchor] (`SummarizeConventionsConfig.since_chapter_num`; None means the first
+  chapter; the form is expected to fill in the job's start). "Strictly new"
+  terms were rejected as the precomputed input: checking that a term is absent
+  from all earlier chapters costs a scan of the whole novel per term (about
+  1.6 s for 85 terms over 856 chapters / 2.7M characters on the dev database).
+  Instead the agent asks for history per term. The data access exists in
+  [occurrences.py](../../backend/src/memory/plugins/glossary/occurrences.py)
+  (`get_terms_in_chapter_range`, `get_term_occurrences`, both on latest chapter
+  content and never past the anchor) and `access.search_terms`; agent tools for
+  them do not exist yet.
 - Output: structured create / revise / withdraw by short handle, with an output
   validator enforcing "agent-created and still pending" (retry otherwise), not
-  write tools. `conventions/access.py` currently has only read and create.
+  write tools. Apply revisions and withdrawals with statements that repeat that
+  condition, so a convention a user edits mid-run is not overwritten.
 - Naming in the same job follows the agent's pending conventions (naming already
   reads pending + approved).
 - First input is term-centric: new terms (kind, short definition), existing

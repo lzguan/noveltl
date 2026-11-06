@@ -11,4 +11,5 @@ import type { ModelName } from './modelName';
  */
 export interface SummarizeConventionsConfig {
   modelName: ModelName;
+  sinceChapterNum?: number | null;
 }

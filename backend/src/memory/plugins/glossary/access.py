@@ -40,11 +40,22 @@ MAX_ALIAS_TERMS: Final = 32
 MAX_ALIAS_EDGES: Final = 64
 
 
+TERM_NAME_MARKS: Final = "『』《》【】"
+
+
+def strip_term_name_marks(term: SQLColumnExpression[str]) -> SQLColumnExpression[str]:
+    """Remove bracket marks from term names; used only for searching names, never chapter text."""
+    return func.translate(term, TERM_NAME_MARKS, "")
+
+
 def contains_query(chapter: SQLColumnExpression[str], term: SQLColumnExpression[str]) -> SQLColumnExpression[bool]:
-    """Match terms after removing known source-text obfuscation marks."""
-    normalized_chapter = func.translate(chapter, "『』《》【】", "")
-    normalized_term = func.translate(term, "『』《》【】", "")
-    return normalized_chapter.contains(normalized_term)
+    """Whether the chapter text contains the term exactly.
+
+    Chapter text is matched raw: stripping marks from it changed no matches on our
+    corpora, cost about 5x per query, and would shift positions in the text.
+    ``strpos`` avoids LIKE, so ``%`` and ``_`` in a term are literal.
+    """
+    return func.strpos(chapter, term) > 0
 
 
 def get_terms_in_chapter(
@@ -330,6 +341,30 @@ def reject_term(db: Session, memory_group_id: UUID, term_id: UUID) -> GlossaryTe
 
 def mark_term_pending(db: Session, memory_group_id: UUID, term_id: UUID) -> GlossaryTerm:
     return _set_term_review_status(db, memory_group_id, term_id, ReviewStatus.PENDING)
+
+
+def search_terms(
+    db: Session,
+    memory_group_id: UUID,
+    query: str,
+    *,
+    limit: int,
+    include_rejected: bool = False,
+) -> tuple[int, list[GlossaryTerm]]:
+    """Terms whose name contains ``query``, ignoring bracket marks in names and query.
+
+    Returns the total number of matching terms and at most ``limit`` of them, by term.
+    """
+    needle = query.translate(str.maketrans("", "", TERM_NAME_MARKS))
+    statement = select(GlossaryTerm).where(
+        GlossaryTerm.memory_group_id == memory_group_id,
+        strip_term_name_marks(GlossaryTerm.term).contains(needle, autoescape=True),
+    )
+    if not include_rejected:
+        statement = statement.where(GlossaryTerm.review_status != ReviewStatus.REJECTED)
+    count = db.scalar(select(func.count()).select_from(statement.subquery())) or 0
+    terms = list(db.scalars(statement.order_by(GlossaryTerm.term, GlossaryTerm.term_id).limit(limit)))
+    return count, terms
 
 
 def get_missing_term_names(db: Session, memory_group_id: UUID, term_names: list[str]) -> list[str]:

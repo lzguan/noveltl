@@ -3048,6 +3048,12 @@ components:
       properties:
         modelName:
           $ref: '#/components/schemas/ModelName'
+        sinceChapterNum:
+          anyOf:
+          - minimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Sincechapternum
       required:
       - modelName
       title: SummarizeConventionsConfig
@@ -3057,6 +3063,12 @@ components:
       properties:
         modelName:
           $ref: '#/components/schemas/ModelName'
+        sinceChapterNum:
+          anyOf:
+          - minimum: 0.0
+            type: integer
+          - type: 'null'
+          title: Sincechapternum
         stageName:
           const: summarize_conventions
           default: summarize_conventions

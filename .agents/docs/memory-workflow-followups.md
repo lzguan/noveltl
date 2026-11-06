@@ -18,7 +18,7 @@ and barriers share one mechanism, reducing the need for job chaining.
 
 Storage, the review UI, and naming consumption now exist; see
 [translation conventions](translation-conventions.md). The conventions stage is
-scaffolded but unimplemented: `summarize_conventions` in job params V2,
+scaffolded but unimplemented: a `summarize_conventions` stage config,
 one anchored task per job ([memory jobs](memory-jobs.md)), and stub
 [agent](../../backend/src/memory/agent/agents/conventions.py) and
 [stage](../../backend/src/memory/agent/stages/conventions.py) modules that raise

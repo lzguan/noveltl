@@ -60,18 +60,6 @@ type StageConfig = Annotated[
 class JobParamsV1(RecordMemoriesConfig):
     version: Literal[1] = 1
 
-    @property
-    def record_memories(self) -> RecordMemoriesConfig:
-        return RecordMemoriesConfig(model_name=self.model_name, toolsets=self.toolsets)
-
-    @property
-    def summarize_conventions(self) -> None:
-        return None
-
-    @property
-    def translate_terms(self) -> None:
-        return None
-
 
 class JobParamsV2(Model):
     model_config = ConfigDict(extra="forbid")
@@ -88,20 +76,38 @@ class JobParamsV2(Model):
         return self
 
 
-type JobParams = Annotated[JobParamsV1 | JobParamsV2, Field(discriminator="version")]
+class JobParamsV3(Model):
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal[3] = 3
+    stages: list[StageConfig] = Field(min_length=1)
+
+
+type JobParams = Annotated[JobParamsV1 | JobParamsV2 | JobParamsV3, Field(discriminator="version")]
+
 job_params_adapter = TypeAdapter(JobParams)
 
 
 def resolve_stages(params: JobParams) -> list[StageConfig]:
-    """Adapt persisted versions into the ordered inputs consumed by task code."""
-    stages: list[StageConfig] = []
-    recording = params.record_memories
-    if recording is not None:
-        stages.append(RecordMemoriesStageConfig.model_validate(recording.model_dump()))
-    conventions = params.summarize_conventions
-    if conventions is not None:
-        stages.append(SummarizeConventionsStageConfig.model_validate(conventions.model_dump()))
-    naming = params.translate_terms
-    if naming is not None:
-        stages.append(TranslateTermsStageConfig.model_validate(naming.model_dump()))
-    return stages
+    match params:
+        case JobParamsV1():
+            return [RecordMemoriesStageConfig(model_name=params.model_name, toolsets=params.toolsets)]
+        case JobParamsV2():
+            stages: list[StageConfig] = []
+            if params.record_memories is not None:
+                stages.append(RecordMemoriesStageConfig.model_validate(params.record_memories.model_dump()))
+            if params.summarize_conventions is not None:
+                stages.append(SummarizeConventionsStageConfig.model_validate(params.summarize_conventions.model_dump()))
+            if params.translate_terms is not None:
+                stages.append(TranslateTermsStageConfig.model_validate(params.translate_terms.model_dump()))
+            return stages
+        case JobParamsV3():
+            return params.stages
+
+
+def upgrade_job_params(params: JobParams) -> JobParamsV3:
+    return JobParamsV3(stages=resolve_stages(params))
+
+
+def parse_job_params(raw: object) -> JobParamsV3:
+    return upgrade_job_params(job_params_adapter.validate_python(raw))

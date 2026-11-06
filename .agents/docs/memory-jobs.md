@@ -15,11 +15,15 @@
 
 ## Configuration and task identity
 
-`MemoryJob.job_params` stores versioned JSON. V1 retains the original recording
-fields (`model_name`, `toolsets`). V2 selects any of recording, conventions summarization, and term translation
-(resolved in that order).
-`resolve_stages` adapts either version into ordered, discriminated `StageConfig`
-models. External parameter models do not contain `stage_name`.
+`MemoryJob.job_params` stores versioned JSON exactly as written: the create
+endpoint and `make_job` accept V1 (recording only), V2 (one optional field per
+stage type), or V3 (an ordered `stages` list of `StageConfig` models tagged by
+`stage_name`). `resolve_stages` turns any version into the ordered stage list,
+with one `match` branch per version; a task's `stage_num` indexes it. V2 resolves
+as recording → conventions → naming. `upgrade_job_params` wraps that list in V3,
+and `parse_job_params` validates stored JSON and upgrades it, so API responses
+always return V3. V1/V2 are to be deleted when migrations are squashed before
+deploy, not by a data migration.
 
 Creation enumerates the selected configs and inserts every stage's tasks in one
 `INSERT .. FROM SELECT` over a `UNION ALL`. `stage_task_chapters` in
@@ -28,10 +32,11 @@ chapters: one task per chapter, except the conventions stage, which gets one
 task on the range's last chapter so barriers place it after all recording and
 before any naming. Chapter ranges have an inclusive start and exclusive end. A naming-only job has naming at stage 0. The task primary key is
 `(memory_job_id, chapter_id, stage_num)`. Tasks store neither a stage name nor
-a config. API responses expose `stage_num`; frontend helpers derive the name
-from job params in [stages.ts](../../frontend/src/memory/agent/stages.ts).
+a config. API responses expose `stage_num`; the frontend still derives stage
+names from V2-shaped params in [stages.ts](../../frontend/src/memory/agent/stages.ts)
+until it moves to V3 (`jobParams.stages[stageNum]`).
 
-Execution builds `dict[int, StageConfig]` from the same resolution order.
+Execution builds `dict[int, StageConfig]` from the V3 stage list.
 `_run_single_task` uses the task's stage number to retrieve its config, then
 dispatches on the config type. Keep this mapping consistent with creation.
 A name-keyed map would collapse configs if a future job format permits multiple
@@ -83,11 +88,10 @@ Checklist, derived from adding the conventions stage. Paths are under
 
 Backend:
 
-- [config.py](../../backend/src/memory/agent/config.py): an external `<X>Config`
-  (`extra="forbid"`, no `stage_name`) and a `<X>StageConfig` with a
-  `stage_name` literal; add it to the `StageConfig` union, a `JobParamsV2`
-  field, a `None` property on `JobParamsV1`, `require_stage`, and
-  `resolve_stages` in its execution position.
+- [config.py](../../backend/src/memory/agent/config.py): a `<X>Config`
+  (`extra="forbid"`) and a `<X>StageConfig` with a `stage_name` literal, added
+  to the `StageConfig` union. V3 lists stages in order, so nothing else in the
+  params changes; do not extend the stored-only V1/V2 models.
 - `StageName` in [memory/types.py](../../backend/src/memory/types.py).
 - A `stage_task_chapters` case in `tasks/jobs.py`. It is a `match`, so
   pyrefly reports a missing case.
@@ -100,7 +104,7 @@ Backend:
 API and frontend:
 
 - Regenerate OpenAPI and the client ([verification](verification.md)); the new
-  `JobParamsV2` field is a public schema change.
+  `StageConfig` member is a public schema change.
 - [stages.ts](../../frontend/src/memory/agent/stages.ts): the stage name,
   `MEMORY_STAGE_LABELS`, `MEMORY_STAGE_TASK_NOUNS`, and the same order as
   `resolve_stages`. A mismatch silently mislabels tasks, because tasks only

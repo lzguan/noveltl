@@ -4,34 +4,28 @@ from pydantic import TypeAdapter, ValidationError
 from src.memory.agent.config import (
     JobParamsV1,
     JobParamsV2,
+    JobParamsV3,
     RecordMemoriesStageConfig,
     StageConfig,
     SummarizeConventionsStageConfig,
     TranslateTermsStageConfig,
     job_params_adapter,
-    resolve_stages,
+    parse_job_params,
+    upgrade_job_params,
 )
 
 MODEL = "deepseek:deepseek-v4-flash-low"
 
 
-def test_persisted_versions_resolve_the_same_recording_interface():
-    """The runner can consume stored V1 jobs without enabling new work."""
+def test_stored_v1_and_v2_recording_jobs_upgrade_to_the_same_v3_params():
+    """Stored V1 jobs keep running as a single recording stage."""
     original = JobParamsV1(model_name=MODEL, toolsets={"glossary_terms": {}})
-    v1 = job_params_adapter.validate_python(original.model_dump(mode="json"))
-    v2 = job_params_adapter.validate_python(
-        {"version": 2, "recordMemories": {"modelName": MODEL, "toolsets": {"glossary_terms": {}}}}
-    )
-    assert v1.record_memories == v2.record_memories
+    v1 = parse_job_params(original.model_dump(mode="json"))
+    v2 = parse_job_params({"version": 2, "recordMemories": {"modelName": MODEL, "toolsets": {"glossary_terms": {}}}})
     assert (
-        resolve_stages(v1)
-        == resolve_stages(v2)
-        == [RecordMemoriesStageConfig(model_name=MODEL, toolsets={"glossary_terms": {}})]
+        v1 == v2 == JobParamsV3(stages=[RecordMemoriesStageConfig(model_name=MODEL, toolsets={"glossary_terms": {}})])
     )
-    assert v1.summarize_conventions is None
-    assert v1.translate_terms is None
     assert original.model_dump() == {"version": 1, "model_name": MODEL, "toolsets": {"glossary_terms": {}}}
-    assert "stage_name" not in v2.model_dump()["record_memories"]
 
 
 @pytest.mark.parametrize(
@@ -44,7 +38,7 @@ def test_persisted_versions_resolve_the_same_recording_interface():
         (True, True, True, ["record_memories", "summarize_conventions", "translate_terms"]),
     ],
 )
-def test_selected_stages_are_materialized_in_supported_order(record, conventions, translate, expected):
+def test_v2_stages_upgrade_in_the_order_their_tasks_were_numbered(record, conventions, translate, expected):
     params = JobParamsV2.model_validate(
         {
             "record_memories": {"model_name": MODEL, "toolsets": {}} if record else None,
@@ -52,12 +46,22 @@ def test_selected_stages_are_materialized_in_supported_order(record, conventions
             "translate_terms": {"model_name": MODEL} if translate else None,
         }
     )
-    stages = resolve_stages(params)
+    stages = upgrade_job_params(params).stages
     assert [stage.stage_name for stage in stages] == expected
     configs = (params.record_memories, params.summarize_conventions, params.translate_terms)
     assert [stage.model_dump(exclude={"stage_name"}) for stage in stages] == [
         config.model_dump() for config in configs if config is not None
     ]
+
+
+def test_v3_params_round_trip_through_storage_unchanged():
+    params = JobParamsV3(
+        stages=[
+            RecordMemoriesStageConfig(model_name=MODEL, toolsets={}),
+            TranslateTermsStageConfig(model_name=MODEL, include_conventions=True),
+        ]
+    )
+    assert parse_job_params(params.model_dump(mode="json")) == params
 
 
 @pytest.mark.parametrize(
@@ -68,14 +72,14 @@ def test_selected_stages_are_materialized_in_supported_order(record, conventions
         ("translate_terms", {}, TranslateTermsStageConfig),
     ],
 )
-def test_internal_stage_configs_validate_by_their_discriminator(stage_name, fields, stage_type):
+def test_stage_configs_validate_by_their_discriminator(stage_name, fields, stage_type):
     adapter = TypeAdapter(StageConfig)
     stage = adapter.validate_python({"stage_name": stage_name, "model_name": MODEL, **fields})
     assert isinstance(stage, stage_type)
     assert adapter.validate_python(stage.model_dump()) == stage
 
 
-def test_internal_stage_config_rejects_unknown_stage_names():
+def test_stage_config_rejects_unknown_stage_names():
     with pytest.raises(ValidationError):
         TypeAdapter(StageConfig).validate_python({"stage_name": "unknown", "model_name": MODEL})
 
@@ -84,9 +88,11 @@ def test_empty_and_unknown_job_versions_are_rejected():
     with pytest.raises(ValidationError, match="at least one"):
         job_params_adapter.validate_python({"version": 2})
     with pytest.raises(ValidationError):
+        job_params_adapter.validate_python({"version": 3, "stages": []})
+    with pytest.raises(ValidationError):
         job_params_adapter.validate_python({"version": 99})
 
 
 def test_stored_naming_configs_without_conventions_flag_keep_conventions_off():
-    params = JobParamsV2.model_validate({"translate_terms": {"model_name": MODEL}})
-    assert params.translate_terms is not None and params.translate_terms.include_conventions is False
+    [stage] = parse_job_params({"version": 2, "translateTerms": {"modelName": MODEL}}).stages
+    assert isinstance(stage, TranslateTermsStageConfig) and stage.include_conventions is False

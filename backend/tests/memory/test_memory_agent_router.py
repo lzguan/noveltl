@@ -112,10 +112,10 @@ def test_memory_agent_router_exposes_authenticated_job_progress_and_dispatch(
     job = response.json()
     memory_job_id = UUID(job["memoryJobId"])
     assert job["memoryGroupId"] == str(group.memory_group_id)
+    # Stored as written (V1); responses use the latest version.
     assert job["jobParams"] == {
-        "version": 1,
-        "modelName": "deepseek:deepseek-v4-flash-low",
-        "toolsets": {},
+        "version": 3,
+        "stages": [{"stageName": "record_memories", "modelName": "deepseek:deepseek-v4-flash-low", "toolsets": {}}],
     }
     assert client.get(f"/memory-agent/jobs/{memory_job_id}").status_code == status.HTTP_401_UNAUTHORIZED
 

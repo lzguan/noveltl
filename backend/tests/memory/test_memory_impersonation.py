@@ -59,7 +59,7 @@ def _memory(ctx: RunContext[MemAgentDeps], terms: list[str], content: str, memor
     memory, _ = access.create_memory(
         ctx.deps.db, ctx.deps.mem_access_context, Creator.AGENT, memory_type, terms, content, mark=mark
     )
-    return ctx.deps.uuid_cache.new(memory.memory_id)
+    return ctx.deps.memory_handles.new(memory.memory_id)
 
 
 def _advance_to_chapter_two(ctx: RunContext[MemAgentDeps], sample_scenario: DatabaseScenario) -> MemAccessContext:
@@ -126,7 +126,7 @@ def test_impersonation_supersession_is_directional_and_isolated_from_generic_lif
         new_impersonation_memory(ctx, "Alpha", "Alpha", "Impossible self impersonation.")
 
     original_handle = new_impersonation_memory(ctx, "Alpha", "Beta", "The initial disguise.")
-    original_id = ctx.deps.uuid_cache.get_uuid(original_handle)
+    original_id = ctx.deps.memory_handles.get_uuid(original_handle)
     original = ctx.deps.db.get(Memory, original_id)
     assert original is not None
     assert original.mark == "impersonation"
@@ -153,7 +153,7 @@ def test_impersonation_supersession_is_directional_and_isolated_from_generic_lif
     successor_handle = supersede_impersonation_memory(
         ctx, original_handle, "Beta", "Alpha", "The direction has reversed."
     )
-    successor_id = ctx.deps.uuid_cache.get_uuid(successor_handle)
+    successor_id = ctx.deps.memory_handles.get_uuid(successor_handle)
     successor = ctx.deps.db.get(Memory, successor_id)
     ctx.deps.db.refresh(original)
     assert successor is not None
@@ -171,7 +171,7 @@ def test_expiring_impersonation_preserves_earlier_history(
 ) -> None:
     ctx = impersonation_context
     handle = new_impersonation_memory(ctx, "Alpha", "Beta", "The disguise is established.")
-    memory_id = ctx.deps.uuid_cache.get_uuid(handle)
+    memory_id = ctx.deps.memory_handles.get_uuid(handle)
     chapter_one_context = ctx.deps.mem_access_context
 
     _advance_to_chapter_two(ctx, sample_scenario)

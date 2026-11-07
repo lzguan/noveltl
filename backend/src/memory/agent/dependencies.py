@@ -7,9 +7,14 @@ from src.memory.access import MemAccessContext
 
 
 class UUIDCache:
-    """A simple class to translate UUIDs to and from strings."""
+    """A simple class to translate UUIDs to and from short strings shown to agents.
 
-    def __init__(self):
+    Attributes:
+        prefix: Leading letter of every generated string, such as ``m`` in ``m1``.
+    """
+
+    def __init__(self, prefix: str = "m"):
+        self.prefix = prefix
         self.uuid_to_str: dict[UUID, str] = {}
         self.str_to_uuid: dict[str, UUID] = {}
         self.counter: int = 0
@@ -17,7 +22,7 @@ class UUIDCache:
     def gen_str(self) -> str:
         """Generate a new unique string representation of a UUID."""
         self.counter += 1
-        return f"m{self.counter}"
+        return f"{self.prefix}{self.counter}"
 
     def new(self, uuid: UUID) -> str:
         """Add a new UUID to the cache and return its string representation."""
@@ -45,4 +50,5 @@ class MemAgentDeps:
     db: Session
     mem_access_context: MemAccessContext
     initial_plugin_contexts: dict[str, str] = field(default_factory=dict)
-    uuid_cache: UUIDCache = field(default_factory=UUIDCache)
+    memory_handles: UUIDCache = field(default_factory=UUIDCache)
+    convention_handles: UUIDCache = field(default_factory=lambda: UUIDCache(prefix="c"))

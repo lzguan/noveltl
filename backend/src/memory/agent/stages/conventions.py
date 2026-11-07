@@ -1,6 +1,7 @@
 from pydantic_ai import AgentRunResult
 
-from src.memory.agent.agents.conventions import ConventionsOutput, create_conventions_agent
+from src.memory.agent.agents.conventions import create_conventions_agent
+from src.memory.agent.capabilities.conventions import ConventionsOutput
 from src.memory.agent.config import SummarizeConventionsStageConfig
 from src.memory.agent.dependencies import MemAgentDeps
 

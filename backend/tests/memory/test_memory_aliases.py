@@ -51,7 +51,7 @@ def _memory(ctx: RunContext[MemAgentDeps], terms: list[str], content: str, memor
     memory, _ = access.create_memory(
         ctx.deps.db, ctx.deps.mem_access_context, Creator.AGENT, memory_type, terms, content, mark=mark
     )
-    return ctx.deps.uuid_cache.new(memory.memory_id)
+    return ctx.deps.memory_handles.new(memory.memory_id)
 
 
 def test_alias_readers_expand_active_transitive_pairs_without_merging_forms(
@@ -136,7 +136,7 @@ def test_legacy_pair_remains_expandable_but_multi_party_or_rejected_alias_does_n
     rejected = _memory(ctx, ["Alpha", "Gamma"], "Rejected alias.", MemoryType.RELATION, "alias")
     ctx.deps.db.execute(
         update(Memory)
-        .where(Memory.memory_id == ctx.deps.uuid_cache.get_uuid(rejected))
+        .where(Memory.memory_id == ctx.deps.memory_handles.get_uuid(rejected))
         .values(memory_review_status=ReviewStatus.REJECTED)
     )
     ctx.deps.db.flush()
@@ -165,7 +165,7 @@ def test_alias_writer_persists_pair_and_rejects_generic_alias_lifecycle(
     with pytest.raises(ModelRetry):
         new_alias_memory(ctx, "Not a pair.", ["Alpha", "Alpha"], "spelling")
     handle = new_alias_memory(ctx, "Alpha is Beta.", ["Alpha", "Beta"], "transformation")
-    memory_id = ctx.deps.uuid_cache.get_uuid(handle)
+    memory_id = ctx.deps.memory_handles.get_uuid(handle)
     memory = ctx.deps.db.get(Memory, memory_id)
     assert memory is not None and memory.mark == "alias.transformation" and memory.memory_end_num is None
     with pytest.raises(ModelRetry):

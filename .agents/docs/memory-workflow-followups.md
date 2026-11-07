@@ -40,10 +40,20 @@ Decided with the user (2026-11-06), not yet implemented:
   tool should reuse it and pass the anchor chapter as the range end, which keeps
   the no-spoiler rule on the memory side. `access.search_terms` searches term
   names. No agent tools exist yet.
-- Output: structured create / revise / withdraw by short handle, with an output
-  validator enforcing "agent-created and still pending" (retry otherwise), not
-  write tools. Apply revisions and withdrawals with statements that repeat that
-  condition, so a convention a user edits mid-run is not overwritten.
+- Output (implemented in [capabilities/conventions.py](../../backend/src/memory/agent/capabilities/conventions.py),
+  not yet wired to a real agent): `ConventionsOutput` with create / revise /
+  withdraw by handle. Handles come from `MemAgentDeps.convention_handles`, a
+  `UUIDCache(prefix="c")` beside `memory_handles`, so the context and any tool
+  hand out the same `c3` within a run. `write_conventions_output` is the output
+  validator and the only write path: in a savepoint it inserts creates and
+  calls access `update_convention` / `delete_convention` with
+  `only_creator=AGENT, only_pending=True`. An unknown handle or a zero-row match
+  rolls back the whole attempt and raises `ModelRetry` (pydantic-ai reports it
+  on the output tool's return part, not as a `RetryPromptPart`); otherwise the
+  savepoint is kept and commits with the task. Checking and writing are one
+  step, so there is no separate permission read to race with. Withdraw deletes
+  the row. The user service keeps its own inline statements, because it wraps
+  them with `convention_mod_access_*` before executing.
 - Naming in the same job follows the agent's pending conventions (naming already
   reads pending + approved).
 - First input is term-centric: new terms (kind, short definition), existing
@@ -108,3 +118,15 @@ hand-curated genre presets; a structured per-job run summary (config, novel
 features, cost, failures, term counts, later eval scores) so data accumulates;
 per-novel calibration of a few configs on early chapters; cross-novel fitting
 only once enough scored runs exist.
+
+## Job ownership and agent access
+
+Memory jobs (and translation jobs) store no user; access is checked only
+through the memory group when a job is created or started. Agents therefore
+act with the job's reach, not the starting user's: a user whose access is
+revoked can still have their job run, and it is unverified whether memory-group
+edit access always implies read access to every chapter the agent reads.
+Agent-written rows are marked only `creator_type=AGENT`, so "the agent's own
+pending conventions" means any agent run's, not one job's. A possible fix is a
+nullable `created_by` on jobs plus a `source_job_id` on agent-written rows;
+deferred by the user (2026-11-07).

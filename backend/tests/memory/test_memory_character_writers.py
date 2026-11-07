@@ -95,7 +95,7 @@ def test_character_writers_share_reads_but_preserve_mutation_ownership(
     expire_appearance_memory(ctx, attire)
     remaining = character_state_memories(ctx, "Alpha")
     assert {row.memory.memory_id for row in remaining.rows} == {replacement, new_level, ability}
-    ended = test_db.get(Memory, deps.uuid_cache.get_uuid(hair))
+    ended = test_db.get(Memory, deps.memory_handles.get_uuid(hair))
     assert ended is not None
     assert ended.memory_end_num == 2
 

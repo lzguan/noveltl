@@ -1,4 +1,4 @@
-from src.memory.agent.toolsets.glossary.guidance import create_guidance_toolset
+from src.memory.agent.toolsets.glossary.instructions.common import create_instruction_toolset
 
 GLOSSARY_ARTIFACT_INSTRUCTIONS = """
 Create `item` terms selectively for named unique objects or recurring classes
@@ -15,4 +15,4 @@ every use in combat, or an upgrade that does not materially change later
 understanding of the object.
 """.strip()
 
-glossary_artifact_toolset = create_guidance_toolset("glossary_artifacts", GLOSSARY_ARTIFACT_INSTRUCTIONS)
+glossary_artifact_toolset = create_instruction_toolset("glossary_artifacts", GLOSSARY_ARTIFACT_INSTRUCTIONS)

@@ -15,13 +15,13 @@ test("shows label groups in the editor only for the contributing user", async ({
 		const ownerPage = await ownerContext.newPage();
 		await loginByApi(ownerPage, request, seed.user);
 		await ownerPage.goto(`/edit/novels/${seed.novelId}`);
-		await ownerPage.getByRole("tab", { name: "Label Groups" }).click();
+		await ownerPage.getByRole("tab", { name: "Labels", exact: true }).click();
 		await expect(ownerPage.getByText(seed.labelGroupName)).toBeVisible();
 
 		const otherPage = await otherContext.newPage();
 		await loginByApi(otherPage, request, seed.otherUser);
 		await otherPage.goto(`/edit/novels/${seed.novelId}`);
-		await otherPage.getByRole("tab", { name: "Label Groups" }).click();
+		await otherPage.getByRole("tab", { name: "Labels", exact: true }).click();
 		await expect(otherPage.getByText("No label groups yet.")).toBeVisible();
 		await expect(otherPage.getByText(seed.labelGroupName)).toHaveCount(0);
 	} finally {

@@ -7,7 +7,7 @@ from pydantic_ai import FunctionToolset, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
-from src.memory.agent.toolsets.glossary.guidance.cultivation import GLOSSARY_CULTIVATION_INSTRUCTIONS
+from src.memory.agent.toolsets.glossary.instructions.cultivation import GLOSSARY_CULTIVATION_INSTRUCTIONS
 from src.memory.types import MemoryType, Scope
 
 CULTIVATION_MARK = "cultivation_level"

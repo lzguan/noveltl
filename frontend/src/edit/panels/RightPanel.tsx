@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent, ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RightPanelTabActiveContext } from "./rightPanelTabActive";
 
 const DEFAULT_RIGHT_PANEL_WIDTH = 448;
 const MIN_RIGHT_PANEL_WIDTH = 320;
@@ -100,7 +101,9 @@ export function RightPanel({
 						hidden={activeTab !== tab.value}
 						className="min-h-0 flex-1 overflow-hidden p-0"
 					>
-						{tab.content}
+						<RightPanelTabActiveContext value={activeTab === tab.value}>
+							{tab.content}
+						</RightPanelTabActiveContext>
 					</TabsContent>
 				))}
 			</Tabs>

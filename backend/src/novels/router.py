@@ -28,6 +28,7 @@ from src.novels.schemas import (
     Chapter,
     ChapterContent,
     ChapterContentMeta,
+    ChapterContentTermSearch,
     ChapterData,
     CreateChapter,
     CreateNovel,
@@ -35,6 +36,7 @@ from src.novels.schemas import (
     ModifyChapterContentResponse,
     Novel,
     NovelAndUsers,
+    NovelTermSearch,
     SourceWork,
     SourceWorkData,
     UpdateChapter,
@@ -66,6 +68,7 @@ from src.novels.service import (
     query_source_works_by_title,
     remove_chapter,
 )
+from src.novels.term_search import MAX_CHAPTERS_PER_PAGE, search_chapter_content, search_novel
 from src.requests.cache import redis_cache
 from src.requests.decorators import attl_cache, serialize_response_model
 from src.schemas import DetailHTTPErrorResponse, OperationStatus, RequestConflictErrorResponse
@@ -528,6 +531,64 @@ async def read_chapter_content_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Chapter content with id {chapter_content_id} not found."
         ) from e
     return content
+
+
+SearchTerm = Annotated[str, Query(min_length=1, max_length=200, description="Exact text to find.")]
+
+
+@router.get("/novels/{novelId}/term-search", response_model=NovelTermSearch)
+async def search_novel_term(
+    novel_id: Annotated[uuid.UUID, Path(alias="novelId")],
+    term: SearchTerm,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_optional_user)],
+    start_chapter_num: Annotated[int | None, Query(alias="startChapterNum", ge=0)] = None,
+    end_chapter_num: Annotated[int | None, Query(alias="endChapterNum", ge=0)] = None,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=MAX_CHAPTERS_PER_PAGE)] = 50,
+):
+    """
+    Endpoint for finding every occurrence of a term in the latest content of a novel's readable chapters.
+
+    Chapters are returned in chapter order, one page at a time; totals cover the whole range.
+
+    Raises:
+        404: Novel not found (or insufficient permissions).
+    """
+    try:
+        return search_novel(
+            db,
+            current_user,
+            novel_id,
+            term,
+            start_chapter_num=start_chapter_num,
+            end_chapter_num=end_chapter_num,
+            offset=offset,
+            limit=limit,
+        )
+    except NovelNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Novel with id {novel_id} not found.") from e
+
+
+@router.get("/chapter-contents/{chapterContentId}/term-search", response_model=ChapterContentTermSearch)
+async def search_chapter_content_term(
+    chapter_content_id: Annotated[uuid.UUID, Path(alias="chapterContentId")],
+    term: SearchTerm,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_optional_user)],
+):
+    """
+    Endpoint for finding every occurrence of a term in one chapter content version, with line previews.
+
+    Raises:
+        404: Chapter content not found (or insufficient permissions).
+    """
+    try:
+        return search_chapter_content(db, current_user, chapter_content_id, term)
+    except ChapterContentNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Chapter content with id {chapter_content_id} not found."
+        ) from e
 
 
 @router.get("/chapters/{chapterId}/content-versions", response_model=list[ChapterContentMeta])

@@ -1,4 +1,4 @@
-from src.memory.agent.toolsets.glossary.guidance import create_guidance_toolset
+from src.memory.agent.toolsets.glossary.instructions.common import create_instruction_toolset
 
 GLOSSARY_SYSTEM_INSTRUCTIONS = """
 Treat a story's system, interface, status panel, quests, and rewards as distinct
@@ -16,4 +16,4 @@ Use definitions for the stable meaning of named system concepts when that
 toolset is enabled.
 """.strip()
 
-glossary_system_toolset = create_guidance_toolset("glossary_system", GLOSSARY_SYSTEM_INSTRUCTIONS)
+glossary_system_toolset = create_instruction_toolset("glossary_system", GLOSSARY_SYSTEM_INSTRUCTIONS)

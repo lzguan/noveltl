@@ -323,6 +323,46 @@ export const ReadChapterContentByIdChapterContentsChapterContentIdGet422Response
 })
 
 /**
+ * Endpoint for finding every occurrence of a term in one chapter content version, with line previews.
+ *
+ * Raises:
+ *     404: Chapter content not found (or insufficient permissions).
+ * @summary Search Chapter Content Term
+ */
+export const SearchChapterContentTermChapterContentsChapterContentIdTermSearchGetParams = S.Struct({
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const searchChapterContentTermChapterContentsChapterContentIdTermSearchGetQueryTermMax = 200;
+
+
+
+export const SearchChapterContentTermChapterContentsChapterContentIdTermSearchGetQueryParams = S.Struct({
+  "term": S.String.check(S.isMinLength(1), S.isMaxLength(searchChapterContentTermChapterContentsChapterContentIdTermSearchGetQueryTermMax)).annotate({ description: 'Exact text to find.' })
+})
+
+export const SearchChapterContentTermChapterContentsChapterContentIdTermSearchGet200Response = S.Struct({
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "occurrences": S.Array(S.Struct({
+  "preview": S.String,
+  "previewStart": S.Number,
+  "start": S.Number
+}).annotate({ description: 'Pydantic schema for one occurrence of a searched term with surrounding text.\n\nAttributes:\n    start: The start offset of the occurrence in the chapter text.\n    preview: Text around the occurrence, within its line.\n    preview_start: The offset of the preview in the chapter text; the occurrence begins at start - preview_start.' }))
+}).annotate({ description: 'Pydantic schema for a term search within one chapter content version.\n\nAttributes:\n    chapter_content_id: The UUID of the content version that was searched.\n    occurrences: Every occurrence of the term in that content, in order.' })
+
+export const SearchChapterContentTermChapterContentsChapterContentIdTermSearchGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * Endpoint for retrieving chapters by novel_id.
  *
  * Raises:
@@ -1678,6 +1718,8 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGetQueryParams = S.Str
 
 
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemOneStageNameDefault = 'record_memories';
+export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemTwoSinceChapterNumOneMin = 0;
+
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemTwoStageNameDefault = 'summarize_conventions';
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemThreeIncludeConventionsDefault = false;
 export const readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemThreeStageNameDefault = 'translate_terms';
@@ -1706,6 +1748,7 @@ export const ReadMemoryJobSummariesMemoryAgentJobSummariesGet200Response = S.Str
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "sinceChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemTwoSinceChapterNumOneMin)), S.Null])),
   "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemTwoStageNameDefault)))
 }), S.Struct({
   "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummariesMemoryAgentJobSummariesGet200ResponseSummariesItemJobJobParamsStagesItemThreeIncludeConventionsDefault))),
@@ -1752,6 +1795,8 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGetParams = S
 
 
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemOneStageNameDefault = 'record_memories';
+export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemTwoSinceChapterNumOneMin = 0;
+
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemTwoStageNameDefault = 'summarize_conventions';
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemThreeIncludeConventionsDefault = false;
 export const readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemThreeStageNameDefault = 'translate_terms';
@@ -1780,6 +1825,7 @@ export const ReadMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200Respons
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "sinceChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemTwoSinceChapterNumOneMin)), S.Null])),
   "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemTwoStageNameDefault)))
 }), S.Struct({
   "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobSummaryMemoryAgentJobSummariesMemoryJobIdGet200ResponseSummaryJobJobParamsStagesItemThreeIncludeConventionsDefault))),
@@ -1826,6 +1872,8 @@ export const ReadMemoryJobsMemoryAgentJobsGetQueryParams = S.Struct({
 
 
 export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemOneStageNameDefault = 'record_memories';
+export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemTwoSinceChapterNumOneMin = 0;
+
 export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemTwoStageNameDefault = 'summarize_conventions';
 export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemThreeIncludeConventionsDefault = false;
 export const readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemThreeStageNameDefault = 'translate_terms';
@@ -1841,6 +1889,7 @@ export const ReadMemoryJobsMemoryAgentJobsGet200ResponseItem = S.Struct({
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "sinceChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemTwoSinceChapterNumOneMin)), S.Null])),
   "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemTwoStageNameDefault)))
 }), S.Struct({
   "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobsMemoryAgentJobsGet200ResponseJobParamsStagesItemThreeIncludeConventionsDefault))),
@@ -1877,9 +1926,13 @@ export const ReadMemoryJobsMemoryAgentJobsGet422Response = S.Struct({
 export const addMemoryJobMemoryAgentJobsPostBodyEndChapterNumOneMin = 0;
 
 export const addMemoryJobMemoryAgentJobsPostBodyParamsOneVersionDefault = 1;
+export const addMemoryJobMemoryAgentJobsPostBodyParamsTwoSummarizeConventionsOneSinceChapterNumOneMin = 0;
+
 export const addMemoryJobMemoryAgentJobsPostBodyParamsTwoTranslateTermsOneIncludeConventionsDefault = false;
 export const addMemoryJobMemoryAgentJobsPostBodyParamsTwoVersionDefault = 2;
 export const addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemOneStageNameDefault = 'record_memories';
+export const addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemTwoSinceChapterNumOneMin = 0;
+
 export const addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemTwoStageNameDefault = 'summarize_conventions';
 export const addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemThreeIncludeConventionsDefault = false;
 export const addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemThreeStageNameDefault = 'translate_terms';
@@ -1901,7 +1954,8 @@ export const AddMemoryJobMemoryAgentJobsPostBody = S.Struct({
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Null])),
   "summarizeConventions": S.optional(S.Union([S.Struct({
-  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low'])
+  "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "sinceChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyParamsTwoSummarizeConventionsOneSinceChapterNumOneMin)), S.Null]))
 }).annotate({ description: 'Propose translation conventions once per job, anchored on the range\'s last chapter.' }), S.Null])),
   "translateTerms": S.optional(S.Union([S.Struct({
   "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsTwoTranslateTermsOneIncludeConventionsDefault))),
@@ -1915,6 +1969,7 @@ export const AddMemoryJobMemoryAgentJobsPostBody = S.Struct({
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "sinceChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemTwoSinceChapterNumOneMin)), S.Null])),
   "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemTwoStageNameDefault)))
 }), S.Struct({
   "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPostBodyParamsThreeStagesItemThreeIncludeConventionsDefault))),
@@ -1928,6 +1983,8 @@ export const AddMemoryJobMemoryAgentJobsPostBody = S.Struct({
 
 
 export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemOneStageNameDefault = 'record_memories';
+export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemTwoSinceChapterNumOneMin = 0;
+
 export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemTwoStageNameDefault = 'summarize_conventions';
 export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemThreeIncludeConventionsDefault = false;
 export const addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemThreeStageNameDefault = 'translate_terms';
@@ -1943,6 +2000,7 @@ export const AddMemoryJobMemoryAgentJobsPost201Response = S.Struct({
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "sinceChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemTwoSinceChapterNumOneMin)), S.Null])),
   "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemTwoStageNameDefault)))
 }), S.Struct({
   "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(addMemoryJobMemoryAgentJobsPost201ResponseJobParamsStagesItemThreeIncludeConventionsDefault))),
@@ -2008,6 +2066,8 @@ export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGetParams = S.Struct({
 
 
 export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemOneStageNameDefault = 'record_memories';
+export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemTwoSinceChapterNumOneMin = 0;
+
 export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemTwoStageNameDefault = 'summarize_conventions';
 export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemThreeIncludeConventionsDefault = false;
 export const readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemThreeStageNameDefault = 'translate_terms';
@@ -2023,6 +2083,7 @@ export const ReadMemoryJobMemoryAgentJobsMemoryJobIdGet200Response = S.Struct({
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "sinceChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemTwoSinceChapterNumOneMin)), S.Null])),
   "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemTwoStageNameDefault)))
 }), S.Struct({
   "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(readMemoryJobMemoryAgentJobsMemoryJobIdGet200ResponseJobParamsStagesItemThreeIncludeConventionsDefault))),
@@ -2061,6 +2122,8 @@ export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPostParams = S.Struct(
 
 
 export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemOneStageNameDefault = 'record_memories';
+export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemTwoSinceChapterNumOneMin = 0;
+
 export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemTwoStageNameDefault = 'summarize_conventions';
 export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemThreeIncludeConventionsDefault = false;
 export const abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemThreeStageNameDefault = 'translate_terms';
@@ -2076,6 +2139,7 @@ export const AbortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200Response = S.St
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "sinceChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemTwoSinceChapterNumOneMin)), S.Null])),
   "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemTwoStageNameDefault)))
 }), S.Struct({
   "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(abortMemoryJobMemoryAgentJobsMemoryJobIdAbortPost200ResponseJobParamsStagesItemThreeIncludeConventionsDefault))),
@@ -2114,6 +2178,8 @@ export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPostParams = S.Struct(
 
 
 export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemOneStageNameDefault = 'record_memories';
+export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemTwoSinceChapterNumOneMin = 0;
+
 export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemTwoStageNameDefault = 'summarize_conventions';
 export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemThreeIncludeConventionsDefault = false;
 export const startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemThreeStageNameDefault = 'translate_terms';
@@ -2129,6 +2195,7 @@ export const StartMemoryJobMemoryAgentJobsMemoryJobIdStartPost202Response = S.St
   "toolsets": S.Record(S.String, S.Record(S.String, S.Unknown))
 }), S.Struct({
   "modelName": S.Literals(['deepseek:deepseek-v4-flash-none', 'deepseek:deepseek-v4-flash-low', 'inception:mercury-2.5-low']),
+  "sinceChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemTwoSinceChapterNumOneMin)), S.Null])),
   "stageName": S.Literals(['summarize_conventions']).pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemTwoStageNameDefault)))
 }), S.Struct({
   "includeConventions": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(startMemoryJobMemoryAgentJobsMemoryJobIdStartPost202ResponseJobParamsStagesItemThreeIncludeConventionsDefault))),
@@ -3684,6 +3751,65 @@ export const CreateChapterNovelsNovelIdChaptersPost200Response = S.Struct({
 }).annotate({ description: 'Pydantic schema for aggregating a ChapterContent and a Chapter together.\n\nAttributes:\n    metadata: The metadata of the chapter, such as title and whether it\'s primary.\n    content: The text content of the chapter.' })
 
 export const CreateChapterNovelsNovelIdChaptersPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * Endpoint for finding every occurrence of a term in the latest content of a novel's readable chapters.
+ *
+ * Chapters are returned in chapter order, one page at a time; totals cover the whole range.
+ *
+ * Raises:
+ *     404: Novel not found (or insufficient permissions).
+ * @summary Search Novel Term
+ */
+export const SearchNovelTermNovelsNovelIdTermSearchGetParams = S.Struct({
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const searchNovelTermNovelsNovelIdTermSearchGetQueryTermMax = 200;
+
+export const searchNovelTermNovelsNovelIdTermSearchGetQueryStartChapterNumOneMin = 0;
+
+export const searchNovelTermNovelsNovelIdTermSearchGetQueryEndChapterNumOneMin = 0;
+
+export const searchNovelTermNovelsNovelIdTermSearchGetQueryOffsetDefault = 0;
+export const searchNovelTermNovelsNovelIdTermSearchGetQueryOffsetMin = 0;
+
+export const searchNovelTermNovelsNovelIdTermSearchGetQueryLimitDefault = 50;
+export const searchNovelTermNovelsNovelIdTermSearchGetQueryLimitMax = 100;
+
+
+
+export const SearchNovelTermNovelsNovelIdTermSearchGetQueryParams = S.Struct({
+  "term": S.String.check(S.isMinLength(1), S.isMaxLength(searchNovelTermNovelsNovelIdTermSearchGetQueryTermMax)).annotate({ description: 'Exact text to find.' }),
+  "startChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(searchNovelTermNovelsNovelIdTermSearchGetQueryStartChapterNumOneMin)), S.Null])),
+  "endChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(searchNovelTermNovelsNovelIdTermSearchGetQueryEndChapterNumOneMin)), S.Null])),
+  "offset": S.Number.check(S.isGreaterThanOrEqualTo(searchNovelTermNovelsNovelIdTermSearchGetQueryOffsetMin)).pipe(S.withDecodingDefaultType(Effect.succeed(searchNovelTermNovelsNovelIdTermSearchGetQueryOffsetDefault))),
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(searchNovelTermNovelsNovelIdTermSearchGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(searchNovelTermNovelsNovelIdTermSearchGetQueryLimitDefault)))
+})
+
+export const SearchNovelTermNovelsNovelIdTermSearchGet200Response = S.Struct({
+  "chapters": S.Array(S.Struct({
+  "chapterContentId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterNum": S.Number,
+  "matchCount": S.Number
+}).annotate({ description: 'Pydantic schema for how often a searched term occurs in one chapter.\n\nAttributes:\n    chapter_id: The UUID of the chapter containing the term.\n    chapter_num: The chapter\'s number in the novel.\n    chapter_content_id: The UUID of the content version that was counted; search it for offsets and previews.\n    match_count: The number of non-overlapping occurrences in that content.' })),
+  "nextOffset": S.Union([S.Number, S.Null]),
+  "totalChapters": S.Number,
+  "totalMatches": S.Number
+}).annotate({ description: 'Pydantic schema for one page of a term search across a novel\'s chapters.\n\nAttributes:\n    total_chapters: The number of chapters in the searched range that contain the term.\n    total_matches: The number of occurrences across all of those chapters.\n    next_offset: The offset of the next page of chapters, or None if this is the last page.\n    chapters: Matching chapters on this page, in chapter order.' })
+
+export const SearchNovelTermNovelsNovelIdTermSearchGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "ctx": S.optional(S.StructWithRest(S.Struct({
 

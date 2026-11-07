@@ -98,7 +98,7 @@ def create_memory(
             f"Every memory must reference at least one glossary term. Add the intended exact source term to "
             f"term_names, then retry {tool_name}."
         ) from exc
-    return ctx.deps.uuid_cache.new(new_memory.memory_id)
+    return ctx.deps.memory_handles.new(new_memory.memory_id)
 
 
 def supersede_memory(
@@ -114,7 +114,7 @@ def supersede_memory(
 ) -> str:
     """Supersede a glossary memory and translate its database UUID for the agent."""
     try:
-        current_id = ctx.deps.uuid_cache.get_uuid(memory_id)
+        current_id = ctx.deps.memory_handles.get_uuid(memory_id)
     except KeyError as exc:
         raise ModelRetry(f"Memory {memory_id} not found.") from exc
 
@@ -151,7 +151,7 @@ def supersede_memory(
             "continue without changing it. For an older memory, retrieve its current handle before making a "
             "different call."
         ) from exc
-    return ctx.deps.uuid_cache.new(new_memory.memory_id)
+    return ctx.deps.memory_handles.new(new_memory.memory_id)
 
 
 def expire_memory(
@@ -163,7 +163,7 @@ def expire_memory(
 ) -> str:
     """Expire a glossary memory without creating a replacement."""
     try:
-        current_id = ctx.deps.uuid_cache.get_uuid(memory_id)
+        current_id = ctx.deps.memory_handles.get_uuid(memory_id)
     except KeyError as exc:
         raise ModelRetry(f"Memory {memory_id} not found.") from exc
 
@@ -196,7 +196,7 @@ def to_agent_memory_page(
             memory=AgentMemory[str].model_validate(
                 {
                     **glossary_memory.memory.model_dump(),
-                    "memory_id": ctx.deps.uuid_cache.new(glossary_memory.memory.memory_id),
+                    "memory_id": ctx.deps.memory_handles.new(glossary_memory.memory.memory_id),
                 }
             ),
             terms=glossary_memory.terms,

@@ -52,7 +52,7 @@ from src.memory.agent.toolsets.glossary.gender_advanced_relations import (
     glossary_gender_advanced_relations_write_toolset,
     new_gender_perception_memory,
 )
-from src.memory.agent.toolsets.glossary.guidance.gender_transformation import (
+from src.memory.agent.toolsets.glossary.instructions.gender_transformation import (
     glossary_gender_transformation_toolset,
 )
 from src.memory.agent.toolsets.glossary.relations import (
@@ -239,7 +239,7 @@ def test_create_memory_skips_missing_term_query_after_success(monkeypatch: pytes
         "new_definition_memory",
     )
 
-    assert ctx.deps.uuid_cache.get_uuid(handle) == memory_id
+    assert ctx.deps.memory_handles.get_uuid(handle) == memory_id
     get_missing_term_names.assert_not_called()
 
 

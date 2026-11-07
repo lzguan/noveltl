@@ -252,7 +252,7 @@ def create_glossary_gender_advanced_events_write_toolset(
                 "Every memory must reference a glossary term. Supply the intended exact source term as "
                 "subject_term_name, then retry new_gender_transformation_event_memory."
             ) from exc
-        return ctx.deps.uuid_cache.new(new_memory.memory_id)
+        return ctx.deps.memory_handles.new(new_memory.memory_id)
 
     def supersede_gender_transformation_event_memory(
         ctx: RunContext[MemAgentDeps],
@@ -263,7 +263,7 @@ def create_glossary_gender_advanced_events_write_toolset(
         """Correct one transformation occurrence for its exact subject."""
         mark = GENDER_EVENT_MARKS["transformation"]
         try:
-            current_id = ctx.deps.uuid_cache.get_uuid(memory_id)
+            current_id = ctx.deps.memory_handles.get_uuid(memory_id)
         except KeyError as exc:
             raise ModelRetry(f"Memory {memory_id} not found.") from exc
 

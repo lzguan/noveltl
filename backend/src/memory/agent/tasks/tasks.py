@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session, aliased, sessionmaker
 
 from src.languages.models import Language
 from src.memory.access import MemAccessContext
-from src.memory.agent.agents.conventions import ConventionsOutput
 from src.memory.agent.capabilities.continuity import ContinuitySummaryOutput
+from src.memory.agent.capabilities.conventions import ConventionsOutput
 from src.memory.agent.capabilities.term_translation import TermTranslationOutput
 from src.memory.agent.config import (
     RecordMemoriesStageConfig,

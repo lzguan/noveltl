@@ -1,4 +1,4 @@
-from src.memory.agent.toolsets.glossary.guidance import create_guidance_toolset
+from src.memory.agent.toolsets.glossary.instructions.common import create_instruction_toolset
 
 GLOSSARY_GENDER_TRANSFORMATION_INSTRUCTIONS = """
 Handle gender-related continuity by distinguishing body, self-identity,
@@ -35,7 +35,7 @@ facts, and perceptions are separate records and should not repeat the same
 prose.
 """.strip()
 
-glossary_gender_transformation_toolset = create_guidance_toolset(
+glossary_gender_transformation_toolset = create_instruction_toolset(
     "glossary_gender_transformation",
     GLOSSARY_GENDER_TRANSFORMATION_INSTRUCTIONS,
 )

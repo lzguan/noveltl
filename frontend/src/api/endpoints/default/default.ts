@@ -14,6 +14,7 @@ import type {
   Chapter,
   ChapterContent,
   ChapterContentMeta,
+  ChapterContentTermSearch,
   ChapterData,
   ConventionRead,
   CreateAutoLabels,
@@ -58,6 +59,7 @@ import type {
   ModifyChapterContentResponse,
   Novel,
   NovelAndUsers,
+  NovelTermSearch,
   OperationStatus,
   OpsResult,
   PageConventionRead,
@@ -95,6 +97,8 @@ import type {
   RetryMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdRetryPostParams,
   SaveConvention,
   SaveTermTranslation,
+  SearchChapterContentTermChapterContentsChapterContentIdTermSearchGetParams,
+  SearchNovelTermNovelsNovelIdTermSearchGetParams,
   SourceWork,
   SourceWorkData,
   StartMemoryTaskMemoryAgentJobsMemoryJobIdTasksChapterIdStartPostParams,
@@ -440,6 +444,61 @@ export const getReadChapterContentByIdChapterContentsChapterContentIdGetUrl = (c
 export const readChapterContentByIdChapterContentsChapterContentIdGet = async (chapterContentId: string, options?: Parameters<typeof customFetch>[1]): Promise<readChapterContentByIdChapterContentsChapterContentIdGetResponse> => {
 
   return customFetch<readChapterContentByIdChapterContentsChapterContentIdGetResponse>(getReadChapterContentByIdChapterContentsChapterContentIdGetUrl(chapterContentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+export type searchChapterContentTermChapterContentsChapterContentIdTermSearchGetResponse200 = {
+  data: ChapterContentTermSearch
+  status: 200
+}
+
+export type searchChapterContentTermChapterContentsChapterContentIdTermSearchGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type searchChapterContentTermChapterContentsChapterContentIdTermSearchGetResponseSuccess = (searchChapterContentTermChapterContentsChapterContentIdTermSearchGetResponse200) & {
+  headers: Headers;
+};
+export type searchChapterContentTermChapterContentsChapterContentIdTermSearchGetResponseError = (searchChapterContentTermChapterContentsChapterContentIdTermSearchGetResponse422) & {
+  headers: Headers;
+};
+
+export type searchChapterContentTermChapterContentsChapterContentIdTermSearchGetResponse = (searchChapterContentTermChapterContentsChapterContentIdTermSearchGetResponseSuccess | searchChapterContentTermChapterContentsChapterContentIdTermSearchGetResponseError)
+
+export const getSearchChapterContentTermChapterContentsChapterContentIdTermSearchGetUrl = (chapterContentId: string,
+    params: SearchChapterContentTermChapterContentsChapterContentIdTermSearchGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/chapter-contents/${chapterContentId}/term-search?${stringifiedParams}` : `/api/chapter-contents/${chapterContentId}/term-search`
+}
+
+/**
+ * Endpoint for finding every occurrence of a term in one chapter content version, with line previews.
+ *
+ * Raises:
+ *     404: Chapter content not found (or insufficient permissions).
+ * @summary Search Chapter Content Term
+ */
+export const searchChapterContentTermChapterContentsChapterContentIdTermSearchGet = async (chapterContentId: string,
+    params: SearchChapterContentTermChapterContentsChapterContentIdTermSearchGetParams, options?: Parameters<typeof customFetch>[1]): Promise<searchChapterContentTermChapterContentsChapterContentIdTermSearchGetResponse> => {
+
+  return customFetch<searchChapterContentTermChapterContentsChapterContentIdTermSearchGetResponse>(getSearchChapterContentTermChapterContentsChapterContentIdTermSearchGetUrl(chapterContentId,params),
   {
     ...options,
     method: 'GET'
@@ -4833,6 +4892,63 @@ return customFetch<createChapterNovelsNovelIdChaptersPostResponse>(getCreateChap
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createChapter)
+  }
+);}
+
+
+export type searchNovelTermNovelsNovelIdTermSearchGetResponse200 = {
+  data: NovelTermSearch
+  status: 200
+}
+
+export type searchNovelTermNovelsNovelIdTermSearchGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type searchNovelTermNovelsNovelIdTermSearchGetResponseSuccess = (searchNovelTermNovelsNovelIdTermSearchGetResponse200) & {
+  headers: Headers;
+};
+export type searchNovelTermNovelsNovelIdTermSearchGetResponseError = (searchNovelTermNovelsNovelIdTermSearchGetResponse422) & {
+  headers: Headers;
+};
+
+export type searchNovelTermNovelsNovelIdTermSearchGetResponse = (searchNovelTermNovelsNovelIdTermSearchGetResponseSuccess | searchNovelTermNovelsNovelIdTermSearchGetResponseError)
+
+export const getSearchNovelTermNovelsNovelIdTermSearchGetUrl = (novelId: string,
+    params: SearchNovelTermNovelsNovelIdTermSearchGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/novels/${novelId}/term-search?${stringifiedParams}` : `/api/novels/${novelId}/term-search`
+}
+
+/**
+ * Endpoint for finding every occurrence of a term in the latest content of a novel's readable chapters.
+ *
+ * Chapters are returned in chapter order, one page at a time; totals cover the whole range.
+ *
+ * Raises:
+ *     404: Novel not found (or insufficient permissions).
+ * @summary Search Novel Term
+ */
+export const searchNovelTermNovelsNovelIdTermSearchGet = async (novelId: string,
+    params: SearchNovelTermNovelsNovelIdTermSearchGetParams, options?: Parameters<typeof customFetch>[1]): Promise<searchNovelTermNovelsNovelIdTermSearchGetResponse> => {
+
+  return customFetch<searchNovelTermNovelsNovelIdTermSearchGetResponse>(getSearchNovelTermNovelsNovelIdTermSearchGetUrl(novelId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 

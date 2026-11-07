@@ -1,4 +1,4 @@
-from src.memory.agent.toolsets.glossary.guidance import create_guidance_toolset
+from src.memory.agent.toolsets.glossary.instructions.common import create_instruction_toolset
 
 GLOSSARY_CULTIVATION_INSTRUCTIONS = """
 Track a recurring person's current, completed cultivation level when it is
@@ -16,7 +16,7 @@ of named realms, techniques, pills, and cultivation resources in definitions
 when that toolset is enabled; do not duplicate those meanings as person facts.
 """.strip()
 
-glossary_cultivation_toolset = create_guidance_toolset(
+glossary_cultivation_toolset = create_instruction_toolset(
     "glossary_cultivation",
     GLOSSARY_CULTIVATION_INSTRUCTIONS,
 )

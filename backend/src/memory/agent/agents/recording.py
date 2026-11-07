@@ -30,11 +30,11 @@ from src.memory.agent.toolsets.glossary.gender_advanced_facts import (
 from src.memory.agent.toolsets.glossary.gender_advanced_relations import (
     glossary_gender_advanced_relations_write_toolset,
 )
-from src.memory.agent.toolsets.glossary.guidance.artifacts import glossary_artifact_toolset
-from src.memory.agent.toolsets.glossary.guidance.gender_transformation import (
+from src.memory.agent.toolsets.glossary.impersonation import glossary_impersonation_write_toolset
+from src.memory.agent.toolsets.glossary.instructions.artifacts import glossary_artifact_toolset
+from src.memory.agent.toolsets.glossary.instructions.gender_transformation import (
     glossary_gender_transformation_toolset,
 )
-from src.memory.agent.toolsets.glossary.impersonation import glossary_impersonation_write_toolset
 from src.memory.agent.toolsets.glossary.relations import (
     glossary_relations_read_toolset,
     glossary_relations_write_toolset,

@@ -1361,6 +1361,181 @@
         }
       }
     },
+    "/novels/{novelId}/term-search": {
+      "get": {
+        "summary": "Search Novel Term",
+        "description": "Endpoint for finding every occurrence of a term in the latest content of a novel's readable chapters.\n\nChapters are returned in chapter order, one page at a time; totals cover the whole range.\n\nRaises:\n    404: Novel not found (or insufficient permissions).",
+        "operationId": "search_novel_term_novels__novelId__term_search_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          },
+          {
+            "name": "term",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "description": "Exact text to find.",
+              "title": "Term"
+            },
+            "description": "Exact text to find."
+          },
+          {
+            "name": "startChapterNum",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Startchapternum"
+            }
+          },
+          {
+            "name": "endChapterNum",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Endchapternum"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NovelTermSearch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chapter-contents/{chapterContentId}/term-search": {
+      "get": {
+        "summary": "Search Chapter Content Term",
+        "description": "Endpoint for finding every occurrence of a term in one chapter content version, with line previews.\n\nRaises:\n    404: Chapter content not found (or insufficient permissions).",
+        "operationId": "search_chapter_content_term_chapter_contents__chapterContentId__term_search_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chapterContentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Chaptercontentid"
+            }
+          },
+          {
+            "name": "term",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "description": "Exact text to find.",
+              "title": "Term"
+            },
+            "description": "Exact text to find."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterContentTermSearch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/chapters/{chapterId}/content-versions": {
       "get": {
         "summary": "Read Chapter Content Versions",
@@ -8864,6 +9039,29 @@
         "title": "ChapterContentMeta",
         "description": "Metadata for a ChapterContent.\n\nAttributes:\n    chapter_content_version: The version number of the text content, used for optimistic concurrency control when updating text.\n    chapter_content_id: The UUID of the text content, used for optimistic concurrency control when updating text."
       },
+      "ChapterContentTermSearch": {
+        "properties": {
+          "chapterContentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chaptercontentid"
+          },
+          "occurrences": {
+            "items": {
+              "$ref": "#/components/schemas/TermOccurrencePreview"
+            },
+            "type": "array",
+            "title": "Occurrences"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterContentId",
+          "occurrences"
+        ],
+        "title": "ChapterContentTermSearch",
+        "description": "Pydantic schema for a term search within one chapter content version.\n\nAttributes:\n    chapter_content_id: The UUID of the content version that was searched.\n    occurrences: Every occurrence of the term in that content, in order."
+      },
       "ChapterData": {
         "properties": {
           "metadata": {
@@ -8880,6 +9078,37 @@
         ],
         "title": "ChapterData",
         "description": "Pydantic schema for aggregating a ChapterContent and a Chapter together.\n\nAttributes:\n    metadata: The metadata of the chapter, such as title and whether it's primary.\n    content: The text content of the chapter."
+      },
+      "ChapterTermMatches": {
+        "properties": {
+          "chapterId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chapterid"
+          },
+          "chapterNum": {
+            "type": "integer",
+            "title": "Chapternum"
+          },
+          "chapterContentId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chaptercontentid"
+          },
+          "matchCount": {
+            "type": "integer",
+            "title": "Matchcount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterId",
+          "chapterNum",
+          "chapterContentId",
+          "matchCount"
+        ],
+        "title": "ChapterTermMatches",
+        "description": "Pydantic schema for how often a searched term occurs in one chapter.\n\nAttributes:\n    chapter_id: The UUID of the chapter containing the term.\n    chapter_num: The chapter's number in the novel.\n    chapter_content_id: The UUID of the content version that was counted; search it for offsets and previews.\n    match_count: The number of non-overlapping occurrences in that content."
       },
       "CluenerParams": {
         "properties": {
@@ -11643,6 +11872,45 @@
         "title": "NovelContributor",
         "description": "Pydantic schema for a novel contributor.\n\nAttributes:\n    user_id: UUID of the user.\n    novel_id: UUID of the novel.\n    contributor_role: Role of the user in the novel."
       },
+      "NovelTermSearch": {
+        "properties": {
+          "totalChapters": {
+            "type": "integer",
+            "title": "Totalchapters"
+          },
+          "totalMatches": {
+            "type": "integer",
+            "title": "Totalmatches"
+          },
+          "nextOffset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextoffset"
+          },
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/ChapterTermMatches"
+            },
+            "type": "array",
+            "title": "Chapters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "totalChapters",
+          "totalMatches",
+          "nextOffset",
+          "chapters"
+        ],
+        "title": "NovelTermSearch",
+        "description": "Pydantic schema for one page of a term search across a novel's chapters.\n\nAttributes:\n    total_chapters: The number of chapters in the searched range that contain the term.\n    total_matches: The number of occurrences across all of those chapters.\n    next_offset: The offset of the next page of chapters, or None if this is the last page.\n    chapters: Matching chapters on this page, in chapter order."
+      },
       "NovelType": {
         "type": "string",
         "enum": [
@@ -12428,6 +12696,18 @@
         "properties": {
           "modelName": {
             "$ref": "#/components/schemas/ModelName"
+          },
+          "sinceChapterNum": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sincechapternum"
           }
         },
         "additionalProperties": false,
@@ -12442,6 +12722,18 @@
         "properties": {
           "modelName": {
             "$ref": "#/components/schemas/ModelName"
+          },
+          "sinceChapterNum": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sincechapternum"
           },
           "stageName": {
             "type": "string",
@@ -12471,6 +12763,30 @@
           "other"
         ],
         "title": "TermKind"
+      },
+      "TermOccurrencePreview": {
+        "properties": {
+          "start": {
+            "type": "integer",
+            "title": "Start"
+          },
+          "preview": {
+            "type": "string",
+            "title": "Preview"
+          },
+          "previewStart": {
+            "type": "integer",
+            "title": "Previewstart"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "preview",
+          "previewStart"
+        ],
+        "title": "TermOccurrencePreview",
+        "description": "Pydantic schema for one occurrence of a searched term with surrounding text.\n\nAttributes:\n    start: The start offset of the occurrence in the chapter text.\n    preview: Text around the occurrence, within its line.\n    preview_start: The offset of the preview in the chapter text; the occurrence begins at start - preview_start."
       },
       "TermTranslationRead": {
         "properties": {

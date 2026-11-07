@@ -295,3 +295,65 @@ class ModifyChapterContentResponse(Model):
     chapter_content_version: int
     chapter_content_id: uuid.UUID
     label_data_id_map: dict[uuid.UUID, uuid.UUID]
+
+
+class ChapterTermMatches(Model):
+    """
+    Pydantic schema for how often a searched term occurs in one chapter.
+
+    Attributes:
+        chapter_id: The UUID of the chapter containing the term.
+        chapter_num: The chapter's number in the novel.
+        chapter_content_id: The UUID of the content version that was counted; search it for offsets and previews.
+        match_count: The number of non-overlapping occurrences in that content.
+    """
+
+    chapter_id: uuid.UUID
+    chapter_num: int
+    chapter_content_id: uuid.UUID
+    match_count: int
+
+
+class NovelTermSearch(Model):
+    """
+    Pydantic schema for one page of a term search across a novel's chapters.
+
+    Attributes:
+        total_chapters: The number of chapters in the searched range that contain the term.
+        total_matches: The number of occurrences across all of those chapters.
+        next_offset: The offset of the next page of chapters, or None if this is the last page.
+        chapters: Matching chapters on this page, in chapter order.
+    """
+
+    total_chapters: int
+    total_matches: int
+    next_offset: int | None
+    chapters: list[ChapterTermMatches]
+
+
+class TermOccurrencePreview(Model):
+    """
+    Pydantic schema for one occurrence of a searched term with surrounding text.
+
+    Attributes:
+        start: The start offset of the occurrence in the chapter text.
+        preview: Text around the occurrence, within its line.
+        preview_start: The offset of the preview in the chapter text; the occurrence begins at start - preview_start.
+    """
+
+    start: int
+    preview: str
+    preview_start: int
+
+
+class ChapterContentTermSearch(Model):
+    """
+    Pydantic schema for a term search within one chapter content version.
+
+    Attributes:
+        chapter_content_id: The UUID of the content version that was searched.
+        occurrences: Every occurrence of the term in that content, in order.
+    """
+
+    chapter_content_id: uuid.UUID
+    occurrences: list[TermOccurrencePreview]

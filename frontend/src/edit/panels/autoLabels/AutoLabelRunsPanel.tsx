@@ -1,10 +1,16 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { ChevronRight, RefreshCw } from "lucide-react";
+import { ChevronRight, EllipsisIcon, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { CProvId, ProvChapter } from "../../controller/types/idTypes";
+import type { CProvId, LGProvId, ProvChapter } from "../../controller/types/idTypes";
 import type { AutoLabelManager } from "../../managers/autolabelManager";
 import type {
 	AutoLabelRunView,
@@ -12,6 +18,8 @@ import type {
 	ChapterMatchStatus,
 	useAutoLabelState,
 } from "../../hooks/useAutoLabelState";
+import type { LabelGroupView } from "../../hooks/useTrackedLabelGroups";
+import { PromoteAutoLabelDialog } from "./PromoteAutoLabelDialog";
 import { formatRunLabel } from "./runLabels";
 
 function statusVariant(status: AutoLabelView["autoLabelStatus"]) {
@@ -110,6 +118,8 @@ function AutoLabelRunItem({
 	onSelectRun,
 	onDeselectRun,
 	onReloadRun,
+	promoteDisabled,
+	onPromote,
 }: {
 	run: AutoLabelRunView;
 	selected: boolean;
@@ -119,6 +129,8 @@ function AutoLabelRunItem({
 	onSelectRun: AutoLabelManager["selectRun"];
 	onDeselectRun: AutoLabelManager["deselectRun"];
 	onReloadRun: AutoLabelManager["reloadRun"];
+	promoteDisabled: boolean;
+	onPromote: () => void;
 }) {
 	const [expanded, setExpanded] = useState(false);
 	const runLabel = formatRunLabel(run);
@@ -177,6 +189,23 @@ function AutoLabelRunItem({
 					>
 						<RefreshCw />
 					</Button>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button
+								type="button"
+								size="icon-xs"
+								variant="ghost"
+								aria-label={`More actions for ${runLabel}`}
+							>
+								<EllipsisIcon />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem disabled={promoteDisabled} onSelect={onPromote}>
+								Promote…
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</div>
 				<div className="px-7 pb-1 text-xs text-muted-foreground">
 					{run.run.modelName} · {countDone(run)} done ·{" "}
@@ -198,6 +227,10 @@ export function AutoLabelRunsPanel({
 	onDeselectRun,
 	onRefreshAllRuns,
 	onReloadRun,
+	labelGroups,
+	activeId,
+	setActive,
+	onPromote,
 }: {
 	autoLabels: ReturnType<typeof useAutoLabelState>;
 	chapters: ProvChapter[];
@@ -206,7 +239,12 @@ export function AutoLabelRunsPanel({
 	onDeselectRun: AutoLabelManager["deselectRun"];
 	onRefreshAllRuns: AutoLabelManager["refreshAllRuns"];
 	onReloadRun: AutoLabelManager["reloadRun"];
+	labelGroups: [LGProvId, LabelGroupView][];
+	activeId: LGProvId | null;
+	setActive: (id: LGProvId | null) => void;
+	onPromote: AutoLabelManager["promote"];
 }) {
+	const [promotingRun, setPromotingRun] = useState<AutoLabelRunView | null>(null);
 	const chapterNumById = useMemo(
 		() => new Map(chapters.map((chapter) => [chapter.chapterId, chapter.chapterNum])),
 		[chapters],
@@ -254,11 +292,28 @@ export function AutoLabelRunsPanel({
 								onSelectRun={onSelectRun}
 								onDeselectRun={onDeselectRun}
 								onReloadRun={onReloadRun}
+								promoteDisabled={autoLabels.promoting || labelGroups.length === 0}
+								onPromote={() => setPromotingRun(run)}
 							/>
 						);
 					})
 				)}
 			</div>
+			{promotingRun !== null && (
+				<PromoteAutoLabelDialog
+					run={promotingRun}
+					labelGroups={labelGroups}
+					defaultLabelGroupId={activeId}
+					promoting={autoLabels.promoting}
+					onPromote={(labelGroupId, filter) => {
+						// The chosen group becomes active so its promoted labels are shown.
+						setActive(labelGroupId);
+						onPromote(promotingRun.run.runId, labelGroupId, filter);
+						setPromotingRun(null);
+					}}
+					onClose={() => setPromotingRun(null)}
+				/>
+			)}
 		</section>
 	);
 }

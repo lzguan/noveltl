@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { vi } from "vitest";
+import { RightPanelTabActiveContext } from "../rightPanelTabActive";
 import { TranslationsPanel } from "./TranslationsPanel";
 import type { TranslationJobSummary, TranslationBatchDetail } from "@/api/models";
 
@@ -81,9 +82,16 @@ function setup() {
 			});
 		}),
 	);
-	const view = render(<TranslationsPanel novelId="novel-1" chapterNumbers={[1, 2]} />);
+	// Rendered as right-panel tab content so tests can hide the tab without remounting.
+	const panel = (active: boolean) => (
+		<RightPanelTabActiveContext value={active}>
+			<TranslationsPanel novelId="novel-1" chapterNumbers={[1, 2]} />
+		</RightPanelTabActiveContext>
+	);
+	const view = render(panel(true));
 	return {
 		view,
+		setTabActive: (active: boolean) => view.rerender(panel(active)),
 		reads,
 		posts,
 		failReads: () => {
@@ -146,4 +154,22 @@ it("polls the current page and stops polling when the viewer unmounts", async ()
 		await vi.advanceTimersByTimeAsync(10000);
 	});
 	expect(harness.reads).toHaveLength(2);
+});
+
+it("pauses polling while its tab is hidden and reloads when shown again", async () => {
+	vi.useFakeTimers();
+	const harness = await act(async () => setup());
+	expect(harness.reads).toHaveLength(1);
+	await act(async () => harness.setTabActive(false));
+	await act(async () => {
+		await vi.advanceTimersByTimeAsync(15000);
+	});
+	expect(harness.reads).toHaveLength(1);
+	expect(screen.getByRole("heading", { name: "Job job-1", hidden: true })).toBeInTheDocument();
+	await act(async () => harness.setTabActive(true));
+	expect(harness.reads).toHaveLength(2);
+	await act(async () => {
+		await vi.advanceTimersByTimeAsync(5000);
+	});
+	expect(harness.reads).toHaveLength(3);
 });

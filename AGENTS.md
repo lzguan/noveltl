@@ -61,6 +61,10 @@ If an issue is caused by a typo, describe it as a typo when communicating with t
 
 Excluding `as const` casts, don't cast variables without permission (i.e. don't use the `as` keyword on the frontend).
 
+Don't write docstrings (module, class, or function) unless the user asks for them, except where an agent reads the text: pydantic-ai tool function docstrings, `Field(description=...)`, and docstrings on agent-facing models. When docstrings are wanted, follow the file's existing style; otherwise use Google style, stated declaratively (what it does, its contract, errors), without design rationale.
+
+Don't add `__init__.py` files; backend packages are namespace packages.
+
 If you are running into issues connecting with the test database/external services, it may be because you are running a command in a sandbox. Escalate the request to the user in that case.
 
 If you decide to use database locks raise that to the user. Almost certainly there is a way to do it without locks.

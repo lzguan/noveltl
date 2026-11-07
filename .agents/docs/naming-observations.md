@@ -15,13 +15,11 @@ All 98 tasks completed on their first attempt. There were 83 glossary terms and
 was $0.384621372 for recording and $0.064119984 for naming. Chapter 50 was stopped
 by the user and excluded; do not classify that abort as a model failure.
 
-The completed local job ID is `3ac561ef-42a8-4972-9fd2-6d690c25a898`, memory
-group `9d21aa10-4a0b-435e-a5a9-ac76eeee8839`. These are environment-specific
-identifiers, not seeded fixtures. Full output was saved locally under
-`playwright-mcp-output/term-review-49-*`; those files and the source corpus are
-not tracked and are not guaranteed to exist in a fresh checkout. Completed
-result logs were in `docs/memory/agent-evals/logs/dsv4-flash-low-marks-v1.jsonl`.
-Check the configured worker sink rather than assuming that filename elsewhere.
+Environment-specific identifiers (not fixtures): job
+`3ac561ef-42a8-4972-9fd2-6d690c25a898`, memory group
+`9d21aa10-4a0b-435e-a5a9-ac76eeee8839` in the `noveltl_dev_2` database. That
+group (83 terms, 82 mappings, no conventions) is the natural input for a
+conventions-only trial.
 
 ## Cases worth preserving
 
@@ -30,7 +28,7 @@ Check the configured worker sink rather than assuming that filename elsewhere.
 | 种级 | Returned `Species-level`. Chapter 11 establishes 种、芽、叶、蕾、花 as seed-to-flower development. The correct older definition is linked to 开华, not 种级. | Delivery/retrieval of related definitions. The chapter-19 naming log queried 种级 definitions, mappings, and rank relations without finding that definition. |
 | 国度 | Returned `Nation` despite established 魔法国度 → `Magical Kingdom`; chapter 29 refers to the same realm. No abbreviation alias joins them. | Abbreviation links and relevant established mapping selection. |
 | Floral codenames | 翠雀 → `Larkspur`, 朝颜 → `Morning Glory`, 樱 → `Cherry Blossom`, but 白玫 → `Bai Mei`, 荼蘼 → `Tumi`, 小锦 → `Xiaojin`. | An explicit naming policy. Individual choices are not all objectively wrong; the mixed treatment is the issue. |
-| 花园防卫战 | Stored term has a chapter-46 event but no mapping. Source writes `‘花园’防卫战`. | Matching normalization: `contains_query` strips 『』《》【】, not those internal quotation marks. |
+| 花园防卫战 | Stored term has a chapter-46 event but no mapping. Source writes `‘花园’防卫战`. | Internal quotation marks: matching is exact on raw text, and the stored term dropped them. |
 | 矢车菊 | Chapter 25 and its recorded summary contain this old codename, but no glossary term/alias or mapping exists. | Recorder term coverage; naming cannot translate a term never requested. |
 | 国度审查 | Recorded as an organization and translated `Kingdom Censorship`; source chapter 6 merely says the kingdom may review an incantation. | Term qualification and classification before judging translation alone. |
 | 花牌 | Classified as an organization, though chapters 39/49 describe a certification distinction. | Upstream term kind accuracy. |

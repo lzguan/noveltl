@@ -1,5 +1,3 @@
-"""Initial context for the conventions agent."""
-
 from pydantic import Field
 
 from src.memory.agent.dependencies import MemAgentDeps
@@ -18,8 +16,6 @@ MAX_CONTEXT_MEMORIES = 2000
 
 
 class ContextConvention(AgentModel):
-    """An existing convention as shown to the conventions agent."""
-
     handle: str = Field(description="Handle for revising or withdrawing this convention, such as c3.")
     category: ConventionCategory
     title: str
@@ -30,8 +26,6 @@ class ContextConvention(AgentModel):
 
 
 class ContextTerm(AgentModel):
-    """A glossary term occurring in the reviewed chapters."""
-
     term: str = Field(description="Exact source-language form.")
     kind: TermKind | None
     first_chapter_num: int = Field(description="First reviewed chapter containing the term.")
@@ -43,8 +37,6 @@ class ContextTerm(AgentModel):
 
 
 class ConventionsContext(AgentModel):
-    """What the conventions agent sees before it calls tools."""
-
     conventions: list[ContextConvention]
     terms: list[ContextTerm] = Field(
         description="Terms in the reviewed chapters, grouped by kind and earliest first within each kind."
@@ -57,16 +49,6 @@ def _shorten(text: str) -> str:
 
 
 def conventions_context(deps: MemAgentDeps, start_chapter_num: int | None) -> ConventionsContext:
-    """Build the conventions agent's context and register its convention handles.
-
-    Args:
-        deps: Run dependencies; listed conventions get handles in ``deps.convention_handles``.
-        start_chapter_num: First reviewed chapter (inclusive), or None for the first chapter. The last
-            reviewed chapter is the access context's chapter.
-
-    Returns:
-        The group's conventions and up to ``MAX_CONTEXT_TERMS`` terms from the reviewed chapters.
-    """
     db, ctx = deps.db, deps.mem_access_context
     conventions = [
         ContextConvention(

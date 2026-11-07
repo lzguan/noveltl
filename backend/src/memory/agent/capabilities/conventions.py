@@ -1,9 +1,3 @@
-"""Conventions agent output and its writes.
-
-Existing conventions are identified by handles (``c1``, ``c2``, ...) from
-``MemAgentDeps.convention_handles``. Only pending, agent-created conventions are editable.
-"""
-
 from typing import Annotated, Self
 from uuid import UUID
 
@@ -51,22 +45,6 @@ class ConventionsOutput(Model):
 
 
 def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsOutput) -> ConventionsOutput:
-    """Write the agent's output in a savepoint, or discard it and request a correction.
-
-    Output validator for the conventions agent. Revisions and withdrawals apply
-    only to pending conventions created by an agent. Kept writes commit with the
-    caller's transaction.
-
-    Args:
-        ctx: Run context holding the session, memory group, and convention handles.
-        output: The agent's parsed output.
-
-    Returns:
-        The output, after it is written.
-
-    Raises:
-        ModelRetry: A revised or withdrawn handle is unknown or not editable. No writes from the attempt are kept.
-    """
     deps = ctx.deps
     group_id = deps.mem_access_context.memory_group_id
     unknown: list[str] = []

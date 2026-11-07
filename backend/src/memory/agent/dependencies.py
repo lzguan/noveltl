@@ -7,11 +7,7 @@ from src.memory.access import MemAccessContext
 
 
 class UUIDCache:
-    """A simple class to translate UUIDs to and from short strings shown to agents.
-
-    Attributes:
-        prefix: Leading letter of every generated string, such as ``m`` in ``m1``.
-    """
+    """A simple class to translate UUIDs to and from strings."""
 
     def __init__(self, prefix: str = "m"):
         self.prefix = prefix

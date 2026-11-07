@@ -46,17 +46,10 @@ TERM_NAME_MARKS: Final = "『』《》【】"
 
 
 def strip_term_name_marks(term: SQLColumnExpression[str]) -> SQLColumnExpression[str]:
-    """Remove bracket marks from term names; used only for searching names, never chapter text."""
     return func.translate(term, TERM_NAME_MARKS, "")
 
 
 def contains_query(chapter: SQLColumnExpression[str], term: SQLColumnExpression[str]) -> SQLColumnExpression[bool]:
-    """Whether the chapter text contains the term exactly.
-
-    Chapter text is matched raw: stripping marks from it changed no matches on our
-    corpora, cost about 5x per query, and would shift positions in the text.
-    ``strpos`` avoids LIKE, so ``%`` and ``_`` in a term are literal.
-    """
     return func.strpos(chapter, term) > 0
 
 
@@ -90,13 +83,6 @@ def get_terms_in_chapter(
 
 @dataclass(frozen=True)
 class RangeTerm:
-    """A glossary term and the first chapter of a range that contains it.
-
-    Attributes:
-        term: The glossary term.
-        first_chapter_num: The first chapter in the range whose latest content contains the term.
-    """
-
     term: GlossaryTerm
     first_chapter_num: int
 
@@ -109,18 +95,6 @@ def get_terms_in_chapter_range(
     limit: int,
     include_rejected: bool = False,
 ) -> tuple[list[RangeTerm], bool]:
-    """Get glossary terms occurring in chapters from the start to the context's chapter, by first occurrence.
-
-    Args:
-        db: The database session.
-        ctx: Access context; its chapter is the last chapter searched.
-        start_chapter_num: First chapter number searched (inclusive), or None for the first chapter.
-        limit: Maximum number of terms returned.
-        include_rejected: Whether to include rejected terms.
-
-    Returns:
-        At most ``limit`` terms ordered by first occurrence and term, and whether more terms were omitted.
-    """
     end_chapter_num, novel_id = check_mem_access_ctx(db, ctx)
     latest = (
         select(Chapter.chapter_num, ChapterContent.chapter_content_text)
@@ -411,10 +385,6 @@ def search_terms(
     limit: int,
     include_rejected: bool = False,
 ) -> tuple[int, list[GlossaryTerm]]:
-    """Terms whose name contains ``query``, ignoring bracket marks in names and query.
-
-    Returns the total number of matching terms and at most ``limit`` of them, by term.
-    """
     needle = query.translate(str.maketrans("", "", TERM_NAME_MARKS))
     statement = select(GlossaryTerm).where(
         GlossaryTerm.memory_group_id == memory_group_id,

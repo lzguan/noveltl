@@ -1,5 +1,3 @@
-"""Instructions and request formatting for the conventions agent."""
-
 from src.memory.agent.toolsets.conventions.context import ConventionsContext
 
 CONVENTIONS_INSTRUCTIONS = """

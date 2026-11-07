@@ -2,10 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { requestErrorMessage } from "@/lib/apiErrors";
 import { useRightPanelTabActive } from "../rightPanelTabActive";
 
-/**
- * Poll sequentially; abort stale pages and retain the last snapshot on refresh errors.
- * Polling pauses while the containing right-panel tab is hidden and reloads when it is shown again.
- */
+/** Poll sequentially; abort stale pages and retain the last snapshot on refresh errors. */
 export function useTranslationRead<T>(load: (signal: AbortSignal) => Promise<T>, invalidation = 0) {
 	const [data, setData] = useState<T>();
 	const [error, setError] = useState<string>();

@@ -31,7 +31,6 @@ function parseChapterNum(value: string): number | undefined {
 	return Number.isNaN(parsed) ? undefined : parsed;
 }
 
-/** Promotes one run's labels into a chosen label group, optionally limited to a chapter range. */
 export function PromoteAutoLabelDialog({
 	run,
 	labelGroups,

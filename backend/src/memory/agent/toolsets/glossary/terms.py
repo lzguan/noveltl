@@ -35,7 +35,6 @@ _ENCLOSING_MARKS = {"【": "】", "「": "」", "『": "』", "《": "》", "“
 
 
 def normalize_agent_term_name(term_name: str) -> str:
-    """Trim whitespace and marks that enclose the whole name; marks inside it are kept."""
     name = term_name.strip()
     while len(name) >= 2 and _ENCLOSING_MARKS.get(name[0]) == name[-1]:
         name = name[1:-1].strip()

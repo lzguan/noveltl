@@ -1,5 +1,3 @@
-"""Read-only tools for the conventions agent."""
-
 from typing import Annotated
 
 from pydantic import Field

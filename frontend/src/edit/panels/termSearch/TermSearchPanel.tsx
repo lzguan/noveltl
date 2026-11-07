@@ -41,7 +41,6 @@ async function fetchPage(novelId: string, search: Search, offset: number, signal
 	return response.data;
 }
 
-/** Exact text search across the novel's chapters; results open the matching text in the editor. */
 export function TermSearchPanel({
 	novelId,
 	chapters,
@@ -195,7 +194,6 @@ export function TermSearchPanel({
 	);
 }
 
-/** Characters of context shown before a match in a preview row. */
 const PREVIEW_LEAD = 8;
 
 type Previews =

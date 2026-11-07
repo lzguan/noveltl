@@ -84,22 +84,6 @@ def update_convention(
     only_creator: Creator | None = None,
     only_pending: bool = False,
 ) -> None:
-    """Replace a convention's content if it matches the given filters.
-
-    Args:
-        db: The session to write in; the caller commits.
-        memory_group_id: The group the convention must belong to.
-        convention_id: The convention to replace.
-        category: The new category.
-        title: The new title.
-        rule: The new rule.
-        rationale: The new rationale, or None for none.
-        only_creator: If given, update only a convention with this creator.
-        only_pending: If true, update only a convention that is still pending.
-
-    Raises:
-        ConventionNotFoundException: No convention matches the ID and filters.
-    """
     try:
         db.execute(
             update(TranslationConvention)
@@ -119,18 +103,6 @@ def delete_convention(
     only_creator: Creator | None = None,
     only_pending: bool = False,
 ) -> None:
-    """Delete a convention if it matches the given filters.
-
-    Args:
-        db: The session to write in; the caller commits.
-        memory_group_id: The group the convention must belong to.
-        convention_id: The convention to delete.
-        only_creator: If given, delete only a convention with this creator.
-        only_pending: If true, delete only a convention that is still pending.
-
-    Raises:
-        ConventionNotFoundException: No convention matches the ID and filters.
-    """
     try:
         db.execute(
             delete(TranslationConvention)

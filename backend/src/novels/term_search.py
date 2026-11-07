@@ -1,11 +1,3 @@
-"""Exact substring search over chapter text, limited to chapters the user can read.
-
-Text is matched raw on each chapter's latest content (or a pinned version).
-Occurrences are non-overlapping, and offsets are Python string indices (code
-points); they equal JavaScript UTF-16 offsets only for text inside the Basic
-Multilingual Plane, as label offsets already assume.
-"""
-
 import re
 import uuid
 
@@ -30,14 +22,12 @@ PREVIEW_CONTEXT = 40
 
 
 def find_occurrences(text: str, term: str) -> list[int]:
-    """Start offsets of non-overlapping occurrences of ``term``, left to right."""
     return [match.start() for match in re.finditer(re.escape(term), text)]
 
 
 def _latest_readable_contents(
     current_user: User | None, novel_id: uuid.UUID, start_chapter_num: int | None, end_chapter_num: int | None
 ) -> Select[uuid.UUID, int, uuid.UUID, str]:
-    """Each readable chapter's latest content, optionally within [start, end] chapter numbers."""
     statement = (
         select(
             Chapter.chapter_id,
@@ -68,25 +58,6 @@ def search_novel(
     offset: int = 0,
     limit: int = 50,
 ) -> NovelTermSearch:
-    """
-    Find every occurrence of a term in the latest content of a novel's readable chapters.
-
-    Args:
-        db: Database which we are querying.
-        current_user: User that is searching; only chapters they can read are searched.
-        novel_id: ID of the novel to search.
-        term: Exact text to find.
-        start_chapter_num: First chapter number to search (inclusive), or None for the first chapter.
-        end_chapter_num: Last chapter number to search (inclusive), or None for the last chapter.
-        offset: Number of matching chapters to skip.
-        limit: Maximum number of matching chapters to return, capped at MAX_CHAPTERS_PER_PAGE.
-
-    Returns:
-        One page of matching chapters in chapter order with their match counts, and totals for the whole range.
-
-    Raises:
-        NovelNotFoundException: The novel does not exist or is not readable.
-    """
     limit = min(limit, MAX_CHAPTERS_PER_PAGE)
     contents = _latest_readable_contents(current_user, novel_id, start_chapter_num, end_chapter_num).subquery()
     text = contents.c.chapter_content_text
@@ -149,21 +120,6 @@ def search_novel(
 def search_chapter_content(
     db: Session, current_user: User | None, chapter_content_id: uuid.UUID, term: str
 ) -> ChapterContentTermSearch:
-    """
-    Find every occurrence of a term in one chapter content version, with surrounding text from its line.
-
-    Args:
-        db: Database which we are querying.
-        current_user: User that is searching.
-        chapter_content_id: ID of the content version to search.
-        term: Exact text to find.
-
-    Returns:
-        Every occurrence in order, each with a preview clipped to its line.
-
-    Raises:
-        ChapterContentNotFoundException: The content does not exist or is not readable.
-    """
     statement = chapter_content_mod_access_select(
         select(ChapterContent.chapter_content_text).where(ChapterContent.chapter_content_id == chapter_content_id),
         current_user,

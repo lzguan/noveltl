@@ -1,5 +1,3 @@
-"""Conventions agent: proposes, revises, and withdraws naming conventions for a chapter range."""
-
 from pydantic_ai import Agent
 from pydantic_ai.capabilities import Toolset
 
@@ -15,7 +13,6 @@ from src.memory.agent.types import ModelName
 
 
 def create_conventions_agent(model_name: ModelName) -> Agent[MemAgentDeps, ConventionsOutput]:
-    """Create the conventions agent; its output validator writes the output in the run's session."""
     model, model_settings = model_configuration(model_name)
     agent = Agent(
         model=model,

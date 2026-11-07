@@ -45,8 +45,8 @@ async function startPendingLabelReloadTextRace({
 	await expect(page.locator(".cm-content")).toContainText(initialContent.chapterContentText);
 
 	await page.getByRole("button", { name: "Edit" }).click();
-	await page.getByRole("tab", { name: "Label Groups" }).click();
-	const labelGroupPanel = page.getByRole("tabpanel", { name: "Label Groups" });
+	await page.getByRole("tab", { name: "Labels", exact: true }).click();
+	const labelGroupPanel = page.getByRole("tabpanel", { name: "Labels", exact: true });
 	await labelGroupPanel.locator("button:has(svg.lucide-plus)").click();
 	await labelGroupPanel.getByPlaceholder("Label group name").fill(groupName);
 	await labelGroupPanel.getByRole("button", { name: "Add" }).click();
@@ -173,8 +173,8 @@ test("reloads authoritative labels after text invalidates an in-flight reload", 
 	await page.getByText(`Ch.1: ${seed.chapterTitle}`).click();
 	await expect(page.locator(".cm-content")).toContainText(initialContent.chapterContentText);
 
-	await page.getByRole("tab", { name: "Label Groups" }).click();
-	const labelGroupPanel = page.getByRole("tabpanel", { name: "Label Groups" });
+	await page.getByRole("tab", { name: "Labels", exact: true }).click();
+	const labelGroupPanel = page.getByRole("tabpanel", { name: "Labels", exact: true });
 	const labelGroupRow = labelGroupPanel.getByText(seed.labelGroupName).locator("..");
 	await labelGroupRow.locator("button:has(svg.lucide-refresh-cw)").click();
 	await reloadStarted;

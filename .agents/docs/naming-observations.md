@@ -15,13 +15,11 @@ All 98 tasks completed on their first attempt. There were 83 glossary terms and
 was $0.384621372 for recording and $0.064119984 for naming. Chapter 50 was stopped
 by the user and excluded; do not classify that abort as a model failure.
 
-The completed local job ID is `3ac561ef-42a8-4972-9fd2-6d690c25a898`, memory
-group `9d21aa10-4a0b-435e-a5a9-ac76eeee8839`. These are environment-specific
-identifiers, not seeded fixtures. Full output was saved locally under
-`playwright-mcp-output/term-review-49-*`; those files and the source corpus are
-not tracked and are not guaranteed to exist in a fresh checkout. Completed
-result logs were in `docs/memory/agent-evals/logs/dsv4-flash-low-marks-v1.jsonl`.
-Check the configured worker sink rather than assuming that filename elsewhere.
+Environment-specific identifiers (not fixtures): job
+`3ac561ef-42a8-4972-9fd2-6d690c25a898`, memory group
+`9d21aa10-4a0b-435e-a5a9-ac76eeee8839` in the `noveltl_dev_2` database. That
+group (83 terms, 82 mappings, no conventions) is the natural input for a
+conventions-only trial.
 
 ## Cases worth preserving
 

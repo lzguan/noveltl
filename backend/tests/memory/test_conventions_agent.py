@@ -23,10 +23,10 @@ from src.memory.models import MemoryChapterTask, MemoryGroup
 from src.memory.plugins.conventions.access import read_conventions
 from src.memory.plugins.glossary import access as glossary
 from src.memory.plugins.glossary.types import TermKind
+from src.memory.plugins.term_search.access import TextOccurrences, count_text_occurrences
 from src.memory.types import Creator, JobStatus, ReviewStatus
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, ChapterContent, Novel, SourceWork
-from src.novels.term_search import TermOccurrenceSummary, summarize_occurrences
 
 MODEL = "deepseek:deepseek-v4-flash-low"
 CHAPTER_TEXTS = {1: ["种级出现。"], 2: ["旧版卵级", "卵级与种级，种级。"], 3: ["蛹级在后面。"]}
@@ -73,17 +73,17 @@ def _setup(db: Session) -> tuple[Novel, MemoryGroup, dict[int, MemAccessContext]
     return novel, group, contexts
 
 
-def test_occurrence_summaries_use_latest_content_up_to_a_chapter(test_db: Session) -> None:
-    novel, _, _ = _setup(test_db)
+def test_text_occurrences_use_latest_content_up_to_the_context_chapter(test_db: Session) -> None:
+    _, _, contexts = _setup(test_db)
 
-    summaries = summarize_occurrences(test_db, novel.novel_id, ["种级", "卵级", "蛹级", "无", "种级"], 2)
+    results = count_text_occurrences(test_db, contexts[2], ["种级", "卵级", "蛹级", "无", "种级"])
 
-    assert summaries == [
-        TermOccurrenceSummary("种级", first_chapter_num=1, chapter_count=2, match_count=3),
-        TermOccurrenceSummary("卵级", first_chapter_num=2, chapter_count=1, match_count=1),
-        # Chapter 3 is past the end; texts need not be glossary terms.
-        TermOccurrenceSummary("蛹级", first_chapter_num=None, chapter_count=0, match_count=0),
-        TermOccurrenceSummary("无", first_chapter_num=None, chapter_count=0, match_count=0),
+    assert results == [
+        TextOccurrences("种级", first_chapter_num=1, chapter_count=2, match_count=3),
+        TextOccurrences("卵级", first_chapter_num=2, chapter_count=1, match_count=1),
+        # Chapter 3 is past the context's chapter; texts need not be glossary terms.
+        TextOccurrences("蛹级", first_chapter_num=None, chapter_count=0, match_count=0),
+        TextOccurrences("无", first_chapter_num=None, chapter_count=0, match_count=0),
     ]
 
 

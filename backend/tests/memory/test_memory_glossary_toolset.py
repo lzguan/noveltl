@@ -52,7 +52,7 @@ from src.memory.agent.toolsets.glossary.gender_advanced_relations import (
     glossary_gender_advanced_relations_write_toolset,
     new_gender_perception_memory,
 )
-from src.memory.agent.toolsets.glossary.guidance.gender_transformation import (
+from src.memory.agent.toolsets.glossary.instructions.gender_transformation import (
     glossary_gender_transformation_toolset,
 )
 from src.memory.agent.toolsets.glossary.relations import (

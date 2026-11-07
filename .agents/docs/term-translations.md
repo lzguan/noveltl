@@ -69,14 +69,14 @@ then one batch of mappings for that page. The glossary displays previews;
 the dedicated view exposes approve, reject, and delete controls. Successful
 mutations update the local mapping map without refetching the source terms.
 
-Chapter matching uses glossary `contains_query`: an exact `strpos` on raw
-chapter text (2026-11-06; it used to strip 『』《》【】 from both sides, which
-changed no matches on the dev corpora and made range queries about 5x slower).
-A stored term that differs from the source's punctuation can be missed by
-naming. Quotes inside a term (`‘花园’防卫战`) were rare across the 9 catalog
-novels; agent-created names now drop only enclosing marks
-(`normalize_agent_term_name`), and user-entered names are only trimmed. Terms absent from the glossary cannot be translated
-by this stage. Missing definition associations or abbreviation aliases can
+Chapter matching uses glossary `contains_query`, an exact `strpos` on raw
+chapter text. Stripping 『』《》【】 from both sides was removed: it changed no
+matches on the dev corpora and made range queries about 5x slower. A stored
+term that differs from the source's punctuation can be missed by naming; quotes
+inside a term (`‘花园’防卫战`) were rare across the 9 catalog novels.
+Agent-created names drop only enclosing marks (`normalize_agent_term_name`);
+user-entered names are only trimmed. Terms absent from the glossary cannot be
+translated by this stage. Missing definition associations or abbreviation aliases can
 hide relevant older context even when it exists elsewhere in the group.
 Successful stage completion does not establish translation quality.
 See [naming observations](naming-observations.md) for source-backed examples

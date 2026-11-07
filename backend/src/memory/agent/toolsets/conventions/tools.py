@@ -5,13 +5,12 @@ from typing import Annotated
 from pydantic import Field
 from pydantic_ai import FunctionToolset, RunContext
 
-from src.memory.access import check_mem_access_ctx
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.plugins.glossary import access as glossary
 from src.memory.plugins.glossary.types import TermKind
+from src.memory.plugins.term_search.access import count_text_occurrences
 from src.memory.plugins.translations.access import read_term_translations
 from src.memory.schemas import AgentModel
-from src.novels.term_search import summarize_occurrences
 
 MAX_SEARCH_RESULTS = 30
 
@@ -61,15 +60,14 @@ def term_occurrences(
     ctx: RunContext[MemAgentDeps], texts: Annotated[list[str], Field(min_length=1, max_length=20)]
 ) -> list[TermOccurrences]:
     """Report where exact source texts occur in the novel up to the last reviewed chapter."""
-    end_chapter_num, novel_id = check_mem_access_ctx(ctx.deps.db, ctx.deps.mem_access_context)
     return [
         TermOccurrences(
-            term=summary.term,
-            first_chapter_num=summary.first_chapter_num,
-            chapter_count=summary.chapter_count,
-            match_count=summary.match_count,
+            term=result.text,
+            first_chapter_num=result.first_chapter_num,
+            chapter_count=result.chapter_count,
+            match_count=result.match_count,
         )
-        for summary in summarize_occurrences(ctx.deps.db, novel_id, texts, end_chapter_num)
+        for result in count_text_occurrences(ctx.deps.db, ctx.deps.mem_access_context, texts)
     ]
 
 

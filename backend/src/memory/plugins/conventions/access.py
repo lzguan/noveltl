@@ -77,6 +77,7 @@ def update_convention(
     memory_group_id: UUID,
     convention_id: UUID,
     *,
+    category: ConventionCategory,
     title: str,
     rule: str,
     rationale: str | None,
@@ -89,6 +90,7 @@ def update_convention(
         db: The session to write in; the caller commits.
         memory_group_id: The group the convention must belong to.
         convention_id: The convention to replace.
+        category: The new category.
         title: The new title.
         rule: The new rule.
         rationale: The new rationale, or None for none.
@@ -102,7 +104,7 @@ def update_convention(
         db.execute(
             update(TranslationConvention)
             .where(*_convention_filters(memory_group_id, convention_id, only_creator, only_pending))
-            .values(title=title, rule=rule, rationale=rationale, updated_at=func.now())
+            .values(category=category, title=title, rule=rule, rationale=rationale, updated_at=func.now())
             .returning(TranslationConvention.convention_id)
         ).scalar_one()
     except NoResultFound as e:

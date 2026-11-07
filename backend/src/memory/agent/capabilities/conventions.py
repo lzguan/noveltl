@@ -21,10 +21,13 @@ type ConventionText = Annotated[str, StringConstraints(strip_whitespace=True, mi
 
 
 class ConventionDraft(Model):
+    category: ConventionCategory = Field(
+        description="naming for how terms are rendered; style for how prose is translated."
+    )
     title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)] = Field(
         description="Short name for the convention."
     )
-    rule: ConventionText = Field(description="The naming rule, with examples from this novel where helpful.")
+    rule: ConventionText = Field(description="The rule, with examples from this novel where helpful.")
     rationale: ConventionText | None = Field(default=None, description="Evidence for the rule.")
 
 
@@ -33,7 +36,7 @@ class ConventionRevision(ConventionDraft):
 
 
 class ConventionsOutput(Model):
-    create: list[ConventionDraft] = Field(default_factory=list, description="New naming conventions.")
+    create: list[ConventionDraft] = Field(default_factory=list, description="New conventions.")
     revise: list[ConventionRevision] = Field(
         default_factory=list, description="Replacements for editable conventions, by handle."
     )
@@ -82,7 +85,7 @@ def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsO
             create_convention(
                 deps.db,
                 group_id,
-                category=ConventionCategory.NAMING,
+                category=draft.category,
                 title=draft.title,
                 rule=draft.rule,
                 rationale=draft.rationale,
@@ -97,6 +100,7 @@ def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsO
                     deps.db,
                     group_id,
                     target,
+                    category=revision.category,
                     title=revision.title,
                     rule=revision.rule,
                     rationale=revision.rationale,

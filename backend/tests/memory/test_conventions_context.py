@@ -120,7 +120,7 @@ def test_context_lists_range_terms_with_current_definitions_translations_and_con
 
     context = conventions_context(deps, 2)
 
-    assert (context.start_chapter_num, context.end_chapter_num, context.terms_truncated) == (2, 3, False)
+    assert not context.terms_truncated
     # Grouped by kind; 旧名 is only in an old version, 樱 is after the anchor, 弃名 is rejected.
     assert [(term.term, term.kind, term.first_chapter_num) for term in context.terms] == [
         ("白玫", TermKind.PERSON, 3),
@@ -132,9 +132,10 @@ def test_context_lists_range_terms_with_current_definitions_translations_and_con
     assert by_term["方亭市"].definition is None
     definition = by_term["种级"].definition
     assert definition is not None and len(definition) == 200 and definition.endswith("…")
-    # Naming conventions only, rejected ones included, with handles registered for the run.
+    # Every category, rejected ones included, with handles registered for the run.
     shown = {convention.title: convention for convention in context.conventions}
-    assert set(shown) == {"Ranks", "Pinyin"}
+    assert set(shown) == {"Ranks", "Pinyin", "Tone"}
+    assert shown["Tone"].category == ConventionCategory.STYLE
     assert shown["Ranks"].editable and not shown["Pinyin"].editable
     assert shown["Pinyin"].review_status == ReviewStatus.REJECTED
     assert deps.convention_handles.get_uuid(shown["Ranks"].handle) == agent_draft.convention_id

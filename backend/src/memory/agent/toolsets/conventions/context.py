@@ -2,7 +2,6 @@
 
 from pydantic import Field
 
-from src.memory.access import check_mem_access_ctx
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.plugins.conventions.access import read_conventions
 from src.memory.plugins.conventions.types import ConventionCategory
@@ -17,9 +16,10 @@ MAX_DEFINITION_CHARS = 200
 
 
 class ContextConvention(AgentModel):
-    """An existing naming convention as shown to the conventions agent."""
+    """An existing convention as shown to the conventions agent."""
 
     handle: str = Field(description="Handle for revising or withdrawing this convention, such as c3.")
+    category: ConventionCategory
     title: str
     rule: str
     rationale: str | None
@@ -40,8 +40,6 @@ class ContextTerm(AgentModel):
 class ConventionsContext(AgentModel):
     """What the conventions agent sees before it calls tools."""
 
-    start_chapter_num: int | None = Field(description="First reviewed chapter; null means the first chapter.")
-    end_chapter_num: int = Field(description="Last reviewed chapter.")
     conventions: list[ContextConvention]
     terms: list[ContextTerm] = Field(
         description="Terms in the reviewed chapters, grouped by kind and earliest first within each kind."
@@ -62,20 +60,20 @@ def conventions_context(deps: MemAgentDeps, start_chapter_num: int | None) -> Co
             reviewed chapter is the access context's chapter.
 
     Returns:
-        The group's naming conventions and up to ``MAX_CONTEXT_TERMS`` terms from the reviewed chapters.
+        The group's conventions and up to ``MAX_CONTEXT_TERMS`` terms from the reviewed chapters.
     """
     db, ctx = deps.db, deps.mem_access_context
-    end_chapter_num, _ = check_mem_access_ctx(db, ctx)
     conventions = [
         ContextConvention(
             handle=deps.convention_handles.new(row.convention_id),
+            category=row.category,
             title=row.title,
             rule=row.rule,
             rationale=row.rationale,
             review_status=row.review_status,
             editable=row.creator_type == Creator.AGENT and row.review_status == ReviewStatus.PENDING,
         )
-        for row in read_conventions(db, ctx.memory_group_id, category=ConventionCategory.NAMING)
+        for row in read_conventions(db, ctx.memory_group_id)
     ]
     range_terms, terms_truncated = glossary.get_terms_in_chapter_range(
         db, ctx, start_chapter_num, limit=MAX_CONTEXT_TERMS
@@ -94,8 +92,6 @@ def conventions_context(deps: MemAgentDeps, start_chapter_num: int | None) -> Co
         mapping.term: mapping.translation for mapping in read_term_translations(db, ctx, [term.term for term in terms])
     }
     return ConventionsContext(
-        start_chapter_num=start_chapter_num,
-        end_chapter_num=end_chapter_num,
         conventions=conventions,
         terms=[
             ContextTerm(

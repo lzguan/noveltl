@@ -17,15 +17,27 @@ e.g. windows of N chapters (record N, conventions, name N) so conventions cadenc
 and barriers share one mechanism, reducing the need for job chaining.
 
 Storage, the review UI, and naming consumption now exist; see
-[translation conventions](translation-conventions.md). The conventions stage is
-scaffolded but unimplemented: a `summarize_conventions` stage config,
-one anchored task per job ([memory jobs](memory-jobs.md)), and stub
-[agent](../../backend/src/memory/agent/agents/conventions.py) and
-[stage](../../backend/src/memory/agent/stages/conventions.py) modules that raise
-`NotImplementedError`. The job form offers it, so such jobs fail at that task
-until the agent exists.
+[translation conventions](translation-conventions.md). The conventions stage
+runs a real agent: a `summarize_conventions` stage config with
+`since_chapter_num`, one anchored task per job ([memory jobs](memory-jobs.md)),
+the [factory](../../backend/src/memory/agent/agents/conventions.py),
+[prompt](../../backend/src/memory/agent/prompts/conventions.py),
+[read tools](../../backend/src/memory/agent/toolsets/conventions/tools.py)
+(`search_glossary_terms`, `term_occurrences` via `novels.term_search.summarize_occurrences`,
+plus the existing definitions, relations, and translations reads), and the
+[runner](../../backend/src/memory/agent/stages/conventions.py), which skips
+the model when no glossary terms occur in the range. The agent proposes both
+`naming` and `style` conventions (each draft carries a category) and sees every
+category in its context; restricting it to naming was dropped because chapter
+translation reads neither kind yet (`iter_batch_memories` is its only memory
+input; `term_translations` are not wired in either). Wiring renderings and
+conventions into chapter translation is the step that makes this output reach
+translated text. Style evidence is weak: the agent has terms, definitions, and
+occurrence counts but no chapter excerpts. It has only run against
+FunctionModel; no real-model trial yet. The job form does not set
+`since_chapter_num` yet.
 
-Decided with the user (2026-11-06), not yet implemented:
+Decided with the user (2026-11-06):
 
 - Scope: a run covers terms occurring in chapters [`since_chapter_num`,
   anchor] (`SummarizeConventionsConfig.since_chapter_num`; None means the first
@@ -40,8 +52,7 @@ Decided with the user (2026-11-06), not yet implemented:
   tool should reuse it and pass the anchor chapter as the range end, which keeps
   the no-spoiler rule on the memory side. `access.search_terms` searches term
   names. No agent tools exist yet.
-- Output (implemented in [capabilities/conventions.py](../../backend/src/memory/agent/capabilities/conventions.py),
-  not yet wired to a real agent): `ConventionsOutput` with create / revise /
+- Output ([capabilities/conventions.py](../../backend/src/memory/agent/capabilities/conventions.py)): `ConventionsOutput` with create / revise /
   withdraw by handle. Handles come from `MemAgentDeps.convention_handles`, a
   `UUIDCache(prefix="c")` beside `memory_handles`, so the context and any tool
   hand out the same `c3` within a run. `write_conventions_output` is the output

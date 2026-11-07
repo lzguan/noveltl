@@ -69,10 +69,14 @@ UNCHANGED = {
 
 def test_output_rejects_a_handle_used_twice_and_blank_text() -> None:
     with pytest.raises(ValidationError, match="at most once"):
-        ConventionsOutput.model_validate({"revise": [{"handle": "c1", "title": "T", "rule": "R"}], "withdraw": ["c1"]})
+        ConventionsOutput.model_validate(
+            {"revise": [{"handle": "c1", "category": "naming", "title": "T", "rule": "R"}], "withdraw": ["c1"]}
+        )
     with pytest.raises(ValidationError):
-        ConventionsOutput.model_validate({"create": [{"title": "  ", "rule": "R"}]})
-    draft = ConventionsOutput.model_validate({"create": [{"title": " Ranks ", "rule": " Use -rank. "}]}).create[0]
+        ConventionsOutput.model_validate({"create": [{"category": "naming", "title": "  ", "rule": "R"}]})
+    draft = ConventionsOutput.model_validate(
+        {"create": [{"category": "naming", "title": " Ranks ", "rule": " Use -rank. "}]}
+    ).create[0]
     assert (draft.title, draft.rule, draft.rationale) == ("Ranks", "Use -rank.", None)
 
 
@@ -82,8 +86,13 @@ def test_writes_creates_revisions_and_withdrawals_of_agent_drafts(
     deps, h = _group_with_conventions(test_db, sample_scenario)
     output = ConventionsOutput.model_validate(
         {
-            "create": [{"title": "Seed ladder", "rule": "Egg/Pupa/Seed-rank."}],
-            "revise": [{"handle": h["Ranks"], "title": "Ranks", "rule": "Use -rank for every grade."}],
+            "create": [
+                {"category": "naming", "title": "Seed ladder", "rule": "Egg/Pupa/Seed-rank."},
+                {"category": "style", "title": "Status panels", "rule": "Keep 【…】 as [ … ]."},
+            ],
+            "revise": [
+                {"handle": h["Ranks"], "category": "style", "title": "Ranks", "rule": "Use -rank for every grade."}
+            ],
             "withdraw": [h["Places"]],
         }
     )
@@ -94,7 +103,10 @@ def test_writes_creates_revisions_and_withdrawals_of_agent_drafts(
         "Ranks": ("Use -rank for every grade.", Creator.AGENT, ReviewStatus.PENDING),
         "Codenames": UNCHANGED["Codenames"],
         "Seed ladder": ("Egg/Pupa/Seed-rank.", Creator.AGENT, ReviewStatus.PENDING),
+        "Status panels": ("Keep 【…】 as [ … ].", Creator.AGENT, ReviewStatus.PENDING),
     }
+    categories = {row.title: row.category for row in read_conventions(test_db, deps.mem_access_context.memory_group_id)}
+    assert categories["Status panels"] == categories["Ranks"] == ConventionCategory.STYLE
 
 
 @pytest.mark.parametrize(
@@ -107,8 +119,8 @@ def test_an_unknown_or_locked_handle_rolls_back_the_whole_attempt(
     deps, h = _group_with_conventions(test_db, sample_scenario)
     output = ConventionsOutput.model_validate(
         {
-            "create": [{"title": "Seed ladder", "rule": "Egg/Pupa/Seed-rank."}],
-            "revise": [{"handle": h["Ranks"], "title": "Ranks", "rule": "Changed."}],
+            "create": [{"category": "naming", "title": "Seed ladder", "rule": "Egg/Pupa/Seed-rank."}],
+            "revise": [{"handle": h["Ranks"], "category": "naming", "title": "Ranks", "rule": "Changed."}],
             "withdraw": [h.get(bad_target, bad_target)],
         }
     )
@@ -143,7 +155,7 @@ def test_agent_retries_after_a_rejected_attempt_and_only_the_retry_is_saved(
         nonlocal calls
         calls += 1
         output = {
-            "create": [{"title": "Seed ladder", "rule": "Egg/Pupa/Seed-rank."}],
+            "create": [{"category": "naming", "title": "Seed ladder", "rule": "Egg/Pupa/Seed-rank."}],
             "withdraw": [h["Codenames"]] if calls == 1 else [h["Places"]],
         }
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, output)])

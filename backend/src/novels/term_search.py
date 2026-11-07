@@ -8,8 +8,10 @@ Multilingual Plane, as label offsets already assume.
 
 import re
 import uuid
+from collections.abc import Sequence
+from dataclasses import dataclass
 
-from sqlalchemy import Integer, Select, cast, func, select
+from sqlalchemy import Integer, Select, Text, cast, column, func, select, values
 from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.orm import Session
 
@@ -182,3 +184,66 @@ def search_chapter_content(
             TermOccurrencePreview(start=start, preview=text[preview_start:preview_end], preview_start=preview_start)
         )
     return ChapterContentTermSearch(chapter_content_id=chapter_content_id, occurrences=previews)
+
+
+@dataclass(frozen=True)
+class TermOccurrenceSummary:
+    """How often one term occurs in a novel up to a chapter.
+
+    Attributes:
+        term: The searched text.
+        first_chapter_num: The first chapter containing it, or None if no chapter does.
+        chapter_count: Number of chapters containing it.
+        match_count: Number of non-overlapping occurrences across those chapters.
+    """
+
+    term: str
+    first_chapter_num: int | None
+    chapter_count: int
+    match_count: int
+
+
+def summarize_occurrences(
+    db: Session, novel_id: uuid.UUID, terms: Sequence[str], end_chapter_num: int
+) -> list[TermOccurrenceSummary]:
+    """Summarize occurrences of each term in the latest content of chapters up to a chapter.
+
+    Applies no permission filter.
+
+    Args:
+        db: The database session.
+        novel_id: The novel to search.
+        terms: Exact texts to find; duplicates are summarized once.
+        end_chapter_num: Last chapter searched (inclusive).
+
+    Returns:
+        One summary per distinct term, in the order given.
+    """
+    distinct_terms = list(dict.fromkeys(terms))
+    if not distinct_terms:
+        return []
+    contents = (
+        select(Chapter.chapter_num, ChapterContent.chapter_content_text)
+        .join(ChapterContent, ChapterContent.chapter_id == Chapter.chapter_id)
+        .where(Chapter.novel_id == novel_id, Chapter.chapter_num <= end_chapter_num)
+        .ext(distinct_on(Chapter.chapter_id))
+        .order_by(Chapter.chapter_id, ChapterContent.chapter_content_version.desc())
+        .subquery()
+    )
+    searched = values(column("term", Text), name="searched_terms").data([(term,) for term in distinct_terms])
+    text = contents.c.chapter_content_text
+    match_count = cast(
+        (func.length(text) - func.length(func.replace(text, searched.c.term, ""))) / func.length(searched.c.term),
+        Integer,
+    )
+    rows = db.execute(
+        select(searched.c.term, func.min(contents.c.chapter_num), func.count(), func.sum(match_count))
+        .select_from(searched)
+        .join(contents, func.strpos(text, searched.c.term) > 0)
+        .group_by(searched.c.term)
+    ).all()
+    found = {term: (first, chapters, matches) for term, first, chapters, matches in rows}
+    return [
+        TermOccurrenceSummary(term, *found[term]) if term in found else TermOccurrenceSummary(term, None, 0, 0)
+        for term in distinct_terms
+    ]

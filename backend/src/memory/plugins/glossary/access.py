@@ -1,8 +1,10 @@
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from typing import Final
 from uuid import UUID
 
 from sqlalchemy import SQLColumnExpression, func, insert, literal, or_, select, update
+from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session, aliased
 
@@ -14,7 +16,7 @@ from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossa
 from src.memory.plugins.glossary.types import TermKind
 from src.memory.schemas import AgentMemory
 from src.memory.types import Creator, MemoryType, PluginName, ReviewStatus, Scope
-from src.novels.models import ChapterContent
+from src.novels.models import Chapter, ChapterContent
 from src.schemas import Page
 
 type ContainsQuery = Callable[
@@ -84,6 +86,64 @@ def get_terms_in_chapter(
     if not include_rejected:
         query = query.where(GlossaryTerm.review_status != ReviewStatus.REJECTED)
     return list(db.scalars(query).all())
+
+
+@dataclass(frozen=True)
+class RangeTerm:
+    """A glossary term and the first chapter of a range that contains it.
+
+    Attributes:
+        term: The glossary term.
+        first_chapter_num: The first chapter in the range whose latest content contains the term.
+    """
+
+    term: GlossaryTerm
+    first_chapter_num: int
+
+
+def get_terms_in_chapter_range(
+    db: Session,
+    ctx: MemAccessContext,
+    start_chapter_num: int | None,
+    *,
+    limit: int,
+    include_rejected: bool = False,
+) -> tuple[list[RangeTerm], bool]:
+    """Get glossary terms occurring in chapters from the start to the context's chapter, by first occurrence.
+
+    Args:
+        db: The database session.
+        ctx: Access context; its chapter is the last chapter searched.
+        start_chapter_num: First chapter number searched (inclusive), or None for the first chapter.
+        limit: Maximum number of terms returned.
+        include_rejected: Whether to include rejected terms.
+
+    Returns:
+        At most ``limit`` terms ordered by first occurrence and term, and whether more terms were omitted.
+    """
+    end_chapter_num, novel_id = check_mem_access_ctx(db, ctx)
+    latest = (
+        select(Chapter.chapter_num, ChapterContent.chapter_content_text)
+        .join(ChapterContent, ChapterContent.chapter_id == Chapter.chapter_id)
+        .where(Chapter.novel_id == novel_id, Chapter.chapter_num <= end_chapter_num)
+        .ext(distinct_on(Chapter.chapter_id))
+        .order_by(Chapter.chapter_id, ChapterContent.chapter_content_version.desc())
+    )
+    if start_chapter_num is not None:
+        latest = latest.where(Chapter.chapter_num >= start_chapter_num)
+    contents = latest.subquery()
+    first_chapter_num = func.min(contents.c.chapter_num).label("first_chapter_num")
+    statement = (
+        select(GlossaryTerm, first_chapter_num)
+        .join(contents, contains_query(contents.c.chapter_content_text, GlossaryTerm.term))
+        .where(GlossaryTerm.memory_group_id == ctx.memory_group_id)
+        .group_by(GlossaryTerm.term_id)
+        .order_by(first_chapter_num, GlossaryTerm.term)
+    )
+    if not include_rejected:
+        statement = statement.where(GlossaryTerm.review_status != ReviewStatus.REJECTED)
+    rows = [RangeTerm(term, first) for term, first in db.execute(statement.limit(limit + 1))]
+    return rows[:limit], len(rows) > limit
 
 
 def inspect_terms(

@@ -56,12 +56,18 @@ Decided with the user (2026-11-06), not yet implemented:
   them with `convention_mod_access_*` before executing.
 - Naming in the same job follows the agent's pending conventions (naming already
   reads pending + approved).
-- First input is term-centric: new terms (kind, short definition), existing
-  conventions by handle (rejected ones included so they are not re-proposed),
-  related translations, and a substring/morpheme term search for families such
-  as rank ladders. The user wants room to add read tools later (chapter
-  excerpts, term occurrences, aliases, possibly selectable toolsets), so keep the
-  agent's tools pluggable rather than baking the context into one prompt.
+- First input is term-centric, built by `conventions_context` in
+  [toolsets/conventions/context.py](../../backend/src/memory/agent/toolsets/conventions/context.py):
+  the group's naming conventions (rejected ones included) with handles
+  registered in `deps.convention_handles`, and up to 200 terms occurring in
+  [since, anchor] (`glossary.get_terms_in_chapter_range`, ordered by first
+  occurrence, with a `terms_truncated` flag) carrying kind, first chapter, the
+  newest active definition (from `inspect_terms`, cut to 200 characters), and
+  the current translation. A chapter cursor for paging terms was tried and
+  dropped: windows rarely approach 200 terms (85 recorded terms for 下班…
+  chapters 1-49). The user wants room to add read tools later (chapter excerpts,
+  term occurrences, aliases, possibly selectable toolsets), so keep the agent's
+  tools pluggable rather than baking more into the context.
 
 Alternative input considered: a dry-run naming stage first, so the agent
 resolves observed rendering variance. `term_translations` has no job

@@ -153,3 +153,29 @@ def test_range_terms_are_ordered_by_first_occurrence_and_capped(test_db: Session
     monkeypatch.setattr(context_module, "MAX_CONTEXT_TERMS", 2)
     context = conventions_context(MemAgentDeps(db=test_db, mem_access_context=contexts[3]), 2)
     assert [term.term for term in context.terms] == ["方亭市", "种级"] and context.terms_truncated
+
+
+def test_context_shows_alias_relations_for_listed_terms(test_db: Session) -> None:
+    _, contexts = _setup(test_db)
+    access.create_memory(
+        test_db,
+        contexts[3],
+        Creator.AGENT,
+        MemoryType.RELATION,
+        ["白玫", "方亭市"],
+        "白玫 is the codename used in 方亭市.",
+        mark=access.ALIAS_PERSONA_MARK,
+    )
+    access.create_memory(
+        test_db, contexts[3], Creator.AGENT, MemoryType.RELATION, ["白玫", "种级"], "Not an alias.", mark="rank"
+    )
+    test_db.commit()
+
+    context = conventions_context(MemAgentDeps(db=test_db, mem_access_context=contexts[3]), 2)
+
+    by_term = {term.term: term.aliases for term in context.terms}
+    assert by_term == {
+        "白玫": ["白玫 is the codename used in 方亭市."],
+        "方亭市": ["白玫 is the codename used in 方亭市."],
+        "种级": [],
+    }

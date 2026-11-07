@@ -6,13 +6,15 @@ from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.plugins.conventions.access import read_conventions
 from src.memory.plugins.conventions.types import ConventionCategory
 from src.memory.plugins.glossary import access as glossary
+from src.memory.plugins.glossary.access import ALIAS_MARKS
 from src.memory.plugins.glossary.types import TermKind
 from src.memory.plugins.translations.access import read_term_translations
 from src.memory.schemas import AgentModel
 from src.memory.types import Creator, MemoryType, ReviewStatus
 
 MAX_CONTEXT_TERMS = 200
-MAX_DEFINITION_CHARS = 200
+MAX_MEMORY_CHARS = 200
+MAX_CONTEXT_MEMORIES = 2000
 
 
 class ContextConvention(AgentModel):
@@ -35,6 +37,9 @@ class ContextTerm(AgentModel):
     first_chapter_num: int = Field(description="First reviewed chapter containing the term.")
     definition: str | None = Field(description="Current definition, shortened; null if none is recorded.")
     translation: str | None = Field(description="Current canonical rendering; null if the term is not named yet.")
+    aliases: list[str] = Field(
+        description="Alias relations involving the term, such as a codename and the person or form it belongs to."
+    )
 
 
 class ConventionsContext(AgentModel):
@@ -48,7 +53,7 @@ class ConventionsContext(AgentModel):
 
 
 def _shorten(text: str) -> str:
-    return text if len(text) <= MAX_DEFINITION_CHARS else text[: MAX_DEFINITION_CHARS - 1] + "…"
+    return text if len(text) <= MAX_MEMORY_CHARS else text[: MAX_MEMORY_CHARS - 1] + "…"
 
 
 def conventions_context(deps: MemAgentDeps, start_chapter_num: int | None) -> ConventionsContext:
@@ -80,14 +85,25 @@ def conventions_context(deps: MemAgentDeps, start_chapter_num: int | None) -> Co
     )
     range_terms.sort(key=lambda row: (row.term.term_kind or "", row.first_chapter_num, row.term.term))
     terms = [row.term for row in range_terms]
-    # Newest first; a term normally has one active definition, so a page of twice the terms covers them.
     definition_page = glossary.inspect_terms(
-        db, ctx, [term.term for term in terms], [MemoryType.DEFINITION], limit=2 * len(terms)
+        db, ctx, [term.term for term in terms], [MemoryType.DEFINITION], limit=MAX_CONTEXT_MEMORIES
     )
     definitions: dict[str, str] = {}
     for row in definition_page.rows:
         for associated in row.terms:
             definitions.setdefault(associated.term, row.memory.memory_content)
+    alias_page = glossary.inspect_terms(
+        db,
+        ctx,
+        [term.term for term in terms],
+        [MemoryType.RELATION],
+        limit=MAX_CONTEXT_MEMORIES,
+        marks=list(ALIAS_MARKS),
+    )
+    aliases: dict[str, list[str]] = {}
+    for row in alias_page.rows:
+        for associated in row.terms:
+            aliases.setdefault(associated.term, []).append(_shorten(row.memory.memory_content))
     translations = {
         mapping.term: mapping.translation for mapping in read_term_translations(db, ctx, [term.term for term in terms])
     }
@@ -100,6 +116,7 @@ def conventions_context(deps: MemAgentDeps, start_chapter_num: int | None) -> Co
                 first_chapter_num=row.first_chapter_num,
                 definition=_shorten(definitions[row.term.term]) if row.term.term in definitions else None,
                 translation=translations.get(row.term.term),
+                aliases=aliases.get(row.term.term, []),
             )
             for row in range_terms
         ],

@@ -42,6 +42,8 @@ import {
 } from "@/api/endpoints/default/default";
 import type { Role } from "@/api/models/role";
 import type { ChapterDataManager, ULabelOp } from "./types/dataTypes";
+import { createTextPositionMap, utf16ToCodePoint } from "@/lib/textPositions";
+import { labelsToUtf16 } from "../utils/textPositions";
 
 export const buildChapterDataManager = (
 	editChapterData: typeof ReadEditChapterDataEditChapterDataChapterIdPost200Response.Type,
@@ -63,6 +65,7 @@ export const buildChapterDataManager = (
 			})
 			.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
 		let text = editChapterData.chapterContent.chapterContentText;
+		let syncedText = text;
 
 		const labelDataIndex = yield* buildLabelDataIndex().pipe(
 			Effect.mapError((err) => new UnknownError({ orig: err })),
@@ -99,7 +102,7 @@ export const buildChapterDataManager = (
 						servId: LDServId(entry.labelData.labelDataId),
 					})
 					.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
-				const provLabels: ProvLabel[] = entry.labels
+				const provLabels: ProvLabel[] = labelsToUtf16(text, entry.labels)
 					.map((l) => {
 						const provLabelId = Effect.runSync(
 							idRepo.newIdAndBindId({ kind: "label", servId: LServId(l.labelId) }),
@@ -167,6 +170,7 @@ export const buildChapterDataManager = (
 
 		// Op queue: keyed by labelGroupProvId for label ops.
 		// Only one tag can be active at a time. Tag switching is handled by auto-flush in actions.
+		// Queued positions are code points for the API; local state and events use UTF-16.
 		let opQueue:
 			| { tag: "label"; queue: Map<LGProvId, { labelId: LProvId; op: ULabelOp }[]> }
 			| { tag: "text"; queue: TextOp[] }
@@ -422,6 +426,7 @@ export const buildChapterDataManager = (
 					opQueue = { tag: "neither" };
 					return events;
 				} else if (opQueue.tag === "text") {
+					const flushedText = text;
 					const queuedOps = [...opQueue.queue];
 					opQueue = { tag: "neither" };
 					const orphanedLabelIdsSnapshot = [...orphanedLabelIds];
@@ -600,6 +605,7 @@ export const buildChapterDataManager = (
 									.pipe(
 										Effect.mapError((err) => new FatalException({ orig: err })),
 									);
+								syncedText = flushedText;
 								for (const {
 									labelGroupProvId,
 									labelDataProvId,
@@ -763,9 +769,10 @@ export const buildChapterDataManager = (
 											}),
 										);
 									}
-									const freshLabels = [...entry.labels].sort(
-										(a, b) => a.labelStart - b.labelStart,
-									);
+									const freshLabels = labelsToUtf16(
+										flushedText,
+										entry.labels,
+									).sort((a, b) => a.labelStart - b.labelStart);
 									if (freshLabels.length !== loaded.labels.length) {
 										return yield* Effect.fail(
 											new FatalException({
@@ -897,7 +904,17 @@ export const buildChapterDataManager = (
 						new UnknownError({ message: "Label bounds are out of range" }),
 					);
 				}
-				if (endPos - startPos > 128) {
+				const positions = yield* Effect.try({
+					try: () => {
+						const mapping = createTextPositionMap(text);
+						return {
+							start: mapping.toCodePoint(startPos),
+							end: mapping.toCodePoint(endPos),
+						};
+					},
+					catch: (orig) => new UnknownError({ orig }),
+				});
+				if (positions.end - positions.start > 128) {
 					return yield* Effect.fail(new UnknownError({ message: "Label is too long" }));
 				}
 				if (
@@ -947,8 +964,8 @@ export const buildChapterDataManager = (
 						labelId: provLabelId,
 						op: {
 							op: "add",
-							startPos,
-							endPos,
+							startPos: positions.start,
+							endPos: positions.end,
 							entityGroup: entityGroup ?? null,
 							score: score ?? 1.0,
 							dirty: dirty ?? true,
@@ -1058,14 +1075,24 @@ export const buildChapterDataManager = (
 				const nextStart = startPos ?? currentLabel.labelStart;
 				const nextEnd = endPos ?? currentLabel.labelEnd;
 
-				if (nextEnd - nextStart > 128) {
-					return yield* Effect.fail(
-						new UnknownError({ message: "Updated label is too long" }),
-					);
-				}
 				if (nextStart >= nextEnd || nextStart < 0 || nextEnd > text.length) {
 					return yield* Effect.fail(
 						new UnknownError({ message: "Updated label bounds out of range" }),
+					);
+				}
+				const positions = yield* Effect.try({
+					try: () => {
+						const mapping = createTextPositionMap(text);
+						return {
+							start: mapping.toCodePoint(nextStart),
+							end: mapping.toCodePoint(nextEnd),
+						};
+					},
+					catch: (orig) => new UnknownError({ orig }),
+				});
+				if (positions.end - positions.start > 128) {
+					return yield* Effect.fail(
+						new UnknownError({ message: "Updated label is too long" }),
 					);
 				}
 
@@ -1113,8 +1140,8 @@ export const buildChapterDataManager = (
 						op: {
 							op: "update",
 							labelId: currentLabel.labelId,
-							startPos,
-							endPos,
+							startPos: startPos == null ? undefined : positions.start,
+							endPos: endPos == null ? undefined : positions.end,
 							entityGroup: entityGroup ?? undefined,
 							score: score ?? undefined,
 							dirty: dirty ?? undefined,
@@ -1163,6 +1190,10 @@ export const buildChapterDataManager = (
 				}
 				const flushedEvents = yield* autoFlushIfTagMismatch("text");
 				if (insertedText.length === 0) return flushedEvents;
+				const serverPos = yield* Effect.try({
+					try: () => utf16ToCodePoint(text, pos),
+					catch: (orig) => new UnknownError({ orig }),
+				});
 
 				const delta = insertedText.length;
 				const insertIds = yield* labelDataIndex.getIds();
@@ -1207,7 +1238,7 @@ export const buildChapterDataManager = (
 					opQueue = { tag: "text", queue: [] };
 				}
 				if (opQueue.tag === "text") {
-					opQueue.queue.push({ op: "insert", start: pos, text: insertedText });
+					opQueue.queue.push({ op: "insert", start: serverPos, text: insertedText });
 				}
 
 				yield* raiseTriggerEvent({
@@ -1241,6 +1272,14 @@ export const buildChapterDataManager = (
 					);
 				}
 				const deletedText = text.slice(startPos, endPos);
+				const serverPos = yield* Effect.try({
+					try: () => {
+						const mapping = createTextPositionMap(text);
+						mapping.toCodePoint(endPos);
+						return mapping.toCodePoint(startPos);
+					},
+					catch: (orig) => new UnknownError({ orig }),
+				});
 				const flushedEvents = yield* autoFlushIfTagMismatch("text");
 				if (deletedText.length === 0) return flushedEvents;
 
@@ -1288,7 +1327,7 @@ export const buildChapterDataManager = (
 					opQueue = { tag: "text", queue: [] };
 				}
 				if (opQueue.tag === "text") {
-					opQueue.queue.push({ op: "delete", start: startPos, text: deletedText });
+					opQueue.queue.push({ op: "delete", start: serverPos, text: deletedText });
 				}
 
 				yield* raiseTriggerEvent({
@@ -1392,6 +1431,7 @@ export const buildChapterDataManager = (
 				let wait = true;
 				let textRequestGenerationAtSend = textRequestGeneration;
 				let textWasPendingAtSend = false;
+				let textAtSend = text;
 
 				const onError = () =>
 					Effect.gen(function* () {
@@ -1457,6 +1497,7 @@ export const buildChapterDataManager = (
 					onFatalError: onError,
 					preSend: () =>
 						Effect.sync(() => {
+							textAtSend = text;
 							textRequestGenerationAtSend = textRequestGeneration;
 							textWasPendingAtSend =
 								opQueue.tag === "text" || pendingTextRequestCount > 0;
@@ -1562,7 +1603,7 @@ export const buildChapterDataManager = (
 								});
 								return;
 							}
-							const provLabels: ProvLabel[] = entry.labels
+							const provLabels: ProvLabel[] = labelsToUtf16(textAtSend, entry.labels)
 								.map((l) => {
 									const provLabelId = Effect.runSync(
 										idRepo.newIdAndBindId({
@@ -1689,6 +1730,8 @@ export const buildChapterDataManager = (
 				text: () => Effect.succeed(text),
 				chapterContentId: () => Effect.succeed(chapterContentId),
 				isDestroyed: () => destroyed,
+				isTextSynced: () =>
+					text === syncedText && opQueue.tag !== "text" && pendingTextRequestCount === 0,
 			},
 		};
 	});

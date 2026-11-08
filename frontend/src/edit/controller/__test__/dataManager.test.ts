@@ -6,7 +6,7 @@ import { buildChapterDataManager } from "../chapterDataManager";
 import { buildIdRepository } from "../idRepository";
 import { buildRequestManager } from "../requestmanager";
 import { buildNovelDataManager, type NovelData } from "../novelDataManager";
-import { CServId, LGServId, LServId, type IDRepository } from "../types/idTypes";
+import { CCServId, CServId, LGServId, LServId, type IDRepository } from "../types/idTypes";
 import type { TriggerEvent } from "../types/controllerTypes";
 import { Prov } from "../types/helperTypes";
 import { buildLabelGroupIndex } from "../dmHelpers";
@@ -56,7 +56,7 @@ const mockNovel: Novel = {
 };
 const mockRole: Role = "owner";
 
-function buildTestChapterDM() {
+function buildTestChapterDM(prefix = "") {
 	return Effect.gen(function* () {
 		const idRepo = buildIdRepository();
 		const triggerEvents: TriggerEvent[] = [];
@@ -89,7 +89,7 @@ function buildTestChapterDM() {
 		const editChapterData = {
 			chapterContent: {
 				chapterContentId: UUID2,
-				chapterContentText: "Alice met Bob at the park.",
+				chapterContentText: `${prefix}Alice met Bob at the park.`,
 				chapterContentVersion: 1,
 			},
 			eagerLabelData: [
@@ -104,8 +104,8 @@ function buildTestChapterDM() {
 						{
 							labelId: UUID5,
 							labelDataId: UUID4,
-							labelStart: 0,
-							labelEnd: 5,
+							labelStart: Array.from(prefix).length,
+							labelEnd: Array.from(prefix).length + 5,
 							labelWord: "Alice",
 							labelEntityGroup: "character",
 							labelScore: 1,
@@ -114,8 +114,8 @@ function buildTestChapterDM() {
 						{
 							labelId: UUID6,
 							labelDataId: UUID4,
-							labelStart: 10,
-							labelEnd: 13,
+							labelStart: Array.from(prefix).length + 10,
+							labelEnd: Array.from(prefix).length + 13,
 							labelWord: "Bob",
 							labelEntityGroup: "character",
 							labelScore: 1,
@@ -349,6 +349,179 @@ async function buildOpenedNovelWithAddedLabelGroup() {
 }
 
 describe("buildChapterDataManager", () => {
+	describe("Unicode API boundaries", () => {
+		it("loads server label ranges into UTF-16 controller positions", () => {
+			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM("😀"));
+			const slot = Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId));
+			if (slot.status !== "ready") throw new Error("Labels were not loaded");
+			expect(slot.data.labels.map((label) => [label.labelStart, label.labelEnd])).toEqual([
+				[2, 7],
+				[12, 15],
+			]);
+			const text = Effect.runSync(chapterDM.getters.text());
+			expect(
+				slot.data.labels.map((label) => text.slice(label.labelStart, label.labelEnd)),
+			).toEqual(["Alice", "Bob"]);
+		});
+
+		it("captures each queued edit against its own pre-edit text and retries the same payload", async () => {
+			const { chapterDM } = Effect.runSync(buildTestChapterDM("😀"));
+			Effect.runSync(chapterDM.insertTextAt(2, "𠮷"));
+			Effect.runSync(chapterDM.deleteTextAt(4, 5));
+			Effect.runSync(chapterDM.insertTextAt(4, "X"));
+			const events = Effect.runSync(chapterDM.flush());
+			const event = events.find((entry) => entry.variant === "textOp");
+			if (!event) throw new Error("No text request was queued");
+			// Later local work must not change the coordinates captured for this request.
+			Effect.runSync(chapterDM.insertTextAt(0, "😀"));
+			const send = vi.mocked(updateChapterContentChaptersChapterIdContentPatch);
+			send.mockClear();
+			send.mockResolvedValue({
+				status: 200,
+				data: { chapterContentId: UUID7, chapterContentVersion: 2, labelDataIdMap: {} },
+				headers: new Headers(),
+			});
+			await Effect.runPromise(event.send(RequestKey("unicode-edit")));
+			await Effect.runPromise(event.send(RequestKey("unicode-retry")));
+			for (const call of send.mock.calls) {
+				expect(call[1].textOps).toEqual([
+					{ op: "insert", start: 1, text: "𠮷" },
+					{ op: "delete", start: 2, text: "A" },
+					{ op: "insert", start: 2, text: "X" },
+				]);
+			}
+			expect(send).toHaveBeenCalledTimes(2);
+			expect(Effect.runSync(chapterDM.getters.text())).toBe(
+				"😀😀𠮷Xlice met Bob at the park.",
+			);
+			expect(chapterDM.getters.isTextSynced()).toBe(false);
+		});
+
+		it("converts label writes while retaining UTF-16 local ranges", async () => {
+			const { chapterDM, labelGroupId } = Effect.runSync(buildTestChapterDM("😀"));
+			Effect.runSync(chapterDM.addLabel(labelGroupId, 8, 11));
+			const events = Effect.runSync(chapterDM.flush());
+			const event = events.find((entry) => entry.variant === "labelOp");
+			if (!event) throw new Error("No label request was queued");
+			const send = vi.mocked(updateLabelDataStreamLabelDatasLabelDataIdPatch);
+			send.mockClear();
+			send.mockResolvedValue({
+				status: 200,
+				data: { results: [UUID8] },
+				headers: new Headers(),
+			});
+			await Effect.runPromise(event.send(RequestKey("unicode-label")));
+			expect(send.mock.calls[0]?.[1].ops).toEqual([
+				expect.objectContaining({ op: "add", startPos: 7, endPos: 10 }),
+			]);
+			const slot = Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId));
+			if (slot.status !== "ready") throw new Error("Labels were not loaded");
+			expect(slot.data.labels.find((label) => label.labelWord === "met")).toMatchObject({
+				labelStart: 8,
+				labelEnd: 11,
+			});
+		});
+
+		it("converts label updates and rejects boundaries inside emoji", async () => {
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM("😀"));
+			const bob = getLabelProvId(idRepo, UUID6);
+			Effect.runSync(chapterDM.updateLabel(labelGroupId, bob, 12, 16));
+			const event = Effect.runSync(chapterDM.flush()).find(
+				(entry) => entry.variant === "labelOp",
+			);
+			if (!event) throw new Error("No label request was queued");
+			const send = vi.mocked(updateLabelDataStreamLabelDatasLabelDataIdPatch);
+			send.mockClear();
+			send.mockResolvedValue({
+				status: 200,
+				data: { results: [UUID6] },
+				headers: new Headers(),
+			});
+			await Effect.runPromise(event.send(RequestKey("unicode-label-update")));
+			expect(send.mock.calls[0]?.[1].ops).toEqual([
+				expect.objectContaining({ op: "update", startPos: 11, endPos: 15 }),
+			]);
+			const text = Effect.runSync(chapterDM.getters.text());
+			expect(Effect.runSync(chapterDM.insertTextAt(1, "X").pipe(Effect.result))._tag).toBe(
+				"Failure",
+			);
+			expect(Effect.runSync(chapterDM.deleteTextAt(0, 1).pipe(Effect.result))._tag).toBe(
+				"Failure",
+			);
+			expect(Effect.runSync(chapterDM.getters.text())).toBe(text);
+		});
+
+		it("converts reloaded labels with the referenced chapter text", async () => {
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM("😀"));
+			const event = Effect.runSync(chapterDM.reloadGroup(labelGroupId, true))[0];
+			if (!event) throw new Error("No reload request was queued");
+			const response = makeReloadResponse(UUID4, [UUID5, UUID6]);
+			if (response.status !== 200) throw new Error("Invalid reload fixture");
+			const data = response.data.map((entry) => ({
+				...entry,
+				labels: entry.labels.map((label) => ({
+					...label,
+					labelStart: label.labelStart + 1,
+					labelEnd: label.labelEnd + 1,
+				})),
+			}));
+			const reservations = event.reservationRequest.reserveList();
+			Effect.runSync(reserveAll(idRepo, reservations));
+			Effect.runSync(event.preSend());
+			await Effect.runPromise(event.postSend(data));
+			const slot = Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId));
+			if (slot.status !== "ready") throw new Error("Labels were not loaded");
+			expect(slot.data.labels.map((label) => [label.labelStart, label.labelEnd])).toEqual([
+				[2, 7],
+				[12, 15],
+			]);
+		});
+
+		it("reconciles saved labels against the flushed text despite subsequent local edits", async () => {
+			const { chapterDM, labelGroupId, idRepo } = Effect.runSync(buildTestChapterDM("😀"));
+			Effect.runSync(chapterDM.insertTextAt(2, "𠮷"));
+			const save = Effect.runSync(chapterDM.flush())[0];
+			if (!save) throw new Error("No text request was queued");
+			Effect.runSync(chapterDM.insertTextAt(0, "😀"));
+			const refresh = Effect.runSync(chapterDM.flush()).find(
+				(entry) => entry.variant === "reloadGroup",
+			);
+			if (!refresh) throw new Error("No saved-label refresh was queued");
+			const reservations = save.reservationRequest.reserveList();
+			Effect.runSync(reserveAll(idRepo, reservations));
+			await Effect.runPromise(
+				save.postSend({
+					chapterContentId: UUID7,
+					chapterContentVersion: 2,
+					labelDataIdMap: { [UUID4]: UUID8 },
+				}),
+			);
+			Effect.runSync(releaseAllOnSuccess(idRepo, reservations));
+			const response = makeReloadResponse(UUID8);
+			if (response.status !== 200) throw new Error("Invalid reload fixture");
+			const data = response.data.map((entry) => ({
+				...entry,
+				labelData: { ...entry.labelData, chapterContentId: UUID7 },
+				labels: entry.labels.map((label) => ({
+					...label,
+					labelStart: label.labelStart + 2,
+					labelEnd: label.labelEnd + 2,
+				})),
+			}));
+			const refreshReservations = refresh.reservationRequest.reserveList();
+			Effect.runSync(reserveAll(idRepo, refreshReservations));
+			await Effect.runPromise(refresh.postSend(data));
+			Effect.runSync(releaseAllOnSuccess(idRepo, refreshReservations));
+			const slot = Effect.runSync(chapterDM.getters.labelDataSlot(labelGroupId));
+			if (slot.status !== "ready") throw new Error("Labels were not loaded");
+			expect(slot.data.labels.map((label) => [label.labelStart, label.labelEnd])).toEqual([
+				[6, 11],
+				[16, 19],
+			]);
+			expect(chapterDM.getters.isTextSynced()).toBe(false);
+		});
+	});
+
 	describe("addLabel", () => {
 		it("adds a label and raises a trigger event", () => {
 			const { chapterDM, triggerEvents, labelGroupId } = Effect.runSync(buildTestChapterDM());
@@ -1170,6 +1343,40 @@ describe("buildChapterDataManager", () => {
 });
 
 describe("buildNovelDataManager chapter eviction", () => {
+	it("rejects a cached server highlight after unsaved local text changes", async () => {
+		const idRepo = buildIdRepository();
+		const events: TriggerEvent[] = [];
+		const novelDM = Effect.runSync(
+			buildNovelDataManager(
+				() => Effect.succeed(makeNovelDataWithoutLabelGroups()),
+				(_getters, event) =>
+					Effect.sync(() => {
+						events.push(event);
+					}),
+				idRepo,
+			),
+		);
+		const chapterId = Effect.runSync(novelDM.getters.chapterIds())[0];
+		const requests = Effect.runSync(
+			novelDM.openChapter(chapterId, [], { now: true, forEditor: true, fromCached: false }),
+		);
+		await Effect.runPromise(requests[0].postSend(makeOpenChapterResponse().data));
+		const chapterDM = novelDM.getChapterDM(chapterId);
+		if (!chapterDM) throw new Error("Chapter was not loaded");
+		Effect.runSync(chapterDM.insertTextAt(0, "😀"));
+		Effect.runSync(
+			novelDM.openChapter(chapterId, [], {
+				now: true,
+				forEditor: true,
+				fromCached: true,
+				highlight: { start: 0, end: 5, desiredCCId: CCServId(UUID2) },
+			}),
+		);
+		expect(events.filter((event) => event.eventType === "chapterOpened").at(-1)).toMatchObject({
+			flags: { forEditor: true, highlight: { validCCId: false } },
+		});
+	});
+
 	it("exposes server ids for a tracked chapter and its active saved content", async () => {
 		const novelDM = Effect.runSync(
 			buildNovelDataManager(

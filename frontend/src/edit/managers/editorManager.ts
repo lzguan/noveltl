@@ -14,6 +14,7 @@ import type { EditorData, LoadingPayload } from "../hooks/useEditorState";
 import { gatherLabelData } from "./readers";
 import type { LabelGroupView } from "../hooks/useTrackedLabelGroups";
 import type { ULabelOp } from "../controller/types/dataTypes";
+import { createTextPositionMap } from "@/lib/textPositions";
 
 export type LabelStyle = ProductStyle<
 	[
@@ -82,6 +83,7 @@ export function createEditorManager({
 					const { text, chapterContentId, labelData, couldNotLoad } = done.success;
 					const flatLabelData = Array.from(labelData.values()).flat();
 					const highlight = event.flags.highlight;
+					const positions = createTextPositionMap(text);
 
 					setLoading({
 						loading: false,
@@ -89,7 +91,10 @@ export function createEditorManager({
 						chapterId: event.chapterId,
 						chapterContentId,
 						initialSelection: highlight?.validCCId
-							? { start: highlight.start, end: highlight.end }
+							? {
+									start: positions.toUtf16(highlight.start),
+									end: positions.toUtf16(highlight.end),
+								}
 							: undefined,
 						empty: false,
 					});

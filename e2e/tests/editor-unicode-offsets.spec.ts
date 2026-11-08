@@ -136,3 +136,35 @@ test("highlights the searched term after emoji in its preview", async ({ page, r
 	await expect(match).toHaveCount(1);
 	await expect(match).toHaveText("白玫");
 });
+
+for (const cached of [false, true]) {
+	test(`search navigation selects a rare CJK term in a ${cached ? "cached" : "newly loaded"} chapter`, async ({
+		page,
+		request,
+	}) => {
+		const number = cached ? 9006 : 9005;
+		const fixture = await createChapter(page, request, number, "😀😀𠮷走进花园。");
+		if (cached) await openChapter(page, number, fixture.title, "😀😀𠮷走进花园。");
+		else await page.goto(`/edit/novels/${readSeed().novelId}`);
+		await page.getByRole("tab", { name: "Search", exact: true }).click();
+		await page.getByRole("textbox", { name: "Search text" }).fill("𠮷");
+		await page.getByRole("button", { name: "Search", exact: true }).click();
+		await page
+			.getByRole("button", { name: `Expand Chapter ${number} · ${fixture.title}` })
+			.click();
+		const occurrence = page.getByRole("button", { name: "😀😀𠮷走进花园。", exact: true });
+		await occurrence.click();
+		await expect(page.locator(".cm-content")).toHaveText("😀😀𠮷走进花园。");
+		await page.getByRole("button", { name: "Edit", exact: true }).click();
+		await page.locator(".cm-content").focus();
+		await page.keyboard.insertText("X");
+		await expect(page.locator(".cm-content")).toHaveText("😀😀X走进花园。");
+		await expect
+			.poll(
+				async () =>
+					(await latestChapterContent(request, fixture.token, fixture.chapterId))
+						.chapterContentText,
+			)
+			.toBe("😀😀X走进花园。");
+	});
+}

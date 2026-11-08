@@ -64,6 +64,11 @@ an unset start means the first chapter.
   (`plugins/term_search/access.py` `count_text_occurrences`, up to the anchor, any text), and
   the existing definitions, relations, and translations reads. No chapter
   excerpts, so style evidence is weak.
+  `term_occurrences` validates each searched string as nonempty; invalid tool
+  arguments are returned to the model for correction. The underlying
+  `count_text_occurrences` also rejects empty strings with `ValueError` before
+  querying, so direct callers cannot trigger SQL division by zero. An empty
+  input list still returns no results; nonempty whitespace is searched literally.
 - Output: `ConventionsOutput` create / revise / withdraw, each draft with a
   `category` (naming or style). `write_conventions_output` is the output
   validator and the only write path: in a savepoint it inserts creates and

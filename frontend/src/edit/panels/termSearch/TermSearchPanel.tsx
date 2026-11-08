@@ -12,6 +12,7 @@ import { apiErrorMessage, requestErrorMessage } from "@/lib/apiErrors";
 import { cn } from "@/lib/utils";
 import { ChevronRight, LoaderCircleIcon, SearchIcon } from "lucide-react";
 import { CCServId, CServId, type ProvChapter } from "../../controller/types/idTypes";
+import { codePointLength, codePointToUtf16 } from "@/lib/textPositions";
 
 export type GotoText = (
 	chapterId: CServId,
@@ -235,7 +236,7 @@ function ChapterResults({
 	function jump(start: number) {
 		gotoText(CServId(chapter.chapterId), {
 			start,
-			end: start + term.length,
+			end: start + codePointLength(term),
 			ccServId: CCServId(chapter.chapterContentId),
 		});
 	}
@@ -276,7 +277,10 @@ function ChapterResults({
 				)}
 				{previews.status === "ready" &&
 					previews.occurrences.map((occurrence) => {
-						const at = occurrence.start - occurrence.previewStart;
+						const at = codePointToUtf16(
+							occurrence.preview,
+							occurrence.start - occurrence.previewStart,
+						);
 						// Rows truncate at the end, so keep the lead-in short enough for the match to show.
 						const lead =
 							at > PREVIEW_LEAD

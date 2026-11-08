@@ -19,6 +19,8 @@ class TextOccurrences:
 
 def count_text_occurrences(db: Session, ctx: MemAccessContext, texts: Sequence[str]) -> list[TextOccurrences]:
     distinct_texts = list(dict.fromkeys(texts))
+    if "" in distinct_texts:
+        raise ValueError("Search texts must be non-empty.")
     if not distinct_texts:
         return []
     end_chapter_num, novel_id = check_mem_access_ctx(db, ctx)

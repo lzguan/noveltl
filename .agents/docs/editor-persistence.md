@@ -79,16 +79,42 @@ make `desiredCCId` required whenever a highlight is passed, so a missing or
 misnamed version fails the type check, and add a `chapterManager` test that a
 mismatched version opens without a highlight. Every current position source
 (filter results, term search, labels, memories) already carries a content
-version. The check compares server versions, so local edits not yet synced can
-still shift a highlight that passes it.
+version. Cached chapter opens also require `isTextSynced()` before accepting a
+server highlight, so an unchanged server ID cannot validate unsaved local text.
+
+## Text position units
+
+API and stored positions use Unicode code points; controller state, local events,
+the text model, and CodeMirror use UTF-16 code units. Shared conversions live in
+[textPositions.ts](../../frontend/src/lib/textPositions.ts), with batched label
+conversion in [edit/utils/textPositions.ts](../../frontend/src/edit/utils/textPositions.ts).
+
+- `chapterDataManager` converts eager/reloaded labels on entry. Text and label
+  operations capture code-point positions when queued; local mutations/events
+  stay UTF-16. Convert text operations before mutating the corresponding text,
+  not when an asynchronous request eventually sends or retries.
+- Post-save label reconciliation uses the text snapshot captured at flush time,
+  and reload conversion uses the text captured at send time after stale-response
+  checks. Do not use subsequently edited text to convert a saved batch's labels.
+- Search preview slicing converts relative offsets using the preview itself.
+  Navigation ranges remain code points through `gotoText`; `editorManager`
+  converts them after the referenced chapter loads. Search range ends use the
+  term's code-point length. Filter ranges share this navigation path.
+- `autolabelManager` converts preview labels against the matching, synced chapter
+  text. Raw autolabel results remain in API units.
+- `isTextSynced()` compares local text with the last successfully saved snapshot
+  and excludes queued/in-flight text work. Failed saves therefore cannot make
+  server positions valid for divergent local text.
+
+Existing incorrectly stored labels are not repaired by these conversions.
 
 ## Regression entry points
 
 - [Unicode offset E2E cases](../../e2e/tests/editor-unicode-offsets.spec.ts)
   reproduce insertion persistence, deletion validation, server-label rendering,
   and search-preview highlighting after supplementary Unicode characters. The
-  frontend uses UTF-16 offsets while backend slicing uses code-point offsets;
-  the tests assert correct behavior and fail until the conversions are fixed.
+  tests assert correct behavior without expected-failure markers, and also cover
+  rare-CJK navigation into cached and newly loaded chapters.
   The four defects were reproduced against real browser/API/database boundaries
   on 2026-11-08. The E2E seed reflects existing tables before dropping them so
   leftover tables from other checkouts do not block the reset.

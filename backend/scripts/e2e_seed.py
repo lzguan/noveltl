@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 import redis
-from sqlalchemy import create_engine, text
+from sqlalchemy import MetaData, create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from src.auth.constants import UserType
@@ -51,7 +51,9 @@ def main() -> None:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto"))
         conn.commit()
 
-    Base.metadata.drop_all(bind=engine)
+    existing_tables = MetaData()
+    existing_tables.reflect(bind=engine)
+    existing_tables.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
     session_local = sessionmaker(autoflush=False, bind=engine)

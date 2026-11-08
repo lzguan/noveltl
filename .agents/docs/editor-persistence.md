@@ -84,6 +84,14 @@ still shift a highlight that passes it.
 
 ## Regression entry points
 
+- [Unicode offset E2E cases](../../e2e/tests/editor-unicode-offsets.spec.ts)
+  reproduce insertion persistence, deletion validation, server-label rendering,
+  and search-preview highlighting after supplementary Unicode characters. The
+  frontend uses UTF-16 offsets while backend slicing uses code-point offsets;
+  the tests assert correct behavior and fail until the conversions are fixed.
+  The four defects were reproduced against real browser/API/database boundaries
+  on 2026-11-08. The E2E seed reflects existing tables before dropping them so
+  leftover tables from other checkouts do not block the reset.
 - [Request manager](../../frontend/src/edit/controller/__test__/requestmanager.test.ts) and [ID repository](../../frontend/src/edit/controller/__test__/idRepository.test.ts).
 - [Novel services](../../backend/tests/novels/test_novels_service.py) and [permissions](../../backend/tests/novels/test_novels_permissions.py).
 - [Label streams](../../backend/tests/labels/test_label_stream.py).

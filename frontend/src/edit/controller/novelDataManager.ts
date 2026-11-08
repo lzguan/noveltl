@@ -600,6 +600,7 @@ export const buildNovelDataManager = (
 									});
 									validHighlight =
 										flags.forEditor &&
+										chapterSlot.data.chapterData.getters.isTextSynced() &&
 										flags.highlight !== undefined &&
 										(flags.highlight.desiredCCId === undefined ||
 											flags.highlight.desiredCCId === servId);

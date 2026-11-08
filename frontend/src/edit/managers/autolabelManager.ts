@@ -25,6 +25,7 @@ import type {
 	WorkspaceLockToken,
 } from "../hooks/useWorkspaceLock";
 import type { EditorMode } from "./editorManager";
+import { labelsToUtf16 } from "../utils/textPositions";
 
 /** Coordinates autolabel run state, preview reconciliation, and promotion. */
 export type AutoLabelUserEventHandlers = {
@@ -146,6 +147,10 @@ export function createAutoLabelManager({
 				autoLabelPreview.setPreview(null);
 				return;
 			}
+			if (!chapterSlot.data.chapterGetters.isTextSynced()) {
+				autoLabelPreview.setPreview(null);
+				return;
+			}
 			const chapterContentId = yield* chapterSlot.data.chapterGetters
 				.chapterContentId()
 				.pipe(Effect.mapError((err) => new UnknownError({ orig: err })));
@@ -178,7 +183,8 @@ export function createAutoLabelManager({
 
 			const autoLabelId = matching.meta.autoLabel.autoLabelMeta.autoLabelId;
 			if (matching.status === "ready") {
-				autoLabelPreview.setPreview(matching.data.autoLabelData ?? []);
+				const text = yield* chapterSlot.data.chapterGetters.text();
+				autoLabelPreview.setPreview(labelsToUtf16(text, matching.data.autoLabelData ?? []));
 				return;
 			}
 

@@ -58,6 +58,7 @@ export interface ChapterGetters {
 	chapterContentId: () => Effect.Effect<CCProvId>;
 	labelDataSlot: (labelGroupId: LGProvId) => Effect.Effect<LabelDataSlot, NotFoundException>;
 	isDestroyed: () => boolean;
+	isTextSynced: () => boolean;
 }
 
 /**

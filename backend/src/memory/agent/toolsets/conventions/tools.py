@@ -55,7 +55,8 @@ def search_glossary_terms(
 
 
 def term_occurrences(
-    ctx: RunContext[MemAgentDeps], texts: Annotated[list[str], Field(min_length=1, max_length=20)]
+    ctx: RunContext[MemAgentDeps],
+    texts: Annotated[list[Annotated[str, Field(min_length=1)]], Field(min_length=1, max_length=20)],
 ) -> list[TermOccurrences]:
     """Report where exact source texts occur in the novel up to the last reviewed chapter."""
     return [

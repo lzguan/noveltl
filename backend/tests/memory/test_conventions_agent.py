@@ -4,7 +4,13 @@ import asyncio
 import json
 
 import pytest
-from pydantic_ai.messages import ModelRequest, ModelResponse, ToolCallPart, ToolReturnPart, UserPromptPart
+from pydantic_ai.messages import (
+    ModelRequest,
+    ModelResponse,
+    ToolCallPart,
+    ToolReturnPart,
+    UserPromptPart,
+)
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -84,6 +90,58 @@ def test_text_occurrences_use_latest_content_up_to_the_context_chapter(test_db: 
         # Chapter 3 is past the context's chapter; texts need not be glossary terms.
         TextOccurrences("蛹级", first_chapter_num=None, chapter_count=0, match_count=0),
         TextOccurrences("无", first_chapter_num=None, chapter_count=0, match_count=0),
+    ]
+
+
+def test_text_occurrences_reject_empty_text_without_aborting_the_transaction(test_db: Session) -> None:
+    _, _, contexts = _setup(test_db)
+
+    for texts in [[""], ["种级", ""]]:
+        with pytest.raises(ValueError, match="Search texts must be non-empty"):
+            count_text_occurrences(test_db, contexts[2], texts)
+
+    assert count_text_occurrences(test_db, contexts[2], []) == []
+    assert count_text_occurrences(test_db, contexts[2], ["种级", " "]) == [
+        TextOccurrences("种级", first_chapter_num=1, chapter_count=2, match_count=3),
+        TextOccurrences(" ", first_chapter_num=None, chapter_count=0, match_count=0),
+    ]
+
+
+def test_stage_retries_an_empty_occurrence_text_and_accepts_the_corrected_call(
+    test_db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, _, contexts = _setup(test_db)
+    seen: list = []
+
+    def respond(messages, info: AgentInfo) -> ModelResponse:
+        seen.append(messages)
+        if len(seen) == 1:
+            return ModelResponse(parts=[ToolCallPart("term_occurrences", {"texts": ["种级", ""]})])
+        if len(seen) == 2:
+            return ModelResponse(parts=[ToolCallPart("term_occurrences", {"texts": ["种级"]})])
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {})])
+
+    monkeypatch.setattr(conventions_agent, "model_configuration", lambda _: (FunctionModel(respond), {}))
+    deps = MemAgentDeps(db=test_db, mem_access_context=contexts[2])
+    result = asyncio.run(run_conventions_stage(deps, 2, "English", SummarizeConventionsStageConfig(model_name=MODEL)))
+
+    assert result is not None
+    assert len(seen) == 3
+    assert any(
+        isinstance(part, ToolReturnPart) and part.tool_name == "term_occurrences" and part.outcome == "retried"
+        for message in seen[1]
+        if isinstance(message, ModelRequest)
+        for part in message.parts
+    )
+    tool_return = next(
+        part
+        for message in seen[2]
+        if isinstance(message, ModelRequest)
+        for part in message.parts
+        if isinstance(part, ToolReturnPart) and part.tool_name == "term_occurrences" and part.outcome == "success"
+    )
+    assert json.loads(tool_return.model_response_str()) == [
+        {"term": "种级", "first_chapter_num": 1, "chapter_count": 2, "match_count": 3}
     ]
 
 

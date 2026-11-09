@@ -95,9 +95,11 @@ Claim tokens remain with the worker and job, and attempt counts remain on tasks.
 Task/workspace deletion cascades to its drafts. No worker or API currently uses
 these tables; the transaction and completion behavior described above is unchanged.
 
-Shadows preserve published payload columns and use `(workspace_id, entity key)`
-primary keys. `deleted` denotes a tombstone. A create-then-delete can remove its
-draft rather than create a tombstone. Active term names and continuity summaries
+Published and shadow entities inherit column-only mixins defined beside each
+published model in its owning `models.py`. Keys, foreign keys, checks, and indexes
+belong to the concrete tables. Shadows use `(workspace_id, entity key)` primary
+keys. `deleted` denotes a tombstone. A create-then-delete can remove its draft
+rather than create a tombstone. Active term names and continuity summaries
 retain workspace-local uniqueness; tombstones do not block replacements.
 
 Entity IDs, association endpoints, translation term IDs, and supersedes IDs

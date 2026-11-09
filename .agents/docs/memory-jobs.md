@@ -6,6 +6,7 @@
 | --- | --- |
 | Stored parameter versions and internal stage configs | [config.py](../../backend/src/memory/agent/config.py) |
 | Job/task rows | [models.py](../../backend/src/memory/models.py) |
+| Inactive typed workspace/shadow schema | [shadow_models.py](../../backend/src/memory/shadow_models.py) |
 | Creation, claims, task status transitions | [tasks/jobs.py](../../backend/src/memory/agent/tasks/jobs.py) |
 | Execution and transaction boundaries | [tasks/tasks.py](../../backend/src/memory/agent/tasks/tasks.py) |
 | Agent construction and output validation | [agents/](../../backend/src/memory/agent/agents/) (one factory module per agent; recording owns the user-selectable toolset registry), [registry.py](../../backend/src/memory/agent/registry.py) (shared model configuration) |
@@ -83,6 +84,32 @@ completed model results and skipped naming stages are logged by the worker.
 Each stage loads the latest chapter content. No agent run context or source
 revision is persisted between memory stages. Agent creation happens per stage;
 [term naming](term-translations.md) skips it when there is nothing to translate.
+
+## Shadow storage schema (not connected to execution)
+
+[Migration f8b2c4d6e901](../../backend/alembic/versions/f8b2c4d6e901_add_memory_shadow_tables.py)
+adds execution workspaces referencing `(job, chapter, stage)` and typed shadows
+for memories, terms, associations, translations, and conventions. Each execution
+creates a fresh workspace; multiple workspaces can reference the same task.
+Claim tokens remain with the worker and job, and attempt counts remain on tasks.
+Task/workspace deletion cascades to its drafts. No worker or API currently uses
+these tables; the transaction and completion behavior described above is unchanged.
+
+Shadows preserve published payload columns and use `(workspace_id, entity key)`
+primary keys. `deleted` denotes a tombstone. A create-then-delete can remove its
+draft rather than create a tombstone. Active term names and continuity summaries
+retain workspace-local uniqueness; tombstones do not block replacements.
+
+Entity IDs, association endpoints, translation term IDs, and supersedes IDs
+deliberately do not reference published rows with foreign keys: new parents may
+exist only as drafts. Existing group/content references still have foreign keys.
+The agreed publication policy is to merge when the worker still owns an unexpired
+job claim and the resulting data satisfies existing validity and editability
+rules; there is no original-timestamp conflict check. Overlay reference validation,
+claim checks, cleanup, and atomic publication are subsequent work; the schema itself
+does not enforce them. [Schema tests](../../backend/tests/memory/test_shadow_schema.py)
+exercise the migration in an isolated PostgreSQL schema, including parity with
+ORM metadata, unpublished IDs, workspace isolation, constraints, and cleanup.
 
 ## Adding a stage or agent
 

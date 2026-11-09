@@ -18,6 +18,9 @@ including terms outside the reviewed chapters; use it to find term families
 such as every term containing 级. `term_occurrences` reports where exact texts
 occur up to the last reviewed chapter, including texts that are not glossary
 terms.
+Use searches to check a family's pattern and exceptions; the returned terms do
+not all need to appear as examples in a convention. Occurrence counts establish
+usage frequency, not a preferred translation or prose style.
 """.strip()
 
 

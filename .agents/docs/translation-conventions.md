@@ -24,8 +24,9 @@ and by the conventions agent. Conventions are global rules, not per-term data or
   `iter_batch_memories`.
 - Fields: `category` (`naming` | `style`), `title`, `rule`, nullable
   `rationale`, `review_status`, `creator_type`. No chapter range, slug, or term
-  membership. Examples belong in the rule text for now; an examples child table
-  keyed by `convention_id` is the intended extension.
+  membership. Examples belong in the rule text for now. A separate examples
+  table is deferred unless examples need independent evidence/review/retrieval;
+  prompt guidance is the current approach to keeping rules compact.
 - Arc scoping (quick-transmigration worlds, infinite-flow instances) was
   considered and deferred to a future arc concept shared with the glossary; see
   [follow-ups](memory-workflow-followups.md).
@@ -84,6 +85,28 @@ Tested only against FunctionModel ([test_conventions_agent.py](../../backend/tes
 [context](../../backend/tests/memory/test_conventions_context.py)).
 
 ## Observed behavior
+
+Working prompt guidance (2026-11-08), motivated by the conventions snapshots and
+the five pending rules in the local chapter-1–50 trial, is implemented in
+`CONVENTIONS_INSTRUCTIONS` and the conventions toolset instructions:
+
+- A coherent shared decision may cover a closed family; unseen members are not
+  required. Normally use two or three examples, with complete short ladders
+  allowed when their structure matters. New terms should not cause example-list
+  growth when they already fit an existing rule.
+- Preserve consistent established renderings unless a specific semantic error
+  or inconsistency motivates change. Separate evidence from editorial choice;
+  suffix matching alone does not establish shared meaning in every occurrence.
+- Preserve the source's name/alias choice and identity disclosure. Definitions
+  and aliases do not establish prose voice or dialogue register. Avoid style
+  claims requiring source excerpts the agent cannot read.
+
+These are provisional guidance, not a demonstrated quality improvement or a
+fixed global convention/example budget. The motivating DB trial used
+`deepseek:deepseek-v4-flash-low`, had no canonical term mappings at review time,
+and included an overly prescriptive transformed-form naming rule. A fresh live
+comparison is still needed; existing editable conventions may correctly remain
+unchanged when a rerun supplies no new evidence.
 
 One trial (2026-11-03, environment-specific group
 `40c9245c-e452-4a68-99e3-63c250ced001`, chapters 1–49 of 下班，然后变成魔法少女,

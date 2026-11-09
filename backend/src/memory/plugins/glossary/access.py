@@ -558,3 +558,61 @@ def expire_memory(
         db.execute(query.values(memory_end_num=end_num).returning(Memory.memory_id)).scalar_one()
     except NoResultFound as exc:
         raise MemoryNotFoundException(f"Glossary memory with id {memory_id} not found or already ended") from exc
+
+
+def read_agent_event_history(
+    db: Session,
+    ctx: MemAccessContext,
+    subject_term_name: str,
+    mark: str,
+) -> tuple[int, list[Memory]]:
+    chapter_num, _ = check_mem_access_ctx(db, ctx)
+    memories = list(
+        db.scalars(
+            select(Memory)
+            .join(GlossaryAssociation, GlossaryAssociation.memory_id == Memory.memory_id)
+            .join(GlossaryTerm, GlossaryTerm.term_id == GlossaryAssociation.term_id)
+            .where(
+                GlossaryTerm.memory_group_id == ctx.memory_group_id,
+                GlossaryTerm.term == subject_term_name,
+                Memory.memory_group_id == ctx.memory_group_id,
+                Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
+                Memory.memory_type == MemoryType.EVENT,
+                Memory.mark == mark,
+                Memory.creator_type == Creator.AGENT,
+                Memory.memory_review_status != ReviewStatus.REJECTED,
+                Memory.memory_start_num <= chapter_num,
+            )
+            .order_by(Memory.memory_start_num, Memory.memory_id)
+        ).all()
+    )
+    return chapter_num, memories
+
+
+def can_supersede_agent_event(
+    db: Session,
+    ctx: MemAccessContext,
+    memory_id: UUID,
+    subject_term_name: str,
+    mark: str,
+) -> bool:
+    chapter_num, _ = check_mem_access_ctx(db, ctx)
+    target_exists = db.scalar(
+        select(Memory.memory_id)
+        .join(GlossaryAssociation, GlossaryAssociation.memory_id == Memory.memory_id)
+        .join(GlossaryTerm, GlossaryTerm.term_id == GlossaryAssociation.term_id)
+        .where(
+            Memory.memory_id == memory_id,
+            Memory.memory_group_id == ctx.memory_group_id,
+            Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
+            Memory.memory_type == MemoryType.EVENT,
+            Memory.mark == mark,
+            Memory.creator_type == Creator.AGENT,
+            Memory.memory_review_status != ReviewStatus.REJECTED,
+            Memory.memory_start_num < chapter_num,
+            or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chapter_num),
+            GlossaryTerm.memory_group_id == ctx.memory_group_id,
+            GlossaryTerm.term == subject_term_name,
+        )
+    )
+    return target_exists is not None

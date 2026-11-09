@@ -3,21 +3,18 @@ import uuid
 from datetime import timedelta
 
 import pytest
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import Agent
 from pydantic_ai.messages import ModelResponse, ToolCallPart, UserPromptPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel
-from pydantic_ai.usage import RunUsage
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.languages.models import Language
-from src.memory.access import MemAccessContext
+from src.memory.access import CONTINUITY_PLUGIN_NAME, MemAccessContext, read_previous_continuity_summary
 from src.memory.agent.capabilities.continuity import (
-    CONTINUITY_PLUGIN_NAME,
     ContinuitySummaryCapability,
     ContinuitySummaryOutput,
-    _previous_summary,
 )
 from src.memory.agent.config import JobParamsV1 as JobParams
 from src.memory.agent.config import JobParamsV2
@@ -381,7 +378,7 @@ def test_previous_summary_uses_only_current_immediate_predecessor_source_content
     context = MemAccessContext(memory_group_id, chapter_ids[2], current.chapter_content_id)
 
     def previous_summary() -> str | None:
-        return _previous_summary(RunContext(deps=MemAgentDeps(test_db, context), model=TestModel(), usage=RunUsage()))
+        return read_previous_continuity_summary(test_db, context)
 
     test_db.add(
         Memory(

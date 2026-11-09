@@ -4,18 +4,14 @@ from uuid import UUID
 
 from pydantic import Field
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
-from sqlalchemy import or_, select
 
-from src.memory.access import check_mem_access_ctx
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
 from src.memory.agent.types import OccurrenceRetentionConfig
 from src.memory.exceptions import GlossaryTermNotFoundException
-from src.memory.models import Memory
 from src.memory.plugins.glossary import access
-from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory
-from src.memory.types import Creator, MemoryType, ReviewStatus, Scope
+from src.memory.types import Creator, MemoryType, Scope
 from src.schemas import Page
 
 type GenderEventKind = Literal[
@@ -173,25 +169,8 @@ def create_glossary_gender_advanced_events_write_toolset(
                     Scope.PERSIST,
                     mark,
                 )
-                chapter_num, _ = check_mem_access_ctx(db, ctx.deps.mem_access_context)
-                memories = list(
-                    db.scalars(
-                        select(Memory)
-                        .join(GlossaryAssociation, GlossaryAssociation.memory_id == Memory.memory_id)
-                        .join(GlossaryTerm, GlossaryTerm.term_id == GlossaryAssociation.term_id)
-                        .where(
-                            GlossaryTerm.memory_group_id == ctx.deps.mem_access_context.memory_group_id,
-                            GlossaryTerm.term == subject_term_name,
-                            Memory.memory_group_id == ctx.deps.mem_access_context.memory_group_id,
-                            Memory.plugin_name == access.GLOSSARY_PLUGIN_NAME,
-                            Memory.memory_type == MemoryType.EVENT,
-                            Memory.mark == mark,
-                            Memory.creator_type == Creator.AGENT,
-                            Memory.memory_review_status != ReviewStatus.REJECTED,
-                            Memory.memory_start_num <= chapter_num,
-                        )
-                        .order_by(Memory.memory_start_num, Memory.memory_id)
-                    ).all()
+                chapter_num, memories = access.read_agent_event_history(
+                    db, ctx.deps.mem_access_context, subject_term_name, mark
                 )
                 memories_by_id = {memory.memory_id: memory for memory in memories}
                 # A correction starts a newer database row, but it is not a new
@@ -267,26 +246,9 @@ def create_glossary_gender_advanced_events_write_toolset(
         except KeyError as exc:
             raise ModelRetry(f"Memory {memory_id} not found.") from exc
 
-        chapter_num, _ = check_mem_access_ctx(ctx.deps.db, ctx.deps.mem_access_context)
-        target_exists = ctx.deps.db.scalar(
-            select(Memory.memory_id)
-            .join(GlossaryAssociation, GlossaryAssociation.memory_id == Memory.memory_id)
-            .join(GlossaryTerm, GlossaryTerm.term_id == GlossaryAssociation.term_id)
-            .where(
-                Memory.memory_id == current_id,
-                Memory.memory_group_id == ctx.deps.mem_access_context.memory_group_id,
-                Memory.plugin_name == access.GLOSSARY_PLUGIN_NAME,
-                Memory.memory_type == MemoryType.EVENT,
-                Memory.mark == mark,
-                Memory.creator_type == Creator.AGENT,
-                Memory.memory_review_status != ReviewStatus.REJECTED,
-                Memory.memory_start_num < chapter_num,
-                or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chapter_num),
-                GlossaryTerm.memory_group_id == ctx.deps.mem_access_context.memory_group_id,
-                GlossaryTerm.term == subject_term_name,
-            )
-        )
-        if target_exists is None:
+        if not access.can_supersede_agent_event(
+            ctx.deps.db, ctx.deps.mem_access_context, current_id, subject_term_name, mark
+        ):
             raise ModelRetry(
                 f"Memory {memory_id} does not exist, has already ended, belongs to another subject or event "
                 "kind, or cannot be superseded in this chapter. Do not retry this memory handle; retrieve "

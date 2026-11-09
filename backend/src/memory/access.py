@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import insert, or_, select, update
+from sqlalchemy import SQLColumnExpression, func, insert, or_, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.selectable import ScalarSelect
 
 from src.memory.exceptions import MemoryGroupNotFoundException, MemoryNotFoundException
 from src.memory.models import Memory, MemoryGroup
@@ -11,6 +13,7 @@ from src.memory.types import Creator, MemoryType, ReviewStatus, Scope
 from src.novels.exceptions import ChapterContentNotFoundException
 from src.novels.models import Chapter, ChapterContent, Novel
 
+CONTINUITY_PLUGIN_NAME = "continuity"
 RECENT_SCOPE_LENGTH = 15
 LOCAL_SCOPE_LENGTH = 1
 
@@ -162,3 +165,68 @@ def expire_memory(db: Session, ctx: MemAccessContext, memory_id: UUID) -> None:
         raise MemoryNotFoundException(f"Memory with id {memory_id} not found or already ended") from e
     except Exception as e:
         raise e
+
+
+def _latest_content_id(chapter_id: SQLColumnExpression[UUID]) -> ScalarSelect[UUID]:
+    latest_version = (
+        select(ChapterContent.chapter_content_version)
+        .where(ChapterContent.chapter_id == chapter_id)
+        .order_by(ChapterContent.chapter_content_version.desc())
+        .limit(1)
+        .scalar_subquery()
+    )
+    return (
+        select(ChapterContent.chapter_content_id)
+        .where(
+            ChapterContent.chapter_id == chapter_id,
+            ChapterContent.chapter_content_version == latest_version,
+        )
+        .scalar_subquery()
+    )
+
+
+def read_previous_continuity_summary(db: Session, ctx: MemAccessContext) -> str | None:
+    current_num, novel_id = check_mem_access_ctx(db, ctx)
+    previous_chapter_id = (
+        select(Chapter.chapter_id)
+        .where(Chapter.novel_id == novel_id, Chapter.chapter_num < current_num)
+        .order_by(Chapter.chapter_num.desc(), Chapter.chapter_id.desc())
+        .limit(1)
+        .scalar_subquery()
+    )
+    summary = db.scalar(
+        select(Memory.memory_content)
+        .where(
+            Memory.memory_group_id == ctx.memory_group_id,
+            Memory.memory_type == MemoryType.SUMMARY,
+            Memory.plugin_name == CONTINUITY_PLUGIN_NAME,
+            Memory.memory_observed_in == _latest_content_id(previous_chapter_id),
+            Memory.memory_start_num <= current_num,
+            or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > current_num),
+            Memory.memory_review_status != ReviewStatus.REJECTED,
+        )
+        .limit(1)
+    )
+    # Human-authored legacy rows can bypass the structured output schema. Do
+    # not truncate them into a different claim; omit them from agent context.
+    return summary if summary is not None and len(summary) <= 1500 else None
+
+
+def write_continuity_summary(db: Session, ctx: MemAccessContext, summary: str) -> None:
+    chapter_num, _ = check_mem_access_ctx(db, ctx)
+    stmt = pg_insert(Memory).values(
+        memory_group_id=ctx.memory_group_id,
+        memory_type=MemoryType.SUMMARY,
+        memory_observed_in=ctx.chapter_content_id,
+        memory_start_num=chapter_num,
+        memory_content=summary,
+        creator_type=Creator.AGENT,
+        plugin_name=CONTINUITY_PLUGIN_NAME,
+    )
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[Memory.memory_group_id, Memory.memory_observed_in],
+        index_where=(Memory.memory_type == MemoryType.SUMMARY) & (Memory.plugin_name == CONTINUITY_PLUGIN_NAME),
+        set_={"memory_content": stmt.excluded.memory_content, "updated_at": func.now()},
+        where=(Memory.creator_type == Creator.AGENT) & (Memory.memory_review_status == ReviewStatus.PENDING),
+    )
+    db.execute(stmt)

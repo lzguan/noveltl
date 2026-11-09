@@ -9,6 +9,8 @@
 | Inactive typed workspace/shadow schema | [shadow_models.py](../../backend/src/memory/shadow_models.py) |
 | Creation, claims, task status transitions | [tasks/jobs.py](../../backend/src/memory/agent/tasks/jobs.py) |
 | Execution and transaction boundaries | [tasks/tasks.py](../../backend/src/memory/agent/tasks/tasks.py) |
+| Continuity summary reads and writes | [memory/access.py](../../backend/src/memory/access.py) |
+| Glossary queries, including event history and supersede checks | [glossary/access.py](../../backend/src/memory/plugins/glossary/access.py) |
 | Agent construction and output validation | [agents/](../../backend/src/memory/agent/agents/) (one factory module per agent; recording owns the user-selectable toolset registry), [registry.py](../../backend/src/memory/agent/registry.py) (shared model configuration) |
 | Thin stage runners | [stages/](../../backend/src/memory/agent/stages/) |
 | Access checks, dispatch, response construction | [service.py](../../backend/src/memory/agent/service.py) |
@@ -84,6 +86,14 @@ completed model results and skipped naming stages are logged by the worker.
 Each stage loads the latest chapter content. No agent run context or source
 revision is persisted between memory stages. Agent creation happens per stage;
 [term naming](term-translations.md) skips it when there is nothing to translate.
+
+Agent toolsets and capabilities delegate entity SQL to access functions. The
+continuity capability handles prompt injection and passes its output to
+`write_continuity_summary`; `read_previous_continuity_summary` owns predecessor
+and source-version eligibility. Transformation tools keep occurrence-retention
+decisions and model-facing errors while glossary access owns their history query
+and exact-subject supersede check. Access functions do not commit; the existing
+task transaction still owns publication.
 
 ## Shadow storage schema (not connected to execution)
 

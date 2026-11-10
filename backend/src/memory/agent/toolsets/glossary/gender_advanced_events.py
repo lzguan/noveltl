@@ -218,6 +218,7 @@ def create_glossary_gender_advanced_events_write_toolset(
                 db,
                 ctx.deps.mem_access_context.memory_group_id,
                 [subject_term_name],
+                workspace_id=ctx.deps.mem_access_context.workspace_id,
             )
             if missing_term_names:
                 serialized_terms = json.dumps(missing_term_names, ensure_ascii=False)

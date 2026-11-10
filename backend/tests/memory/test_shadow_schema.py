@@ -42,6 +42,7 @@ class ShadowSchema:
     chapter_id: UUID
     group_id: UUID
     content_id: UUID
+    schema_name: str
 
 
 @pytest.fixture
@@ -65,7 +66,7 @@ def shadow_schema(test_engine: Engine) -> Iterator[ShadowSchema]:
                 "PRIMARY KEY (memory_job_id, chapter_id, stage_num))"
             )
         )
-        data = ShadowSchema(connection, migration, uuid4(), uuid4(), uuid4(), uuid4())
+        data = ShadowSchema(connection, migration, uuid4(), uuid4(), uuid4(), uuid4(), schema)
         connection.execute(text("INSERT INTO memory_groups VALUES (:id)"), {"id": data.group_id})
         connection.execute(text("INSERT INTO chapter_contents VALUES (:id)"), {"id": data.content_id})
         connection.execute(
@@ -235,11 +236,11 @@ def test_downgrade_refuses_workspaces_and_preserves_parent_tables(shadow_schema:
     _workspace(data)
     with pytest.raises(RuntimeError, match="Discard or export"):
         data.migration.downgrade()
-    assert NEW_TABLES.issubset(inspect(data.connection).get_table_names())
+    assert NEW_TABLES.issubset(inspect(data.connection).get_table_names(schema=data.schema_name))
     data.connection.execute(delete(MemoryWorkspace))
     data.migration.downgrade()
-    assert NEW_TABLES.isdisjoint(inspect(data.connection).get_table_names())
+    assert NEW_TABLES.isdisjoint(inspect(data.connection).get_table_names(schema=data.schema_name))
     assert data.connection.scalar(text("SELECT count(*) FROM memory_chapter_tasks")) == 1
     assert data.connection.scalar(text("SELECT count(*) FROM memory_groups")) == 1
     data.migration.upgrade()
-    assert NEW_TABLES.issubset(inspect(data.connection).get_table_names())
+    assert NEW_TABLES.issubset(inspect(data.connection).get_table_names(schema=data.schema_name))

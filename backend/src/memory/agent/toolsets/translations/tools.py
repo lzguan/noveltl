@@ -68,6 +68,7 @@ def term_translation_context(
             for row in read_conventions(
                 db,
                 ctx.memory_group_id,
+                workspace_id=ctx.workspace_id,
                 category=ConventionCategory.NAMING,
                 review_statuses=[ReviewStatus.PENDING, ReviewStatus.APPROVED],
             )

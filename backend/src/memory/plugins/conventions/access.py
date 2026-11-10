@@ -12,8 +12,10 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
 from src.memory.exceptions import ConventionNotFoundException
+from src.memory.overlay import visible_rows, workspace_read
 from src.memory.plugins.conventions.models import TranslationConvention
 from src.memory.plugins.conventions.types import ConventionCategory
+from src.memory.shadow_models import ShadowConvention
 from src.memory.types import Creator, ReviewStatus
 
 
@@ -21,17 +23,19 @@ def read_conventions(
     db: Session,
     memory_group_id: UUID,
     *,
+    workspace_id: UUID | None = None,
     category: ConventionCategory | None = None,
     review_statuses: Sequence[ReviewStatus] | None = None,
 ) -> list[TranslationConvention]:
     """Read a group's conventions in creation order; None filters match everything."""
-    statement = select(TranslationConvention).where(TranslationConvention.memory_group_id == memory_group_id)
+    convention_rows = visible_rows(TranslationConvention, ShadowConvention, workspace_id)
+    statement = select(convention_rows).where(convention_rows.memory_group_id == memory_group_id)
     if category is not None:
-        statement = statement.where(TranslationConvention.category == category)
+        statement = statement.where(convention_rows.category == category)
     if review_statuses is not None:
-        statement = statement.where(TranslationConvention.review_status.in_(review_statuses))
-    statement = statement.order_by(TranslationConvention.created_at, TranslationConvention.convention_id)
-    return list(db.scalars(statement))
+        statement = statement.where(convention_rows.review_status.in_(review_statuses))
+    statement = statement.order_by(convention_rows.created_at, convention_rows.convention_id)
+    return list(db.scalars(workspace_read(statement, workspace_id)))
 
 
 def create_convention(

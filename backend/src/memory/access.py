@@ -9,6 +9,8 @@ from sqlalchemy.sql.selectable import ScalarSelect
 
 from src.memory.exceptions import MemoryGroupNotFoundException, MemoryNotFoundException
 from src.memory.models import Memory, MemoryGroup
+from src.memory.overlay import visible_rows, workspace_read
+from src.memory.shadow_models import ShadowMemory
 from src.memory.types import Creator, MemoryType, ReviewStatus, Scope
 from src.novels.exceptions import ChapterContentNotFoundException
 from src.novels.models import Chapter, ChapterContent, Novel
@@ -23,6 +25,7 @@ class MemAccessContext:
     memory_group_id: UUID
     chapter_id: UUID
     chapter_content_id: UUID
+    workspace_id: UUID | None = None
 
 
 def check_mem_access_ctx(db: Session, ctx: MemAccessContext) -> tuple[int, UUID]:
@@ -186,6 +189,7 @@ def _latest_content_id(chapter_id: SQLColumnExpression[UUID]) -> ScalarSelect[UU
 
 
 def read_previous_continuity_summary(db: Session, ctx: MemAccessContext) -> str | None:
+    memory_rows = visible_rows(Memory, ShadowMemory, ctx.workspace_id)
     current_num, novel_id = check_mem_access_ctx(db, ctx)
     previous_chapter_id = (
         select(Chapter.chapter_id)
@@ -195,17 +199,20 @@ def read_previous_continuity_summary(db: Session, ctx: MemAccessContext) -> str 
         .scalar_subquery()
     )
     summary = db.scalar(
-        select(Memory.memory_content)
-        .where(
-            Memory.memory_group_id == ctx.memory_group_id,
-            Memory.memory_type == MemoryType.SUMMARY,
-            Memory.plugin_name == CONTINUITY_PLUGIN_NAME,
-            Memory.memory_observed_in == _latest_content_id(previous_chapter_id),
-            Memory.memory_start_num <= current_num,
-            or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > current_num),
-            Memory.memory_review_status != ReviewStatus.REJECTED,
+        workspace_read(
+            select(memory_rows.memory_content)
+            .where(
+                memory_rows.memory_group_id == ctx.memory_group_id,
+                memory_rows.memory_type == MemoryType.SUMMARY,
+                memory_rows.plugin_name == CONTINUITY_PLUGIN_NAME,
+                memory_rows.memory_observed_in == _latest_content_id(previous_chapter_id),
+                memory_rows.memory_start_num <= current_num,
+                or_(memory_rows.memory_end_num.is_(None), memory_rows.memory_end_num > current_num),
+                memory_rows.memory_review_status != ReviewStatus.REJECTED,
+            )
+            .limit(1),
+            ctx.workspace_id,
         )
-        .limit(1)
     )
     # Human-authored legacy rows can bypass the structured output schema. Do
     # not truncate them into a different claim; omit them from agent context.

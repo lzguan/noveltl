@@ -7,6 +7,7 @@
 | Stored parameter versions and internal stage configs | [config.py](../../backend/src/memory/agent/config.py) |
 | Job/task rows | [models.py](../../backend/src/memory/models.py) |
 | Inactive typed workspace/shadow schema | [shadow_models.py](../../backend/src/memory/shadow_models.py) |
+| Workspace-aware read composition | [overlay.py](../../backend/src/memory/overlay.py) |
 | Creation, claims, task status transitions | [tasks/jobs.py](../../backend/src/memory/agent/tasks/jobs.py) |
 | Execution and transaction boundaries | [tasks/tasks.py](../../backend/src/memory/agent/tasks/tasks.py) |
 | Continuity summary reads and writes | [memory/access.py](../../backend/src/memory/access.py) |
@@ -122,6 +123,44 @@ claim checks, cleanup, and atomic publication are subsequent work; the schema it
 does not enforce them. [Schema tests](../../backend/tests/memory/test_shadow_schema.py)
 exercise the migration in an isolated PostgreSQL schema, including parity with
 ORM metadata, unpublished IDs, workspace isolation, constraints, and cleanup.
+
+## Workspace reads (not enabled in jobs)
+
+`MemAccessContext.workspace_id` defaults to `None`. With no workspace, accessors
+query the published models directly. With a workspace, `visible_rows` builds a
+per-entity `UNION ALL` between published rows lacking any matching shadow key
+and nondeleted shadow rows belonging to that workspace. The exclusion considers
+all shadow rows before caller filters, so a rejected, renamed, recategorized,
+ended, or deleted draft cannot expose its old published version. Association
+overrides match both entity IDs. Filters, counts, ordering, and pagination use
+the combined view; joins use overlays for every staged entity involved.
+
+Glossary chapter/range reads, inspection, alias traversal, event history/checks,
+term searches/missing-term diagnostics, translations, conventions, and continuity
+reads support the overlay. Group-only read accessors take a keyword-only
+`workspace_id`; naming and conventions context builders pass it through.
+Source chapter text and access-context group/chapter validation remain published.
+
+`workspace_read` sets an ORM identity token per workspace and refreshes existing
+query results. This prevents cached published objects, another workspace, or a
+previous draft read from supplying stale payloads. These ORM results are read
+snapshots: consume/materialize them before session commit/expiry and do not edit
+them through the published ORM mapper. Short transaction boundaries and plain
+tool results remain part of the later worker/write integration.
+
+No execution path creates workspaces yet, and writes retain their published-table
+behavior. Workspace ownership/group validation, staged writes, and guarded atomic
+publication remain subsequent work. [Read tests](../../backend/tests/memory/test_shadow_reads.py)
+seed drafts directly and exercise the real accessors and context builders against
+PostgreSQL, including cache isolation, masks before filtering, pagination,
+composite association keys, aliases, translations, conventions, and continuity.
+
+A one-time synthetic PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)` check used 1,000 terms,
+20,000 memories, 20,200 associations, and 70 shadow rows in temporary test tables.
+Summed warm execution across a lookup's three SELECTs was about 0.9 ms published
+and 50 ms with overlays; alias-aware workspace retrieval used five SELECTs and
+about 76 ms. These local measurements exclude client/ORM overhead and do not
+establish production-scale performance; the overlay adds material query cost.
 
 ## Adding a stage or agent
 

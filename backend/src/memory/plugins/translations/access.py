@@ -8,9 +8,11 @@ from sqlalchemy.orm import Session
 
 from src.memory.access import MemAccessContext, check_mem_access_ctx
 from src.memory.exceptions import GlossaryTermNotFoundException
+from src.memory.overlay import visible_rows, workspace_read
 from src.memory.plugins.glossary.models import GlossaryTerm
 from src.memory.plugins.translations.models import TermTranslation as TermTranslationRow
 from src.memory.plugins.translations.schemas import TermTranslation
+from src.memory.shadow_models import ShadowTerm, ShadowTermTranslation
 from src.memory.types import Creator, ReviewStatus
 
 
@@ -19,18 +21,23 @@ def read_term_translations(db: Session, ctx: MemAccessContext, term_names: Seque
     if not term_names:
         return []
     check_mem_access_ctx(db, ctx)
+    term_rows = visible_rows(GlossaryTerm, ShadowTerm, ctx.workspace_id)
+    translation_rows = visible_rows(TermTranslationRow, ShadowTermTranslation, ctx.workspace_id)
     statement = (
-        select(GlossaryTerm.term, TermTranslationRow.translation, TermTranslationRow.review_status)
-        .join(TermTranslationRow, TermTranslationRow.term_id == GlossaryTerm.term_id)
+        select(term_rows.term, translation_rows.translation, translation_rows.review_status)
+        .join(translation_rows, translation_rows.term_id == term_rows.term_id)
         .where(
-            GlossaryTerm.memory_group_id == ctx.memory_group_id,
-            GlossaryTerm.term.in_(term_names),
-            GlossaryTerm.review_status != ReviewStatus.REJECTED,
-            TermTranslationRow.review_status != ReviewStatus.REJECTED,
+            term_rows.memory_group_id == ctx.memory_group_id,
+            term_rows.term.in_(term_names),
+            term_rows.review_status != ReviewStatus.REJECTED,
+            translation_rows.review_status != ReviewStatus.REJECTED,
         )
-        .order_by(GlossaryTerm.term)
+        .order_by(term_rows.term)
     )
-    return [TermTranslation.model_validate(row) for row in db.execute(statement).mappings()]
+    return [
+        TermTranslation.model_validate(row)
+        for row in db.execute(workspace_read(statement, ctx.workspace_id)).mappings()
+    ]
 
 
 def missing_term_translations(db: Session, ctx: MemAccessContext, term_names: Sequence[str]) -> list[str]:

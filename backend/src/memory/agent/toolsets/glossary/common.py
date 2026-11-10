@@ -85,6 +85,7 @@ def create_memory(
             db,
             ctx.deps.mem_access_context.memory_group_id,
             term_names,
+            workspace_id=ctx.deps.mem_access_context.workspace_id,
         )
         if missing_term_names:
             serialized_terms = json.dumps(missing_term_names, ensure_ascii=False)
@@ -137,6 +138,7 @@ def supersede_memory(
             ctx.deps.db,
             ctx.deps.mem_access_context.memory_group_id,
             replacement_term_names or [],
+            workspace_id=ctx.deps.mem_access_context.workspace_id,
         )
         serialized_terms = json.dumps(missing_term_names, ensure_ascii=False)
         raise ModelRetry(

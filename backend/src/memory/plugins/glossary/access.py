@@ -1,6 +1,6 @@
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Final
+from typing import Final, overload
 from uuid import UUID
 
 from sqlalchemy import SQLColumnExpression, func, insert, literal, or_, select, update
@@ -9,7 +9,11 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session, aliased
 
 from src.memory.access import MemAccessContext, check_mem_access_ctx, write_memory
-from src.memory.exceptions import GlossaryTermNotFoundException, MemoryNotFoundException
+from src.memory.exceptions import (
+    GlossaryTermAlreadyExistsException,
+    GlossaryTermNotFoundException,
+    MemoryNotFoundException,
+)
 from src.memory.models import Memory
 from src.memory.overlay import visible_rows, workspace_read
 from src.memory.plugins.glossary.models import GlossaryAssociation, GlossaryTerm
@@ -17,6 +21,7 @@ from src.memory.plugins.glossary.schemas import AgentGlossaryMemory, AgentGlossa
 from src.memory.plugins.glossary.types import TermKind
 from src.memory.schemas import AgentMemory
 from src.memory.shadow_models import ShadowGlossaryAssociation, ShadowMemory, ShadowTerm
+from src.memory.staging import check_workspace, stage_record
 from src.memory.types import Creator, MemoryType, PluginName, ReviewStatus, Scope
 from src.novels.models import Chapter, ChapterContent
 from src.schemas import Page
@@ -374,12 +379,51 @@ def _expand_alias_terms(
     return sorted(reached), used_edges, truncated
 
 
+@overload
 def create_term(
     db: Session,
     memory_group_id: UUID,
     term_name: str,
     term_kind: TermKind | None = None,
-) -> GlossaryTerm:
+    *,
+    workspace_id: None = None,
+) -> GlossaryTerm: ...
+
+
+@overload
+def create_term(
+    db: Session,
+    memory_group_id: UUID,
+    term_name: str,
+    term_kind: TermKind | None = None,
+    *,
+    workspace_id: UUID,
+) -> ShadowTerm: ...
+
+
+def create_term(
+    db: Session,
+    memory_group_id: UUID,
+    term_name: str,
+    term_kind: TermKind | None = None,
+    *,
+    workspace_id: UUID | None = None,
+) -> GlossaryTerm | ShadowTerm:
+    if workspace_id is not None:
+        check_workspace(db, workspace_id, memory_group_id)
+        term_rows = visible_rows(GlossaryTerm, ShadowTerm, workspace_id)
+        if (
+            db.scalar(
+                select(term_rows.term_id).where(
+                    term_rows.memory_group_id == memory_group_id, term_rows.term == term_name
+                )
+            )
+            is not None
+        ):
+            raise GlossaryTermAlreadyExistsException(f"Glossary term {term_name!r} already exists")
+        return stage_record(
+            db, ShadowTerm, workspace_id, memory_group_id=memory_group_id, term=term_name, term_kind=term_kind
+        )
     return db.execute(
         insert(GlossaryTerm)
         .values(memory_group_id=memory_group_id, term=term_name, term_kind=term_kind)
@@ -465,10 +509,27 @@ def _associate_terms(
     memory_group_id: UUID,
     memory_id: UUID,
     term_names: list[str],
-) -> list[GlossaryAssociation]:
+    *,
+    workspace_id: UUID | None = None,
+) -> list[GlossaryAssociation | ShadowGlossaryAssociation]:
     unique_term_names = list(dict.fromkeys(term_names))
     if not unique_term_names:
         return []
+    if workspace_id is not None:
+        term_rows = visible_rows(GlossaryTerm, ShadowTerm, workspace_id)
+        term_ids = list(
+            db.scalars(
+                select(term_rows.term_id).where(
+                    term_rows.term.in_(unique_term_names), term_rows.memory_group_id == memory_group_id
+                )
+            )
+        )
+        if len(term_ids) != len(unique_term_names):
+            raise GlossaryTermNotFoundException("Some terms do not exist in the memory group.")
+        return [
+            stage_record(db, ShadowGlossaryAssociation, workspace_id, term_id=term_id, memory_id=memory_id)
+            for term_id in term_ids
+        ]
     association_source = select(
         GlossaryTerm.term_id,
         literal(memory_id),
@@ -502,7 +563,7 @@ def create_memory(
     content: str,
     scope: Scope | None = None,
     mark: str | None = None,
-) -> tuple[Memory, list[GlossaryAssociation]]:
+) -> tuple[Memory | ShadowMemory, list[GlossaryAssociation | ShadowGlossaryAssociation]]:
     new_memory = write_memory(
         db,
         ctx,
@@ -513,7 +574,9 @@ def create_memory(
         scope,
         mark=mark,
     )
-    glossary_associations = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, term_names)
+    glossary_associations = _associate_terms(
+        db, ctx.memory_group_id, new_memory.memory_id, term_names, workspace_id=ctx.workspace_id
+    )
     return new_memory, list(glossary_associations)
 
 
@@ -528,33 +591,38 @@ def supersede_memory(
     mark: str | None = None,
     replacement_term_names: list[str] | None = None,
     expected_marks: Sequence[str | None] | None = None,
-) -> tuple[Memory, list[GlossaryAssociation]]:
-    target_query = select(Memory.memory_id).where(
-        Memory.memory_id == memory_id,
-        Memory.memory_group_id == ctx.memory_group_id,
-        Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
-        Memory.memory_type == mem_type,
+) -> tuple[Memory | ShadowMemory, list[GlossaryAssociation | ShadowGlossaryAssociation]]:
+    if ctx.workspace_id is not None:
+        check_mem_access_ctx(db, ctx)
+    memory_rows = visible_rows(Memory, ShadowMemory, ctx.workspace_id)
+    term_rows = visible_rows(GlossaryTerm, ShadowTerm, ctx.workspace_id)
+    association_rows = visible_rows(GlossaryAssociation, ShadowGlossaryAssociation, ctx.workspace_id)
+    target_query = select(memory_rows.memory_id).where(
+        memory_rows.memory_id == memory_id,
+        memory_rows.memory_group_id == ctx.memory_group_id,
+        memory_rows.plugin_name == GLOSSARY_PLUGIN_NAME,
+        memory_rows.memory_type == mem_type,
     )
     if expected_marks is not None:
         non_null_marks = [expected_mark for expected_mark in expected_marks if expected_mark is not None]
         mark_filters = []
         if non_null_marks:
-            mark_filters.append(Memory.mark.in_(non_null_marks))
+            mark_filters.append(memory_rows.mark.in_(non_null_marks))
         if None in expected_marks:
-            mark_filters.append(Memory.mark.is_(None))
-        target_query = target_query.where(or_(*mark_filters) if mark_filters else Memory.mark.in_([]))
+            mark_filters.append(memory_rows.mark.is_(None))
+        target_query = target_query.where(or_(*mark_filters) if mark_filters else memory_rows.mark.in_([]))
     if db.scalar(target_query) is None:
         raise MemoryNotFoundException(f"Glossary memory with id {memory_id} is outside this toolset")
 
     if replacement_term_names is None:
         replacement_term_names = list(
             db.execute(
-                select(GlossaryTerm.term)
-                .select_from(GlossaryAssociation)
-                .where(GlossaryAssociation.memory_id == memory_id)
-                .join(GlossaryTerm, GlossaryTerm.term_id == GlossaryAssociation.term_id)
+                select(term_rows.term)
+                .select_from(association_rows)
+                .where(association_rows.memory_id == memory_id)
+                .join(term_rows, term_rows.term_id == association_rows.term_id)
                 .where(
-                    GlossaryTerm.memory_group_id == ctx.memory_group_id,
+                    term_rows.memory_group_id == ctx.memory_group_id,
                 )
             )
             .scalars()
@@ -571,7 +639,9 @@ def supersede_memory(
         supersedes_id=memory_id,
         mark=mark,
     )
-    new_assocs = _associate_terms(db, ctx.memory_group_id, new_memory.memory_id, replacement_term_names)
+    new_assocs = _associate_terms(
+        db, ctx.memory_group_id, new_memory.memory_id, replacement_term_names, workspace_id=ctx.workspace_id
+    )
     return new_memory, new_assocs
 
 
@@ -587,24 +657,31 @@ def expire_memory(
     """End an active glossary memory at the context chapter plus an internal offset."""
     chapter_num, _ = check_mem_access_ctx(db, ctx)
     end_num = chapter_num + end_offset
+    memory_rows = visible_rows(Memory, ShadowMemory, ctx.workspace_id)
     try:
-        query = update(Memory).where(
-            Memory.memory_id == memory_id,
-            Memory.memory_group_id == ctx.memory_group_id,
-            Memory.plugin_name == GLOSSARY_PLUGIN_NAME,
-            Memory.memory_type.in_(memory_types),
-            Memory.memory_start_num < end_num,
-            or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chapter_num),
-        )
+        conditions = [
+            memory_rows.memory_id == memory_id,
+            memory_rows.memory_group_id == ctx.memory_group_id,
+            memory_rows.plugin_name == GLOSSARY_PLUGIN_NAME,
+            memory_rows.memory_type.in_(memory_types),
+            memory_rows.memory_start_num < end_num,
+            or_(memory_rows.memory_end_num.is_(None), memory_rows.memory_end_num > chapter_num),
+        ]
         if marks is not None:
             non_null_marks = [mark for mark in marks if mark is not None]
             mark_filters = []
             if non_null_marks:
-                mark_filters.append(Memory.mark.in_(non_null_marks))
+                mark_filters.append(memory_rows.mark.in_(non_null_marks))
             if None in marks:
-                mark_filters.append(Memory.mark.is_(None))
-            query = query.where(or_(*mark_filters) if mark_filters else Memory.mark.in_([]))
-        db.execute(query.values(memory_end_num=end_num).returning(Memory.memory_id)).scalar_one()
+                mark_filters.append(memory_rows.mark.is_(None))
+            conditions.append(or_(*mark_filters) if mark_filters else memory_rows.mark.in_([]))
+        if ctx.workspace_id is not None:
+            original = db.scalars(workspace_read(select(memory_rows).where(*conditions), ctx.workspace_id)).one()
+            stage_record(db, ShadowMemory, ctx.workspace_id, original, memory_end_num=end_num)
+        else:
+            db.execute(
+                update(Memory).where(*conditions).values(memory_end_num=end_num).returning(Memory.memory_id)
+            ).scalar_one()
     except NoResultFound as exc:
         raise MemoryNotFoundException(f"Glossary memory with id {memory_id} not found or already ended") from exc
 

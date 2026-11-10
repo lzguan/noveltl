@@ -68,6 +68,7 @@ def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsO
                 rule=draft.rule,
                 rationale=draft.rationale,
                 creator_type=Creator.AGENT,
+                workspace_id=deps.mem_access_context.workspace_id,
             )
         for revision in output.revise:
             target = convention_id(revision.handle)
@@ -84,6 +85,7 @@ def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsO
                     rationale=revision.rationale,
                     only_creator=Creator.AGENT,
                     only_pending=True,
+                    workspace_id=deps.mem_access_context.workspace_id,
                 )
             except ConventionNotFoundException:
                 locked.append(revision.handle)
@@ -92,7 +94,14 @@ def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsO
             if target is None:
                 continue
             try:
-                delete_convention(deps.db, group_id, target, only_creator=Creator.AGENT, only_pending=True)
+                delete_convention(
+                    deps.db,
+                    group_id,
+                    target,
+                    only_creator=Creator.AGENT,
+                    only_pending=True,
+                    workspace_id=deps.mem_access_context.workspace_id,
+                )
             except ConventionNotFoundException:
                 locked.append(handle)
     except Exception:

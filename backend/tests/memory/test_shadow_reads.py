@@ -1,7 +1,5 @@
-from dataclasses import dataclass, replace
 from typing import Any
 
-import pytest
 from pydantic_ai import RunContext, RunUsage
 from pydantic_ai.models.test import TestModel
 from sqlalchemy import inspect, select
@@ -12,7 +10,7 @@ from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.conventions.context import conventions_context
 from src.memory.agent.toolsets.conventions.tools import search_glossary_terms
 from src.memory.agent.toolsets.translations.tools import term_translation_context
-from src.memory.models import Memory, MemoryChapterTask, MemoryGroup, MemoryJob
+from src.memory.models import Memory
 from src.memory.plugins.conventions.access import create_convention, read_conventions
 from src.memory.plugins.conventions.types import ConventionCategory
 from src.memory.plugins.glossary import access
@@ -22,7 +20,6 @@ from src.memory.plugins.glossary.types import TermKind
 from src.memory.plugins.translations.access import missing_term_translations, read_term_translations
 from src.memory.plugins.translations.models import TermTranslation
 from src.memory.shadow_models import (
-    MemoryWorkspace,
     ShadowConvention,
     ShadowGlossaryAssociation,
     ShadowMemory,
@@ -31,48 +28,8 @@ from src.memory.shadow_models import (
 )
 from src.memory.types import Creator, MemoryType, ReviewStatus, Scope
 from src.models import Base
-from src.novels.models import ChapterContent
-from test_support.test_data.scenarios import DatabaseScenario
-
-
-@dataclass
-class ReadScenario:
-    published: MemAccessContext
-    current: MemAccessContext
-    other: MemAccessContext
-    predecessor: MemAccessContext
-
-
-@pytest.fixture
-def reads(test_db: Session, sample_scenario: DatabaseScenario) -> ReadScenario:
-    source = sample_scenario.contents["chapter_1_v2"]
-    source.chapter_content_text = "Alpha Beta Gamma Delta Epsilon"
-    chapter = sample_scenario.chapters["chapter_2"]
-    content = ChapterContent(
-        chapter_id=chapter.chapter_id,
-        chapter_content_version=1,
-        chapter_content_text="Alpha Beta Gamma Delta Epsilon Zeta",
-    )
-    group = MemoryGroup(novel_id=chapter.novel_id, memory_group_name="Shadow reads", memory_language="en")
-    test_db.add_all([content, group])
-    test_db.flush()
-    job = MemoryJob(memory_group_id=group.memory_group_id, job_params={})
-    test_db.add(job)
-    test_db.flush()
-    test_db.add(MemoryChapterTask(memory_job_id=job.memory_job_id, chapter_id=chapter.chapter_id, stage_num=0))
-    test_db.flush()
-    workspaces = [
-        MemoryWorkspace(memory_job_id=job.memory_job_id, chapter_id=chapter.chapter_id, stage_num=0) for _ in range(2)
-    ]
-    test_db.add_all(workspaces)
-    test_db.flush()
-    published = MemAccessContext(group.memory_group_id, chapter.chapter_id, content.chapter_content_id)
-    return ReadScenario(
-        published,
-        replace(published, workspace_id=workspaces[0].workspace_id),
-        replace(published, workspace_id=workspaces[1].workspace_id),
-        MemAccessContext(group.memory_group_id, source.chapter_id, source.chapter_content_id),
-    )
+from tests.fixtures.memory_workspaces import ReadScenario
+from tests.fixtures.memory_workspaces import reads as reads
 
 
 def _stage[T: Base](db: Session, model: type[T], ctx: MemAccessContext, original: Base, **changes: Any) -> T:

@@ -8,6 +8,7 @@
 | Job/task rows | [models.py](../../backend/src/memory/models.py) |
 | Inactive typed workspace/shadow schema | [shadow_models.py](../../backend/src/memory/shadow_models.py) |
 | Workspace-aware read composition | [overlay.py](../../backend/src/memory/overlay.py) |
+| Typed shadow upserts and workspace validation | [staging.py](../../backend/src/memory/staging.py) |
 | Creation, claims, task status transitions | [tasks/jobs.py](../../backend/src/memory/agent/tasks/jobs.py) |
 | Execution and transaction boundaries | [tasks/tasks.py](../../backend/src/memory/agent/tasks/tasks.py) |
 | Continuity summary reads and writes | [memory/access.py](../../backend/src/memory/access.py) |
@@ -125,7 +126,7 @@ deliberately do not reference published rows with foreign keys: new parents may
 exist only as drafts. Existing group/content references still have foreign keys.
 The agreed publication policy is to merge when the worker still owns an unexpired
 job claim and the resulting data satisfies existing validity and editability
-rules; there is no original-timestamp conflict check. Overlay reference validation,
+rules; there is no original-timestamp conflict check. Publication reference validation,
 claim checks, cleanup, and atomic publication are subsequent work; the schema itself
 does not enforce them. [Schema tests](../../backend/tests/memory/test_shadow_schema.py)
 exercise the migration in an isolated PostgreSQL schema, including parity with
@@ -155,9 +156,8 @@ snapshots: consume/materialize them before session commit/expiry and do not edit
 them through the published ORM mapper. Short transaction boundaries and plain
 tool results remain part of the later worker/write integration.
 
-No execution path creates workspaces yet, and writes retain their published-table
-behavior. Workspace ownership/group validation, staged writes, and guarded atomic
-publication remain subsequent work. [Read tests](../../backend/tests/memory/test_shadow_reads.py)
+No execution path creates workspaces yet. Guarded atomic publication and worker
+integration remain subsequent work. [Read tests](../../backend/tests/memory/test_shadow_reads.py)
 seed drafts directly and exercise the real accessors and context builders against
 PostgreSQL, including cache isolation, masks before filtering, pagination,
 composite association keys, aliases, translations, conventions, and continuity.
@@ -168,6 +168,39 @@ Summed warm execution across a lookup's three SELECTs was about 0.9 ms published
 and 50 ms with overlays; alias-aware workspace retrieval used five SELECTs and
 about 76 ms. These local measurements exclude client/ORM overhead and do not
 establish production-scale performance; the overlay adds material query cost.
+
+## Workspace writes (not enabled in jobs)
+
+Agent mutations select the visible row before changing it and write only to the
+typed shadow table when a workspace is supplied. `stage_record` upserts by the
+workspace/entity key, preserving an existing row's payload, UUID, and creation
+timestamp while applying explicit changes. It never mutates an overlay snapshot
+through the published ORM mapper. Accessors do not commit or own the outer
+transaction; caller savepoints still roll back a failed tool/output attempt.
+
+Workspace-aware paths cover term creation, memory creation/supersession/expiry,
+association creation, term translations, convention CRUD, and continuity writes.
+Term creation checks published-plus-shadow name uniqueness; associations resolve
+exact terms through the overlay, including unpublished terms. Naming preserves
+usable translations; continuity preserves reviewed/user-authored summaries;
+convention updates/deletes retain their creator and pending-status conditions.
+Convention deletion removes a draft with no published counterpart, otherwise it
+writes a tombstone. No extra agent deletion APIs were introduced.
+
+`check_workspace` validates the workspace's job/group and, for `MemAccessContext`,
+its task chapter. Invalid/missing workspaces raise `MemoryWorkspaceNotFoundException`.
+Claim ownership is deliberately not checked by staging: the worker's claim will
+guard atomic publication in the later integration step. Human review accessors
+(`approve_*`, `reject_*`, `mark_*_pending` for memories/terms) remain published-only
+and are not exposed to agents. Source-text queries also use published chapter data.
+Calls without a workspace preserve the existing published-table write path.
+
+[Write tests](../../backend/tests/memory/test_shadow_writes.py) exercise the real
+accessors and agent tool/output adapters against PostgreSQL: committed drafts stay
+unpublished, other workspaces remain isolated, supersession/expiry affect only
+drafts, protected choices survive, create/delete and tombstone behavior differ,
+and failed savepoints roll back all staged output. Read/write tests share the
+synthetic workspace fixture in `tests/fixtures/memory_workspaces.py`.
 
 ## Adding a stage or agent
 

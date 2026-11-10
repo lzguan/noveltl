@@ -11,6 +11,7 @@ from src.memory.exceptions import MemoryGroupNotFoundException, MemoryNotFoundEx
 from src.memory.models import Memory, MemoryGroup
 from src.memory.overlay import visible_rows, workspace_read
 from src.memory.shadow_models import ShadowMemory
+from src.memory.staging import check_workspace, stage_record
 from src.memory.types import Creator, MemoryType, ReviewStatus, Scope
 from src.novels.exceptions import ChapterContentNotFoundException
 from src.novels.models import Chapter, ChapterContent, Novel
@@ -54,6 +55,8 @@ def check_mem_access_ctx(db: Session, ctx: MemAccessContext) -> tuple[int, UUID]
 
     if memory_group_novel_id != novel_id:
         raise ValueError(f"Memory group {ctx.memory_group_id} does not belong to novel {novel_id}")
+    if ctx.workspace_id is not None:
+        check_workspace(db, ctx.workspace_id, ctx.memory_group_id, ctx.chapter_id)
     return cur_chap_num, novel_id
 
 
@@ -97,7 +100,7 @@ def write_memory(
     supersedes_id: UUID | None = None,
     *,
     mark: str | None = None,
-) -> Memory:
+) -> Memory | ShadowMemory:
     cur_chap_num, _ = check_mem_access_ctx(db, ctx)
 
     end = None
@@ -114,23 +117,40 @@ def write_memory(
         end = cur_chap_num + RECENT_SCOPE_LENGTH
 
     if supersedes_id is not None:
+        memory_rows = visible_rows(Memory, ShadowMemory, ctx.workspace_id)
+        conditions = (
+            memory_rows.memory_id == supersedes_id,
+            or_(memory_rows.memory_end_num.is_(None), memory_rows.memory_end_num > cur_chap_num),
+            memory_rows.memory_start_num < cur_chap_num,
+            memory_rows.memory_group_id == ctx.memory_group_id,
+            memory_rows.plugin_name == plugin_name,
+        )
         try:
-            db.execute(
-                update(Memory)
-                .where(
-                    Memory.memory_id == supersedes_id,
-                    or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > cur_chap_num),
-                    Memory.memory_start_num < cur_chap_num,
-                    Memory.memory_group_id == ctx.memory_group_id,
-                    Memory.plugin_name == plugin_name,
-                )
-                .values(memory_end_num=cur_chap_num)
-                .returning(Memory.memory_id)
-            ).scalar_one()
+            if ctx.workspace_id is not None:
+                original = db.scalars(workspace_read(select(memory_rows).where(*conditions), ctx.workspace_id)).one()
+                stage_record(db, ShadowMemory, ctx.workspace_id, original, memory_end_num=cur_chap_num)
+            else:
+                db.execute(
+                    update(Memory).where(*conditions).values(memory_end_num=cur_chap_num).returning(Memory.memory_id)
+                ).scalar_one()
         except NoResultFound as e:
             raise MemoryNotFoundException(f"Memory with id {supersedes_id} not found or already ended") from e
-        except Exception as e:
-            raise e
+    if ctx.workspace_id is not None:
+        return stage_record(
+            db,
+            ShadowMemory,
+            ctx.workspace_id,
+            memory_type=mem_type,
+            mark=mark,
+            memory_observed_in=ctx.chapter_content_id,
+            memory_start_num=cur_chap_num,
+            memory_end_num=end,
+            supersedes_memory_id=supersedes_id,
+            memory_content=content,
+            memory_group_id=ctx.memory_group_id,
+            creator_type=creator_type,
+            plugin_name=plugin_name,
+        )
     new_memory = db.execute(
         insert(Memory)
         .values(
@@ -152,22 +172,23 @@ def write_memory(
 
 def expire_memory(db: Session, ctx: MemAccessContext, memory_id: UUID) -> None:
     chap_num, _ = check_mem_access_ctx(db, ctx)
+    memory_rows = visible_rows(Memory, ShadowMemory, ctx.workspace_id)
+    conditions = (
+        memory_rows.memory_id == memory_id,
+        or_(memory_rows.memory_end_num.is_(None), memory_rows.memory_end_num > chap_num),
+        memory_rows.memory_start_num < chap_num,
+        memory_rows.memory_group_id == ctx.memory_group_id,
+    )
     try:
-        db.execute(
-            update(Memory)
-            .where(
-                Memory.memory_id == memory_id,
-                or_(Memory.memory_end_num.is_(None), Memory.memory_end_num > chap_num),
-                Memory.memory_start_num < chap_num,
-                Memory.memory_group_id == ctx.memory_group_id,
-            )
-            .values(memory_end_num=chap_num)
-            .returning(Memory.memory_id)
-        ).scalar_one()
+        if ctx.workspace_id is not None:
+            original = db.scalars(workspace_read(select(memory_rows).where(*conditions), ctx.workspace_id)).one()
+            stage_record(db, ShadowMemory, ctx.workspace_id, original, memory_end_num=chap_num)
+        else:
+            db.execute(
+                update(Memory).where(*conditions).values(memory_end_num=chap_num).returning(Memory.memory_id)
+            ).scalar_one()
     except NoResultFound as e:
         raise MemoryNotFoundException(f"Memory with id {memory_id} not found or already ended") from e
-    except Exception as e:
-        raise e
 
 
 def _latest_content_id(chapter_id: SQLColumnExpression[UUID]) -> ScalarSelect[UUID]:
@@ -221,6 +242,36 @@ def read_previous_continuity_summary(db: Session, ctx: MemAccessContext) -> str 
 
 def write_continuity_summary(db: Session, ctx: MemAccessContext, summary: str) -> None:
     chapter_num, _ = check_mem_access_ctx(db, ctx)
+    if ctx.workspace_id is not None:
+        memory_rows = visible_rows(Memory, ShadowMemory, ctx.workspace_id)
+        original = db.scalar(
+            workspace_read(
+                select(memory_rows).where(
+                    memory_rows.memory_group_id == ctx.memory_group_id,
+                    memory_rows.memory_type == MemoryType.SUMMARY,
+                    memory_rows.plugin_name == CONTINUITY_PLUGIN_NAME,
+                    memory_rows.memory_observed_in == ctx.chapter_content_id,
+                ),
+                ctx.workspace_id,
+            )
+        )
+        if original is not None:
+            if original.creator_type == Creator.AGENT and original.memory_review_status == ReviewStatus.PENDING:
+                stage_record(db, ShadowMemory, ctx.workspace_id, original, memory_content=summary)
+        else:
+            stage_record(
+                db,
+                ShadowMemory,
+                ctx.workspace_id,
+                memory_group_id=ctx.memory_group_id,
+                memory_type=MemoryType.SUMMARY,
+                memory_observed_in=ctx.chapter_content_id,
+                memory_start_num=chapter_num,
+                memory_content=summary,
+                creator_type=Creator.AGENT,
+                plugin_name=CONTINUITY_PLUGIN_NAME,
+            )
+        return
     stmt = pg_insert(Memory).values(
         memory_group_id=ctx.memory_group_id,
         memory_type=MemoryType.SUMMARY,

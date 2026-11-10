@@ -13,6 +13,7 @@ from src.memory.plugins.glossary.models import GlossaryTerm
 from src.memory.plugins.translations.models import TermTranslation as TermTranslationRow
 from src.memory.plugins.translations.schemas import TermTranslation
 from src.memory.shadow_models import ShadowTerm, ShadowTermTranslation
+from src.memory.staging import stage_record
 from src.memory.types import Creator, ReviewStatus
 
 
@@ -54,15 +55,33 @@ def create_term_translation(db: Session, ctx: MemAccessContext, term: str, trans
     if not translation.strip():
         raise ValueError("A term translation must not be blank")
     check_mem_access_ctx(db, ctx)
+    term_rows = visible_rows(GlossaryTerm, ShadowTerm, ctx.workspace_id)
     term_id = db.scalar(
-        select(GlossaryTerm.term_id).where(
-            GlossaryTerm.memory_group_id == ctx.memory_group_id,
-            GlossaryTerm.term == term,
-            GlossaryTerm.review_status != ReviewStatus.REJECTED,
+        select(term_rows.term_id).where(
+            term_rows.memory_group_id == ctx.memory_group_id,
+            term_rows.term == term,
+            term_rows.review_status != ReviewStatus.REJECTED,
         )
     )
     if term_id is None:
         raise GlossaryTermNotFoundException(f"No usable glossary term {term!r} in this memory group")
+    if ctx.workspace_id is not None:
+        translation_rows = visible_rows(TermTranslationRow, ShadowTermTranslation, ctx.workspace_id)
+        original = db.scalar(
+            workspace_read(select(translation_rows).where(translation_rows.term_id == term_id), ctx.workspace_id)
+        )
+        if original is None or original.review_status == ReviewStatus.REJECTED:
+            stage_record(
+                db,
+                ShadowTermTranslation,
+                ctx.workspace_id,
+                original,
+                term_id=term_id,
+                translation=translation.strip(),
+                review_status=ReviewStatus.PENDING,
+                creator_type=Creator.AGENT,
+            )
+        return
     statement = insert(TermTranslationRow).values(
         term_id=term_id, translation=translation.strip(), review_status=ReviewStatus.PENDING, creator_type=Creator.AGENT
     )

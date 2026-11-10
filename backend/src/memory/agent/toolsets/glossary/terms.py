@@ -2,6 +2,7 @@ from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 from sqlalchemy.exc import IntegrityError
 
 from src.memory.agent.dependencies import MemAgentDeps
+from src.memory.exceptions import GlossaryTermAlreadyExistsException
 from src.memory.plugins.glossary import access
 from src.memory.plugins.glossary.types import TermKind
 
@@ -54,11 +55,17 @@ def add_term(ctx: RunContext[MemAgentDeps], term_name: str, term_kind: TermKind)
                 ctx.deps.mem_access_context.memory_group_id,
                 term_name,
                 term_kind,
+                workspace_id=ctx.deps.mem_access_context.workspace_id,
             )
             result = f"Term {new_term.term} added successfully."
+    except GlossaryTermAlreadyExistsException as exc:
+        raise ModelRetry(f"Glossary term {term_name!r} already exists. Do not add it again.") from exc
     except IntegrityError as exc:
         diagnostic = getattr(exc.orig, "diag", None)
-        if getattr(diagnostic, "constraint_name", None) == "uq_glossaries_term_memory_group_id":
+        if getattr(diagnostic, "constraint_name", None) in {
+            "uq_glossaries_term_memory_group_id",
+            "uq_shadow_terms_workspace_group_term",
+        }:
             raise ModelRetry(f"Glossary term {term_name!r} already exists. Do not add it again.") from exc
         raise
     return result

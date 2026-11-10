@@ -4,7 +4,7 @@ from sqlalchemy import Select, inspect, select, union_all
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.util import AliasedClass
 
-from src.models import Base
+from src.model_base import Base
 
 
 def visible_rows[T: Base](

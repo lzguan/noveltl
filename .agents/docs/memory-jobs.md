@@ -113,6 +113,13 @@ keys. `deleted` denotes a tombstone. A create-then-delete can remove its draft
 rather than create a tombstone. Active term names and continuity summaries
 retain workspace-local uniqueness; tombstones do not block replacements.
 
+These model modules import `Base` from `src.model_base`, which declares only the
+shared ORM base and timestamps. `src.models` re-exports the same class and remains
+the complete model registry used for metadata creation/migrations. Keeping the
+base separate avoids registering shadow models while an imported published
+model is still defining its column mixins; model/access imports can start before
+the global registry without an import cycle.
+
 Entity IDs, association endpoints, translation term IDs, and supersedes IDs
 deliberately do not reference published rows with foreign keys: new parents may
 exist only as drafts. Existing group/content references still have foreign keys.

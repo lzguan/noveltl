@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from src.memory.plugins.conventions.types import ConventionCategory
 from src.memory.types import Creator, ReviewStatus
-from src.models import Base
+from src.model_base import Base
 
 
 class TranslationConventionFields:

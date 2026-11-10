@@ -15,7 +15,7 @@ from src.memory.models import MemoryFields
 from src.memory.plugins.conventions.models import TranslationConventionFields
 from src.memory.plugins.glossary.models import GlossaryAssociationFields, GlossaryTermFields
 from src.memory.plugins.translations.models import TermTranslationFields
-from src.models import Base
+from src.model_base import Base
 
 
 class MemoryWorkspace(Base):

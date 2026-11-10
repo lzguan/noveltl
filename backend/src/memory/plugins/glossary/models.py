@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from src.memory.plugins.glossary.types import TermKind
 from src.memory.types import ReviewStatus
-from src.models import Base
+from src.model_base import Base
 
 
 class GlossaryTermFields:

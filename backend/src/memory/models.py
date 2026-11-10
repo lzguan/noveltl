@@ -18,7 +18,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.memory.types import Creator, JobStatus, MemoryType, ReviewStatus
-from src.models import Base
+from src.model_base import Base
 
 
 class MemoryGroup(Base):

@@ -4,7 +4,7 @@ from sqlalchemy import CheckConstraint, Enum, ForeignKeyConstraint, PrimaryKeyCo
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.memory.types import Creator, ReviewStatus
-from src.models import Base
+from src.model_base import Base
 
 
 class TermTranslationFields:

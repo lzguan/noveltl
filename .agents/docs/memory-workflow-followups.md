@@ -61,3 +61,21 @@ reach rather than its creator's (revoked users' jobs still run). Unverified:
 whether memory-group edit access always implies reading every chapter an agent
 reads. Possible fix: nullable `created_by` on jobs and `source_job_id` on
 agent-written rows. Deferred by the user (2026-11-07).
+
+## Failure logging and workspace cleanup
+
+Failed tasks get one `logger.exception` line in `arun_tasks`; the JSONL result
+sink in [celery.py](../../backend/src/memory/agent/dispatch/celery.py) records
+only completed and skipped tasks. A `memoryAgent.failed` event would have two
+shapes: the full `AgentRunResult` when publication fails after a finished run,
+and a partial transcript from `capture_run_messages` when `agent.run` raises.
+Orphan workspaces (crash, failed cleanup, failed commit verification) have no
+reaper; a periodic delete of workspaces whose task is not processing would do.
+Both deferred by the user until before production (2026-11-12).
+
+## Publication merge policy
+
+Publication is last write wins, so a review or edit made during a run is
+overwritten (approvals revert, guarded convention/translation updates apply
+unconditionally). The user accepts this until a merge policy is chosen
+(2026-11-12); do not re-raise it as a defect.

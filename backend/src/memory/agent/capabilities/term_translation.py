@@ -7,6 +7,7 @@ from pydantic_ai import AgentRunResult, RunContext
 from pydantic_ai.capabilities import AbstractCapability
 
 from src.memory.agent.dependencies import MemAgentDeps
+from src.memory.agent.transactions import atool_transaction
 from src.memory.plugins.translations.access import create_term_translation
 from src.schemas import Model
 
@@ -30,6 +31,7 @@ class TermTranslationOutput(Model):
 
 
 class TermTranslationCapability(AbstractCapability[MemAgentDeps]):
+    @atool_transaction
     async def after_run(
         self, ctx: RunContext[MemAgentDeps], *, result: AgentRunResult[TermTranslationOutput]
     ) -> AgentRunResult[TermTranslationOutput]:

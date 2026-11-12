@@ -5,6 +5,7 @@ from pydantic import Field, StringConstraints, model_validator
 from pydantic_ai import ModelRetry, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
+from src.memory.agent.transactions import tool_transaction
 from src.memory.exceptions import ConventionNotFoundException
 from src.memory.plugins.conventions.access import create_convention, delete_convention, update_convention
 from src.memory.plugins.conventions.types import ConventionCategory
@@ -44,6 +45,7 @@ class ConventionsOutput(Model):
         return self
 
 
+@tool_transaction
 def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsOutput) -> ConventionsOutput:
     deps = ctx.deps
     group_id = deps.mem_access_context.memory_group_id
@@ -68,6 +70,7 @@ def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsO
                 rule=draft.rule,
                 rationale=draft.rationale,
                 creator_type=Creator.AGENT,
+                workspace_id=deps.mem_access_context.workspace_id,
             )
         for revision in output.revise:
             target = convention_id(revision.handle)
@@ -84,6 +87,7 @@ def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsO
                     rationale=revision.rationale,
                     only_creator=Creator.AGENT,
                     only_pending=True,
+                    workspace_id=deps.mem_access_context.workspace_id,
                 )
             except ConventionNotFoundException:
                 locked.append(revision.handle)
@@ -92,7 +96,14 @@ def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsO
             if target is None:
                 continue
             try:
-                delete_convention(deps.db, group_id, target, only_creator=Creator.AGENT, only_pending=True)
+                delete_convention(
+                    deps.db,
+                    group_id,
+                    target,
+                    only_creator=Creator.AGENT,
+                    only_pending=True,
+                    workspace_id=deps.mem_access_context.workspace_id,
+                )
             except ConventionNotFoundException:
                 locked.append(handle)
     except Exception:

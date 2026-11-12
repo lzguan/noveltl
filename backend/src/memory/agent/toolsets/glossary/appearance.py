@@ -7,6 +7,7 @@ from pydantic_ai import FunctionToolset, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
+from src.memory.agent.transactions import tool_transaction
 from src.memory.types import MemoryType, Scope
 
 type AppearanceField = Literal["hair", "eyes", "markings", "stature_build", "anatomy", "apparent_age", "attire"]
@@ -41,6 +42,7 @@ appearance facts remain readable; do not duplicate one merely to categorize it.
 """.strip()
 
 
+@tool_transaction
 def new_appearance_memory(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
@@ -61,6 +63,7 @@ def new_appearance_memory(
     )
 
 
+@tool_transaction
 def supersede_appearance_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
@@ -83,6 +86,7 @@ def supersede_appearance_memory(
     )
 
 
+@tool_transaction
 def expire_appearance_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """End an appearance claim without affecting other character domains."""
     return common.expire_memory(

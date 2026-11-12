@@ -5,6 +5,7 @@ from pydantic_ai import FunctionToolset, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
+from src.memory.agent.transactions import tool_transaction
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory
 from src.memory.types import MemoryType, Scope
 from src.schemas import Page
@@ -115,6 +116,7 @@ is not an independent ability.
 """.strip()
 
 
+@tool_transaction
 def fact_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
@@ -138,6 +140,7 @@ def fact_memories(
     return common.to_agent_memory_page(ctx, page)
 
 
+@tool_transaction
 def new_fact_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
@@ -157,6 +160,7 @@ def new_fact_memory(
     )
 
 
+@tool_transaction
 def supersede_fact_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
@@ -178,6 +182,7 @@ def supersede_fact_memory(
     )
 
 
+@tool_transaction
 def expire_fact_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire an active fact that explicitly stopped being true."""
     return common.expire_memory(ctx, memory_id, [MemoryType.FACT], marks=list(FACT_CATEGORIES))

@@ -1,13 +1,24 @@
 import uuid
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, Index, func, text, types
+from sqlalchemy import (
+    CheckConstraint,
+    Enum,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    PrimaryKeyConstraint,
+    func,
+    text,
+    types,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.memory.types import Creator, JobStatus, MemoryType, ReviewStatus
-from src.models import Base
+from src.model_base import Base
 
 
 class MemoryGroup(Base):
@@ -35,58 +46,45 @@ class MemoryGroup(Base):
     __table_args__ = (Index("ix_memory_groups_novel_id", "novel_id"),)
 
 
-class Memory(Base):
-    __tablename__ = "memories"
-
-    memory_id: Mapped[uuid.UUID] = mapped_column(types.UUID, primary_key=True, server_default=func.gen_random_uuid())
-    memory_group_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey(
-            "memory_groups.memory_group_id",
-            name="fk_memories_memory_group_id_memory_groups",
-        ),
-        nullable=False,
-    )
+class MemoryFields:
+    memory_id: Mapped[UUID] = mapped_column(types.UUID, nullable=False, server_default=func.gen_random_uuid())
+    memory_group_id: Mapped[UUID] = mapped_column(types.UUID, nullable=False)
     memory_type: Mapped[MemoryType] = mapped_column(
         Enum(
-            MemoryType,
-            native_enum=False,
-            length=10,
-            values_callable=lambda values: [use_case.value for use_case in values],
+            MemoryType, native_enum=False, length=10, values_callable=lambda values: [value.value for value in values]
         ),
         nullable=False,
     )
     mark: Mapped[str | None] = mapped_column(types.String, nullable=True)
-    memory_observed_in: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("chapter_contents.chapter_content_id", ondelete="CASCADE"), nullable=False
-    )
+    memory_observed_in: Mapped[UUID] = mapped_column(types.UUID, nullable=False)
     memory_start_num: Mapped[int] = mapped_column(types.Integer, nullable=False)
     memory_end_num: Mapped[int | None] = mapped_column(types.Integer, nullable=True)
-    supersedes_memory_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("memories.memory_id", ondelete="SET NULL"), nullable=True
-    )
+    supersedes_memory_id: Mapped[UUID | None] = mapped_column(types.UUID, nullable=True)
     memory_content: Mapped[str] = mapped_column(types.Text, nullable=False)
     memory_review_status: Mapped[ReviewStatus] = mapped_column(
         Enum(
-            ReviewStatus,
-            native_enum=False,
-            length=10,
-            values_callable=lambda values: [use_case.value for use_case in values],
+            ReviewStatus, native_enum=False, length=10, values_callable=lambda values: [value.value for value in values]
         ),
         nullable=False,
-        server_default="pending",
+        server_default=ReviewStatus.PENDING.value,
     )
     creator_type: Mapped[Creator] = mapped_column(
-        Enum(
-            Creator,
-            native_enum=False,
-            length=10,
-            values_callable=lambda values: [use_case.value for use_case in values],
-        ),
+        Enum(Creator, native_enum=False, length=10, values_callable=lambda values: [value.value for value in values]),
         nullable=False,
     )
     plugin_name: Mapped[str] = mapped_column(types.String(32), nullable=False)
 
+
+class Memory(MemoryFields, Base):
+    __tablename__ = "memories"
+
     __table_args__ = (
+        PrimaryKeyConstraint("memory_id"),
+        ForeignKeyConstraint(
+            ["memory_group_id"], ["memory_groups.memory_group_id"], name="fk_memories_memory_group_id_memory_groups"
+        ),
+        ForeignKeyConstraint(["memory_observed_in"], ["chapter_contents.chapter_content_id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["supersedes_memory_id"], ["memories.memory_id"], ondelete="SET NULL"),
         CheckConstraint("memory_start_num < memory_end_num", name="ck_memories_start_end_num"),
         Index("ix_memories_memory_group_id_start_num", "memory_group_id", "memory_start_num"),
         Index("ix_memories_memory_observed_in", "memory_observed_in"),

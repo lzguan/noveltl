@@ -8,6 +8,7 @@ from pydantic_ai import FunctionToolset, RunContext
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
 from src.memory.agent.toolsets.glossary.instructions.cultivation import GLOSSARY_CULTIVATION_INSTRUCTIONS
+from src.memory.agent.transactions import tool_transaction
 from src.memory.types import MemoryType, Scope
 
 CULTIVATION_MARK = "cultivation_level"
@@ -23,6 +24,7 @@ Read visibility never grants permission to change other categories.
 """.strip()
 
 
+@tool_transaction
 def new_cultivation_memory(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
@@ -41,6 +43,7 @@ def new_cultivation_memory(
     )
 
 
+@tool_transaction
 def supersede_cultivation_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
@@ -61,6 +64,7 @@ def supersede_cultivation_memory(
     )
 
 
+@tool_transaction
 def expire_cultivation_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """End only a cultivation-level fact."""
     return common.expire_memory(ctx, memory_id, [MemoryType.FACT], marks=[CULTIVATION_MARK])

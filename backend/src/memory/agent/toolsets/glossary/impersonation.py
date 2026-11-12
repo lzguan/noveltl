@@ -7,6 +7,7 @@ from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
+from src.memory.agent.transactions import tool_transaction
 from src.memory.types import MemoryType, Scope
 
 IMPERSONATION_MARK = "impersonation"
@@ -36,6 +37,7 @@ def _claim(actor: str, target: str, content: str) -> str:
     return f"{actor} is impersonating {target}. {content}"
 
 
+@tool_transaction
 def new_impersonation_memory(
     ctx: RunContext[MemAgentDeps],
     actor_term_name: Annotated[str, Field(min_length=1)],
@@ -54,6 +56,7 @@ def new_impersonation_memory(
     )
 
 
+@tool_transaction
 def supersede_impersonation_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
@@ -74,6 +77,7 @@ def supersede_impersonation_memory(
     )
 
 
+@tool_transaction
 def expire_impersonation_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """End an impersonation without ending either individual's identity."""
     return common.expire_memory(ctx, memory_id, [MemoryType.RELATION], marks=[IMPERSONATION_MARK])

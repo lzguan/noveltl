@@ -3,6 +3,7 @@ import json
 from pydantic_ai import RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
+from src.memory.agent.transactions import tool_transaction
 from src.memory.plugins.glossary import access
 from src.memory.plugins.glossary.schemas import AgentGlossaryTerm
 
@@ -21,6 +22,7 @@ omit memories whose terms do not exist.
 """.strip()
 
 
+@tool_transaction
 def initial_glossary_context(ctx: RunContext[MemAgentDeps]) -> str:
     """Inject a snapshot of matching terms at the start of a run."""
     context_key = "glossary"

@@ -60,7 +60,7 @@ def conventions_context(deps: MemAgentDeps, start_chapter_num: int | None) -> Co
             review_status=row.review_status,
             editable=row.creator_type == Creator.AGENT and row.review_status == ReviewStatus.PENDING,
         )
-        for row in read_conventions(db, ctx.memory_group_id)
+        for row in read_conventions(db, ctx.memory_group_id, workspace_id=ctx.workspace_id)
     ]
     range_terms, terms_truncated = glossary.get_terms_in_chapter_range(
         db, ctx, start_chapter_num, limit=MAX_CONTEXT_TERMS

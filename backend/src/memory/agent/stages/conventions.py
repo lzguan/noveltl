@@ -12,10 +12,13 @@ async def run_conventions_stage(
     deps: MemAgentDeps, chapter_num: int, language_name: str, config: SummarizeConventionsStageConfig
 ) -> AgentRunResult[ConventionsOutput] | None:
     context = conventions_context(deps, config.since_chapter_num)
+    if deps.mem_access_context.workspace_id is not None:
+        deps.db.commit()
     if not context.terms:
         return None
     agent = create_conventions_agent(config.model_name)
     async with agent:
         return await agent.run(
-            conventions_request_prompt(context, chapter_num, config.since_chapter_num, language_name), deps=deps
+            conventions_request_prompt(context, chapter_num, config.since_chapter_num, language_name),
+            deps=deps,
         )

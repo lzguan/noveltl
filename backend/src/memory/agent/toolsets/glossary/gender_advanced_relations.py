@@ -5,6 +5,7 @@ from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
+from src.memory.agent.transactions import tool_transaction
 from src.memory.plugins.glossary import access
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory
 from src.memory.types import MemoryType, Scope
@@ -49,6 +50,7 @@ absence is not evidence. Different observers' beliefs remain separate.
 """.strip()
 
 
+@tool_transaction
 def gender_perception_memories(
     ctx: RunContext[MemAgentDeps],
     observer_term_name: Annotated[str, Field(min_length=1)],
@@ -78,6 +80,7 @@ def _validate_participants(observer_term_name: str, subject_term_name: str) -> N
         )
 
 
+@tool_transaction
 def new_gender_perception_memory(
     ctx: RunContext[MemAgentDeps],
     observer_term_name: Annotated[str, Field(min_length=1)],
@@ -98,6 +101,7 @@ def new_gender_perception_memory(
     )
 
 
+@tool_transaction
 def supersede_gender_perception_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
@@ -120,6 +124,7 @@ def supersede_gender_perception_memory(
     )
 
 
+@tool_transaction
 def expire_gender_perception_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire one gender perception that explicitly stopped being held."""
     return common.expire_memory(

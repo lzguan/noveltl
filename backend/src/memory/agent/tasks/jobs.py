@@ -1,6 +1,5 @@
 import uuid
 from datetime import timedelta
-from typing import Literal
 
 from sqlalchemy import Select, and_, func, insert, literal, or_, select, tuple_, union_all, update
 from sqlalchemy.orm import Session
@@ -343,15 +342,14 @@ def claim_task(
     return task
 
 
-def release_task(
+def fail_task(
     db: Session,
     memory_job_id: uuid.UUID,
     chapter_id: uuid.UUID,
     claim_token: uuid.UUID,
-    task_status: Literal[JobStatus.COMPLETED, JobStatus.FAILED],
     stage_num: int = 0,
 ) -> bool:
-    """Finish a processing task and commit if the caller still owns the job claim."""
+    """Mark a processing task failed and commit if the caller still owns the job claim."""
 
     release_stmt = (
         update(MemoryChapterTask)
@@ -362,7 +360,7 @@ def release_task(
             MemoryChapterTask.task_status == JobStatus.PROCESSING,
             _owns_job_claim(memory_job_id, claim_token),
         )
-        .values(task_status=task_status)
+        .values(task_status=JobStatus.FAILED)
         .returning(MemoryChapterTask.chapter_id)
     )
 

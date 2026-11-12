@@ -7,6 +7,7 @@ from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
+from src.memory.agent.transactions import tool_transaction
 from src.memory.plugins.glossary.access import (
     ALIAS_MARKS,
     ALIAS_PERSONA_MARK,
@@ -68,6 +69,7 @@ def _mark(category: AliasCategory) -> str:
     return ALIAS_CATEGORY_MARKS[category]
 
 
+@tool_transaction
 def new_alias_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
@@ -87,6 +89,7 @@ def new_alias_memory(
     )
 
 
+@tool_transaction
 def supersede_alias_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
@@ -108,6 +111,7 @@ def supersede_alias_memory(
     )
 
 
+@tool_transaction
 def expire_alias_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire one pair alias that explicitly stopped being true."""
     return common.expire_memory(ctx, memory_id, [MemoryType.RELATION], marks=list(ALIAS_MARKS))

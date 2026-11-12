@@ -9,6 +9,10 @@ class MemoryGroupNotFoundException(NotFoundException):
     pass
 
 
+class MemoryWorkspaceNotFoundException(NotFoundException):
+    pass
+
+
 class MemoryJobClaimLostException(RuntimeError):
     pass
 

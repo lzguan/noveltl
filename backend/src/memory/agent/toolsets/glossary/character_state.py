@@ -16,6 +16,7 @@ from src.memory.agent.toolsets.glossary.gender_advanced_relations import (
     GLOSSARY_ADVANCED_GENDER_RELATION_READ_INSTRUCTIONS,
     gender_perception_memories,
 )
+from src.memory.agent.transactions import tool_transaction
 from src.memory.plugins.glossary.schemas import AgentCharacterStatePage, AgentGlossaryMemoryPage
 from src.memory.types import MemoryType
 from src.schemas import Page
@@ -58,6 +59,7 @@ Use gender_perception_memories for the separate directional observer query.
 """.strip()
 
 
+@tool_transaction
 def character_state_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],

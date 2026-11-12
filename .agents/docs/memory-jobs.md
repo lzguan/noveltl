@@ -6,7 +6,9 @@
 | --- | --- |
 | Stored parameter versions and internal stage configs | [config.py](../../backend/src/memory/agent/config.py) |
 | Job/task rows | [models.py](../../backend/src/memory/models.py) |
-| Inactive typed workspace/shadow schema | [shadow_models.py](../../backend/src/memory/shadow_models.py) |
+| Typed workspace/shadow schema | [shadow_models.py](../../backend/src/memory/shadow_models.py) |
+| Publication and workspace cleanup | [workspaces.py](../../backend/src/memory/workspaces.py) |
+| Tool transaction decorator and output transaction helper | [transactions.py](../../backend/src/memory/agent/transactions.py) |
 | Workspace-aware read composition | [overlay.py](../../backend/src/memory/overlay.py) |
 | Typed shadow upserts and workspace validation | [staging.py](../../backend/src/memory/staging.py) |
 | Creation, claims, task status transitions | [tasks/jobs.py](../../backend/src/memory/agent/tasks/jobs.py) |
@@ -47,6 +49,45 @@ dispatches on the config type. Keep this mapping consistent with creation.
 A name-keyed map would collapse configs if a future job format permits multiple
 stages of the same type. Stage numbers are not fixed IDs for recording or naming.
 
+## Worker call flow
+
+Successful full-job execution follows this flow. The task loop includes stage
+execution, publication, cleanup, and renewal before moving to the next task.
+
+```text
+run_memory_job()                         # Celery entry
+└─ asyncio.run(consume_job())
+   └─ run_all_tasks()
+      └─ run_tasks()
+         ├─ claim_job()
+         ├─ arun_tasks()                 # repeated per task
+         │  ├─ aiterate_tasks()
+         │  │  └─ claim_next_task()
+         │  ├─ _run_single_task()
+         │  │  ├─ create workspace + commit
+         │  │  └─ run_*_stage()
+         │  │     ├─ prepare context / decide whether to skip
+         │  │     └─ agent.run()
+         │  │        └─ tools and output hooks
+         │  │           └─ accessors → shadow writes → commit
+         │  └─ _complete_workspace_task()
+         │     ├─ publish_workspace()   # publish + complete task + commit
+         │     └─ _cleanup_workspace()  # delete workspace + commit
+         ├─ refresh_job()               # after each completed task
+         └─ release_job()               # finally
+```
+
+The single-task entry is `run_memory_task() → run_one_task() → run_tasks()`,
+using `claim_task()` instead of `claim_next_task()`. The Celery entry points
+log each result after it is yielded. Skipped stages still publish/complete their
+workspace and clean it up. Read tools also commit their read transactions; the
+arrow through shadow writes describes write operations.
+
+See [worker entries](../../backend/src/memory/agent/dispatch/celery.py),
+[orchestration](../../backend/src/memory/agent/tasks/tasks.py), and
+[publication](../../backend/src/memory/workspaces.py). Failure and claim-loss paths
+are described below.
+
 ## Running and retrying
 
 `run_all_tasks` delegates to `run_tasks`, which acquires the job claim and uses
@@ -73,11 +114,50 @@ N chapters for conventions) are planned as a later params option; see
 execution waits for lower stages across the job, but does not enforce chapter
 order within a stage.
 
-`arun_tasks` owns the session for a task's writes. `release_task` commits writes
-and completion together, conditional on continued claim ownership. Failure rolls
-back that task's writes before recording failure in a separate session. Naming
-failure therefore preserves successful recording. Expired claims can be replaced;
-the old worker cannot finalize work after losing ownership.
+`arun_tasks` owns the task session and directly finalizes each completed workspace:
+`_run_single_task` creates and commits a fresh workspace. Registered tools use
+`tool_transaction` to commit completed operations and roll back failed attempts;
+read tools also end their transactions before returning materialized results.
+The initial glossary context and conventions output validator use the same
+wrapper. Continuity context reads and continuity/naming final writes use
+`atool_transaction`, which awaits the operation before committing and rolls back
+on failure or cancellation. It binds the named `ctx` argument to support both
+async tools and instance hooks. Naming/conventions stage runners load their own
+context, materialize and commit it before inference, and skip agent creation when
+there is no work. No transaction capability is attached
+to `agent.run`; transaction ownership lives at each database operation boundary.
+Without a workspace, these wrappers preserve the caller's transaction ownership.
+
+Publication uses a dedicated connection with an explicit transaction. Its first
+request conditionally updates the owned job row without extending its expiry;
+the normal UPDATE row lock prevents claim replacement until the transaction ends. Each subsequent request asserts
+ownership, processing task state, and expiry using `clock_timestamp()`, then
+executes set-based SQLAlchemy Core DML inside a PostgreSQL DO block. Scope queries,
+the ownership guard, and completion also use Core expressions; only procedural claim
+assertions and transaction batching are raw SQL. No chapter number is loaded for
+publication.
+The expressions are compiled with typed execution IDs and policy constants;
+model-produced text is selected from the shadow tables. An assertion raises even
+when that table has no drafts. The final request marks the task
+completed and includes COMMIT in the same request. Cleanup then deletes the
+workspace and commits separately; cleanup failure cannot undo publication.
+After finalization returns, `run_tasks` renews the job claim in a fresh transaction
+before yielding the result or starting the next task. Publication and `arun_tasks`
+do not receive a claim duration, and publication does not extend the lease.
+
+On model/tool failure, the worker rolls back pending work and attempts to discard
+committed drafts. Ordinary exceptions mark the task failed only while the original
+claim is owned. Rollback/cleanup handlers re-raise process-control exceptions;
+there is no cancellation-specific task-status or retry policy. Naming failure preserves earlier
+successful recording. An expired/replaced claim cannot publish its drafts or
+overwrite the replacement worker's task state. Each attempt gets a new workspace
+ID without waiting for older workspaces. Crashes or cleanup failures can leave
+orphan workspaces; no periodic cleanup job exists yet.
+
+If a publication COMMIT raises after being attempted, a fresh session checks the
+persisted task status before treating it as a failure. A completed task establishes
+logical completion; absence of the workspace alone does not. There is no blind
+publication/model retry after an ambiguous commit.
 
 The retry service resets and enqueues the selected failed task. It does not
 automatically run the rest of the job; starting the job continues pending work.
@@ -95,17 +175,18 @@ continuity capability handles prompt injection and passes its output to
 and source-version eligibility. Transformation tools keep occurrence-retention
 decisions and model-facing errors while glossary access owns their history query
 and exact-subject supersede check. Access functions do not commit; the existing
-task transaction still owns publication.
+task finalization still owns publication.
 
-## Shadow storage schema (not connected to execution)
+## Shadow storage schema
 
 [Migration f8b2c4d6e901](../../backend/alembic/versions/f8b2c4d6e901_add_memory_shadow_tables.py)
 adds execution workspaces referencing `(job, chapter, stage)` and typed shadows
 for memories, terms, associations, translations, and conventions. Each execution
 creates a fresh workspace; multiple workspaces can reference the same task.
 Claim tokens remain with the worker and job, and attempt counts remain on tasks.
-Task/workspace deletion cascades to its drafts. No worker or API currently uses
-these tables; the transaction and completion behavior described above is unchanged.
+Task/workspace deletion cascades to its drafts. The worker now requires this
+migration to be applied before running memory jobs; this change does not apply it
+to a development database automatically.
 
 Published and shadow entities inherit column-only mixins defined beside each
 published model in its owning `models.py`. Keys, foreign keys, checks, and indexes
@@ -124,15 +205,16 @@ the global registry without an import cycle.
 Entity IDs, association endpoints, translation term IDs, and supersedes IDs
 deliberately do not reference published rows with foreign keys: new parents may
 exist only as drafts. Existing group/content references still have foreign keys.
-The agreed publication policy is to merge when the worker still owns an unexpired
-job claim and the resulting data satisfies existing validity and editability
-rules; there is no original-timestamp conflict check. Publication reference validation,
-claim checks, cleanup, and atomic publication are subsequent work; the schema itself
-does not enforce them. [Schema tests](../../backend/tests/memory/test_shadow_schema.py)
+Publication uses last write wins when the worker still owns an unexpired job
+claim and its task is processing. Accessors apply business rules when staging;
+publication copies the staged payload without reapplying review/lifecycle rules
+or timestamp conflict checks. It relies on accessors for group/source consistency
+and schema constraints for referential integrity; it does not rescan drafts to
+validate their group, source novel, or parent existence. [Schema tests](../../backend/tests/memory/test_shadow_schema.py)
 exercise the migration in an isolated PostgreSQL schema, including parity with
 ORM metadata, unpublished IDs, workspace isolation, constraints, and cleanup.
 
-## Workspace reads (not enabled in jobs)
+## Workspace reads
 
 `MemAccessContext.workspace_id` defaults to `None`. With no workspace, accessors
 query the published models directly. With a workspace, `visible_rows` builds a
@@ -153,11 +235,10 @@ Source chapter text and access-context group/chapter validation remain published
 query results. This prevents cached published objects, another workspace, or a
 previous draft read from supplying stale payloads. These ORM results are read
 snapshots: consume/materialize them before session commit/expiry and do not edit
-them through the published ORM mapper. Short transaction boundaries and plain
-tool results remain part of the later worker/write integration.
+them through the published ORM mapper. Tool results and prompt contexts are
+materialized before operation commits.
 
-No execution path creates workspaces yet. Guarded atomic publication and worker
-integration remain subsequent work. [Read tests](../../backend/tests/memory/test_shadow_reads.py)
+[Read tests](../../backend/tests/memory/test_shadow_reads.py)
 seed drafts directly and exercise the real accessors and context builders against
 PostgreSQL, including cache isolation, masks before filtering, pagination,
 composite association keys, aliases, translations, conventions, and continuity.
@@ -169,7 +250,7 @@ and 50 ms with overlays; alias-aware workspace retrieval used five SELECTs and
 about 76 ms. These local measurements exclude client/ORM overhead and do not
 establish production-scale performance; the overlay adds material query cost.
 
-## Workspace writes (not enabled in jobs)
+## Workspace writes
 
 Agent mutations select the visible row before changing it and write only to the
 typed shadow table when a workspace is supplied. `stage_record` upserts by the
@@ -189,8 +270,8 @@ writes a tombstone. No extra agent deletion APIs were introduced.
 
 `check_workspace` validates the workspace's job/group and, for `MemAccessContext`,
 its task chapter. Invalid/missing workspaces raise `MemoryWorkspaceNotFoundException`.
-Claim ownership is deliberately not checked by staging: the worker's claim will
-guard atomic publication in the later integration step. Human review accessors
+Claim ownership is deliberately not checked by staging: finalization's guarded
+job-row update controls publication. Human review accessors
 (`approve_*`, `reject_*`, `mark_*_pending` for memories/terms) remain published-only
 and are not exposed to agents. Source-text queries also use published chapter data.
 Calls without a workspace preserve the existing published-table write path.
@@ -201,6 +282,38 @@ unpublished, other workspaces remain isolated, supersession/expiry affect only
 drafts, protected choices survive, create/delete and tombstone behavior differ,
 and failed savepoints roll back all staged output. Read/write tests share the
 synthetic workspace fixture in `tests/fixtures/memory_workspaces.py`.
+
+## Publication rules and verification
+
+`publish_workspace` owns publication and its commit, but does not delete the workspace.
+Call it after committing staged changes. It removes tombstones before inserting
+replacements, inserts terms before memories, and inserts associations/translations
+after their parents. The workspace identifies its job/chapter/stage; callers do
+not supply redundant expected task IDs. Operations are set-based per table.
+
+Every nondeleted shadow row is the desired complete published row. Generic upserts
+match the published primary key and overwrite every non-key column, including
+content, review fields, and timestamps, with the shadow values. Tombstones delete
+matching rows regardless of later review changes. A human edit made after staging
+can therefore be overwritten. Accessors still enforce their business rules when
+creating the drafts; publication contains no memory-specific merge policy.
+
+IDs are preserved. There is no natural-key remapping for continuity summaries;
+foreign-key and uniqueness violations roll back the whole publication. All five
+tables use the same delete/upsert behavior. The claim checks, atomic publication
+and completion, and separate workspace cleanup remain in place.
+
+[Publication tests](../../backend/tests/memory/test_workspace_publication.py) cover
+visibility before and after the final bundled commit, separate cleanup, exact
+shadow payload copies over existing rows, late edits/reviews overwritten by
+staged values, invalid graph/name collisions, lost claims, cleanup failure, and
+lost commit acknowledgements.
+[Transaction tests](../../backend/tests/memory/test_workspace_transactions.py) use
+FunctionModel and real database sessions to verify committed drafts between tool
+calls, no open transaction during model calls, tool rollback, and output-validator
+commit timing. Worker tests also exercise successful publication and model failure
+after a committed tool call. Live-provider/browser verification is outside these
+checks.
 
 ## Adding a stage or agent
 

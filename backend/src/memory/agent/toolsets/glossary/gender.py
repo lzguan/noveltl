@@ -5,6 +5,7 @@ from pydantic_ai import FunctionToolset, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
+from src.memory.agent.transactions import tool_transaction
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory
 from src.memory.types import MemoryType, Scope
 from src.schemas import Page
@@ -54,6 +55,7 @@ approved memories change only on clear textual evidence.
 """.strip()
 
 
+@tool_transaction
 def gender_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
@@ -65,6 +67,7 @@ def gender_memories(
     return common.term_memories(ctx, term_name, MemoryType.FACT, GENDER_MARK, skip, limit, term_search)
 
 
+@tool_transaction
 def new_gender_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
@@ -83,6 +86,7 @@ def new_gender_memory(
     )
 
 
+@tool_transaction
 def supersede_gender_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
@@ -103,6 +107,7 @@ def supersede_gender_memory(
     )
 
 
+@tool_transaction
 def expire_gender_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire a gender memory whose exact attribute explicitly stopped being true."""
     return common.expire_memory(ctx, memory_id, [MemoryType.FACT], marks=[GENDER_MARK])

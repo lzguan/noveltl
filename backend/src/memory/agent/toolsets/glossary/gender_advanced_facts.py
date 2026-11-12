@@ -5,6 +5,7 @@ from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
+from src.memory.agent.transactions import tool_transaction
 from src.memory.plugins.glossary import access
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory
 from src.memory.schemas import AgentModel
@@ -132,6 +133,7 @@ def _mark(aspect: GenderFactAspect) -> str:
     return GENDER_FACT_MARKS[aspect]
 
 
+@tool_transaction
 def gender_state(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
@@ -155,6 +157,7 @@ def gender_state(
     )
 
 
+@tool_transaction
 def new_gender_fact_memory(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
@@ -190,6 +193,7 @@ def new_gender_fact_memory(
     )
 
 
+@tool_transaction
 def supersede_gender_fact_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
@@ -212,6 +216,7 @@ def supersede_gender_fact_memory(
     )
 
 
+@tool_transaction
 def expire_gender_fact_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire a gender state or change rule that explicitly stopped being true."""
     return common.expire_memory(

@@ -353,6 +353,7 @@ def release_task(
 ) -> bool:
     """Finish a processing task and commit if the caller still owns the job claim."""
 
+    # TODO: this function is no longer called with JobStatus.COMPLETED. We should consider removing the task_status argument and hardcoding it to JobStatus.FAILED, since we don't want to allow a worker to mark a task as completed without going through the publish_workspace function.
     release_stmt = (
         update(MemoryChapterTask)
         .where(

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, replace
+from uuid import UUID
 
 import pytest
 from sqlalchemy.orm import Session
@@ -16,6 +17,11 @@ class ReadScenario:
     current: MemAccessContext
     other: MemAccessContext
     predecessor: MemAccessContext
+
+    @property
+    def workspace_id(self) -> UUID:
+        assert self.current.workspace_id is not None
+        return self.current.workspace_id
 
 
 @pytest.fixture

@@ -5,6 +5,7 @@ from pydantic import Field, StringConstraints, model_validator
 from pydantic_ai import ModelRetry, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
+from src.memory.agent.transactions import tool_transaction
 from src.memory.exceptions import ConventionNotFoundException
 from src.memory.plugins.conventions.access import create_convention, delete_convention, update_convention
 from src.memory.plugins.conventions.types import ConventionCategory
@@ -44,6 +45,7 @@ class ConventionsOutput(Model):
         return self
 
 
+@tool_transaction
 def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsOutput) -> ConventionsOutput:
     deps = ctx.deps
     group_id = deps.mem_access_context.memory_group_id

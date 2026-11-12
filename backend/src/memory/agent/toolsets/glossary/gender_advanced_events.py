@@ -7,6 +7,7 @@ from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
+from src.memory.agent.transactions import tool_transaction
 from src.memory.agent.types import OccurrenceRetentionConfig
 from src.memory.exceptions import GlossaryTermNotFoundException
 from src.memory.plugins.glossary import access
@@ -91,6 +92,7 @@ enforce that policy.
 """.strip()
 
 
+@tool_transaction
 def gender_event_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
@@ -116,6 +118,7 @@ def gender_event_memories(
     return common.to_agent_memory_page(ctx, page)
 
 
+@tool_transaction
 def new_gender_event_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
@@ -149,6 +152,7 @@ def create_glossary_gender_advanced_events_write_toolset(
     """Build advanced gender-event writers with one job's retention policy."""
     retention = config
 
+    @tool_transaction
     def new_gender_transformation_event_memory(
         ctx: RunContext[MemAgentDeps],
         subject_term_name: Annotated[str, Field(min_length=1)],
@@ -234,6 +238,7 @@ def create_glossary_gender_advanced_events_write_toolset(
             ) from exc
         return ctx.deps.memory_handles.new(new_memory.memory_id)
 
+    @tool_transaction
     def supersede_gender_transformation_event_memory(
         ctx: RunContext[MemAgentDeps],
         memory_id: str,
@@ -267,6 +272,7 @@ def create_glossary_gender_advanced_events_write_toolset(
             expected_marks=[mark],
         )
 
+    @tool_transaction
     def supersede_gender_event_memory(
         ctx: RunContext[MemAgentDeps],
         memory_id: str,

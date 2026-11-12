@@ -5,6 +5,7 @@ from pydantic_ai import FunctionToolset, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
+from src.memory.agent.transactions import tool_transaction
 from src.memory.plugins.glossary import access
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemory
 from src.memory.types import MemoryType, Scope
@@ -47,6 +48,7 @@ and a clearly standalone new event does not require speculative retrieval.
 """.strip()
 
 
+@tool_transaction
 def term_event_memories(
     ctx: RunContext[MemAgentDeps],
     term_names: Annotated[list[str], Field(min_length=1)],
@@ -67,6 +69,7 @@ def term_event_memories(
     return common.to_agent_memory_page(ctx, page)
 
 
+@tool_transaction
 def new_term_event_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
@@ -84,6 +87,7 @@ def new_term_event_memory(
     )
 
 
+@tool_transaction
 def supersede_term_event_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,

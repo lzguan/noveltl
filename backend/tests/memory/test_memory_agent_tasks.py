@@ -4,10 +4,11 @@ from datetime import timedelta
 
 import pytest
 from pydantic_ai import Agent
-from pydantic_ai.messages import ModelResponse, ToolCallPart, UserPromptPart
+from pydantic_ai.capabilities import Toolset
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart, UserPromptPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel
-from sqlalchemy import func, select, update
+from sqlalchemy import event, func, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.languages.models import Language
@@ -23,9 +24,13 @@ from src.memory.agent.stages import recording
 from src.memory.agent.tasks import tasks as agent_tasks
 from src.memory.agent.tasks.jobs import claim_job, claim_task, make_job
 from src.memory.agent.tasks.schedule import StageBarrierSchedule
+from src.memory.agent.toolsets.glossary.definitions import glossary_definitions_write_toolset
+from src.memory.agent.toolsets.glossary.terms import glossary_term_toolset
 from src.memory.exceptions import MemoryJobClaimLostException
 from src.memory.models import Memory, MemoryChapterTask, MemoryGroup, MemoryJob
+from src.memory.plugins.glossary.models import GlossaryTerm
 from src.memory.plugins.translations.models import TermTranslation
+from src.memory.shadow_models import MemoryWorkspace, ShadowTerm
 from src.memory.types import Creator, JobStatus, MemoryType, ReviewStatus
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, ChapterContent, Novel, SourceWork
@@ -110,47 +115,13 @@ def _claim_once(
     return claim
 
 
-def test_arun_tasks_raises_when_completion_claim_is_lost(
-    test_db: Session,
-    testing_session_local: sessionmaker[Session],
-) -> None:
-    memory_job_id, [chapter_id] = _make_memory_job(test_db, chapter_count=1)
-
-    async def expire_claim(db: Session, _task: agent_tasks.ClaimedTask) -> str:
-        db.execute(
-            update(MemoryJob)
-            .where(MemoryJob.memory_job_id == memory_job_id)
-            .values(claim_expires_at=func.now() - timedelta(seconds=1))
-        )
-        return "processed"
-
-    async def consume_tasks():
-        return [
-            result
-            async for result in agent_tasks.arun_tasks(
-                testing_session_local,
-                uuid.uuid4(),
-                _claim_once(memory_job_id, chapter_id),
-                expire_claim,
-            )
-        ]
-
-    with pytest.raises(MemoryJobClaimLostException, match=str(chapter_id)):
-        asyncio.run(consume_tasks())
-
-    test_db.expire_all()
-    task = test_db.get(MemoryChapterTask, (memory_job_id, chapter_id, 0))
-    assert task is not None
-    assert task.task_status == JobStatus.PROCESSING
-
-
 def test_arun_tasks_preserves_processing_error_when_failure_claim_is_lost(
     test_db: Session,
     testing_session_local: sessionmaker[Session],
 ) -> None:
     memory_job_id, [chapter_id] = _make_memory_job(test_db, chapter_count=1)
 
-    async def fail_after_expiration(_db: Session, _task: agent_tasks.ClaimedTask) -> None:
+    async def fail_after_expiration(_db: Session, _task: agent_tasks.ClaimedTask) -> agent_tasks.CompletedMemoryTask:
         with testing_session_local() as other_db:
             other_db.execute(
                 update(MemoryJob)
@@ -224,7 +195,34 @@ def test_run_all_tasks_completes_tasks_refreshes_and_releases_job(
             )
         ]
 
-    completed_tasks = asyncio.run(consume_tasks())
+    completed_at_renewal = []
+    engine = test_db.get_bind().engine
+
+    def observe_claim_update(_conn, _cursor, statement, _parameters, _context, _many):
+        set_clause = statement.split(" WHERE ")[0]
+        if (
+            statement.startswith("UPDATE memory_jobs SET")
+            and "claim_expires_at" in set_clause
+            and "claim_token" not in set_clause
+        ):
+            with testing_session_local() as other:
+                completed_at_renewal.append(
+                    other.scalar(
+                        select(func.count())
+                        .select_from(MemoryChapterTask)
+                        .where(
+                            MemoryChapterTask.memory_job_id == memory_job_id,
+                            MemoryChapterTask.task_status == JobStatus.COMPLETED,
+                        )
+                    )
+                )
+
+    event.listen(engine, "before_cursor_execute", observe_claim_update)
+    try:
+        completed_tasks = asyncio.run(consume_tasks())
+    finally:
+        event.remove(engine, "before_cursor_execute", observe_claim_update)
+    assert completed_at_renewal == [1, 2]
     assert all(completed_task.result is not None for completed_task in completed_tasks)
     assert [
         completed_task.result.output for completed_task in completed_tasks if completed_task.result is not None
@@ -333,7 +331,7 @@ def test_continuity_summary_is_rolled_back_when_task_completion_claim_is_lost(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A staged handoff is not durable when its task cannot be completed."""
-    memory_job_id, _chapter_ids = _make_memory_job(test_db, chapter_count=1, toolsets={"continuity_summary": {}})
+    memory_job_id, [chapter_id] = _make_memory_job(test_db, chapter_count=1, toolsets={"continuity_summary": {}})
 
     def expire_claim_during_model_request(_messages, agent_info):
         with testing_session_local() as other_db:
@@ -362,6 +360,9 @@ def test_continuity_summary_is_rolled_back_when_task_completion_claim_is_lost(
         asyncio.run(consume_tasks())
     test_db.expire_all()
     assert test_db.scalars(select(Memory).where(Memory.memory_type == MemoryType.SUMMARY)).all() == []
+    task = test_db.get(MemoryChapterTask, (memory_job_id, chapter_id, 0))
+    assert task is not None and task.task_status == JobStatus.PROCESSING
+    assert test_db.scalar(select(func.count()).select_from(MemoryWorkspace)) == 0
 
 
 def test_previous_summary_uses_only_current_immediate_predecessor_source_content(test_db: Session) -> None:
@@ -620,3 +621,50 @@ def test_naming_only_no_work_completes_without_creating_an_agent(
     task = test_db.get(MemoryChapterTask, (job_id, chapter_id, 0))
     assert task is not None and task.task_status == JobStatus.COMPLETED
     assert test_db.scalars(select(TermTranslation)).one().translation == "Lin Yun"
+
+
+@pytest.mark.parametrize("fail", [False, True])
+def test_worker_publishes_success_and_discards_drafts_on_model_failure(
+    test_db: Session, testing_session_local: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch, fail: bool
+) -> None:
+    memory_job_id, [chapter_id] = _make_memory_job(test_db, chapter_count=1, toolsets={"glossary_terms": {}})
+    requests = 0
+
+    async def respond(_messages, _info):
+        nonlocal requests
+        requests += 1
+        with testing_session_local() as other:
+            assert other.scalar(select(func.count()).select_from(GlossaryTerm)) == 0
+            if requests > 1:
+                assert other.scalar(select(func.count()).select_from(ShadowTerm)) == 1
+        if requests == 1:
+            return ModelResponse(parts=[ToolCallPart("add_term", {"term_name": "Alpha", "term_kind": "concept"})])
+        if fail:
+            raise RuntimeError("Model request failed")
+        if requests == 2:
+            return ModelResponse(
+                parts=[ToolCallPart("new_definition_memory", {"term_names": ["Alpha"], "content": "A concept."})]
+            )
+        return ModelResponse(parts=[TextPart("Done.")])
+
+    agent = Agent(
+        FunctionModel(respond),
+        deps_type=MemAgentDeps,
+        capabilities=[Toolset(glossary_term_toolset), Toolset(glossary_definitions_write_toolset)],
+    )
+    monkeypatch.setattr(recording, "create_recording_agent", lambda _model_name, _toolsets: agent)
+
+    async def consume():
+        return [item async for item in agent_tasks.run_all_tasks(testing_session_local, memory_job_id)]
+
+    if fail:
+        with pytest.raises(RuntimeError, match="Model request failed"):
+            asyncio.run(consume())
+    else:
+        assert len(asyncio.run(consume())) == 1
+    test_db.expire_all()
+    task = test_db.get(MemoryChapterTask, (memory_job_id, chapter_id, 0))
+    assert task is not None and task.task_status == (JobStatus.FAILED if fail else JobStatus.COMPLETED)
+    assert test_db.scalar(select(func.count()).select_from(GlossaryTerm)) == (0 if fail else 1)
+    assert test_db.scalar(select(func.count()).select_from(Memory)) == (0 if fail else 1)
+    assert test_db.scalar(select(func.count()).select_from(MemoryWorkspace)) == 0

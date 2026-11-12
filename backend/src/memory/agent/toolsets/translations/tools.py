@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from src.memory.access import MemAccessContext
 from src.memory.agent.dependencies import MemAgentDeps
+from src.memory.agent.transactions import tool_transaction
 from src.memory.plugins.conventions.access import read_conventions
 from src.memory.plugins.conventions.schemas import AgentConvention
 from src.memory.plugins.conventions.types import ConventionCategory
@@ -33,6 +34,7 @@ class TermTranslationContext(Model):
     conventions: list[AgentConvention] | None = None
 
 
+@tool_transaction
 def term_translations(
     ctx: RunContext[MemAgentDeps], term_names: Annotated[list[str], Field(min_length=1, max_length=50)]
 ) -> list[TermTranslation]:

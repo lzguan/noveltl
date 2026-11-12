@@ -4,6 +4,7 @@ from pydantic import Field
 from pydantic_ai import FunctionToolset, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
+from src.memory.agent.transactions import tool_transaction
 from src.memory.plugins.glossary import access as glossary
 from src.memory.plugins.glossary.types import TermKind
 from src.memory.plugins.term_search.access import count_text_occurrences
@@ -42,6 +43,7 @@ class TermOccurrences(AgentModel):
     match_count: int = Field(description="Number of occurrences across those chapters.")
 
 
+@tool_transaction
 def search_glossary_terms(
     ctx: RunContext[MemAgentDeps], query: Annotated[str, Field(min_length=1, max_length=50)]
 ) -> TermSearchResult:
@@ -59,6 +61,7 @@ def search_glossary_terms(
     )
 
 
+@tool_transaction
 def term_occurrences(
     ctx: RunContext[MemAgentDeps],
     texts: Annotated[list[Annotated[str, Field(min_length=1)]], Field(min_length=1, max_length=20)],

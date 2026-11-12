@@ -2,6 +2,7 @@ from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 from sqlalchemy.exc import IntegrityError
 
 from src.memory.agent.dependencies import MemAgentDeps
+from src.memory.agent.transactions import tool_transaction
 from src.memory.exceptions import GlossaryTermAlreadyExistsException
 from src.memory.plugins.glossary import access
 from src.memory.plugins.glossary.types import TermKind
@@ -42,6 +43,7 @@ def normalize_agent_term_name(term_name: str) -> str:
     return name
 
 
+@tool_transaction
 def add_term(ctx: RunContext[MemAgentDeps], term_name: str, term_kind: TermKind) -> str:
     """Add and classify one new exact source-language glossary term."""
     term_name = normalize_agent_term_name(term_name)

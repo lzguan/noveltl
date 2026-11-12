@@ -10,6 +10,7 @@ from pydantic_ai.models import ModelRequestContext
 
 from src.memory import access
 from src.memory.agent.dependencies import MemAgentDeps
+from src.memory.agent.transactions import atool_transaction
 from src.schemas import Model
 
 CONTINUITY_SUMMARY_INSTRUCTIONS = """
@@ -65,7 +66,7 @@ def _append_summary_to_user_prompt(
 
 @dataclass
 class ContinuitySummaryCapability(AbstractCapability[MemAgentDeps]):
-    """Inject and stage one per-run continuity summary without owning a transaction."""
+    """Inject and persist one per-run continuity summary."""
 
     _summary_handled: bool = False
 
@@ -75,6 +76,7 @@ class ContinuitySummaryCapability(AbstractCapability[MemAgentDeps]):
     def get_instructions(self) -> str:
         return CONTINUITY_SUMMARY_INSTRUCTIONS
 
+    @atool_transaction
     async def before_model_request(
         self,
         ctx: RunContext[MemAgentDeps],
@@ -87,6 +89,7 @@ class ContinuitySummaryCapability(AbstractCapability[MemAgentDeps]):
             _append_summary_to_user_prompt(ctx, request_context, summary)
         return request_context
 
+    @atool_transaction
     async def after_run(
         self,
         ctx: RunContext[MemAgentDeps],

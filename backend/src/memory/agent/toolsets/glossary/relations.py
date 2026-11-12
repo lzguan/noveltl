@@ -5,6 +5,7 @@ from pydantic_ai import FunctionToolset, RunContext
 
 from src.memory.agent.dependencies import MemAgentDeps
 from src.memory.agent.toolsets.glossary import common
+from src.memory.agent.transactions import tool_transaction
 from src.memory.plugins.glossary.access import ALIAS_MARKS
 from src.memory.plugins.glossary.schemas import AgentGlossaryMemoryPage
 from src.memory.types import MemoryType, Scope
@@ -89,6 +90,7 @@ other compatible relationships may coexist.
 """.strip()
 
 
+@tool_transaction
 def relation_memories(
     ctx: RunContext[MemAgentDeps],
     term_name: Annotated[str, Field(min_length=1)],
@@ -122,6 +124,7 @@ def relation_memories(
     return common.to_agent_alias_memory_page(ctx, page)
 
 
+@tool_transaction
 def new_relation_memory(
     ctx: RunContext[MemAgentDeps],
     content: str,
@@ -141,6 +144,7 @@ def new_relation_memory(
     )
 
 
+@tool_transaction
 def supersede_relation_memory(
     ctx: RunContext[MemAgentDeps],
     memory_id: str,
@@ -160,6 +164,7 @@ def supersede_relation_memory(
     )
 
 
+@tool_transaction
 def expire_relation_memory(ctx: RunContext[MemAgentDeps], memory_id: str) -> str:
     """Expire an active relation that explicitly stopped being true."""
     return common.expire_memory(ctx, memory_id, [MemoryType.RELATION], marks=list(RELATION_WRITE_CATEGORIES))

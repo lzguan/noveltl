@@ -35,10 +35,11 @@ from src.memory.agent.tasks.jobs import (
     release_task,
 )
 from src.memory.agent.tasks.schedule import TaskSchedule, get_schedule
-from src.memory.agent.toolsets.translations.tools import term_translation_context
 from src.memory.exceptions import MemoryJobClaimLostException
 from src.memory.models import MemoryChapterTask, MemoryGroup
+from src.memory.shadow_models import MemoryWorkspace
 from src.memory.types import JobStatus, StageName
+from src.memory.workspaces import WorkspaceCommitUnknownError, discard_workspace, publish_workspace
 from src.novels.models import Chapter, ChapterContent
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,7 @@ class CompletedMemoryTask:
         | AgentRunResult[TermTranslationOutput]
         | None
     )
+    workspace_id: uuid.UUID
     stage_num: int = 0
     stage_name: StageName = "record_memories"
 
@@ -87,7 +89,7 @@ async def aiterate_tasks(
         yield claimed_task
 
 
-async def arun_tasks[T](
+async def arun_tasks[T: CompletedMemoryTask](
     db_factory: sessionmaker[Session],
     claim_token: uuid.UUID,
     claim_next_task: Callable[[Session, uuid.UUID], MemoryChapterTask | None],
@@ -105,12 +107,7 @@ async def arun_tasks[T](
         try:
             with db_factory() as db:
                 result = await process_task(db, task)
-                if not release_task(
-                    db, task.memory_job_id, task.chapter_id, claim_token, JobStatus.COMPLETED, task.stage_num
-                ):
-                    raise MemoryJobClaimLostException(
-                        f"Lost claim while completing memory task for chapter {task.chapter_id}, stage {task.stage_num}"
-                    )
+                _complete_workspace_task(db, task, result, claim_token, db_factory)
         except MemoryJobClaimLostException:
             raise
         except Exception:
@@ -166,31 +163,83 @@ async def _run_single_task(
         )
     )
     ccid, cctext, cnum = db.execute(q).one()
-    context = MemAccessContext(memory_group_id, task.chapter_id, ccid)
+    workspace = MemoryWorkspace(memory_job_id=task.memory_job_id, chapter_id=task.chapter_id, stage_num=task.stage_num)
+    db.add(workspace)
+    db.flush()
+    workspace_id = workspace.workspace_id
+    db.commit()
+    context = MemAccessContext(memory_group_id, task.chapter_id, ccid, workspace_id)
     deps = MemAgentDeps(db, context)
-    stage = stages[task.stage_num]
-    match stage:
-        case RecordMemoriesStageConfig():
-            result = await run_recording_stage(deps, cctext, cnum, lang_name, stage)
-        case SummarizeConventionsStageConfig():
-            result = await run_conventions_stage(deps, cnum, lang_name, stage)
-        case TranslateTermsStageConfig():
-            glossary_context = term_translation_context(db, context, include_conventions=stage.include_conventions)
-            result = (
-                await run_term_translation_stage(deps, cctext, cnum, lang_name, stage, glossary_context)
-                if glossary_context is not None
-                else None
+    try:
+        stage = stages[task.stage_num]
+        match stage:
+            case RecordMemoriesStageConfig():
+                result = await run_recording_stage(deps, cctext, cnum, lang_name, stage)
+            case SummarizeConventionsStageConfig():
+                result = await run_conventions_stage(deps, cnum, lang_name, stage)
+            case TranslateTermsStageConfig():
+                result = await run_term_translation_stage(deps, cctext, cnum, lang_name, stage)
+        db.commit()
+        return CompletedMemoryTask(
+            memory_job_id=task.memory_job_id,
+            memory_group_id=memory_group_id,
+            chapter_id=task.chapter_id,
+            chapter_content_id=ccid,
+            chapter_num=cnum,
+            result=result,
+            stage_num=task.stage_num,
+            stage_name=stage.stage_name,
+            workspace_id=workspace_id,
+        )
+    except BaseException:
+        db.rollback()
+        _cleanup_workspace(db, workspace_id)
+        raise
+
+
+def _cleanup_workspace(db: Session, workspace_id: uuid.UUID) -> None:
+    try:
+        discard_workspace(db, workspace_id)
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Could not clean up memory workspace workspace_id=%s", workspace_id)
+
+
+def _complete_workspace_task(
+    db: Session,
+    task: ClaimedTask,
+    result: CompletedMemoryTask,
+    claim_token: uuid.UUID,
+    db_factory: sessionmaker[Session],
+) -> None:
+    workspace_id = result.workspace_id
+    try:
+        publish_workspace(
+            db,
+            workspace_id,
+            claim_token,
+        )
+    except WorkspaceCommitUnknownError:
+        db.rollback()
+        with db_factory() as verification:
+            status = verification.scalar(
+                select(MemoryChapterTask.task_status).where(
+                    MemoryChapterTask.memory_job_id == task.memory_job_id,
+                    MemoryChapterTask.chapter_id == task.chapter_id,
+                    MemoryChapterTask.stage_num == task.stage_num,
+                )
             )
-    return CompletedMemoryTask(
-        memory_job_id=task.memory_job_id,
-        memory_group_id=memory_group_id,
-        chapter_id=task.chapter_id,
-        chapter_content_id=ccid,
-        chapter_num=cnum,
-        result=result,
-        stage_num=task.stage_num,
-        stage_name=stage.stage_name,
-    )
+        if status == JobStatus.COMPLETED:
+            _cleanup_workspace(db, workspace_id)
+            return
+        _cleanup_workspace(db, workspace_id)
+        raise
+    except BaseException:
+        db.rollback()
+        _cleanup_workspace(db, workspace_id)
+        raise
+    _cleanup_workspace(db, workspace_id)
 
 
 async def run_tasks(
@@ -209,7 +258,6 @@ async def run_tasks(
     Fetch the memory group's language
     For each claimed task:
         Run and finalize the task
-        Refresh the job claim
         Yield the agent result
     Release the job claim
     """

@@ -282,6 +282,7 @@ def test_convention_output_retries_roll_back_all_staged_changes(test_db: Session
     )
     ctx = RunContext(deps=MemAgentDeps(test_db, reads.current), model=TestModel(), usage=RunUsage())
     handle = ctx.deps.convention_handles.new(locked.convention_id)
+    test_db.commit()
     output = ConventionsOutput.model_validate(
         {
             "create": [{"category": "naming", "title": "Draft", "rule": "Draft rule."}],

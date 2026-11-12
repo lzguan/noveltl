@@ -29,7 +29,7 @@ from src.memory.shadow_models import (
     ShadowTermTranslation,
 )
 from src.memory.types import Creator, JobStatus, MemoryType, ReviewStatus
-from src.memory.workspaces import discard_workspace, end_workspace
+from src.memory.workspaces import discard_workspace, publish_workspace
 from src.model_base import Base
 from tests.fixtures.memory_workspaces import ReadScenario
 from tests.fixtures.memory_workspaces import reads as reads
@@ -75,7 +75,7 @@ def publication_token(test_db: Session, reads: ReadScenario) -> UUID:
 
 
 def _publish(db: Session, reads: ReadScenario, token: UUID) -> None:
-    end_workspace(db, reads.workspace_id, token)
+    publish_workspace(db, reads.workspace_id, token)
 
 
 def test_publication_commits_in_final_request_and_cleanup_is_separate(

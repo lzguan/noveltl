@@ -1,6 +1,6 @@
 """Workspace synchronization code.
 
-We write raw SQL here to ensure that workspace commit is atomic. We have the following guarantees in `end_workspace`:
+We write raw SQL here to ensure that workspace commit is atomic. We have the following guarantees in `publish_workspace`:
 - The workspace is only committed if the claim token is valid and the task is still processing.
 - If the workspace commit fails, the database is rolled back to its previous state.
 - If the workspace commit succeeds, the database is committed and the workspace is marked as completed.

@@ -37,7 +37,7 @@ class WorkspaceCommitUnknownError(RuntimeError):
 
 _CLAIM_LOST = """
 IF NOT FOUND THEN
-    RAISE EXCEPTION 'Memory job claim expired, changed, or task is not processing' USING ERRCODE = 'P0001';
+    RAISE EXCEPTION 'Memory job claim expired, changed, or task is not processing' USING ERRCODE = 'MW001';
 END IF;
 """
 
@@ -177,7 +177,7 @@ def publish_workspace(
             original = getattr(error, "orig", error)
             code = getattr(original, "pgcode", None)
             message = getattr(getattr(original, "diag", None), "message_primary", str(error))
-            if code == "P0001":
+            if code == "MW001":
                 raise MemoryJobClaimLostException(message) from error
             if isinstance(error, Exception) and final_request and (code is None or code.startswith("08")):
                 raise WorkspaceCommitUnknownError("Publication commit outcome is unknown") from error

@@ -30,9 +30,9 @@ from src.memory.agent.tasks.jobs import (
     claim_job,
     claim_next_task,
     claim_task,
+    fail_task,
     refresh_job,
     release_job,
-    release_task,
 )
 from src.memory.agent.tasks.schedule import TaskSchedule, get_schedule
 from src.memory.exceptions import MemoryJobClaimLostException
@@ -111,16 +111,15 @@ async def arun_tasks[T: CompletedMemoryTask](
         except MemoryJobClaimLostException:
             raise
         except Exception:
+            logger.exception(
+                "Memory task failed job_id=%s chapter_id=%s stage_num=%s",
+                task.memory_job_id,
+                task.chapter_id,
+                task.stage_num,
+            )
             try:
                 with db_factory() as db:
-                    released = release_task(
-                        db,
-                        task.memory_job_id,
-                        task.chapter_id,
-                        claim_token,
-                        JobStatus.FAILED,
-                        task.stage_num,
-                    )
+                    released = fail_task(db, task.memory_job_id, task.chapter_id, claim_token, task.stage_num)
                 if not released:
                     logger.warning(
                         "Could not mark memory task failed after losing its claim job_id=%s chapter_id=%s stage_num=%s",

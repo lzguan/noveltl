@@ -12,16 +12,32 @@ from src.memory.agent.tasks.jobs import (
     claim_job,
     claim_next_task,
     claim_task,
+    fail_task,
     make_job,
     refresh_job,
     release_job,
-    release_task,
 )
 from src.memory.agent.tasks.schedule import StageBarrierSchedule
 from src.memory.models import MemoryChapterTask, MemoryGroup, MemoryJob
 from src.memory.types import JobStatus
 from src.novels.constants import NovelType, Visibility
 from src.novels.models import Chapter, Novel, SourceWork
+
+
+def _complete_task(db: Session, memory_job_id: uuid.UUID, chapter_id: uuid.UUID, stage_num: int = 0) -> None:
+    completed = db.scalar(
+        update(MemoryChapterTask)
+        .where(
+            MemoryChapterTask.memory_job_id == memory_job_id,
+            MemoryChapterTask.chapter_id == chapter_id,
+            MemoryChapterTask.stage_num == stage_num,
+            MemoryChapterTask.task_status == JobStatus.PROCESSING,
+        )
+        .values(task_status=JobStatus.COMPLETED)
+        .returning(MemoryChapterTask.chapter_id)
+    )
+    assert completed is not None
+    db.commit()
 
 
 def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Session) -> None:
@@ -156,27 +172,17 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
     assert second_task.attempt_count == 1
     assert claim_task(test_db, memory_job_id, chapters[2].chapter_id, third_token, StageBarrierSchedule()) is None
     assert (
-        release_task(
+        fail_task(
             test_db,
             memory_job_id,
             second_task.chapter_id,
             second_token,
-            JobStatus.COMPLETED,
         )
         is False
     )
     test_db.refresh(second_task)
     assert second_task.task_status == JobStatus.PROCESSING
-    assert (
-        release_task(
-            test_db,
-            memory_job_id,
-            second_task.chapter_id,
-            third_token,
-            JobStatus.COMPLETED,
-        )
-        is True
-    )
+    _complete_task(test_db, memory_job_id, second_task.chapter_id)
 
     first_task = claim_next_task(test_db, memory_job_id, third_token, StageBarrierSchedule())
     assert first_task is not None
@@ -215,12 +221,11 @@ def test_make_job_records_params_and_pending_tasks_for_chapter_range(test_db: Se
     assert claimed_again.claim_token is None
     assert claimed_again.claim_expires_at is None
     assert (
-        release_task(
+        fail_task(
             test_db,
             memory_job_id,
             reclaimed_task.chapter_id,
             replacement_token,
-            JobStatus.COMPLETED,
         )
         is False
     )
@@ -267,7 +272,7 @@ def test_stages_run_as_job_wide_barriers(test_db: Session) -> None:
     # A direct naming run waits for recording of every chapter, not just its own.
     record_first = claim_task(test_db, memory_job_id, first, token, StageBarrierSchedule(), stage_num=0)
     assert record_first is not None
-    assert release_task(test_db, memory_job_id, first, token, JobStatus.COMPLETED, stage_num=0)
+    _complete_task(test_db, memory_job_id, first, stage_num=0)
     assert claim_task(test_db, memory_job_id, first, token, StageBarrierSchedule(), stage_num=1) is None
 
     schedule = StageBarrierSchedule()
@@ -277,5 +282,5 @@ def test_stages_run_as_job_wide_barriers(test_db: Session) -> None:
         # Schedule invariant: the worker never claims a task that direct runs would refuse.
         prerequisites = schedule.unfinished_prerequisites(memory_job_id, task.chapter_id, task.stage_num)
         assert not test_db.scalar(select(prerequisites))
-        assert release_task(test_db, memory_job_id, task.chapter_id, token, JobStatus.COMPLETED, task.stage_num)
+        _complete_task(test_db, memory_job_id, task.chapter_id, task.stage_num)
     assert claimed == [(second, 0), (first, 1), (second, 1)]

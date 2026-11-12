@@ -3,8 +3,8 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import delete, event, func, insert, inspect, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import delete, event, func, insert, inspect, select, text, update
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.memory.access import write_continuity_summary
@@ -341,6 +341,33 @@ def test_staged_conventions_overwrite_late_reviews(test_db: Session, reads: Read
     _publish(test_db, reads, publication_token)
     test_db.refresh(convention)
     assert convention.rule == "Draft." and convention.review_status == ReviewStatus.PENDING
+
+
+def test_unrelated_database_exception_is_not_reported_as_lost_claim(
+    test_db: Session, reads: ReadScenario, publication_token: UUID
+):
+    term_id, _ = _draft(test_db, reads)
+    test_db.commit()
+    table = GlossaryTerm.__tablename__
+    test_db.execute(
+        text(
+            "CREATE FUNCTION reject_publication() RETURNS trigger LANGUAGE plpgsql AS "
+            "$$ BEGIN RAISE EXCEPTION 'unrelated failure'; END $$"
+        )
+    )
+    test_db.execute(
+        text(f'CREATE TRIGGER reject_publication BEFORE INSERT ON "{table}" EXECUTE FUNCTION reject_publication()')
+    )
+    test_db.commit()
+    try:
+        with pytest.raises(DBAPIError) as raised:
+            _publish(test_db, reads, publication_token)
+    finally:
+        test_db.rollback()
+        test_db.execute(text("DROP FUNCTION reject_publication() CASCADE"))
+        test_db.commit()
+    assert getattr(raised.value.orig, "pgcode", None) == "P0001"
+    assert test_db.get(GlossaryTerm, term_id) is None
 
 
 @pytest.mark.parametrize("claim_lost", ["expired", "replaced"])

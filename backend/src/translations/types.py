@@ -1,4 +1,4 @@
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Literal
@@ -72,32 +72,6 @@ def infer_pipeline(initial: ActionType, signatures: Sequence[ActionSignature]) -
             raise ValueError(f"stage {stage_num} {error}") from error
         inferred.append(available)
     return inferred
-
-
-type SignatureFn = Callable[[ActionType], ActionSignature]
-
-
-def fixed(signature: ActionSignature) -> SignatureFn:
-    return lambda job_inputs: signature
-
-
-# Each entry maps the job's input streams to the signature of a stage running that action.
-ACTIONS: dict[ActionName, SignatureFn] = {
-    "load_inputs": lambda job_inputs: ActionSignature(inputs={}, outputs=job_inputs),
-    "prune_memories": fixed(
-        ActionSignature(
-            inputs={"chapter": "chapter", "memories": "memories"},
-            outputs={"memories": "memories"},
-        )
-    ),
-    "translate": fixed(
-        ActionSignature(
-            inputs={"chapter": "chapter"},
-            optional_inputs={"memories": "memories"},
-            outputs={"chapter": "chapter"},
-        )
-    ),
-}
 
 
 class TranslationTaskStatus(StrEnum):

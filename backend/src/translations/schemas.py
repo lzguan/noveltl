@@ -1,12 +1,20 @@
 import uuid
+from collections.abc import Mapping
 from datetime import datetime
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, ClassVar, Literal, Self
 
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, TypeAdapter, model_validator
 
 from src.memory.types import MemoryType, PluginName
 from src.schemas import Model
-from src.translations.types import ACTIONS, ActionType, DataName, ModelName, TranslationTaskStatus, infer_pipeline
+from src.translations.types import (
+    ActionName,
+    ActionSignature,
+    DataName,
+    ModelName,
+    TranslationTaskStatus,
+    infer_pipeline,
+)
 from src.translations.ui import UIHints
 
 
@@ -48,6 +56,14 @@ class PruneMemoriesConfig(Model):
         json_schema_extra=UIHints(control="number", show_after="model", placeholder="Provider default").schema_extra(),
     )
 
+    SIGNATURE: ClassVar[ActionSignature] = ActionSignature(
+        inputs={"chapter": "chapter", "memories": "memories"},
+        outputs={"memories": "memories"},
+    )
+
+    def signature(self) -> ActionSignature:
+        return self.SIGNATURE
+
 
 class PruneMemoriesStageCreate(Model):
     action: Literal["prune_memories"]
@@ -85,6 +101,15 @@ class TranslateConfig(Model):
         json_schema_extra=UIHints(control="number", show_after="model", placeholder="Provider default").schema_extra(),
     )
 
+    SIGNATURE: ClassVar[ActionSignature] = ActionSignature(
+        inputs={"chapter": "chapter"},
+        optional_inputs={"memories": "memories"},
+        outputs={"chapter": "chapter"},
+    )
+
+    def signature(self) -> ActionSignature:
+        return self.SIGNATURE
+
 
 class TranslateStageCreate(Model):
     action: Literal["translate"]
@@ -110,10 +135,9 @@ class MemoriesInput(Model):
 type TranslationInput = MemoriesInput
 
 
-class TranslationJobConfig(Model):
-    start_chapter_num: int | None = Field(default=None, ge=0)
-    end_chapter_num: int | None = Field(default=None, ge=0)
-    batch_size: int = Field(gt=0)
+class LoadInputsConfig(Model):
+    model_config = ConfigDict(extra="forbid")
+
     inputs: dict[str, TranslationInput] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -124,10 +148,31 @@ class TranslationJobConfig(Model):
                 raise ValueError(f"Input stream {name!r} must be named {source.type!r}")
         return self
 
-    def input_type(self) -> ActionType:
-        streams: dict[str, DataName] = {"chapter": "chapter"}
-        streams.update({name: source.type for name, source in self.inputs.items()})
-        return streams
+    def signature(self) -> ActionSignature:
+        outputs: dict[str, DataName] = {"chapter": "chapter"}
+        outputs.update({name: source.type for name, source in self.inputs.items()})
+        return ActionSignature(inputs={}, outputs=outputs)
+
+
+type StageConfig = LoadInputsConfig | PruneMemoriesConfig | TranslateConfig
+
+_action_name = TypeAdapter(ActionName)
+
+
+def stage_config(action: str, config: Mapping[str, Any]) -> StageConfig:
+    match _action_name.validate_python(action):
+        case "load_inputs":
+            return LoadInputsConfig.model_validate(config)
+        case "prune_memories":
+            return PruneMemoriesConfig.model_validate(config)
+        case "translate":
+            return TranslateConfig.model_validate(config)
+
+
+class TranslationJobConfig(Model):
+    start_chapter_num: int | None = Field(default=None, ge=0)
+    end_chapter_num: int | None = Field(default=None, ge=0)
+    batch_size: int = Field(gt=0)
 
     @model_validator(mode="after")
     def validate_chapter_range(self) -> Self:
@@ -150,6 +195,7 @@ class TranslationJobCreateRequest(Model):
 
     novel_id: uuid.UUID
     config: TranslationJobConfig
+    inputs: dict[str, TranslationInput] = Field(default_factory=dict)
     stages: list[TranslationStageRequest] = Field(min_length=1, max_length=5)
 
 
@@ -158,15 +204,16 @@ class TranslationJobCreate(Model):
 
     novel_id: uuid.UUID
     config: TranslationJobConfig
+    inputs: dict[str, TranslationInput] = Field(default_factory=dict)
     stages: list[TranslationStageCreate] = Field(min_length=1, max_length=5)
+
+    def loader_config(self) -> LoadInputsConfig:
+        return LoadInputsConfig(inputs=self.inputs)
 
     @model_validator(mode="after")
     def validate_pipeline(self) -> Self:
-        job_inputs = self.config.input_type()
-        signatures = [ACTIONS["load_inputs"](job_inputs)]
-        signatures += [ACTIONS[stage.action](job_inputs) for stage in self.stages]
         # Stage numbers match the stored pipeline, where the loader is stage 0.
-        infer_pipeline({}, signatures)
+        infer_pipeline({}, [self.loader_config().signature(), *(stage.config.signature() for stage in self.stages)])
         return self
 
 

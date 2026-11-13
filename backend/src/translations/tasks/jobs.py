@@ -68,7 +68,14 @@ def create_job(db: Session, request: TranslationJobCreate) -> UUID:
                 }
                 for stage_num, stage in enumerate(request.stages, start=1)
             ]
-            + [{"job_id": job_id, "stage_num": 0, "action": "load_inputs", "config": {}}],
+            + [
+                {
+                    "job_id": job_id,
+                    "stage_num": 0,
+                    "action": "load_inputs",
+                    "config": request.loader_config().model_dump(mode="json"),
+                }
+            ],
         )
 
         inserted_batches = (

@@ -58,7 +58,7 @@ def create_translation_job(db: Session, user: User, request: TranslationJobCreat
         is None
     ):
         raise TranslationNotFoundError("Novel not found")
-    group_ids = {source.memory_group_id for source in request.config.inputs.values()}
+    group_ids = {source.memory_group_id for source in request.inputs.values()}
     if group_ids:
         found = set(
             db.scalars(

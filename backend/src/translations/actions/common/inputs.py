@@ -2,7 +2,6 @@ from collections.abc import Collection, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from uuid import UUID
 
-from pydantic import TypeAdapter
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -15,28 +14,14 @@ from src.translations.actions.common.memory_inputs import iter_batch_memories
 from src.translations.jsonl import iter_translation_records
 from src.translations.models import TranslationJob, TranslationJobChapter, TranslationStage, TranslationTask
 from src.translations.records import ChapterRecord, TranslationRecord
-from src.translations.schemas import MemoriesInput, TranslationInput, TranslationJobConfig
+from src.translations.schemas import MemoriesInput, TranslationInput, stage_config
 from src.translations.types import (
-    ACTIONS,
-    ActionName,
     ActionSignature,
     ActionType,
     TranslationTaskStatus,
     infer_pipeline,
 )
 from src.translations.validation import validate_output_records
-
-_action_name = TypeAdapter(ActionName)
-
-
-def job_config(db: Session, job_id: UUID) -> TranslationJobConfig:
-    return TranslationJobConfig.model_validate(
-        db.execute(select(TranslationJob.config).where(TranslationJob.job_id == job_id)).scalar_one()
-    )
-
-
-def stage_signature(config: TranslationJobConfig, stage: TranslationStage) -> ActionSignature:
-    return ACTIONS[_action_name.validate_python(stage.action)](config.input_type())
 
 
 def batch_chapter_ids(context: ActionTaskContext, stage: TranslationStage) -> list[UUID]:
@@ -101,13 +86,12 @@ class StageTypes:
 
 
 def stage_types(db: Session, stage: TranslationStage) -> StageTypes:
-    config = job_config(db, stage.job_id)
     stages = db.scalars(
         select(TranslationStage)
         .where(TranslationStage.job_id == stage.job_id, TranslationStage.stage_num <= stage.stage_num)
         .order_by(TranslationStage.stage_num)
     ).all()
-    signatures = [stage_signature(config, earlier) for earlier in stages]
+    signatures = [stage_config(earlier.action, earlier.config).signature() for earlier in stages]
     states = infer_pipeline({}, signatures)
     return StageTypes(states[-2] if len(states) > 1 else {}, signatures[-1], states[-1])
 

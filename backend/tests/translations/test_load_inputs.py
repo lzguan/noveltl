@@ -45,7 +45,8 @@ def _request(scenario: DatabaseScenario, stage: dict, inputs: dict | None = None
     return TranslationJobCreate.model_validate(
         {
             "novel_id": scenario.novels["novel_1"].novel_id,
-            "config": {"batch_size": 100, "inputs": inputs or {}},
+            "config": {"batch_size": 100},
+            "inputs": inputs or {},
             "stages": [stage],
         }
     )

@@ -70,7 +70,8 @@ def _tasks(db: Session, scenario: DatabaseScenario, stages: list[dict], inputs: 
         TranslationJobCreate.model_validate(
             {
                 "novel_id": scenario.novels["novel_1"].novel_id,
-                "config": {"batch_size": 100, "inputs": inputs},
+                "config": {"batch_size": 100},
+                "inputs": inputs,
                 "stages": stages,
             }
         ),

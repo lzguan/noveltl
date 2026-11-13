@@ -3,20 +3,15 @@
 from pydantic import TypeAdapter
 
 from src.translations.schemas import (
-    PruneMemoriesStageCreate,
-    TranslateStageCreate,
+    PruneMemoriesConfig,
+    TranslateConfig,
     TranslationActionMetadata,
     TranslationActionsRead,
 )
-from src.translations.types import ACTIONS
 
-_STAGE_TYPES = {
-    "translate": TranslateStageCreate,
-    "prune_memories": PruneMemoriesStageCreate,
-}
-_LABELS = {
-    "translate": "Translate",
-    "prune_memories": "Prune memories",
+_ACTIONS = {
+    "translate": ("Translate", TranslateConfig),
+    "prune_memories": ("Prune memories", PruneMemoriesConfig),
 }
 
 
@@ -25,15 +20,12 @@ def read_action_metadata() -> TranslationActionsRead:
         actions=[
             TranslationActionMetadata(
                 name=name,
-                label=_LABELS[name],
-                input_types=sorted(signature({}).input_types),
-                output_types=sorted(signature({}).output_types),
+                label=label,
+                input_types=sorted(config.SIGNATURE.input_types),
+                output_types=sorted(config.SIGNATURE.output_types),
                 allowed_as_first_stage=True,
-                config_schema=TypeAdapter(_STAGE_TYPES[name].model_fields["config"].annotation).json_schema(
-                    by_alias=True, mode="validation"
-                ),
+                config_schema=TypeAdapter(config).json_schema(by_alias=True, mode="validation"),
             )
-            for name, signature in ACTIONS.items()
-            if name in _STAGE_TYPES
+            for name, (label, config) in _ACTIONS.items()
         ]
     )

@@ -22,7 +22,7 @@ from src.translations.types import TranslationTaskStatus as State
 from test_support.test_data.scenarios import DatabaseScenario
 
 
-def make_job(db: Session, scenario: DatabaseScenario) -> tuple[UUID, list[TranslationTask]]:
+def make_job(db: Session, scenario: DatabaseScenario, *, loaded: bool = True) -> tuple[UUID, list[TranslationTask]]:
     job_id = create_translation_job(
         db,
         scenario.users["admin"],
@@ -42,6 +42,11 @@ def make_job(db: Session, scenario: DatabaseScenario) -> tuple[UUID, list[Transl
             .order_by(TranslationStage.stage_num)
         )
     )
+    if loaded:
+        # Most tests exercise controls on the user's stages, so the loader has already finished.
+        loader, *tasks = tasks
+        loader.status, tasks[0].status = State.COMPLETE, State.READY
+        db.commit()
     return job_id, tasks
 
 
@@ -58,11 +63,11 @@ def make_job(db: Session, scenario: DatabaseScenario) -> tuple[UUID, list[Transl
     ],
 )
 def test_registered_steps_resolve_recovery_boundaries(state: State, expected: State) -> None:
-    for action in ("translate", "translate_with_memories", "prune_memories"):
+    for action in ("translate", "prune_memories"):
         step = last_step(action, state)
         assert step is not None and step.expect == expected
-    combine = last_step("combine_chapter", State.FINALIZING)
-    assert combine is not None and combine.expect == State.READY
+    loader = last_step("load_inputs", State.FINALIZING)
+    assert loader is not None and loader.expect == State.READY
     assert last_step("translate", State.COMPLETE) is None
 
 
@@ -317,16 +322,19 @@ def test_control_does_not_overwrite_concurrent_worker_claim(
 ) -> None:
     # A control snapshot can precede a worker claim's commit. The UPDATE must
     # recheck ownership after waiting, so the worker keeps its lease and work.
-    job_id, (task, _) = make_job(test_db, sample_scenario)
+    # Start only dispatches a batch's first stage, which is the loader.
+    starting = operation == "start"
+    job_id, (task, *_) = make_job(test_db, sample_scenario, loaded=not starting)
     task_id, token = task.task_id, uuid4()
     user = sample_scenario.users["admin"]
     queued = Mock()
-    monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", queued)
+    step, claimed = ("load_inputs.load", State.FINALIZING) if starting else ("translate.prepare", State.PREPARING)
+    monkeypatch.setattr(app.tasks[f"src.translations.actions.{step}"], "apply_async", queued)
     test_db.execute(
         update(TranslationTask)
         .where(TranslationTask.task_id == task_id)
         .values(
-            status=State.PREPARING,
+            status=claimed,
             claim_token=token,
             claim_expires_at=func.clock_timestamp() + timedelta(minutes=5),
         )
@@ -354,7 +362,7 @@ def test_control_does_not_overwrite_concurrent_worker_claim(
         result = future.result(timeout=5)
     assert result.dispatched_task_ids == []
     test_db.refresh(task)
-    assert task.status == State.PREPARING and task.claim_token == token
+    assert task.status == claimed and task.claim_token == token
     queued.assert_not_called()
 
 

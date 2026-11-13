@@ -1,4 +1,5 @@
-from collections.abc import Iterator, Mapping
+from collections.abc import Collection, Iterable, Iterator, Mapping
+from dataclasses import dataclass
 from uuid import UUID
 
 from pydantic import TypeAdapter
@@ -15,7 +16,14 @@ from src.translations.jsonl import iter_translation_records
 from src.translations.models import TranslationJob, TranslationJobChapter, TranslationStage, TranslationTask
 from src.translations.records import ChapterRecord, TranslationRecord
 from src.translations.schemas import MemoriesInput, TranslationInput, TranslationJobConfig
-from src.translations.types import ACTIONS, ActionName, ActionSignature, ActionType, TranslationTaskStatus
+from src.translations.types import (
+    ACTIONS,
+    ActionName,
+    ActionSignature,
+    ActionType,
+    TranslationTaskStatus,
+    infer_pipeline,
+)
 from src.translations.validation import validate_output_records
 
 _action_name = TypeAdapter(ActionName)
@@ -81,46 +89,57 @@ def iter_initial_records(
                 )
 
 
-def _sources(context: ActionTaskContext, stage: TranslationStage, needs: ActionType) -> dict[UUID, set[str]]:
-    config = job_config(context.db, stage.job_id)
-    earlier = context.db.execute(
-        select(TranslationTask.status, TranslationTask.failed_at, TranslationTask.output_file_id, TranslationStage)
+@dataclass(frozen=True)
+class StageTypes:
+    before: ActionType
+    signature: ActionSignature
+    after: ActionType
+
+    @property
+    def declared(self) -> Collection[str]:
+        return self.signature.inputs.keys() | self.signature.optional_inputs.keys()
+
+
+def stage_types(db: Session, stage: TranslationStage) -> StageTypes:
+    config = job_config(db, stage.job_id)
+    stages = db.scalars(
+        select(TranslationStage)
+        .where(TranslationStage.job_id == stage.job_id, TranslationStage.stage_num <= stage.stage_num)
+        .order_by(TranslationStage.stage_num)
+    ).all()
+    signatures = [stage_signature(config, earlier) for earlier in stages]
+    states = infer_pipeline({}, signatures)
+    return StageTypes(states[-2] if len(states) > 1 else {}, signatures[-1], states[-1])
+
+
+def resolve_inputs(
+    context: ActionTaskContext, store: ObjectStore, stage: TranslationStage, available: ActionType
+) -> Iterator[TranslationRecord]:
+    if stage.stage_num == 0:
+        return
+    previous = context.db.execute(
+        select(TranslationTask.status, TranslationTask.failed_at, TranslationTask.output_file_id)
         .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
         .where(
             TranslationTask.batch_id == context.task.batch_id,
             TranslationStage.job_id == stage.job_id,
-            TranslationStage.stage_num < stage.stage_num,
+            TranslationStage.stage_num == stage.stage_num - 1,
         )
-        .order_by(TranslationStage.stage_num.desc())
-    ).all()
-    remaining = set(needs)
-    sources: dict[UUID, set[str]] = {}
-    for status, failed_at, output_file_id, producer in earlier:
-        signature = stage_signature(config, producer)
-        dropped = remaining & signature.drops
-        if dropped:
-            raise ValueError(f"Stage {producer.stage_num} drops: {', '.join(sorted(dropped))}")
-        produced = remaining & signature.outputs.keys()
-        if not produced:
-            continue
-        if status != TranslationTaskStatus.COMPLETE or failed_at is not None or output_file_id is None:
-            raise ValueError(f"Stage {producer.stage_num} must have a completed output artifact")
-        sources.setdefault(output_file_id, set()).update(produced)
-        remaining -= produced
-    if remaining:
-        raise ValueError(f"No earlier stage produces: {', '.join(sorted(remaining))}")
-    return sources
+    ).one()
+    if (
+        previous.status != TranslationTaskStatus.COMPLETE
+        or previous.failed_at is not None
+        or previous.output_file_id is None
+    ):
+        raise ValueError("Previous translation task must have a completed output artifact")
+    yield from validate_output_records(
+        iter_translation_records(fetch_file(context.db, store, previous.output_file_id)),
+        chapter_ids=batch_chapter_ids(context, stage),
+        output_type=available,
+    )
 
 
-def resolve_inputs(
-    context: ActionTaskContext, store: ObjectStore, stage: TranslationStage, needs: ActionType
-) -> Iterator[TranslationRecord]:
-    chapter_ids = batch_chapter_ids(context, stage)
-    for file_id, names in _sources(context, stage, needs).items():
-        records = (
-            record
-            for record in iter_translation_records(fetch_file(context.db, store, file_id))
-            if record.key.stream in names
-        )
-        output_type = {name: needs[name] for name in names}
-        yield from validate_output_records(records, chapter_ids=chapter_ids, output_type=output_type)
+def select_streams(records: Iterable[TranslationRecord], streams: Collection[str]) -> Iterator[TranslationRecord]:
+    for record in records:
+        if record.stream in streams:
+            yield record

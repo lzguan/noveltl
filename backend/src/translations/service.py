@@ -17,8 +17,6 @@ from src.translations.actions.actions import ActionTask
 from src.translations.actions.registry import ACTION_CALLBACKS, last_step, last_step_sql
 from src.translations.models import TranslationBatch, TranslationJob, TranslationStage, TranslationTask
 from src.translations.schemas import (
-    PruneMemoriesStageCreate,
-    TranslateWithMemoriesStageCreate,
     TranslationBatchRead,
     TranslationControlResult,
     TranslationJobCreate,
@@ -60,14 +58,7 @@ def create_translation_job(db: Session, user: User, request: TranslationJobCreat
         is None
     ):
         raise TranslationNotFoundError("Novel not found")
-    if request.stages[0].action == "combine_chapter":
-        raise ValueError("combine_chapter requires a preceding stage")
-    group_ids = {
-        stage.config.memory_group_id
-        for stage in request.stages
-        if isinstance(stage, (PruneMemoriesStageCreate, TranslateWithMemoriesStageCreate))
-        and stage.config.memory_group_id is not None
-    } | {source.memory_group_id for source in request.config.inputs.values()}
+    group_ids = {source.memory_group_id for source in request.config.inputs.values()}
     if group_ids:
         found = set(
             db.scalars(
@@ -126,18 +117,8 @@ def _restart_state_sql():
         ),
         else_=state,
     )
-    return case(
-        (TranslationStage.action.in_(("combine_chapter", "load_inputs")), TranslationTask.status),
-        (
-            and_(
-                TranslationStage.action == "prune_memories",
-                TranslationStage.stage_num == 0,
-                TranslationBatch.initial_file_id.is_(None),
-            ),
-            str(State.READY),
-        ),
-        else_=state,
-    )
+    # The loader has a single step, so its recorded status is already its restart state.
+    return case((TranslationStage.action == "load_inputs", TranslationTask.status), else_=state)
 
 
 def _cancel_statement(job_id: UUID, batch_id: UUID | None):

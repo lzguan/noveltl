@@ -23,10 +23,6 @@ class TranslationActionsRead(Model):
     actions: list[TranslationActionMetadata]
 
 
-class CombineChapterConfig(Model):
-    model_config = ConfigDict(extra="forbid")
-
-
 class PruneMemoriesConfig(Model):
     model_config = ConfigDict(extra="forbid")
 
@@ -51,55 +47,11 @@ class PruneMemoriesConfig(Model):
         description="Leave blank to use the provider default.",
         json_schema_extra=UIHints(control="number", show_after="model", placeholder="Provider default").schema_extra(),
     )
-    memory_group_id: uuid.UUID | None = Field(
-        default=None,
-        title="Memory group",
-        json_schema_extra=UIHints(
-            control="resource-picker",
-            resource="memory-group",
-            scope="current-novel",
-            placement="job-inputs",
-            stage_scope="first",
-            null_label="None",
-        ).schema_extra(),
-    )
-    plugin_names: list[PluginName] | None = Field(
-        default=None,
-        title="Plugin names",
-        json_schema_extra=UIHints(
-            control="filter-checklist",
-            stage_scope="first",
-            show_after="model",
-            null_label="All plugin names",
-            empty_label="Selecting none excludes all memories.",
-        ).schema_extra(),
-    )
-    memory_types: list[MemoryType] | None = Field(
-        default=None,
-        title="Memory types",
-        json_schema_extra=UIHints(
-            control="filter-checklist",
-            stage_scope="first",
-            show_after="model",
-            null_label="All memory types",
-            empty_label="Selecting none excludes all memories.",
-        ).schema_extra(),
-    )
-    exclude_current_chapter: bool = Field(
-        default=True,
-        title="Exclude current chapter",
-        json_schema_extra=UIHints(control="checkbox", stage_scope="first", show_after="model").schema_extra(),
-    )
 
 
 class PruneMemoriesStageCreate(Model):
     action: Literal["prune_memories"]
     config: PruneMemoriesConfig
-
-
-class CombineChapterStageCreate(Model):
-    action: Literal["combine_chapter"]
-    config: CombineChapterConfig = Field(default_factory=CombineChapterConfig)
 
 
 class TranslateConfig(Model):
@@ -134,60 +86,13 @@ class TranslateConfig(Model):
     )
 
 
-class TranslateWithMemoriesConfig(TranslateConfig):
-    memory_group_id: uuid.UUID | None = Field(
-        default=None,
-        title="Memory group",
-        json_schema_extra=UIHints(
-            control="resource-picker",
-            resource="memory-group",
-            scope="current-novel",
-            placement="job-inputs",
-            stage_scope="first",
-            null_label="None",
-        ).schema_extra(),
-    )
-    plugin_names: list[PluginName] | None = Field(
-        default=None,
-        title="Plugin names",
-        json_schema_extra=UIHints(
-            control="filter-checklist",
-            stage_scope="first",
-            show_after="model",
-            null_label="All plugin names",
-            empty_label="Selecting none excludes all memories.",
-        ).schema_extra(),
-    )
-    memory_types: list[MemoryType] | None = Field(
-        default=None,
-        title="Memory types",
-        json_schema_extra=UIHints(
-            control="filter-checklist",
-            stage_scope="first",
-            show_after="model",
-            null_label="All memory types",
-            empty_label="Selecting none excludes all memories.",
-        ).schema_extra(),
-    )
-    exclude_current_chapter: bool = Field(
-        default=True,
-        title="Exclude current chapter",
-        json_schema_extra=UIHints(control="checkbox", stage_scope="first", show_after="model").schema_extra(),
-    )
-
-
-class TranslateWithMemoriesStageCreate(Model):
-    action: Literal["translate_with_memories"]
-    config: TranslateWithMemoriesConfig
-
-
 class TranslateStageCreate(Model):
     action: Literal["translate"]
     config: TranslateConfig
 
 
 type TranslationStageCreate = Annotated[
-    PruneMemoriesStageCreate | CombineChapterStageCreate | TranslateWithMemoriesStageCreate | TranslateStageCreate,
+    PruneMemoriesStageCreate | TranslateStageCreate,
     Field(discriminator="action"),
 ]
 

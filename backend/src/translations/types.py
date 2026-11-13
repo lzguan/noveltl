@@ -7,7 +7,7 @@ from uuid import UUID
 type DataName = Literal["chapter", "memories"]
 type DataT = frozenset[DataName]
 type ActionType = Mapping[str, DataName]
-type ActionName = Literal["load_inputs", "prune_memories", "combine_chapter", "translate_with_memories", "translate"]
+type ActionName = Literal["load_inputs", "prune_memories", "translate"]
 type ModelName = Literal["qwen-plus", "qwen-flash", "deepseek/deepseek-v4.1-flash"]
 
 
@@ -90,21 +90,10 @@ ACTIONS: dict[ActionName, SignatureFn] = {
             outputs={"memories": "memories"},
         )
     ),
-    "combine_chapter": fixed(
-        ActionSignature(
-            inputs={"memories": "memories"},
-            outputs={"chapter": "chapter", "memories": "memories"},
-        )
-    ),
-    "translate_with_memories": fixed(
-        ActionSignature(
-            inputs={"chapter": "chapter", "memories": "memories"},
-            outputs={"chapter": "chapter"},
-        )
-    ),
     "translate": fixed(
         ActionSignature(
             inputs={"chapter": "chapter"},
+            optional_inputs={"memories": "memories"},
             outputs={"chapter": "chapter"},
         )
     ),

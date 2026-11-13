@@ -1,3 +1,4 @@
+LOAD_INPUTS_LOAD = "src.translations.actions.load_inputs.load"
 COMBINE_CHAPTER_COMBINE = "src.translations.actions.combine_chapter.combine"
 
 PRUNE_MEMORIES_PREPARE = "src.translations.actions.prune_memories.prepare"

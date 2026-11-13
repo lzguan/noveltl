@@ -100,7 +100,7 @@ def _inputs(
         or previous.output_file_id is None
     ):
         raise ValueError("Previous translation task must have a completed output artifact")
-    signature = ACTIONS[TypeAdapter(ActionName).validate_python(previous_stage.action)]
+    signature = ACTIONS[TypeAdapter(ActionName).validate_python(previous_stage.action)]({})
     records = iter_translation_records(fetch_file(context.db, store, previous.output_file_id))
     for record in validate_output_records(records, chapter_ids=chapter_ids, output_type=signature.outputs):
         if isinstance(record, ChapterRecord) or isinstance(config, TranslateWithMemoriesConfig):
@@ -185,7 +185,7 @@ def prepare(context: ActionTaskContext) -> None:
     records = validate_output_records(
         _inputs(context, store, stage, chapter_ids, config),
         chapter_ids=chapter_ids,
-        output_type=ACTIONS[TypeAdapter(ActionName).validate_python(stage.action)].inputs,
+        output_type=ACTIONS[TypeAdapter(ActionName).validate_python(stage.action)]({}).inputs,
     )
     renew_at = monotonic() + _PREPARE_LEASE_SECONDS / 3
     with TemporaryFile(mode="w+b") as content:
@@ -332,7 +332,7 @@ def finalize(context: ActionTaskContext) -> None:
     validated = validate_output_records(
         records(),
         chapter_ids=chapter_ids,
-        output_type=ACTIONS["translate"].outputs,
+        output_type=ACTIONS["translate"]({}).outputs,
     )
     with TemporaryFile(mode="w+b") as content:
         for record in validated:

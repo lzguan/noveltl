@@ -1,4 +1,4 @@
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Literal
@@ -7,7 +7,7 @@ from uuid import UUID
 type DataName = Literal["chapter", "memories"]
 type DataT = frozenset[DataName]
 type ActionType = Mapping[str, DataName]
-type ActionName = Literal["prune_memories", "combine_chapter", "translate_with_memories", "translate"]
+type ActionName = Literal["load_inputs", "prune_memories", "combine_chapter", "translate_with_memories", "translate"]
 type ModelName = Literal["qwen-plus", "qwen-flash", "deepseek/deepseek-v4.1-flash"]
 
 
@@ -74,22 +74,39 @@ def infer_pipeline(initial: ActionType, signatures: Sequence[ActionSignature]) -
     return inferred
 
 
-ACTIONS: dict[ActionName, ActionSignature] = {
-    "prune_memories": ActionSignature(
-        inputs={"chapter": "chapter", "memories": "memories"},
-        outputs={"memories": "memories"},
+type SignatureFn = Callable[[ActionType], ActionSignature]
+
+
+def fixed(signature: ActionSignature) -> SignatureFn:
+    return lambda job_inputs: signature
+
+
+# Each entry maps the job's input streams to the signature of a stage running that action.
+ACTIONS: dict[ActionName, SignatureFn] = {
+    "load_inputs": lambda job_inputs: ActionSignature(inputs={}, outputs=job_inputs),
+    "prune_memories": fixed(
+        ActionSignature(
+            inputs={"chapter": "chapter", "memories": "memories"},
+            outputs={"memories": "memories"},
+        )
     ),
-    "combine_chapter": ActionSignature(
-        inputs={"memories": "memories"},
-        outputs={"chapter": "chapter", "memories": "memories"},
+    "combine_chapter": fixed(
+        ActionSignature(
+            inputs={"memories": "memories"},
+            outputs={"chapter": "chapter", "memories": "memories"},
+        )
     ),
-    "translate_with_memories": ActionSignature(
-        inputs={"chapter": "chapter", "memories": "memories"},
-        outputs={"chapter": "chapter"},
+    "translate_with_memories": fixed(
+        ActionSignature(
+            inputs={"chapter": "chapter", "memories": "memories"},
+            outputs={"chapter": "chapter"},
+        )
     ),
-    "translate": ActionSignature(
-        inputs={"chapter": "chapter"},
-        outputs={"chapter": "chapter"},
+    "translate": fixed(
+        ActionSignature(
+            inputs={"chapter": "chapter"},
+            outputs={"chapter": "chapter"},
+        )
     ),
 }
 

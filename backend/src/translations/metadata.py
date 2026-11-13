@@ -32,13 +32,14 @@ def read_action_metadata() -> TranslationActionsRead:
             TranslationActionMetadata(
                 name=name,
                 label=_LABELS[name],
-                input_types=sorted(signature.input_types),
-                output_types=sorted(signature.output_types),
+                input_types=sorted(signature({}).input_types),
+                output_types=sorted(signature({}).output_types),
                 allowed_as_first_stage=name != "combine_chapter",
                 config_schema=TypeAdapter(_STAGE_TYPES[name].model_fields["config"].annotation).json_schema(
                     by_alias=True, mode="validation"
                 ),
             )
             for name, signature in ACTIONS.items()
+            if name in _STAGE_TYPES
         ]
     )

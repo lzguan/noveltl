@@ -82,7 +82,7 @@ def _artifact(context: ActionTaskContext, stage: TranslationStage) -> tuple[UUID
         batch = context.db.get(TranslationBatch, context.task.batch_id)
         if batch is None or batch.job_id != stage.job_id:
             raise ValueError("Batch does not belong to the pruning job")
-        return batch.initial_file_id, ACTIONS["prune_memories"].inputs
+        return batch.initial_file_id, ACTIONS["prune_memories"]({}).inputs
     previous, previous_stage = context.db.execute(
         select(TranslationTask, TranslationStage)
         .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
@@ -94,8 +94,8 @@ def _artifact(context: ActionTaskContext, stage: TranslationStage) -> tuple[UUID
     ).one()
     if previous.status != State.COMPLETE or previous.failed_at is not None or previous.output_file_id is None:
         raise ValueError("Previous translation task must have a completed output artifact")
-    output_type = ACTIONS[TypeAdapter(ActionName).validate_python(previous_stage.action)].outputs
-    if not ACTIONS["prune_memories"].inputs.keys() <= output_type.keys():
+    output_type = ACTIONS[TypeAdapter(ActionName).validate_python(previous_stage.action)]({}).outputs
+    if not ACTIONS["prune_memories"]({}).inputs.keys() <= output_type.keys():
         raise ValueError("Pruning requires chapter and memory inputs")
     return previous.output_file_id, output_type
 
@@ -323,7 +323,7 @@ def finalize(context: ActionTaskContext) -> None:
         record for record in apply_memory_selections(selections, candidates) if isinstance(record, MemoriesRecord)
     )
     validated = validate_output_records(
-        selected, chapter_ids=chapter_ids, output_type=ACTIONS["prune_memories"].outputs
+        selected, chapter_ids=chapter_ids, output_type=ACTIONS["prune_memories"]({}).outputs
     )
     with TemporaryFile(mode="w+b") as content:
         for record in validated:

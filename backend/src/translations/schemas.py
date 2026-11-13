@@ -257,7 +257,11 @@ class TranslationJobCreate(Model):
 
     @model_validator(mode="after")
     def validate_pipeline(self) -> Self:
-        infer_pipeline(self.config.input_type(), [ACTIONS[stage.action] for stage in self.stages])
+        job_inputs = self.config.input_type()
+        signatures = [ACTIONS["load_inputs"](job_inputs)]
+        signatures += [ACTIONS[stage.action](job_inputs) for stage in self.stages]
+        # Stage numbers match the stored pipeline, where the loader is stage 0.
+        infer_pipeline({}, signatures)
         return self
 
 

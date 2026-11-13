@@ -54,8 +54,8 @@ def combine(context: ActionTaskContext) -> None:
         or previous.output_file_id is None
     ):
         raise ValueError("Previous translation task must have a completed output artifact")
-    signature = ACTIONS[TypeAdapter(ActionName).validate_python(previous_stage.action)]
-    if not ACTIONS["combine_chapter"].input_types <= signature.output_types:
+    signature = ACTIONS[TypeAdapter(ActionName).validate_python(previous_stage.action)]({})
+    if not ACTIONS["combine_chapter"]({}).input_types <= signature.output_types:
         raise ValueError("Previous stage must produce memories")
     chapter_ids = list(
         context.db.scalars(
@@ -89,7 +89,7 @@ def combine(context: ActionTaskContext) -> None:
     validated = validate_output_records(
         records(),
         chapter_ids=chapter_ids,
-        output_type=ACTIONS["combine_chapter"].outputs,
+        output_type=ACTIONS["combine_chapter"]({}).outputs,
     )
     renew_at = monotonic() + _LEASE_SECONDS / 3
     with TemporaryFile(mode="w+b") as content:

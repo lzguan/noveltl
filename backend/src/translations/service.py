@@ -67,7 +67,7 @@ def create_translation_job(db: Session, user: User, request: TranslationJobCreat
         for stage in request.stages
         if isinstance(stage, (PruneMemoriesStageCreate, TranslateWithMemoriesStageCreate))
         and stage.config.memory_group_id is not None
-    }
+    } | {source.memory_group_id for source in request.config.inputs.values()}
     if group_ids:
         found = set(
             db.scalars(
@@ -127,7 +127,7 @@ def _restart_state_sql():
         else_=state,
     )
     return case(
-        (TranslationStage.action == "combine_chapter", TranslationTask.status),
+        (TranslationStage.action.in_(("combine_chapter", "load_inputs")), TranslationTask.status),
         (
             and_(
                 TranslationStage.action == "prune_memories",

@@ -79,3 +79,13 @@ Publication is last write wins, so a review or edit made during a run is
 overwritten (approvals revert, guarded convention/translation updates apply
 unconditionally). The user accepts this until a merge policy is chosen
 (2026-11-12); do not re-raise it as a defect.
+
+## Existing partial translations as input
+
+Considered and deferred by the user (2026-11-13). Three distinct uses: earlier
+translated chapters as a style/consistency reference for chapter translation; a
+rough translation of the same chapter as a draft to revise; and source/translation
+alignment as evidence for term naming (memory side, feeding the planned `terms`
+stream). The first two are extra translation-job input streams of type `chapter`
+under another name, i.e. the first case needing stream names distinct from types.
+Unverified: how translated novels map chapter-to-chapter onto their source work.

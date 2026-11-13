@@ -1,13 +1,12 @@
 import uuid
 from datetime import datetime
-from itertools import pairwise
 from typing import Annotated, Any, Literal, Self
 
 from pydantic import ConfigDict, Field, model_validator
 
 from src.memory.types import MemoryType, PluginName
 from src.schemas import Model
-from src.translations.types import ACTIONS, DataName, ModelName, TranslationTaskStatus
+from src.translations.types import ACTIONS, ActionType, DataName, ModelName, TranslationTaskStatus, infer_pipeline
 from src.translations.ui import UIHints
 
 
@@ -193,10 +192,37 @@ type TranslationStageCreate = Annotated[
 ]
 
 
+class MemoriesInput(Model):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["memories"]
+    memory_group_id: uuid.UUID
+    plugin_names: list[PluginName] | None = None
+    memory_types: list[MemoryType] | None = None
+    exclude_current_chapter: bool = True
+
+
+type TranslationInput = MemoriesInput
+
+
 class TranslationJobConfig(Model):
     start_chapter_num: int | None = Field(default=None, ge=0)
     end_chapter_num: int | None = Field(default=None, ge=0)
     batch_size: int = Field(gt=0)
+    inputs: dict[str, TranslationInput] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_inputs(self) -> Self:
+        # Stages bind streams by name, and each stream is named after its type for now.
+        for name, source in self.inputs.items():
+            if name != source.type:
+                raise ValueError(f"Input stream {name!r} must be named {source.type!r}")
+        return self
+
+    def input_type(self) -> ActionType:
+        streams: dict[str, DataName] = {"chapter": "chapter"}
+        streams.update({name: source.type for name, source in self.inputs.items()})
+        return streams
 
     @model_validator(mode="after")
     def validate_chapter_range(self) -> Self:
@@ -231,22 +257,7 @@ class TranslationJobCreate(Model):
 
     @model_validator(mode="after")
     def validate_pipeline(self) -> Self:
-        first = self.stages[0]
-        if (
-            isinstance(first, (TranslateWithMemoriesStageCreate, PruneMemoriesStageCreate))
-            and first.config.memory_group_id is None
-        ):
-            raise ValueError(f"First-stage {first.action} requires memory_group_id")
-        for stage_num, (current_stage, next_stage) in enumerate(pairwise(self.stages)):
-            output_types = ACTIONS[current_stage.action].output_types
-            input_types = ACTIONS[next_stage.action].input_types
-            missing_types = input_types - output_types
-            if missing_types:
-                raise ValueError(
-                    f"stage {stage_num + 1} requires data not produced by stage {stage_num}: "
-                    f"{', '.join(sorted(missing_types))}"
-                )
-
+        infer_pipeline(self.config.input_type(), [ACTIONS[stage.action] for stage in self.stages])
         return self
 
 

@@ -78,6 +78,7 @@ def iter_batch_memories(
         for chapter_id, rows in groupby(result, key=lambda row: row[0]):
             yield MemoriesRecord(
                 chapter_id=chapter_id,
+                stream="memories",
                 payload=[Memory.model_validate(memory) for _, memory in rows if memory is not None],
             )
     finally:

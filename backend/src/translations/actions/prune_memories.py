@@ -48,7 +48,7 @@ from src.translations.task_names import (
     PRUNE_MEMORIES_SUBMIT,
 )
 from src.translations.tasks.claims import publish_initial_file
-from src.translations.types import ACTIONS, ActionName, DataT
+from src.translations.types import ACTIONS, ActionName, ActionType
 from src.translations.types import TranslationTaskStatus as State
 from src.translations.validation import validate_output_records
 
@@ -77,12 +77,12 @@ def _chapter_ids(context: ActionTaskContext, stage: TranslationStage) -> list[UU
     return chapter_ids
 
 
-def _artifact(context: ActionTaskContext, stage: TranslationStage) -> tuple[UUID | None, DataT]:
+def _artifact(context: ActionTaskContext, stage: TranslationStage) -> tuple[UUID | None, ActionType]:
     if stage.stage_num == 0:
         batch = context.db.get(TranslationBatch, context.task.batch_id)
         if batch is None or batch.job_id != stage.job_id:
             raise ValueError("Batch does not belong to the pruning job")
-        return batch.initial_file_id, ACTIONS["prune_memories"].input_types
+        return batch.initial_file_id, ACTIONS["prune_memories"].inputs
     previous, previous_stage = context.db.execute(
         select(TranslationTask, TranslationStage)
         .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
@@ -94,10 +94,10 @@ def _artifact(context: ActionTaskContext, stage: TranslationStage) -> tuple[UUID
     ).one()
     if previous.status != State.COMPLETE or previous.failed_at is not None or previous.output_file_id is None:
         raise ValueError("Previous translation task must have a completed output artifact")
-    output_types = ACTIONS[TypeAdapter(ActionName).validate_python(previous_stage.action)].output_types
-    if not ACTIONS["prune_memories"].input_types <= output_types:
+    output_type = ACTIONS[TypeAdapter(ActionName).validate_python(previous_stage.action)].outputs
+    if not ACTIONS["prune_memories"].inputs.keys() <= output_type.keys():
         raise ValueError("Pruning requires chapter and memory inputs")
-    return previous.output_file_id, output_types
+    return previous.output_file_id, output_type
 
 
 def _database_inputs(
@@ -133,7 +133,7 @@ def _database_inputs(
         for row, memory in zip_longest(rows, memories):
             if row is not None:
                 chapter_id, content = row
-                yield ChapterRecord(chapter_id=chapter_id, payload=content)
+                yield ChapterRecord(chapter_id=chapter_id, stream="chapter", payload=content)
             if memory is not None:
                 yield memory
     finally:
@@ -151,14 +151,14 @@ def _database_inputs(
 def prepare(context: ActionTaskContext) -> None:
     stage, config = _stage(context)
     chapter_ids = _chapter_ids(context, stage)
-    file_id, input_types = _artifact(context, stage)
+    file_id, input_type = _artifact(context, stage)
     store, codec = get_object_store(), get_codec(config.model)
     source = (
         iter_translation_records(fetch_file(context.db, store, file_id))
         if file_id is not None
         else _database_inputs(context, stage, config)
     )
-    records = validate_output_records(source, chapter_ids=chapter_ids, output_types=input_types)
+    records = validate_output_records(source, chapter_ids=chapter_ids, output_type=input_type)
     instructions = (
         "Select the context memories relevant to translating the supplied novel chapter. "
         "Keep memories useful for names, meaning, relationships, or narrative continuity. "
@@ -298,7 +298,7 @@ def poll(context: ActionTaskContext) -> bool:
 def finalize(context: ActionTaskContext) -> None:
     stage, config = _stage(context)
     chapter_ids = _chapter_ids(context, stage)
-    file_id, input_types = _artifact(context, stage)
+    file_id, input_type = _artifact(context, stage)
     if file_id is None or context.task.provider_output_id is None:
         raise ValueError("Pruning finalization requires saved candidates and provider output")
     store, codec = get_object_store(), get_codec(config.model)
@@ -316,14 +316,14 @@ def finalize(context: ActionTaskContext) -> None:
     candidates = validate_output_records(
         iter_translation_records(fetch_file(context.db, store, file_id)),
         chapter_ids=chapter_ids,
-        output_types=input_types,
+        output_type=input_type,
     )
     selections = (parse_memory_selection(codec.decode_result(line)) for line in iter_jsonl_lines(chunks()))
     selected = (
         record for record in apply_memory_selections(selections, candidates) if isinstance(record, MemoriesRecord)
     )
     validated = validate_output_records(
-        selected, chapter_ids=chapter_ids, output_types=ACTIONS["prune_memories"].output_types
+        selected, chapter_ids=chapter_ids, output_type=ACTIONS["prune_memories"].outputs
     )
     with TemporaryFile(mode="w+b") as content:
         for record in validated:

@@ -71,9 +71,7 @@ def combine(context: ActionTaskContext) -> None:
 
     def records() -> Iterator[TranslationRecord]:
         previous_records = iter_translation_records(fetch_file(context.db, store, previous.output_file_id))
-        for record in validate_output_records(
-            previous_records, chapter_ids=chapter_ids, output_types=signature.output_types
-        ):
+        for record in validate_output_records(previous_records, chapter_ids=chapter_ids, output_type=signature.outputs):
             if isinstance(record, MemoriesRecord):
                 yield record
         rows = context.db.execute(
@@ -86,12 +84,12 @@ def combine(context: ActionTaskContext) -> None:
             .execution_options(yield_per=100)
         )
         for chapter_id, text in rows:
-            yield ChapterRecord(chapter_id=chapter_id, payload=text)
+            yield ChapterRecord(chapter_id=chapter_id, stream="chapter", payload=text)
 
     validated = validate_output_records(
         records(),
         chapter_ids=chapter_ids,
-        output_types=ACTIONS["combine_chapter"].output_types,
+        output_type=ACTIONS["combine_chapter"].outputs,
     )
     renew_at = monotonic() + _LEASE_SECONDS / 3
     with TemporaryFile(mode="w+b") as content:

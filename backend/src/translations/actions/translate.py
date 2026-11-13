@@ -63,7 +63,7 @@ def _inputs(
             .execution_options(yield_per=100)
         )
         for chapter_id, content in rows:
-            yield ChapterRecord(chapter_id=chapter_id, payload=content)
+            yield ChapterRecord(chapter_id=chapter_id, stream="chapter", payload=content)
         if isinstance(config, TranslateWithMemoriesConfig):
             if config.memory_group_id is None:
                 raise ValueError("First-stage translate_with_memories requires memory_group_id")
@@ -102,7 +102,7 @@ def _inputs(
         raise ValueError("Previous translation task must have a completed output artifact")
     signature = ACTIONS[TypeAdapter(ActionName).validate_python(previous_stage.action)]
     records = iter_translation_records(fetch_file(context.db, store, previous.output_file_id))
-    for record in validate_output_records(records, chapter_ids=chapter_ids, output_types=signature.output_types):
+    for record in validate_output_records(records, chapter_ids=chapter_ids, output_type=signature.outputs):
         if isinstance(record, ChapterRecord) or isinstance(config, TranslateWithMemoriesConfig):
             yield record
 
@@ -185,7 +185,7 @@ def prepare(context: ActionTaskContext) -> None:
     records = validate_output_records(
         _inputs(context, store, stage, chapter_ids, config),
         chapter_ids=chapter_ids,
-        output_types=ACTIONS[TypeAdapter(ActionName).validate_python(stage.action)].input_types,
+        output_type=ACTIONS[TypeAdapter(ActionName).validate_python(stage.action)].inputs,
     )
     renew_at = monotonic() + _PREPARE_LEASE_SECONDS / 3
     with TemporaryFile(mode="w+b") as content:
@@ -325,14 +325,14 @@ def finalize(context: ActionTaskContext) -> None:
             result = codec.decode_result(line)
             if isinstance(result, BatchItemFailure):
                 raise ValueError(f"Translation result failed for {result.key}: {result.error}")
-            if result.key.data_name != "chapter":
+            if result.key.stream != "chapter":
                 raise ValueError("Translate output requires chapter keys")
-            yield ChapterRecord(chapter_id=result.key.chapter_id, payload=result.text)
+            yield ChapterRecord(chapter_id=result.key.chapter_id, stream=result.key.stream, payload=result.text)
 
     validated = validate_output_records(
         records(),
         chapter_ids=chapter_ids,
-        output_types=ACTIONS["translate"].output_types,
+        output_type=ACTIONS["translate"].outputs,
     )
     with TemporaryFile(mode="w+b") as content:
         for record in validated:

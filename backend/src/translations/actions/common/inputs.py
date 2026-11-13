@@ -15,7 +15,7 @@ from src.translations.actions.common.memory_inputs import iter_batch_memories
 from src.translations.jsonl import iter_translation_records
 from src.translations.models import TranslationJob, TranslationJobChapter, TranslationStage, TranslationTask
 from src.translations.records import ChapterRecord, TranslationRecord
-from src.translations.types import ACTIONS, ActionName, DataName, DataT, TranslationTaskStatus
+from src.translations.types import ACTIONS, ActionName, ActionType, TranslationTaskStatus
 from src.translations.validation import validate_output_records
 
 _action_name = TypeAdapter(ActionName)
@@ -50,7 +50,7 @@ def iter_initial_records(
         .execution_options(yield_per=100)
     )
     for chapter_id, content in rows:
-        yield ChapterRecord(chapter_id=chapter_id, payload=content)
+        yield ChapterRecord(chapter_id=chapter_id, stream="chapter", payload=content)
     if memories is not None:
         yield from iter_batch_memories(
             db,
@@ -63,7 +63,7 @@ def iter_initial_records(
         )
 
 
-def _sources(context: ActionTaskContext, stage: TranslationStage, needs: DataT) -> dict[UUID, set[DataName]]:
+def _sources(context: ActionTaskContext, stage: TranslationStage, needs: ActionType) -> dict[UUID, set[str]]:
     earlier = context.db.execute(
         select(TranslationTask.status, TranslationTask.failed_at, TranslationTask.output_file_id, TranslationStage)
         .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
@@ -75,9 +75,9 @@ def _sources(context: ActionTaskContext, stage: TranslationStage, needs: DataT) 
         .order_by(TranslationStage.stage_num.desc())
     ).all()
     remaining = set(needs)
-    sources: dict[UUID, set[DataName]] = {}
+    sources: dict[UUID, set[str]] = {}
     for status, failed_at, output_file_id, producer in earlier:
-        produced = remaining & ACTIONS[_action_name.validate_python(producer.action)].output_types
+        produced = remaining & ACTIONS[_action_name.validate_python(producer.action)].outputs.keys()
         if not produced:
             continue
         if status != TranslationTaskStatus.COMPLETE or failed_at is not None or output_file_id is None:
@@ -90,7 +90,7 @@ def _sources(context: ActionTaskContext, stage: TranslationStage, needs: DataT) 
 
 
 def resolve_inputs(
-    context: ActionTaskContext, store: ObjectStore, stage: TranslationStage, needs: DataT
+    context: ActionTaskContext, store: ObjectStore, stage: TranslationStage, needs: ActionType
 ) -> Iterator[TranslationRecord]:
     chapter_ids = list(
         context.db.scalars(
@@ -106,6 +106,7 @@ def resolve_inputs(
         records = (
             record
             for record in iter_translation_records(fetch_file(context.db, store, file_id))
-            if record.key.data_name in names
+            if record.key.stream in names
         )
-        yield from validate_output_records(records, chapter_ids=chapter_ids, output_types=frozenset(names))
+        output_type = {name: needs[name] for name in names}
+        yield from validate_output_records(records, chapter_ids=chapter_ids, output_type=output_type)

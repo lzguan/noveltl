@@ -13,7 +13,7 @@ type ModelName = Literal["qwen-plus", "qwen-flash", "deepseek/deepseek-v4.1-flas
 
 @dataclass(frozen=True)
 class TranslationDataKey:
-    """Identify one complete component within a task's stored stage artifact.
+    """Identify one chapter's record of one named stream within a task's stored stage artifact.
 
     Keys must be unique within the artifact. The owning task supplies job,
     batch, and stage scope. Provider request/chunk identifiers are separate.
@@ -21,7 +21,7 @@ class TranslationDataKey:
     """
 
     chapter_id: UUID
-    data_name: DataName
+    stream: str
 
 
 @dataclass(frozen=True)

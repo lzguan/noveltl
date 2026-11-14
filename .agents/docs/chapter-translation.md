@@ -23,7 +23,7 @@ stream design below is the intended route for them.
 
 ## Streams, signatures, and full-state artifacts
 
-A job's data flows as named **streams**, each with a type (`DataName`: `chapter`,
+A job's data flows as named **streams**, each with a type (`StreamType`: `chapter`,
 `memories`). For now a stream must be named after its type, so there is one
 stream per type; the name/type split exists so several streams of one type can
 be added later (see [follow-ups](memory-workflow-followups.md)).
@@ -46,13 +46,30 @@ typed config. Streams a stage neither outputs nor drops pass through.
 | `prune_memories` | `chapter`, `memories` | `memories` |
 | `translate` | `chapter`; `memories` optional | `chapter` |
 
-`infer_type` / `infer_pipeline` in [types.py](../../backend/src/translations/types.py)
-are the single checker. `TranslationJobCreate.validate_pipeline` folds them over
-the loader and the stages at creation; `stage_types` in
-[inputs.py](../../backend/src/translations/actions/common/inputs.py) folds them
-over the stored stage rows at run time and returns the state before the stage,
-its signature, and the state after. Stage numbers in errors are stored numbers,
-so "stage 1" is the user's first stage.
+`trace_pipeline` in [types.py](../../backend/src/translations/types.py) is the
+single statement of the type rules. Starting from nothing, it links each stage's
+input ports to the stage that last wrote each stream (`linked`, `broken` for a
+missing required stream, `incompatible` for a wrong type, `absent` for a missing
+optional one). A stage fits when no port is broken or incompatible; a fitting
+stage removes what it drops and becomes the producer of what it outputs, and a
+stage that does not fit changes nothing. The first signature is the loader's by
+convention only: any signature without inputs can start a pipeline.
+
+Two layers read the trace. `infer_pipeline` raises on the first stage with a
+warning and otherwise returns the state after each stage;
+`TranslationJobCreate.validate_pipeline` calls it at creation, and `stage_types`
+in [inputs.py](../../backend/src/translations/actions/common/inputs.py) calls it
+over the stored stage rows at run time, returning the state before the stage,
+its signature, and the state after. `check_pipeline` in
+[metadata.py](../../backend/src/translations/metadata.py) backs
+`POST /translation-jobs/check`: it converts the trace into ports, links, lane
+ends, and addable actions for the pipeline builder
+([response models](../../backend/src/translations/pipeline_schemas.py)). It only
+warns, skips stages that do not fit so later ones still get feedback, and uses
+each action's class-level `SIGNATURE`, the least demanding one. Its request,
+`TranslationJobDraft`, is the creation request with stages allowed to be empty;
+`TranslationJobCreateRequest` inherits from it. Stage numbers in errors and
+`source` indices are stored numbers, so "stage 1" is the user's first stage.
 
 **Every task's output file is the full state after its stage**, not only what
 the stage produced. A stage reads exactly one file, the previous stage's
@@ -74,7 +91,7 @@ renews the lease while writing. The record key is embedded in provider request
 IDs, so stream names will need a restricted character set once free naming is
 allowed.
 
-Adding a stream type needs a `DataName`, a record class, a loader source and
+Adding a stream type needs a `StreamType` value, a record class, a loader source and
 case in `iter_initial_records`, and a declaration on each action that reads it.
 Group-level data (e.g. conventions) has no chapter; the current plan is to
 repeat it on each chapter's record rather than add a batch-level record.
@@ -83,10 +100,10 @@ Leftovers as of 2026-11-14: `translation_batches.initial_file_id` and
 `publish_initial_file` are unused (the loader's output replaced the batch
 snapshot) and await a migration, which should also rename the task's
 `input_file_id` (the provider request file, not pipeline input). The metadata
-endpoint's `inputTypes` / `outputTypes` ignore optional inputs. The frontend
-create dialog still sends the old request shape and has no label for the
-`load_inputs` stage; a dry-run validate endpoint is planned to replace its own
-compatibility logic.
+endpoint's `inputTypes` / `outputTypes` ignore optional inputs and are superseded
+by the check endpoint. The frontend create dialog still sends the old request
+shape, has no label for the `load_inputs` stage, and does not call the check
+endpoint yet; a lane diagram of ports and links is planned there.
 
 ## Source and memory selection
 

@@ -17,8 +17,8 @@ from src.translations.celery_app import app
 from src.translations.clients.batch_jobs import BatchJobComplete, BatchJobId, BatchJobPoll, BatchOutputId
 from src.translations.clients.registry import BATCH_CLIENT_FACTORIES
 from src.translations.jsonl import encode_translation_record, iter_translation_records
-from src.translations.models import TranslationBatch, TranslationStage, TranslationTask
-from src.translations.records import ChapterRecord, MemoriesRecord
+from src.translations.models import TranslationJobChapter, TranslationStage, TranslationTask
+from src.translations.records import ChapterRecord, MemoriesRecord, TranslationRecord
 from src.translations.schemas import TranslationJobCreate
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationTaskStatus as State
@@ -66,21 +66,22 @@ class PruningClient:
             yield output[offset : offset + 7]
 
 
-@pytest.mark.parametrize("later", [False, True])
+def _by_key(records: list[TranslationRecord]) -> list[TranslationRecord]:
+    return sorted(records, key=lambda record: (record.stream, record.chapter_id))
+
+
 @pytest.mark.parametrize("response", ["[0]", "[]", "[99]", "[true]", "prepare_upload"])
-def test_pruning_resolves_saved_candidates_and_advances_only_valid_output(
+def test_pruning_resolves_loaded_candidates_and_advances_only_valid_output(
     test_db: Session,
     sample_scenario: DatabaseScenario,
     testing_session_local: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
-    later: bool,
     response: str,
 ) -> None:
-    # Finalization must resolve the model's indices against preparation's exact
-    # snapshots, even after DB memory content changes. DB transactions are real;
-    # the unavailable provider, S3, and queue dispatch are external test seams.
+    # The model's indices must resolve against the candidates the previous stage
+    # wrote, even after DB memory content changes. DB transactions are real; the
+    # unavailable provider, S3, and queue dispatch are external test seams.
     novel = sample_scenario.novels["novel_1"]
-    chapter = sample_scenario.chapters["chapter_1"]
     group = MemoryGroup(novel_id=novel.novel_id, memory_group_name="Pruning", memory_language=novel.language_code)
     test_db.add(group)
     test_db.flush()
@@ -95,49 +96,50 @@ def test_pruning_resolves_saved_candidates_and_advances_only_valid_output(
     )
     test_db.add(memory)
     test_db.flush()
-    snapshot = MemoriesRecord(chapter_id=chapter.chapter_id, payload=[MemorySchema.model_validate(memory)])
-    pruning = {
-        "action": "prune_memories",
-        "config": {"model": "qwen-plus", **({} if later else {"memory_group_id": str(group.memory_group_id)})},
-    }
-    stages = ([{"action": "combine_chapter"}] if later else []) + [pruning, {"action": "combine_chapter"}]
+    candidate = MemorySchema.model_validate(memory)
     job_id = create_job(
         test_db,
         TranslationJobCreate.model_validate(
             {
                 "novel_id": novel.novel_id,
                 "config": {"batch_size": 10},
-                "stages": stages,
+                "inputs": {"memories": {"type": "memories", "memory_group_id": str(group.memory_group_id)}},
+                "stages": [
+                    {"action": "prune_memories", "config": {"model": "qwen-plus"}},
+                    {"action": "translate", "config": {"model": "qwen-plus"}},
+                ],
             }
         ),
     )
-    tasks = test_db.scalars(
+    loader, task, following = test_db.scalars(
         select(TranslationTask)
         .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
         .where(TranslationStage.job_id == job_id)
         .order_by(TranslationStage.stage_num)
     ).all()
-    task, following = tasks[-2:]
     task_id, following_id = task.task_id, following.task_id
-    batch = test_db.get(TranslationBatch, task.batch_id)
-    assert batch is not None
+    chapter_ids = list(
+        test_db.scalars(select(TranslationJobChapter.chapter_id).where(TranslationJobChapter.job_id == job_id))
+    )
+    chapters: list[TranslationRecord] = [
+        ChapterRecord(chapter_id=chapter_id, stream="chapter", payload="Loaded chapter") for chapter_id in chapter_ids
+    ]
+    candidates: list[TranslationRecord] = [
+        MemoriesRecord(chapter_id=chapter_id, stream="memories", payload=[candidate]) for chapter_id in chapter_ids
+    ]
     store = MemoryObjectStore()
-    if later:
-        previous = create_file(
-            test_db,
-            store,
-            BytesIO(
-                encode_translation_record(snapshot)
-                + encode_translation_record(ChapterRecord(chapter_id=chapter.chapter_id, payload="Previous chapter"))
-            ),
-            storage_name="test",
-            bucket="test",
-            namespace="translations",
-            content_type="application/jsonl",
-        )
-        test_db.flush()
-        tasks[0].status, tasks[0].output_file_id = State.COMPLETE, previous.file_id
-        task.status = State.READY
+    loaded = create_file(
+        test_db,
+        store,
+        BytesIO(b"".join(encode_translation_record(record) for record in chapters + candidates)),
+        storage_name="test",
+        bucket="test",
+        namespace="translations",
+        content_type="application/jsonl",
+    )
+    test_db.flush()
+    loader.status, loader.output_file_id = State.COMPLETE, loaded.file_id
+    task.status = State.READY
     test_db.commit()
     monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
     monkeypatch.setattr("src.translations.actions.prune_memories.get_object_store", lambda: store)
@@ -154,35 +156,30 @@ def test_pruning_resolves_saved_candidates_and_advances_only_valid_output(
             assert next_task is not None and next_task.status == State.READY
 
     dispatch = Mock(side_effect=check_dispatch)
-    monkeypatch.setattr(app.tasks["src.translations.actions.combine_chapter.combine"], "apply_async", dispatch)
+    monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", dispatch)
     if response == "prepare_upload":
         store.upload_error = ConnectionError("upload interrupted")
         with pytest.raises(ConnectionError, match="upload interrupted"):
             prepare(task_id)
         test_db.expire_all()
-        assert task.input_file_id is None and batch.initial_file_id is None
+        assert task.input_file_id is None
         assert task.failed_at is not None and task.status == State.PREPARING
-        assert test_db.scalar(select(func.count()).select_from(StoredFile)) == (1 if later else 0)
+        # Only the loader's file exists.
+        assert test_db.scalar(select(func.count()).select_from(StoredFile)) == 1
         dispatch.assert_not_called()
         return
     prepare(task_id)
     test_db.expire_all()
     assert task.status == State.PREPARED and task.input_file_id is not None
-    assert (batch.initial_file_id is None) == later
-    if not later:
-        stored = test_db.get(StoredFile, batch.initial_file_id)
-        assert stored is not None
-        initial = list(iter_translation_records([store.objects[stored.object_key]]))
-        assert snapshot in initial
-    memory.memory_content = "Changed after preparation"
+    memory.memory_content = "Changed after loading"
     test_db.commit()
     submit(task_id)
-    assert len(client.requests) == 1
-    request = client.requests[0]
-    assert json.loads(request["custom_id"])["data_name"] == "memories"
-    prompt = request["body"]["messages"][1]["content"]
-    assert "Original candidate" in prompt and str(memory.memory_id) not in prompt
-    assert ("Previous chapter" in prompt) == later
+    assert len(client.requests) == len(chapter_ids)
+    for request in client.requests:
+        assert json.loads(request["custom_id"])["stream"] == "memories"
+        prompt = request["body"]["messages"][1]["content"]
+        assert "Original candidate" in prompt and str(memory.memory_id) not in prompt
+        assert "Loaded chapter" in prompt
     poll(task_id)
     count_before = test_db.scalar(select(func.count()).select_from(StoredFile))
     if response in ("[99]", "[true]"):
@@ -193,12 +190,18 @@ def test_pruning_resolves_saved_candidates_and_advances_only_valid_output(
         assert task.output_file_id is None and following.status == State.WAITING
         assert test_db.scalar(select(func.count()).select_from(StoredFile)) == count_before
         dispatch.assert_not_called()
-    else:
-        finalize(task_id)
-        test_db.expire_all()
-        assert task.status == State.COMPLETE and task.output_file_id is not None
-        output = test_db.get(StoredFile, task.output_file_id)
-        assert output is not None
-        records = list(iter_translation_records([store.objects[output.object_key]]))
-        assert records == [snapshot if response == "[0]" else MemoriesRecord(chapter_id=chapter.chapter_id, payload=[])]
-        dispatch.assert_called_once_with((following_id,))
+        return
+    finalize(task_id)
+    test_db.expire_all()
+    assert task.status == State.COMPLETE and task.output_file_id is not None
+    output = test_db.get(StoredFile, task.output_file_id)
+    assert output is not None
+    # The output is the full state: chapters copied forward, memories cut to the selection.
+    selected: list[TranslationRecord] = (
+        candidates
+        if response == "[0]"
+        else [MemoriesRecord(chapter_id=chapter_id, stream="memories", payload=[]) for chapter_id in chapter_ids]
+    )
+    records = list(iter_translation_records([store.objects[output.object_key]]))
+    assert _by_key(records) == _by_key(chapters + selected)
+    dispatch.assert_called_once_with((following_id,))

@@ -42,9 +42,9 @@ def test_openrouter_decodes_keys_from_previously_prepared_artifacts(legacy_forma
     key = TranslationDataKey(UUID(int=1), "memories")
     result = {
         "custom_id": json.dumps(
-            {"chapter_id": str(key.chapter_id), "data_name": key.data_name}
+            {"chapter_id": str(key.chapter_id), "stream": key.stream}
             if legacy_format == "object"
-            else [str(key.chapter_id), key.data_name]
+            else [str(key.chapter_id), key.stream]
         ),
         "response": {
             "status_code": 200,

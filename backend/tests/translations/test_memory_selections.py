@@ -18,6 +18,7 @@ A, B = UUID(int=1), UUID(int=2)
 
 def candidates(chapter_id: UUID) -> MemoriesRecord:
     return MemoriesRecord(
+        stream="memories",
         chapter_id=chapter_id,
         payload=[
             Memory.model_validate(
@@ -62,7 +63,7 @@ def test_match_unordered_streams_passes_chapters_and_preserves_candidate_order()
     # Pruning finalization needs selections to resolve against exactly the saved
     # snapshots, irrespective of provider order, without retaining matched data.
     a, b = candidates(A), candidates(B)
-    chapter = ChapterRecord(chapter_id=A, payload="Original chapter")
+    chapter = ChapterRecord(stream="chapter", chapter_id=A, payload="Original chapter")
     output = list(
         apply_memory_selections(
             iter([MemorySelection(B, []), MemorySelection(A, [2, 0])]),
@@ -70,9 +71,9 @@ def test_match_unordered_streams_passes_chapters_and_preserves_candidate_order()
         )
     )
     assert output == [
-        MemoriesRecord(chapter_id=A, payload=[a.payload[0], a.payload[2]]),
+        MemoriesRecord(stream="memories", chapter_id=A, payload=[a.payload[0], a.payload[2]]),
         chapter,
-        MemoriesRecord(chapter_id=B, payload=[]),
+        MemoriesRecord(stream="memories", chapter_id=B, payload=[]),
     ]
     assert len(a.payload) == 3 and len(b.payload) == 3
 
@@ -83,7 +84,7 @@ def test_yields_pair_before_consuming_rest_and_propagates_source_failure() -> No
         raise ConnectionError("interrupted")
 
     output = apply_memory_selections(selections(), [candidates(A)])
-    assert next(output) == MemoriesRecord(chapter_id=A, payload=[])
+    assert next(output) == MemoriesRecord(stream="memories", chapter_id=A, payload=[])
     with pytest.raises(ConnectionError, match="interrupted"):
         next(output)
 
@@ -103,7 +104,7 @@ def test_detects_duplicates_after_pair_was_removed(duplicate_selection: bool) ->
     else:
         records += records
     output = apply_memory_selections(selections, records)
-    assert next(output) == MemoriesRecord(chapter_id=A, payload=[])
+    assert next(output) == MemoriesRecord(stream="memories", chapter_id=A, payload=[])
     with pytest.raises(ValueError, match="Duplicate"):
         list(output)
 

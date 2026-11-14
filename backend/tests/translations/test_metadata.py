@@ -6,8 +6,7 @@ from fastapi.testclient import TestClient
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
 from src.translations.router import router
-from src.translations.schemas import TranslateStageCreate, TranslationJobCreate
-from src.translations.types import ACTIONS
+from src.translations.schemas import PruneMemoriesConfig, TranslateConfig, TranslateStageCreate, TranslationJobCreate
 
 
 def test_action_metadata_supports_pipeline_builder() -> None:
@@ -21,13 +20,15 @@ def test_action_metadata_supports_pipeline_builder() -> None:
         response = client.get("/translation-jobs/actions")
     assert response.status_code == 200
     actions = {action["name"]: action for action in response.json()["actions"]}
-    assert actions.keys() == ACTIONS.keys()
-    for name, signature in ACTIONS.items():
+    # The loader is inserted by job creation and is not offered to the builder.
+    configs = {"translate": TranslateConfig, "prune_memories": PruneMemoriesConfig}
+    assert actions.keys() == configs.keys()
+    for name, config in configs.items():
         action = actions[name]
-        assert set(action["inputTypes"]) == signature.input_types
-        assert set(action["outputTypes"]) == signature.output_types
+        assert set(action["inputTypes"]) == config.SIGNATURE.input_types
+        assert set(action["outputTypes"]) == config.SIGNATURE.output_types
         assert action["label"]
-        assert action["allowedAsFirstStage"] == (name != "combine_chapter")
+        assert action["allowedAsFirstStage"] is True
         assert action["configSchema"]["type"] == "object"
 
     schema = actions["translate"]["configSchema"]
@@ -57,25 +58,12 @@ def test_action_metadata_supports_pipeline_builder() -> None:
         assert isinstance(request.stages[0], TranslateStageCreate)
         assert request.stages[0].config.target_language == "English"
 
-    for name in ("translate_with_memories", "prune_memories"):
-        props = actions[name]["configSchema"]["properties"]
-        assert props["memoryGroupId"]["x-ui"] == {
-            "control": "resource-picker",
-            "resource": "memory-group",
-            "scope": "current-novel",
-            "placement": "job-inputs",
-            "stageScope": "first",
-            "nullLabel": "None",
-        }
-        for field in ("pluginNames", "memoryTypes"):
-            assert props[field]["x-ui"]["control"] == "filter-checklist"
-            assert props[field]["x-ui"]["stageScope"] == "first"
-        assert props["excludeCurrentChapter"]["default"] is True
-        assert props["memoryGroupId"]["anyOf"][0]["format"] == "uuid"
-    combine_schema = actions["combine_chapter"]["configSchema"]
-    assert combine_schema["additionalProperties"] is False
-    assert combine_schema["properties"] == {}
-    assert combine_schema["type"] == "object"
+    # Input streams are configured once for the job, not on the stages that read them.
+    for name in configs:
+        assert (
+            not {"memoryGroupId", "pluginNames", "memoryTypes", "excludeCurrentChapter"}
+            & actions[name]["configSchema"]["properties"].keys()
+        )
 
 
 def test_action_metadata_requires_authentication() -> None:

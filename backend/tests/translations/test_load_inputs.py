@@ -143,3 +143,33 @@ def test_creation_rejects_stages_whose_streams_the_job_does_not_load(sample_scen
             {"action": "translate", "config": {"model": "qwen-plus"}},
             {"side": {"type": "memories", "memory_group_id": "00000000-0000-0000-0000-000000000001"}},
         )
+
+
+def test_loader_rejects_a_memory_group_from_another_novel(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+    testing_session_local: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The service checks ownership at creation; the loader checks again in case the group moved since.
+    group = _group(test_db, sample_scenario)
+    inputs = {"memories": {"type": "memories", "memory_group_id": str(group.memory_group_id)}}
+    request = _request(sample_scenario, {"action": "prune_memories", "config": {"model": "qwen-plus"}}, inputs)
+    job_id = create_job(test_db, request)
+    group.novel_id = sample_scenario.novels["novel_2"].novel_id
+    test_db.commit()
+    loader = test_db.scalars(
+        select(TranslationTask)
+        .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
+        .where(TranslationStage.job_id == job_id, TranslationStage.stage_num == 0)
+    ).one()
+    store = MemoryObjectStore()
+    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
+    monkeypatch.setattr("src.translations.actions.load_inputs.get_object_store", lambda: store)
+
+    with pytest.raises(ValueError, match="does not belong"):
+        load(loader.task_id)
+
+    test_db.expire_all()
+    assert loader.output_file_id is None and loader.failed_at is not None
+    assert not store.objects

@@ -1,6 +1,6 @@
 import pytest
 
-from src.translations.types import ACTIONS, ActionSignature, ActionType, infer_pipeline, infer_type
+from src.translations.types import ActionSignature, ActionType, infer_pipeline, infer_type
 
 CHAPTER: ActionType = {"chapter": "chapter"}
 BOTH: ActionType = {"chapter": "chapter", "memories": "memories"}
@@ -62,10 +62,3 @@ def test_pipeline_inference_reports_each_stage_and_the_failing_one() -> None:
     assert infer_pipeline(CHAPTER, []) == []
     with pytest.raises(ValueError, match="stage 1 requires memories"):
         infer_pipeline(CHAPTER, [translate, prune])
-
-
-def test_registered_actions_keep_their_pairwise_views() -> None:
-    assert ACTIONS["prune_memories"].input_types == frozenset(("chapter", "memories"))
-    assert ACTIONS["prune_memories"].output_types == frozenset(("memories",))
-    assert ACTIONS["combine_chapter"].output_types == frozenset(("chapter", "memories"))
-    assert ACTIONS["translate"].input_types == ACTIONS["translate"].output_types == frozenset(("chapter",))

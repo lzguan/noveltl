@@ -252,7 +252,7 @@ class TranslationTaskRead(Model):
     failed_at: datetime | None
     error: str | None
     claim_expires_at: datetime | None
-    input_file_id: uuid.UUID | None
+    request_file_id: uuid.UUID | None
     output_file_id: uuid.UUID | None
 
 
@@ -268,7 +268,6 @@ class TranslationBatchRead(Model):
     model_config = ConfigDict(from_attributes=True)
     batch_id: uuid.UUID
     batch_num: int
-    initial_file_id: uuid.UUID | None
 
 
 class TranslationJobRead(Model):

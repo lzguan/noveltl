@@ -40,7 +40,6 @@ class TranslationBatch(Base):
     batch_id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, server_default=func.gen_random_uuid())
     job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("translation_jobs.job_id", ondelete="CASCADE"), nullable=False)
     batch_num: Mapped[int] = mapped_column(Integer, nullable=False)
-    initial_file_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("stored_files.file_id"), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("job_id", "batch_num", name="uq_translation_batch_job_num"),
@@ -84,7 +83,7 @@ class TranslationTask(Base):
         ),
         nullable=False,
     )
-    input_file_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("stored_files.file_id"), nullable=True)
+    request_file_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("stored_files.file_id"), nullable=True)
     output_file_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("stored_files.file_id"), nullable=True)
     provider_batch_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     provider_output_id: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -114,7 +114,7 @@ def prepare(context: ActionTaskContext) -> None:
             )
             yield codec.encode_request(item)
 
-    context.task.input_file_id = store_lines(context, store, requests(), renew_seconds=_PREPARE_LEASE_SECONDS / 3)
+    context.task.request_file_id = store_lines(context, store, requests(), renew_seconds=_PREPARE_LEASE_SECONDS / 3)
 
 
 @callbacks.new_func(
@@ -127,16 +127,16 @@ def prepare(context: ActionTaskContext) -> None:
 def submit(context: ActionTaskContext) -> None:
     if context.task.provider_batch_id is not None:
         return
-    if context.task.input_file_id is None:
-        raise ValueError("Submission requires a prepared input file")
+    if context.task.request_file_id is None:
+        raise ValueError("Submission requires a prepared request file")
     _, config = _stage(context)
     client = get_batch_client(config.model)
     store = get_object_store()
-    input_file_id = context.task.input_file_id
+    request_file_id = context.task.request_file_id
 
     def content() -> Iterator[bytes]:
         renew_at = monotonic() + _SUBMIT_LEASE_SECONDS / 3
-        for chunk in fetch_file(context.db, store, input_file_id):
+        for chunk in fetch_file(context.db, store, request_file_id):
             if monotonic() >= renew_at:
                 context.renew_lease()
                 renew_at = monotonic() + _SUBMIT_LEASE_SECONDS / 3

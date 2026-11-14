@@ -162,7 +162,7 @@ def test_pruning_resolves_loaded_candidates_and_advances_only_valid_output(
         with pytest.raises(ConnectionError, match="upload interrupted"):
             prepare(task_id)
         test_db.expire_all()
-        assert task.input_file_id is None
+        assert task.request_file_id is None
         assert task.failed_at is not None and task.status == State.PREPARING
         # Only the loader's file exists.
         assert test_db.scalar(select(func.count()).select_from(StoredFile)) == 1
@@ -170,7 +170,7 @@ def test_pruning_resolves_loaded_candidates_and_advances_only_valid_output(
         return
     prepare(task_id)
     test_db.expire_all()
-    assert task.status == State.PREPARED and task.input_file_id is not None
+    assert task.status == State.PREPARED and task.request_file_id is not None
     memory.memory_content = "Changed after loading"
     test_db.commit()
     submit(task_id)

@@ -112,7 +112,7 @@ def _restart_state_sql():
     )
     state = case(
         (
-            and_(state.in_((State.PREPARED, State.SUBMITTING)), TranslationTask.input_file_id.is_(None)),
+            and_(state.in_((State.PREPARED, State.SUBMITTING)), TranslationTask.request_file_id.is_(None)),
             str(State.READY),
         ),
         else_=state,
@@ -224,7 +224,7 @@ def _restart_statement(job_id: UUID, operation: Literal["start", "resume", "retr
             error=None,
             provider_batch_id=case((rebuild, None), else_=task.provider_batch_id),
             provider_output_id=case((rebuild, None), else_=task.provider_output_id),
-            input_file_id=case((rebuild, None), else_=task.input_file_id),
+            request_file_id=case((rebuild, None), else_=task.request_file_id),
             output_file_id=case((rebuild, None), else_=task.output_file_id),
         )
     poll_in = task.next_poll_at - func.clock_timestamp(type_=DateTime(timezone=True))

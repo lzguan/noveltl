@@ -102,7 +102,7 @@ def prepare(context: ActionTaskContext) -> None:
         if chapters or candidates:
             raise ValueError("Unmatched pruning inputs")
 
-    context.task.input_file_id = store_lines(context, store, requests(), renew_seconds=_LEASE_SECONDS / 3)
+    context.task.request_file_id = store_lines(context, store, requests(), renew_seconds=_LEASE_SECONDS / 3)
 
 
 @callbacks.new_func(
@@ -116,10 +116,10 @@ def submit(context: ActionTaskContext) -> None:
     _, config = _stage(context)
     if context.task.provider_batch_id is not None:
         return
-    if context.task.input_file_id is None:
-        raise ValueError("Submission requires a prepared input file")
+    if context.task.request_file_id is None:
+        raise ValueError("Submission requires a prepared request file")
     store = get_object_store()
-    file_id = context.task.input_file_id
+    file_id = context.task.request_file_id
 
     def chunks() -> Iterator[bytes]:
         renew_at = monotonic() + _LEASE_SECONDS / 3

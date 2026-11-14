@@ -191,9 +191,9 @@ def test_prepare_builds_requests_from_the_previous_stage_and_persists_adapter_by
 
     test_db.expire_all()
     task = test_db.get(TranslationTask, task_id)
-    assert task is not None and task.status == State.PREPARED and task.input_file_id is not None
+    assert task is not None and task.status == State.PREPARED and task.request_file_id is not None
     assert task.output_file_id is None and task.claim_token is None
-    stored = test_db.get(StoredFile, task.input_file_id)
+    stored = test_db.get(StoredFile, task.request_file_id)
     assert stored is not None
     assert worker.objects[stored.object_key] == b'{"encoded_by_adapter":true}\n' * len(chapter_ids)
     assert {item.key for item in recording_codec.items} == {
@@ -225,7 +225,7 @@ def test_prepare_upload_failure_does_not_publish_input(
         prepare(task_id)
     test_db.expire_all()
     task = test_db.get(TranslationTask, task_id)
-    assert task is not None and task.input_file_id is None and task.failed_at is not None
+    assert task is not None and task.request_file_id is None and task.failed_at is not None
     assert task.status == State.PREPARING
     # Only the loader's file exists.
     assert test_db.scalar(select(func.count()).select_from(StoredFile)) == 1

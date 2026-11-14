@@ -104,4 +104,52 @@ it("renders backend port states, explicit segments, drops, and accessible warnin
 		"requires memories",
 	);
 	expect(screen.getByText(/ends here/)).toBeInTheDocument();
+	expect(
+		container.querySelector('text[data-stream="chapter"][data-stage="1"][data-port="input"]'),
+	).toHaveTextContent("memories");
+});
+
+it("labels changed output and input types beside their ports without repeating the header type", () => {
+	const check: TranslationPipelineCheck = {
+		stages: [
+			{
+				action: "load_inputs",
+				inputs: [],
+				outputs: [{ stream: "chapter", type: "chapter" }],
+				warning: null,
+			},
+			{
+				action: "transform",
+				inputs: [],
+				outputs: [{ stream: "chapter", type: "memories" }],
+				warning: null,
+			},
+			{
+				action: "consume",
+				inputs: [
+					{
+						stream: "chapter",
+						type: "memories",
+						sourceType: "memories",
+						source: 1,
+						link: "linked",
+						optional: false,
+						drops: true,
+					},
+				],
+				outputs: [],
+				warning: null,
+			},
+		],
+		ends: [],
+		addable: [],
+	};
+	const { container } = render(<PipelineDiagram check={check} />);
+	expect(container.querySelector('text[data-stage="0"][data-port="output"]')).toBeNull();
+	expect(container.querySelector('text[data-stage="1"][data-port="output"]')).toHaveTextContent(
+		"memories",
+	);
+	expect(container.querySelector('text[data-stage="2"][data-port="input"]')).toHaveTextContent(
+		"memories",
+	);
 });

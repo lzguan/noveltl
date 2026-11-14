@@ -108,6 +108,8 @@ the check endpoint. Its read-only lane diagram, including the labelled loader,
 lives in [pipeline-diagram/](../../frontend/src/edit/panels/translations/pipeline-diagram/).
 Layout and rendering use backend sources and link states without inferring types
 or stream availability in the frontend.
+Port types that differ from the lane header are labelled beside their dots;
+all port types remain available in hover titles.
 
 ## Source and memory selection
 

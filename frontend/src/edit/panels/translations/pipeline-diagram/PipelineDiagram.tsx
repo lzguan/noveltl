@@ -126,6 +126,21 @@ export function PipelineDiagram({ check }: { check: TranslationPipelineCheck }) 
 						>
 							<title>{`${port.stream}: ${port.type}${port.kind === "input" ? `, ${port.link}${port.optional ? ", optional" : ""}${port.drops ? ", ends here" : ""}` : ", output"}`}</title>
 						</circle>
+						{port.type !==
+							drawing.lanes.find((lane) => lane.stream === port.stream)?.type && (
+							<text
+								data-stream={port.stream}
+								data-stage={port.row}
+								data-port={port.kind}
+								x={port.x + 10}
+								y={port.y + (port.kind === "input" ? -9 : 18)}
+								fill="currentColor"
+								fontSize={11}
+								className="text-muted-foreground"
+							>
+								{port.type}
+							</text>
+						)}
 						{port.kind === "input" && port.drops && (
 							<line
 								x1={port.x - 8}

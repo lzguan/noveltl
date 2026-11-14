@@ -102,7 +102,7 @@ class TranslateConfig(Model):
 
     SIGNATURE: ClassVar[ActionSignature] = ActionSignature(
         inputs={"chapter": "chapter"},
-        optional_inputs={"memories": "memories"},
+        optional_inputs={"memories": "memories", "terms": "terms", "conventions": "conventions"},
         outputs={"chapter": "chapter"},
     )
 

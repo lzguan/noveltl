@@ -225,6 +225,8 @@ function CreateTranslationForm({
 	const [error, setError] = useState<string | null>(null);
 	const [stageErrors, setStageErrors] = useState<Record<number, string>>({});
 	const [memoryGroup, setMemoryGroup] = useState("");
+	const [termsGroup, setTermsGroup] = useState("");
+	const [conventionsGroup, setConventionsGroup] = useState("");
 	const [stages, setStages] = useState<Stage[]>([]);
 	const [selected, setSelected] = useState("");
 	const [configuring, setConfiguring] = useState<string | null>(null);
@@ -240,18 +242,23 @@ function CreateTranslationForm({
 		chapterNumbers.length ? String(Math.max(...chapterNumbers)) : "",
 	);
 	const [batchSize, setBatchSize] = useState("100");
-	// The job's input streams: chapters are always loaded, memories when a group is chosen.
-	const inputs: TranslationJobCreateRequestInputs = memoryGroup
-		? {
-				memories: {
-					type: "memories",
-					memoryGroupId: memoryGroup,
-					excludeCurrentChapter,
-					pluginNames,
-					memoryTypes,
-				},
-			}
-		: {};
+	const inputs: TranslationJobCreateRequestInputs = {
+		...(memoryGroup
+			? {
+					memories: {
+						type: "memories",
+						memoryGroupId: memoryGroup,
+						excludeCurrentChapter,
+						pluginNames,
+						memoryTypes,
+					},
+				}
+			: {}),
+		...(termsGroup ? { terms: { type: "terms", memoryGroupId: termsGroup } } : {}),
+		...(conventionsGroup
+			? { conventions: { type: "conventions", memoryGroupId: conventionsGroup } }
+			: {}),
+	};
 	// The backend type-checks the draft; this component only renders its answer.
 	const [check, setCheck] = useState<TranslationPipelineCheck | null>(null);
 	const stageActions = stages.map((stage) => stage.action.id).join(",");
@@ -262,9 +269,15 @@ function CreateTranslationForm({
 				novelId,
 				// Types do not depend on the chapter range, which may be mid-edit.
 				config: { batchSize: 1 },
-				inputs: memoryGroup
-					? { memories: { type: "memories", memoryGroupId: memoryGroup } }
-					: {},
+				inputs: {
+					...(memoryGroup
+						? { memories: { type: "memories", memoryGroupId: memoryGroup } }
+						: {}),
+					...(termsGroup ? { terms: { type: "terms", memoryGroupId: termsGroup } } : {}),
+					...(conventionsGroup
+						? { conventions: { type: "conventions", memoryGroupId: conventionsGroup } }
+						: {}),
+				},
 				stages: stageActions ? stageActions.split(",").map((action) => ({ action })) : [],
 			},
 			{ signal: controller.signal },
@@ -277,7 +290,7 @@ function CreateTranslationForm({
 				if (!controller.signal.aborted) setCheck(null);
 			});
 		return () => controller.abort();
-	}, [novelId, memoryGroup, stageActions]);
+	}, [novelId, memoryGroup, termsGroup, conventionsGroup, stageActions]);
 	const addable = new Map(check?.addable.map((item) => [item.action, item.warning]));
 	const validRange =
 		[start, end, batchSize].every(
@@ -488,6 +501,48 @@ function CreateTranslationForm({
 								</div>
 							</div>
 						)}
+						<div className="grid gap-3 sm:grid-cols-2">
+							<label className="space-y-2 text-sm">
+								Term translations group
+								<select
+									className={selectClass}
+									disabled={groups.status !== "ready"}
+									value={termsGroup}
+									onChange={(event) => setTermsGroup(event.target.value)}
+								>
+									<option value="">None</option>
+									{groups.status === "ready" &&
+										groups.data.map((group) => (
+											<option
+												key={group.memoryGroupId}
+												value={group.memoryGroupId}
+											>
+												{group.memoryGroupName}
+											</option>
+										))}
+								</select>
+							</label>
+							<label className="space-y-2 text-sm">
+								Conventions group
+								<select
+									className={selectClass}
+									disabled={groups.status !== "ready"}
+									value={conventionsGroup}
+									onChange={(event) => setConventionsGroup(event.target.value)}
+								>
+									<option value="">None</option>
+									{groups.status === "ready" &&
+										groups.data.map((group) => (
+											<option
+												key={group.memoryGroupId}
+												value={group.memoryGroupId}
+											>
+												{group.memoryGroupName}
+											</option>
+										))}
+								</select>
+							</label>
+						</div>
 						{groups.status === "error" && (
 							<div role="alert">
 								{groups.message}{" "}

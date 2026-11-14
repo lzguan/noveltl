@@ -2,7 +2,6 @@
 
 from collections.abc import Iterator
 from time import monotonic
-from uuid import UUID
 
 from src.files.access import fetch_file
 from src.files.dependencies import get_object_store
@@ -10,6 +9,7 @@ from src.translations.actions.actions import ActionTaskContext
 from src.translations.actions.celery_actions import CeleryActionCallbacks
 from src.translations.actions.common.files import store_lines
 from src.translations.actions.common.inputs import (
+    group_by_chapter,
     resolve_inputs,
     select_streams,
     stage_types,
@@ -73,16 +73,11 @@ def prepare(context: ActionTaskContext) -> None:
     types = stage_types(context.db, stage)
 
     def requests() -> Iterator[bytes]:
-        chapters: dict[UUID, ChapterRecord] = {}
-        candidates: dict[UUID, MemoriesRecord] = {}
-        for record in select_streams(resolve_inputs(context, store, stage, types.before), types.signature.inputs):
-            if isinstance(record, ChapterRecord):
-                chapters[record.chapter_id] = record
-            elif isinstance(record, MemoriesRecord):
-                candidates[record.chapter_id] = record
-            if record.chapter_id not in chapters or record.chapter_id not in candidates:
-                continue
-            chapter, memories = chapters.pop(record.chapter_id), candidates.pop(record.chapter_id)
+        records = select_streams(resolve_inputs(context, store, stage, types.before), types.signature.inputs)
+        for inputs in group_by_chapter(records, types.signature.inputs):
+            chapter, memories = inputs["chapter"], inputs["memories"]
+            if not isinstance(chapter, ChapterRecord) or not isinstance(memories, MemoriesRecord):
+                raise ValueError("Memory pruning requires chapter and memories records in their respective streams")
             item = BatchItem(
                 key=memories.key,
                 request=InferenceRequest(
@@ -99,8 +94,6 @@ def prepare(context: ActionTaskContext) -> None:
                 ),
             )
             yield codec.encode_request(item)
-        if chapters or candidates:
-            raise ValueError("Unmatched pruning inputs")
 
     context.task.request_file_id = store_lines(context, store, requests(), renew_seconds=_LEASE_SECONDS / 3)
 

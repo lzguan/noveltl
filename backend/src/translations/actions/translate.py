@@ -1,8 +1,8 @@
 """Translate chapters through provider-neutral batch inference, using memories when the job loads them."""
 
-from collections.abc import Iterable, Iterator
+import json
+from collections.abc import Iterator
 from time import monotonic
-from uuid import UUID
 
 from src.files.access import fetch_file
 from src.files.dependencies import get_object_store
@@ -10,6 +10,7 @@ from src.translations.actions.actions import ActionTaskContext
 from src.translations.actions.celery_actions import CeleryActionCallbacks
 from src.translations.actions.common.files import store_lines
 from src.translations.actions.common.inputs import (
+    group_by_chapter,
     resolve_inputs,
     select_streams,
     stage_types,
@@ -30,7 +31,7 @@ from src.translations.codecs.batch_lines import BatchItem, BatchItemFailure, Inf
 from src.translations.codecs.registry import get_codec
 from src.translations.jsonl import encode_translation_record, iter_jsonl_lines
 from src.translations.models import TranslationStage
-from src.translations.records import ChapterRecord, MemoriesRecord, TranslationRecord
+from src.translations.records import ChapterRecord, ConventionsRecord, MemoriesRecord, TermsRecord
 from src.translations.schemas import TranslateConfig
 from src.translations.task_names import (
     TRANSLATE_FINALIZE,
@@ -51,25 +52,6 @@ def _stage(context: ActionTaskContext) -> tuple[TranslationStage, TranslateConfi
     if stage is None or stage.action != "translate":
         raise ValueError("Translation callbacks require a translate stage")
     return stage, TranslateConfig.model_validate(stage.config)
-
-
-def _pair(
-    records: Iterable[TranslationRecord], *, with_memories: bool
-) -> Iterator[tuple[ChapterRecord, MemoriesRecord | None]]:
-    chapters: dict[UUID, ChapterRecord] = {}
-    memories: dict[UUID, MemoriesRecord] = {}
-    for record in records:
-        if isinstance(record, MemoriesRecord):
-            memories[record.chapter_id] = record
-        elif isinstance(record, ChapterRecord):
-            if with_memories:
-                chapters[record.chapter_id] = record
-            else:
-                yield record, None
-        if record.chapter_id in chapters and record.chapter_id in memories:
-            yield chapters.pop(record.chapter_id), memories.pop(record.chapter_id)
-    if chapters or (with_memories and memories):
-        raise ValueError("Unmatched chapter and memory inputs")
 
 
 @callbacks.new_func(
@@ -95,12 +77,39 @@ def prepare(context: ActionTaskContext) -> None:
     records = select_streams(resolve_inputs(context, store, stage, types.before), types.declared)
 
     def requests() -> Iterator[bytes]:
-        for chapter, memories in _pair(records, with_memories="memories" in types.before):
-            if memories is None:
-                system, prompt = instructions, chapter.payload
-            else:
-                system = instructions + memory_instructions
-                prompt = f"Context memories:\n{format_memories(memories.payload)}\n\nChapter to translate:\n{chapter.payload}"
+        for inputs in group_by_chapter(records, streams=types.before.keys() & types.declared):
+            chapter = inputs["chapter"]
+            memories = inputs.get("memories")
+            terms = inputs.get("terms")
+            conventions = inputs.get("conventions")
+            if not isinstance(chapter, ChapterRecord):
+                raise ValueError("Translation requires chapter records in the chapter stream")
+            system = instructions
+            sections: list[str] = []
+            if memories is not None:
+                if not isinstance(memories, MemoriesRecord):
+                    raise ValueError("Translation requires memories records in the memories stream")
+                system += memory_instructions
+                sections.append(f"Context memories:\n{format_memories(memories.payload)}")
+            if terms is not None:
+                if not isinstance(terms, TermsRecord):
+                    raise ValueError("Translation requires terms records in the terms stream")
+                system += (
+                    " Use the supplied canonical term translations for exact source forms,"
+                    " preserving the source's choice of names and aliases."
+                )
+                sections.append("Canonical term translations:\n" + json.dumps(terms.payload, ensure_ascii=False))
+            if conventions is not None:
+                if not isinstance(conventions, ConventionsRecord):
+                    raise ValueError("Translation requires conventions records in the conventions stream")
+                system += " Follow the supplied naming and style conventions."
+                sections.append(
+                    "Translation conventions:\n"
+                    + json.dumps([rule.model_dump(mode="json") for rule in conventions.payload], ensure_ascii=False)
+                )
+            prompt = (
+                "\n\n".join([*sections, f"Chapter to translate:\n{chapter.payload}"]) if sections else chapter.payload
+            )
             item = BatchItem(
                 key=chapter.key,
                 request=InferenceRequest(

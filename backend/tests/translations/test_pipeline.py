@@ -8,6 +8,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from src.files.models import StoredFile
 from src.memory.models import Memory, MemoryGroup
+from src.memory.plugins.conventions.models import TranslationConvention
+from src.memory.plugins.conventions.types import ConventionCategory
+from src.memory.plugins.glossary.models import GlossaryTerm
+from src.memory.plugins.translations.models import TermTranslation
 from src.memory.types import Creator, MemoryType
 from src.translations.actions import load_inputs, prune_memories, translate
 from src.translations.celery_app import app
@@ -116,33 +120,59 @@ def test_job_loads_prunes_and_translates_with_each_stage_carrying_the_full_state
             )
         )
     test_db.flush()
+    sample_scenario.contents["chapter_1_v2"].chapter_content_text = "白玫 arrives."
+    term = GlossaryTerm(memory_group_id=group.memory_group_id, term="白玫")
+    test_db.add(term)
+    test_db.flush()
+    test_db.add(TermTranslation(term_id=term.term_id, translation="White Rose", creator_type=Creator.USER))
+    test_db.add(
+        TranslationConvention(
+            memory_group_id=group.memory_group_id,
+            category=ConventionCategory.STYLE,
+            title="Narrator",
+            rule="Keep the narration restrained.",
+            rationale=None,
+            creator_type=Creator.USER,
+        )
+    )
     inputs = {
         "memories": {
             "type": "memories",
             "memory_group_id": str(group.memory_group_id),
             "exclude_current_chapter": False,
-        }
+        },
+        "terms": {"type": "terms", "memory_group_id": str(group.memory_group_id)},
+        "conventions": {"type": "conventions", "memory_group_id": str(group.memory_group_id)},
     }
     stages = [
         {"action": "prune_memories", "config": {"model": "qwen-plus"}},
         {"action": "translate", "config": {"model": "qwen-plus"}},
+        {"action": "translate", "config": {"model": "qwen-plus"}},
     ]
-    loader, pruning, translation = _tasks(test_db, sample_scenario, stages, inputs)
+    loader, pruning, translation, revision = _tasks(test_db, sample_scenario, stages, inputs)
 
     load_inputs.load(loader.task_id)
     for step in (prune_memories.prepare, prune_memories.submit, prune_memories.poll, prune_memories.finalize):
         step(pruning.task_id)
     for step in (translate.prepare, translate.submit, translate.poll, translate.finalize):
         step(translation.task_id)
+    for step in (translate.prepare, translate.submit, translate.poll, translate.finalize):
+        step(revision.task_id)
 
     loaded = _output(test_db, store, loader)
     pruned = _output(test_db, store, pruning)
     translated = _output(test_db, store, translation)
+    revised = _output(test_db, store, revision)
     chapter_ids = {record.chapter_id for record in loaded}
-    expected_keys = {(chapter_id, stream) for chapter_id in chapter_ids for stream in ("chapter", "memories")}
+    expected_keys = {
+        (chapter_id, stream) for chapter_id in chapter_ids for stream in ("chapter", "memories", "terms", "conventions")
+    }
     # Every stage's file is the full state: its own outputs plus everything it left alone.
-    for output in (loaded, pruned, translated):
+    for output in (loaded, pruned, translated, revised):
         assert {(record.chapter_id, record.stream) for record in output} == expected_keys
+        assert [record for record in output if record.stream in ("terms", "conventions")] == [
+            record for record in loaded if record.stream in ("terms", "conventions")
+        ]
 
     def chapters(records: list[TranslationRecord]) -> dict:
         return {record.chapter_id: record.payload for record in records if isinstance(record, ChapterRecord)}
@@ -163,6 +193,15 @@ def test_job_loads_prunes_and_translates_with_each_stage_carrying_the_full_state
         assert prompt.startswith("Context memories:") and sum(name in prompt for name in CANDIDATES) <= 1
         assert any(text in prompt for text in source_text.values())
     assert any(name in prompt for prompt in prompts for name in CANDIDATES)
+    for batch in client.batches[1:]:
+        for request in batch:
+            prompt = request["body"]["messages"][1]["content"]
+            assert "Canonical term translations:" in prompt and "Translation conventions:" in prompt
+            assert "Keep the narration restrained." in prompt
+        assert any("White Rose" in request["body"]["messages"][1]["content"] for request in batch)
+    assert all(
+        request["body"]["messages"][1]["content"].endswith("Translated chapter") for request in client.batches[2]
+    )
 
 
 def test_translation_without_a_memories_stream_sends_only_the_chapter(

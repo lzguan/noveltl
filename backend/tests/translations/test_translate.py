@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from src.files.access import create_file
 from src.files.models import StoredFile
 from src.memory.models import Memory, MemoryGroup
+from src.memory.plugins.conventions.types import ConventionCategory
 from src.memory.schemas import Memory as MemorySchema
 from src.memory.types import Creator, MemoryType
 from src.translations.actions.translate import finalize, poll, prepare, submit
@@ -29,7 +30,14 @@ from src.translations.codecs.batch_lines import BatchItem, BatchItemResult
 from src.translations.codecs.registry import MODEL_CODECS
 from src.translations.jsonl import encode_translation_record, iter_translation_records
 from src.translations.models import TranslationJobChapter, TranslationStage, TranslationTask
-from src.translations.records import ChapterRecord, MemoriesRecord, TranslationRecord
+from src.translations.records import (
+    ChapterRecord,
+    ConventionContent,
+    ConventionsRecord,
+    MemoriesRecord,
+    TermsRecord,
+    TranslationRecord,
+)
 from src.translations.schemas import TranslationJobCreate
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationDataKey
@@ -102,12 +110,15 @@ def make_job(
     store: MemoryObjectStore,
     *,
     with_memories: bool = False,
+    with_terms: bool = False,
+    with_conventions: bool = False,
+    empty_context: bool = False,
     loaded: bool = True,
 ) -> tuple[UUID, list[TranslationRecord]]:
     """Create a translate job whose loader already wrote the returned records, unless ``loaded`` is false."""
     inputs = {}
     memories: list[MemorySchema] = []
-    if with_memories:
+    if with_memories or with_terms or with_conventions:
         novel = scenario.novels["novel_1"]
         group = MemoryGroup(novel_id=novel.novel_id, memory_group_name="Context", memory_language=novel.language_code)
         db.add(group)
@@ -124,7 +135,11 @@ def make_job(
         db.add(memory)
         db.flush()
         memories = [MemorySchema.model_validate(memory)]
-        inputs = {"memories": {"type": "memories", "memory_group_id": str(group.memory_group_id)}}
+        inputs = {
+            name: {"type": name, "memory_group_id": str(group.memory_group_id)}
+            for name, enabled in (("memories", with_memories), ("terms", with_terms), ("conventions", with_conventions))
+            if enabled
+        }
     translate = {
         "action": "translate",
         "config": {
@@ -158,7 +173,32 @@ def make_job(
     ):
         records.append(ChapterRecord(chapter_id=chapter_id, stream="chapter", payload=LOADED_TEXT))
         if with_memories:
-            records.append(MemoriesRecord(chapter_id=chapter_id, stream="memories", payload=memories))
+            records.append(
+                MemoriesRecord(chapter_id=chapter_id, stream="memories", payload=[] if empty_context else memories)
+            )
+        if with_terms:
+            records.append(
+                TermsRecord(
+                    chapter_id=chapter_id, stream="terms", payload={} if empty_context else {"白玫": "White Rose"}
+                )
+            )
+        if with_conventions:
+            records.append(
+                ConventionsRecord(
+                    chapter_id=chapter_id,
+                    stream="conventions",
+                    payload=[]
+                    if empty_context
+                    else [
+                        ConventionContent(
+                            category=ConventionCategory.STYLE,
+                            title="Narration",
+                            rule="Keep a restrained narrative voice.",
+                            rationale=None,
+                        )
+                    ],
+                )
+            )
     task.status = State.READY
     if loaded:
         stored = create_file(
@@ -177,14 +217,25 @@ def make_job(
 
 
 @pytest.mark.parametrize("with_memories", [False, True])
+@pytest.mark.parametrize("with_terms", [False, True])
+@pytest.mark.parametrize("with_conventions", [False, True])
 def test_prepare_builds_requests_from_the_previous_stage_and_persists_adapter_bytes(
     test_db: Session,
     sample_scenario: DatabaseScenario,
     worker: MemoryObjectStore,
     with_memories: bool,
+    with_terms: bool,
+    with_conventions: bool,
     recording_codec: RecordingCodec,
 ) -> None:
-    task_id, records = make_job(test_db, sample_scenario, worker, with_memories=with_memories)
+    task_id, records = make_job(
+        test_db,
+        sample_scenario,
+        worker,
+        with_memories=with_memories,
+        with_terms=with_terms,
+        with_conventions=with_conventions,
+    )
     chapter_ids = {record.chapter_id for record in records}
 
     prepare(task_id)
@@ -207,10 +258,33 @@ def test_prepare_builds_requests_from_the_previous_stage_and_persists_adapter_by
         if with_memories:
             assert user.content.endswith(LOADED_TEXT)
             assert "Use the name Alice." in user.content and '"index":0' in user.content
-        else:
+        elif not with_terms and not with_conventions:
             assert user.content == LOADED_TEXT
+        assert ("Canonical term translations:" in user.content) == with_terms
+        assert ("Translation conventions:" in user.content) == with_conventions
+        assert ("canonical term translations" in system.content) == with_terms
+        assert ("naming and style conventions" in system.content) == with_conventions
+        if with_terms:
+            assert '"白玫": "White Rose"' in user.content
+        if with_conventions:
+            assert "Keep a restrained narrative voice." in user.content and '"category": "style"' in user.content
         assert item.request.temperature == 0.4 and item.request.max_output_tokens == 2048
     assert worker.fetched_keys
+
+
+def test_prepare_accepts_empty_enabled_context_streams(
+    test_db: Session, sample_scenario: DatabaseScenario, worker: MemoryObjectStore, recording_codec: RecordingCodec
+) -> None:
+    task_id, records = make_job(
+        test_db, sample_scenario, worker, with_memories=True, with_terms=True, with_conventions=True, empty_context=True
+    )
+    prepare(task_id)
+    assert len(recording_codec.items) == len({record.chapter_id for record in records})
+    for item in recording_codec.items:
+        assert (
+            item.request.messages[1].content
+            == f"Context memories:\n[]\n\nCanonical term translations:\n{{}}\n\nTranslation conventions:\n[]\n\nChapter to translate:\n{LOADED_TEXT}"
+        )
 
 
 def test_prepare_upload_failure_does_not_publish_input(

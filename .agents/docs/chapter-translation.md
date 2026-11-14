@@ -2,8 +2,8 @@
 
 Code checked 2026-11-14. This is the batch chapter-translation subsystem, distinct
 from the memory recording and glossary [term-naming jobs](memory-jobs.md).
-Term translations and conventions can be loaded as artifact streams but are not
-yet consumed by translation prompts.
+Term translations and conventions can be loaded as artifact streams and consumed
+as optional context by translation prompts.
 
 ## Entry points
 
@@ -44,7 +44,7 @@ typed config. Streams a stage neither outputs nor drops pass through.
 | --- | --- | --- |
 | `load_inputs` | none | `chapter` plus each declared stream |
 | `prune_memories` | `chapter`, `memories` | `memories` |
-| `translate` | `chapter`; `memories` optional | `chapter` |
+| `translate` | `chapter`; `memories`, `terms`, `conventions` optional | `chapter` |
 
 `trace_pipeline` in [types.py](../../backend/src/translations/types.py) is the
 single statement of the type rules. Starting from nothing, it links each stage's
@@ -76,9 +76,15 @@ the stage produced. A stage reads exactly one file, the previous stage's
 (`resolve_inputs`, validated against the state before the stage), and writes
 `output_records`: records of untouched streams copied forward, then its own,
 validated against the state after. `select_streams` is the one filter wrapper;
-an action's `prepare` narrows to its declared inputs. Pairing a chapter with its
-memories is done inside each action, not in common code, and currently
-distinguishes records by type rather than stream name.
+an action's `prepare` narrows to its declared inputs. The shared
+`group_by_chapter(records, streams)` helper in `actions/common/inputs.py` groups
+validated, prefiltered records into stream-name → record dictionaries, yielding
+each chapter once all requested streams are present regardless of record order
+or type. It raises for incomplete groups at exhaustion and relies on upstream
+artifact validation for duplicate/type/chapter checks. Translation uses it to
+wait for enabled context records; memory pruning uses it for its two required
+inputs. Both handle record types locally. Absent optional streams require no
+record and enabled empty streams are valid.
 
 Records carry `chapter_id`, `stream`, a `data_name` type discriminator, and a
 payload; the logical key is `(chapter_id, stream)`. `validate_output_records`
@@ -105,8 +111,11 @@ The loader materializes the batch's pinned chapters once and reuses that list
 for each stream, reading each group's mappings/conventions once.
 Term retrieval lives in `actions/common/term_inputs.py`, alongside memory
 retrieval in `memory_inputs.py`; the loader checks
-each source group's novel ownership before reading it. No later stage declares
-these streams as inputs yet, so they pass through artifacts without entering prompts.
+each source group's novel ownership before reading it. Translation consumes
+these streams in separate canonical-rendering and convention prompt sections;
+both pass unchanged through pruning and translation artifacts. Tests verify
+request content and preservation through repeated translation stages, not live
+model adherence or translation quality.
 
 Migration `a9d3e7c1b2f4` drops the per-batch snapshot column (the loader's output
 replaced it) and renames the task's provider request file column to
@@ -115,8 +124,9 @@ The renamed column's foreign key keeps its old auto-generated name.
 
 Leftovers as of 2026-11-14: action metadata supplies only `name`, `label`, and
 `configSchema`; compatibility and availability come from the check endpoint.
-The frontend create dialog sends top-level inputs and calls
-the check endpoint. Its read-only lane diagram, including the labelled loader,
+The frontend create dialog has independent memory-group selectors for memories,
+term translations, and conventions, sends those sources as top-level inputs,
+and includes them in the check request. Its read-only lane diagram, including the labelled loader,
 lives in [pipeline-diagram/](../../frontend/src/edit/panels/translations/pipeline-diagram/).
 Layout and rendering use backend sources and link states without inferring types
 or stream availability in the frontend.

@@ -17,8 +17,9 @@ Naming tools share translation-plugin accessors. Chapter-loader retrieval lives
 alongside memory retrieval in
 [term_inputs.py](../../backend/src/translations/actions/common/term_inputs.py).
 The loader snapshots its mappings as a `terms` stream, filtering exact source
-forms against each pinned chapter's text. The translation prompt does not consume
-that stream yet.
+forms against each pinned chapter's text. Translation consumes that optional
+stream in a canonical-rendering prompt section; the mappings survive pruning
+and subsequent translation stages unchanged.
 
 ## Storage and review
 

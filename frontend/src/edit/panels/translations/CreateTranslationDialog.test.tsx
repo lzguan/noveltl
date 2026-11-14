@@ -101,11 +101,13 @@ function setup({
 	metadataFails = false,
 	detailsFail = false,
 	createWait,
+	checks = [],
 }: {
 	reject?: boolean;
 	metadataFails?: boolean;
 	detailsFail?: boolean;
 	createWait?: Promise<void>;
+	checks?: unknown[];
 } = {}) {
 	const payloads: unknown[] = [];
 	let metadataCalls = 0;
@@ -120,6 +122,12 @@ function setup({
 						memoryLanguage: "en",
 						novelId: "novel-1",
 					},
+					{
+						memoryGroupId: "group-2",
+						memoryGroupName: "Style guide",
+						memoryLanguage: "en",
+						novelId: "novel-1",
+					},
 				]);
 			if (url.endsWith("/actions")) {
 				metadataCalls++;
@@ -130,9 +138,10 @@ function setup({
 			if (url.endsWith("/check")) {
 				// Stand in for the backend type check: the memory action needs the memories stream.
 				const draft = typeof options?.body === "string" ? JSON.parse(options.body) : {};
-				const loaded = draft.inputs?.memories ? ["chapter", "memories"] : ["chapter"];
+				checks.push(draft.inputs);
+				const loaded = ["chapter", ...Object.keys(draft.inputs ?? {})];
 				const warn = (action: string) =>
-					action === "dynamic-translation" && loaded.length === 1
+					action === "dynamic-translation" && !loaded.includes("memories")
 						? "requires memories"
 						: null;
 				const port = (stream: string) => ({ stream, type: stream });
@@ -214,8 +223,54 @@ function setup({
 	return payloads;
 }
 afterEach(() => vi.unstubAllGlobals());
+
+it.each([true, false])(
+	"checks and submits independent term/convention sources with terms enabled: %s",
+	async (keepTerms) => {
+		const checks: unknown[] = [];
+		const payloads = setup({ checks });
+		await screen.findAllByRole("option", { name: "Real glossary" });
+		fireEvent.change(screen.getByLabelText("Term translations group"), {
+			target: { value: "group-1" },
+		});
+		fireEvent.change(screen.getByLabelText("Conventions group"), {
+			target: { value: "group-2" },
+		});
+		await waitFor(() =>
+			expect(checks.at(-1)).toEqual({
+				terms: { type: "terms", memoryGroupId: "group-1" },
+				conventions: { type: "conventions", memoryGroupId: "group-2" },
+			}),
+		);
+		expect(screen.getByRole("img")).toHaveTextContent("terms");
+		expect(screen.getByRole("img")).toHaveTextContent("conventions");
+		if (!keepTerms) {
+			fireEvent.change(screen.getByLabelText("Term translations group"), {
+				target: { value: "" },
+			});
+			await waitFor(() =>
+				expect(checks.at(-1)).toEqual({
+					conventions: { type: "conventions", memoryGroupId: "group-2" },
+				}),
+			);
+		}
+		fireEvent.change(screen.getByLabelText("Add stage"), { target: { value: "plain" } });
+		fireEvent.click(screen.getByRole("button", { name: "Add stage" }));
+		fireEvent.change(screen.getByRole("combobox", { name: /Model/ }), {
+			target: { value: "0" },
+		});
+		fireEvent.submit(
+			screen.getByRole("button", { name: "Save configuration" }).closest("form")!,
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Create job" }));
+		await screen.findByRole("dialog", { name: /Job created-.*Batches/ });
+		expect(payloads[0]).toMatchObject({ inputs: checks.at(-1) });
+		expect(JSON.stringify(payloads[0])).not.toContain('"memories"');
+	},
+);
+
 async function configure() {
-	await screen.findByRole("option", { name: "Real glossary" });
+	await screen.findAllByRole("option", { name: "Real glossary" });
 	fireEvent.change(screen.getByLabelText("Memory group"), { target: { value: "group-1" } });
 	// The action becomes selectable once the backend check reports that memories are loaded.
 	await waitFor(() =>
@@ -314,7 +369,7 @@ it("warns about a stage whose input is no longer loaded without blocking creatio
 
 it("sends the advanced memory options with the job inputs", async () => {
 	const payloads = setup();
-	await screen.findByRole("option", { name: "Real glossary" });
+	await screen.findAllByRole("option", { name: "Real glossary" });
 	// The options belong to the memories input, so they need a memory group.
 	expect(screen.getByRole("button", { name: "Advanced" })).toBeDisabled();
 	await configure();
@@ -384,7 +439,7 @@ it("renders nullable numbers as labeled inputs and preserves numeric values and 
 
 it("waits for a model and renders nullable filters with explicit all and selected semantics", async () => {
 	const payloads = setup();
-	await screen.findByRole("option", { name: "Real glossary" });
+	await screen.findAllByRole("option", { name: "Real glossary" });
 	fireEvent.change(screen.getByLabelText("Memory group"), { target: { value: "group-1" } });
 	await waitFor(() =>
 		expect(screen.getByRole("option", { name: "Translate with memories" })).toBeEnabled(),

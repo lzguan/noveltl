@@ -10,6 +10,7 @@ from src.translations.schemas import MAX_STAGES, TranslationJobCreateRequest, Tr
 
 NOVEL_ID = "00000000-0000-0000-0000-000000000001"
 MEMORIES = {"memories": {"type": "memories", "memoryGroupId": "00000000-0000-0000-0000-000000000002"}}
+ABSENT_CONTEXT = {"terms": ("absent", None), "conventions": ("absent", None)}
 
 
 def draft(inputs: dict, actions: list[str]) -> dict:
@@ -56,15 +57,16 @@ def test_each_port_links_to_the_stage_that_last_wrote_its_stream() -> None:
     assert links(result, 1) == {"chapter": ("linked", 0), "memories": ("linked", 0)}
     assert [port.stream for port in result.stages[1].outputs] == ["memories"]
     # The first translation skips past pruning for the chapter; the second reads the first's.
-    assert links(result, 2) == {"chapter": ("linked", 0), "memories": ("linked", 1)}
-    assert links(result, 3) == {"chapter": ("linked", 2), "memories": ("linked", 1)}
+    assert links(result, 2) == {"chapter": ("linked", 0), "memories": ("linked", 1)} | ABSENT_CONTEXT
+    assert links(result, 3) == {"chapter": ("linked", 2), "memories": ("linked", 1)} | ABSENT_CONTEXT
     assert [(end.stream, end.source) for end in result.ends] == [("chapter", 3), ("memories", 1)]
-    chapter, memories = result.stages[2].inputs
+    chapter, memories, terms, conventions = result.stages[2].inputs
     assert (chapter.optional, memories.optional) == (False, True)
     assert chapter.source_type == "chapter" and not chapter.drops
+    assert terms.optional and conventions.optional
 
 
-def test_new_loader_outputs_pass_through_stages_without_becoming_stage_inputs() -> None:
+def test_new_loader_outputs_feed_optional_translation_inputs() -> None:
     inputs = {
         name: {"type": name, "memoryGroupId": MEMORIES["memories"]["memoryGroupId"]}
         for name in ("terms", "conventions")
@@ -76,12 +78,17 @@ def test_new_loader_outputs_pass_through_stages_without_becoming_stage_inputs() 
         ("conventions", "conventions"),
     ]
     assert [(end.stream, end.source) for end in result.ends] == [("chapter", 1), ("terms", 0), ("conventions", 0)]
-    assert links(result, 1) == {"chapter": ("linked", 0), "memories": ("absent", None)}
+    assert links(result, 1) == {
+        "chapter": ("linked", 0),
+        "memories": ("absent", None),
+        "terms": ("linked", 0),
+        "conventions": ("linked", 0),
+    }
 
 
 def test_an_optional_port_without_a_producer_is_absent_not_broken() -> None:
     result = check({}, ["translate"])
-    assert links(result, 1) == {"chapter": ("linked", 0), "memories": ("absent", None)}
+    assert links(result, 1) == {"chapter": ("linked", 0), "memories": ("absent", None)} | ABSENT_CONTEXT
     assert result.stages[1].warning is None
     assert [end.stream for end in result.ends] == ["chapter"]
 
@@ -92,7 +99,7 @@ def test_a_stage_with_a_broken_port_is_warned_about_and_feeds_nothing() -> None:
     assert links(result, 2) == {"chapter": ("linked", 1), "memories": ("broken", None)}
     # The broken stage still shows its ports, but nothing below is fed by it.
     assert [port.stream for port in result.stages[2].outputs] == ["memories"]
-    assert links(result, 4) == {"chapter": ("linked", 1), "memories": ("absent", None)}
+    assert links(result, 4) == {"chapter": ("linked", 1), "memories": ("absent", None)} | ABSENT_CONTEXT
     assert [(end.stream, end.source) for end in result.ends] == [("chapter", 4)]
     assert addable(result) == {"translate": None, "prune_memories": "requires memories"}
 

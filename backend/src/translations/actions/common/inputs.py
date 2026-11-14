@@ -153,3 +153,19 @@ def select_streams(records: Iterable[TranslationRecord], streams: Collection[str
     for record in records:
         if record.stream in streams:
             yield record
+
+
+def group_by_chapter(
+    records: Iterable[TranslationRecord], streams: Collection[str]
+) -> Iterator[dict[str, TranslationRecord]]:
+    expected = frozenset(streams)
+    pending: dict[UUID, dict[str, TranslationRecord]] = {}
+    for record in records:
+        group = pending.setdefault(record.chapter_id, {})
+        group[record.stream] = record
+        if group.keys() == expected:
+            yield pending.pop(record.chapter_id)
+    if pending:
+        chapter_id, group = next(iter(pending.items()))
+        missing = ", ".join(sorted(expected - group.keys()))
+        raise ValueError(f"Missing input streams for chapter {chapter_id}: {missing}")

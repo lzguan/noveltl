@@ -6,9 +6,9 @@ behavior is in [memory jobs](memory-jobs.md) and
 
 ## Conventions
 
-- **Chapter translation prompts do not consume term translations or conventions.**
-  The loader can snapshot both as streams; wiring those streams into the
-  translate prompt is what makes naming and conventions output reach translated text.
+- **Evaluate chapter-translation adherence to terms and conventions.** Both
+  streams now reach translation prompts; live model adherence and translation
+  quality remain unverified by the deterministic pipeline tests.
 - **Windowed schedules:** a params option compiled into the schedule queries,
   e.g. record N chapters, conventions, name N, so conventions cadence and stage
   barriers share one mechanism. Stages already run as job-wide barriers.

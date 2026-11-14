@@ -92,7 +92,7 @@ def stage_types(db: Session, stage: TranslationStage) -> StageTypes:
         .order_by(TranslationStage.stage_num)
     ).all()
     signatures = [stage_config(earlier.action, earlier.config).signature() for earlier in stages]
-    states = infer_pipeline({}, signatures)
+    states = infer_pipeline(signatures)
     return StageTypes(states[-2] if len(states) > 1 else {}, signatures[-1], states[-1])
 
 

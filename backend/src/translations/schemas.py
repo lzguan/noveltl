@@ -10,19 +10,21 @@ from src.schemas import Model
 from src.translations.types import (
     ActionName,
     ActionSignature,
-    DataName,
     ModelName,
+    StreamType,
     TranslationTaskStatus,
     infer_pipeline,
 )
 from src.translations.ui import UIHints
 
+MAX_STAGES = 5
+
 
 class TranslationActionMetadata(Model):
     name: str
     label: str
-    input_types: list[DataName]
-    output_types: list[DataName]
+    input_types: list[StreamType]
+    output_types: list[StreamType]
     allowed_as_first_stage: bool
     config_schema: dict[str, Any]
 
@@ -149,7 +151,7 @@ class LoadInputsConfig(Model):
         return self
 
     def signature(self) -> ActionSignature:
-        outputs: dict[str, DataName] = {"chapter": "chapter"}
+        outputs: dict[str, StreamType] = {"chapter": "chapter"}
         outputs.update({name: source.type for name, source in self.inputs.items()})
         return ActionSignature(inputs={}, outputs=outputs)
 
@@ -190,13 +192,23 @@ class TranslationStageRequest(Model):
     config: dict[str, Any] = Field(default_factory=dict)
 
 
-class TranslationJobCreateRequest(Model):
-    """Public envelope; action-specific validation happens before job creation."""
-
+# A creation request that may still have no stages; the pipeline builder checks these as it goes.
+class TranslationJobDraft(Model):
     novel_id: uuid.UUID
     config: TranslationJobConfig
     inputs: dict[str, TranslationInput] = Field(default_factory=dict)
-    stages: list[TranslationStageRequest] = Field(min_length=1, max_length=5)
+    stages: list[TranslationStageRequest] = Field(default_factory=list, max_length=MAX_STAGES)
+
+    @model_validator(mode="after")
+    def validate_inputs(self) -> Self:
+        LoadInputsConfig(inputs=self.inputs)
+        return self
+
+
+class TranslationJobCreateRequest(TranslationJobDraft):
+    """Public envelope; action-specific validation happens before job creation."""
+
+    stages: list[TranslationStageRequest] = Field(min_length=1, max_length=MAX_STAGES)
 
 
 class TranslationJobCreate(Model):
@@ -205,7 +217,7 @@ class TranslationJobCreate(Model):
     novel_id: uuid.UUID
     config: TranslationJobConfig
     inputs: dict[str, TranslationInput] = Field(default_factory=dict)
-    stages: list[TranslationStageCreate] = Field(min_length=1, max_length=5)
+    stages: list[TranslationStageCreate] = Field(min_length=1, max_length=MAX_STAGES)
 
     def loader_config(self) -> LoadInputsConfig:
         return LoadInputsConfig(inputs=self.inputs)
@@ -213,7 +225,7 @@ class TranslationJobCreate(Model):
     @model_validator(mode="after")
     def validate_pipeline(self) -> Self:
         # Stage numbers match the stored pipeline, where the loader is stage 0.
-        infer_pipeline({}, [self.loader_config().signature(), *(stage.config.signature() for stage in self.stages)])
+        infer_pipeline([self.loader_config().signature(), *(stage.config.signature() for stage in self.stages)])
         return self
 
 

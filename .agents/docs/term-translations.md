@@ -13,8 +13,12 @@
 | Translation editing and review controls | [TermTranslationEditor.tsx](../../frontend/src/memory/components/TermTranslationEditor.tsx) |
 
 Naming tools use glossary accessors for terms, definitions, relations, and aliases.
-Translation SQL belongs to the shared translation plugin. Canonical mappings
-are not yet integrated into chapter-translation actions.
+Naming tools share translation-plugin accessors. Chapter-loader retrieval lives
+alongside memory retrieval in
+[term_inputs.py](../../backend/src/translations/actions/common/term_inputs.py).
+The loader snapshots its mappings as a `terms` stream, filtering exact source
+forms against each pinned chapter's text. The translation prompt does not consume
+that stream yet.
 
 ## Storage and review
 

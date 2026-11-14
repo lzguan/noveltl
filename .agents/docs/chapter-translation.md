@@ -2,8 +2,8 @@
 
 Code checked 2026-11-14. This is the batch chapter-translation subsystem, distinct
 from the memory recording and glossary [term-naming jobs](memory-jobs.md).
-Term translations and conventions are not yet wired into these actions; the
-stream design below is the intended route for them.
+Term translations and conventions can be loaded as artifact streams but are not
+yet consumed by translation prompts.
 
 ## Entry points
 
@@ -24,9 +24,9 @@ stream design below is the intended route for them.
 ## Streams, signatures, and full-state artifacts
 
 A job's data flows as named **streams**, each with a type (`StreamType`: `chapter`,
-`memories`). For now a stream must be named after its type, so there is one
-stream per type; the name/type split exists so several streams of one type can
-be added later (see [follow-ups](memory-workflow-followups.md)).
+`memories`, `terms`, `conventions`). For now a loaded stream must be named after
+its type, so there is one stream per type; the name/type split exists so several
+streams of one type can be added later (see [follow-ups](memory-workflow-followups.md)).
 
 Job creation inserts a `load_inputs` stage at `stage_num` 0; the user's stages
 start at 1. The request's top-level `inputs` map (stream name → typed source,
@@ -95,6 +95,18 @@ Adding a stream type needs a `StreamType` value, a record class, a loader source
 case in `iter_initial_records`, and a declaration on each action that reads it.
 Group-level data (e.g. conventions) has no chapter; the current plan is to
 repeat it on each chapter's record rather than add a batch-level record.
+`TermsRecord` holds an exact source-form → translation map; `ConventionsRecord`
+holds category/title/rule/rationale entries. `TermsInput` and `ConventionsInput`
+each select a memory group independently. The loader snapshots pending/approved
+term mappings (excluding rejected source terms), filtered by exact substring
+matches in each pinned chapter, and pending/approved conventions of both
+categories repeated for every chapter. Empty results still produce records.
+The loader materializes the batch's pinned chapters once and reuses that list
+for each stream, reading each group's mappings/conventions once.
+Term retrieval lives in `actions/common/term_inputs.py`, alongside memory
+retrieval in `memory_inputs.py`; the loader checks
+each source group's novel ownership before reading it. No later stage declares
+these streams as inputs yet, so they pass through artifacts without entering prompts.
 
 Migration `a9d3e7c1b2f4` drops the per-batch snapshot column (the loader's output
 replaced it) and renames the task's provider request file column to

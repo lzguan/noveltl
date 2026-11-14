@@ -6,10 +6,9 @@ behavior is in [memory jobs](memory-jobs.md) and
 
 ## Conventions
 
-- **Chapter translation does not read term translations or conventions**
-  (`iter_batch_memories` is its only memory input). Wiring established
-  renderings, then conventions, into the translate prompt is what makes naming
-  and conventions output reach translated text.
+- **Chapter translation prompts do not consume term translations or conventions.**
+  The loader can snapshot both as streams; wiring those streams into the
+  translate prompt is what makes naming and conventions output reach translated text.
 - **Windowed schedules:** a params option compiled into the schedule queries,
   e.g. record N chapters, conventions, name N, so conventions cadence and stage
   barriers share one mechanism. Stages already run as job-wide barriers.

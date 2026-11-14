@@ -64,6 +64,21 @@ def test_each_port_links_to_the_stage_that_last_wrote_its_stream() -> None:
     assert chapter.source_type == "chapter" and not chapter.drops
 
 
+def test_new_loader_outputs_pass_through_stages_without_becoming_stage_inputs() -> None:
+    inputs = {
+        name: {"type": name, "memoryGroupId": MEMORIES["memories"]["memoryGroupId"]}
+        for name in ("terms", "conventions")
+    }
+    result = check(inputs, ["translate"])
+    assert [(port.stream, port.type) for port in result.stages[0].outputs] == [
+        ("chapter", "chapter"),
+        ("terms", "terms"),
+        ("conventions", "conventions"),
+    ]
+    assert [(end.stream, end.source) for end in result.ends] == [("chapter", 1), ("terms", 0), ("conventions", 0)]
+    assert links(result, 1) == {"chapter": ("linked", 0), "memories": ("absent", None)}
+
+
 def test_an_optional_port_without_a_producer_is_absent_not_broken() -> None:
     result = check({}, ["translate"])
     assert links(result, 1) == {"chapter": ("linked", 0), "memories": ("absent", None)}

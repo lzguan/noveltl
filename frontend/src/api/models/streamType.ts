@@ -11,4 +11,6 @@ export type StreamType = typeof StreamType[keyof typeof StreamType];
 export const StreamType = {
   chapter: 'chapter',
   memories: 'memories',
+  terms: 'terms',
+  conventions: 'conventions',
 } as const;

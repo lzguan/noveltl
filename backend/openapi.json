@@ -9278,6 +9278,27 @@
         ],
         "title": "ConventionRead"
       },
+      "ConventionsInput": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "conventions",
+            "title": "Type"
+          },
+          "memoryGroupId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Memorygroupid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "memoryGroupId"
+        ],
+        "title": "ConventionsInput"
+      },
       "CreateAutoLabels": {
         "properties": {
           "novelId": {
@@ -11240,6 +11261,60 @@
           }
         }
       },
+      "MemoriesInput": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "memories",
+            "title": "Type"
+          },
+          "memoryGroupId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Memorygroupid"
+          },
+          "pluginNames": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PluginName"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pluginnames"
+          },
+          "memoryTypes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MemoryType"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memorytypes"
+          },
+          "excludeCurrentChapter": {
+            "type": "boolean",
+            "title": "Excludecurrentchapter",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "memoryGroupId"
+        ],
+        "title": "MemoriesInput"
+      },
       "Memory": {
         "properties": {
           "memoryId": {
@@ -12692,7 +12767,9 @@
         "type": "string",
         "enum": [
           "chapter",
-          "memories"
+          "memories",
+          "terms",
+          "conventions"
         ]
       },
       "StringData": {
@@ -12881,6 +12958,27 @@
           "updatedAt"
         ],
         "title": "TermTranslationRead"
+      },
+      "TermsInput": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "terms",
+            "title": "Type"
+          },
+          "memoryGroupId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Memorygroupid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "memoryGroupId"
+        ],
+        "title": "TermsInput"
       },
       "TextOp": {
         "properties": {
@@ -13230,58 +13328,25 @@
         "title": "TranslationControlResult"
       },
       "TranslationInput": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "memories",
-            "title": "Type"
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/MemoriesInput"
           },
-          "memoryGroupId": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Memorygroupid"
+          {
+            "$ref": "#/components/schemas/TermsInput"
           },
-          "pluginNames": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/PluginName"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pluginnames"
-          },
-          "memoryTypes": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/MemoryType"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Memorytypes"
-          },
-          "excludeCurrentChapter": {
-            "type": "boolean",
-            "title": "Excludecurrentchapter",
-            "default": true
+          {
+            "$ref": "#/components/schemas/ConventionsInput"
           }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "type",
-          "memoryGroupId"
         ],
-        "title": "MemoriesInput"
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "conventions": "#/components/schemas/ConventionsInput",
+            "memories": "#/components/schemas/MemoriesInput",
+            "terms": "#/components/schemas/TermsInput"
+          }
+        }
       },
       "TranslationInputPort": {
         "properties": {

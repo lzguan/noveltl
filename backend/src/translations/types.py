@@ -4,7 +4,7 @@ from enum import StrEnum
 from typing import Literal
 from uuid import UUID
 
-type StreamType = Literal["chapter", "memories"]
+type StreamType = Literal["chapter", "memories", "terms", "conventions"]
 type DataT = frozenset[StreamType]
 type ActionType = Mapping[str, StreamType]
 type ActionName = Literal["load_inputs", "prune_memories", "translate"]

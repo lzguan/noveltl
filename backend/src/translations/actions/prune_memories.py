@@ -78,7 +78,7 @@ def prepare(context: ActionTaskContext) -> None:
         for record in select_streams(resolve_inputs(context, store, stage, types.before), types.signature.inputs):
             if isinstance(record, ChapterRecord):
                 chapters[record.chapter_id] = record
-            else:
+            elif isinstance(record, MemoriesRecord):
                 candidates[record.chapter_id] = record
             if record.chapter_id not in chapters or record.chapter_id not in candidates:
                 continue

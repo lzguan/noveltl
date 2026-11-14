@@ -8,13 +8,16 @@ from sqlalchemy.orm import Session
 from src.files.access import fetch_file
 from src.files.storage import ObjectStore
 from src.memory.models import MemoryGroup
+from src.memory.plugins.conventions.access import read_conventions
+from src.memory.types import ReviewStatus
 from src.novels.models import Chapter, ChapterContent
 from src.translations.actions.actions import ActionTaskContext
 from src.translations.actions.common.memory_inputs import iter_batch_memories
+from src.translations.actions.common.term_inputs import read_term_translation_map
 from src.translations.jsonl import iter_translation_records
 from src.translations.models import TranslationJob, TranslationJobChapter, TranslationStage, TranslationTask
-from src.translations.records import ChapterRecord, TranslationRecord
-from src.translations.schemas import MemoriesInput, TranslationInput, stage_config
+from src.translations.records import ChapterRecord, ConventionContent, ConventionsRecord, TermsRecord, TranslationRecord
+from src.translations.schemas import ConventionsInput, MemoriesInput, TermsInput, TranslationInput, stage_config
 from src.translations.types import (
     ActionSignature,
     ActionType,
@@ -42,26 +45,27 @@ def iter_initial_records(
     context: ActionTaskContext, stage: TranslationStage, inputs: Mapping[str, TranslationInput]
 ) -> Iterator[TranslationRecord]:
     db, batch_id = context.db, context.task.batch_id
-    rows = db.execute(
-        select(TranslationJobChapter.chapter_id, ChapterContent.chapter_content_text)
-        .join(ChapterContent, ChapterContent.chapter_content_id == TranslationJobChapter.source_chapter_content_id)
-        .join(Chapter, Chapter.chapter_id == TranslationJobChapter.chapter_id)
-        .where(TranslationJobChapter.job_id == stage.job_id, TranslationJobChapter.batch_id == batch_id)
-        .order_by(Chapter.chapter_num, Chapter.chapter_id)
-        .execution_options(yield_per=100)
+    chapters = list(
+        db.execute(
+            select(TranslationJobChapter.chapter_id, ChapterContent.chapter_content_text)
+            .join(ChapterContent, ChapterContent.chapter_content_id == TranslationJobChapter.source_chapter_content_id)
+            .join(Chapter, Chapter.chapter_id == TranslationJobChapter.chapter_id)
+            .where(TranslationJobChapter.job_id == stage.job_id, TranslationJobChapter.batch_id == batch_id)
+            .order_by(Chapter.chapter_num, Chapter.chapter_id)
+        )
     )
-    for chapter_id, content in rows:
+    for chapter_id, content in chapters:
         yield ChapterRecord(chapter_id=chapter_id, stream="chapter", payload=content)
     for name, source in inputs.items():
+        group = db.scalar(
+            select(MemoryGroup.memory_group_id)
+            .join(TranslationJob, TranslationJob.novel_id == MemoryGroup.novel_id)
+            .where(TranslationJob.job_id == stage.job_id, MemoryGroup.memory_group_id == source.memory_group_id)
+        )
+        if group is None:
+            raise ValueError("Memory group does not belong to the translation job's novel")
         match source:
             case MemoriesInput():
-                group = db.scalar(
-                    select(MemoryGroup.memory_group_id)
-                    .join(TranslationJob, TranslationJob.novel_id == MemoryGroup.novel_id)
-                    .where(TranslationJob.job_id == stage.job_id, MemoryGroup.memory_group_id == source.memory_group_id)
-                )
-                if group is None:
-                    raise ValueError("Memory group does not belong to the translation job's novel")
                 yield from iter_batch_memories(
                     db,
                     job_id=stage.job_id,
@@ -72,6 +76,28 @@ def iter_initial_records(
                     exclude_current_chapter=source.exclude_current_chapter,
                     stream=name,
                 )
+            case TermsInput():
+                translations = read_term_translation_map(db, source.memory_group_id)
+                for chapter_id, content in chapters:
+                    yield TermsRecord(
+                        chapter_id=chapter_id,
+                        stream=name,
+                        payload={term: translation for term, translation in translations.items() if term in content},
+                    )
+            case ConventionsInput():
+                conventions = [
+                    ConventionContent(
+                        category=convention.category,
+                        title=convention.title,
+                        rule=convention.rule,
+                        rationale=convention.rationale,
+                    )
+                    for convention in read_conventions(
+                        db, source.memory_group_id, review_statuses=[ReviewStatus.PENDING, ReviewStatus.APPROVED]
+                    )
+                ]
+                for chapter_id, _ in chapters:
+                    yield ConventionsRecord(chapter_id=chapter_id, stream=name, payload=conventions)
 
 
 @dataclass(frozen=True)

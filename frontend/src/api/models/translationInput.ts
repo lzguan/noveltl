@@ -4,13 +4,8 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { MemoryType } from './memoryType';
-import type { PluginName } from './pluginName';
+import type { ConventionsInput } from './conventionsInput';
+import type { MemoriesInput } from './memoriesInput';
+import type { TermsInput } from './termsInput';
 
-export interface TranslationInput {
-  excludeCurrentChapter?: boolean;
-  memoryGroupId: string;
-  memoryTypes?: MemoryType[] | null;
-  pluginNames?: PluginName[] | null;
-  type: 'memories';
-}
+export type TranslationInput = MemoriesInput | TermsInput | ConventionsInput;

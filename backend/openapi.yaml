@@ -575,6 +575,22 @@ components:
       - updatedAt
       title: ConventionRead
       type: object
+    ConventionsInput:
+      additionalProperties: false
+      properties:
+        memoryGroupId:
+          format: uuid
+          title: Memorygroupid
+          type: string
+        type:
+          const: conventions
+          title: Type
+          type: string
+      required:
+      - type
+      - memoryGroupId
+      title: ConventionsInput
+      type: object
     CreateAutoLabels:
       description: "Pydantic schema for creating a new autolabel run.\n\nAttributes:\n\
         \    novel_id: UUID of novel to create auto labels for.\n    params: Parameters\
@@ -2004,6 +2020,40 @@ components:
       - $ref: '#/components/schemas/IntData'
       - $ref: '#/components/schemas/FloatData'
       - $ref: '#/components/schemas/BoolData'
+    MemoriesInput:
+      additionalProperties: false
+      properties:
+        excludeCurrentChapter:
+          default: true
+          title: Excludecurrentchapter
+          type: boolean
+        memoryGroupId:
+          format: uuid
+          title: Memorygroupid
+          type: string
+        memoryTypes:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/MemoryType'
+            type: array
+          - type: 'null'
+          title: Memorytypes
+        pluginNames:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/PluginName'
+            type: array
+          - type: 'null'
+          title: Pluginnames
+        type:
+          const: memories
+          title: Type
+          type: string
+      required:
+      - type
+      - memoryGroupId
+      title: MemoriesInput
+      type: object
     Memory:
       description: Memory schema
       properties:
@@ -3087,6 +3137,8 @@ components:
       enum:
       - chapter
       - memories
+      - terms
+      - conventions
       type: string
     StringData:
       additionalProperties: false
@@ -3229,6 +3281,22 @@ components:
       - createdAt
       - updatedAt
       title: TermTranslationRead
+      type: object
+    TermsInput:
+      additionalProperties: false
+      properties:
+        memoryGroupId:
+          format: uuid
+          title: Memorygroupid
+          type: string
+        type:
+          const: terms
+          title: Type
+          type: string
+      required:
+      - type
+      - memoryGroupId
+      title: TermsInput
       type: object
     TextOp:
       description: "Pydantic schema to update text content of a chapter.\n\nAttributes:\n\
@@ -3491,39 +3559,16 @@ components:
       title: TranslationControlResult
       type: object
     TranslationInput:
-      additionalProperties: false
-      properties:
-        excludeCurrentChapter:
-          default: true
-          title: Excludecurrentchapter
-          type: boolean
-        memoryGroupId:
-          format: uuid
-          title: Memorygroupid
-          type: string
-        memoryTypes:
-          anyOf:
-          - items:
-              $ref: '#/components/schemas/MemoryType'
-            type: array
-          - type: 'null'
-          title: Memorytypes
-        pluginNames:
-          anyOf:
-          - items:
-              $ref: '#/components/schemas/PluginName'
-            type: array
-          - type: 'null'
-          title: Pluginnames
-        type:
-          const: memories
-          title: Type
-          type: string
-      required:
-      - type
-      - memoryGroupId
-      title: MemoriesInput
-      type: object
+      discriminator:
+        mapping:
+          conventions: '#/components/schemas/ConventionsInput'
+          memories: '#/components/schemas/MemoriesInput'
+          terms: '#/components/schemas/TermsInput'
+        propertyName: type
+      oneOf:
+      - $ref: '#/components/schemas/MemoriesInput'
+      - $ref: '#/components/schemas/TermsInput'
+      - $ref: '#/components/schemas/ConventionsInput'
     TranslationInputPort:
       properties:
         drops:

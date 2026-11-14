@@ -3,7 +3,7 @@ from uuid import UUID
 
 import pytest
 
-from src.translations.records import ChapterRecord, MemoriesRecord, TranslationRecord
+from src.translations.records import ChapterRecord, ConventionsRecord, MemoriesRecord, TermsRecord, TranslationRecord
 from src.translations.types import ActionType
 from src.translations.validation import validate_output_records
 
@@ -51,6 +51,19 @@ def test_stream_names_are_checked_against_their_declared_type() -> None:
     assert list(validate_output_records([record], chapter_ids=[CHAPTER_A], output_type=renamed)) == [record]
     with pytest.raises(ValueError, match="Unexpected output stream: chapter"):
         list(validate_output_records([chapter(CHAPTER_A, "A")], chapter_ids=[CHAPTER_A], output_type=renamed))
+
+
+def test_terms_and_conventions_are_complete_typed_streams() -> None:
+    expected: ActionType = {"terms": "terms", "conventions": "conventions"}
+    records = [
+        TermsRecord(chapter_id=CHAPTER_A, stream="terms", payload={"白玫": "White Rose"}),
+        ConventionsRecord(chapter_id=CHAPTER_A, stream="conventions", payload=[]),
+    ]
+    assert list(validate_output_records(records, chapter_ids=[CHAPTER_A], output_type=expected)) == records
+    with pytest.raises(ValueError, match="Missing 1 output record.*conventions"):
+        list(validate_output_records(records[:1], chapter_ids=[CHAPTER_A], output_type=expected))
+    with pytest.raises(ValueError, match="Stream terms must hold conventions records, not terms"):
+        list(validate_output_records(records[:1], chapter_ids=[CHAPTER_A], output_type={"terms": "conventions"}))
 
 
 def test_missing_record_is_detected_at_exhaustion() -> None:

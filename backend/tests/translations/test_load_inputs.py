@@ -1,19 +1,25 @@
+from collections.abc import Callable
 from unittest.mock import Mock
 from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import Engine, event, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.files.models import StoredFile
 from src.memory.models import Memory, MemoryGroup
-from src.memory.types import Creator, MemoryType
+from src.memory.plugins.conventions.models import TranslationConvention
+from src.memory.plugins.conventions.types import ConventionCategory
+from src.memory.plugins.glossary.models import GlossaryTerm
+from src.memory.plugins.translations.models import TermTranslation
+from src.memory.types import Creator, MemoryType, ReviewStatus
+from src.novels.models import Chapter, ChapterContent
 from src.translations.actions.load_inputs import load
 from src.translations.celery_app import app
 from src.translations.jsonl import iter_translation_records
 from src.translations.models import TranslationJobChapter, TranslationStage, TranslationTask
-from src.translations.records import ChapterRecord, MemoriesRecord, TranslationRecord
+from src.translations.records import ChapterRecord, ConventionsRecord, MemoriesRecord, TermsRecord, TranslationRecord
 from src.translations.schemas import TranslationJobCreate
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationTaskStatus as State
@@ -58,6 +64,7 @@ def _run_loader(
     monkeypatch: pytest.MonkeyPatch,
     request: TranslationJobCreate,
     next_step: str,
+    before_load: Callable[[], None] | None = None,
 ) -> tuple[list[TranslationRecord], list[UUID], TranslationTask, Mock]:
     job_id = create_job(db, request)
     rows = db.execute(
@@ -77,6 +84,8 @@ def _run_loader(
     monkeypatch.setattr("src.translations.actions.load_inputs.get_object_store", lambda: store)
     monkeypatch.setattr(app.tasks[next_step], "apply_async", dispatch)
 
+    if before_load is not None:
+        before_load()
     load(loader.task_id)
 
     db.expire_all()
@@ -145,16 +154,18 @@ def test_creation_rejects_stages_whose_streams_the_job_does_not_load(sample_scen
         )
 
 
+@pytest.mark.parametrize("stream", ["memories", "terms", "conventions"])
 def test_loader_rejects_a_memory_group_from_another_novel(
     test_db: Session,
     sample_scenario: DatabaseScenario,
     testing_session_local: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
+    stream: str,
 ) -> None:
     # The service checks ownership at creation; the loader checks again in case the group moved since.
     group = _group(test_db, sample_scenario)
-    inputs = {"memories": {"type": "memories", "memory_group_id": str(group.memory_group_id)}}
-    request = _request(sample_scenario, {"action": "prune_memories", "config": {"model": "qwen-plus"}}, inputs)
+    inputs = {stream: {"type": stream, "memory_group_id": str(group.memory_group_id)}}
+    request = _request(sample_scenario, {"action": "translate", "config": {"model": "qwen-plus"}}, inputs)
     job_id = create_job(test_db, request)
     group.novel_id = sample_scenario.novels["novel_2"].novel_id
     test_db.commit()
@@ -173,3 +184,129 @@ def test_loader_rejects_a_memory_group_from_another_novel(
     test_db.expire_all()
     assert loader.output_file_id is None and loader.failed_at is not None
     assert not store.objects
+
+
+def test_loader_snapshots_usable_terms_for_pinned_text_and_global_conventions(
+    test_db: Session,
+    test_engine: Engine,
+    sample_scenario: DatabaseScenario,
+    testing_session_local: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    group = _group(test_db, sample_scenario)
+    source = sample_scenario.contents["chapter_1_v2"]
+    source.chapter_content_text = "Alpha Approved RejectedTerm RejectedMapping Unmapped"
+    chapter_id = source.chapter_id
+    other_group = MemoryGroup(novel_id=group.novel_id, memory_group_name="Other", memory_language="en")
+    second = Chapter(novel_id=group.novel_id, chapter_num=100, chapter_title="No matches", chapter_is_public=False)
+    test_db.add_all([other_group, second])
+    test_db.flush()
+    second_id = second.chapter_id
+    test_db.add(ChapterContent(chapter_id=second_id, chapter_content_version=1, chapter_content_text="No matches"))
+    for name, term_status, translation_status in [
+        ("Alpha", ReviewStatus.PENDING, ReviewStatus.PENDING),
+        ("Approved", ReviewStatus.APPROVED, ReviewStatus.APPROVED),
+        ("RejectedTerm", ReviewStatus.REJECTED, ReviewStatus.PENDING),
+        ("RejectedMapping", ReviewStatus.PENDING, ReviewStatus.REJECTED),
+        ("Absent", ReviewStatus.PENDING, ReviewStatus.PENDING),
+        ("NewOnly", ReviewStatus.PENDING, ReviewStatus.PENDING),
+    ]:
+        term = GlossaryTerm(memory_group_id=group.memory_group_id, term=name, review_status=term_status)
+        test_db.add(term)
+        test_db.flush()
+        test_db.add(
+            TermTranslation(
+                term_id=term.term_id,
+                translation=f"English {name}",
+                review_status=translation_status,
+                creator_type=Creator.USER,
+            )
+        )
+    test_db.add(GlossaryTerm(memory_group_id=group.memory_group_id, term="Unmapped"))
+    foreign_term = GlossaryTerm(memory_group_id=other_group.memory_group_id, term="Alpha")
+    test_db.add(foreign_term)
+    test_db.flush()
+    test_db.add(TermTranslation(term_id=foreign_term.term_id, translation="Wrong group", creator_type=Creator.USER))
+    for title, category, status, owner in [
+        ("Names", ConventionCategory.NAMING, ReviewStatus.PENDING, group),
+        ("Voice", ConventionCategory.STYLE, ReviewStatus.APPROVED, group),
+        ("Rejected", ConventionCategory.STYLE, ReviewStatus.REJECTED, group),
+        ("Foreign", ConventionCategory.NAMING, ReviewStatus.APPROVED, other_group),
+    ]:
+        test_db.add(
+            TranslationConvention(
+                memory_group_id=owner.memory_group_id,
+                category=category,
+                title=title,
+                rule=f"Rule for {title}",
+                rationale=None,
+                review_status=status,
+                creator_type=Creator.USER,
+            )
+        )
+    test_db.flush()
+    inputs = {
+        stream: {"type": stream, "memory_group_id": str(group.memory_group_id)} for stream in ("terms", "conventions")
+    }
+    request = _request(sample_scenario, {"action": "translate", "config": {"model": "qwen-plus"}}, inputs)
+
+    def edit_after_pinning() -> None:
+        test_db.add(ChapterContent(chapter_id=chapter_id, chapter_content_version=3, chapter_content_text="NewOnly"))
+        test_db.commit()
+
+    chapter_reads: list[str] = []
+
+    def record_query(conn, cursor, statement, parameters, context, executemany):
+        if "chapter_content_text" in statement and "source_chapter_content_id" in statement:
+            chapter_reads.append(statement)
+
+    event.listen(test_engine, "before_cursor_execute", record_query)
+    try:
+        records, chapter_ids, following, _ = _run_loader(
+            test_db,
+            testing_session_local,
+            monkeypatch,
+            request,
+            "src.translations.actions.translate.prepare",
+            edit_after_pinning,
+        )
+    finally:
+        event.remove(test_engine, "before_cursor_execute", record_query)
+    assert len(chapter_reads) == 1
+    assert {(record.chapter_id, record.stream) for record in records} == {
+        (chapter, stream) for chapter in chapter_ids for stream in ("chapter", "terms", "conventions")
+    }
+    terms = {record.chapter_id: record.payload for record in records if isinstance(record, TermsRecord)}
+    assert terms[chapter_id] == {"Alpha": "English Alpha", "Approved": "English Approved"}
+    assert terms[second_id] == {}
+    conventions = [record for record in records if isinstance(record, ConventionsRecord)]
+    assert len(conventions) == len(chapter_ids)
+    for record in conventions:
+        assert {(item.category, item.title, item.rule, item.rationale) for item in record.payload} == {
+            (ConventionCategory.NAMING, "Names", "Rule for Names", None),
+            (ConventionCategory.STYLE, "Voice", "Rule for Voice", None),
+        }
+    assert following.status == State.READY
+
+
+@pytest.mark.parametrize("stream", ["terms", "conventions"])
+def test_loader_emits_empty_records_for_an_independently_enabled_stream(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+    testing_session_local: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+    stream: str,
+) -> None:
+    group = _group(test_db, sample_scenario)
+    request = _request(
+        sample_scenario,
+        {"action": "translate", "config": {"model": "qwen-plus"}},
+        {stream: {"type": stream, "memory_group_id": str(group.memory_group_id)}},
+    )
+    records, chapter_ids, _, _ = _run_loader(
+        test_db, testing_session_local, monkeypatch, request, "src.translations.actions.translate.prepare"
+    )
+    assert {(record.chapter_id, record.stream) for record in records} == {
+        (chapter, name) for chapter in chapter_ids for name in ("chapter", stream)
+    }
+    assert all(not record.payload for record in records if record.stream == stream)

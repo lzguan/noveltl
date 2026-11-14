@@ -131,7 +131,21 @@ class MemoriesInput(Model):
     exclude_current_chapter: bool = True
 
 
-type TranslationInput = MemoriesInput
+class TermsInput(Model):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["terms"]
+    memory_group_id: uuid.UUID
+
+
+class ConventionsInput(Model):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["conventions"]
+    memory_group_id: uuid.UUID
+
+
+type TranslationInput = Annotated[MemoriesInput | TermsInput | ConventionsInput, Field(discriminator="type")]
 
 
 class LoadInputsConfig(Model):

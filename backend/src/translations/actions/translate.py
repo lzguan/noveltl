@@ -61,10 +61,11 @@ def _pair(
     for record in records:
         if isinstance(record, MemoriesRecord):
             memories[record.chapter_id] = record
-        elif with_memories:
-            chapters[record.chapter_id] = record
-        else:
-            yield record, None
+        elif isinstance(record, ChapterRecord):
+            if with_memories:
+                chapters[record.chapter_id] = record
+            else:
+                yield record, None
         if record.chapter_id in chapters and record.chapter_id in memories:
             yield chapters.pop(record.chapter_id), memories.pop(record.chapter_id)
     if chapters or (with_memories and memories):

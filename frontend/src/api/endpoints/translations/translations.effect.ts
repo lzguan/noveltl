@@ -85,7 +85,7 @@ export const createTranslationJobsPostBodyConfigEndChapterNumOneMin = 0;
 
 export const createTranslationJobsPostBodyConfigStartChapterNumOneMin = 0;
 
-export const createTranslationJobsPostBodyInputsExcludeCurrentChapterDefault = true;
+export const createTranslationJobsPostBodyInputsOneExcludeCurrentChapterDefault = true;
 export const createTranslationJobsPostBodyStagesMax = 5;
 
 
@@ -96,13 +96,19 @@ export const CreateTranslationJobsPostBody = S.Struct({
   "endChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(createTranslationJobsPostBodyConfigEndChapterNumOneMin)), S.Null])),
   "startChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(createTranslationJobsPostBodyConfigStartChapterNumOneMin)), S.Null]))
 }),
-  "inputs": S.optional(S.Record(S.String, S.Struct({
-  "excludeCurrentChapter": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(createTranslationJobsPostBodyInputsExcludeCurrentChapterDefault))),
+  "inputs": S.optional(S.Record(S.String, S.Union([S.Struct({
+  "excludeCurrentChapter": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(createTranslationJobsPostBodyInputsOneExcludeCurrentChapterDefault))),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryTypes": S.optional(S.Union([S.Array(S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null])),
   "pluginNames": S.optional(S.Union([S.Array(S.Literals(['glossary', 'continuity'])), S.Null])),
-  "type": S.Literal("memories")
-}))),
+  "type": S.Literals(['memories'])
+}), S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "type": S.Literals(['terms'])
+}), S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "type": S.Literals(['conventions'])
+})]))),
   "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "stages": S.Array(S.Struct({
   "action": S.String,
@@ -147,7 +153,7 @@ export const checkTranslationJobsCheckPostBodyConfigEndChapterNumOneMin = 0;
 
 export const checkTranslationJobsCheckPostBodyConfigStartChapterNumOneMin = 0;
 
-export const checkTranslationJobsCheckPostBodyInputsExcludeCurrentChapterDefault = true;
+export const checkTranslationJobsCheckPostBodyInputsOneExcludeCurrentChapterDefault = true;
 export const checkTranslationJobsCheckPostBodyStagesMax = 5;
 
 
@@ -158,13 +164,19 @@ export const CheckTranslationJobsCheckPostBody = S.Struct({
   "endChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(checkTranslationJobsCheckPostBodyConfigEndChapterNumOneMin)), S.Null])),
   "startChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(checkTranslationJobsCheckPostBodyConfigStartChapterNumOneMin)), S.Null]))
 }),
-  "inputs": S.optional(S.Record(S.String, S.Struct({
-  "excludeCurrentChapter": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(checkTranslationJobsCheckPostBodyInputsExcludeCurrentChapterDefault))),
+  "inputs": S.optional(S.Record(S.String, S.Union([S.Struct({
+  "excludeCurrentChapter": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(checkTranslationJobsCheckPostBodyInputsOneExcludeCurrentChapterDefault))),
   "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "memoryTypes": S.optional(S.Union([S.Array(S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null])),
   "pluginNames": S.optional(S.Union([S.Array(S.Literals(['glossary', 'continuity'])), S.Null])),
-  "type": S.Literal("memories")
-}))),
+  "type": S.Literals(['memories'])
+}), S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "type": S.Literals(['terms'])
+}), S.Struct({
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "type": S.Literals(['conventions'])
+})]))),
   "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "stages": S.optional(S.Array(S.Struct({
   "action": S.String,
@@ -180,7 +192,7 @@ export const CheckTranslationJobsCheckPost200Response = S.Struct({
   "ends": S.Array(S.Struct({
   "source": S.Number,
   "stream": S.String,
-  "type": S.Literals(['chapter', 'memories'])
+  "type": S.Literals(['chapter', 'memories', 'terms', 'conventions'])
 })),
   "stages": S.Array(S.Struct({
   "action": S.String,
@@ -189,13 +201,13 @@ export const CheckTranslationJobsCheckPost200Response = S.Struct({
   "link": S.Literals(['linked', 'broken', 'incompatible', 'absent']),
   "optional": S.Boolean,
   "source": S.Union([S.Number, S.Null]),
-  "sourceType": S.Union([S.Literals(['chapter', 'memories']), S.Null]),
+  "sourceType": S.Union([S.Literals(['chapter', 'memories', 'terms', 'conventions']), S.Null]),
   "stream": S.String,
-  "type": S.Literals(['chapter', 'memories'])
+  "type": S.Literals(['chapter', 'memories', 'terms', 'conventions'])
 })),
   "outputs": S.Array(S.Struct({
   "stream": S.String,
-  "type": S.Literals(['chapter', 'memories'])
+  "type": S.Literals(['chapter', 'memories', 'terms', 'conventions'])
 })),
   "warning": S.Union([S.String, S.Null])
 }))

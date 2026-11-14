@@ -5,10 +5,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type DataName = typeof DataName[keyof typeof DataName];
+export type MemoriesInputType = typeof MemoriesInputType[keyof typeof MemoriesInputType];
 
 
-export const DataName = {
-  chapter: 'chapter',
+export const MemoriesInputType = {
   memories: 'memories',
 } as const;

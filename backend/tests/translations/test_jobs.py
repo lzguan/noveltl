@@ -60,6 +60,7 @@ def test_create_job_builds_batched_pipeline_from_latest_chapter_contents(test_db
     test_db.add_all([old_content, *latest_contents])
     test_db.commit()
 
+    group_id = uuid4()
     request = TranslationJobCreate(
         novel_id=novel.novel_id,
         config={
@@ -67,10 +68,10 @@ def test_create_job_builds_batched_pipeline_from_latest_chapter_contents(test_db
             "end_chapter_num": 5,
             "batch_size": 2,
         },
+        inputs={"memories": {"type": "memories", "memory_group_id": group_id}},
         stages=[
-            {"action": "prune_memories", "config": {"model": "qwen-plus", "memory_group_id": uuid4()}},
-            {"action": "combine_chapter"},
-            {"action": "translate_with_memories", "config": {"model": "qwen-plus"}},
+            {"action": "prune_memories", "config": {"model": "qwen-plus"}},
+            {"action": "translate", "config": {"model": "qwen-plus"}},
         ],
     )
     job_id = create_job(test_db, request)
@@ -87,10 +88,12 @@ def test_create_job_builds_batched_pipeline_from_latest_chapter_contents(test_db
         select(TranslationStage).where(TranslationStage.job_id == job_id).order_by(TranslationStage.stage_num)
     ).all()
     assert [(stage.stage_num, stage.action) for stage in stages] == [
-        (0, "prune_memories"),
-        (1, "combine_chapter"),
-        (2, "translate_with_memories"),
+        (0, "load_inputs"),
+        (1, "prune_memories"),
+        (2, "translate"),
     ]
+    # The job's input streams are stored on the loader stage, not in the job config.
+    assert stages[0].config["inputs"]["memories"]["memory_group_id"] == str(group_id)
 
     batches = test_db.scalars(
         select(TranslationBatch).where(TranslationBatch.job_id == job_id).order_by(TranslationBatch.batch_num)

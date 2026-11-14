@@ -25,7 +25,7 @@ def parse_memory_selection(result: BatchItemResult[TranslationDataKey]) -> Memor
     """Parse a JSON integer array; chapter identity comes only from the request key."""
     if isinstance(result, BatchItemFailure):
         raise ValueError(f"Memory selection failed for {result.key}: {result.error}")
-    if result.key.data_name != "memories":
+    if result.key.stream != "memories":
         raise ValueError("Memory selection requires a memories key")
     return MemorySelection(result.key.chapter_id, _indices_adapter.validate_json(result.text))
 
@@ -40,6 +40,7 @@ def _select(record: MemoriesRecord, selection: MemorySelection) -> MemoriesRecor
         indices.add(index)
     return MemoriesRecord(
         chapter_id=record.chapter_id,
+        stream=record.stream,
         payload=[memory for index, memory in enumerate(record.payload) if index in indices],
     )
 

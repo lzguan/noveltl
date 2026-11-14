@@ -6,10 +6,9 @@ behavior is in [memory jobs](memory-jobs.md) and
 
 ## Conventions
 
-- **Chapter translation does not read term translations or conventions**
-  (`iter_batch_memories` is its only memory input). Wiring established
-  renderings, then conventions, into the translate prompt is what makes naming
-  and conventions output reach translated text.
+- **Evaluate chapter-translation adherence to terms and conventions.** Both
+  streams now reach translation prompts; live model adherence and translation
+  quality remain unverified by the deterministic pipeline tests.
 - **Windowed schedules:** a params option compiled into the schedule queries,
   e.g. record N chapters, conventions, name N, so conventions cadence and stage
   barriers share one mechanism. Stages already run as job-wide barriers.
@@ -79,3 +78,28 @@ Publication is last write wins, so a review or edit made during a run is
 overwritten (approvals revert, guarded convention/translation updates apply
 unconditionally). The user accepts this until a merge policy is chosen
 (2026-11-12); do not re-raise it as a defect.
+
+## Existing partial translations as input
+
+Considered and deferred by the user (2026-11-13). Three distinct uses: earlier
+translated chapters as a style/consistency reference for chapter translation; a
+rough translation of the same chapter as a draft to revise; and source/translation
+alignment as evidence for term naming (memory side, feeding the planned `terms`
+stream). The first two are extra translation-job input streams of type `chapter`
+under another name, i.e. the first case needing stream names distinct from types.
+Unverified: how translated novels map chapter-to-chapter onto their source work.
+
+## Recording as structured output
+
+Considered 2026-11-14; the user prefers to leave tool-based recording as is.
+The appeal is one request per chapter (batch-API eligible, one atomic write,
+a single diffable artifact per chapter). The user's concerns: shadow workspaces
+already solve the transaction problem and should stay until shown to be a
+liability, and a single schema covering every memory kind is unlikely to be
+filled reliably by small models. A structured stage would still stage through
+workspaces, and would need per-chapter retrieval of relevant terms/memories with
+handles, since on-demand reads disappear. If recording cost becomes the
+bottleneck, the proposed experiment is one narrow pass (e.g. term extraction)
+compared against tool-based output on already-recorded chapters, not a single
+large schema. Unmeasured: how many requests and read-tool calls recording uses
+per chapter today (the worker's result log records both).

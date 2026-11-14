@@ -13,8 +13,10 @@ import type {
   TranslationControlResult,
   TranslationJobCreateRequest,
   TranslationJobCreated,
+  TranslationJobDraft,
   TranslationJobPage,
-  TranslationJobRead
+  TranslationJobRead,
+  TranslationPipelineCheck
 } from '../../models';
 
 import { customFetch } from '../../custom-fetch';
@@ -156,6 +158,62 @@ export const listActionsTranslationJobsActionsGet = async ( options?: Parameters
     method: 'GET'
 
 
+  }
+);}
+
+
+export type checkTranslationJobsCheckPostResponse200 = {
+  data: TranslationPipelineCheck
+  status: 200
+}
+
+export type checkTranslationJobsCheckPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type checkTranslationJobsCheckPostResponseSuccess = (checkTranslationJobsCheckPostResponse200) & {
+  headers: Headers;
+};
+export type checkTranslationJobsCheckPostResponseError = (checkTranslationJobsCheckPostResponse422) & {
+  headers: Headers;
+};
+
+export type checkTranslationJobsCheckPostResponse = (checkTranslationJobsCheckPostResponseSuccess | checkTranslationJobsCheckPostResponseError)
+
+export const getCheckTranslationJobsCheckPostUrl = () => {
+
+
+
+
+  return `/api/translation-jobs/check`
+}
+
+/**
+ * @summary Check
+ */
+export const checkTranslationJobsCheckPost = async (translationJobDraft: TranslationJobDraft, options?: Parameters<typeof customFetch>[1]): Promise<checkTranslationJobsCheckPostResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<checkTranslationJobsCheckPostResponse>(getCheckTranslationJobsCheckPostUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(translationJobDraft)
   }
 );}
 

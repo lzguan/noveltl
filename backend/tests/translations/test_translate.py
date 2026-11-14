@@ -12,8 +12,9 @@ from sqlalchemy.orm import Session, sessionmaker
 from src.files.access import create_file
 from src.files.models import StoredFile
 from src.memory.models import Memory, MemoryGroup
+from src.memory.plugins.conventions.types import ConventionCategory
+from src.memory.schemas import Memory as MemorySchema
 from src.memory.types import Creator, MemoryType
-from src.novels.models import ChapterContent
 from src.translations.actions.translate import finalize, poll, prepare, submit
 from src.translations.celery_app import app
 from src.translations.clients.batch_jobs import (
@@ -28,14 +29,23 @@ from src.translations.clients.registry import BATCH_CLIENT_FACTORIES
 from src.translations.codecs.batch_lines import BatchItem, BatchItemResult
 from src.translations.codecs.registry import MODEL_CODECS
 from src.translations.jsonl import encode_translation_record, iter_translation_records
-from src.translations.models import TranslationStage, TranslationTask
-from src.translations.records import ChapterRecord, MemoriesRecord
+from src.translations.models import TranslationJobChapter, TranslationStage, TranslationTask
+from src.translations.records import (
+    ChapterRecord,
+    ConventionContent,
+    ConventionsRecord,
+    MemoriesRecord,
+    TermsRecord,
+    TranslationRecord,
+)
 from src.translations.schemas import TranslationJobCreate
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationDataKey
 from src.translations.types import TranslationTaskStatus as State
 from test_support.test_data.scenarios import DatabaseScenario
 from tests.files.test_access import MemoryObjectStore
+
+LOADED_TEXT = "Loaded chapter"
 
 
 class RecordingCodec:
@@ -86,7 +96,50 @@ def recording_codec(monkeypatch: pytest.MonkeyPatch) -> RecordingCodec:
     return codec
 
 
-def make_job(db: Session, scenario: DatabaseScenario, *, later: bool, with_memories: bool = False) -> list[UUID]:
+@pytest.fixture
+def worker(testing_session_local: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch) -> MemoryObjectStore:
+    store = MemoryObjectStore()
+    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
+    monkeypatch.setattr("src.translations.actions.translate.get_object_store", lambda: store)
+    return store
+
+
+def make_job(
+    db: Session,
+    scenario: DatabaseScenario,
+    store: MemoryObjectStore,
+    *,
+    with_memories: bool = False,
+    with_terms: bool = False,
+    with_conventions: bool = False,
+    empty_context: bool = False,
+    loaded: bool = True,
+) -> tuple[UUID, list[TranslationRecord]]:
+    """Create a translate job whose loader already wrote the returned records, unless ``loaded`` is false."""
+    inputs = {}
+    memories: list[MemorySchema] = []
+    if with_memories or with_terms or with_conventions:
+        novel = scenario.novels["novel_1"]
+        group = MemoryGroup(novel_id=novel.novel_id, memory_group_name="Context", memory_language=novel.language_code)
+        db.add(group)
+        db.flush()
+        memory = Memory(
+            memory_group_id=group.memory_group_id,
+            memory_observed_in=scenario.contents["chapter_1_v2"].chapter_content_id,
+            memory_type=MemoryType.FACT,
+            memory_content="Use the name Alice.",
+            memory_start_num=0,
+            creator_type=Creator.USER,
+            plugin_name="continuity",
+        )
+        db.add(memory)
+        db.flush()
+        memories = [MemorySchema.model_validate(memory)]
+        inputs = {
+            name: {"type": name, "memory_group_id": str(group.memory_group_id)}
+            for name, enabled in (("memories", with_memories), ("terms", with_terms), ("conventions", with_conventions))
+            if enabled
+        }
     translate = {
         "action": "translate",
         "config": {
@@ -97,190 +150,171 @@ def make_job(db: Session, scenario: DatabaseScenario, *, later: bool, with_memor
             "max_output_tokens": 2048,
         },
     }
-    if with_memories:
-        novel = scenario.novels["novel_1"]
-        group = MemoryGroup(novel_id=novel.novel_id, memory_group_name="Context", memory_language=novel.language_code)
-        db.add(group)
-        db.flush()
-        db.add(
-            Memory(
-                memory_group_id=group.memory_group_id,
-                memory_observed_in=scenario.contents["chapter_1_v2"].chapter_content_id,
-                memory_type=MemoryType.FACT,
-                memory_content="Use the name Alice.",
-                memory_start_num=0,
-                creator_type=Creator.USER,
-                plugin_name="continuity",
+    job_id = create_job(
+        db,
+        TranslationJobCreate.model_validate(
+            {
+                "novel_id": scenario.novels["novel_1"].novel_id,
+                "config": {"batch_size": 10},
+                "inputs": inputs,
+                "stages": [translate],
+            }
+        ),
+    )
+    loader, task = db.scalars(
+        select(TranslationTask)
+        .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
+        .where(TranslationStage.job_id == job_id)
+        .order_by(TranslationStage.stage_num)
+    ).all()
+    records: list[TranslationRecord] = []
+    for chapter_id in db.scalars(
+        select(TranslationJobChapter.chapter_id).where(TranslationJobChapter.job_id == job_id)
+    ):
+        records.append(ChapterRecord(chapter_id=chapter_id, stream="chapter", payload=LOADED_TEXT))
+        if with_memories:
+            records.append(
+                MemoriesRecord(chapter_id=chapter_id, stream="memories", payload=[] if empty_context else memories)
             )
-        )
-        translate["action"] = "translate_with_memories"
-        translate["config"]["memory_group_id"] = str(group.memory_group_id)
-    request = TranslationJobCreate.model_validate(
-        {
-            "novel_id": scenario.novels["novel_1"].novel_id,
-            "config": {"batch_size": 10},
-            "stages": [{"action": "combine_chapter"}, translate] if later else [translate],
-        }
-    )
-    job_id = create_job(db, request)
-    return list(
-        db.scalars(
-            select(TranslationTask.task_id)
-            .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
-            .where(TranslationStage.job_id == job_id)
-            .order_by(TranslationStage.stage_num)
-        )
-    )
-
-
-@pytest.mark.parametrize("with_memories", [False, True])
-@pytest.mark.parametrize("later", [False, True])
-def test_prepare_uses_correct_input_and_persists_adapter_bytes(
-    test_db: Session,
-    sample_scenario: DatabaseScenario,
-    testing_session_local: sessionmaker[Session],
-    monkeypatch: pytest.MonkeyPatch,
-    later: bool,
-    with_memories: bool,
-    recording_codec: RecordingCodec,
-) -> None:
-    task_ids = make_job(test_db, sample_scenario, later=later, with_memories=with_memories)
-    chapter_id = sample_scenario.chapters["chapter_1"].chapter_id
-    store, codec = MemoryObjectStore(), recording_codec
-    expected_text = (
-        "Previously produced chapter" if later else sample_scenario.contents["chapter_1_v2"].chapter_content_text
-    )
-    # A later source revision must not change the job's pinned input.
-    test_db.add(ChapterContent(chapter_id=chapter_id, chapter_content_version=3, chapter_content_text="Too new"))
-    if later:
-        previous_file = create_file(
-            test_db,
+        if with_terms:
+            records.append(
+                TermsRecord(
+                    chapter_id=chapter_id, stream="terms", payload={} if empty_context else {"白玫": "White Rose"}
+                )
+            )
+        if with_conventions:
+            records.append(
+                ConventionsRecord(
+                    chapter_id=chapter_id,
+                    stream="conventions",
+                    payload=[]
+                    if empty_context
+                    else [
+                        ConventionContent(
+                            category=ConventionCategory.STYLE,
+                            title="Narration",
+                            rule="Keep a restrained narrative voice.",
+                            rationale=None,
+                        )
+                    ],
+                )
+            )
+    task.status = State.READY
+    if loaded:
+        stored = create_file(
+            db,
             store,
-            BytesIO(
-                encode_translation_record(MemoriesRecord(chapter_id=chapter_id, payload=[]))
-                + encode_translation_record(ChapterRecord(chapter_id=chapter_id, payload=expected_text))
-            ),
+            BytesIO(b"".join(encode_translation_record(record) for record in records)),
             storage_name="test",
             bucket="test",
             namespace="translations",
             content_type="application/jsonl",
         )
-        test_db.flush()
-        previous = test_db.get(TranslationTask, task_ids[0])
-        current = test_db.get(TranslationTask, task_ids[1])
-        assert previous is not None and current is not None
-        previous.output_file_id, previous.status = previous_file.file_id, State.COMPLETE
-        current.status = State.READY
-    test_db.commit()
+        db.flush()
+        loader.status, loader.output_file_id = State.COMPLETE, stored.file_id
+    db.commit()
+    return task.task_id, records
 
-    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
-    monkeypatch.setattr("src.translations.actions.translate.get_object_store", lambda: store)
-    prepare(task_ids[-1])
+
+@pytest.mark.parametrize("with_memories", [False, True])
+@pytest.mark.parametrize("with_terms", [False, True])
+@pytest.mark.parametrize("with_conventions", [False, True])
+def test_prepare_builds_requests_from_the_previous_stage_and_persists_adapter_bytes(
+    test_db: Session,
+    sample_scenario: DatabaseScenario,
+    worker: MemoryObjectStore,
+    with_memories: bool,
+    with_terms: bool,
+    with_conventions: bool,
+    recording_codec: RecordingCodec,
+) -> None:
+    task_id, records = make_job(
+        test_db,
+        sample_scenario,
+        worker,
+        with_memories=with_memories,
+        with_terms=with_terms,
+        with_conventions=with_conventions,
+    )
+    chapter_ids = {record.chapter_id for record in records}
+
+    prepare(task_id)
+
     test_db.expire_all()
-    task = test_db.get(TranslationTask, task_ids[-1])
-    assert task is not None and task.status == State.PREPARED and task.input_file_id is not None
+    task = test_db.get(TranslationTask, task_id)
+    assert task is not None and task.status == State.PREPARED and task.request_file_id is not None
     assert task.output_file_id is None and task.claim_token is None
-    stored = test_db.get(StoredFile, task.input_file_id)
+    stored = test_db.get(StoredFile, task.request_file_id)
     assert stored is not None
-    assert store.objects[stored.object_key] == b'{"encoded_by_adapter":true}\n'
-    assert len(codec.items) == 1
-    item = codec.items[0]
-    assert item.key == TranslationDataKey(chapter_id, "chapter")
-    assert item.request.model == "qwen-plus"
-    if with_memories:
-        assert item.request.messages[1].content.endswith(expected_text)
-        if later:
-            assert "Context memories:\n[]" in item.request.messages[1].content
-            assert "Alice" not in item.request.messages[1].content
-        else:
-            assert "Use the name Alice." in item.request.messages[1].content
-            assert '"index":0' in item.request.messages[1].content
-    else:
-        assert item.request.messages[1].content == expected_text
-    assert "French" in item.request.messages[0].content
-    assert "Preserve formal speech." in item.request.messages[0].content
-    assert item.request.temperature == 0.4 and item.request.max_output_tokens == 2048
-    assert bool(store.fetched_keys) == later
+    assert worker.objects[stored.object_key] == b'{"encoded_by_adapter":true}\n' * len(chapter_ids)
+    assert {item.key for item in recording_codec.items} == {
+        TranslationDataKey(chapter_id, "chapter") for chapter_id in chapter_ids
+    }
+    for item in recording_codec.items:
+        system, user = item.request.messages
+        assert item.request.model == "qwen-plus"
+        assert "French" in system.content and "Preserve formal speech." in system.content
+        assert ("context memories" in system.content) == with_memories
+        if with_memories:
+            assert user.content.endswith(LOADED_TEXT)
+            assert "Use the name Alice." in user.content and '"index":0' in user.content
+        elif not with_terms and not with_conventions:
+            assert user.content == LOADED_TEXT
+        assert ("Canonical term translations:" in user.content) == with_terms
+        assert ("Translation conventions:" in user.content) == with_conventions
+        assert ("canonical term translations" in system.content) == with_terms
+        assert ("naming and style conventions" in system.content) == with_conventions
+        if with_terms:
+            assert '"白玫": "White Rose"' in user.content
+        if with_conventions:
+            assert "Keep a restrained narrative voice." in user.content and '"category": "style"' in user.content
+        assert item.request.temperature == 0.4 and item.request.max_output_tokens == 2048
+    assert worker.fetched_keys
+
+
+def test_prepare_accepts_empty_enabled_context_streams(
+    test_db: Session, sample_scenario: DatabaseScenario, worker: MemoryObjectStore, recording_codec: RecordingCodec
+) -> None:
+    task_id, records = make_job(
+        test_db, sample_scenario, worker, with_memories=True, with_terms=True, with_conventions=True, empty_context=True
+    )
+    prepare(task_id)
+    assert len(recording_codec.items) == len({record.chapter_id for record in records})
+    for item in recording_codec.items:
+        assert (
+            item.request.messages[1].content
+            == f"Context memories:\n[]\n\nCanonical term translations:\n{{}}\n\nTranslation conventions:\n[]\n\nChapter to translate:\n{LOADED_TEXT}"
+        )
 
 
 def test_prepare_upload_failure_does_not_publish_input(
     test_db: Session,
     sample_scenario: DatabaseScenario,
-    testing_session_local: sessionmaker[Session],
-    monkeypatch: pytest.MonkeyPatch,
+    worker: MemoryObjectStore,
     recording_codec: RecordingCodec,
 ) -> None:
-    task_id = make_job(test_db, sample_scenario, later=False)[0]
-    store = MemoryObjectStore(upload_error=ConnectionError("upload failed"))
-    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
-    monkeypatch.setattr("src.translations.actions.translate.get_object_store", lambda: store)
+    task_id, _ = make_job(test_db, sample_scenario, worker)
+    worker.upload_error = ConnectionError("upload failed")
     with pytest.raises(ConnectionError, match="upload failed"):
         prepare(task_id)
     test_db.expire_all()
     task = test_db.get(TranslationTask, task_id)
-    assert task is not None and task.input_file_id is None and task.failed_at is not None
+    assert task is not None and task.request_file_id is None and task.failed_at is not None
     assert task.status == State.PREPARING
-    assert test_db.scalar(select(func.count()).select_from(StoredFile)) == 0
+    # Only the loader's file exists.
+    assert test_db.scalar(select(func.count()).select_from(StoredFile)) == 1
 
 
 def test_prepare_rejects_incomplete_previous_task(
     test_db: Session,
     sample_scenario: DatabaseScenario,
-    testing_session_local: sessionmaker[Session],
-    monkeypatch: pytest.MonkeyPatch,
+    worker: MemoryObjectStore,
     recording_codec: RecordingCodec,
 ) -> None:
-    task_id = make_job(test_db, sample_scenario, later=True)[-1]
-    task = test_db.get(TranslationTask, task_id)
-    assert task is not None
-    task.status = State.READY
-    test_db.commit()
-    store, codec = MemoryObjectStore(), recording_codec
-    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
-    monkeypatch.setattr("src.translations.actions.translate.get_object_store", lambda: store)
+    task_id, _ = make_job(test_db, sample_scenario, worker, loaded=False)
     with pytest.raises(ValueError, match="completed output artifact"):
         prepare(task_id)
-    assert not codec.items and not store.objects
-
-
-def test_memory_translation_rejects_foreign_group(
-    test_db: Session,
-    sample_scenario: DatabaseScenario,
-    testing_session_local: sessionmaker[Session],
-    monkeypatch: pytest.MonkeyPatch,
-    recording_codec: RecordingCodec,
-) -> None:
-    task_id = make_job(test_db, sample_scenario, later=False, with_memories=True)[0]
-    task = test_db.get(TranslationTask, task_id)
-    assert task is not None
-    stage = test_db.get(TranslationStage, task.stage_id)
-    assert stage is not None
-    group = test_db.get(MemoryGroup, UUID(stage.config["memory_group_id"]))
-    assert group is not None
-    group.novel_id = sample_scenario.novels["novel_2"].novel_id
-    test_db.commit()
-    store = MemoryObjectStore()
-    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
-    monkeypatch.setattr("src.translations.actions.translate.get_object_store", lambda: store)
-    with pytest.raises(ValueError, match="does not belong"):
-        prepare(task_id)
-    test_db.expire_all()
-    assert task.input_file_id is None and task.failed_at is not None
-    assert not store.objects and not recording_codec.items
-
-
-def test_memory_translation_requires_group_only_for_first_stage() -> None:
-    stage = {"action": "translate_with_memories", "config": {"model": "qwen-plus"}}
-    with pytest.raises(ValueError, match="requires memory_group_id"):
-        TranslationJobCreate.model_validate({"novel_id": UUID(int=1), "config": {"batch_size": 10}, "stages": [stage]})
-    request = TranslationJobCreate.model_validate(
-        {
-            "novel_id": UUID(int=1),
-            "config": {"batch_size": 10},
-            "stages": [{"action": "combine_chapter"}, stage],
-        }
-    )
-    assert len(request.stages) == 2
+    assert not recording_codec.items and not worker.objects
 
 
 @pytest.mark.parametrize("with_memories", [False, True])
@@ -290,6 +324,7 @@ def test_submission_and_polling_persist_progress_before_dispatch(
     sample_scenario: DatabaseScenario,
     testing_session_local: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
+    worker: MemoryObjectStore,
     recording_codec: RecordingCodec,
     queued_tasks: dict[str, Mock],
     failed: bool,
@@ -297,11 +332,10 @@ def test_submission_and_polling_persist_progress_before_dispatch(
 ) -> None:
     # Finalization/recovery rely on durable provider IDs, and pending polls must
     # release their claim so a fresh worker can perform the next check.
-    task_id = make_job(test_db, sample_scenario, later=False, with_memories=with_memories)[0]
-    client, store = FakeBatchClient(), MemoryObjectStore()
+    task_id, records = make_job(test_db, sample_scenario, worker, with_memories=with_memories)
+    requests = len({record.chapter_id for record in records})
+    client = FakeBatchClient()
     monkeypatch.setitem(BATCH_CLIENT_FACTORIES, "qwen-plus", lambda: client)
-    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
-    monkeypatch.setattr("src.translations.actions.translate.get_object_store", lambda: store)
     prepare(task_id)
     queued_tasks["submit"].assert_called_once_with((task_id,))
 
@@ -316,7 +350,7 @@ def test_submission_and_polling_persist_progress_before_dispatch(
     queued_tasks["poll"].side_effect = observe_poll_dispatch
     submit(task_id)
     submit(task_id)  # Duplicate delivery must not submit twice.
-    assert client.uploads == [b'{"encoded_by_adapter":true}\n']
+    assert client.uploads == [b'{"encoded_by_adapter":true}\n' * requests]
     queued_tasks["poll"].assert_called_once_with((task_id,))
     queued_tasks["poll"].reset_mock()
     poll(task_id)
@@ -361,53 +395,56 @@ def test_submission_and_polling_persist_progress_before_dispatch(
 
 @pytest.mark.parametrize("with_memories", [False, True])
 @pytest.mark.parametrize(
-    "failure", [None, "duplicate", "missing", "component", "foreign", "item", "malformed", "download", "upload"]
+    "failure", [None, "duplicate", "missing", "stream", "foreign", "item", "malformed", "download", "upload"]
 )
-def test_finalize_publishes_only_complete_normalized_output(
+def test_finalize_publishes_only_the_complete_state_after_translation(
     test_db: Session,
     sample_scenario: DatabaseScenario,
-    testing_session_local: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
+    worker: MemoryObjectStore,
     failure: str | None,
     with_memories: bool,
 ) -> None:
-    task_id = make_job(test_db, sample_scenario, later=False, with_memories=with_memories)[0]
-    chapter_id = sample_scenario.chapters["chapter_1"].chapter_id
+    task_id, records = make_job(test_db, sample_scenario, worker, with_memories=with_memories)
+    chapter_ids = sorted({record.chapter_id for record in records})
     task = test_db.get(TranslationTask, task_id)
     assert task is not None
     task.status = State.PROCESSED
     task.provider_output_id = "provider-output"
     test_db.commit()
-    wire: dict[str, object] = {
-        "custom_id": json.dumps(
-            {
-                "chapter_id": str(UUID(int=0) if failure == "foreign" else chapter_id),
-                "data_name": "memories" if failure == "component" else "chapter",
-            }
-        ),
-        "response": {
-            "status_code": 200,
-            "body": {
-                "choices": [
-                    {
-                        "index": 0,
-                        "message": {"role": "assistant", "content": "Texte traduit — français"},
-                        "finish_reason": "stop",
-                    },
-                ]
+
+    def line(chapter_id: UUID, stream: str = "chapter") -> bytes:
+        wire: dict[str, object] = {
+            "custom_id": json.dumps({"chapter_id": str(chapter_id), "stream": stream}),
+            "response": {
+                "status_code": 200,
+                "body": {
+                    "choices": [
+                        {
+                            "index": 0,
+                            "message": {"role": "assistant", "content": "Texte traduit — français"},
+                            "finish_reason": "stop",
+                        },
+                    ]
+                },
             },
-        },
-    }
-    if failure == "item":
-        wire["error"] = {"code": "failed", "message": "inference failed"}
-    line = json.dumps(wire, ensure_ascii=False).encode()
-    output = line
+        }
+        if failure == "item":
+            wire["error"] = {"code": "failed", "message": "inference failed"}
+        return json.dumps(wire, ensure_ascii=False).encode()
+
+    lines = [line(chapter_id) for chapter_id in chapter_ids]
     if failure == "duplicate":
-        output = line + b"\r\n" + line
+        lines.append(lines[0])
     elif failure == "missing":
-        output = b""
+        lines.pop()
+    elif failure == "stream":
+        lines[0] = line(chapter_ids[0], "memories")
+    elif failure == "foreign":
+        lines[0] = line(UUID(int=0))
     elif failure == "malformed":
-        output = b"not json"
+        lines[0] = b"not json"
+    output = b"\r\n".join(lines)
 
     class OutputClient(FakeBatchClient):
         def fetch_batch_output(self, output_id: BatchOutputId) -> Iterator[bytes]:
@@ -418,17 +455,16 @@ def test_finalize_publishes_only_complete_normalized_output(
             if failure == "download":
                 raise ConnectionError("download interrupted")
 
-    store = MemoryObjectStore(upload_error=ConnectionError("upload interrupted") if failure == "upload" else None)
+    if failure == "upload":
+        worker.upload_error = ConnectionError("upload interrupted")
     monkeypatch.setitem(BATCH_CLIENT_FACTORIES, "qwen-plus", OutputClient)
-    monkeypatch.setattr("src.translations.actions.celery_actions.SessionLocal", testing_session_local)
-    monkeypatch.setattr("src.translations.actions.translate.get_object_store", lambda: store)
     if failure is None:
         finalize(task_id)
     else:
         expected_error = {
             "duplicate": "Duplicate output",
             "missing": "Missing",
-            "component": "chapter keys",
+            "stream": "Unexpected output stream|must hold memories records",
             "foreign": "Unexpected chapter",
             "item": "inference failed",
             "malformed": "Invalid JSON",
@@ -443,13 +479,19 @@ def test_finalize_publishes_only_complete_normalized_output(
     assert task.claim_token is None and task.claim_expires_at is None
     if failure is not None:
         assert task.status == State.FINALIZING and task.failed_at is not None
-        assert task.output_file_id is None and not store.objects
-        assert test_db.scalar(select(func.count()).select_from(StoredFile)) == 0
-    else:
-        assert task.status == State.COMPLETE and task.failed_at is None
-        assert task.output_file_id is not None
-        stored = test_db.get(StoredFile, task.output_file_id)
-        assert stored is not None
-        assert list(iter_translation_records([store.objects[stored.object_key]])) == [
-            ChapterRecord(chapter_id=chapter_id, payload="Texte traduit — français"),
-        ]
+        # Only the loader's file exists.
+        assert task.output_file_id is None and len(worker.objects) == 1
+        assert test_db.scalar(select(func.count()).select_from(StoredFile)) == 1
+        return
+    assert task.status == State.COMPLETE and task.failed_at is None
+    assert task.output_file_id is not None
+    stored = test_db.get(StoredFile, task.output_file_id)
+    assert stored is not None
+    # The output is the full state: untouched streams copied forward, then the translated chapters.
+    assert list(iter_translation_records([worker.objects[stored.object_key]])) == [
+        *(record for record in records if isinstance(record, MemoriesRecord)),
+        *(
+            ChapterRecord(chapter_id=chapter_id, stream="chapter", payload="Texte traduit — français")
+            for chapter_id in chapter_ids
+        ),
+    ]

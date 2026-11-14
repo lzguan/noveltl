@@ -17,8 +17,6 @@ from src.translations.actions.actions import ActionTask
 from src.translations.actions.registry import ACTION_CALLBACKS, last_step, last_step_sql
 from src.translations.models import TranslationBatch, TranslationJob, TranslationStage, TranslationTask
 from src.translations.schemas import (
-    PruneMemoriesStageCreate,
-    TranslateWithMemoriesStageCreate,
     TranslationBatchRead,
     TranslationControlResult,
     TranslationJobCreate,
@@ -60,14 +58,7 @@ def create_translation_job(db: Session, user: User, request: TranslationJobCreat
         is None
     ):
         raise TranslationNotFoundError("Novel not found")
-    if request.stages[0].action == "combine_chapter":
-        raise ValueError("combine_chapter requires a preceding stage")
-    group_ids = {
-        stage.config.memory_group_id
-        for stage in request.stages
-        if isinstance(stage, (PruneMemoriesStageCreate, TranslateWithMemoriesStageCreate))
-        and stage.config.memory_group_id is not None
-    }
+    group_ids = {source.memory_group_id for source in request.inputs.values()}
     if group_ids:
         found = set(
             db.scalars(
@@ -121,23 +112,13 @@ def _restart_state_sql():
     )
     state = case(
         (
-            and_(state.in_((State.PREPARED, State.SUBMITTING)), TranslationTask.input_file_id.is_(None)),
+            and_(state.in_((State.PREPARED, State.SUBMITTING)), TranslationTask.request_file_id.is_(None)),
             str(State.READY),
         ),
         else_=state,
     )
-    return case(
-        (TranslationStage.action == "combine_chapter", TranslationTask.status),
-        (
-            and_(
-                TranslationStage.action == "prune_memories",
-                TranslationStage.stage_num == 0,
-                TranslationBatch.initial_file_id.is_(None),
-            ),
-            str(State.READY),
-        ),
-        else_=state,
-    )
+    # The loader has a single step, so its recorded status is already its restart state.
+    return case((TranslationStage.action == "load_inputs", TranslationTask.status), else_=state)
 
 
 def _cancel_statement(job_id: UUID, batch_id: UUID | None):
@@ -243,7 +224,7 @@ def _restart_statement(job_id: UUID, operation: Literal["start", "resume", "retr
             error=None,
             provider_batch_id=case((rebuild, None), else_=task.provider_batch_id),
             provider_output_id=case((rebuild, None), else_=task.provider_output_id),
-            input_file_id=case((rebuild, None), else_=task.input_file_id),
+            request_file_id=case((rebuild, None), else_=task.request_file_id),
             output_file_id=case((rebuild, None), else_=task.output_file_id),
         )
     poll_in = task.next_poll_at - func.clock_timestamp(type_=DateTime(timezone=True))

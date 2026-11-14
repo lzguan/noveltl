@@ -1,23 +1,21 @@
 """Prune persisted candidates through provider-neutral batch inference."""
 
 from collections.abc import Iterator
-from itertools import zip_longest
-from tempfile import TemporaryFile
 from time import monotonic
-from uuid import UUID
 
-from pydantic import TypeAdapter
-from sqlalchemy import select
-
-from src.files.access import create_file, fetch_file
-from src.files.config import file_store_settings
+from src.files.access import fetch_file
 from src.files.dependencies import get_object_store
-from src.memory.models import MemoryGroup
-from src.novels.models import Chapter, ChapterContent
 from src.translations.actions.actions import ActionTaskContext
 from src.translations.actions.celery_actions import CeleryActionCallbacks
-from src.translations.actions.common.memory_inputs import iter_batch_memories
+from src.translations.actions.common.files import store_lines
+from src.translations.actions.common.inputs import (
+    group_by_chapter,
+    resolve_inputs,
+    select_streams,
+    stage_types,
+)
 from src.translations.actions.common.memory_selections import apply_memory_selections, parse_memory_selection
+from src.translations.actions.common.outputs import output_records
 from src.translations.actions.common.prompts import format_memories
 from src.translations.actions.registry import ACTION_CALLBACKS
 from src.translations.celery_app import app
@@ -31,15 +29,9 @@ from src.translations.clients.batch_jobs import (
 from src.translations.clients.registry import get_batch_client
 from src.translations.codecs.batch_lines import BatchItem, InferenceMessage, InferenceRequest
 from src.translations.codecs.registry import get_codec
-from src.translations.jsonl import encode_translation_record, iter_jsonl_lines, iter_translation_records
-from src.translations.models import (
-    TranslationBatch,
-    TranslationJob,
-    TranslationJobChapter,
-    TranslationStage,
-    TranslationTask,
-)
-from src.translations.records import ChapterRecord, MemoriesRecord, TranslationRecord
+from src.translations.jsonl import encode_translation_record, iter_jsonl_lines
+from src.translations.models import TranslationStage
+from src.translations.records import ChapterRecord, MemoriesRecord
 from src.translations.schemas import PruneMemoriesConfig
 from src.translations.task_names import (
     PRUNE_MEMORIES_FINALIZE,
@@ -47,10 +39,7 @@ from src.translations.task_names import (
     PRUNE_MEMORIES_PREPARE,
     PRUNE_MEMORIES_SUBMIT,
 )
-from src.translations.tasks.claims import publish_initial_file
-from src.translations.types import ACTIONS, ActionName, DataT
 from src.translations.types import TranslationTaskStatus as State
-from src.translations.validation import validate_output_records
 
 callbacks = CeleryActionCallbacks(app, ACTION_CALLBACKS)
 _LEASE_SECONDS = 300
@@ -63,84 +52,6 @@ def _stage(context: ActionTaskContext) -> tuple[TranslationStage, PruneMemoriesC
     return stage, PruneMemoriesConfig.model_validate(stage.config)
 
 
-def _chapter_ids(context: ActionTaskContext, stage: TranslationStage) -> list[UUID]:
-    chapter_ids = list(
-        context.db.scalars(
-            select(TranslationJobChapter.chapter_id).where(
-                TranslationJobChapter.job_id == stage.job_id,
-                TranslationJobChapter.batch_id == context.task.batch_id,
-            )
-        )
-    )
-    if not chapter_ids:
-        raise ValueError("Cannot prune an empty translation batch")
-    return chapter_ids
-
-
-def _artifact(context: ActionTaskContext, stage: TranslationStage) -> tuple[UUID | None, DataT]:
-    if stage.stage_num == 0:
-        batch = context.db.get(TranslationBatch, context.task.batch_id)
-        if batch is None or batch.job_id != stage.job_id:
-            raise ValueError("Batch does not belong to the pruning job")
-        return batch.initial_file_id, ACTIONS["prune_memories"].input_types
-    previous, previous_stage = context.db.execute(
-        select(TranslationTask, TranslationStage)
-        .join(TranslationStage, TranslationStage.stage_id == TranslationTask.stage_id)
-        .where(
-            TranslationTask.batch_id == context.task.batch_id,
-            TranslationStage.job_id == stage.job_id,
-            TranslationStage.stage_num == stage.stage_num - 1,
-        )
-    ).one()
-    if previous.status != State.COMPLETE or previous.failed_at is not None or previous.output_file_id is None:
-        raise ValueError("Previous translation task must have a completed output artifact")
-    output_types = ACTIONS[TypeAdapter(ActionName).validate_python(previous_stage.action)].output_types
-    if not ACTIONS["prune_memories"].input_types <= output_types:
-        raise ValueError("Pruning requires chapter and memory inputs")
-    return previous.output_file_id, output_types
-
-
-def _database_inputs(
-    context: ActionTaskContext, stage: TranslationStage, config: PruneMemoriesConfig
-) -> Iterator[TranslationRecord]:
-    if config.memory_group_id is None:
-        raise ValueError("First-stage pruning requires memory_group_id")
-    group = context.db.scalar(
-        select(MemoryGroup.memory_group_id)
-        .join(TranslationJob, TranslationJob.novel_id == MemoryGroup.novel_id)
-        .where(TranslationJob.job_id == stage.job_id, MemoryGroup.memory_group_id == config.memory_group_id)
-    )
-    if group is None:
-        raise ValueError("Memory group does not belong to the translation job's novel")
-    rows = context.db.execute(
-        select(TranslationJobChapter.chapter_id, ChapterContent.chapter_content_text)
-        .join(ChapterContent, ChapterContent.chapter_content_id == TranslationJobChapter.source_chapter_content_id)
-        .join(Chapter, Chapter.chapter_id == TranslationJobChapter.chapter_id)
-        .where(TranslationJobChapter.job_id == stage.job_id, TranslationJobChapter.batch_id == context.task.batch_id)
-        .order_by(Chapter.chapter_num, Chapter.chapter_id)
-        .execution_options(yield_per=100)
-    )
-    memories = iter_batch_memories(
-        context.db,
-        job_id=stage.job_id,
-        batch_id=context.task.batch_id,
-        memory_group_id=config.memory_group_id,
-        plugin_names=config.plugin_names,
-        memory_types=config.memory_types,
-        exclude_current_chapter=config.exclude_current_chapter,
-    )
-    try:
-        for row, memory in zip_longest(rows, memories):
-            if row is not None:
-                chapter_id, content = row
-                yield ChapterRecord(chapter_id=chapter_id, payload=content)
-            if memory is not None:
-                yield memory
-    finally:
-        rows.close()
-        memories.close()
-
-
 @callbacks.new_func(
     expect=State.READY,
     during=State.PREPARING,
@@ -150,15 +61,7 @@ def _database_inputs(
 )
 def prepare(context: ActionTaskContext) -> None:
     stage, config = _stage(context)
-    chapter_ids = _chapter_ids(context, stage)
-    file_id, input_types = _artifact(context, stage)
     store, codec = get_object_store(), get_codec(config.model)
-    source = (
-        iter_translation_records(fetch_file(context.db, store, file_id))
-        if file_id is not None
-        else _database_inputs(context, stage, config)
-    )
-    records = validate_output_records(source, chapter_ids=chapter_ids, output_types=input_types)
     instructions = (
         "Select the context memories relevant to translating the supplied novel chapter. "
         "Keep memories useful for names, meaning, relationships, or narrative continuity. "
@@ -167,70 +70,32 @@ def prepare(context: ActionTaskContext) -> None:
     )
     if config.instructions:
         instructions += "\n\n" + config.instructions
-    chapters: dict[UUID, ChapterRecord] = {}
-    memories: dict[UUID, MemoriesRecord] = {}
-    renew_at = monotonic() + _LEASE_SECONDS / 3
-    with TemporaryFile(mode="w+b") as content, TemporaryFile(mode="w+b") as initial:
-        for record in records:
-            if file_id is None:
-                initial.write(encode_translation_record(record))
-            if isinstance(record, ChapterRecord):
-                chapters[record.chapter_id] = record
-            else:
-                memories[record.chapter_id] = record
-            if record.chapter_id in chapters and record.chapter_id in memories:
-                chapter = chapters.pop(record.chapter_id)
-                memory = memories.pop(record.chapter_id)
-                item = BatchItem(
-                    key=memory.key,
-                    request=InferenceRequest(
-                        model=config.model,
-                        messages=(
-                            InferenceMessage(role="system", content=instructions),
-                            InferenceMessage(
-                                role="user",
-                                content=f"Candidate memories:\n{format_memories(memory.payload)}\n\nChapter:\n{chapter.payload}",
-                            ),
+    types = stage_types(context.db, stage)
+
+    def requests() -> Iterator[bytes]:
+        records = select_streams(resolve_inputs(context, store, stage, types.before), types.signature.inputs)
+        for inputs in group_by_chapter(records, types.signature.inputs):
+            chapter, memories = inputs["chapter"], inputs["memories"]
+            if not isinstance(chapter, ChapterRecord) or not isinstance(memories, MemoriesRecord):
+                raise ValueError("Memory pruning requires chapter and memories records in their respective streams")
+            item = BatchItem(
+                key=memories.key,
+                request=InferenceRequest(
+                    model=config.model,
+                    messages=(
+                        InferenceMessage(role="system", content=instructions),
+                        InferenceMessage(
+                            role="user",
+                            content=f"Candidate memories:\n{format_memories(memories.payload)}\n\nChapter:\n{chapter.payload}",
                         ),
-                        temperature=config.temperature,
-                        max_output_tokens=config.max_output_tokens,
                     ),
-                )
-                content.write(codec.encode_request(item))
-            if monotonic() >= renew_at:
-                context.renew_lease()
-                renew_at = monotonic() + _LEASE_SECONDS / 3
-        if chapters or memories:
-            raise ValueError("Unmatched pruning inputs")
-        context.renew_lease()
-        if file_id is None:
-            initial.seek(0)
-            snapshot = create_file(
-                context.db,
-                store,
-                initial,
-                storage_name=file_store_settings.FILE_STORE_NAME,
-                bucket=file_store_settings.S3_BUCKET,
-                namespace="translations",
-                content_type="application/jsonl",
+                    temperature=config.temperature,
+                    max_output_tokens=config.max_output_tokens,
+                ),
             )
-        else:
-            snapshot = None
-        context.renew_lease()
-        content.seek(0)
-        prepared = create_file(
-            context.db,
-            store,
-            content,
-            storage_name=file_store_settings.FILE_STORE_NAME,
-            bucket=file_store_settings.S3_BUCKET,
-            namespace="translations",
-            content_type="application/jsonl",
-        )
-        context.db.flush()
-        if snapshot is not None:
-            publish_initial_file(context.db, context.task.task_id, context.claim_token, snapshot.file_id)
-        context.task.input_file_id = prepared.file_id
+            yield codec.encode_request(item)
+
+    context.task.request_file_id = store_lines(context, store, requests(), renew_seconds=_LEASE_SECONDS / 3)
 
 
 @callbacks.new_func(
@@ -244,10 +109,10 @@ def submit(context: ActionTaskContext) -> None:
     _, config = _stage(context)
     if context.task.provider_batch_id is not None:
         return
-    if context.task.input_file_id is None:
-        raise ValueError("Submission requires a prepared input file")
+    if context.task.request_file_id is None:
+        raise ValueError("Submission requires a prepared request file")
     store = get_object_store()
-    file_id = context.task.input_file_id
+    file_id = context.task.request_file_id
 
     def chunks() -> Iterator[bytes]:
         renew_at = monotonic() + _LEASE_SECONDS / 3
@@ -297,12 +162,11 @@ def poll(context: ActionTaskContext) -> bool:
 )
 def finalize(context: ActionTaskContext) -> None:
     stage, config = _stage(context)
-    chapter_ids = _chapter_ids(context, stage)
-    file_id, input_types = _artifact(context, stage)
-    if file_id is None or context.task.provider_output_id is None:
-        raise ValueError("Pruning finalization requires saved candidates and provider output")
+    if context.task.provider_output_id is None:
+        raise ValueError("Pruning finalization requires provider output")
     store, codec = get_object_store(), get_codec(config.model)
     client = get_batch_client(config.model)
+    types = stage_types(context.db, stage)
     output_id = BatchOutputId(context.task.provider_output_id)
 
     def chunks() -> Iterator[bytes]:
@@ -313,31 +177,10 @@ def finalize(context: ActionTaskContext) -> None:
                 renew_at = monotonic() + _LEASE_SECONDS / 3
             yield chunk
 
-    candidates = validate_output_records(
-        iter_translation_records(fetch_file(context.db, store, file_id)),
-        chapter_ids=chapter_ids,
-        output_types=input_types,
-    )
+    # The candidates the model indexed are the previous stage's records for the streams this stage rewrites.
+    candidates = select_streams(resolve_inputs(context, store, stage, types.before), types.signature.outputs)
     selections = (parse_memory_selection(codec.decode_result(line)) for line in iter_jsonl_lines(chunks()))
-    selected = (
-        record for record in apply_memory_selections(selections, candidates) if isinstance(record, MemoriesRecord)
+    output = output_records(context, store, stage, apply_memory_selections(selections, candidates), types)
+    context.task.output_file_id = store_lines(
+        context, store, map(encode_translation_record, output), renew_seconds=_LEASE_SECONDS / 3
     )
-    validated = validate_output_records(
-        selected, chapter_ids=chapter_ids, output_types=ACTIONS["prune_memories"].output_types
-    )
-    with TemporaryFile(mode="w+b") as content:
-        for record in validated:
-            content.write(encode_translation_record(record))
-        context.renew_lease()
-        content.seek(0)
-        stored = create_file(
-            context.db,
-            store,
-            content,
-            storage_name=file_store_settings.FILE_STORE_NAME,
-            bucket=file_store_settings.S3_BUCKET,
-            namespace="translations",
-            content_type="application/jsonl",
-        )
-        context.db.flush()
-        context.task.output_file_id = stored.file_id

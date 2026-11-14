@@ -1,31 +1,33 @@
 import uuid
+from collections.abc import Mapping
 from datetime import datetime
-from itertools import pairwise
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, ClassVar, Literal, Self
 
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, TypeAdapter, model_validator
 
 from src.memory.types import MemoryType, PluginName
 from src.schemas import Model
-from src.translations.types import ACTIONS, DataName, ModelName, TranslationTaskStatus
+from src.translations.types import (
+    ActionName,
+    ActionSignature,
+    ModelName,
+    StreamType,
+    TranslationTaskStatus,
+    infer_pipeline,
+)
 from src.translations.ui import UIHints
+
+MAX_STAGES = 5
 
 
 class TranslationActionMetadata(Model):
     name: str
     label: str
-    input_types: list[DataName]
-    output_types: list[DataName]
-    allowed_as_first_stage: bool
     config_schema: dict[str, Any]
 
 
 class TranslationActionsRead(Model):
     actions: list[TranslationActionMetadata]
-
-
-class CombineChapterConfig(Model):
-    model_config = ConfigDict(extra="forbid")
 
 
 class PruneMemoriesConfig(Model):
@@ -52,55 +54,19 @@ class PruneMemoriesConfig(Model):
         description="Leave blank to use the provider default.",
         json_schema_extra=UIHints(control="number", show_after="model", placeholder="Provider default").schema_extra(),
     )
-    memory_group_id: uuid.UUID | None = Field(
-        default=None,
-        title="Memory group",
-        json_schema_extra=UIHints(
-            control="resource-picker",
-            resource="memory-group",
-            scope="current-novel",
-            placement="job-inputs",
-            stage_scope="first",
-            null_label="None",
-        ).schema_extra(),
+
+    SIGNATURE: ClassVar[ActionSignature] = ActionSignature(
+        inputs={"chapter": "chapter", "memories": "memories"},
+        outputs={"memories": "memories"},
     )
-    plugin_names: list[PluginName] | None = Field(
-        default=None,
-        title="Plugin names",
-        json_schema_extra=UIHints(
-            control="filter-checklist",
-            stage_scope="first",
-            show_after="model",
-            null_label="All plugin names",
-            empty_label="Selecting none excludes all memories.",
-        ).schema_extra(),
-    )
-    memory_types: list[MemoryType] | None = Field(
-        default=None,
-        title="Memory types",
-        json_schema_extra=UIHints(
-            control="filter-checklist",
-            stage_scope="first",
-            show_after="model",
-            null_label="All memory types",
-            empty_label="Selecting none excludes all memories.",
-        ).schema_extra(),
-    )
-    exclude_current_chapter: bool = Field(
-        default=True,
-        title="Exclude current chapter",
-        json_schema_extra=UIHints(control="checkbox", stage_scope="first", show_after="model").schema_extra(),
-    )
+
+    def signature(self) -> ActionSignature:
+        return self.SIGNATURE
 
 
 class PruneMemoriesStageCreate(Model):
     action: Literal["prune_memories"]
     config: PruneMemoriesConfig
-
-
-class CombineChapterStageCreate(Model):
-    action: Literal["combine_chapter"]
-    config: CombineChapterConfig = Field(default_factory=CombineChapterConfig)
 
 
 class TranslateConfig(Model):
@@ -134,52 +100,14 @@ class TranslateConfig(Model):
         json_schema_extra=UIHints(control="number", show_after="model", placeholder="Provider default").schema_extra(),
     )
 
-
-class TranslateWithMemoriesConfig(TranslateConfig):
-    memory_group_id: uuid.UUID | None = Field(
-        default=None,
-        title="Memory group",
-        json_schema_extra=UIHints(
-            control="resource-picker",
-            resource="memory-group",
-            scope="current-novel",
-            placement="job-inputs",
-            stage_scope="first",
-            null_label="None",
-        ).schema_extra(),
-    )
-    plugin_names: list[PluginName] | None = Field(
-        default=None,
-        title="Plugin names",
-        json_schema_extra=UIHints(
-            control="filter-checklist",
-            stage_scope="first",
-            show_after="model",
-            null_label="All plugin names",
-            empty_label="Selecting none excludes all memories.",
-        ).schema_extra(),
-    )
-    memory_types: list[MemoryType] | None = Field(
-        default=None,
-        title="Memory types",
-        json_schema_extra=UIHints(
-            control="filter-checklist",
-            stage_scope="first",
-            show_after="model",
-            null_label="All memory types",
-            empty_label="Selecting none excludes all memories.",
-        ).schema_extra(),
-    )
-    exclude_current_chapter: bool = Field(
-        default=True,
-        title="Exclude current chapter",
-        json_schema_extra=UIHints(control="checkbox", stage_scope="first", show_after="model").schema_extra(),
+    SIGNATURE: ClassVar[ActionSignature] = ActionSignature(
+        inputs={"chapter": "chapter"},
+        optional_inputs={"memories": "memories", "terms": "terms", "conventions": "conventions"},
+        outputs={"chapter": "chapter"},
     )
 
-
-class TranslateWithMemoriesStageCreate(Model):
-    action: Literal["translate_with_memories"]
-    config: TranslateWithMemoriesConfig
+    def signature(self) -> ActionSignature:
+        return self.SIGNATURE
 
 
 class TranslateStageCreate(Model):
@@ -188,9 +116,70 @@ class TranslateStageCreate(Model):
 
 
 type TranslationStageCreate = Annotated[
-    PruneMemoriesStageCreate | CombineChapterStageCreate | TranslateWithMemoriesStageCreate | TranslateStageCreate,
+    PruneMemoriesStageCreate | TranslateStageCreate,
     Field(discriminator="action"),
 ]
+
+
+class MemoriesInput(Model):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["memories"]
+    memory_group_id: uuid.UUID
+    plugin_names: list[PluginName] | None = None
+    memory_types: list[MemoryType] | None = None
+    exclude_current_chapter: bool = True
+
+
+class TermsInput(Model):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["terms"]
+    memory_group_id: uuid.UUID
+
+
+class ConventionsInput(Model):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["conventions"]
+    memory_group_id: uuid.UUID
+
+
+type TranslationInput = Annotated[MemoriesInput | TermsInput | ConventionsInput, Field(discriminator="type")]
+
+
+class LoadInputsConfig(Model):
+    model_config = ConfigDict(extra="forbid")
+
+    inputs: dict[str, TranslationInput] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_inputs(self) -> Self:
+        # Stages bind streams by name, and each stream is named after its type for now.
+        for name, source in self.inputs.items():
+            if name != source.type:
+                raise ValueError(f"Input stream {name!r} must be named {source.type!r}")
+        return self
+
+    def signature(self) -> ActionSignature:
+        outputs: dict[str, StreamType] = {"chapter": "chapter"}
+        outputs.update({name: source.type for name, source in self.inputs.items()})
+        return ActionSignature(inputs={}, outputs=outputs)
+
+
+type StageConfig = LoadInputsConfig | PruneMemoriesConfig | TranslateConfig
+
+_action_name = TypeAdapter(ActionName)
+
+
+def stage_config(action: str, config: Mapping[str, Any]) -> StageConfig:
+    match _action_name.validate_python(action):
+        case "load_inputs":
+            return LoadInputsConfig.model_validate(config)
+        case "prune_memories":
+            return PruneMemoriesConfig.model_validate(config)
+        case "translate":
+            return TranslateConfig.model_validate(config)
 
 
 class TranslationJobConfig(Model):
@@ -214,12 +203,23 @@ class TranslationStageRequest(Model):
     config: dict[str, Any] = Field(default_factory=dict)
 
 
-class TranslationJobCreateRequest(Model):
-    """Public envelope; action-specific validation happens before job creation."""
-
+# A creation request that may still have no stages; the pipeline builder checks these as it goes.
+class TranslationJobDraft(Model):
     novel_id: uuid.UUID
     config: TranslationJobConfig
-    stages: list[TranslationStageRequest] = Field(min_length=1, max_length=5)
+    inputs: dict[str, TranslationInput] = Field(default_factory=dict)
+    stages: list[TranslationStageRequest] = Field(default_factory=list, max_length=MAX_STAGES)
+
+    @model_validator(mode="after")
+    def validate_inputs(self) -> Self:
+        LoadInputsConfig(inputs=self.inputs)
+        return self
+
+
+class TranslationJobCreateRequest(TranslationJobDraft):
+    """Public envelope; action-specific validation happens before job creation."""
+
+    stages: list[TranslationStageRequest] = Field(min_length=1, max_length=MAX_STAGES)
 
 
 class TranslationJobCreate(Model):
@@ -227,26 +227,16 @@ class TranslationJobCreate(Model):
 
     novel_id: uuid.UUID
     config: TranslationJobConfig
-    stages: list[TranslationStageCreate] = Field(min_length=1, max_length=5)
+    inputs: dict[str, TranslationInput] = Field(default_factory=dict)
+    stages: list[TranslationStageCreate] = Field(min_length=1, max_length=MAX_STAGES)
+
+    def loader_config(self) -> LoadInputsConfig:
+        return LoadInputsConfig(inputs=self.inputs)
 
     @model_validator(mode="after")
     def validate_pipeline(self) -> Self:
-        first = self.stages[0]
-        if (
-            isinstance(first, (TranslateWithMemoriesStageCreate, PruneMemoriesStageCreate))
-            and first.config.memory_group_id is None
-        ):
-            raise ValueError(f"First-stage {first.action} requires memory_group_id")
-        for stage_num, (current_stage, next_stage) in enumerate(pairwise(self.stages)):
-            output_types = ACTIONS[current_stage.action].output_types
-            input_types = ACTIONS[next_stage.action].input_types
-            missing_types = input_types - output_types
-            if missing_types:
-                raise ValueError(
-                    f"stage {stage_num + 1} requires data not produced by stage {stage_num}: "
-                    f"{', '.join(sorted(missing_types))}"
-                )
-
+        # Stage numbers match the stored pipeline, where the loader is stage 0.
+        infer_pipeline([self.loader_config().signature(), *(stage.config.signature() for stage in self.stages)])
         return self
 
 
@@ -273,7 +263,7 @@ class TranslationTaskRead(Model):
     failed_at: datetime | None
     error: str | None
     claim_expires_at: datetime | None
-    input_file_id: uuid.UUID | None
+    request_file_id: uuid.UUID | None
     output_file_id: uuid.UUID | None
 
 
@@ -289,7 +279,6 @@ class TranslationBatchRead(Model):
     model_config = ConfigDict(from_attributes=True)
     batch_id: uuid.UUID
     batch_num: int
-    initial_file_id: uuid.UUID | None
 
 
 class TranslationJobRead(Model):

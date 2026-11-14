@@ -11,18 +11,17 @@ from sqlalchemy import event, func, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.auth.utils import create_access_token
-from src.files.models import StoredFile
 from src.translations.actions.registry import ACTION_CALLBACKS, last_step
 from src.translations.celery_app import app
 from src.translations.models import TranslationBatch, TranslationStage, TranslationTask
 from src.translations.schemas import TranslationJobCreate
 from src.translations.service import Control, TranslationNotFoundError, control_translation_job, create_translation_job
-from src.translations.tasks.claims import TranslationClaimLostError, finish_claim, publish_initial_file
+from src.translations.tasks.claims import TranslationClaimLostError, finish_claim
 from src.translations.types import TranslationTaskStatus as State
 from test_support.test_data.scenarios import DatabaseScenario
 
 
-def make_job(db: Session, scenario: DatabaseScenario) -> tuple[UUID, list[TranslationTask]]:
+def make_job(db: Session, scenario: DatabaseScenario, *, loaded: bool = True) -> tuple[UUID, list[TranslationTask]]:
     job_id = create_translation_job(
         db,
         scenario.users["admin"],
@@ -42,6 +41,11 @@ def make_job(db: Session, scenario: DatabaseScenario) -> tuple[UUID, list[Transl
             .order_by(TranslationStage.stage_num)
         )
     )
+    if loaded:
+        # Most tests exercise controls on the user's stages, so the loader has already finished.
+        loader, *tasks = tasks
+        loader.status, tasks[0].status = State.COMPLETE, State.READY
+        db.commit()
     return job_id, tasks
 
 
@@ -58,11 +62,11 @@ def make_job(db: Session, scenario: DatabaseScenario) -> tuple[UUID, list[Transl
     ],
 )
 def test_registered_steps_resolve_recovery_boundaries(state: State, expected: State) -> None:
-    for action in ("translate", "translate_with_memories", "prune_memories"):
+    for action in ("translate", "prune_memories"):
         step = last_step(action, state)
         assert step is not None and step.expect == expected
-    combine = last_step("combine_chapter", State.FINALIZING)
-    assert combine is not None and combine.expect == State.READY
+    loader = last_step("load_inputs", State.FINALIZING)
+    assert loader is not None and loader.expect == State.READY
     assert last_step("translate", State.COMPLETE) is None
 
 
@@ -255,58 +259,6 @@ def test_router_controls_and_permissions(
         control_translation_job(test_db, sample_scenario.users["user"], UUID(job_id), "cancel")
 
 
-def test_cancel_during_snapshot_publication_rolls_back_worker(
-    test_db: Session,
-    sample_scenario: DatabaseScenario,
-    testing_session_local: sessionmaker[Session],
-) -> None:
-    # Controls must cancel without waiting for a worker's batch artifact write;
-    # the worker must then roll that artifact back when completion loses its claim.
-    job_id, (task, _) = make_job(test_db, sample_scenario)
-    token = uuid4()
-    task.status = State.PREPARING
-    task.claim_token = token
-    task.claim_expires_at = test_db.scalar(select(func.clock_timestamp())) + timedelta(minutes=5)
-    file = StoredFile(
-        storage_name="test",
-        bucket="test",
-        object_key=str(uuid4()),
-        content_type="application/jsonl",
-        byte_size=0,
-        sha256="0" * 64,
-    )
-    test_db.add(file)
-    test_db.commit()
-    task_id, batch_id, file_id = task.task_id, task.batch_id, file.file_id
-    published, cancelled = Event(), Event()
-
-    def worker():
-        with testing_session_local() as db:
-            try:
-                publish_initial_file(db, task_id, token, file_id)
-                published.set()
-                assert cancelled.wait(10)
-                with pytest.raises(TranslationClaimLostError):
-                    finish_claim(db, task_id, token, during=State.PREPARING, finish=State.PREPARED)
-            finally:
-                db.rollback()
-
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(worker)
-        try:
-            assert published.wait(5)
-            # Bound a regression's failure rather than hanging on the old batch lock.
-            test_db.execute(select(func.set_config("lock_timeout", "2000", True)))
-            result = control_translation_job(test_db, sample_scenario.users["admin"], job_id, "cancel")
-            assert result.affected_batch_ids == [batch_id]
-        finally:
-            cancelled.set()
-        future.result(timeout=5)
-    test_db.refresh(task)
-    assert task.failed_at is not None and task.claim_token is None
-    assert test_db.scalar(select(TranslationBatch.initial_file_id).where(TranslationBatch.batch_id == batch_id)) is None
-
-
 @pytest.mark.parametrize("operation", ["start", "resume", "retry"])
 def test_control_does_not_overwrite_concurrent_worker_claim(
     test_db: Session,
@@ -317,16 +269,19 @@ def test_control_does_not_overwrite_concurrent_worker_claim(
 ) -> None:
     # A control snapshot can precede a worker claim's commit. The UPDATE must
     # recheck ownership after waiting, so the worker keeps its lease and work.
-    job_id, (task, _) = make_job(test_db, sample_scenario)
+    # Start only dispatches a batch's first stage, which is the loader.
+    starting = operation == "start"
+    job_id, (task, *_) = make_job(test_db, sample_scenario, loaded=not starting)
     task_id, token = task.task_id, uuid4()
     user = sample_scenario.users["admin"]
     queued = Mock()
-    monkeypatch.setattr(app.tasks["src.translations.actions.translate.prepare"], "apply_async", queued)
+    step, claimed = ("load_inputs.load", State.FINALIZING) if starting else ("translate.prepare", State.PREPARING)
+    monkeypatch.setattr(app.tasks[f"src.translations.actions.{step}"], "apply_async", queued)
     test_db.execute(
         update(TranslationTask)
         .where(TranslationTask.task_id == task_id)
         .values(
-            status=State.PREPARING,
+            status=claimed,
             claim_token=token,
             claim_expires_at=func.clock_timestamp() + timedelta(minutes=5),
         )
@@ -354,7 +309,7 @@ def test_control_does_not_overwrite_concurrent_worker_claim(
         result = future.result(timeout=5)
     assert result.dispatched_task_ids == []
     test_db.refresh(task)
-    assert task.status == State.PREPARING and task.claim_token == token
+    assert task.status == claimed and task.claim_token == token
     queued.assert_not_called()
 
 

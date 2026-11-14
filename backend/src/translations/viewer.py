@@ -132,7 +132,6 @@ def read_translation_batches(db: Session, user: User, job_id: UUID, *, offset: i
             TranslationBatchDetail(
                 batch_id=batch.batch_id,
                 batch_num=batch.batch_num,
-                initial_file_id=batch.initial_file_id,
                 tasks=tasks[batch.batch_id],
             )
             for batch in batches

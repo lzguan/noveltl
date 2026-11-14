@@ -4,14 +4,10 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { DataName } from './dataName';
 import type { TranslationActionMetadataConfigSchema } from './translationActionMetadataConfigSchema';
 
 export interface TranslationActionMetadata {
-  allowedAsFirstStage: boolean;
   configSchema: TranslationActionMetadataConfigSchema;
-  inputTypes: DataName[];
   label: string;
   name: string;
-  outputTypes: DataName[];
 }

@@ -45,8 +45,12 @@ their behavior. When enabled, `term_translation_context` adds the group's
 pending and approved naming conventions (`AgentConvention`: title, rule,
 rationale), and the naming agent receives
 `TERM_TRANSLATION_CONVENTIONS_INSTRUCTIONS`. When disabled, both the context JSON
-and the instructions are unchanged. Chapter translation reads no conventions
-(and no term translations) yet, so style conventions have no consumer.
+and the instructions are unchanged. Chapter translation's loader can snapshot
+pending/approved conventions of both categories into a `conventions` stream,
+repeated per chapter. Translation consumes this optional stream in a dedicated
+prompt section, instructing the model to follow naming and style conventions.
+Automated tests establish delivery and artifact preservation; actual model
+adherence remains for manual testing.
 
 ## Conventions agent
 

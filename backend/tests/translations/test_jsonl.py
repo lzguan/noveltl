@@ -4,14 +4,36 @@ from uuid import UUID
 import pytest
 from pydantic import ValidationError
 
+from src.memory.plugins.conventions.types import ConventionCategory
 from src.translations.jsonl import encode_translation_record, iter_translation_records
-from src.translations.records import ChapterRecord, MemoriesRecord
+from src.translations.records import ChapterRecord, ConventionContent, ConventionsRecord, MemoriesRecord, TermsRecord
 
 
 def test_round_trip_at_every_byte_boundary() -> None:
     records = [
-        ChapterRecord(chapter_id=UUID(int=1), payload='第一章\n"Hello" 🌙'),
-        MemoriesRecord(chapter_id=UUID(int=1), payload=[]),
+        ChapterRecord(stream="chapter", chapter_id=UUID(int=1), payload='第一章\n"Hello" 🌙'),
+        MemoriesRecord(stream="memories", chapter_id=UUID(int=1), payload=[]),
+        TermsRecord(stream="terms", chapter_id=UUID(int=1), payload={"白玫": "White Rose"}),
+        ConventionsRecord(
+            stream="conventions",
+            chapter_id=UUID(int=1),
+            payload=[
+                ConventionContent(
+                    category=ConventionCategory.NAMING,
+                    title="Codenames",
+                    rule="Keep established codenames.",
+                    rationale=None,
+                ),
+                ConventionContent(
+                    category=ConventionCategory.STYLE,
+                    title="Narration",
+                    rule="Preserve the narrator's register.",
+                    rationale="Keep dialogue distinct from narration.",
+                ),
+            ],
+        ),
+        TermsRecord(stream="terms", chapter_id=UUID(int=2), payload={}),
+        ConventionsRecord(stream="conventions", chapter_id=UUID(int=2), payload=[]),
     ]
     encoded = [encode_translation_record(record) for record in records]
     assert all(line.endswith(b"\n") and line.count(b"\n") == 1 for line in encoded)
@@ -22,7 +44,7 @@ def test_round_trip_at_every_byte_boundary() -> None:
 
 
 def test_crlf_and_unterminated_final_record() -> None:
-    record = ChapterRecord(chapter_id=UUID(int=1), payload="text")
+    record = ChapterRecord(stream="chapter", chapter_id=UUID(int=1), payload="text")
     line = encode_translation_record(record).removesuffix(b"\n")
     assert list(iter_translation_records([line + b"\r", b"\n" + line])) == [record, record]
     assert list(iter_translation_records([b"", b""])) == []
@@ -34,12 +56,12 @@ def test_crlf_and_unterminated_final_record() -> None:
         b"\n",
         b" \r\n",
         b'{"chapter_id":',
-        b'{"chapter_id":"00000000-0000-0000-0000-000000000001","data_name":"chapter","payload":[]}',
-        b'{"chapter_id":"00000000-0000-0000-0000-000000000001","data_name":"chapter","payload":"\xff"}',
+        b'{"chapter_id":"00000000-0000-0000-0000-000000000001","stream":"chapter","data_name":"chapter","payload":[]}',
+        b'{"chapter_id":"00000000-0000-0000-0000-000000000001","stream":"chapter","data_name":"chapter","payload":"\xff"}',
     ],
 )
 def test_invalid_record_after_valid_record_raises(content: bytes) -> None:
-    record = ChapterRecord(chapter_id=UUID(int=1), payload="valid")
+    record = ChapterRecord(stream="chapter", chapter_id=UUID(int=1), payload="valid")
     reader = iter_translation_records([encode_translation_record(record), content])
     assert next(reader) == record
     with pytest.raises(ValidationError):
@@ -47,7 +69,7 @@ def test_invalid_record_after_valid_record_raises(content: bytes) -> None:
 
 
 def test_stream_failure_propagates_without_reading_ahead() -> None:
-    record = ChapterRecord(chapter_id=UUID(int=1), payload="text")
+    record = ChapterRecord(stream="chapter", chapter_id=UUID(int=1), payload="text")
 
     def chunks() -> Iterator[bytes]:
         yield encode_translation_record(record)

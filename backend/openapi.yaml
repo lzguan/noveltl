@@ -575,6 +575,22 @@ components:
       - updatedAt
       title: ConventionRead
       type: object
+    ConventionsInput:
+      additionalProperties: false
+      properties:
+        memoryGroupId:
+          format: uuid
+          title: Memorygroupid
+          type: string
+        type:
+          const: conventions
+          title: Type
+          type: string
+      required:
+      - type
+      - memoryGroupId
+      title: ConventionsInput
+      type: object
     CreateAutoLabels:
       description: "Pydantic schema for creating a new autolabel run.\n\nAttributes:\n\
         \    novel_id: UUID of novel to create auto labels for.\n    params: Parameters\
@@ -975,11 +991,6 @@ components:
       - workflow
       - agent
       title: Creator
-      type: string
-    DataName:
-      enum:
-      - chapter
-      - memories
       type: string
     DataObj:
       additionalProperties: false
@@ -1989,6 +2000,13 @@ components:
       - labelData
       title: LazyEntry
       type: object
+    LinkKind:
+      enum:
+      - linked
+      - broken
+      - incompatible
+      - absent
+      type: string
     MDataType:
       discriminator:
         mapping:
@@ -2002,6 +2020,40 @@ components:
       - $ref: '#/components/schemas/IntData'
       - $ref: '#/components/schemas/FloatData'
       - $ref: '#/components/schemas/BoolData'
+    MemoriesInput:
+      additionalProperties: false
+      properties:
+        excludeCurrentChapter:
+          default: true
+          title: Excludecurrentchapter
+          type: boolean
+        memoryGroupId:
+          format: uuid
+          title: Memorygroupid
+          type: string
+        memoryTypes:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/MemoryType'
+            type: array
+          - type: 'null'
+          title: Memorytypes
+        pluginNames:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/PluginName'
+            type: array
+          - type: 'null'
+          title: Pluginnames
+        type:
+          const: memories
+          title: Type
+          type: string
+      required:
+      - type
+      - memoryGroupId
+      title: MemoriesInput
+      type: object
     Memory:
       description: Memory schema
       properties:
@@ -3081,6 +3133,13 @@ components:
       - $ref: '#/components/schemas/RecordMemoriesStageConfig'
       - $ref: '#/components/schemas/SummarizeConventionsStageConfig'
       - $ref: '#/components/schemas/TranslateTermsStageConfig'
+    StreamType:
+      enum:
+      - chapter
+      - memories
+      - terms
+      - conventions
+      type: string
     StringData:
       additionalProperties: false
       properties:
@@ -3223,6 +3282,22 @@ components:
       - updatedAt
       title: TermTranslationRead
       type: object
+    TermsInput:
+      additionalProperties: false
+      properties:
+        memoryGroupId:
+          format: uuid
+          title: Memorygroupid
+          type: string
+        type:
+          const: terms
+          title: Type
+          type: string
+      required:
+      - type
+      - memoryGroupId
+      title: TermsInput
+      type: object
     TextOp:
       description: "Pydantic schema to update text content of a chapter.\n\nAttributes:\n\
         \    op: The text operation, either \"insert\" or \"delete\".\n    start:\
@@ -3360,37 +3435,36 @@ components:
       - modelName
       title: TranslateTermsStageConfig
       type: object
+    TranslationActionCheck:
+      properties:
+        action:
+          title: Action
+          type: string
+        warning:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Warning
+      required:
+      - action
+      - warning
+      title: TranslationActionCheck
+      type: object
     TranslationActionMetadata:
       properties:
-        allowedAsFirstStage:
-          title: Allowedasfirststage
-          type: boolean
         configSchema:
           additionalProperties: true
           title: Configschema
           type: object
-        inputTypes:
-          items:
-            $ref: '#/components/schemas/DataName'
-          title: Inputtypes
-          type: array
         label:
           title: Label
           type: string
         name:
           title: Name
           type: string
-        outputTypes:
-          items:
-            $ref: '#/components/schemas/DataName'
-          title: Outputtypes
-          type: array
       required:
       - name
       - label
-      - inputTypes
-      - outputTypes
-      - allowedAsFirstStage
       - configSchema
       title: TranslationActionMetadata
       type: object
@@ -3414,12 +3488,6 @@ components:
         batchNum:
           title: Batchnum
           type: integer
-        initialFileId:
-          anyOf:
-          - format: uuid
-            type: string
-          - type: 'null'
-          title: Initialfileid
         tasks:
           items:
             $ref: '#/components/schemas/TranslationTaskRead'
@@ -3428,7 +3496,6 @@ components:
       required:
       - batchId
       - batchNum
-      - initialFileId
       - tasks
       title: TranslationBatchDetail
       type: object
@@ -3464,16 +3531,9 @@ components:
         batchNum:
           title: Batchnum
           type: integer
-        initialFileId:
-          anyOf:
-          - format: uuid
-            type: string
-          - type: 'null'
-          title: Initialfileid
       required:
       - batchId
       - batchNum
-      - initialFileId
       title: TranslationBatchRead
       type: object
     TranslationControlResult:
@@ -3497,6 +3557,51 @@ components:
           title: Dispatchedtaskids
           type: array
       title: TranslationControlResult
+      type: object
+    TranslationInput:
+      discriminator:
+        mapping:
+          conventions: '#/components/schemas/ConventionsInput'
+          memories: '#/components/schemas/MemoriesInput'
+          terms: '#/components/schemas/TermsInput'
+        propertyName: type
+      oneOf:
+      - $ref: '#/components/schemas/MemoriesInput'
+      - $ref: '#/components/schemas/TermsInput'
+      - $ref: '#/components/schemas/ConventionsInput'
+    TranslationInputPort:
+      properties:
+        drops:
+          title: Drops
+          type: boolean
+        link:
+          $ref: '#/components/schemas/LinkKind'
+        optional:
+          title: Optional
+          type: boolean
+        source:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Source
+        sourceType:
+          anyOf:
+          - $ref: '#/components/schemas/StreamType'
+          - type: 'null'
+        stream:
+          title: Stream
+          type: string
+        type:
+          $ref: '#/components/schemas/StreamType'
+      required:
+      - stream
+      - type
+      - optional
+      - drops
+      - link
+      - source
+      - sourceType
+      title: TranslationInputPort
       type: object
     TranslationJobConfig:
       properties:
@@ -3526,6 +3631,11 @@ components:
       properties:
         config:
           $ref: '#/components/schemas/TranslationJobConfig'
+        inputs:
+          additionalProperties:
+            $ref: '#/components/schemas/TranslationInput'
+          title: Inputs
+          type: object
         novelId:
           format: uuid
           title: Novelid
@@ -3552,6 +3662,30 @@ components:
       required:
       - jobId
       title: TranslationJobCreated
+      type: object
+    TranslationJobDraft:
+      properties:
+        config:
+          $ref: '#/components/schemas/TranslationJobConfig'
+        inputs:
+          additionalProperties:
+            $ref: '#/components/schemas/TranslationInput'
+          title: Inputs
+          type: object
+        novelId:
+          format: uuid
+          title: Novelid
+          type: string
+        stages:
+          items:
+            $ref: '#/components/schemas/TranslationStageRequest'
+          maxItems: 5
+          title: Stages
+          type: array
+      required:
+      - novelId
+      - config
+      title: TranslationJobDraft
       type: object
     TranslationJobPage:
       properties:
@@ -3630,6 +3764,57 @@ components:
       - progress
       title: TranslationJobSummary
       type: object
+    TranslationLaneEnd:
+      properties:
+        source:
+          title: Source
+          type: integer
+        stream:
+          title: Stream
+          type: string
+        type:
+          $ref: '#/components/schemas/StreamType'
+      required:
+      - stream
+      - type
+      - source
+      title: TranslationLaneEnd
+      type: object
+    TranslationOutputPort:
+      properties:
+        stream:
+          title: Stream
+          type: string
+        type:
+          $ref: '#/components/schemas/StreamType'
+      required:
+      - stream
+      - type
+      title: TranslationOutputPort
+      type: object
+    TranslationPipelineCheck:
+      properties:
+        addable:
+          items:
+            $ref: '#/components/schemas/TranslationActionCheck'
+          title: Addable
+          type: array
+        ends:
+          items:
+            $ref: '#/components/schemas/TranslationLaneEnd'
+          title: Ends
+          type: array
+        stages:
+          items:
+            $ref: '#/components/schemas/TranslationStageCheck'
+          title: Stages
+          type: array
+      required:
+      - stages
+      - ends
+      - addable
+      title: TranslationPipelineCheck
+      type: object
     TranslationProgress:
       properties:
         activeBatches:
@@ -3673,6 +3858,33 @@ components:
           title: Totaltasks
           type: integer
       title: TranslationProgress
+      type: object
+    TranslationStageCheck:
+      properties:
+        action:
+          title: Action
+          type: string
+        inputs:
+          items:
+            $ref: '#/components/schemas/TranslationInputPort'
+          title: Inputs
+          type: array
+        outputs:
+          items:
+            $ref: '#/components/schemas/TranslationOutputPort'
+          title: Outputs
+          type: array
+        warning:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Warning
+      required:
+      - action
+      - inputs
+      - outputs
+      - warning
+      title: TranslationStageCheck
       type: object
     TranslationStageRead:
       properties:
@@ -3733,18 +3945,18 @@ components:
             type: string
           - type: 'null'
           title: Failedat
-        inputFileId:
-          anyOf:
-          - format: uuid
-            type: string
-          - type: 'null'
-          title: Inputfileid
         outputFileId:
           anyOf:
           - format: uuid
             type: string
           - type: 'null'
           title: Outputfileid
+        requestFileId:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Requestfileid
         stageId:
           format: uuid
           title: Stageid
@@ -3763,7 +3975,7 @@ components:
       - failedAt
       - error
       - claimExpiresAt
-      - inputFileId
+      - requestFileId
       - outputFileId
       title: TranslationTaskRead
       type: object
@@ -9031,6 +9243,33 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: List Actions
+      tags:
+      - translations
+  /translation-jobs/check:
+    post:
+      operationId: check_translation_jobs_check_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TranslationJobDraft'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationPipelineCheck'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Check
       tags:
       - translations
   /translation-jobs/{jobId}:

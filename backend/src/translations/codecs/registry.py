@@ -14,13 +14,13 @@ type CodecFactory = Callable[[], BatchLineCodec[TranslationDataKey]]
 
 def _expand_compact_key(value: object) -> object:
     if isinstance(value, str):
-        match = re.fullmatch(r"([0-9a-f]{32})_(chapter|memories)", value)
+        match = re.fullmatch(r"([0-9a-f]{32})_(.+)", value)
         if match is not None:
-            return {"chapter_id": match[1], "data_name": match[2]}
+            return {"chapter_id": match[1], "stream": match[2]}
         if value.startswith(("{", "[")):
             value = json.loads(value)
     if isinstance(value, list) and len(value) == 2:
-        return {"chapter_id": value[0], "data_name": value[1]}
+        return {"chapter_id": value[0], "stream": value[1]}
     # Continue accepting results from artifacts prepared with the older codec.
     return value
 
@@ -28,7 +28,7 @@ def _expand_compact_key(value: object) -> object:
 type _CompactKey = Annotated[
     TranslationDataKey,
     BeforeValidator(_expand_compact_key),
-    PlainSerializer(lambda key: f"{key.chapter_id.hex}_{key.data_name}", return_type=str),
+    PlainSerializer(lambda key: f"{key.chapter_id.hex}_{key.stream}", return_type=str),
 ]
 
 

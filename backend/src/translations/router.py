@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
 from src.database import get_db
-from src.translations.metadata import read_action_metadata
+from src.translations.metadata import check_pipeline, read_action_metadata
+from src.translations.pipeline_schemas import TranslationPipelineCheck
 from src.translations.schemas import (
     TranslationActionsRead,
     TranslationBatchPage,
@@ -17,6 +18,7 @@ from src.translations.schemas import (
     TranslationJobCreate,
     TranslationJobCreated,
     TranslationJobCreateRequest,
+    TranslationJobDraft,
     TranslationJobPage,
     TranslationJobRead,
 )
@@ -55,6 +57,11 @@ def create(request: TranslationJobCreateRequest, db: DB, current_user: CurrentUs
 def list_actions(current_user: CurrentUser) -> TranslationActionsRead:
     """Return action compatibility and standalone configuration JSON Schemas."""
     return read_action_metadata()
+
+
+@router.post("/check", response_model=TranslationPipelineCheck)
+def check(draft: TranslationJobDraft, current_user: CurrentUser) -> TranslationPipelineCheck:
+    return check_pipeline(draft)
 
 
 @router.get("", response_model=TranslationJobPage)

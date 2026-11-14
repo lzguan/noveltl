@@ -89,3 +89,18 @@ alignment as evidence for term naming (memory side, feeding the planned `terms`
 stream). The first two are extra translation-job input streams of type `chapter`
 under another name, i.e. the first case needing stream names distinct from types.
 Unverified: how translated novels map chapter-to-chapter onto their source work.
+
+## Recording as structured output
+
+Considered 2026-11-14; the user prefers to leave tool-based recording as is.
+The appeal is one request per chapter (batch-API eligible, one atomic write,
+a single diffable artifact per chapter). The user's concerns: shadow workspaces
+already solve the transaction problem and should stay until shown to be a
+liability, and a single schema covering every memory kind is unlikely to be
+filled reliably by small models. A structured stage would still stage through
+workspaces, and would need per-chapter retrieval of relevant terms/memories with
+handles, since on-demand reads disappear. If recording cost becomes the
+bottleneck, the proposed experiment is one narrow pass (e.g. term extraction)
+compared against tool-based output on already-recorded chapters, not a single
+large schema. Unmeasured: how many requests and read-tool calls recording uses
+per chapter today (the worker's result log records both).

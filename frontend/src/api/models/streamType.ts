@@ -5,10 +5,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type DataName = typeof DataName[keyof typeof DataName];
+export type StreamType = typeof StreamType[keyof typeof StreamType];
 
 
-export const DataName = {
+export const StreamType = {
   chapter: 'chapter',
   memories: 'memories',
 } as const;

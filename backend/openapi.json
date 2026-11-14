@@ -7951,6 +7951,52 @@
         ]
       }
     },
+    "/translation-jobs/check": {
+      "post": {
+        "tags": [
+          "translations"
+        ],
+        "summary": "Check",
+        "operationId": "check_translation_jobs_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslationJobDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationPipelineCheck"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/translation-jobs/{jobId}/batches": {
       "get": {
         "tags": [
@@ -9803,13 +9849,6 @@
         ],
         "title": "Creator"
       },
-      "DataName": {
-        "type": "string",
-        "enum": [
-          "chapter",
-          "memories"
-        ]
-      },
       "DataObj": {
         "properties": {
           "fields": {
@@ -11166,6 +11205,15 @@
           "labelData"
         ],
         "title": "LazyEntry"
+      },
+      "LinkKind": {
+        "type": "string",
+        "enum": [
+          "linked",
+          "broken",
+          "incompatible",
+          "absent"
+        ]
       },
       "MDataType": {
         "oneOf": [
@@ -12640,6 +12688,13 @@
           }
         }
       },
+      "StreamType": {
+        "type": "string",
+        "enum": [
+          "chapter",
+          "memories"
+        ]
+      },
       "StringData": {
         "properties": {
           "value": {
@@ -13002,6 +13057,31 @@
         ],
         "title": "TranslateTermsStageConfig"
       },
+      "TranslationActionCheck": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warning"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "warning"
+        ],
+        "title": "TranslationActionCheck"
+      },
       "TranslationActionMetadata": {
         "properties": {
           "name": {
@@ -13014,14 +13094,14 @@
           },
           "inputTypes": {
             "items": {
-              "$ref": "#/components/schemas/DataName"
+              "$ref": "#/components/schemas/StreamType"
             },
             "type": "array",
             "title": "Inputtypes"
           },
           "outputTypes": {
             "items": {
-              "$ref": "#/components/schemas/DataName"
+              "$ref": "#/components/schemas/StreamType"
             },
             "type": "array",
             "title": "Outputtypes"
@@ -13074,18 +13154,6 @@
             "type": "integer",
             "title": "Batchnum"
           },
-          "initialFileId": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Initialfileid"
-          },
           "tasks": {
             "items": {
               "$ref": "#/components/schemas/TranslationTaskRead"
@@ -13098,7 +13166,6 @@
         "required": [
           "batchId",
           "batchNum",
-          "initialFileId",
           "tasks"
         ],
         "title": "TranslationBatchDetail"
@@ -13144,25 +13211,12 @@
           "batchNum": {
             "type": "integer",
             "title": "Batchnum"
-          },
-          "initialFileId": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Initialfileid"
           }
         },
         "type": "object",
         "required": [
           "batchId",
-          "batchNum",
-          "initialFileId"
+          "batchNum"
         ],
         "title": "TranslationBatchRead"
       },
@@ -13195,6 +13249,114 @@
         },
         "type": "object",
         "title": "TranslationControlResult"
+      },
+      "TranslationInput": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "memories",
+            "title": "Type"
+          },
+          "memoryGroupId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Memorygroupid"
+          },
+          "pluginNames": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PluginName"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pluginnames"
+          },
+          "memoryTypes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MemoryType"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memorytypes"
+          },
+          "excludeCurrentChapter": {
+            "type": "boolean",
+            "title": "Excludecurrentchapter",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "memoryGroupId"
+        ],
+        "title": "MemoriesInput"
+      },
+      "TranslationInputPort": {
+        "properties": {
+          "stream": {
+            "type": "string",
+            "title": "Stream"
+          },
+          "type": {
+            "$ref": "#/components/schemas/StreamType"
+          },
+          "optional": {
+            "type": "boolean",
+            "title": "Optional"
+          },
+          "drops": {
+            "type": "boolean",
+            "title": "Drops"
+          },
+          "link": {
+            "$ref": "#/components/schemas/LinkKind"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "sourceType": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StreamType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "stream",
+          "type",
+          "optional",
+          "drops",
+          "link",
+          "source",
+          "sourceType"
+        ],
+        "title": "TranslationInputPort"
       },
       "TranslationJobConfig": {
         "properties": {
@@ -13244,6 +13406,13 @@
           "config": {
             "$ref": "#/components/schemas/TranslationJobConfig"
           },
+          "inputs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TranslationInput"
+            },
+            "type": "object",
+            "title": "Inputs"
+          },
           "stages": {
             "items": {
               "$ref": "#/components/schemas/TranslationStageRequest"
@@ -13276,6 +13445,39 @@
           "jobId"
         ],
         "title": "TranslationJobCreated"
+      },
+      "TranslationJobDraft": {
+        "properties": {
+          "novelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Novelid"
+          },
+          "config": {
+            "$ref": "#/components/schemas/TranslationJobConfig"
+          },
+          "inputs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TranslationInput"
+            },
+            "type": "object",
+            "title": "Inputs"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationStageRequest"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Stages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "novelId",
+          "config"
+        ],
+        "title": "TranslationJobDraft"
       },
       "TranslationJobPage": {
         "properties": {
@@ -13380,6 +13582,77 @@
         ],
         "title": "TranslationJobSummary"
       },
+      "TranslationLaneEnd": {
+        "properties": {
+          "stream": {
+            "type": "string",
+            "title": "Stream"
+          },
+          "type": {
+            "$ref": "#/components/schemas/StreamType"
+          },
+          "source": {
+            "type": "integer",
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stream",
+          "type",
+          "source"
+        ],
+        "title": "TranslationLaneEnd"
+      },
+      "TranslationOutputPort": {
+        "properties": {
+          "stream": {
+            "type": "string",
+            "title": "Stream"
+          },
+          "type": {
+            "$ref": "#/components/schemas/StreamType"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stream",
+          "type"
+        ],
+        "title": "TranslationOutputPort"
+      },
+      "TranslationPipelineCheck": {
+        "properties": {
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationStageCheck"
+            },
+            "type": "array",
+            "title": "Stages"
+          },
+          "ends": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationLaneEnd"
+            },
+            "type": "array",
+            "title": "Ends"
+          },
+          "addable": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationActionCheck"
+            },
+            "type": "array",
+            "title": "Addable"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stages",
+          "ends",
+          "addable"
+        ],
+        "title": "TranslationPipelineCheck"
+      },
       "TranslationProgress": {
         "properties": {
           "totalTasks": {
@@ -13435,6 +13708,47 @@
         },
         "type": "object",
         "title": "TranslationProgress"
+      },
+      "TranslationStageCheck": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "inputs": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationInputPort"
+            },
+            "type": "array",
+            "title": "Inputs"
+          },
+          "outputs": {
+            "items": {
+              "$ref": "#/components/schemas/TranslationOutputPort"
+            },
+            "type": "array",
+            "title": "Outputs"
+          },
+          "warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warning"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "inputs",
+          "outputs",
+          "warning"
+        ],
+        "title": "TranslationStageCheck"
       },
       "TranslationStageRead": {
         "properties": {
@@ -13539,7 +13853,7 @@
             ],
             "title": "Claimexpiresat"
           },
-          "inputFileId": {
+          "requestFileId": {
             "anyOf": [
               {
                 "type": "string",
@@ -13549,7 +13863,7 @@
                 "type": "null"
               }
             ],
-            "title": "Inputfileid"
+            "title": "Requestfileid"
           },
           "outputFileId": {
             "anyOf": [
@@ -13573,7 +13887,7 @@
           "failedAt",
           "error",
           "claimExpiresAt",
-          "inputFileId",
+          "requestFileId",
           "outputFileId"
         ],
         "title": "TranslationTaskRead"

@@ -11,8 +11,8 @@ export interface TranslationTaskRead {
   claimExpiresAt: string | null;
   error: string | null;
   failedAt: string | null;
-  inputFileId: string | null;
   outputFileId: string | null;
+  requestFileId: string | null;
   stageId: string;
   status: TranslationTaskStatus;
   taskId: string;

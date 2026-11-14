@@ -85,6 +85,7 @@ export const createTranslationJobsPostBodyConfigEndChapterNumOneMin = 0;
 
 export const createTranslationJobsPostBodyConfigStartChapterNumOneMin = 0;
 
+export const createTranslationJobsPostBodyInputsExcludeCurrentChapterDefault = true;
 export const createTranslationJobsPostBodyStagesMax = 5;
 
 
@@ -95,6 +96,13 @@ export const CreateTranslationJobsPostBody = S.Struct({
   "endChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(createTranslationJobsPostBodyConfigEndChapterNumOneMin)), S.Null])),
   "startChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(createTranslationJobsPostBodyConfigStartChapterNumOneMin)), S.Null]))
 }),
+  "inputs": S.optional(S.Record(S.String, S.Struct({
+  "excludeCurrentChapter": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(createTranslationJobsPostBodyInputsExcludeCurrentChapterDefault))),
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryTypes": S.optional(S.Union([S.Array(S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null])),
+  "pluginNames": S.optional(S.Union([S.Array(S.Literals(['glossary', 'continuity'])), S.Null])),
+  "type": S.Literal("memories")
+}))),
   "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "stages": S.Array(S.Struct({
   "action": S.String,
@@ -134,6 +142,81 @@ export const ListActionsTranslationJobsActionsGet200Response = S.Struct({
 })
 
 /**
+ * @summary Check
+ */
+export const checkTranslationJobsCheckPostBodyConfigBatchSizeExclusiveMin = 0;
+
+export const checkTranslationJobsCheckPostBodyConfigEndChapterNumOneMin = 0;
+
+export const checkTranslationJobsCheckPostBodyConfigStartChapterNumOneMin = 0;
+
+export const checkTranslationJobsCheckPostBodyInputsExcludeCurrentChapterDefault = true;
+export const checkTranslationJobsCheckPostBodyStagesMax = 5;
+
+
+
+export const CheckTranslationJobsCheckPostBody = S.Struct({
+  "config": S.Struct({
+  "batchSize": S.Number.check(S.isGreaterThan(checkTranslationJobsCheckPostBodyConfigBatchSizeExclusiveMin)),
+  "endChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(checkTranslationJobsCheckPostBodyConfigEndChapterNumOneMin)), S.Null])),
+  "startChapterNum": S.optional(S.Union([S.Number.check(S.isGreaterThanOrEqualTo(checkTranslationJobsCheckPostBodyConfigStartChapterNumOneMin)), S.Null]))
+}),
+  "inputs": S.optional(S.Record(S.String, S.Struct({
+  "excludeCurrentChapter": S.Boolean.pipe(S.withDecodingDefaultType(Effect.succeed(checkTranslationJobsCheckPostBodyInputsExcludeCurrentChapterDefault))),
+  "memoryGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "memoryTypes": S.optional(S.Union([S.Array(S.Literals(['fact', 'event', 'def', 'rel', 'summary']).annotate({ description: 'The type of a memory.\n\nFACT: Memory about a specific fact or piece of information.\nEVENT: Memory about a specific event or occurrence.\nDEFINITION: Long-term memory about a specific definition or concept.\nRELATION: Long-term memory about a relationship between glossary terms.' })), S.Null])),
+  "pluginNames": S.optional(S.Union([S.Array(S.Literals(['glossary', 'continuity'])), S.Null])),
+  "type": S.Literal("memories")
+}))),
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "stages": S.optional(S.Array(S.Struct({
+  "action": S.String,
+  "config": S.optional(S.Record(S.String, S.Unknown))
+})).check(S.isMaxLength(checkTranslationJobsCheckPostBodyStagesMax)))
+})
+
+export const CheckTranslationJobsCheckPost200Response = S.Struct({
+  "addable": S.Array(S.Struct({
+  "action": S.String,
+  "warning": S.Union([S.String, S.Null])
+})),
+  "ends": S.Array(S.Struct({
+  "source": S.Number,
+  "stream": S.String,
+  "type": S.Literals(['chapter', 'memories'])
+})),
+  "stages": S.Array(S.Struct({
+  "action": S.String,
+  "inputs": S.Array(S.Struct({
+  "drops": S.Boolean,
+  "link": S.Literals(['linked', 'broken', 'incompatible', 'absent']),
+  "optional": S.Boolean,
+  "source": S.Union([S.Number, S.Null]),
+  "sourceType": S.Union([S.Literals(['chapter', 'memories']), S.Null]),
+  "stream": S.String,
+  "type": S.Literals(['chapter', 'memories'])
+})),
+  "outputs": S.Array(S.Struct({
+  "stream": S.String,
+  "type": S.Literals(['chapter', 'memories'])
+})),
+  "warning": S.Union([S.String, S.Null])
+}))
+})
+
+export const CheckTranslationJobsCheckPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * @summary Read
  */
 export const ReadTranslationJobsJobIdGetParams = S.Struct({
@@ -143,8 +226,7 @@ export const ReadTranslationJobsJobIdGetParams = S.Struct({
 export const ReadTranslationJobsJobIdGet200Response = S.Struct({
   "batches": S.Array(S.Struct({
   "batchId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "batchNum": S.Number,
-  "initialFileId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null])
+  "batchNum": S.Number
 })),
   "config": S.Record(S.String, S.Unknown),
   "jobId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
@@ -160,8 +242,8 @@ export const ReadTranslationJobsJobIdGet200Response = S.Struct({
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "error": S.Union([S.String, S.Null]),
   "failedAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
-  "inputFileId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
   "outputFileId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "requestFileId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
   "stageId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "status": S.Literals(['waiting', 'ready', 'preparing', 'prepared', 'submitting', 'processing', 'processed', 'finalizing', 'complete']),
   "taskId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
@@ -215,14 +297,13 @@ export const ListBatchesTranslationJobsJobIdBatchesGet200Response = S.Struct({
   "items": S.Array(S.Struct({
   "batchId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "batchNum": S.Number,
-  "initialFileId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
   "tasks": S.Array(S.Struct({
   "batchId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "claimExpiresAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
   "error": S.Union([S.String, S.Null]),
   "failedAt": S.Union([S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)), S.Null]),
-  "inputFileId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
   "outputFileId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
+  "requestFileId": S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]),
   "stageId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
   "status": S.Literals(['waiting', 'ready', 'preparing', 'prepared', 'submitting', 'processing', 'processed', 'finalizing', 'complete']),
   "taskId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))

@@ -8,5 +8,4 @@
 export interface TranslationBatchRead {
   batchId: string;
   batchNum: number;
-  initialFileId: string | null;
 }

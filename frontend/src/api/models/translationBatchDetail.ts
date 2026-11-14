@@ -9,6 +9,5 @@ import type { TranslationTaskRead } from './translationTaskRead';
 export interface TranslationBatchDetail {
   batchId: string;
   batchNum: number;
-  initialFileId: string | null;
   tasks: TranslationTaskRead[];
 }

@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { TranslationJobConfig } from './translationJobConfig';
+import type { TranslationJobCreateRequestInputs } from './translationJobCreateRequestInputs';
 import type { TranslationStageRequest } from './translationStageRequest';
 
 /**
@@ -12,6 +13,7 @@ import type { TranslationStageRequest } from './translationStageRequest';
  */
 export interface TranslationJobCreateRequest {
   config: TranslationJobConfig;
+  inputs?: TranslationJobCreateRequestInputs;
   novelId: string;
   /**
      * @minItems 1

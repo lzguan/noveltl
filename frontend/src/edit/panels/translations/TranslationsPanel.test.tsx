@@ -24,7 +24,6 @@ const job: TranslationJobSummary = {
 const batches: TranslationBatchDetail[] = Array.from({ length: 6 }, (_, index) => ({
 	batchId: `batch-${index}`,
 	batchNum: index,
-	initialFileId: null,
 	tasks: [
 		{
 			taskId: `task-${index}`,
@@ -34,7 +33,7 @@ const batches: TranslationBatchDetail[] = Array.from({ length: 6 }, (_, index) =
 			failedAt: null,
 			error: null,
 			claimExpiresAt: null,
-			inputFileId: null,
+			requestFileId: null,
 			outputFileId: null,
 		},
 	],

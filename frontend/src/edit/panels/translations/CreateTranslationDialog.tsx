@@ -9,11 +9,17 @@ import {
 	DialogTitle,
 	DialogDescription,
 } from "@/components/ui/dialog";
-import { memoryGroupInputs, readUI } from "./schemaUi";
+import { readUI } from "./schemaUi";
 import { StageConfigForm } from "./StageConfigForm";
 import type { RJSFSchema } from "@rjsf/utils";
-import type { TranslationActionMetadata } from "@/api/models";
+import { MemoryType, PluginName } from "@/api/models";
+import type {
+	TranslationActionMetadata,
+	TranslationJobCreateRequestInputs,
+	TranslationPipelineCheck,
+} from "@/api/models";
 import {
+	checkTranslationJobsCheckPost,
 	createTranslationJobsPost,
 	listActionsTranslationJobsActionsGet,
 } from "@/api/endpoints/translations/translations";
@@ -27,14 +33,7 @@ type Props = {
 	onClose: () => void;
 	onCreate: (jobId: string) => void;
 };
-type Action = {
-	id: string;
-	label: string;
-	inputs: string[];
-	outputs: string[];
-	first: boolean;
-	schema: RJSFSchema;
-};
+type Action = { id: string; label: string; schema: RJSFSchema };
 type Stage = { id: string; action: Action; config: Record<string, unknown> };
 
 export function CreateTranslationDialog(props: Props) {
@@ -72,9 +71,6 @@ export function CreateTranslationDialog(props: Props) {
 				actions={catalog.data.map((action) => ({
 					id: action.name,
 					label: action.label,
-					inputs: action.inputTypes,
-					outputs: action.outputTypes,
-					first: action.allowedAsFirstStage,
 					schema: action.configSchema,
 				}))}
 			/>
@@ -111,64 +107,107 @@ export function CreateTranslationDialog(props: Props) {
 	);
 }
 
-function formSchema(action: Action, index: number): RJSFSchema {
-	const hidden = Object.entries(action.schema.properties ?? {})
-		.filter(([, field]) => {
-			const ui = readUI(field);
-			return ui.placement === "job-inputs" || (index > 0 && ui.stageScope === "first");
-		})
-		.map(([name]) => name);
+function formSchema(action: Action): RJSFSchema {
 	return {
 		...action.schema,
 		properties: Object.fromEntries(
-			Object.entries(action.schema.properties ?? {})
-				.filter(([name]) => !hidden.includes(name))
-				.map(([name, field]) => {
-					if (typeof field === "boolean") return [name, field];
-					const words = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replaceAll("_", " ");
-					const title =
-						field.title ?? words.charAt(0).toUpperCase() + words.slice(1).toLowerCase();
-					const numeric = field.anyOf?.find(
-						(branch) =>
-							typeof branch === "object" &&
-							(branch.type === "number" ||
-								branch.type === "integer" ||
-								branch.type === "array"),
-					);
-					if (
-						["number", "filter-checklist"].includes(readUI(field).control ?? "") &&
-						field.anyOf?.length === 2 &&
-						typeof numeric === "object" &&
-						field.anyOf.some(
-							(branch) => typeof branch === "object" && branch.type === "null",
-						)
-					) {
-						const normalized: RJSFSchema = {
-							...field,
-							...numeric,
-							title,
-							type: [
-								numeric.type === "integer"
-									? "integer"
-									: numeric.type === "array"
-										? "array"
-										: "number",
-								"null",
-							],
-							description:
-								field.description ??
-								(numeric.type === "array"
-									? "All values are included unless a selection is specified."
-									: "Leave blank to use the provider default."),
-						};
-						delete normalized.anyOf;
-						return [name, normalized];
-					}
-					return [name, { ...field, title }];
-				}),
+			Object.entries(action.schema.properties ?? {}).map(([name, field]) => {
+				if (typeof field === "boolean") return [name, field];
+				const words = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replaceAll("_", " ");
+				const title =
+					field.title ?? words.charAt(0).toUpperCase() + words.slice(1).toLowerCase();
+				const numeric = field.anyOf?.find(
+					(branch) =>
+						typeof branch === "object" &&
+						(branch.type === "number" ||
+							branch.type === "integer" ||
+							branch.type === "array"),
+				);
+				if (
+					["number", "filter-checklist"].includes(readUI(field).control ?? "") &&
+					field.anyOf?.length === 2 &&
+					typeof numeric === "object" &&
+					field.anyOf.some(
+						(branch) => typeof branch === "object" && branch.type === "null",
+					)
+				) {
+					const normalized: RJSFSchema = {
+						...field,
+						...numeric,
+						title,
+						type: [
+							numeric.type === "integer"
+								? "integer"
+								: numeric.type === "array"
+									? "array"
+									: "number",
+							"null",
+						],
+						description:
+							field.description ??
+							(numeric.type === "array"
+								? "All values are included unless a selection is specified."
+								: "Leave blank to use the provider default."),
+					};
+					delete normalized.anyOf;
+					return [name, normalized];
+				}
+				return [name, { ...field, title }];
+			}),
 		),
-		required: action.schema.required?.filter((name) => !hidden.includes(name)),
 	};
+}
+
+/** null means unrestricted; an explicit empty list intentionally matches nothing. */
+function MemoryFilter<T extends string>({
+	title,
+	allLabel,
+	choices,
+	value,
+	onChange,
+}: {
+	title: string;
+	allLabel: string;
+	choices: T[];
+	value: T[] | null;
+	onChange: (value: T[] | null) => void;
+}) {
+	return (
+		<fieldset className="space-y-2 rounded-md border p-3">
+			<legend className="px-1 text-sm font-medium">{title}</legend>
+			<label className="flex items-center gap-2 text-sm">
+				<input
+					type="checkbox"
+					checked={value === null}
+					onChange={(event) => onChange(event.target.checked ? null : [])}
+				/>
+				{allLabel}
+			</label>
+			{value !== null && (
+				<>
+					<p className="text-xs text-muted-foreground">
+						Selecting none excludes all memories.
+					</p>
+					{choices.map((choice) => (
+						<label key={choice} className="flex items-center gap-2 text-sm">
+							<input
+								type="checkbox"
+								checked={value.includes(choice)}
+								onChange={(event) =>
+									onChange(
+										event.target.checked
+											? [...value, choice]
+											: value.filter((item) => item !== choice),
+									)
+								}
+							/>
+							{choice}
+						</label>
+					))}
+				</>
+			)}
+		</fieldset>
+	);
 }
 
 const selectClass = "h-9 w-full rounded-md border bg-background px-2 text-sm";
@@ -188,7 +227,11 @@ function CreateTranslationForm({
 	const [stages, setStages] = useState<Stage[]>([]);
 	const [selected, setSelected] = useState("");
 	const [configuring, setConfiguring] = useState<string | null>(null);
-	const [pending, setPending] = useState<{ index: number; group?: string } | null>(null);
+	const [excludeCurrentChapter, setExcludeCurrentChapter] = useState(true);
+	const [pluginNames, setPluginNames] = useState<PluginName[] | null>(null);
+	const [memoryTypes, setMemoryTypes] = useState<MemoryType[] | null>(null);
+	const [advanced, setAdvanced] = useState(false);
+	const [pending, setPending] = useState<{ index: number } | null>(null);
 	const [start, setStart] = useState(
 		chapterNumbers.length ? String(Math.min(...chapterNumbers)) : "",
 	);
@@ -196,14 +239,45 @@ function CreateTranslationForm({
 		chapterNumbers.length ? String(Math.max(...chapterNumbers)) : "",
 	);
 	const [batchSize, setBatchSize] = useState("100");
-	const memoryInput = actions.flatMap((action) => memoryGroupInputs(action.schema))[0];
-	const inputs =
-		stages.at(-1)?.action.outputs ?? (memoryGroup ? ["chapter", "memories"] : ["chapter"]);
-	const available = actions.filter(
-		(action) =>
-			(stages.length > 0 || action.first) &&
-			action.inputs.every((input) => inputs.includes(input)),
-	);
+	// The job's input streams: chapters are always loaded, memories when a group is chosen.
+	const inputs: TranslationJobCreateRequestInputs = memoryGroup
+		? {
+				memories: {
+					type: "memories",
+					memoryGroupId: memoryGroup,
+					excludeCurrentChapter,
+					pluginNames,
+					memoryTypes,
+				},
+			}
+		: {};
+	// The backend type-checks the draft; this component only renders its answer.
+	const [check, setCheck] = useState<TranslationPipelineCheck | null>(null);
+	const stageActions = stages.map((stage) => stage.action.id).join(",");
+	useEffect(() => {
+		const controller = new AbortController();
+		void checkTranslationJobsCheckPost(
+			{
+				novelId,
+				// Types do not depend on the chapter range, which may be mid-edit.
+				config: { batchSize: 1 },
+				inputs: memoryGroup
+					? { memories: { type: "memories", memoryGroupId: memoryGroup } }
+					: {},
+				stages: stageActions ? stageActions.split(",").map((action) => ({ action })) : [],
+			},
+			{ signal: controller.signal },
+		)
+			.then((response) => {
+				if (!controller.signal.aborted)
+					setCheck(response.status === 200 ? response.data : null);
+			})
+			.catch(() => {
+				if (!controller.signal.aborted) setCheck(null);
+			});
+		return () => controller.abort();
+	}, [novelId, memoryGroup, stageActions]);
+	const addable = new Map(check?.addable.map((item) => [item.action, item.warning]));
 	const validRange =
 		[start, end, batchSize].every(
 			(value) => value.trim() !== "" && Number.isSafeInteger(Number(value)),
@@ -214,14 +288,13 @@ function CreateTranslationForm({
 		Number.isSafeInteger(Number(end) + 1) &&
 		chapterNumbers.some((number) => number >= Number(start) && number <= Number(end));
 	function addStage() {
-		const action = available.find((item) => item.id === selected);
+		const action = actions.find((item) => item.id === selected);
 		if (!action || stages.length === 5) return;
 		const config = Object.fromEntries(
-			Object.entries(formSchema(action, stages.length).properties ?? {}).flatMap(
-				([name, field]) =>
-					typeof field === "object" && field.default !== undefined
-						? [[name, field.default]]
-						: [],
+			Object.entries(formSchema(action).properties ?? {}).flatMap(([name, field]) =>
+				typeof field === "object" && field.default !== undefined
+					? [[name, field.default]]
+					: [],
 			),
 		);
 		const stage = { id: crypto.randomUUID(), action, config };
@@ -232,9 +305,9 @@ function CreateTranslationForm({
 	async function submit() {
 		if (submittingRef.current) return;
 		const invalid = stages.findIndex(
-			(stage, index) =>
-				validator.validateFormData(stage.config, formSchema(stage.action, index)).errors
-					.length > 0,
+			(stage) =>
+				validator.validateFormData(stage.config, formSchema(stage.action)).errors.length >
+				0,
 		);
 		if (invalid >= 0) {
 			setConfiguring(stages[invalid].id);
@@ -253,20 +326,8 @@ function CreateTranslationForm({
 					endChapterNum: Number(end) + 1,
 					batchSize: Number(batchSize),
 				},
-				stages: stages.map((stage, index) => ({
-					action: stage.action.id,
-					config: {
-						...stage.config,
-						...Object.fromEntries(
-							memoryGroupInputs(stage.action.schema)
-								.filter(
-									([, field]) =>
-										index === 0 || readUI(field).stageScope !== "first",
-								)
-								.map(([name]) => [name, memoryGroup || null]),
-						),
-					},
-				})),
+				inputs,
+				stages: stages.map((stage) => ({ action: stage.action.id, config: stage.config })),
 			});
 			if (response.status !== 201) {
 				setError(apiErrorMessage(response.data, "Could not create translation job."));
@@ -326,89 +387,122 @@ function CreateTranslationForm({
 					</p>
 				)}
 				<fieldset disabled={submitting} className="min-w-0 space-y-5">
-					<div className="grid grid-cols-3 gap-3">
-						<label className="space-y-1 text-sm">
-							From chapter
-							<Input
-								type="number"
-								min={0}
-								value={start}
-								onChange={(event) => setStart(event.target.value)}
-							/>
-						</label>
-						<label className="space-y-1 text-sm">
-							To chapter (inclusive)
-							<Input
-								type="number"
-								min={0}
-								value={end}
-								onChange={(event) => setEnd(event.target.value)}
-							/>
-						</label>
-						<label className="space-y-1 text-sm">
-							Chapters per batch
-							<Input
-								type="number"
-								min={1}
-								value={batchSize}
-								onChange={(event) => setBatchSize(event.target.value)}
-							/>
-						</label>
-					</div>
-					{!validRange && (
-						<p role="alert" className="text-sm text-destructive">
-							Enter a valid chapter range containing source chapters and a positive
-							batch size.
-						</p>
-					)}
-					{memoryInput && (
-						<label className="space-y-2 text-sm">
-							{typeof memoryInput[1] === "object"
-								? memoryInput[1].title
-								: "Memory group"}
-							<select
-								className={selectClass}
-								disabled={groups.status !== "ready"}
-								value={memoryGroup}
-								onChange={(event) => {
-									const group = event.target.value;
-									if (!group && stages[0]?.action.inputs.includes("memories"))
-										setPending({ index: 0, group });
-									else {
-										setMemoryGroup(group);
+					<section className="space-y-4 rounded-lg bg-muted/50 p-4">
+						<h3 className="font-medium">Inputs</h3>
+						<div className="grid grid-cols-3 gap-3">
+							<label className="space-y-1 text-sm">
+								From chapter
+								<Input
+									type="number"
+									min={0}
+									value={start}
+									onChange={(event) => setStart(event.target.value)}
+								/>
+							</label>
+							<label className="space-y-1 text-sm">
+								To chapter (inclusive)
+								<Input
+									type="number"
+									min={0}
+									value={end}
+									onChange={(event) => setEnd(event.target.value)}
+								/>
+							</label>
+							<label className="space-y-1 text-sm">
+								Chapters per batch
+								<Input
+									type="number"
+									min={1}
+									value={batchSize}
+									onChange={(event) => setBatchSize(event.target.value)}
+								/>
+							</label>
+						</div>
+						{!validRange && (
+							<p role="alert" className="text-sm text-destructive">
+								Enter a valid chapter range containing source chapters and a
+								positive batch size.
+							</p>
+						)}
+						<div className="flex items-end gap-2">
+							<label className="flex-1 space-y-2 text-sm">
+								Memory group
+								<select
+									className={selectClass}
+									disabled={groups.status !== "ready"}
+									value={memoryGroup}
+									onChange={(event) => {
+										setMemoryGroup(event.target.value);
 										setSelected("");
-									}
-								}}
+									}}
+								>
+									<option value="">None</option>
+									{groups.status === "ready" &&
+										groups.data.map((group) => (
+											<option
+												key={group.memoryGroupId}
+												value={group.memoryGroupId}
+											>
+												{group.memoryGroupName}
+											</option>
+										))}
+								</select>
+							</label>
+							<Button
+								variant="outline"
+								disabled={!memoryGroup}
+								aria-expanded={advanced && memoryGroup !== ""}
+								onClick={() => setAdvanced(!advanced)}
 							>
-								<option value="">
-									{readUI(memoryInput[1]).nullLabel ?? "None"}
-								</option>
-								{groups.status === "ready" &&
-									groups.data.map((group) => (
-										<option
-											key={group.memoryGroupId}
-											value={group.memoryGroupId}
-										>
-											{group.memoryGroupName}
-										</option>
-									))}
-							</select>
-						</label>
-					)}
-					{memoryInput && groups.status === "error" && (
-						<div role="alert">
-							{groups.message}{" "}
-							<Button variant="outline" onClick={reloadGroups}>
-								Retry memory groups
+								Advanced
 							</Button>
 						</div>
-					)}
-					{(groups.status === "idle" || groups.status === "loading") && (
-						<p role="status">Loading memory groups…</p>
-					)}
-					<p className="text-xs text-muted-foreground">
-						Initial inputs: Chapter{memoryGroup && " + Memories"}
-					</p>
+						{advanced && memoryGroup && (
+							<div className="space-y-3 rounded-lg border p-3">
+								<label className="flex items-center gap-2 text-sm">
+									<input
+										type="checkbox"
+										checked={excludeCurrentChapter}
+										onChange={(event) =>
+											setExcludeCurrentChapter(event.target.checked)
+										}
+									/>
+									Exclude memories recorded from the chapter being translated
+								</label>
+								<div className="grid grid-cols-2 gap-3">
+									<MemoryFilter
+										title="Plugin names"
+										allLabel="All plugin names"
+										choices={Object.values(PluginName)}
+										value={pluginNames}
+										onChange={setPluginNames}
+									/>
+									<MemoryFilter
+										title="Memory types"
+										allLabel="All memory types"
+										choices={Object.values(MemoryType)}
+										value={memoryTypes}
+										onChange={setMemoryTypes}
+									/>
+								</div>
+							</div>
+						)}
+						{groups.status === "error" && (
+							<div role="alert">
+								{groups.message}{" "}
+								<Button variant="outline" onClick={reloadGroups}>
+									Retry memory groups
+								</Button>
+							</div>
+						)}
+						{(groups.status === "idle" || groups.status === "loading") && (
+							<p role="status">Loading memory groups…</p>
+						)}
+						<p className="text-xs text-muted-foreground">
+							Loaded for every stage:{" "}
+							{check?.stages[0].outputs.map((port) => port.stream).join(" + ") ?? "…"}
+						</p>
+					</section>
 					<div className="space-y-3">
 						<h3 className="font-medium">
 							Stages{" "}
@@ -445,10 +539,24 @@ function CreateTranslationForm({
 										Remove
 									</Button>
 								</div>
-								<p className="text-xs text-muted-foreground">
-									{stage.action.inputs.join(" + ")} →{" "}
-									{stage.action.outputs.join(" + ")}
-								</p>
+								{check?.stages[index + 1] && (
+									<p className="text-xs text-muted-foreground">
+										Uses{" "}
+										{check.stages[index + 1].inputs
+											.filter((port) => port.link === "linked")
+											.map((port) => port.stream)
+											.join(" + ") || "nothing"}{" "}
+										→ writes{" "}
+										{check.stages[index + 1].outputs
+											.map((port) => port.stream)
+											.join(" + ")}
+									</p>
+								)}
+								{check?.stages[index + 1]?.warning && (
+									<p role="status" className="text-sm text-amber-600">
+										This stage cannot run: {check.stages[index + 1].warning}.
+									</p>
+								)}
 								<p className="text-sm">
 									{[
 										stage.config.model,
@@ -466,7 +574,7 @@ function CreateTranslationForm({
 								{configuring === stage.id && (
 									<StageConfigForm
 										key={stage.id}
-										schema={formSchema(stage.action, index)}
+										schema={formSchema(stage.action)}
 										config={stage.config}
 										onSave={(config) => {
 											setStages(
@@ -488,19 +596,13 @@ function CreateTranslationForm({
 								className="rounded-lg border border-destructive/40 p-3 space-y-2 text-sm"
 							>
 								<p>
-									Remove stages {pending.index + 1}–{stages.length}
-									{pending.group !== undefined
-										? " to remove the memory group"
-										: ""}
-									?
+									Remove stages {pending.index + 1}–{stages.length}?
 								</p>
 								<Button
 									size="sm"
 									variant="destructive"
 									onClick={() => {
 										setStages(stages.slice(0, pending.index));
-										if (pending.group !== undefined)
-											setMemoryGroup(pending.group);
 										setConfiguring(null);
 										setSelected("");
 										setPending(null);
@@ -526,12 +628,20 @@ function CreateTranslationForm({
 										value={selected}
 										onChange={(event) => setSelected(event.target.value)}
 									>
-										<option value="">Select compatible action</option>
-										{available.map((action) => (
-											<option key={action.id} value={action.id}>
-												{action.label}
-											</option>
-										))}
+										<option value="">Select action</option>
+										{actions.map((action) => {
+											const warning = addable.get(action.id);
+											return (
+												<option
+													key={action.id}
+													value={action.id}
+													disabled={warning !== null}
+												>
+													{action.label}
+													{warning ? ` (${warning})` : ""}
+												</option>
+											);
+										})}
 									</select>
 								</label>
 								<Button
@@ -551,12 +661,6 @@ function CreateTranslationForm({
 							disabled={
 								!validRange ||
 								submitting ||
-								(stages[0]?.action.inputs.includes("memories") &&
-									(!memoryGroup ||
-										groups.status !== "ready" ||
-										!groups.data.some(
-											(group) => group.memoryGroupId === memoryGroup,
-										))) ||
 								stages.length === 0 ||
 								configuring !== null ||
 								pending !== null

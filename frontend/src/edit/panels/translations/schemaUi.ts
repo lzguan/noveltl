@@ -12,23 +12,9 @@ export function readUI(field: RJSFSchema | boolean) {
 		control: string("control"),
 		resource: string("resource"),
 		scope: string("scope"),
-		placement: string("placement"),
-		stageScope: string("stageScope"),
 		showAfter: string("showAfter"),
 		placeholder: string("placeholder"),
 		nullLabel: string("nullLabel"),
 		emptyLabel: string("emptyLabel"),
 	};
-}
-
-export function memoryGroupInputs(schema: RJSFSchema) {
-	return Object.entries(schema.properties ?? {}).filter(([, field]) => {
-		const ui = readUI(field);
-		return (
-			ui.control === "resource-picker" &&
-			ui.resource === "memory-group" &&
-			ui.scope === "current-novel" &&
-			ui.placement === "job-inputs"
-		);
-	});
 }

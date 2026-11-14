@@ -41,28 +41,10 @@ const schema = {
 			anyOf: [{ type: "integer", exclusiveMinimum: 0 }, { type: "null" }],
 			default: null,
 		},
-		memoryGroupId: {
-			title: "Memory group",
-			"x-ui": {
-				control: "resource-picker",
-				resource: "memory-group",
-				scope: "current-novel",
-				placement: "job-inputs",
-				stageScope: "first",
-			},
-			anyOf: [{ type: "string", format: "uuid" }, { type: "null" }],
-			default: null,
-		},
-		excludeCurrentChapter: {
-			type: "boolean",
-			default: true,
-			"x-ui": { control: "checkbox", stageScope: "first", showAfter: "model" },
-		},
 		pluginNames: {
 			title: "Plugin names",
 			"x-ui": {
 				control: "filter-checklist",
-				stageScope: "first",
 				showAfter: "model",
 				nullLabel: "All plugin names",
 				emptyLabel: "Selecting none excludes all memories.",
@@ -74,7 +56,6 @@ const schema = {
 			title: "Memory types",
 			"x-ui": {
 				control: "filter-checklist",
-				stageScope: "first",
 				showAfter: "model",
 				nullLabel: "All memory types",
 				emptyLabel: "Selecting none excludes all memories.",
@@ -152,6 +133,44 @@ function setup({
 					? Response.json({ detail: "Metadata unavailable" }, { status: 503 })
 					: Response.json(catalog);
 			}
+			if (url.endsWith("/check")) {
+				// Stand in for the backend type check: the memory action needs the memories stream.
+				const draft = typeof options?.body === "string" ? JSON.parse(options.body) : {};
+				const loaded = draft.inputs?.memories ? ["chapter", "memories"] : ["chapter"];
+				const warn = (action: string) =>
+					action === "dynamic-translation" && loaded.length === 1
+						? "requires memories"
+						: null;
+				const port = (stream: string) => ({ stream, type: stream });
+				return Response.json({
+					stages: [
+						{
+							action: "load_inputs",
+							inputs: [],
+							outputs: loaded.map(port),
+							warning: null,
+						},
+						...(draft.stages ?? []).map((stage: { action: string }) => ({
+							action: stage.action,
+							inputs: loaded.map((stream) => ({
+								...port(stream),
+								optional: false,
+								drops: false,
+								link: "linked",
+								source: 0,
+								sourceType: stream,
+							})),
+							outputs: [port("chapter")],
+							warning: warn(stage.action),
+						})),
+					],
+					ends: [],
+					addable: catalog.actions.map((action) => ({
+						action: action.name,
+						warning: warn(action.name),
+					})),
+				});
+			}
 			if (options?.method === "POST") {
 				if (typeof options.body === "string") payloads.push(JSON.parse(options.body));
 				await createWait;
@@ -204,12 +223,15 @@ afterEach(() => vi.unstubAllGlobals());
 async function configure() {
 	await screen.findByRole("option", { name: "Real glossary" });
 	fireEvent.change(screen.getByLabelText("Memory group"), { target: { value: "group-1" } });
+	// The action becomes selectable once the backend check reports that memories are loaded.
+	await waitFor(() =>
+		expect(screen.getByRole("option", { name: "Translate with memories" })).toBeEnabled(),
+	);
 	fireEvent.change(screen.getByLabelText("Add stage"), {
 		target: { value: "dynamic-translation" },
 	});
 	fireEvent.click(screen.getByRole("button", { name: "Add stage" }));
 	fireEvent.change(screen.getByRole("combobox", { name: /Model/ }), { target: { value: "0" } });
-	expect(screen.queryByLabelText(/Memory Group Id/i)).not.toBeInTheDocument();
 	fireEvent.change(screen.getByLabelText(/Target language/), { target: { value: "French" } });
 	fireEvent.change(screen.getByLabelText("Instructions"), {
 		target: { value: "Keep names consistent" },
@@ -227,6 +249,15 @@ it("submits runtime action names, inclusive bounds, and the selected memory grou
 		{
 			novelId: "novel-1",
 			config: { startChapterNum: 3, endChapterNum: 9, batchSize: 100 },
+			inputs: {
+				memories: {
+					type: "memories",
+					memoryGroupId: "group-1",
+					excludeCurrentChapter: true,
+					pluginNames: null,
+					memoryTypes: null,
+				},
+			},
 			stages: [
 				{
 					action: "dynamic-translation",
@@ -234,12 +265,10 @@ it("submits runtime action names, inclusive bounds, and the selected memory grou
 						model: "qwen-plus",
 						targetLanguage: "French",
 						instructions: "Keep names consistent",
-						excludeCurrentChapter: true,
 						temperature: null,
 						maxOutputTokens: null,
 						pluginNames: null,
 						memoryTypes: null,
-						memoryGroupId: "group-1",
 					},
 				},
 			],
@@ -274,15 +303,46 @@ it("retries metadata loading and retains a created job ID when detail loading fa
 	);
 	expect(payloads).toHaveLength(1);
 });
-it("removes the dependent suffix when the initial memory group is removed", async () => {
+it("warns about a stage whose input is no longer loaded without blocking creation", async () => {
 	setup();
 	await configure();
+	await screen.findByText(/Uses chapter \+ memories/);
 	fireEvent.change(screen.getByLabelText("Memory group"), { target: { value: "" } });
-	fireEvent.click(screen.getByRole("button", { name: "Remove stages" }));
-	expect(screen.getByRole("button", { name: "Create job" })).toBeDisabled();
+	await screen.findByText("This stage cannot run: requires memories.");
+	// The stage stays, and only creating the job can reject it.
+	expect(screen.getByText("qwen-plus · French · Custom instructions")).toBeInTheDocument();
+	expect(screen.getByRole("button", { name: "Create job" })).toBeEnabled();
 	expect(
-		screen.queryByRole("option", { name: "Translate with memories" }),
-	).not.toBeInTheDocument();
+		screen.getByRole("option", { name: "Translate with memories (requires memories)" }),
+	).toBeDisabled();
+	expect(screen.getByRole("option", { name: "Translate" })).toBeEnabled();
+});
+
+it("sends the advanced memory options with the job inputs", async () => {
+	const payloads = setup();
+	await screen.findByRole("option", { name: "Real glossary" });
+	// The options belong to the memories input, so they need a memory group.
+	expect(screen.getByRole("button", { name: "Advanced" })).toBeDisabled();
+	await configure();
+	expect(screen.queryByLabelText("All plugin names")).not.toBeInTheDocument();
+	fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
+	fireEvent.click(screen.getByLabelText(/Exclude memories recorded from the chapter/));
+	fireEvent.click(screen.getByLabelText("All plugin names"));
+	fireEvent.click(screen.getByLabelText("glossary"));
+	// Explicit [] is intentionally distinct from unrestricted null.
+	fireEvent.click(screen.getByLabelText("All memory types"));
+	fireEvent.click(screen.getByRole("button", { name: "Create job" }));
+	await screen.findByRole("dialog", { name: /Job created-.*Batches/ });
+	expect(payloads[0]).toMatchObject({
+		inputs: {
+			memories: {
+				memoryGroupId: "group-1",
+				excludeCurrentChapter: false,
+				pluginNames: ["glossary"],
+				memoryTypes: [],
+			},
+		},
+	});
 });
 
 it("prevents duplicate submission while creation is pending", async () => {
@@ -332,6 +392,9 @@ it("waits for a model and renders nullable filters with explicit all and selecte
 	const payloads = setup();
 	await screen.findByRole("option", { name: "Real glossary" });
 	fireEvent.change(screen.getByLabelText("Memory group"), { target: { value: "group-1" } });
+	await waitFor(() =>
+		expect(screen.getByRole("option", { name: "Translate with memories" })).toBeEnabled(),
+	);
 	fireEvent.change(screen.getByLabelText("Add stage"), {
 		target: { value: "dynamic-translation" },
 	});

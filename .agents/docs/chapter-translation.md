@@ -96,10 +96,12 @@ case in `iter_initial_records`, and a declaration on each action that reads it.
 Group-level data (e.g. conventions) has no chapter; the current plan is to
 repeat it on each chapter's record rather than add a batch-level record.
 
-Leftovers as of 2026-11-14: `translation_batches.initial_file_id` and
-`publish_initial_file` are unused (the loader's output replaced the batch
-snapshot) and await a migration, which should also rename the task's
-`input_file_id` (the provider request file, not pipeline input). The metadata
+Migration `a9d3e7c1b2f4` drops the per-batch snapshot column (the loader's output
+replaced it) and renames the task's provider request file column to
+`request_file_id`; it is not applied to a development database automatically.
+The renamed column's foreign key keeps its old auto-generated name.
+
+Leftovers as of 2026-11-14: the metadata
 endpoint's `inputTypes` / `outputTypes` ignore optional inputs and are superseded
 by the check endpoint. The frontend create dialog still sends the old request
 shape, has no label for the `load_inputs` stage, and does not call the check

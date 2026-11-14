@@ -126,7 +126,7 @@ class CeleryActionCallbacks(ActionCallbacks):
         self._steps.append(ActionStep(expect, during, finish, dispatch))
         return celery_task
 
-    def last_step(self, state: TranslationTaskStatus) -> ActionStep | None:
+    def resume_step(self, state: TranslationTaskStatus) -> ActionStep | None:
         if state == TranslationTaskStatus.COMPLETE:
             return None
         if state == TranslationTaskStatus.WAITING and self._steps:

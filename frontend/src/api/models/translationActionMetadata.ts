@@ -4,14 +4,10 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { StreamType } from './streamType';
 import type { TranslationActionMetadataConfigSchema } from './translationActionMetadataConfigSchema';
 
 export interface TranslationActionMetadata {
-  allowedAsFirstStage: boolean;
   configSchema: TranslationActionMetadataConfigSchema;
-  inputTypes: StreamType[];
   label: string;
   name: string;
-  outputTypes: StreamType[];
 }

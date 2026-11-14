@@ -101,9 +101,9 @@ replaced it) and renames the task's provider request file column to
 `request_file_id`; it is not applied to a development database automatically.
 The renamed column's foreign key keeps its old auto-generated name.
 
-Leftovers as of 2026-11-14: the metadata
-endpoint's `inputTypes` / `outputTypes` ignore optional inputs and are superseded
-by the check endpoint. The frontend create dialog sends top-level inputs and calls
+Leftovers as of 2026-11-14: action metadata supplies only `name`, `label`, and
+`configSchema`; compatibility and availability come from the check endpoint.
+The frontend create dialog sends top-level inputs and calls
 the check endpoint. Its read-only lane diagram, including the labelled loader,
 lives in [pipeline-diagram/](../../frontend/src/edit/panels/translations/pipeline-diagram/).
 Layout and rendering use backend sources and link states without inferring types

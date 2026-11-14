@@ -13092,24 +13092,6 @@
             "type": "string",
             "title": "Label"
           },
-          "inputTypes": {
-            "items": {
-              "$ref": "#/components/schemas/StreamType"
-            },
-            "type": "array",
-            "title": "Inputtypes"
-          },
-          "outputTypes": {
-            "items": {
-              "$ref": "#/components/schemas/StreamType"
-            },
-            "type": "array",
-            "title": "Outputtypes"
-          },
-          "allowedAsFirstStage": {
-            "type": "boolean",
-            "title": "Allowedasfirststage"
-          },
           "configSchema": {
             "additionalProperties": true,
             "type": "object",
@@ -13120,9 +13102,6 @@
         "required": [
           "name",
           "label",
-          "inputTypes",
-          "outputTypes",
-          "allowedAsFirstStage",
           "configSchema"
         ],
         "title": "TranslationActionMetadata"

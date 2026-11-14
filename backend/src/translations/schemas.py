@@ -23,9 +23,6 @@ MAX_STAGES = 5
 class TranslationActionMetadata(Model):
     name: str
     label: str
-    input_types: list[StreamType]
-    output_types: list[StreamType]
-    allowed_as_first_stage: bool
     config_schema: dict[str, Any]
 
 

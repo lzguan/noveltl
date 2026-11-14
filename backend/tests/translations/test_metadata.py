@@ -23,12 +23,10 @@ def test_action_metadata_supports_pipeline_builder() -> None:
     # The loader is inserted by job creation and is not offered to the builder.
     configs = {"translate": TranslateConfig, "prune_memories": PruneMemoriesConfig}
     assert actions.keys() == configs.keys()
-    for name, config in configs.items():
+    for name in configs:
         action = actions[name]
-        assert set(action["inputTypes"]) == config.SIGNATURE.input_types
-        assert set(action["outputTypes"]) == config.SIGNATURE.output_types
+        assert action.keys() == {"name", "label", "configSchema"}
         assert action["label"]
-        assert action["allowedAsFirstStage"] is True
         assert action["configSchema"]["type"] == "object"
 
     schema = actions["translate"]["configSchema"]

@@ -132,12 +132,9 @@ export const CreateTranslationJobsPost422Response = S.Struct({
  */
 export const ListActionsTranslationJobsActionsGet200Response = S.Struct({
   "actions": S.Array(S.Struct({
-  "allowedAsFirstStage": S.Boolean,
   "configSchema": S.Record(S.String, S.Unknown),
-  "inputTypes": S.Array(S.Literals(['chapter', 'memories'])),
   "label": S.String,
-  "name": S.String,
-  "outputTypes": S.Array(S.Literals(['chapter', 'memories']))
+  "name": S.String
 }))
 })
 

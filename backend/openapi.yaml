@@ -3384,35 +3384,19 @@ components:
       type: object
     TranslationActionMetadata:
       properties:
-        allowedAsFirstStage:
-          title: Allowedasfirststage
-          type: boolean
         configSchema:
           additionalProperties: true
           title: Configschema
           type: object
-        inputTypes:
-          items:
-            $ref: '#/components/schemas/StreamType'
-          title: Inputtypes
-          type: array
         label:
           title: Label
           type: string
         name:
           title: Name
           type: string
-        outputTypes:
-          items:
-            $ref: '#/components/schemas/StreamType'
-          title: Outputtypes
-          type: array
       required:
       - name
       - label
-      - inputTypes
-      - outputTypes
-      - allowedAsFirstStage
       - configSchema
       title: TranslationActionMetadata
       type: object

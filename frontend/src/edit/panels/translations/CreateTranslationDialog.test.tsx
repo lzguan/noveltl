@@ -70,17 +70,11 @@ const catalog = {
 		{
 			name: "dynamic-translation",
 			label: "Translate with memories",
-			inputTypes: ["chapter", "memories"],
-			outputTypes: ["chapter"],
-			allowedAsFirstStage: true,
 			configSchema: schema,
 		},
 		{
 			name: "plain",
 			label: "Translate",
-			inputTypes: ["chapter"],
-			outputTypes: ["chapter"],
-			allowedAsFirstStage: true,
 			configSchema: schema,
 		},
 	],

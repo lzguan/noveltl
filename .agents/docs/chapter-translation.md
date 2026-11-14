@@ -103,9 +103,11 @@ The renamed column's foreign key keeps its old auto-generated name.
 
 Leftovers as of 2026-11-14: the metadata
 endpoint's `inputTypes` / `outputTypes` ignore optional inputs and are superseded
-by the check endpoint. The frontend create dialog still sends the old request
-shape, has no label for the `load_inputs` stage, and does not call the check
-endpoint yet; a lane diagram of ports and links is planned there.
+by the check endpoint. The frontend create dialog sends top-level inputs and calls
+the check endpoint. Its read-only lane diagram, including the labelled loader,
+lives in [pipeline-diagram/](../../frontend/src/edit/panels/translations/pipeline-diagram/).
+Layout and rendering use backend sources and link states without inferring types
+or stream availability in the frontend.
 
 ## Source and memory selection
 

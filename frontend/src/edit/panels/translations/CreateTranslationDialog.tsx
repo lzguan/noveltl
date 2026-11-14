@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { readUI } from "./schemaUi";
 import { StageConfigForm } from "./StageConfigForm";
+import { PipelineDiagram } from "./pipeline-diagram/PipelineDiagram";
 import type { RJSFSchema } from "@rjsf/utils";
 import { MemoryType, PluginName } from "@/api/models";
 import type {
@@ -374,7 +375,7 @@ function CreateTranslationForm({
 				if (!open && !submitting) onClose();
 			}}
 		>
-			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-6xl">
 				<DialogHeader>
 					<DialogTitle>Create translation job</DialogTitle>
 					<DialogDescription>
@@ -503,155 +504,165 @@ function CreateTranslationForm({
 							{check?.stages[0].outputs.map((port) => port.stream).join(" + ") ?? "…"}
 						</p>
 					</section>
-					<div className="space-y-3">
-						<h3 className="font-medium">
-							Stages{" "}
-							<span className="text-muted-foreground">{stages.length} / 5</span>
-						</h3>
-						{stages.length === 0 && (
-							<p className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
-								Add your first stage below.
-							</p>
-						)}
-						{stages.map((stage, index) => (
-							<section key={stage.id} className="rounded-lg border p-4 space-y-3">
-								<div className="flex flex-wrap items-center gap-2">
-									<h4 className="mr-auto font-medium">
-										{index + 1}. {stage.action.label}
-									</h4>
+					<div className="grid items-start gap-5 lg:grid-cols-2">
+						<div className="min-w-0 space-y-3">
+							<h3 className="font-medium">
+								Stages{" "}
+								<span className="text-muted-foreground">{stages.length} / 5</span>
+							</h3>
+							{stages.length === 0 && (
+								<p className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
+									Add your first stage below.
+								</p>
+							)}
+							{stages.map((stage, index) => (
+								<section key={stage.id} className="rounded-lg border p-4 space-y-3">
+									<div className="flex flex-wrap items-center gap-2">
+										<h4 className="mr-auto font-medium">
+											{index + 1}. {stage.action.label}
+										</h4>
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={() =>
+												setConfiguring(
+													configuring === stage.id ? null : stage.id,
+												)
+											}
+										>
+											{configuring === stage.id
+												? "Cancel changes"
+												: "Configure"}
+										</Button>
+										<Button
+											size="sm"
+											variant="ghost"
+											aria-label={`Remove stage ${index + 1} and following stages`}
+											onClick={() => setPending({ index })}
+										>
+											Remove
+										</Button>
+									</div>
+									{check?.stages[index + 1] && (
+										<p className="text-xs text-muted-foreground">
+											Uses{" "}
+											{check.stages[index + 1].inputs
+												.filter((port) => port.link === "linked")
+												.map((port) => port.stream)
+												.join(" + ") || "nothing"}{" "}
+											→ writes{" "}
+											{check.stages[index + 1].outputs
+												.map((port) => port.stream)
+												.join(" + ")}
+										</p>
+									)}
+									{check?.stages[index + 1]?.warning && (
+										<p role="status" className="text-sm text-amber-600">
+											This stage cannot run: {check.stages[index + 1].warning}
+											.
+										</p>
+									)}
+									<p className="text-sm">
+										{[
+											stage.config.model,
+											stage.config.targetLanguage,
+											stage.config.instructions
+												? "Custom instructions"
+												: null,
+										]
+											.filter((value) => typeof value === "string")
+											.join(" · ") || "No configuration required"}
+									</p>
+									{stageErrors[index] && (
+										<p role="alert" className="text-sm text-destructive">
+											{stageErrors[index]}
+										</p>
+									)}
+									{configuring === stage.id && (
+										<StageConfigForm
+											key={stage.id}
+											schema={formSchema(stage.action)}
+											config={stage.config}
+											onSave={(config) => {
+												setStages(
+													stages.map((item) =>
+														item.id === stage.id
+															? { ...item, config }
+															: item,
+													),
+												);
+												setConfiguring(null);
+											}}
+										/>
+									)}
+								</section>
+							))}
+							{pending && (
+								<div
+									role="alert"
+									className="rounded-lg border border-destructive/40 p-3 space-y-2 text-sm"
+								>
+									<p>
+										Remove stages {pending.index + 1}–{stages.length}?
+									</p>
+									<Button
+										size="sm"
+										variant="destructive"
+										onClick={() => {
+											setStages(stages.slice(0, pending.index));
+											setConfiguring(null);
+											setSelected("");
+											setPending(null);
+										}}
+									>
+										Remove stages
+									</Button>{" "}
 									<Button
 										size="sm"
 										variant="outline"
-										onClick={() =>
-											setConfiguring(
-												configuring === stage.id ? null : stage.id,
-											)
-										}
+										onClick={() => setPending(null)}
 									>
-										{configuring === stage.id ? "Cancel changes" : "Configure"}
-									</Button>
-									<Button
-										size="sm"
-										variant="ghost"
-										aria-label={`Remove stage ${index + 1} and following stages`}
-										onClick={() => setPending({ index })}
-									>
-										Remove
+										Keep stages
 									</Button>
 								</div>
-								{check?.stages[index + 1] && (
-									<p className="text-xs text-muted-foreground">
-										Uses{" "}
-										{check.stages[index + 1].inputs
-											.filter((port) => port.link === "linked")
-											.map((port) => port.stream)
-											.join(" + ") || "nothing"}{" "}
-										→ writes{" "}
-										{check.stages[index + 1].outputs
-											.map((port) => port.stream)
-											.join(" + ")}
-									</p>
-								)}
-								{check?.stages[index + 1]?.warning && (
-									<p role="status" className="text-sm text-amber-600">
-										This stage cannot run: {check.stages[index + 1].warning}.
-									</p>
-								)}
-								<p className="text-sm">
-									{[
-										stage.config.model,
-										stage.config.targetLanguage,
-										stage.config.instructions ? "Custom instructions" : null,
-									]
-										.filter((value) => typeof value === "string")
-										.join(" · ") || "No configuration required"}
-								</p>
-								{stageErrors[index] && (
-									<p role="alert" className="text-sm text-destructive">
-										{stageErrors[index]}
-									</p>
-								)}
-								{configuring === stage.id && (
-									<StageConfigForm
-										key={stage.id}
-										schema={formSchema(stage.action)}
-										config={stage.config}
-										onSave={(config) => {
-											setStages(
-												stages.map((item) =>
-													item.id === stage.id
-														? { ...item, config }
-														: item,
-												),
-											);
-											setConfiguring(null);
-										}}
-									/>
-								)}
-							</section>
-						))}
-						{pending && (
-							<div
-								role="alert"
-								className="rounded-lg border border-destructive/40 p-3 space-y-2 text-sm"
-							>
-								<p>
-									Remove stages {pending.index + 1}–{stages.length}?
-								</p>
-								<Button
-									size="sm"
-									variant="destructive"
-									onClick={() => {
-										setStages(stages.slice(0, pending.index));
-										setConfiguring(null);
-										setSelected("");
-										setPending(null);
-									}}
-								>
-									Remove stages
-								</Button>{" "}
-								<Button
-									size="sm"
-									variant="outline"
-									onClick={() => setPending(null)}
-								>
-									Keep stages
-								</Button>
-							</div>
-						)}
-						{stages.length < 5 && (
-							<div className="flex items-end gap-2">
-								<label className="flex-1 space-y-1 text-sm">
-									Add stage
-									<select
-										className={selectClass}
-										value={selected}
-										onChange={(event) => setSelected(event.target.value)}
+							)}
+							{stages.length < 5 && (
+								<div className="flex items-end gap-2">
+									<label className="flex-1 space-y-1 text-sm">
+										Add stage
+										<select
+											className={selectClass}
+											value={selected}
+											onChange={(event) => setSelected(event.target.value)}
+										>
+											<option value="">Select action</option>
+											{actions.map((action) => {
+												const warning = addable.get(action.id);
+												return (
+													<option
+														key={action.id}
+														value={action.id}
+														disabled={warning !== null}
+													>
+														{action.label}
+														{warning ? ` (${warning})` : ""}
+													</option>
+												);
+											})}
+										</select>
+									</label>
+									<Button
+										disabled={
+											!selected || pending !== null || configuring !== null
+										}
+										onClick={addStage}
 									>
-										<option value="">Select action</option>
-										{actions.map((action) => {
-											const warning = addable.get(action.id);
-											return (
-												<option
-													key={action.id}
-													value={action.id}
-													disabled={warning !== null}
-												>
-													{action.label}
-													{warning ? ` (${warning})` : ""}
-												</option>
-											);
-										})}
-									</select>
-								</label>
-								<Button
-									disabled={!selected || pending !== null || configuring !== null}
-									onClick={addStage}
-								>
-									Add stage
-								</Button>
-							</div>
-						)}
+										Add stage
+									</Button>
+								</div>
+							)}
+						</div>
+						{check && <PipelineDiagram check={check} />}
 					</div>
 					<div className="flex justify-end gap-2">
 						<Button variant="outline" onClick={onClose}>

@@ -5,7 +5,7 @@ from time import monotonic
 
 from src.files.access import fetch_file
 from src.files.dependencies import get_object_store
-from src.translations.actions.actions import ActionTaskContext
+from src.translations.actions.actions import ActionStepSpec, ActionTaskContext, PollSpec, StepSpec, register_steps
 from src.translations.actions.celery_actions import CeleryActionCallbacks
 from src.translations.actions.common.files import store_lines
 from src.translations.actions.common.inputs import (
@@ -41,7 +41,6 @@ from src.translations.task_names import (
 )
 from src.translations.types import TranslationTaskStatus as State
 
-callbacks = CeleryActionCallbacks(app, ACTION_CALLBACKS)
 _LEASE_SECONDS = 300
 
 
@@ -52,14 +51,7 @@ def _stage(context: ActionTaskContext) -> tuple[TranslationStage, PruneMemoriesC
     return stage, PruneMemoriesConfig.model_validate(stage.config)
 
 
-@callbacks.new_func(
-    expect=State.READY,
-    during=State.PREPARING,
-    finish=State.PREPARED,
-    lease_seconds=_LEASE_SECONDS,
-    name=PRUNE_MEMORIES_PREPARE,
-)
-def prepare(context: ActionTaskContext) -> None:
+def _prepare(context: ActionTaskContext) -> None:
     stage, config = _stage(context)
     store, codec = get_object_store(), get_codec(config.model)
     instructions = (
@@ -98,14 +90,7 @@ def prepare(context: ActionTaskContext) -> None:
     context.task.request_file_id = store_lines(context, store, requests(), renew_seconds=_LEASE_SECONDS / 3)
 
 
-@callbacks.new_func(
-    expect=State.PREPARED,
-    during=State.SUBMITTING,
-    finish=State.PROCESSING,
-    lease_seconds=_LEASE_SECONDS,
-    name=PRUNE_MEMORIES_SUBMIT,
-)
-def submit(context: ActionTaskContext) -> None:
+def _submit(context: ActionTaskContext) -> None:
     _, config = _stage(context)
     if context.task.provider_batch_id is not None:
         return
@@ -129,14 +114,7 @@ def submit(context: ActionTaskContext) -> None:
     context.task.provider_batch_id = job_id
 
 
-@callbacks.new_poll(
-    expect=State.PROCESSING,
-    during=State.PROCESSING,
-    finish=State.PROCESSED,
-    interval_seconds=60,
-    name=PRUNE_MEMORIES_POLL,
-)
-def poll(context: ActionTaskContext) -> bool:
+def _poll(context: ActionTaskContext) -> bool:
     _, config = _stage(context)
     if context.task.provider_batch_id is None:
         raise ValueError("Polling requires a provider batch ID")
@@ -153,14 +131,7 @@ def poll(context: ActionTaskContext) -> bool:
             raise RuntimeError(f"Provider batch failed: {error}")
 
 
-@callbacks.new_func(
-    expect=State.PROCESSED,
-    during=State.FINALIZING,
-    finish=State.COMPLETE,
-    lease_seconds=_LEASE_SECONDS,
-    name=PRUNE_MEMORIES_FINALIZE,
-)
-def finalize(context: ActionTaskContext) -> None:
+def _finalize(context: ActionTaskContext) -> None:
     stage, config = _stage(context)
     if context.task.provider_output_id is None:
         raise ValueError("Pruning finalization requires provider output")
@@ -184,3 +155,42 @@ def finalize(context: ActionTaskContext) -> None:
     context.task.output_file_id = store_lines(
         context, store, map(encode_translation_record, output), renew_seconds=_LEASE_SECONDS / 3
     )
+
+
+STEPS: tuple[ActionStepSpec, ...] = (
+    StepSpec(
+        _prepare,
+        name=PRUNE_MEMORIES_PREPARE,
+        expect=State.READY,
+        during=State.PREPARING,
+        finish=State.PREPARED,
+        lease_seconds=_LEASE_SECONDS,
+    ),
+    StepSpec(
+        _submit,
+        name=PRUNE_MEMORIES_SUBMIT,
+        expect=State.PREPARED,
+        during=State.SUBMITTING,
+        finish=State.PROCESSING,
+        lease_seconds=_LEASE_SECONDS,
+    ),
+    PollSpec(
+        _poll,
+        name=PRUNE_MEMORIES_POLL,
+        expect=State.PROCESSING,
+        during=State.PROCESSING,
+        finish=State.PROCESSED,
+        interval_seconds=60,
+    ),
+    StepSpec(
+        _finalize,
+        name=PRUNE_MEMORIES_FINALIZE,
+        expect=State.PROCESSED,
+        during=State.FINALIZING,
+        finish=State.COMPLETE,
+        lease_seconds=_LEASE_SECONDS,
+    ),
+)
+
+callbacks = CeleryActionCallbacks(app, ACTION_CALLBACKS)
+prepare, submit, poll, finalize = register_steps(callbacks, STEPS)

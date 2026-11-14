@@ -15,7 +15,8 @@ as optional context by translation prompts.
 | Action discovery and form metadata | [metadata.py](../../backend/src/translations/metadata.py) |
 | Job/stage/batch/task persistence and pinned chapters | [models.py](../../backend/src/translations/models.py), [tasks/jobs.py](../../backend/src/translations/tasks/jobs.py) |
 | Controls and dispatch reporting | [service.py](../../backend/src/translations/service.py) |
-| Worker callback contract and wrappers | [actions.py](../../backend/src/translations/actions/actions.py), [celery_actions.py](../../backend/src/translations/actions/celery_actions.py) |
+| Worker callback contract, step specs, and wrappers | [actions.py](../../backend/src/translations/actions/actions.py), [celery_actions.py](../../backend/src/translations/actions/celery_actions.py) |
+| Claimed step execution and next-stage handoff | [runner.py](../../backend/src/translations/actions/runner.py) |
 | Lease ownership | [claims.py](../../backend/src/translations/tasks/claims.py) |
 | Normalized data, JSONL, output completeness | [records.py](../../backend/src/translations/records.py), [jsonl.py](../../backend/src/translations/jsonl.py), [validation.py](../../backend/src/translations/validation.py) |
 | Provider transport and response codecs | [clients/](../../backend/src/translations/clients/), [codecs/](../../backend/src/translations/codecs/) |
@@ -157,6 +158,15 @@ rather than model-listed order. Structural validity does not establish that
 pruning is semantically well tuned.
 
 ## Lifecycle and recovery
+
+Each action module defines plain private step callbacks and exports them as a
+`STEPS` tuple of `StepSpec`/`PollSpec` (task name, expect/during/finish states,
+lease, poll interval). `register_steps` turns that tuple into the module's
+public Celery tasks (`translate.prepare` etc., names from `task_names.py`), so
+another `ActionCallbacks` implementation can register the same specs. Dispatch
+stays in `CeleryActionCallbacks`; `run_claimed_step` (claim, run, finish or
+fail; returns `unclaimed`/`advanced`/`pending`) and `ready_next_task` (mark the
+next stage's task READY) take a session factory and contain no dispatch.
 
 Wrappers own commit/rollback, status, failure, and claim fields. Callbacks must
 not commit, roll back, or close the session. Long work renews its lease

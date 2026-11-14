@@ -1,7 +1,7 @@
 """Callback contracts; action implementations and worker wiring live elsewhere."""
 
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Protocol
@@ -83,3 +83,55 @@ class ActionCallbacks(Protocol):
     ) -> Callable[[PollCallback], ActionTask]:
         """False releases and reschedules this step; True advances; errors fail."""
         ...
+
+
+@dataclass(frozen=True)
+class StepSpec:
+    callback: ActionCallback
+    name: str
+    expect: TranslationTaskStatus
+    during: TranslationTaskStatus
+    finish: TranslationTaskStatus
+    lease_seconds: int = 300
+
+
+@dataclass(frozen=True)
+class PollSpec:
+    callback: PollCallback
+    name: str
+    expect: TranslationTaskStatus
+    during: TranslationTaskStatus
+    finish: TranslationTaskStatus
+    interval_seconds: int = 60
+    lease_seconds: int = 300
+
+
+type ActionStepSpec = StepSpec | PollSpec
+
+
+def register_steps(callbacks: ActionCallbacks, steps: Sequence[ActionStepSpec]) -> tuple[ActionTask, ...]:
+    registered: list[ActionTask] = []
+    for step in steps:
+        match step:
+            case StepSpec():
+                registered.append(
+                    callbacks.new_func(
+                        expect=step.expect,
+                        during=step.during,
+                        finish=step.finish,
+                        lease_seconds=step.lease_seconds,
+                        name=step.name,
+                    )(step.callback)
+                )
+            case PollSpec():
+                registered.append(
+                    callbacks.new_poll(
+                        expect=step.expect,
+                        during=step.during,
+                        finish=step.finish,
+                        interval_seconds=step.interval_seconds,
+                        lease_seconds=step.lease_seconds,
+                        name=step.name,
+                    )(step.callback)
+                )
+    return tuple(registered)

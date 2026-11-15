@@ -2,7 +2,7 @@ import json
 from uuid import UUID
 
 import httpx2
-from openai import OpenAI
+from openai import AsyncOpenAI
 from pydantic import TypeAdapter
 
 from src.translations.clients.batch_jobs import BatchJobComplete, BatchOutputId
@@ -46,11 +46,13 @@ def _completion(text: str) -> dict:
 
 
 def _client(handler, store: MemoryObjectStore, *, max_retries: int = 0) -> SyncChatClient:
-    sdk = OpenAI(
-        api_key="test-key",
-        base_url="https://example.invalid",
-        http_client=httpx2.Client(transport=httpx2.MockTransport(handler)),
-    )
+    def sdk() -> AsyncOpenAI:
+        return AsyncOpenAI(
+            api_key="test-key",
+            base_url="https://example.invalid",
+            http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(handler)),
+        )
+
     return SyncChatClient(
         sdk, store, provider_models={"qwen-flash-sync": "qwen-flash"}, max_concurrency=2, max_retries=max_retries
     )

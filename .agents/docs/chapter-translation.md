@@ -188,7 +188,8 @@ Model `qwen-flash-sync` uses
 [sync_client.py](../../backend/src/translations/clients/sync_client.py) behind
 the same `BatchJobClient` interface: `create_batch_job` sends each request
 line's body to the chat-completions endpoint (model renamed to `qwen-flash`),
-at most four at once with SDK retries for 429/5xx, and writes provider
+at most four at once with SDK retries for 429/5xx (one `asyncio.run` per batch,
+`AsyncOpenAI` from a factory with `async_buffer`; the interface stays sync), and writes provider
 batch-output lines to the object store at `translations/sync-batches/<uuid>.jsonl`.
 That key is the job and output ID, and the first poll is complete, so a stage
 needs no poll wait. A failed request becomes that chapter's failed line. The

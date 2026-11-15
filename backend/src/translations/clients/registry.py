@@ -17,14 +17,14 @@ def _qwen_client_factory() -> BatchJobClient:
 
 @lru_cache
 def _qwen_sync_client_factory() -> BatchJobClient:
-    from openai import OpenAI
+    from openai import AsyncOpenAI
 
     from src.config import qwen_settings
     from src.files.dependencies import get_object_store
     from src.translations.clients.sync_client import SyncChatClient
 
     return SyncChatClient(
-        OpenAI(api_key=qwen_settings.QWEN_API_KEY, base_url=qwen_settings.QWEN_API_URL),
+        lambda: AsyncOpenAI(api_key=qwen_settings.QWEN_API_KEY, base_url=qwen_settings.QWEN_API_URL),
         get_object_store(),
         provider_models={"qwen-flash-sync": "qwen-flash"},
     )

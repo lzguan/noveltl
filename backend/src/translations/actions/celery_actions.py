@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from collections.abc import Callable
 from datetime import timedelta
@@ -108,7 +109,7 @@ class CeleryActionCallbacks(ActionCallbacks):
             if outcome == "unclaimed":
                 return
             if outcome == "pending":
-                dispatch(x, delay=timedelta(seconds=interval_seconds))
+                asyncio.run(dispatch(x, delay=timedelta(seconds=interval_seconds)))
             elif idx + 1 < len(self._intermediate):
                 self._intermediate[idx + 1].apply_async((x,))
             else:
@@ -116,7 +117,7 @@ class CeleryActionCallbacks(ActionCallbacks):
 
         self._intermediate.append(celery_task)
 
-        def dispatch(task_id: uuid.UUID, *, delay: timedelta | None = None) -> None:
+        async def dispatch(task_id: uuid.UUID, *, delay: timedelta | None = None) -> None:
             if delay is None:
                 celery_task.apply_async((task_id,))
             else:
@@ -140,7 +141,7 @@ class CeleryActionCallbacks(ActionCallbacks):
                 return step
         raise ValueError(f"No registered action step for state {state}")
 
-    def entrypoint(self, x: uuid.UUID) -> None:
+    async def entrypoint(self, x: uuid.UUID) -> None:
         if self._intermediate:
             self._intermediate[0].apply_async((x,))
         else:
@@ -153,4 +154,4 @@ class CeleryActionCallbacks(ActionCallbacks):
         next_task_id, next_action = ready
         # A failed dispatch leaves the task READY so exitpoint can be retried.
         next_callbacks = self._callbacks_dict[TypeAdapter(ActionName).validate_python(next_action)]
-        next_callbacks.entrypoint(next_task_id)
+        asyncio.run(next_callbacks.entrypoint(next_task_id))

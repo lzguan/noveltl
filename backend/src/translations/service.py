@@ -1,6 +1,8 @@
 """User-facing job controls; database transitions commit before queue dispatch."""
 
+import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from functools import partial
 from typing import Literal
 from uuid import UUID
@@ -13,7 +15,6 @@ from src.auth.models import User
 from src.memory.models import MemoryGroup
 from src.novels.models import Novel
 from src.novels.permissions import novel_mod_access_select
-from src.translations.actions.actions import ActionTask
 from src.translations.actions.registry import ACTION_CALLBACKS, resume_step, resume_step_sql
 from src.translations.models import TranslationBatch, TranslationJob, TranslationStage, TranslationTask
 from src.translations.schemas import (
@@ -242,7 +243,7 @@ def control_translation_job(
     batch_id: UUID | None = None,
 ) -> TranslationControlResult:
     result = TranslationControlResult()
-    dispatches: list[tuple[UUID, ActionTask]] = []
+    dispatches: list[tuple[UUID, Callable[[UUID], Awaitable[None]]]] = []
     try:
         _job(db, user, job_id)
         if (
@@ -266,8 +267,9 @@ def control_translation_job(
                 if position != 1:
                     continue
                 action = TypeAdapter(ActionName).validate_python(name)
+                cb = ACTION_CALLBACKS[action]
                 if operation == "start":
-                    dispatches.append((task_id, ACTION_CALLBACKS[action].entrypoint))
+                    dispatches.append((task_id, cb.entrypoint))
                 else:
                     step = resume_step(action, State(state))
                     if step is not None:
@@ -276,9 +278,9 @@ def control_translation_job(
     except Exception:
         db.rollback()
         raise
-    for task_id, dispatch in dispatches:
+    for task_id, cor in dispatches:
         try:
-            dispatch(task_id)
+            asyncio.run(cor(task_id))
         except Exception:
             logger.exception("Translation dispatch failed for task %s", task_id)
             result.dispatch_failed_task_ids.append(task_id)

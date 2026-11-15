@@ -1,7 +1,7 @@
 """Callback contracts; action implementations and worker wiring live elsewhere."""
 
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Protocol
@@ -37,7 +37,7 @@ type ActionTask = Callable[[uuid.UUID], None]
 
 
 class StepDispatcher(Protocol):
-    def __call__(self, task_id: uuid.UUID, *, delay: timedelta | None = None) -> None: ...
+    def __call__(self, task_id: uuid.UUID, *, delay: timedelta | None = None) -> Awaitable[None]: ...
 
 
 @dataclass(frozen=True)
@@ -55,7 +55,7 @@ class ActionCallbacks(Protocol):
     In practice the implementation will be absolutely cursed. This doesn't matter because this is a personal project, but I would not recommend using this as a model for your own code. Admittedly this implementation is kind of an experiment.
     """
 
-    def entrypoint(self, x: uuid.UUID) -> None: ...
+    async def entrypoint(self, x: uuid.UUID) -> None: ...
 
     def resume_step(self, state: TranslationTaskStatus) -> ActionStep | None: ...
 

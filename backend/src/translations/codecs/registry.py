@@ -35,6 +35,7 @@ type _CompactKey = Annotated[
 MODEL_CODECS: dict[ModelName, CodecFactory] = {
     "qwen-plus": lambda: OpenAIChatBatchCodec(TypeAdapter(TranslationDataKey), max_tokens_field="max_tokens"),
     "qwen-flash": lambda: OpenAIChatBatchCodec(TypeAdapter(TranslationDataKey), max_tokens_field="max_tokens"),
+    "qwen-flash-sync": lambda: OpenAIChatBatchCodec(TypeAdapter(TranslationDataKey), max_tokens_field="max_tokens"),
     "deepseek/deepseek-v4.1-flash": lambda: OpenAIChatBatchCodec(
         TypeAdapter(_CompactKey), max_tokens_field="max_tokens", custom_id_format="string"
     ),

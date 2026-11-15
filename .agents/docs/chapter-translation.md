@@ -184,6 +184,18 @@ registers every action's `STEPS`. To run a job, await each batch's stage-0
 and registered batch clients. Tests do not cover poll waits: the claim gate
 blocks reclaiming a poll before `next_poll_at`, so skipping the sleep stalls.
 
+Model `qwen-flash-sync` uses
+[sync_client.py](../../backend/src/translations/clients/sync_client.py) behind
+the same `BatchJobClient` interface: `create_batch_job` sends each request
+line's body to the chat-completions endpoint (model renamed to `qwen-flash`),
+at most four at once with SDK retries for 429/5xx, and writes provider
+batch-output lines to the object store at `translations/sync-batches/<uuid>.jsonl`.
+That key is the job and output ID, and the first poll is complete, so a stage
+needs no poll wait. A failed request becomes that chapter's failed line. The
+whole batch runs inside `submit`, so it must finish within the 300 s submit lease;
+use small batches. These objects have no `StoredFile` row and are never cleaned
+up. The model appears in the editor's model list through `configSchema`.
+
 Wrappers own commit/rollback, status, failure, and claim fields. Callbacks must
 not commit, roll back, or close the session. Long work renews its lease
 cooperatively; a blocking operation must fit inside that lease. An expired or

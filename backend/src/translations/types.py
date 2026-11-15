@@ -8,7 +8,7 @@ type StreamType = Literal["chapter", "memories", "terms", "conventions"]
 type DataT = frozenset[StreamType]
 type ActionType = Mapping[str, StreamType]
 type ActionName = Literal["load_inputs", "prune_memories", "translate"]
-type ModelName = Literal["qwen-plus", "qwen-flash", "deepseek/deepseek-v4.1-flash"]
+type ModelName = Literal["qwen-plus", "qwen-flash", "qwen-flash-sync", "deepseek/deepseek-v4.1-flash"]
 
 
 @dataclass(frozen=True)

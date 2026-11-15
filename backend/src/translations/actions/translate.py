@@ -53,7 +53,7 @@ def _stage(context: ActionTaskContext) -> tuple[TranslationStage, TranslateConfi
     return stage, TranslateConfig.model_validate(stage.config)
 
 
-def _prepare(context: ActionTaskContext) -> None:
+def prepare(context: ActionTaskContext) -> None:
     stage, config = _stage(context)
     store, codec = get_object_store(), get_codec(config.model)
     instructions = (
@@ -119,7 +119,7 @@ def _prepare(context: ActionTaskContext) -> None:
     context.task.request_file_id = store_lines(context, store, requests(), renew_seconds=_PREPARE_LEASE_SECONDS / 3)
 
 
-def _submit(context: ActionTaskContext) -> None:
+def submit(context: ActionTaskContext) -> None:
     if context.task.provider_batch_id is not None:
         return
     if context.task.request_file_id is None:
@@ -144,7 +144,7 @@ def _submit(context: ActionTaskContext) -> None:
     context.task.provider_batch_id = job_id
 
 
-def _poll(context: ActionTaskContext) -> bool:
+def poll(context: ActionTaskContext) -> bool:
     if context.task.provider_batch_id is None:
         raise ValueError("Polling requires a provider batch ID")
     _, config = _stage(context)
@@ -161,7 +161,7 @@ def _poll(context: ActionTaskContext) -> bool:
             raise RuntimeError(f"Provider batch failed: {error}")
 
 
-def _finalize(context: ActionTaskContext) -> None:
+def finalize(context: ActionTaskContext) -> None:
     if context.task.provider_output_id is None:
         raise ValueError("Finalization requires a provider output ID")
     stage, config = _stage(context)
@@ -193,7 +193,7 @@ def _finalize(context: ActionTaskContext) -> None:
 
 STEPS: tuple[ActionStepSpec, ...] = (
     StepSpec(
-        _prepare,
+        prepare,
         name=TRANSLATE_PREPARE,
         expect=TranslationTaskStatus.READY,
         during=TranslationTaskStatus.PREPARING,
@@ -201,7 +201,7 @@ STEPS: tuple[ActionStepSpec, ...] = (
         lease_seconds=_PREPARE_LEASE_SECONDS,
     ),
     StepSpec(
-        _submit,
+        submit,
         name=TRANSLATE_SUBMIT,
         expect=TranslationTaskStatus.PREPARED,
         during=TranslationTaskStatus.SUBMITTING,
@@ -209,7 +209,7 @@ STEPS: tuple[ActionStepSpec, ...] = (
         lease_seconds=_SUBMIT_LEASE_SECONDS,
     ),
     PollSpec(
-        _poll,
+        poll,
         name=TRANSLATE_POLL,
         expect=TranslationTaskStatus.PROCESSING,
         during=TranslationTaskStatus.PROCESSING,
@@ -217,7 +217,7 @@ STEPS: tuple[ActionStepSpec, ...] = (
         interval_seconds=60,
     ),
     StepSpec(
-        _finalize,
+        finalize,
         name=TRANSLATE_FINALIZE,
         expect=TranslationTaskStatus.PROCESSED,
         during=TranslationTaskStatus.FINALIZING,
@@ -227,4 +227,4 @@ STEPS: tuple[ActionStepSpec, ...] = (
 )
 
 callbacks = CeleryActionCallbacks(app, ACTION_CALLBACKS)
-prepare, submit, poll, finalize = register_steps(callbacks, STEPS)
+register_steps(callbacks, STEPS)

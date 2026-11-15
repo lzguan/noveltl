@@ -159,11 +159,13 @@ pruning is semantically well tuned.
 
 ## Lifecycle and recovery
 
-Each action module defines plain private step callbacks and exports them as a
-`STEPS` tuple of `StepSpec`/`PollSpec` (task name, expect/during/finish states,
-lease, poll interval). `register_steps` turns that tuple into the module's
-public Celery tasks (`translate.prepare` etc., names from `task_names.py`), so
-another `ActionCallbacks` implementation can register the same specs. Dispatch
+Each action module defines public step callbacks (`translate.prepare(context)`
+etc.) and exports them as a `STEPS` tuple of `StepSpec`/`PollSpec` (task name,
+expect/during/finish states, lease, poll interval). The module registers the
+tuple on its `callbacks` with `register_steps`, so another `ActionCallbacks`
+implementation can register the same specs. The Celery tasks are not bound to
+module names: reach one by its registered name, e.g.
+`app.tasks[TRANSLATE_PREPARE](task_id)` with names from `task_names.py`. Dispatch
 stays in `CeleryActionCallbacks`; `run_claimed_step` (claim, run, finish or
 fail; returns `unclaimed`/`advanced`/`pending`) and `ready_next_task` (mark the
 next stage's task READY) take a session factory and contain no dispatch.

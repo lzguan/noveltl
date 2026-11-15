@@ -15,7 +15,7 @@ from src.translations.types import TranslationTaskStatus
 _LEASE_SECONDS = 300
 
 
-def _load(context: ActionTaskContext) -> None:
+def load(context: ActionTaskContext) -> None:
     stage = context.db.get(TranslationStage, context.task.stage_id)
     if stage is None or stage.action != "load_inputs":
         raise ValueError("Input loading requires a load_inputs stage")
@@ -29,7 +29,7 @@ def _load(context: ActionTaskContext) -> None:
 
 STEPS: tuple[ActionStepSpec, ...] = (
     StepSpec(
-        _load,
+        load,
         name=LOAD_INPUTS_LOAD,
         expect=TranslationTaskStatus.READY,
         during=TranslationTaskStatus.FINALIZING,
@@ -39,4 +39,4 @@ STEPS: tuple[ActionStepSpec, ...] = (
 )
 
 callbacks = CeleryActionCallbacks(app, ACTION_CALLBACKS)
-(load,) = register_steps(callbacks, STEPS)
+register_steps(callbacks, STEPS)

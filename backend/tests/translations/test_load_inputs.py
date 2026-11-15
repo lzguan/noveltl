@@ -15,12 +15,12 @@ from src.memory.plugins.glossary.models import GlossaryTerm
 from src.memory.plugins.translations.models import TermTranslation
 from src.memory.types import Creator, MemoryType, ReviewStatus
 from src.novels.models import Chapter, ChapterContent
-from src.translations.actions.load_inputs import load
 from src.translations.celery_app import app
 from src.translations.jsonl import iter_translation_records
 from src.translations.models import TranslationJobChapter, TranslationStage, TranslationTask
 from src.translations.records import ChapterRecord, ConventionsRecord, MemoriesRecord, TermsRecord, TranslationRecord
 from src.translations.schemas import TranslationJobCreate
+from src.translations.task_names import LOAD_INPUTS_LOAD
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationTaskStatus as State
 from test_support.test_data.scenarios import DatabaseScenario
@@ -86,7 +86,7 @@ def _run_loader(
 
     if before_load is not None:
         before_load()
-    load(loader.task_id)
+    app.tasks[LOAD_INPUTS_LOAD](loader.task_id)
 
     db.expire_all()
     assert loader.status == State.COMPLETE and loader.output_file_id is not None
@@ -179,7 +179,7 @@ def test_loader_rejects_a_memory_group_from_another_novel(
     monkeypatch.setattr("src.translations.actions.load_inputs.get_object_store", lambda: store)
 
     with pytest.raises(ValueError, match="does not belong"):
-        load(loader.task_id)
+        app.tasks[LOAD_INPUTS_LOAD](loader.task_id)
 
     test_db.expire_all()
     assert loader.output_file_id is None and loader.failed_at is not None

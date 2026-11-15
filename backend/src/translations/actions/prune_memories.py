@@ -51,7 +51,7 @@ def _stage(context: ActionTaskContext) -> tuple[TranslationStage, PruneMemoriesC
     return stage, PruneMemoriesConfig.model_validate(stage.config)
 
 
-def _prepare(context: ActionTaskContext) -> None:
+def prepare(context: ActionTaskContext) -> None:
     stage, config = _stage(context)
     store, codec = get_object_store(), get_codec(config.model)
     instructions = (
@@ -90,7 +90,7 @@ def _prepare(context: ActionTaskContext) -> None:
     context.task.request_file_id = store_lines(context, store, requests(), renew_seconds=_LEASE_SECONDS / 3)
 
 
-def _submit(context: ActionTaskContext) -> None:
+def submit(context: ActionTaskContext) -> None:
     _, config = _stage(context)
     if context.task.provider_batch_id is not None:
         return
@@ -114,7 +114,7 @@ def _submit(context: ActionTaskContext) -> None:
     context.task.provider_batch_id = job_id
 
 
-def _poll(context: ActionTaskContext) -> bool:
+def poll(context: ActionTaskContext) -> bool:
     _, config = _stage(context)
     if context.task.provider_batch_id is None:
         raise ValueError("Polling requires a provider batch ID")
@@ -131,7 +131,7 @@ def _poll(context: ActionTaskContext) -> bool:
             raise RuntimeError(f"Provider batch failed: {error}")
 
 
-def _finalize(context: ActionTaskContext) -> None:
+def finalize(context: ActionTaskContext) -> None:
     stage, config = _stage(context)
     if context.task.provider_output_id is None:
         raise ValueError("Pruning finalization requires provider output")
@@ -159,7 +159,7 @@ def _finalize(context: ActionTaskContext) -> None:
 
 STEPS: tuple[ActionStepSpec, ...] = (
     StepSpec(
-        _prepare,
+        prepare,
         name=PRUNE_MEMORIES_PREPARE,
         expect=State.READY,
         during=State.PREPARING,
@@ -167,7 +167,7 @@ STEPS: tuple[ActionStepSpec, ...] = (
         lease_seconds=_LEASE_SECONDS,
     ),
     StepSpec(
-        _submit,
+        submit,
         name=PRUNE_MEMORIES_SUBMIT,
         expect=State.PREPARED,
         during=State.SUBMITTING,
@@ -175,7 +175,7 @@ STEPS: tuple[ActionStepSpec, ...] = (
         lease_seconds=_LEASE_SECONDS,
     ),
     PollSpec(
-        _poll,
+        poll,
         name=PRUNE_MEMORIES_POLL,
         expect=State.PROCESSING,
         during=State.PROCESSING,
@@ -183,7 +183,7 @@ STEPS: tuple[ActionStepSpec, ...] = (
         interval_seconds=60,
     ),
     StepSpec(
-        _finalize,
+        finalize,
         name=PRUNE_MEMORIES_FINALIZE,
         expect=State.PROCESSED,
         during=State.FINALIZING,
@@ -193,4 +193,4 @@ STEPS: tuple[ActionStepSpec, ...] = (
 )
 
 callbacks = CeleryActionCallbacks(app, ACTION_CALLBACKS)
-prepare, submit, poll, finalize = register_steps(callbacks, STEPS)
+register_steps(callbacks, STEPS)

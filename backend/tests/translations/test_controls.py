@@ -11,7 +11,8 @@ from sqlalchemy import event, func, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.auth.utils import create_access_token
-from src.translations.actions.registry import ACTION_CALLBACKS, last_step
+from src.translations.actions import translate
+from src.translations.actions.registry import resume_step
 from src.translations.celery_app import app
 from src.translations.models import TranslationBatch, TranslationStage, TranslationTask
 from src.translations.schemas import TranslationJobCreate
@@ -63,11 +64,11 @@ def make_job(db: Session, scenario: DatabaseScenario, *, loaded: bool = True) ->
 )
 def test_registered_steps_resolve_recovery_boundaries(state: State, expected: State) -> None:
     for action in ("translate", "prune_memories"):
-        step = last_step(action, state)
+        step = resume_step(action, state)
         assert step is not None and step.expect == expected
-    loader = last_step("load_inputs", State.FINALIZING)
+    loader = resume_step("load_inputs", State.FINALIZING)
     assert loader is not None and loader.expect == State.READY
-    assert last_step("translate", State.COMPLETE) is None
+    assert resume_step("translate", State.COMPLETE) is None
 
 
 def test_cancel_fences_worker_and_retry_preserves_provider_output(
@@ -161,7 +162,7 @@ def test_cancel_fences_inflight_exitpoint(
     event.listen(engine, "before_cursor_execute", observe)
     try:
         with ThreadPoolExecutor(max_workers=1) as pool:
-            worker = pool.submit(ACTION_CALLBACKS["translate"].exitpoint, current_id)
+            worker = pool.submit(translate.callbacks.exitpoint, current_id)
             try:
                 assert entered.wait(5)
                 control_translation_job(test_db, sample_scenario.users["admin"], job_id, "cancel")

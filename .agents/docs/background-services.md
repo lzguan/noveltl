@@ -61,6 +61,16 @@ and normalized stage-output artifacts. Check the actual file field and codec
 before treating downloaded bytes as normalized translation records. See
 [chapter translation](chapter-translation.md) for output completeness checks.
 
+An async store sits beside the sync one for async callers:
+[async_storage.py](../../backend/src/files/async_storage.py) defines
+`AsyncObjectStore` (`create` is an async context manager yielding a writer with
+awaitable `write`; `fetch` is an async iterator) and `AioS3ObjectStore`, an
+aiobotocore port of the multipart writer with the same part, ETag, and abort
+behavior. It keeps one session and opens a client per operation, so it works from
+any event loop. `get_async_object_store()` shares settings with `get_object_store()`.
+aiobotocore pins botocore, which holds boto3 at a matching version (1.43.117 when
+added). Delete the sync store once every caller is async.
+
 [File access tests](../../backend/tests/files/test_access.py) cover metadata and
 streamed content; [storage tests](../../backend/tests/files/test_storage.py)
 exercise the adapter's upload/fetch behavior.

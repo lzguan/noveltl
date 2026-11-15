@@ -1,6 +1,8 @@
 """User-facing job controls; database transitions commit before queue dispatch."""
 
+import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from functools import partial
 from typing import Literal
 from uuid import UUID
@@ -13,8 +15,7 @@ from src.auth.models import User
 from src.memory.models import MemoryGroup
 from src.novels.models import Novel
 from src.novels.permissions import novel_mod_access_select
-from src.translations.actions.actions import ActionTask
-from src.translations.actions.registry import ACTION_CALLBACKS, last_step, last_step_sql
+from src.translations.actions.registry import ACTION_CALLBACKS, resume_step, resume_step_sql
 from src.translations.models import TranslationBatch, TranslationJob, TranslationStage, TranslationTask
 from src.translations.schemas import (
     TranslationBatchRead,
@@ -182,7 +183,7 @@ def _restart_statement(job_id: UUID, operation: Literal["start", "resume", "retr
             func.row_number().over(partition_by=task.batch_id, order_by=TranslationStage.stage_num).label("position"),
             func.bool_or(live).over(partition_by=task.batch_id).label("live_batch"),
             func.bool_or(task.failed_at.is_not(None)).over(partition_by=task.batch_id).label("failed_batch"),
-            last_step_sql(TranslationStage.action, state).label("restart"),
+            resume_step_sql(TranslationStage.action, state).label("restart"),
         )
         .join(TranslationStage, TranslationStage.stage_id == task.stage_id)
         .join(TranslationBatch, TranslationBatch.batch_id == task.batch_id)
@@ -242,7 +243,7 @@ def control_translation_job(
     batch_id: UUID | None = None,
 ) -> TranslationControlResult:
     result = TranslationControlResult()
-    dispatches: list[tuple[UUID, ActionTask]] = []
+    dispatches: list[tuple[UUID, Callable[[UUID], Awaitable[None]]]] = []
     try:
         _job(db, user, job_id)
         if (
@@ -266,19 +267,20 @@ def control_translation_job(
                 if position != 1:
                     continue
                 action = TypeAdapter(ActionName).validate_python(name)
+                cb = ACTION_CALLBACKS[action]
                 if operation == "start":
-                    dispatches.append((task_id, ACTION_CALLBACKS[action].entrypoint))
+                    dispatches.append((task_id, cb.entrypoint))
                 else:
-                    step = last_step(action, State(state))
+                    step = resume_step(action, State(state))
                     if step is not None:
                         dispatches.append((task_id, partial(step.dispatch, delay=poll_in)))
         db.commit()
     except Exception:
         db.rollback()
         raise
-    for task_id, dispatch in dispatches:
+    for task_id, cor in dispatches:
         try:
-            dispatch(task_id)
+            asyncio.run(cor(task_id))
         except Exception:
             logger.exception("Translation dispatch failed for task %s", task_id)
             result.dispatch_failed_task_ids.append(task_id)

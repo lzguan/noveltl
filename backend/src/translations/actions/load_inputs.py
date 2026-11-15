@@ -1,5 +1,5 @@
 from src.files.dependencies import get_object_store
-from src.translations.actions.actions import ActionTaskContext
+from src.translations.actions.actions import ActionStepSpec, ActionTaskContext, StepSpec, register_steps
 from src.translations.actions.celery_actions import CeleryActionCallbacks
 from src.translations.actions.common.files import store_lines
 from src.translations.actions.common.inputs import iter_initial_records, stage_types
@@ -12,17 +12,9 @@ from src.translations.schemas import LoadInputsConfig
 from src.translations.task_names import LOAD_INPUTS_LOAD
 from src.translations.types import TranslationTaskStatus
 
-callbacks = CeleryActionCallbacks(app, ACTION_CALLBACKS)
 _LEASE_SECONDS = 300
 
 
-@callbacks.new_func(
-    expect=TranslationTaskStatus.READY,
-    during=TranslationTaskStatus.FINALIZING,
-    finish=TranslationTaskStatus.COMPLETE,
-    lease_seconds=_LEASE_SECONDS,
-    name=LOAD_INPUTS_LOAD,
-)
 def load(context: ActionTaskContext) -> None:
     stage = context.db.get(TranslationStage, context.task.stage_id)
     if stage is None or stage.action != "load_inputs":
@@ -33,3 +25,18 @@ def load(context: ActionTaskContext) -> None:
     context.task.output_file_id = store_lines(
         context, store, map(encode_translation_record, output), renew_seconds=_LEASE_SECONDS / 3
     )
+
+
+STEPS: tuple[ActionStepSpec, ...] = (
+    StepSpec(
+        load,
+        name=LOAD_INPUTS_LOAD,
+        expect=TranslationTaskStatus.READY,
+        during=TranslationTaskStatus.FINALIZING,
+        finish=TranslationTaskStatus.COMPLETE,
+        lease_seconds=_LEASE_SECONDS,
+    ),
+)
+
+callbacks = CeleryActionCallbacks(app, ACTION_CALLBACKS)
+register_steps(callbacks, STEPS)

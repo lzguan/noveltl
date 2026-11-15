@@ -24,6 +24,7 @@ class GlossaryTermFields:
         default=ReviewStatus.PENDING,
         server_default=ReviewStatus.PENDING.value,
     )
+    recorded_on: Mapped[UUID | None] = mapped_column(types.UUID, nullable=True)
 
 
 class GlossaryTerm(GlossaryTermFields, Base):
@@ -34,6 +35,13 @@ class GlossaryTerm(GlossaryTermFields, Base):
         ForeignKeyConstraint(
             ["memory_group_id"], ["memory_groups.memory_group_id"], name="fk_glossaries_memory_group_id_memory_groups"
         ),
+        ForeignKeyConstraint(
+            ["recorded_on"],
+            ["chapter_contents.chapter_content_id"],
+            name="fk_glossaries_recorded_on_chapter_contents",
+            ondelete="SET NULL",
+        ),
+        Index("ix_glossaries_recorded_on", "recorded_on"),
         UniqueConstraint(
             "memory_group_id",
             "term",

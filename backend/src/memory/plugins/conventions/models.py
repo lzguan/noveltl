@@ -34,6 +34,7 @@ class TranslationConventionFields:
         Enum(Creator, native_enum=False, length=10, values_callable=lambda values: [value.value for value in values]),
         nullable=False,
     )
+    recorded_on: Mapped[UUID | None] = mapped_column(types.UUID, nullable=True)
 
 
 class TranslationConvention(TranslationConventionFields, Base):
@@ -53,6 +54,13 @@ class TranslationConvention(TranslationConventionFields, Base):
             ["memory_groups.memory_group_id"],
             name="fk_translation_conventions_memory_group_id_memory_groups",
         ),
+        ForeignKeyConstraint(
+            ["recorded_on"],
+            ["chapter_contents.chapter_content_id"],
+            name="fk_translation_conventions_recorded_on_chapter_contents",
+            ondelete="SET NULL",
+        ),
+        Index("ix_translation_conventions_recorded_on", "recorded_on"),
         CheckConstraint("char_length(btrim(title)) > 0", name="ck_translation_conventions_title_nonblank"),
         CheckConstraint("char_length(btrim(rule)) > 0", name="ck_translation_conventions_rule_nonblank"),
         Index("ix_translation_conventions_memory_group_id", "memory_group_id"),

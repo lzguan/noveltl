@@ -52,13 +52,7 @@ def _client(handler, store: MemoryObjectStore, *, max_retries: int = 0) -> SyncC
         http_client=httpx2.Client(transport=httpx2.MockTransport(handler)),
     )
     return SyncChatClient(
-        "test-key",
-        "https://example.invalid",
-        store,
-        provider_models={"qwen-flash-sync": "qwen-flash"},
-        max_concurrency=2,
-        max_retries=max_retries,
-        client=sdk,
+        sdk, store, provider_models={"qwen-flash-sync": "qwen-flash"}, max_concurrency=2, max_retries=max_retries
     )
 
 

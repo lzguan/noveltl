@@ -24,19 +24,16 @@ from src.translations.jsonl import iter_jsonl_lines
 class SyncChatClient(BatchJobClient):
     def __init__(
         self,
-        api_key: str,
-        base_url: str,
+        client: OpenAI,
         store: ObjectStore,
         *,
         provider_models: Mapping[str, str],
         max_concurrency: int = 4,
         max_retries: int = 5,
-        client: OpenAI | None = None,
     ) -> None:
         if max_concurrency <= 0:
             raise ValueError("max_concurrency must be positive")
-        self.client = client if client is not None else OpenAI(api_key=api_key, base_url=base_url)
-        self.client = self.client.with_options(max_retries=max_retries)
+        self.client = client.with_options(max_retries=max_retries)
         self.store = store
         self.provider_models = dict(provider_models)
         self.max_concurrency = max_concurrency

@@ -168,6 +168,20 @@ stays in `CeleryActionCallbacks`; `run_claimed_step` (claim, run, finish or
 fail; returns `unclaimed`/`advanced`/`pending`) and `ready_next_task` (mark the
 next stage's task READY) take a session factory and contain no dispatch.
 
+[async_actions.py](../../backend/src/translations/actions/async_actions.py)
+(marked not audited, strictly for agent-eval use) implements `ActionCallbacks`
+in-process. Awaiting `entrypoint(task_id)` runs that batch's remaining stages to
+completion: steps run in `asyncio.to_thread` through `run_claimed_step` behind a
+shared semaphore, pending polls `asyncio.sleep` their interval without holding
+it, and `exitpoint` awaits the next stage's `entrypoint`. A step error is
+recorded on the task and raised from `entrypoint`; an unclaimable task returns
+without error. `build_async_registry(session_factory, max_concurrent_steps=...)`
+registers every action's `STEPS`. To run a job, await each batch's stage-0
+`load_inputs` entrypoint (e.g. with `asyncio.gather`). It bypasses
+`control_translation_job`, and the actions still use the global object store
+and registered batch clients. Tests do not cover poll waits: the claim gate
+blocks reclaiming a poll before `next_poll_at`, so skipping the sleep stalls.
+
 Wrappers own commit/rollback, status, failure, and claim fields. Callbacks must
 not commit, roll back, or close the session. Long work renews its lease
 cooperatively; a blocking operation must fit inside that lease. An expired or

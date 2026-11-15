@@ -54,7 +54,10 @@ services:
   test_db:
     image: postgres:18
     restart: always
-      
+    # Disposable test data: keep it in RAM and skip durability work.
+    tmpfs:
+      - /var/lib/postgresql:size=1g
+    command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"]
     environment:
       POSTGRES_USER: "${TEST_USER}"
       POSTGRES_PASSWORD: "${TEST_PASSWORD}"

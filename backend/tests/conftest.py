@@ -109,15 +109,31 @@ def testing_session_local(test_engine: Engine) -> sessionmaker[Session]:
     return sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 
-@pytest.fixture(scope="function")
-def test_db(test_engine: Engine, testing_session_local: sessionmaker[Session]) -> Generator[Session]:
-    """Creates a new database session for a test."""
-    with test_engine.connect() as connection:
-        connection.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist"))
-        connection.commit()
+@pytest.fixture(scope="session")
+def database_schema() -> Generator[None]:
+    url = os.getenv("TEST_URL")
+    if url is None:
+        raise OSError("TEST_URL environment variable not set for tests.")
+    engine = create_engine(url)
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist"))
+        Base.metadata.drop_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
+        yield
+    finally:
+        engine.dispose()
 
-    Base.metadata.drop_all(bind=test_engine)
-    Base.metadata.create_all(bind=test_engine)
+
+@pytest.fixture(scope="function")
+def test_db(
+    database_schema: None, test_engine: Engine, testing_session_local: sessionmaker[Session]
+) -> Generator[Session]:
+    """Creates a new database session for a test."""
+    # The schema is built once per session; emptying every table is much cheaper than rebuilding it.
+    with test_engine.begin() as connection:
+        tables = ", ".join(connection.dialect.identifier_preparer.format_table(t) for t in Base.metadata.sorted_tables)
+        connection.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
 
     db = testing_session_local()
     try:

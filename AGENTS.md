@@ -46,6 +46,8 @@ Use the [maintain-agent-docs skill](.agents/skills/maintain-agent-docs/SKILL.md)
 
 Actively suggest ways for the user to improve their workflow, such as using plan mode, subagents, or various other features that you offer if they fit the task scope.
 
+Do not bring up what you plan to record unless the user wants you to record something specific.
+
 ## Project scripts
 
 - Frontend: `pnpm --dir frontend check` (type check), `pnpm --dir frontend lint` (ESLint), `pnpm --dir frontend test` (vitest). See [`frontend/package.json`](frontend/package.json) for more details.

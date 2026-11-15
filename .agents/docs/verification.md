@@ -12,6 +12,15 @@ link to focused tests. Backend database behavior needs the real PostgreSQL
 fixtures. Task tests replace paid inference with Pydantic AI test/function models;
 passing them does not establish naming quality.
 
+The session-scoped `database_schema` fixture in
+[conftest.py](../../backend/tests/conftest.py) builds the schema once; each
+`test_db` setup truncates every `Base.metadata` table with `RESTART IDENTITY`
+instead of rebuilding. Tests that need their own DDL (migration tests, shadow
+schema) create and drop an isolated schema rather than touching `public`. A new
+test that alters `public` tables must restore them or use the same pattern. The
+`test_db` Compose service keeps its data on tmpfs with `fsync`,
+`synchronous_commit`, and `full_page_writes` off, so it is lost on restart.
+
 Backend changes should run relevant tests and lint/type checks. Pure file moves
 or import changes can use static checks and a runtime import check. Documentation
 changes need link/path checks and `git diff --check`.

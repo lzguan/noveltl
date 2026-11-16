@@ -19,6 +19,7 @@ they describe changes.
 | Plan chapter-translation wiring, windowed schedules, job chaining, or story arcs | [Memory workflow follow-ups](memory-workflow-followups.md) |
 | Choose checks or regenerate API contracts | [Verification](verification.md) |
 | Plan eval framework work or the translation calibration loop | [Evaluation plans](evaluation-plans.md) |
+| Build eval database states, slice specs, or the evals seed database | [Eval slices](eval-slices.md) |
 | Plan the reader app or translation publishing | [Reader plans](reader-plans.md) |
 
 The root [AGENTS.md](../../AGENTS.md) contains project instructions. This folder

@@ -46,9 +46,11 @@ framework would supply.
 4. Port memory-agent scoring to evaluators; retire the old reporting path.
 5. Evaluate the calibration loop below.
 
-Unsettled: whether evals stay in `agent-evals/` or become a sibling package;
-whether the runner uses the API or backend functions directly (as
-`agent-evals` does); the audited-snapshot format.
+Evals now live in the sibling `evals/` project; `agent-evals/` is slated for
+deletion. Per-case database state comes from a seed database through
+[slices](eval-slices.md) rather than an audited-snapshot file format.
+Unsettled: whether the runner uses the API or backend functions directly (as
+`agent-evals` does).
 
 ## Calibration loop (sample → refine) × N → translate
 

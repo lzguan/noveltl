@@ -1,0 +1,7 @@
+{
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"useTabs": true,
+	"tabWidth": 4,
+	"printWidth": 100,
+	"ignorePatterns": ["app/api/endpoints/**", "app/api/models/**", "build/**", ".react-router/**"]
+}

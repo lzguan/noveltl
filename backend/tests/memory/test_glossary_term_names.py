@@ -1,5 +1,3 @@
-from uuid import uuid4
-
 import pytest
 from pydantic import ValidationError
 from pydantic_ai import ModelRetry, RunContext, RunUsage
@@ -52,7 +50,14 @@ def test_agent_adds_the_normalized_term_and_rejects_names_that_normalize_to_noth
     test_db.add(group)
     test_db.flush()
     ctx = RunContext(
-        deps=MemAgentDeps(db=test_db, mem_access_context=MemAccessContext(group.memory_group_id, uuid4(), uuid4())),
+        deps=MemAgentDeps(
+            db=test_db,
+            mem_access_context=MemAccessContext(
+                group.memory_group_id,
+                sample_scenario.chapters["chapter_1"].chapter_id,
+                sample_scenario.contents["chapter_1_v2"].chapter_content_id,
+            ),
+        ),
         model=TestModel(),
         usage=RunUsage(),
     )

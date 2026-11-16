@@ -55,6 +55,8 @@ Do not bring up what you plan to record unless the user wants you to record some
 
 See [scripts.md](docs/scripts.md) for more scripts.
 
+Don't run the entire test suite unless your changes span multiple areas of the codebase.
+
 If any scripts time out, it may be due to lacking hardware. Confirm with the user before proceeding with a rerun.
 
 ## Other

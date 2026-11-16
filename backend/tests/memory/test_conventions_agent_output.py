@@ -1,5 +1,4 @@
 import asyncio
-from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
@@ -40,7 +39,14 @@ def _group_with_conventions(db: Session, scenario: DatabaseScenario) -> tuple[Me
         if title == "Codenames":
             row.review_status = ReviewStatus.APPROVED
     db.commit()
-    deps = MemAgentDeps(db=db, mem_access_context=MemAccessContext(group.memory_group_id, uuid4(), uuid4()))
+    deps = MemAgentDeps(
+        db=db,
+        mem_access_context=MemAccessContext(
+            group.memory_group_id,
+            scenario.chapters["chapter_1"].chapter_id,
+            scenario.contents["chapter_1_v2"].chapter_content_id,
+        ),
+    )
     # Hand out handles as the context builder will.
     handles = {
         row.title: deps.convention_handles.new(row.convention_id) for row in read_conventions(db, group.memory_group_id)
@@ -107,6 +113,16 @@ def test_writes_creates_revisions_and_withdrawals_of_agent_drafts(
     }
     categories = {row.title: row.category for row in read_conventions(test_db, deps.mem_access_context.memory_group_id)}
     assert categories["Status panels"] == categories["Ranks"] == ConventionCategory.STYLE
+    recorded_on = {
+        row.title: row.recorded_on for row in read_conventions(test_db, deps.mem_access_context.memory_group_id)
+    }
+    chapter_content_id = deps.mem_access_context.chapter_content_id
+    assert recorded_on == {
+        "Ranks": chapter_content_id,
+        "Codenames": None,
+        "Seed ladder": chapter_content_id,
+        "Status panels": chapter_content_id,
+    }
 
 
 @pytest.mark.parametrize(

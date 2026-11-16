@@ -387,6 +387,7 @@ def create_term(
     term_kind: TermKind | None = None,
     *,
     workspace_id: None = None,
+    recorded_on: UUID | None = None,
 ) -> GlossaryTerm: ...
 
 
@@ -398,6 +399,7 @@ def create_term(
     term_kind: TermKind | None = None,
     *,
     workspace_id: UUID,
+    recorded_on: UUID | None = None,
 ) -> ShadowTerm: ...
 
 
@@ -408,6 +410,7 @@ def create_term(
     term_kind: TermKind | None = None,
     *,
     workspace_id: UUID | None = None,
+    recorded_on: UUID | None = None,
 ) -> GlossaryTerm | ShadowTerm:
     if workspace_id is not None:
         check_workspace(db, workspace_id, memory_group_id)
@@ -422,11 +425,17 @@ def create_term(
         ):
             raise GlossaryTermAlreadyExistsException(f"Glossary term {term_name!r} already exists")
         return stage_record(
-            db, ShadowTerm, workspace_id, memory_group_id=memory_group_id, term=term_name, term_kind=term_kind
+            db,
+            ShadowTerm,
+            workspace_id,
+            memory_group_id=memory_group_id,
+            term=term_name,
+            term_kind=term_kind,
+            recorded_on=recorded_on,
         )
     return db.execute(
         insert(GlossaryTerm)
-        .values(memory_group_id=memory_group_id, term=term_name, term_kind=term_kind)
+        .values(memory_group_id=memory_group_id, term=term_name, term_kind=term_kind, recorded_on=recorded_on)
         .returning(GlossaryTerm)
     ).scalar_one()
 

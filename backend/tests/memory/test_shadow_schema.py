@@ -45,13 +45,19 @@ class ShadowSchema:
     schema_name: str
 
 
-@pytest.fixture
-def shadow_schema(test_engine: Engine) -> Iterator[ShadowSchema]:
-    path = Path(__file__).parents[2] / "alembic/versions/f8b2c4d6e901_add_memory_shadow_tables.py"
-    spec = importlib.util.spec_from_file_location("memory_shadow_migration", path)
+def _load_migration(name: str) -> ModuleType:
+    path = Path(__file__).parents[2] / "alembic/versions" / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(name, path)
     assert spec is not None and spec.loader is not None
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
+    return migration
+
+
+@pytest.fixture
+def shadow_schema(test_engine: Engine) -> Iterator[ShadowSchema]:
+    migration = _load_migration("f8b2c4d6e901_add_memory_shadow_tables")
+    provenance = _load_migration("74a4a10cb394_add_memory_chapter_provenance")
     with test_engine.begin() as connection:
         schema = "memory_shadow_test_" + uuid4().hex
         connection.execute(CreateSchema(schema))
@@ -78,6 +84,7 @@ def shadow_schema(test_engine: Engine) -> Iterator[ShadowSchema]:
         )
         with Operations.context(MigrationContext.configure(connection)):
             migration.upgrade()
+            provenance.upgrade_shadow_tables()
             yield data
         connection.execute(DropSchema(schema, cascade=True))
 

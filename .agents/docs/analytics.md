@@ -21,11 +21,10 @@ Evaluation directions are in [evaluation plans](evaluation-plans.md).
 
 1. `backend/: uv run python scripts/export_db.py` writes one gzipped JSONL file
    per run to `exports/translation_job.v1/<until>.jsonl.gz`. It exports jobs
-   whose tasks are all complete with a last task update in `(since, until]`.
-   `since` is the newest file name in the prefix (the watermark; no state table),
-   `until` is Postgres `now()`. Records: `header` (producer, git version with
+   whose tasks are all complete and whose IDs are absent from previous export
+   headers. Explicit `--since` bypasses this check to allow re-exports. Records: `header` (producer, git version with
    `-dirty`, watermark, job ids), then per job `job` (config, normalized
-   `condition`), `chapter`, `blob` (`sha256`, `kind`, `content`; text hashed raw,
+   `condition`), `chapter`, `blob` (`sha256`, `kind`, `content`; hash covers kind, NUL, and UTF-8 content,
    JSON as sorted compact JSON; once per run), and `stream` (stage, stream,
    `data_name`, blob hash, task and output-file ids). Metadata comes from six
    batched queries; only task output files are fetched per object.

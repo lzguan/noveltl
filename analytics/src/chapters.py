@@ -71,6 +71,8 @@ def chapter_data(
         filters.append(f"j.novel_id = '{uuid.UUID(str(novel_id))}'")
     if condition_hashes is not None:
         prefixes = [h.lower() for h in condition_hashes]
+        if not prefixes:
+            return []
         if any(not all(c in "0123456789abcdef" for c in h) for h in prefixes):
             raise ValueError("condition hashes must be hex")
         filters.append("(" + " OR ".join(f"starts_with(j.condition_hash, '{h}')" for h in prefixes) + ")")

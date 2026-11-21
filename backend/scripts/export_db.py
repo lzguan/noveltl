@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 from collections import defaultdict
 from collections.abc import Iterator
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, BinaryIO
@@ -22,6 +23,7 @@ from src.files.models import StoredFile
 from src.files.storage import ObjectStore
 from src.models import Base  # noqa: F401  registers every mapper
 from src.novels.models import Chapter
+from src.translations.jsonl import iter_jsonl_lines
 from src.translations.models import TranslationJob, TranslationStage, TranslationTask
 from src.translations.schemas import stage_config
 from src.translations.types import TranslationTaskStatus
@@ -51,7 +53,7 @@ def _read_records(object_store: ObjectStore, object_key: str) -> Iterator[dict[s
     raw = b"".join(object_store.fetch(object_key))
     if raw[:2] == b"\x1f\x8b":
         raw = gzip.decompress(raw)
-    for line in raw.decode().splitlines():
+    for line in iter_jsonl_lines([raw]):
         if line.strip():
             yield json.loads(line)
 
@@ -69,7 +71,7 @@ def _condition(job: TranslationJob, stages: list[TranslationStage]) -> dict[str,
 
 
 def _blob_content(payload: Any) -> tuple[str, str]:
-    """Text payloads as-is, anything else as canonical JSON; the blob's sha256 is the hash of this content."""
+    """Text payloads as-is, anything else as canonical JSON."""
     if isinstance(payload, str):
         return "text", payload
     return "json", json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -105,7 +107,7 @@ def dump_translation_jobs(
         until: Watermark the run ends at (inclusive).
     Returns:
         A `header` record, then per job a `job` record followed by its `chapter`, `blob` and `stream` records.
-        Each distinct payload is emitted once per run as a `blob` (kind, content and the content's sha256), before
+        Each distinct payload is emitted once per run as a `blob` (kind, content and their combined hash), before
         the first `stream` that references it.
     """
     yield {
@@ -187,7 +189,7 @@ def dump_translation_jobs(
                             "chapter_title": title,
                         }
                     kind, content = _blob_content(record["payload"])
-                    sha = hashlib.sha256(content.encode()).hexdigest()
+                    sha = hashlib.sha256(f"{kind}\0{content}".encode()).hexdigest()
                     if sha not in seen_blobs:
                         seen_blobs.add(sha)
                         yield {"type": "blob", "sha256": sha, "kind": kind, "content": content}
@@ -214,18 +216,24 @@ def write_jsonl_gz(records: Iterator[dict[str, Any]], handle: BinaryIO) -> int:
     return count
 
 
-def _watermark(names: list[str]) -> datetime:
-    """The latest export's `until`, read from file names of the form `<until>.jsonl.gz`."""
-    stamps = [datetime.strptime(name.removesuffix(SUFFIX), NAME_FORMAT).replace(tzinfo=UTC) for name in names]
-    return max(stamps, default=EPOCH)
+def _header_job_ids(source: BinaryIO) -> set[UUID]:
+    with gzip.GzipFile(fileobj=source) as archive:
+        header = json.loads(archive.readline())
+    if header.get("type") != "header" or header.get("kind") != KIND:
+        raise ValueError("Unexpected translation export header")
+    return {UUID(value) for value in header["job_ids"]}
 
 
 class LocalDestination:
     def __init__(self, root: Path) -> None:
         self.root = root / KIND
 
-    def watermark(self) -> datetime:
-        return _watermark([path.name for path in self.root.glob(f"*{SUFFIX}")])
+    def exported_job_ids(self) -> set[UUID]:
+        exported: set[UUID] = set()
+        for path in self.root.glob(f"*{SUFFIX}"):
+            with path.open("rb") as source:
+                exported.update(_header_job_ids(source))
+        return exported
 
     def write(self, name: str, source: BinaryIO) -> str:
         self.root.mkdir(parents=True, exist_ok=True)
@@ -251,14 +259,16 @@ class S3Destination:
         self.bucket = bucket
         self.prefix = f"{prefix.strip('/')}/{KIND}/"
 
-    def watermark(self) -> datetime:
-        names = [
-            item["Key"].removeprefix(self.prefix)
-            for page in self.client.get_paginator("list_objects_v2").paginate(Bucket=self.bucket, Prefix=self.prefix)
-            for item in page.get("Contents", [])
-            if item["Key"].endswith(SUFFIX)
-        ]
-        return _watermark(names)
+    def exported_job_ids(self) -> set[UUID]:
+        exported: set[UUID] = set()
+        pages = self.client.get_paginator("list_objects_v2").paginate(Bucket=self.bucket, Prefix=self.prefix)
+        for page in pages:
+            for item in page.get("Contents", []):
+                key = item["Key"]
+                if key.endswith(SUFFIX):
+                    with closing(self.client.get_object(Bucket=self.bucket, Key=key)["Body"]) as source:
+                        exported.update(_header_job_ids(source))
+        return exported
 
     def write(self, name: str, source: BinaryIO) -> str:
         key = f"{self.prefix}{name}"
@@ -276,7 +286,7 @@ def main() -> None:
         description="Export translation jobs finished since the last run into one translation_job.v1 file."
     )
     parser.add_argument(
-        "--since", type=datetime.fromisoformat, help="override the watermark (default: the latest export's end)"
+        "--since", type=datetime.fromisoformat, help="include previously exported jobs finished after this time"
     )
     parser.add_argument("--bucket", default="analytics", help="destination bucket (default: analytics)")
     parser.add_argument("--prefix", default="exports", help="key prefix inside the bucket (default: exports)")
@@ -284,13 +294,14 @@ def main() -> None:
     args = parser.parse_args()
 
     destination = LocalDestination(args.out) if args.out else S3Destination(args.bucket, args.prefix)
-    since = args.since or destination.watermark()
+    since = args.since or EPOCH
+    exported = set() if args.since else destination.exported_job_ids()
     with SessionLocal() as session:
         until = session.scalar(select(func.now()))
         assert until is not None
-        job_ids = finished_job_ids(session, since, until)
+        job_ids = [job_id for job_id in finished_job_ids(session, since, until) if job_id not in exported]
         if not job_ids:
-            print(f"nothing finished since {since.isoformat()}")
+            print(f"no jobs to export since {since.isoformat()}")
             return
         name = until.astimezone(UTC).strftime(NAME_FORMAT) + SUFFIX
         with tempfile.TemporaryFile() as spool:

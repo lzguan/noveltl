@@ -29,3 +29,4 @@ docs/memory/agent-evals/corpora.local.md
 !docs/memory/agent-evals/logs/README.md
 docs/memory/agent-evals/logs/*.jsonl
 /.worktrees/
+.data

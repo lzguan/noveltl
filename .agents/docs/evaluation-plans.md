@@ -50,6 +50,14 @@ Unsettled: whether evals stay in `agent-evals/` or become a sibling package;
 whether the runner uses the API or backend functions directly (as
 `agent-evals` does); the audited-snapshot format.
 
+Deferred cleanup: the versioned test-data catalog moved from
+`backend/test_support/test_data/` to [backend/src/datasets](../../backend/src/datasets)
+(commit `8903e1a`) so `agent-evals` corpora could import it. Besides
+`agent-evals`, its importers are backend tests (`tests/conftest.py`,
+`tests/fixtures/scenarios.py`, `tests/test_data_support/`) and test-data scripts
+in `backend/scripts/`. When `agent-evals` is deleted, consider moving it back
+under `test_support/`; first confirm nothing outside tests and scripts imports it.
+
 ## Calibration loop (sample → refine) × N → translate
 
 Translate a few chapter intervals (about 5–10 chapters each, roughly 5% of the
@@ -86,3 +94,13 @@ conventions versus terms + memories + conventions, no prune stage.
 
 Limits: string-match and pronoun-count proxies only; no meaning, continuity, or
 prose-quality judgment; single run per arm.
+
+## Reader feedback (2026-11-17)
+
+The user read chapters 1–30 of a modern-day romance novel (dev novel
+`e33ee811…`, environment-specific) translated by `qwen-flash` through the batch
+API with `terms` + `conventions` inputs and no memories: "pretty good", clearly
+better than a year earlier, but lacking human touch and slang, especially in
+dialogue. The user suspects the modern setting is the easy case (no invented
+terminology or classical idioms). Untested levers: translate-stage style
+instructions, per-character voice conventions, a stronger model.

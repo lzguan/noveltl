@@ -358,6 +358,13 @@ export function EditNovelPage() {
 										keepMounted: true,
 										content: (
 											<AutoLabelPanel
+												novelId={novel.novel.novelId}
+												labelGroupServerId={
+													managers.labelGroupMgr.labelGroupServerId
+												}
+												onLabelGroupPromoted={
+													managers.labelGroupMgr.reloadPromotedLabelGroup
+												}
 												autoLabels={autoLabels}
 												autoLabelManager={managers.autoLabelMgr}
 												chapters={chapterState.chapterList}

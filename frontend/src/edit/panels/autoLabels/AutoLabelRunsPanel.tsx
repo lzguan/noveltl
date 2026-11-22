@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ChevronRight, EllipsisIcon, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
+import type { ChapterFilter } from "../../controller/types/controllerTypes";
 import type { CProvId, LGProvId, ProvChapter } from "../../controller/types/idTypes";
 import type { AutoLabelManager } from "../../managers/autolabelManager";
 import type {
@@ -230,6 +231,7 @@ export function AutoLabelRunsPanel({
 	labelGroups,
 	activeId,
 	setActive,
+	promotionSubmitting,
 	onPromote,
 }: {
 	autoLabels: ReturnType<typeof useAutoLabelState>;
@@ -242,7 +244,12 @@ export function AutoLabelRunsPanel({
 	labelGroups: [LGProvId, LabelGroupView][];
 	activeId: LGProvId | null;
 	setActive: (id: LGProvId | null) => void;
-	onPromote: AutoLabelManager["promote"];
+	promotionSubmitting: boolean;
+	onPromote: (
+		run: AutoLabelRunView,
+		labelGroupId: LGProvId,
+		filter: ChapterFilter,
+	) => Promise<string | null>;
 }) {
 	const [promotingRun, setPromotingRun] = useState<AutoLabelRunView | null>(null);
 	const chapterNumById = useMemo(
@@ -292,7 +299,9 @@ export function AutoLabelRunsPanel({
 								onSelectRun={onSelectRun}
 								onDeselectRun={onDeselectRun}
 								onReloadRun={onReloadRun}
-								promoteDisabled={autoLabels.promoting || labelGroups.length === 0}
+								promoteDisabled={
+									labelGroups.length === 0 || run.run.servId === null
+								}
 								onPromote={() => setPromotingRun(run)}
 							/>
 						);
@@ -304,12 +313,14 @@ export function AutoLabelRunsPanel({
 					run={promotingRun}
 					labelGroups={labelGroups}
 					defaultLabelGroupId={activeId}
-					promoting={autoLabels.promoting}
-					onPromote={(labelGroupId, filter) => {
+					submitting={promotionSubmitting}
+					onPromote={async (labelGroupId, filter) => {
+						const error = await onPromote(promotingRun, labelGroupId, filter);
+						if (error !== null) return error;
 						// The chosen group becomes active so its promoted labels are shown.
 						setActive(labelGroupId);
-						onPromote(promotingRun.run.runId, labelGroupId, filter);
 						setPromotingRun(null);
+						return null;
 					}}
 					onClose={() => setPromotingRun(null)}
 				/>

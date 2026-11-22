@@ -1,13 +1,28 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { PromotionJobsList } from "@/autolabels/promotions/PromotionJobsList";
+import { MAX_TRACKED_PROMOTIONS } from "@/autolabels/promotions/promotionJobsState";
+import {
+	type QueuePromotionResult,
+	usePromotionJobs,
+} from "@/autolabels/promotions/usePromotionJobs";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { ChapterFilter } from "../../controller/types/controllerTypes";
 import type { CProvId, ProvChapter, LGProvId } from "../../controller/types/idTypes";
-import type { useAutoLabelState } from "../../hooks/useAutoLabelState";
+import type { AutoLabelRunView, useAutoLabelState } from "../../hooks/useAutoLabelState";
 import type { LabelGroupView } from "../../hooks/useTrackedLabelGroups";
 import type { AutoLabelManager } from "../../managers/autolabelManager";
 import { AutoLabelRunsPanel } from "./AutoLabelRunsPanel";
 import { CreateAutoLabelPanel } from "./CreateAutoLabelPanel";
+import { formatRunLabel } from "./runLabels";
+
+const QUEUE_ERRORS: Record<Exclude<QueuePromotionResult, { ok: true }>["reason"], string> = {
+	tooMany: `At most ${MAX_TRACKED_PROMOTIONS} promotions can run at once.`,
+	alreadyActive: "This run is already being promoted into that label group.",
+	notFound: "The run or label group no longer exists, or you cannot edit it.",
+	failed: "Could not start the promotion.",
+};
 
 type AutoLabelView = "runs" | "create";
 
@@ -16,6 +31,9 @@ function isAutoLabelView(value: string): value is AutoLabelView {
 }
 
 export function AutoLabelPanel({
+	novelId,
+	labelGroupServerId,
+	onLabelGroupPromoted,
 	autoLabels,
 	autoLabelManager,
 	chapters,
@@ -27,6 +45,9 @@ export function AutoLabelPanel({
 	previewLoading,
 	onSetPreviewEnabled,
 }: {
+	novelId: string;
+	labelGroupServerId: (labelGroupId: LGProvId) => string | null;
+	onLabelGroupPromoted: (labelGroupServId: string) => void;
 	autoLabels: ReturnType<typeof useAutoLabelState>;
 	autoLabelManager: AutoLabelManager;
 	chapters: ProvChapter[];
@@ -39,6 +60,43 @@ export function AutoLabelPanel({
 	onSetPreviewEnabled: AutoLabelManager["setPreviewEnabled"];
 }) {
 	const [view, setView] = useState<AutoLabelView>("runs");
+	const promotions = usePromotionJobs({
+		novelId,
+		onJobFinished: (job) => onLabelGroupPromoted(job.labelGroupId),
+	});
+	const runNames = useMemo(
+		() =>
+			new Map(
+				autoLabels.runs.flatMap((run) =>
+					run.run.servId === null ? [] : [[run.run.servId, formatRunLabel(run)] as const],
+				),
+			),
+		[autoLabels.runs],
+	);
+	// Not memoized: a group's server ID can appear after it syncs without labelGroups changing.
+	const labelGroupNames = new Map(
+		labelGroups.flatMap(([id, group]) => {
+			const servId = labelGroupServerId(id);
+			return servId === null ? [] : [[servId, group.labelGroup.labelGroupName] as const];
+		}),
+	);
+
+	const promote = async (
+		run: AutoLabelRunView,
+		labelGroupId: LGProvId,
+		filter: ChapterFilter,
+	): Promise<string | null> => {
+		const labelGroupServId = labelGroupServerId(labelGroupId);
+		if (run.run.servId === null || labelGroupServId === null) {
+			return "This run or label group has not finished saving yet.";
+		}
+		const result = await promotions.queue(labelGroupServId, {
+			runId: run.run.servId,
+			start: filter.start ?? null,
+			end: filter.end ?? null,
+		});
+		return result.ok ? null : QUEUE_ERRORS[result.reason];
+	};
 
 	return (
 		<Tabs
@@ -94,7 +152,13 @@ export function AutoLabelPanel({
 					labelGroups={labelGroups}
 					activeId={activeId}
 					setActive={setActive}
-					onPromote={autoLabelManager.promote}
+					promotionSubmitting={promotions.submitting}
+					onPromote={promote}
+				/>
+				<PromotionJobsList
+					jobs={promotions.jobs}
+					runNames={runNames}
+					labelGroupNames={labelGroupNames}
 				/>
 			</TabsContent>
 			{/* Kept mounted so the form keeps its values when switching tabs. */}
@@ -109,7 +173,7 @@ export function AutoLabelPanel({
 						autoLabelManager.createRun(params, filter);
 						setView("runs");
 					}}
-					disabled={autoLabels.refreshing || autoLabels.promoting}
+					disabled={autoLabels.refreshing}
 				/>
 			</TabsContent>
 		</Tabs>

@@ -1,0 +1,53 @@
+{
+	"name": "reader",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"generate:api": "node scripts/generate-api.mjs",
+		"dev": "react-router dev",
+		"build": "react-router build",
+		"start": "react-router-serve ./build/server/index.js",
+		"typegen": "react-router typegen",
+		"check": "react-router typegen && tsc --noEmit",
+		"lint": "oxlint",
+		"lint:fix": "oxlint --fix",
+		"format": "oxfmt",
+		"format:check": "oxfmt --check",
+		"test": "vitest",
+		"test:ci": "vitest run"
+	},
+	"dependencies": {
+		"@react-router/node": "^7.18.5",
+		"@react-router/serve": "^7.18.5",
+		"isbot": "^5.2.3",
+		"react": "^19.3.1",
+		"react-dom": "^19.3.1",
+		"react-router": "^7.18.5"
+	},
+	"devDependencies": {
+		"@react-router/dev": "^7.18.5",
+		"@tailwindcss/vite": "^4.3.3",
+		"@types/node": "^26.6.6",
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
+		"orval": "^8.46.0",
+		"oxfmt": "^0.75.0",
+		"oxlint": "^1.90.0",
+		"oxlint-tsgolint": "^7.0.2005",
+		"tailwindcss": "^4.3.3",
+		"typescript": "^7.0.2",
+		"vite": "^8.3.5",
+		"vitest": "^5.0.5"
+	},
+	"devEngines": {
+		"packageManager": {
+			"name": "pnpm",
+			"version": "^12.16.1",
+			"onFail": "error"
+		}
+	},
+	"engines": {
+		"node": "26.x"
+	}
+}

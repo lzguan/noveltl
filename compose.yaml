@@ -192,6 +192,18 @@ services:
       - /home/newuser/frontend/node_modules
     ports:
       - "${FRONTEND_PORT}:5173"
+
+  reader:
+    build:
+      context: ./reader
+      target: base
+    environment:
+      READER_BACKEND_URL: http://backend:8000
+    volumes:
+      - ./reader:/home/newuser/reader
+      - /home/newuser/reader/node_modules
+    ports:
+      - "${READER_PORT:-5174}:5173"
   
   garage:
     image: dxflrs/garage:v2.4.1

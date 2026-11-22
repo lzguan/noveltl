@@ -7,7 +7,7 @@ from celery import Celery
 from celery.app.task import Task
 from pydantic import TypeAdapter
 
-from src.autolabels.inference.worker.config import SessionLocal
+from src.database import SessionLocal
 from src.translations.actions.actions import (
     ActionCallback,
     ActionCallbacks,

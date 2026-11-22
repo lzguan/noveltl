@@ -6,7 +6,7 @@ authors = [{ name = "Leo Guan", email = "leo.ziqi@gmail.com" }]
 requires-python = ">=3.15,<3.16"
 readme = "README.md"
 dependencies = [
-    "sqlalchemy>=2.1.6",
+    "sqlalchemy[asyncio]>=2.1.6",
     "psycopg[binary]>=3.2.0",
     "pydantic>=2.14.0",
     "pydantic-settings>=2.16.0",

@@ -2489,99 +2489,6 @@
         }
       }
     },
-    "/label-groups/{labelGroupId}/label-datas/auto-labels": {
-      "post": {
-        "summary": "Create Label Datas By Auto Labels",
-        "description": "Creates label datas and populates labels from autolabel results.",
-        "operationId": "create_label_datas_by_auto_labels_label_groups__labelGroupId__label_datas_auto_labels_post",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "labelGroupId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Labelgroupid"
-            }
-          },
-          {
-            "name": "requestKey",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Requestkey"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateLabelDataByAutoLabel"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateLabelDataByAutoLabelStatus"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Label group not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Request key conflict.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RequestConflictErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/auto-label-runs": {
       "get": {
         "summary": "Read Auto Label Runs",
@@ -2846,6 +2753,310 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RequestConflictErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/label-groups/{labelGroupId}/label-datas/auto-labels": {
+      "post": {
+        "summary": "Create Label Datas By Auto Labels",
+        "description": "Creates label datas and populates labels from autolabel results.",
+        "operationId": "create_label_datas_by_auto_labels_label_groups__labelGroupId__label_datas_auto_labels_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "labelGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Labelgroupid"
+            }
+          },
+          {
+            "name": "requestKey",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Requestkey"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLabelDataByAutoLabel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateLabelDataByAutoLabelStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Label group not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request key conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestConflictErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/label-groups/{labelGroupId}/label-promotions": {
+      "post": {
+        "summary": "Create Label Promotion",
+        "description": "Start promoting an autolabel run's labels into a label group in the background.",
+        "operationId": "create_label_promotion_label_groups__labelGroupId__label_promotions_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "labelGroupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Labelgroupid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLabelDataByAutoLabel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedLabelPromotion"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Label group or run not found, or not editable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A promotion for this run and group is running.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailHTTPErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/novels/{novelId}/label-promotions": {
+      "get": {
+        "summary": "Read Label Promotions",
+        "description": "List a novel's label promotion jobs: active ones first, then the most recently updated.",
+        "operationId": "read_label_promotions_novels__novelId__label_promotions_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "novelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Novelid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 10,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LabelPromotionJob"
+                  },
+                  "title": "Response Read Label Promotions Novels  Novelid  Label Promotions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/label-promotions/{promotionId}/failures": {
+      "get": {
+        "summary": "Read Label Promotion Failures",
+        "description": "List the chapters a label promotion job could not promote, in processing order.",
+        "operationId": "read_label_promotion_failures_label_promotions__promotionId__failures_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "promotionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Promotionid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LabelPromotionFailure"
+                  },
+                  "title": "Response Read Label Promotion Failures Label Promotions  Promotionid  Failures Get"
                 }
               }
             }
@@ -9861,6 +10072,25 @@
         "title": "CreateUser",
         "description": "Pydantic schema to validate data required to create a user.\n\nAttributes:\n    user_name: Username of user being created.\n    user_password: Unhashed password of user being create.\n    user_type: UserType type of user to be created.\nNotes:"
       },
+      "CreatedLabelPromotion": {
+        "properties": {
+          "promotionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Promotionid"
+          },
+          "itemCount": {
+            "type": "integer",
+            "title": "Itemcount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "promotionId",
+          "itemCount"
+        ],
+        "title": "CreatedLabelPromotion"
+      },
       "Creator": {
         "type": "string",
         "enum": [
@@ -11093,6 +11323,116 @@
             "update": "#/components/schemas/UpdateLabelOp"
           }
         }
+      },
+      "LabelPromotionCounts": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "done",
+          "failed",
+          "pending"
+        ],
+        "title": "LabelPromotionCounts"
+      },
+      "LabelPromotionFailure": {
+        "properties": {
+          "chapterId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chapterid"
+          },
+          "chapterNum": {
+            "type": "integer",
+            "title": "Chapternum"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chapterId",
+          "chapterNum",
+          "message"
+        ],
+        "title": "LabelPromotionFailure"
+      },
+      "LabelPromotionJob": {
+        "properties": {
+          "promotionId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Promotionid"
+          },
+          "runId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Runid"
+          },
+          "labelGroupId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Labelgroupid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AutoLabelProgress"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/LabelPromotionCounts"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "promotionId",
+          "runId",
+          "labelGroupId",
+          "status",
+          "message",
+          "counts",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "LabelPromotionJob"
       },
       "LabelRef": {
         "properties": {

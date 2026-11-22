@@ -35,6 +35,7 @@ import type {
   CreateNovel,
   CreateSourceWork,
   CreateUser,
+  CreatedLabelPromotion,
   DeleteUserStatus,
   DetailHTTPErrorResponse,
   EagerEntry,
@@ -48,6 +49,8 @@ import type {
   LabelData,
   LabelGroup,
   LabelGroupWithRole,
+  LabelPromotionFailure,
+  LabelPromotionJob,
   Language,
   Memory,
   MemoryAgentConfig,
@@ -79,6 +82,8 @@ import type {
   ReadLabelDatasByGroupChaptersLabelDatasGetParams,
   ReadLabelGroupsLabelGroupsGetParams,
   ReadLabelGroupsWithRoleLabelGroupsWithRoleGetParams,
+  ReadLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetParams,
+  ReadLabelPromotionsNovelsNovelIdLabelPromotionsGetParams,
   ReadMemoriesAtChapterMemoryGroupsMemoryGroupIdChaptersChapterIdMemoriesGetParams,
   ReadMemoriesForTermMemoryGroupsMemoryGroupIdGlossaryTermsTermIdMemoriesGetParams,
   ReadMemoriesMemoryGroupsMemoryGroupIdMemoriesGetParams,
@@ -1928,6 +1933,126 @@ return customFetch<createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatas
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createLabelDataByAutoLabel)
+  }
+);}
+
+
+export type createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponse202 = {
+  data: CreatedLabelPromotion
+  status: 202
+}
+
+export type createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponse404 = {
+  data: DetailHTTPErrorResponse
+  status: 404
+}
+
+export type createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponse409 = {
+  data: DetailHTTPErrorResponse
+  status: 409
+}
+
+export type createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponseSuccess = (createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponse202) & {
+  headers: Headers;
+};
+export type createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponseError = (createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponse404 | createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponse409 | createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponse422) & {
+  headers: Headers;
+};
+
+export type createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponse = (createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponseSuccess | createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponseError)
+
+export const getCreateLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostUrl = (labelGroupId: string,) => {
+
+
+
+
+  return `/api/label-groups/${labelGroupId}/label-promotions`
+}
+
+/**
+ * Start promoting an autolabel run's labels into a label group in the background.
+ * @summary Create Label Promotion
+ */
+export const createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPost = async (labelGroupId: string,
+    createLabelDataByAutoLabel: CreateLabelDataByAutoLabel, options?: Parameters<typeof customFetch>[1]): Promise<createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<createLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostResponse>(getCreateLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostUrl(labelGroupId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createLabelDataByAutoLabel)
+  }
+);}
+
+
+export type readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetResponse200 = {
+  data: LabelPromotionFailure[]
+  status: 200
+}
+
+export type readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetResponseSuccess = (readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetResponse200) & {
+  headers: Headers;
+};
+export type readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetResponseError = (readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetResponse422) & {
+  headers: Headers;
+};
+
+export type readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetResponse = (readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetResponseSuccess | readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetResponseError)
+
+export const getReadLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetUrl = (promotionId: string,
+    params?: ReadLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/label-promotions/${promotionId}/failures?${stringifiedParams}` : `/api/label-promotions/${promotionId}/failures`
+}
+
+/**
+ * List the chapters a label promotion job could not promote, in processing order.
+ * @summary Read Label Promotion Failures
+ */
+export const readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGet = async (promotionId: string,
+    params?: ReadLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetParams, options?: Parameters<typeof customFetch>[1]): Promise<readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetResponse> => {
+
+  return customFetch<readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetResponse>(getReadLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetUrl(promotionId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 
@@ -4892,6 +5017,58 @@ return customFetch<createChapterNovelsNovelIdChaptersPostResponse>(getCreateChap
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(createChapter)
+  }
+);}
+
+
+export type readLabelPromotionsNovelsNovelIdLabelPromotionsGetResponse200 = {
+  data: LabelPromotionJob[]
+  status: 200
+}
+
+export type readLabelPromotionsNovelsNovelIdLabelPromotionsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type readLabelPromotionsNovelsNovelIdLabelPromotionsGetResponseSuccess = (readLabelPromotionsNovelsNovelIdLabelPromotionsGetResponse200) & {
+  headers: Headers;
+};
+export type readLabelPromotionsNovelsNovelIdLabelPromotionsGetResponseError = (readLabelPromotionsNovelsNovelIdLabelPromotionsGetResponse422) & {
+  headers: Headers;
+};
+
+export type readLabelPromotionsNovelsNovelIdLabelPromotionsGetResponse = (readLabelPromotionsNovelsNovelIdLabelPromotionsGetResponseSuccess | readLabelPromotionsNovelsNovelIdLabelPromotionsGetResponseError)
+
+export const getReadLabelPromotionsNovelsNovelIdLabelPromotionsGetUrl = (novelId: string,
+    params?: ReadLabelPromotionsNovelsNovelIdLabelPromotionsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/novels/${novelId}/label-promotions?${stringifiedParams}` : `/api/novels/${novelId}/label-promotions`
+}
+
+/**
+ * List a novel's label promotion jobs: active ones first, then the most recently updated.
+ * @summary Read Label Promotions
+ */
+export const readLabelPromotionsNovelsNovelIdLabelPromotionsGet = async (novelId: string,
+    params?: ReadLabelPromotionsNovelsNovelIdLabelPromotionsGetParams, options?: Parameters<typeof customFetch>[1]): Promise<readLabelPromotionsNovelsNovelIdLabelPromotionsGetResponse> => {
+
+  return customFetch<readLabelPromotionsNovelsNovelIdLabelPromotionsGetResponse>(getReadLabelPromotionsNovelsNovelIdLabelPromotionsGetUrl(novelId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 

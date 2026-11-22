@@ -95,7 +95,7 @@ Background jobs run in separate worker processes rather than in the FastAPI proc
 
 | Worker | Celery app | Redis database | Dockerfile target |
 | --- | --- | --- | --- |
-| Autolabels | [`src/autolabels/celery_app.py`](../backend/src/autolabels/celery_app.py) | `AUTOLABELS_DATABASE` (default 1) | `autolabels-worker` |
+| Autolabels | [`src/autolabels/inference/celery_app.py`](../backend/src/autolabels/inference/celery_app.py) | `AUTOLABELS_DATABASE` (default 1) | `autolabels-worker` |
 | Filters | [`src/filters/celery_app.py`](../backend/src/filters/celery_app.py) | `FILTERS_DATABASE` (default 0) | `filters-worker` |
 
 The editor's request-idempotency cache is a third consumer of the same Redis instance, on `REQUESTS_DATABASE` (default 2). All three settings are defined in [`config.py`](../backend/src/config.py) and none of the Compose files override them, so the defaults apply in every environment. Keeping them distinct is what stops the two queues from consuming each other's tasks.
@@ -122,7 +122,7 @@ docker compose -f compose.yaml -f compose.local.yaml --profile manual up -d --bu
 Or run one directly from [`backend/`](../backend/), outside Docker:
 
 ```bash
-uv run --no-sync celery -A src.autolabels.celery_app worker --loglevel=info
+uv run --no-sync celery -A src.autolabels.inference.celery_app worker --loglevel=info
 uv run --no-sync celery -A src.filters.celery_app worker --loglevel=info
 ```
 

@@ -120,8 +120,8 @@ def _normalize_cluener_errors(errors: Iterable[Mapping[str, Any]]) -> list[dict[
 
 def _make_default_predictor(config: ModelConfigDocument) -> Predictor:
     from src.autolabels.constants import SepPriority
+    from src.autolabels.inference.worker.inference import Cluener
     from src.autolabels.params import CluenerParams
-    from src.autolabels.worker.inference import Cluener
 
     sep_map = {"high": SepPriority.HIGH, "med": SepPriority.MED, "low": SepPriority.LOW}
     params = CluenerParams(

@@ -256,36 +256,6 @@ class UpdateLabelDataStream(Model):
     ops: list[LabelOp]
 
 
-class CreateLabelDataByAutoLabel(Model):
-    """
-    Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.
-
-    Attributes:
-        run_id: UUID of the autolabel run whose results should be promoted.
-        chapter_ids: Optional filter on what chapters to include.
-        start: Optional filter on the least chapter number to include.
-        end: Optional filter on the greatest chapter number to include.
-    """
-
-    run_id: uuid.UUID
-    chapter_ids: list[uuid.UUID] | None = None
-    start: int | None = None
-    end: int | None = None
-
-
-class CreateLabelDataByAutoLabelStatus(Model):
-    """
-    Return message for CreateLabelDataByAutoLabel.
-
-    Attributes:
-        success: List of tuples of (chapter_id, chapter_content_id) for successful inserts.
-        errors: List of tuples of (chapter_id, chapter_content_id, error message) for failed inserts.
-    """
-
-    success: list[tuple[uuid.UUID, uuid.UUID]]
-    errors: list[tuple[uuid.UUID, uuid.UUID, str]]
-
-
 class LabelContributor(Model):
     """
     Pydantic schema for a label contributor, which can be either a user or an autolabel model.

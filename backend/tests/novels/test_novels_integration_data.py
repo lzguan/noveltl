@@ -8,6 +8,7 @@ DB output.
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.datasets import NovelDataset
@@ -93,9 +94,10 @@ def dd_chapter_0_labels(
 
 
 class TestDataDrivenModifyChapterContent:
-    def test_multiple_ops_match_in_memory(
+    async def test_multiple_ops_match_in_memory(
         self,
         test_db: Session,
+        async_test_db: AsyncSession,
         xianxia_scenario: DatabaseScenario,
         dd_chapter_0_labels: tuple[ChapterContent, list[LabelModel]],
     ):
@@ -118,8 +120,8 @@ class TestDataDrivenModifyChapterContent:
         expected_text, expected_labels = apply_text_ops(original_text, ops, in_memory_labels)
 
         # Service
-        modify_chapter_content(
-            test_db,
+        await modify_chapter_content(
+            async_test_db,
             xianxia_scenario.users["owner"],
             chapter.chapter_id,
             cc.chapter_content_id,

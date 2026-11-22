@@ -1,10 +1,10 @@
+import asyncio
 import uuid
 
-from psycopg2 import Error as PgError
-from psycopg2 import errorcodes
+from psycopg.errors import StringDataRightTruncation, UniqueViolation
 from sqlalchemy import select
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth import models, schemas
 from src.auth.constants import UserType
@@ -17,7 +17,7 @@ from src.auth.utils import hash_password, verify_password
 from src.exceptions import DataTooLongException, InsufficientPermissionsException
 
 
-def query_user_by_user_name(db: Session, user_name: str) -> models.User:
+async def query_user_by_user_name(db: AsyncSession, user_name: str) -> models.User:
     """
     Finds exactly one user in the database with user_name, or raises an exception
 
@@ -30,14 +30,14 @@ def query_user_by_user_name(db: Session, user_name: str) -> models.User:
     """
     q = select(models.User).where(models.User.user_name == user_name)
     try:
-        result = db.execute(q)
+        result = await db.execute(q)
         result_user = result.scalar_one()
     except NoResultFound as e:
         raise UserNotFoundException from e
     return result_user
 
 
-def query_user_by_id(db: Session, user_id: uuid.UUID) -> models.User:
+async def query_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> models.User:
     """
     Finds exactly one user in the database with user_id, or raises an exception
 
@@ -50,14 +50,14 @@ def query_user_by_id(db: Session, user_id: uuid.UUID) -> models.User:
     """
     q = select(models.User).where(models.User.user_id == user_id)
     try:
-        result = db.execute(q)
+        result = await db.execute(q)
         result_user = result.scalar_one()
     except NoResultFound as e:
         raise UserNotFoundException from e
     return result_user
 
 
-def authenticate_user(db: Session, user_name: str, password: str) -> models.User:
+async def authenticate_user(db: AsyncSession, user_name: str, password: str) -> models.User:
     """
     Authenticates a user login and returns a User object if successful.
 
@@ -70,13 +70,13 @@ def authenticate_user(db: Session, user_name: str, password: str) -> models.User
         UserNotFoundException: No user with user_name found in database.
         UserAuthenticationFailedException: Password does not match required password.
     """
-    db_user = query_user_by_user_name(db, user_name)
-    if not verify_password(password, db_user.user_hashed_password):
+    db_user = await query_user_by_user_name(db, user_name)
+    if not await asyncio.to_thread(verify_password, password, db_user.user_hashed_password):
         raise UserAuthenticationFailedException
     return db_user
 
 
-def insert_user(db: Session, current_user: schemas.User | None, request: schemas.CreateUser) -> models.User:
+async def insert_user(db: AsyncSession, current_user: schemas.User | None, request: schemas.CreateUser) -> models.User:
     """
     Inserts a new user into the database, under the assumption that the current_user is doing the insertion.
 
@@ -98,31 +98,27 @@ def insert_user(db: Session, current_user: schemas.User | None, request: schemas
         raise InsufficientPermissionsException
 
     # add new user into db
-    hashed_password = hash_password(request.user_password)
+    hashed_password = await asyncio.to_thread(hash_password, request.user_password)
     new_user = models.User(
         user_name=request.user_name, user_hashed_password=hashed_password, user_type=request.user_type
     )
     try:
         db.add(new_user)
-        db.commit()
+        await db.commit()
     except IntegrityError as e:
-        db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.UNIQUE_VIOLATION:
-                raise UserNameDuplicateException from e
+        await db.rollback()
+        if isinstance(e.orig, UniqueViolation):
+            raise UserNameDuplicateException from e
         raise
     except DataError as e:
-        db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        await db.rollback()
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     return new_user
 
 
-def remove_user(db: Session, current_user: schemas.User, user_id: uuid.UUID) -> schemas.DeleteUserStatus:
+async def remove_user(db: AsyncSession, current_user: schemas.User, user_id: uuid.UUID) -> schemas.DeleteUserStatus:
     """
     Removes a user with user_id from the database. The user performing the remove is current_user.
 
@@ -135,13 +131,13 @@ def remove_user(db: Session, current_user: schemas.User, user_id: uuid.UUID) -> 
         UserNotFoundException: If user_id not found in db
         InsufficientPermissionsException: If a regular user tries to delete someone that is not themself.
     """
-    delete_user = query_user_by_id(db, user_id)
+    delete_user = await query_user_by_id(db, user_id)
     if current_user.user_type != UserType.ADMIN and user_id != current_user.user_id:
         raise InsufficientPermissionsException
     try:
-        db.delete(delete_user)
-        db.commit()
+        await db.delete(delete_user)
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return schemas.DeleteUserStatus(status="success", detail=f"Delete user {user_id} success")

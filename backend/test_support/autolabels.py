@@ -22,6 +22,17 @@ class RecordingDispatcher:
         self.enqueue(job_id, auto_label_id)
 
 
+@dataclass
+class RecordingPromotionDispatcher:
+    promotions: list[uuid.UUID] = field(default_factory=list)
+    enqueue_error: Exception | None = None
+
+    async def aenqueue(self, promotion_id: uuid.UUID) -> None:
+        if self.enqueue_error is not None:
+            raise self.enqueue_error
+        self.promotions.append(promotion_id)
+
+
 class DeterministicNERModel:
     """Cheap model double used when tests exercise worker plumbing."""
 

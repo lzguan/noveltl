@@ -10,7 +10,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.config import ACCESS_TOKEN_EXPIRE_MINUTES
 from src.auth.dependencies import get_current_user, get_optional_user
@@ -18,7 +18,7 @@ from src.auth.exceptions import UserAuthenticationFailedException, UserNameDupli
 from src.auth.schemas import CreateUser, DeleteUserStatus, Token, User
 from src.auth.service import authenticate_user, insert_user, query_user_by_user_name, remove_user
 from src.auth.utils import create_access_token
-from src.database import get_db
+from src.database import get_async_db
 from src.exceptions import DataTooLongException, InsufficientPermissionsException
 
 router = APIRouter()
@@ -32,7 +32,7 @@ router = APIRouter()
     },
 )
 async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Annotated[Session, Depends(get_db)]
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Annotated[AsyncSession, Depends(get_async_db)]
 ):
     """
     Verifies a client's login request and returns a token if it succeeds.
@@ -42,7 +42,7 @@ async def login_for_access_token(
         form_data: OAuth2PasswordRequestForm dependency.
     """
     try:
-        user = authenticate_user(db, form_data.username, form_data.password)
+        user = await authenticate_user(db, form_data.username, form_data.password)
     except UserNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found.", headers={"WWW-Authenticate": "Bearer"}
@@ -61,7 +61,7 @@ async def login_for_access_token(
 @router.post("/register", response_model=User)
 async def register_user(
     request: CreateUser,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
 ):
     """
@@ -78,7 +78,7 @@ async def register_user(
             detail="User already logged in. Log out before registering as new user.",
         )
     try:
-        new_user = insert_user(db, None, request)
+        new_user = await insert_user(db, None, request)
     except InsufficientPermissionsException as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Cannot create admin account.") from e
     except UserNameDuplicateException as e:
@@ -93,7 +93,7 @@ async def register_user(
 @router.post("/users", response_model=User)
 async def create_user(
     request: CreateUser,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -105,7 +105,7 @@ async def create_user(
         request: Metadata of user to be added.
     """
     try:
-        new_user = insert_user(db, current_user, request)
+        new_user = await insert_user(db, current_user, request)
     except InsufficientPermissionsException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -134,7 +134,7 @@ async def read_user_me(current_user: Annotated[User, Depends(get_current_user)])
 @router.get("/users/{userName}", response_model=User)
 async def read_user(
     user_name: Annotated[str, Path(alias="userName")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
 ):
     """
@@ -145,7 +145,7 @@ async def read_user(
         db: Database dependency.
     """
     try:
-        user = query_user_by_user_name(db, user_name)
+        user = await query_user_by_user_name(db, user_name)
     except UserNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found.", headers={"WWW-Authenticate": "Bearer"}
@@ -155,13 +155,13 @@ async def read_user(
 
 @router.delete("/users/me", response_model=DeleteUserStatus)
 async def delete_user_me(
-    db: Annotated[Session, Depends(get_db)], current_user: Annotated[User, Depends(get_current_user)]
+    db: Annotated[AsyncSession, Depends(get_async_db)], current_user: Annotated[User, Depends(get_current_user)]
 ):
     """
     Delete the user currently logged in.
     """
     try:
-        stat = remove_user(db, current_user, current_user.user_id)
+        stat = await remove_user(db, current_user, current_user.user_id)
     except UserNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -175,14 +175,14 @@ async def delete_user_me(
 @router.delete("/users/{userId}", response_model=DeleteUserStatus)
 async def delete_user(
     user_id: Annotated[uuid.UUID, Path(alias="userId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
     Delete the user with user_id if the current user has sufficient permissions to perform this action. Throw an exception if the user currently logged in has insufficient permissions.
     """
     try:
-        stat = remove_user(db, current_user, user_id)
+        stat = await remove_user(db, current_user, user_id)
     except UserNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with id {user_id} not found.") from e
     except InsufficientPermissionsException as e:

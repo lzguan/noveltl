@@ -6,13 +6,13 @@ from collections.abc import Sequence
 
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.languages.exceptions import LanguageNotFoundException
 from src.languages.models import Language
 
 
-def query_language_by_code(db: Session, language_code: str) -> Language:
+async def query_language_by_code(db: AsyncSession, language_code: str) -> Language:
     """
     Finds language with corresponding language_code in database.
 
@@ -24,7 +24,7 @@ def query_language_by_code(db: Session, language_code: str) -> Language:
         LanguageNotFoundException: language code not found in database.
     """
     q = select(Language).where(Language.language_code == language_code)
-    result = db.execute(q)
+    result = await db.execute(q)
     try:
         ret = result.scalar_one()
     except NoResultFound as e:
@@ -32,7 +32,7 @@ def query_language_by_code(db: Session, language_code: str) -> Language:
     return ret
 
 
-def query_all_languages(db: Session) -> Sequence[Language]:
+async def query_all_languages(db: AsyncSession) -> Sequence[Language]:
     """
     Queries all languages in the database.
 
@@ -43,5 +43,5 @@ def query_all_languages(db: Session) -> Sequence[Language]:
         List of all languages in the database.
     """
     q = select(Language)
-    result = db.execute(q)
+    result = await db.execute(q)
     return result.scalars().all()

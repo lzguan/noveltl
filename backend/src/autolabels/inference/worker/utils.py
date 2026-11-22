@@ -2,7 +2,7 @@ from collections.abc import Generator
 
 from src.autolabels.constants import SepPriority
 from src.autolabels.exceptions import ChunkTooLargeException, TokenDoesNotExistException
-from src.autolabels.worker.interfaces import Tokenizer
+from src.autolabels.inference.worker.interfaces import Tokenizer
 
 
 def _chunk_blocks(text: str, separators: dict[str, SepPriority]) -> Generator[tuple[str, int, SepPriority | None]]:

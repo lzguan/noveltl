@@ -9,18 +9,28 @@ from collections.abc import Coroutine
 from typing import Any
 from uuid import uuid4
 
-from psycopg2 import Error as PgError
-from psycopg2 import errorcodes
-from sqlalchemy import exists, func, insert, literal, select
+from psycopg.errors import UniqueViolation
+from sqlalchemy import and_, exists, func, insert, literal, select
 from sqlalchemy.exc import IntegrityError, NoResultFound
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, defer
 
 from src.auth.models import User
 from src.autolabels import models, schemas
-from src.autolabels.constants import AutoLabelProgress
-from src.autolabels.dispatch.dispatcher import AutoLabelDispatcher
-from src.autolabels.exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
+from src.autolabels.constants import AutoLabelProgress, PromotionItemOutcome
+from src.autolabels.exceptions import (
+    AutoLabelDuplicateException,
+    AutoLabelNotFoundException,
+    EnqueueFailedException,
+    PromotionAlreadyActiveException,
+)
+from src.autolabels.inference.dispatch.dispatcher import AutoLabelDispatcher
 from src.autolabels.permissions import auto_label_mod_access_insert, auto_label_mod_access_select
+from src.autolabels.promotions.dispatch.dispatcher import PromotionDispatcher
+from src.autolabels.schemas import CreateLabelDataByAutoLabel
+from src.labels.exceptions import LabelGroupNotFoundException
+from src.labels.models import LabelData, LabelGroup
+from src.labels.permissions import label_group_mod_access_select
 from src.novels import models as nm
 from src.novels.exceptions import NovelNotFoundException
 from src.novels.permissions import chapter_mod_access_select, novel_mod_access_select
@@ -246,10 +256,8 @@ async def insert_auto_labels(
     except IntegrityError as e:
         db.rollback()
         logger.exception("Autolabel insert integrity error run_id=%s novel_id=%s", run.run_id, request.novel_id)
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.UNIQUE_VIOLATION:
-                raise AutoLabelDuplicateException from e
+        if isinstance(e.orig, UniqueViolation):
+            raise AutoLabelDuplicateException from e
         raise
     except Exception:
         db.rollback()
@@ -343,3 +351,163 @@ async def insert_auto_labels(
 
 def regenerate_auto_labels():
     pass
+
+
+_ACTIVE = (AutoLabelProgress.PENDING, AutoLabelProgress.PROCESSING)
+
+
+def _promotion_candidates(promotion_id: uuid.UUID, label_group_id: uuid.UUID, request: CreateLabelDataByAutoLabel):
+    group_novel = select(LabelGroup.novel_id).where(LabelGroup.label_group_id == label_group_id).scalar_subquery()
+    latest_version = (
+        select(func.max(nm.ChapterContent.chapter_content_version))
+        .where(nm.ChapterContent.chapter_id == nm.Chapter.chapter_id)
+        .correlate(nm.Chapter)
+        .scalar_subquery()
+    )
+    already_labelled = (
+        select(LabelData.label_data_id)
+        .where(
+            LabelData.label_group_id == label_group_id,
+            LabelData.chapter_content_id == models.AutoLabel.chapter_content_id,
+        )
+        .exists()
+    )
+    candidates = (
+        select(
+            literal(promotion_id),
+            models.AutoLabel.auto_label_id,
+            func.row_number().over(order_by=nm.Chapter.chapter_num) - 1,
+        )
+        .join(nm.ChapterContent, nm.ChapterContent.chapter_content_id == models.AutoLabel.chapter_content_id)
+        .join(nm.Chapter, nm.Chapter.chapter_id == nm.ChapterContent.chapter_id)
+        .where(
+            models.AutoLabel.run_id == request.run_id,
+            models.AutoLabel.auto_label_status == AutoLabelProgress.DONE,
+            nm.Chapter.novel_id == group_novel,
+            nm.ChapterContent.chapter_content_version == latest_version,
+            ~already_labelled,
+        )
+    )
+    if request.chapter_ids:
+        candidates = candidates.where(nm.Chapter.chapter_id.in_(request.chapter_ids))
+    if request.start is not None:
+        candidates = candidates.where(nm.Chapter.chapter_num >= request.start)
+    if request.end is not None:
+        candidates = candidates.where(nm.Chapter.chapter_num < request.end)
+    return (
+        insert(models.LabelPromotionJobItem)
+        .from_select(["promotion_id", "auto_label_id", "position"], candidates)
+        .returning(models.LabelPromotionJobItem.position)
+    )
+
+
+async def create_promotion_job(
+    db: AsyncSession,
+    current_user: User,
+    dispatcher: PromotionDispatcher,
+    label_group_id: uuid.UUID,
+    request: CreateLabelDataByAutoLabel,
+) -> schemas.CreatedLabelPromotion:
+    # The job row is selected from the label group the user can edit, joined to the run on the
+    # same novel, so a missing group, a missing run and missing permission all insert nothing.
+    job_values = select(
+        literal(request.run_id),
+        LabelGroup.label_group_id,
+        literal(current_user.user_id),
+    ).join(
+        models.AutoLabelRun,
+        and_(models.AutoLabelRun.run_id == request.run_id, models.AutoLabelRun.novel_id == LabelGroup.novel_id),
+    )
+    job_values = label_group_mod_access_select(
+        job_values.where(LabelGroup.label_group_id == label_group_id), current_user, label_edit_only=True
+    )
+    try:
+        created = (
+            await db.execute(
+                insert(models.LabelPromotionJob)
+                .from_select(
+                    ["run_id", "label_group_id", "requested_by"],
+                    job_values,
+                )
+                .returning(models.LabelPromotionJob.promotion_id)
+            )
+        ).scalar_one_or_none()
+        if created is None:
+            raise LabelGroupNotFoundException(
+                f"Label group {label_group_id} or autolabel run {request.run_id} not found or not editable."
+            )
+        promotion_id = created
+        item_count = len((await db.execute(_promotion_candidates(promotion_id, label_group_id, request))).all())
+        await db.commit()
+    except IntegrityError as error:
+        await db.rollback()
+        if isinstance(error.orig, UniqueViolation):
+            raise PromotionAlreadyActiveException(
+                "A promotion for this run and label group is still running."
+            ) from error
+        raise
+    try:
+        await dispatcher.aenqueue(promotion_id)
+    except EnqueueFailedException:
+        logger.warning("Label promotion enqueue failed; job left pending promotion_id=%s", promotion_id)
+    return schemas.CreatedLabelPromotion(promotion_id=promotion_id, item_count=item_count)
+
+
+async def query_promotion_jobs(
+    db: AsyncSession, current_user: User, novel_id: uuid.UUID, limit: int
+) -> list[schemas.LabelPromotionJob]:
+    job, item = models.LabelPromotionJob, models.LabelPromotionJobItem
+    query = (
+        select(
+            job,
+            func.count(item.auto_label_id).filter(item.outcome == PromotionItemOutcome.DONE),
+            func.count(item.auto_label_id).filter(item.outcome == PromotionItemOutcome.FAILED),
+            func.count(item.auto_label_id).filter(item.outcome.is_(None)),
+        )
+        .outerjoin(item, item.promotion_id == job.promotion_id)
+        .join(LabelGroup, LabelGroup.label_group_id == job.label_group_id)
+        .where(LabelGroup.novel_id == novel_id)
+        .group_by(job.promotion_id)
+        .order_by(job.status.in_(_ACTIVE).desc(), job.updated_at.desc())
+        .limit(limit)
+    )
+    query = label_group_mod_access_select(query, current_user)
+    return [
+        schemas.LabelPromotionJob(
+            promotion_id=row.promotion_id,
+            run_id=row.run_id,
+            label_group_id=row.label_group_id,
+            status=row.status,
+            message=row.message,
+            counts=schemas.LabelPromotionCounts(
+                total=done + failed + pending, done=done, failed=failed, pending=pending
+            ),
+            created_at=row.created_at,
+            updated_at=row.updated_at,
+        )
+        for row, done, failed, pending in await db.execute(query)
+    ]
+
+
+async def query_promotion_failures(
+    db: AsyncSession, current_user: User, promotion_id: uuid.UUID, limit: int, offset: int
+) -> list[schemas.LabelPromotionFailure]:
+    item = models.LabelPromotionJobItem
+    query = (
+        select(nm.Chapter.chapter_id, nm.Chapter.chapter_num, item.message)
+        .select_from(item)
+        .join(models.LabelPromotionJob, models.LabelPromotionJob.promotion_id == item.promotion_id)
+        .join(LabelGroup, LabelGroup.label_group_id == models.LabelPromotionJob.label_group_id)
+        .join(models.AutoLabel, models.AutoLabel.auto_label_id == item.auto_label_id)
+        .join(nm.ChapterContent, nm.ChapterContent.chapter_content_id == models.AutoLabel.chapter_content_id)
+        .join(nm.Chapter, nm.Chapter.chapter_id == nm.ChapterContent.chapter_id)
+        .where(item.promotion_id == promotion_id, item.outcome == PromotionItemOutcome.FAILED)
+        .order_by(item.position)
+        .limit(limit)
+        .offset(offset)
+    )
+    query = label_group_mod_access_select(query, current_user)
+    return [
+        schemas.LabelPromotionFailure(chapter_id=chapter_id, chapter_num=chapter_num, message=message or "")
+        for chapter_id, chapter_num, message in await db.execute(query)
+    ]

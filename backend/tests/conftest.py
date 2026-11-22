@@ -1,21 +1,23 @@
 import os
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, text
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
-from src.autolabels.dependencies import get_dispatcher
-from src.database import get_db
+from src.autolabels.dependencies import get_dispatcher, get_promotion_dispatcher
+from src.database import get_async_db, get_db
 from src.datasets import Catalog, NovelDataset, load_catalog, load_config, load_novel
 from src.filters.dependencies import get_dispatcher as get_filter_dispatcher
 from src.main import app
 from src.memory.agent.dispatch.dependencies import get_dispatcher as get_memory_agent_dispatcher
 from src.models import Base
-from test_support.autolabels import RecordingDispatcher
+from test_support.autolabels import RecordingDispatcher, RecordingPromotionDispatcher
 from test_support.filters import RecordingRunnerDispatcher
 from test_support.memory import RecordingMemoryAgentDispatcher
 
@@ -109,6 +111,22 @@ def testing_session_local(test_engine: Engine) -> sessionmaker[Session]:
     return sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 
+# NullPool: TestClient runs the app on its own event loop, and pooled async
+# connections cannot move between loops.
+@pytest.fixture
+def test_async_engine(test_url: str) -> Generator[AsyncEngine]:
+    engine = create_async_engine(test_url, poolclass=NullPool)
+    try:
+        yield engine
+    finally:
+        engine.sync_engine.dispose()
+
+
+@pytest.fixture
+def testing_async_session_local(test_async_engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(test_async_engine, autoflush=False, expire_on_commit=False)
+
+
 @pytest.fixture(scope="session")
 def database_schema() -> Generator[None]:
     url = os.getenv("TEST_URL")
@@ -143,8 +161,21 @@ def test_db(
 
 
 @pytest.fixture
+async def async_test_db(
+    test_db: Session, testing_async_session_local: async_sessionmaker[AsyncSession]
+) -> AsyncGenerator[AsyncSession]:
+    async with testing_async_session_local() as db:
+        yield db
+
+
+@pytest.fixture
 def recording_dispatcher() -> RecordingDispatcher:
     return RecordingDispatcher()
+
+
+@pytest.fixture
+def recording_promotion_dispatcher() -> RecordingPromotionDispatcher:
+    return RecordingPromotionDispatcher()
 
 
 @pytest.fixture
@@ -160,15 +191,23 @@ def recording_memory_agent_dispatcher() -> RecordingMemoryAgentDispatcher:
 @pytest.fixture
 def client(
     test_db: Session,
+    testing_async_session_local: async_sessionmaker[AsyncSession],
     recording_dispatcher: RecordingDispatcher,
+    recording_promotion_dispatcher: RecordingPromotionDispatcher,
     recording_runner_dispatcher: RecordingRunnerDispatcher,
     recording_memory_agent_dispatcher: RecordingMemoryAgentDispatcher,
 ):
     def override_get_db():
         yield test_db
 
+    async def override_get_async_db():
+        async with testing_async_session_local() as db:
+            yield db
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_async_db] = override_get_async_db
     app.dependency_overrides[get_dispatcher] = lambda: recording_dispatcher
+    app.dependency_overrides[get_promotion_dispatcher] = lambda: recording_promotion_dispatcher
     app.dependency_overrides[get_filter_dispatcher] = lambda: recording_runner_dispatcher
     app.dependency_overrides[get_memory_agent_dispatcher] = lambda: recording_memory_agent_dispatcher
     with TestClient(app) as c:

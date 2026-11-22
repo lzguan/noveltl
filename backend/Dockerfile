@@ -36,7 +36,7 @@ RUN uv run --no-sync hf download \
       tokenizer_config.json \
       vocab.txt \
       --revision ${CLUENER_REVISION}
-CMD ["uv", "run", "--no-sync", "celery", "-A", "src.autolabels.celery_app", "worker", "--loglevel=info"]
+CMD ["uv", "run", "--no-sync", "celery", "-A", "src.autolabels.inference.celery_app", "worker", "--loglevel=info"]
 
 FROM base AS filters-worker
 # The filter runners need only the base dependencies. Nothing reachable from
@@ -44,6 +44,12 @@ FROM base AS filters-worker
 COPY --chown=${UNAME}:${GNAME} . .
 
 CMD ["uv", "run", "--no-sync", "celery", "-A", "src.filters.celery_app", "worker", "--loglevel=info"]
+
+FROM base AS jobs-worker
+# Generic database-bound jobs (see src/jobs). Task modules import only base dependencies.
+COPY --chown=${UNAME}:${GNAME} . .
+
+CMD ["uv", "run", "--no-sync", "taskiq", "worker", "src.jobs.broker:broker", "src.autolabels.promotions.tasks"]
 
 FROM base AS memory-agent-worker
 RUN --mount=type=cache,target=/home/${UNAME}/.cache/uv,uid=${UID},gid=${GID} uv sync --locked --no-default-groups --group agent --no-install-project

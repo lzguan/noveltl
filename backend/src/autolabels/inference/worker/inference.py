@@ -1,8 +1,8 @@
 from typing import Any, Protocol, TypedDict, cast
 
+from src.autolabels.inference.worker.interfaces import NERModel, Tokenizer
+from src.autolabels.inference.worker.utils import chunk_text
 from src.autolabels.params import CluenerParams, NERModelParamsBase
-from src.autolabels.worker.interfaces import NERModel, Tokenizer
-from src.autolabels.worker.utils import chunk_text
 from src.labels.schemas import LabelBase
 
 

@@ -1,7 +1,7 @@
 import uuid
 
 from sqlalchemy import and_, exists, insert, literal, select, union_all
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.models import User
 from src.editing.schemas import EagerEntry, EditChapterData, LazyEntry
@@ -16,8 +16,8 @@ from src.novels.exceptions import ChapterContentNotFoundException
 from src.novels.service import query_chapter_content_by_most_recent, query_chapter_content_ids_by_chapter_id
 
 
-def query_edit_chapter_data(
-    db: Session, current_user: User, chapter_id: uuid.UUID, eager: list[uuid.UUID]
+async def query_edit_chapter_data(
+    db: AsyncSession, current_user: User, chapter_id: uuid.UUID, eager: list[uuid.UUID]
 ) -> EditChapterData:
     """
     Validate that chapter with chapter_id is a chapter that belongs to novel with novel_id and return all data associated with the chapter required for editing
@@ -32,7 +32,7 @@ def query_edit_chapter_data(
     Raises:
         ChapterContentNotFoundException: If chapter with chapter_id does not exist or does not belong to novel with novel_id or user does not have access to the chapter.
     """
-    chapter_content = query_chapter_content_by_most_recent(db, current_user, chapter_id)
+    chapter_content = await query_chapter_content_by_most_recent(db, current_user, chapter_id)
 
     q = (
         select(lm.LabelGroup, lm.LabelData)
@@ -48,7 +48,7 @@ def query_edit_chapter_data(
     )
     q = label_group_mod_access_select(q, current_user)
     try:
-        result = db.execute(q)
+        result = await db.execute(q)
         result_rows = result.all()
     except Exception:
         raise
@@ -75,7 +75,7 @@ def query_edit_chapter_data(
     )
     q = label_data_mod_access_select(q, current_user)
     try:
-        result = db.execute(q)
+        result = await db.execute(q)
         result_rows = result.scalars().all()
     except Exception:
         raise
@@ -96,8 +96,8 @@ def query_edit_chapter_data(
     )
 
 
-def query_edit_chapter_data_only_label_data(
-    db: Session, current_user: User, chapter_id: uuid.UUID, label_group_ids: list[uuid.UUID]
+async def query_edit_chapter_data_only_label_data(
+    db: AsyncSession, current_user: User, chapter_id: uuid.UUID, label_group_ids: list[uuid.UUID]
 ) -> list[EagerEntry]:
     """
     Fetch label data and labels for the specified label groups on the most recent
@@ -123,7 +123,7 @@ def query_edit_chapter_data_only_label_data(
         ChapterContentNotFoundException: If no chapter content exists for the
             given chapter_id, or the user lacks access.
     """
-    chapter_contents = query_chapter_content_ids_by_chapter_id(db, current_user, chapter_id)
+    chapter_contents = await query_chapter_content_ids_by_chapter_id(db, current_user, chapter_id)
     if len(chapter_contents) == 0:
         raise ChapterContentNotFoundException("Chapter content not found or insufficient permissions.")
     chapter_content = chapter_contents[0]
@@ -151,7 +151,7 @@ def query_edit_chapter_data_only_label_data(
             [lm.LabelData.label_group_id, lm.LabelData.chapter_content_id],
             union_all(*parts).subquery(),
         )
-        db.execute(stmt)
+        await db.execute(stmt)
 
     q = (
         select(lm.LabelGroup, lm.LabelData, lm.Label)
@@ -172,11 +172,11 @@ def query_edit_chapter_data_only_label_data(
     )
     q = label_group_mod_access_select(q, current_user)
     try:
-        result = db.execute(q)
+        result = await db.execute(q)
         result_rows = result.all()
     except Exception:
         raise
-    db.commit()
+    await db.commit()
 
     entries: dict[uuid.UUID, EagerEntry] = {}
     for group, data, label in result_rows:

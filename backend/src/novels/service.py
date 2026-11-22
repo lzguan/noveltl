@@ -11,11 +11,11 @@ from collections import defaultdict
 from collections.abc import Sequence
 from typing import Any, cast
 
-from psycopg2 import Error as PgError
-from psycopg2 import errorcodes
+from psycopg.errors import ForeignKeyViolation, StringDataRightTruncation, UniqueViolation
 from sqlalchemy import CursorResult, and_, delete, exists, func, insert, literal, select, update
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
-from sqlalchemy.orm import Session, aliased, defer
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased, defer
 
 from src.auth.models import User
 from src.exceptions import DataTooLongException, InsufficientPermissionsException
@@ -51,8 +51,8 @@ from src.schemas import OperationStatus
 logger = logging.getLogger(__name__)
 
 
-def query_source_works_by_title(
-    db: Session, current_user: User | None, source_work_title: str | None, ret_novels: bool
+async def query_source_works_by_title(
+    db: AsyncSession, current_user: User | None, source_work_title: str | None, ret_novels: bool
 ) -> Sequence[tuple[models.SourceWork, list[models.Novel]]]:
     """
     Queries source works with source_work_title as substring.
@@ -69,13 +69,13 @@ def query_source_works_by_title(
         search_term = f"%{source_work_title}%"
     q = select(models.SourceWork).where(models.SourceWork.source_work_title.ilike(search_term))
     q = source_work_mod_access_select(q, current_user)
-    result = db.execute(q)
+    result = await db.execute(q)
     result_scalars = result.scalars().all()
     if ret_novels:
         source_work_ids = [sw.source_work_id for sw in result_scalars]
         novels_q = select(models.Novel).where(models.Novel.source_work_id.in_(source_work_ids))
         novels_q = novel_mod_access_select(novels_q, current_user)
-        novels_result = db.execute(novels_q)
+        novels_result = await db.execute(novels_q)
         novels_scalars = novels_result.scalars().all()
         novels_by_source_work = defaultdict(list)
         for novel in novels_scalars:
@@ -85,7 +85,9 @@ def query_source_works_by_title(
     return [(sw, []) for sw in result_scalars]
 
 
-def query_source_work_by_id(db: Session, current_user: User | None, source_work_id: uuid.UUID) -> models.SourceWork:
+async def query_source_work_by_id(
+    db: AsyncSession, current_user: User | None, source_work_id: uuid.UUID
+) -> models.SourceWork:
     """
     Queries a source work by id.
 
@@ -99,7 +101,7 @@ def query_source_work_by_id(db: Session, current_user: User | None, source_work_
     """
     q = select(models.SourceWork).where(models.SourceWork.source_work_id == source_work_id)
     q = source_work_mod_access_select(q, current_user)
-    result = db.execute(q)
+    result = await db.execute(q)
     try:
         result_scalar = result.scalar_one()
     except NoResultFound as e:
@@ -107,8 +109,8 @@ def query_source_work_by_id(db: Session, current_user: User | None, source_work_
     return result_scalar
 
 
-def query_novels_by_source_work(
-    db: Session, current_user: User | None, source_work_id: uuid.UUID
+async def query_novels_by_source_work(
+    db: AsyncSession, current_user: User | None, source_work_id: uuid.UUID
 ) -> Sequence[models.Novel]:
     """
     Queries novels with a specific source work.
@@ -123,14 +125,16 @@ def query_novels_by_source_work(
     """
     q = select(models.Novel).where(models.Novel.source_work_id == source_work_id)
     q = novel_mod_access_select(q, current_user)
-    result = db.execute(q)
+    result = await db.execute(q)
     result_scalars = result.scalars().all()
     if len(result_scalars) == 0:
-        query_source_work_by_id(db, current_user, source_work_id)
+        await query_source_work_by_id(db, current_user, source_work_id)
     return result_scalars
 
 
-def insert_source_work(db: Session, current_user: User, request: schemas.CreateSourceWork) -> models.SourceWork:
+async def insert_source_work(
+    db: AsyncSession, current_user: User, request: schemas.CreateSourceWork
+) -> models.SourceWork:
     """
     Insert a new source work into the database.
 
@@ -145,22 +149,20 @@ def insert_source_work(db: Session, current_user: User, request: schemas.CreateS
     source_work = models.SourceWork(**request.model_dump())
     try:
         db.add(source_work)
-        db.commit()
+        await db.commit()
     except DataError as e:
-        db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        await db.rollback()
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return source_work
 
 
-def modify_source_work(
-    db: Session, current_user: User, source_work_id: uuid.UUID, request: schemas.UpdateSourceWork
+async def modify_source_work(
+    db: AsyncSession, current_user: User, source_work_id: uuid.UUID, request: schemas.UpdateSourceWork
 ) -> models.SourceWork:
     """
     Modify a source work's metadata.
@@ -184,27 +186,27 @@ def modify_source_work(
     stmt = source_work_mod_access_update(stmt, current_user)
     stmt = stmt.returning(models.SourceWork)
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         result_row = result.scalar_one()
-        db.commit()
+        await db.commit()
     except DataError as e:
-        db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        await db.rollback()
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     except NoResultFound as e:
-        db.rollback()
-        query_source_work_by_id(db, current_user, source_work_id)
+        await db.rollback()
+        await query_source_work_by_id(db, current_user, source_work_id)
         raise InsufficientPermissionsException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return result_row
 
 
-def query_novels_by_title(db: Session, current_user: User | None, novel_title: str | None) -> Sequence[models.Novel]:
+async def query_novels_by_title(
+    db: AsyncSession, current_user: User | None, novel_title: str | None
+) -> Sequence[models.Novel]:
     """
     Queries novels with novel_title as substring. Selects only public novels.
 
@@ -222,14 +224,14 @@ def query_novels_by_title(db: Session, current_user: User | None, novel_title: s
         .where(models.Novel.novel_title.ilike(search_term))
         .where(models.Novel.novel_visibility == Visibility.PUBLIC)
     )
-    result = db.execute(q)
+    result = await db.execute(q)
     result_scalars = result.scalars().all()
 
     return result_scalars
 
 
-def query_novels_by_current_user(
-    db: Session, current_user: User, editable: bool, title_contains: str | None
+async def query_novels_by_current_user(
+    db: AsyncSession, current_user: User, editable: bool, title_contains: str | None
 ) -> list[models.Novel]:
     """
     Queries all novels that the current user has special access to.
@@ -252,12 +254,12 @@ def query_novels_by_current_user(
     if title_contains:
         q = q.where(models.Novel.novel_title.ilike(f"%{title_contains}%"))
 
-    result = db.execute(q)
+    result = await db.execute(q)
     result_scalars = result.scalars().all()
     return list(result_scalars)
 
 
-def query_novel_by_id(db: Session, current_user: User | None, novel_id: uuid.UUID) -> models.Novel:
+async def query_novel_by_id(db: AsyncSession, current_user: User | None, novel_id: uuid.UUID) -> models.Novel:
     """
     Queries a novel by id. Will return a novel if the user has permission to view it and throws an exception otherwise.
 
@@ -271,7 +273,7 @@ def query_novel_by_id(db: Session, current_user: User | None, novel_id: uuid.UUI
     """
     q = select(models.Novel).where(models.Novel.novel_id == novel_id)
     q = novel_mod_access_select(q, current_user)
-    result = db.execute(q)
+    result = await db.execute(q)
     try:
         result_scalar = result.scalar_one()
     except NoResultFound as e:
@@ -279,7 +281,9 @@ def query_novel_by_id(db: Session, current_user: User | None, novel_id: uuid.UUI
     return result_scalar
 
 
-def query_novel_and_users_by_id(db: Session, current_user: User, novel_id: uuid.UUID) -> schemas.NovelAndUsers:
+async def query_novel_and_users_by_id(
+    db: AsyncSession, current_user: User, novel_id: uuid.UUID
+) -> schemas.NovelAndUsers:
     """
     Queries a novel and its contributors by id. Will return a novel if the user has permission to view it and throws an exception otherwise.
 
@@ -294,7 +298,7 @@ def query_novel_and_users_by_id(db: Session, current_user: User, novel_id: uuid.
         .join(models.NovelContributor, models.NovelContributor.novel_id == models.Novel.novel_id)
     )
     q = novel_mod_access_select(q, current_user)
-    result = db.execute(q)
+    result = await db.execute(q)
     rows = result.all()
     if len(rows) == 0:
         raise NovelNotFoundException
@@ -303,8 +307,8 @@ def query_novel_and_users_by_id(db: Session, current_user: User, novel_id: uuid.
     return schemas.NovelAndUsers(novel=novel, users=users)
 
 
-def query_chapters_by_novel(
-    db: Session, current_user: User | None, novel_id: uuid.UUID, start: int | None, end: int | None
+async def query_chapters_by_novel(
+    db: AsyncSession, current_user: User | None, novel_id: uuid.UUID, start: int | None, end: int | None
 ) -> Sequence[models.Chapter]:
     """
     Query all chapters of a specific novel satisfying certain conditions. Only returns chapters that the user has permission to view.
@@ -331,14 +335,14 @@ def query_chapters_by_novel(
         q = q.where(models.Chapter.chapter_num < end)
     q = chapter_mod_access_select(q, current_user)
     q = q.order_by(models.Chapter.chapter_num.asc())
-    result = db.execute(q)
+    result = await db.execute(q)
     result_scalars = result.scalars().all()
     if len(result_scalars) == 0:
-        query_novel_by_id(db, current_user, novel_id)
+        await query_novel_by_id(db, current_user, novel_id)
     return result_scalars
 
 
-def query_chapter_by_id(db: Session, current_user: User | None, chapter_id: uuid.UUID) -> models.Chapter:
+async def query_chapter_by_id(db: AsyncSession, current_user: User | None, chapter_id: uuid.UUID) -> models.Chapter:
     """
     Query a chapter by id.
 
@@ -356,7 +360,7 @@ def query_chapter_by_id(db: Session, current_user: User | None, chapter_id: uuid
         .join(models.Novel, models.Chapter.novel_id == models.Novel.novel_id)
     )
     q = chapter_mod_access_select(q, current_user)
-    result = db.execute(q)
+    result = await db.execute(q)
     try:
         result_scalar = result.scalar_one()
     except NoResultFound as e:
@@ -364,8 +368,8 @@ def query_chapter_by_id(db: Session, current_user: User | None, chapter_id: uuid
     return result_scalar
 
 
-def query_chapter_content_by_most_recent(
-    db: Session, current_user: User | None, chapter_id: uuid.UUID
+async def query_chapter_content_by_most_recent(
+    db: AsyncSession, current_user: User | None, chapter_id: uuid.UUID
 ) -> models.ChapterContent:
     """
     Query the most recent version of text of a specific chapter.
@@ -396,16 +400,16 @@ def query_chapter_content_by_most_recent(
     )
     try:
         q = chapter_content_mod_access_select(q, current_user)
-        result = db.execute(q)
+        result = await db.execute(q)
         result_row = result.scalar_one()
     except NoResultFound as e:
-        query_chapter_by_id(db, current_user, chapter_id)
+        await query_chapter_by_id(db, current_user, chapter_id)
         raise ChapterContentNotFoundException from e
     return result_row
 
 
-def query_chapter_content_by_id(
-    db: Session, current_user: User | None, chapter_content_id: uuid.UUID
+async def query_chapter_content_by_id(
+    db: AsyncSession, current_user: User | None, chapter_content_id: uuid.UUID
 ) -> models.ChapterContent:
     """
     Query a specific version of text of a specific chapter by the text's id.
@@ -421,15 +425,15 @@ def query_chapter_content_by_id(
     q = select(models.ChapterContent).where(models.ChapterContent.chapter_content_id == chapter_content_id)
     q = chapter_content_mod_access_select(q, current_user)
     try:
-        result = db.execute(q)
+        result = await db.execute(q)
         result_row = result.scalar_one()
     except NoResultFound as e:
         raise ChapterContentNotFoundException from e
     return result_row
 
 
-def query_chapter_content_status(
-    db: Session,
+async def query_chapter_content_status(
+    db: AsyncSession,
     current_user: User | None,
     chapter_id: uuid.UUID,
     chapter_content_id: uuid.UUID,
@@ -461,7 +465,7 @@ def query_chapter_content_status(
     )
     q = chapter_content_mod_access_select(q, current_user)
     try:
-        latest_id = db.execute(q).scalar_one()
+        latest_id = (await db.execute(q)).scalar_one()
     except NoResultFound as e:
         raise ChapterContentNotFoundException from e
     if latest_id != chapter_content_id:
@@ -469,8 +473,8 @@ def query_chapter_content_status(
     return OperationStatus(status="success", detail="Chapter content is current.")
 
 
-def query_chapter_content_ids_by_chapter_id(
-    db: Session, current_user: User, chapter_id: uuid.UUID
+async def query_chapter_content_ids_by_chapter_id(
+    db: AsyncSession, current_user: User, chapter_id: uuid.UUID
 ) -> list[schemas.ChapterContentMeta]:
     """
     Query all text ids of a specific chapter.
@@ -486,12 +490,12 @@ def query_chapter_content_ids_by_chapter_id(
         .where(models.ChapterContent.chapter_id == chapter_id)
     )
     q = chapter_content_mod_access_select(q, current_user)
-    result = db.execute(q)
+    result = await db.execute(q)
     result_rows = result.scalars().all()
     return [schemas.ChapterContentMeta.model_validate(row) for row in result_rows]
 
 
-def insert_novel(db: Session, current_user: User, request: schemas.CreateNovel) -> models.Novel:
+async def insert_novel(db: AsyncSession, current_user: User, request: schemas.CreateNovel) -> models.Novel:
     """
     Insert a novel into the database. If source_work_id is None, a new SourceWork
     is auto-created using the novel's title.
@@ -510,7 +514,7 @@ def insert_novel(db: Session, current_user: User, request: schemas.CreateNovel) 
         if request.source_work_id is None:
             source_work = models.SourceWork(source_work_title=request.novel_title)
             db.add(source_work)
-            db.flush()
+            await db.flush()
             source_work_id = source_work.source_work_id
         else:
             source_work_id = request.source_work_id
@@ -518,36 +522,34 @@ def insert_novel(db: Session, current_user: User, request: schemas.CreateNovel) 
         novel_data = request.model_dump(exclude={"source_work_id"})
         novel = models.Novel(**novel_data, source_work_id=source_work_id)
         db.add(novel)
-        db.flush()
+        await db.flush()
         contributor = models.NovelContributor(
             contributor_role=Role.OWNER, novel_id=novel.novel_id, user_id=current_user.user_id
         )
         db.add(contributor)
-        db.commit()
+        await db.commit()
     except IntegrityError as e:
-        db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
-                constraint = getattr(e.orig.diag, "constraint_name", "") or ""
-                if "source_work" in constraint:
-                    raise SourceWorkNotFoundException from e
-                raise LanguageNotFoundException from e
+        await db.rollback()
+        if isinstance(e.orig, ForeignKeyViolation):
+            constraint = getattr(e.orig.diag, "constraint_name", "") or ""
+            if "source_work" in constraint:
+                raise SourceWorkNotFoundException from e
+            raise LanguageNotFoundException from e
         raise
     except DataError as e:
-        db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        await db.rollback()
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return novel
 
 
-def modify_novel(db: Session, current_user: User, novel_id: uuid.UUID, request: schemas.UpdateNovel) -> models.Novel:
+async def modify_novel(
+    db: AsyncSession, current_user: User, novel_id: uuid.UUID, request: schemas.UpdateNovel
+) -> models.Novel:
     """
     Modifies novel with novel_id.
 
@@ -566,29 +568,27 @@ def modify_novel(db: Session, current_user: User, novel_id: uuid.UUID, request: 
     stmt = novel_mod_access_update(stmt, current_user)
     stmt = stmt.returning(models.Novel)
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         result_row = result.scalar_one()
-        db.commit()
+        await db.commit()
     except DataError as e:
-        db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        await db.rollback()
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     except NoResultFound as e:
-        db.rollback()
-        query_novel_by_id(db, current_user, novel_id)
+        await db.rollback()
+        await query_novel_by_id(db, current_user, novel_id)
         raise InsufficientPermissionsException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
     return result_row
 
 
-def insert_chapter(
-    db: Session, current_user: User, novel_id: uuid.UUID, request: schemas.CreateChapter
+async def insert_chapter(
+    db: AsyncSession, current_user: User, novel_id: uuid.UUID, request: schemas.CreateChapter
 ) -> tuple[models.Chapter, models.ChapterContent]:
     """
     Insert a chapter into a database with an initial empty ChapterContent (version 1).
@@ -616,42 +616,38 @@ def insert_chapter(
     stmt = insert(models.Chapter).from_select(cols, vals).returning(models.Chapter)
 
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         chapter = result.scalar_one()
         cc_vals = select(literal(chapter.chapter_id), literal(""), literal(1))
         cc_vals = chapter_content_mod_access_insert(cc_vals, current_user, chapter.chapter_id)
         cc_cols = ["chapter_id", "chapter_content_text", "chapter_content_version"]
         cc_stmt = insert(models.ChapterContent).from_select(cc_cols, cc_vals).returning(models.ChapterContent)
-        chapter_content = db.execute(cc_stmt).scalar_one()
-        db.commit()
+        chapter_content = (await db.execute(cc_stmt)).scalar_one()
+        await db.commit()
     except IntegrityError as e:
-        db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
-                raise NovelNotFoundException from e
-            if pgcode == errorcodes.UNIQUE_VIOLATION:
-                raise ChapterNumDuplicateException from e
+        await db.rollback()
+        if isinstance(e.orig, ForeignKeyViolation):
+            raise NovelNotFoundException from e
+        if isinstance(e.orig, UniqueViolation):
+            raise ChapterNumDuplicateException from e
         raise
     except NoResultFound as e:
-        db.rollback()
-        query_novel_by_id(db, current_user, novel_id)
+        await db.rollback()
+        await query_novel_by_id(db, current_user, novel_id)
         raise InsufficientPermissionsException from e
     except DataError as e:
-        db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        await db.rollback()
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return chapter, chapter_content
 
 
-def modify_chapter(
-    db: Session,
+async def modify_chapter(
+    db: AsyncSession,
     current_user: User,
     chapter_id: uuid.UUID,
     request: schemas.UpdateChapter,
@@ -677,27 +673,25 @@ def modify_chapter(
     stmt = chapter_mod_access_update(stmt, current_user)
     stmt = stmt.returning(models.Chapter)
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         chapter = result.scalar_one()
-        db.commit()
+        await db.commit()
     except DataError as e:
-        db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        await db.rollback()
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     except NoResultFound as e:
-        db.rollback()
-        query_chapter_by_id(db, current_user, chapter_id)
+        await db.rollback()
+        await query_chapter_by_id(db, current_user, chapter_id)
         raise InsufficientPermissionsException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return chapter
 
 
-def make_public_chapter(db: Session, current_user: User, chapter_id: uuid.UUID) -> models.Chapter:
+async def make_public_chapter(db: AsyncSession, current_user: User, chapter_id: uuid.UUID) -> models.Chapter:
     """
     Make a chapter public.
 
@@ -714,21 +708,21 @@ def make_public_chapter(db: Session, current_user: User, chapter_id: uuid.UUID) 
     stmt = chapter_mod_access_update(stmt, current_user)
     stmt = stmt.returning(models.Chapter)
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         chapter = result.scalar_one()
-        db.commit()
+        await db.commit()
     except NoResultFound as e:
-        db.rollback()
-        query_chapter_by_id(db, current_user, chapter_id)
+        await db.rollback()
+        await query_chapter_by_id(db, current_user, chapter_id)
         raise InsufficientPermissionsException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return chapter
 
 
-def modify_chapter_content(
-    db: Session,
+async def modify_chapter_content(
+    db: AsyncSession,
     current_user: User,
     chapter_id: uuid.UUID,
     chapter_content_id: uuid.UUID,
@@ -760,12 +754,12 @@ def modify_chapter_content(
     )
     q = chapter_content_mod_access_select(q, current_user, edit_only=True)
     try:
-        result = db.execute(q)
+        result = await db.execute(q)
         chapter_content = result.scalar_one()
     except NoResultFound as e:
         # Preserve the existing missing/stale/insufficient-permission error
         # distinction without loading or processing content for a viewer.
-        query_chapter_content_status(db, current_user, chapter_id, chapter_content_id)
+        await query_chapter_content_status(db, current_user, chapter_id, chapter_content_id)
         raise InsufficientPermissionsException from e
     if chapter_content.chapter_content_id != chapter_content_id:
         raise ChapterContentOutdatedException("Chapter content is outdated. Please refresh and try again.")
@@ -777,7 +771,7 @@ def modify_chapter_content(
         .join(label_models.LabelData, label_models.Label.label_data_id == label_models.LabelData.label_data_id)
         .where(label_models.LabelData.chapter_content_id == chapter_content.chapter_content_id)
     )
-    label_result = db.execute(q).scalars().all()
+    label_result = (await db.execute(q)).scalars().all()
 
     labels = [label_schemas.Label.model_validate(label) for label in label_result]
 
@@ -795,23 +789,23 @@ def modify_chapter_content(
     )
 
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         new_chapter_content_id, new_chapter_content_version = result.one()
     except NoResultFound as e:
-        db.rollback()
+        await db.rollback()
         # Distinguish between outdated text and insufficient write permissions.
         # query_chapter_content_status raises the appropriate exception.
-        query_chapter_content_status(db, current_user, chapter_id, chapter_content_id)
+        await query_chapter_content_status(db, current_user, chapter_id, chapter_content_id)
         # If status check passes (shouldn't happen), raise generic error.
         raise InsufficientPermissionsException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
     qq = select(label_models.LabelData.label_data_id).where(
         label_models.LabelData.chapter_content_id == chapter_content.chapter_content_id
     )
-    all_label_data_ids = db.execute(qq).scalars().all()
+    all_label_data_ids = (await db.execute(qq)).scalars().all()
     # port label datas
     label_data_map: dict[uuid.UUID, list[label_schemas.Label]] = defaultdict(list)
 
@@ -827,26 +821,26 @@ def modify_chapter_content(
         label_data_q = select(label_models.LabelData.label_group_id).where(
             label_models.LabelData.label_data_id == label_data_id
         )
-        label_group_id = db.execute(label_data_q).scalar_one()
+        label_group_id = (await db.execute(label_data_q)).scalar_one()
         stmt = (
             insert(label_models.LabelData)
             .values(label_group_id=label_group_id, chapter_content_id=new_chapter_content_id)
             .returning(label_models.LabelData)
         )
-        label_data = db.execute(stmt).scalar_one()
+        label_data = (await db.execute(stmt)).scalar_one()
         label_data_id_map[label_data_id] = label_data.label_data_id
         label_vals = [label.model_dump(exclude={"label_id"}) for label in labels]
         for label in label_vals:
             label["label_data_id"] = label_data.label_data_id
         if len(label_vals) > 0:
             stmt = insert(label_models.Label).values(label_vals)
-            db.execute(stmt)
+            await db.execute(stmt)
         else:
             logger.debug(
                 f"No labels to port for label_data_id {label_data_id} and chapter_content_id {chapter_content.chapter_content_id}"
             )
 
-    db.commit()
+    await db.commit()
 
     return schemas.ModifyChapterContentResponse(
         chapter_content_id=new_chapter_content_id,
@@ -855,7 +849,7 @@ def modify_chapter_content(
     )
 
 
-def remove_chapter(db: Session, current_user: User, chapter_id: uuid.UUID) -> OperationStatus:
+async def remove_chapter(db: AsyncSession, current_user: User, chapter_id: uuid.UUID) -> OperationStatus:
     """
     Remove a chapter from the database.
 
@@ -872,18 +866,18 @@ def remove_chapter(db: Session, current_user: User, chapter_id: uuid.UUID) -> Op
     stmt = delete(models.Chapter).where(models.Chapter.chapter_id == chapter_id)
     stmt = chapter_mod_access_delete(stmt, current_user)
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         cursor_res = cast(CursorResult[Any], result)
         if cursor_res.rowcount == 0:
-            db.rollback()
-            query_chapter_by_id(db, current_user, chapter_id)
+            await db.rollback()
+            await query_chapter_by_id(db, current_user, chapter_id)
             raise InsufficientPermissionsException
-        db.commit()
+        await db.commit()
     except InsufficientPermissionsException as e:
         raise e
     except ChapterNotFoundException as e:
         raise e
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise ChapterDeleteFailedException from e
     return OperationStatus(status="success", detail="Delete succeeded.")

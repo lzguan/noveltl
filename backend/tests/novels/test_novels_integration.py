@@ -2,6 +2,7 @@
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.auth.models import User
@@ -32,9 +33,10 @@ def _text_ops_label_group(scenario: DatabaseScenario, group_key: str) -> LabelGr
 
 
 class TestBasicTextModification:
-    def test_delete_shifts_labels_and_creates_new_version(
+    async def test_delete_shifts_labels_and_creates_new_version(
         self,
         test_db: Session,
+        async_test_db: AsyncSession,
         editing_scenario: DatabaseScenario,
     ):
         actor = _text_ops_user(editing_scenario, "owner")
@@ -44,8 +46,8 @@ class TestBasicTextModification:
         label_group_2 = _text_ops_label_group(editing_scenario, "group_2")
         ops = [TextOp(op="delete", start=0, text="Hello ")]  # delete "Hello "
 
-        modify_chapter_content(
-            test_db,
+        await modify_chapter_content(
+            async_test_db,
             actor,
             chapter.chapter_id,
             chapter_content.chapter_content_id,
@@ -110,9 +112,10 @@ class TestBasicTextModification:
         assert new_labels_2[0].label_start == 21  # was 27, shifted left by 6
         assert new_labels_2[0].label_end == 29
 
-    def test_insert_shifts_labels(
+    async def test_insert_shifts_labels(
         self,
         test_db: Session,
+        async_test_db: AsyncSession,
         editing_scenario: DatabaseScenario,
     ):
         actor = _text_ops_user(editing_scenario, "owner")
@@ -121,8 +124,8 @@ class TestBasicTextModification:
         label_group_1 = _text_ops_label_group(editing_scenario, "group_1")
         ops = [TextOp(op="insert", start=0, text="Dear ")]
 
-        modify_chapter_content(
-            test_db,
+        await modify_chapter_content(
+            async_test_db,
             actor,
             chapter.chapter_id,
             chapter_content.chapter_content_id,
@@ -152,9 +155,10 @@ class TestBasicTextModification:
         assert hello.label_start == 5
         assert hello.label_end == 10
 
-    def test_multiple_ops_applied_sequentially(
+    async def test_multiple_ops_applied_sequentially(
         self,
         test_db: Session,
+        async_test_db: AsyncSession,
         editing_scenario: DatabaseScenario,
     ):
         actor = _text_ops_user(editing_scenario, "owner")
@@ -165,8 +169,8 @@ class TestBasicTextModification:
             TextOp(op="insert", start=0, text="Greetings "),  # -> "Greetings world. This is a test sentence."
         ]
 
-        modify_chapter_content(
-            test_db,
+        await modify_chapter_content(
+            async_test_db,
             actor,
             chapter.chapter_id,
             chapter_content.chapter_content_id,
@@ -183,9 +187,10 @@ class TestBasicTextModification:
 
 
 class TestEdgeCases:
-    def test_empty_ops_creates_new_version_with_same_content(
+    async def test_empty_ops_creates_new_version_with_same_content(
         self,
         test_db: Session,
+        async_test_db: AsyncSession,
         editing_scenario: DatabaseScenario,
     ):
         actor = _text_ops_user(editing_scenario, "owner")
@@ -193,8 +198,8 @@ class TestEdgeCases:
         chapter_content = _text_ops_chapter_content(editing_scenario)
         label_group_1 = _text_ops_label_group(editing_scenario, "group_1")
         label_group_2 = _text_ops_label_group(editing_scenario, "group_2")
-        modify_chapter_content(
-            test_db,
+        await modify_chapter_content(
+            async_test_db,
             actor,
             chapter.chapter_id,
             chapter_content.chapter_content_id,
@@ -237,11 +242,13 @@ class TestEdgeCases:
         assert len(group_1_labels) == 3
         assert len(group_2_labels) == 1
 
-    def test_no_labels_on_chapter_content(self, test_db: Session, editing_scenario: DatabaseScenario):
+    async def test_no_labels_on_chapter_content(
+        self, test_db: Session, async_test_db: AsyncSession, editing_scenario: DatabaseScenario
+    ):
         ops = [TextOp(op="insert", start=0, text="New ")]
 
-        modify_chapter_content(
-            test_db,
+        await modify_chapter_content(
+            async_test_db,
             editing_scenario.users["owner"],
             editing_scenario.chapters["unlabeled_chapter"].chapter_id,
             editing_scenario.contents["unlabeled_content_v1"].chapter_content_id,
@@ -266,17 +273,18 @@ class TestEdgeCases:
 
 
 class TestStalenessChecks:
-    def test_stale_chapter_content_id_raises(
+    async def test_stale_chapter_content_id_raises(
         self,
         test_db: Session,
+        async_test_db: AsyncSession,
         editing_scenario: DatabaseScenario,
     ):
         actor = _text_ops_user(editing_scenario, "owner")
         chapter = _text_ops_chapter(editing_scenario)
         chapter_content = _text_ops_chapter_content(editing_scenario)
         # First call succeeds and creates version 2
-        modify_chapter_content(
-            test_db,
+        await modify_chapter_content(
+            async_test_db,
             actor,
             chapter.chapter_id,
             chapter_content.chapter_content_id,
@@ -285,25 +293,26 @@ class TestStalenessChecks:
 
         # Second call with OLD chapter_content_id -> stale
         with pytest.raises(ChapterContentOutdatedException):
-            modify_chapter_content(
-                test_db,
+            await modify_chapter_content(
+                async_test_db,
                 actor,
                 chapter.chapter_id,
                 chapter_content.chapter_content_id,  # version 1, but version 2 exists
                 [TextOp(op="insert", start=0, text="B")],
             )
 
-    def test_successive_modifications_work(
+    async def test_successive_modifications_work(
         self,
         test_db: Session,
+        async_test_db: AsyncSession,
         editing_scenario: DatabaseScenario,
     ):
         actor = _text_ops_user(editing_scenario, "owner")
         chapter = _text_ops_chapter(editing_scenario)
         chapter_content = _text_ops_chapter_content(editing_scenario)
         # Create version 2
-        modify_chapter_content(
-            test_db,
+        await modify_chapter_content(
+            async_test_db,
             actor,
             chapter.chapter_id,
             chapter_content.chapter_content_id,
@@ -319,8 +328,8 @@ class TestStalenessChecks:
         ).scalar_one()
 
         # Create version 3 using version 2's id
-        modify_chapter_content(
-            test_db,
+        await modify_chapter_content(
+            async_test_db,
             actor,
             chapter.chapter_id,
             cc_v2.chapter_content_id,
@@ -337,9 +346,10 @@ class TestStalenessChecks:
 
 
 class TestPermissions:
-    def test_non_contributor_cannot_modify(
+    async def test_non_contributor_cannot_modify(
         self,
         test_db: Session,
+        async_test_db: AsyncSession,
         editing_scenario: DatabaseScenario,
     ):
         actor = _text_ops_user(editing_scenario, "other")
@@ -349,8 +359,8 @@ class TestPermissions:
         # The error handler calls query_chapter_content_status which passes (public),
         # then falls through to InsufficientPermissionsException.
         with pytest.raises(InsufficientPermissionsException):
-            modify_chapter_content(
-                test_db,
+            await modify_chapter_content(
+                async_test_db,
                 actor,
                 chapter.chapter_id,
                 chapter_content.chapter_content_id,
@@ -376,16 +386,17 @@ class TestPermissions:
         )
         assert v2 is None
 
-    def test_admin_can_modify(
+    async def test_admin_can_modify(
         self,
         test_db: Session,
+        async_test_db: AsyncSession,
         editing_scenario: DatabaseScenario,
     ):
         actor = _text_ops_user(editing_scenario, "admin")
         chapter = _text_ops_chapter(editing_scenario)
         chapter_content = _text_ops_chapter_content(editing_scenario)
-        modify_chapter_content(
-            test_db,
+        await modify_chapter_content(
+            async_test_db,
             actor,
             chapter.chapter_id,
             chapter_content.chapter_content_id,

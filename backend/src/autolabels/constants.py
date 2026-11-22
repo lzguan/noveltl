@@ -18,6 +18,17 @@ class AutoLabelProgress(StrEnum):
     """Task for this autolabel succeeded"""
 
 
+class PromotionItemOutcome(StrEnum):
+    """
+    Result of promoting one chapter's autolabels. One of 'done', 'failed'; unprocessed items have no outcome.
+    """
+
+    DONE = "done"
+    """Labels for this chapter were promoted"""
+    FAILED = "failed"
+    """This chapter could not be promoted"""
+
+
 class SepPriority(IntEnum):
     HIGH = 1
     MED = 2

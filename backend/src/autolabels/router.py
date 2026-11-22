@@ -2,27 +2,43 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
-from src.autolabels.dependencies import get_dispatcher
-from src.autolabels.dispatch.dispatcher import AutoLabelDispatcher
-from src.autolabels.exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
+from src.autolabels.dependencies import get_dispatcher, get_promotion_dispatcher
+from src.autolabels.exceptions import (
+    AutoLabelDuplicateException,
+    AutoLabelNotFoundException,
+    PromotionAlreadyActiveException,
+)
+from src.autolabels.inference.dispatch.dispatcher import AutoLabelDispatcher
+from src.autolabels.promotions.dispatch.dispatcher import PromotionDispatcher
+from src.autolabels.promotions.processing import insert_label_datas_by_autolabels
 from src.autolabels.schemas import (
     AutoLabel,
     AutoLabelMetaWithCid,
     AutoLabelRun,
     CreateAutoLabels,
     CreateAutoLabelsResponse,
+    CreatedLabelPromotion,
+    CreateLabelDataByAutoLabel,
+    CreateLabelDataByAutoLabelStatus,
+    LabelPromotionFailure,
+    LabelPromotionJob,
 )
 from src.autolabels.service import (
+    create_promotion_job,
     insert_auto_labels,
     query_auto_label_by_id,
     query_auto_label_runs,
     query_auto_labels_by_run,
+    query_promotion_failures,
+    query_promotion_jobs,
 )
-from src.database import get_db
+from src.database import get_async_db, get_db
+from src.labels.exceptions import LabelGroupNotFoundException
 from src.novels.exceptions import NovelNotFoundException
 from src.requests.cache import redis_cache
 from src.requests.decorators import attl_cache, serialize_response_model
@@ -132,3 +148,95 @@ async def create_autolabels(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unknown error occured.",
         ) from e
+
+
+@router.post(
+    "/label-groups/{labelGroupId}/label-datas/auto-labels",
+    response_model=CreateLabelDataByAutoLabelStatus,
+    responses={
+        404: {"model": DetailHTTPErrorResponse, "description": "Label group not found."},
+        409: {
+            "model": RequestConflictErrorResponse,
+            "description": "Request key conflict.",
+        },
+    },
+)
+@attl_cache(
+    ttl=3600,
+    cache=redis_cache,
+    serialize_ret=serialize_response_model(CreateLabelDataByAutoLabelStatus),
+)
+async def create_label_datas_by_auto_labels(
+    label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
+    request: CreateLabelDataByAutoLabel,
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
+):
+    """
+    Creates label datas and populates labels from autolabel results.
+    """
+    try:
+        return await insert_label_datas_by_autolabels(db, current_user, label_group_id, request)
+    except LabelGroupNotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Label group {label_group_id} not found or not accessible.",
+        ) from e
+
+
+@router.post(
+    "/label-groups/{labelGroupId}/label-promotions",
+    response_model=CreatedLabelPromotion,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={
+        404: {"model": DetailHTTPErrorResponse, "description": "Label group or run not found, or not editable."},
+        409: {"model": DetailHTTPErrorResponse, "description": "A promotion for this run and group is running."},
+    },
+)
+async def create_label_promotion(
+    label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
+    request: CreateLabelDataByAutoLabel,
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    dispatcher: Annotated[PromotionDispatcher, Depends(get_promotion_dispatcher)],
+):
+    """
+    Start promoting an autolabel run's labels into a label group in the background.
+    """
+    try:
+        return await create_promotion_job(db, current_user, dispatcher, label_group_id, request)
+    except LabelGroupNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+    except PromotionAlreadyActiveException as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
+
+
+@router.get(
+    "/novels/{novelId}/label-promotions",
+    response_model=list[LabelPromotionJob],
+)
+async def read_label_promotions(
+    novel_id: Annotated[uuid.UUID, Path(alias="novelId")],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    limit: Annotated[int, Query(ge=1, le=50)] = 10,
+):
+    """
+    List a novel's label promotion jobs: active ones first, then the most recently updated.
+    """
+    return await query_promotion_jobs(db, current_user, novel_id, limit)
+
+
+@router.get("/label-promotions/{promotionId}/failures", response_model=list[LabelPromotionFailure])
+async def read_label_promotion_failures(
+    promotion_id: Annotated[uuid.UUID, Path(alias="promotionId")],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+):
+    """
+    List the chapters a label promotion job could not promote, in processing order.
+    """
+    return await query_promotion_failures(db, current_user, promotion_id, limit, offset)

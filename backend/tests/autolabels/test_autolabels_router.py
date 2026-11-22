@@ -11,8 +11,8 @@ from src.auth.models import User
 from src.auth.utils import create_access_token
 from src.autolabels.constants import AutoLabelProgress
 from src.autolabels.models import AutoLabel, AutoLabelRun
+from src.autolabels.promotions import processing as label_service
 from src.labels import models as label_models
-from src.labels import service as label_service
 from src.labels.constants import MAX_LABEL_WORD_LEN, LabelRole
 from src.novels.models import Chapter, ChapterContent
 from test_support.test_data.scenarios import DatabaseScenario

@@ -1415,6 +1415,86 @@ export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLa
 })
 
 /**
+ * Start promoting an autolabel run's labels into a label group in the background.
+ * @summary Create Label Promotion
+ */
+export const CreateLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostParams = S.Struct({
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const CreateLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPostBody = S.Struct({
+  "chapterIds": S.optional(S.Union([S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))), S.Null])),
+  "end": S.optional(S.Union([S.Number, S.Null])),
+  "runId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "start": S.optional(S.Union([S.Number, S.Null]))
+}).annotate({ description: 'Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.\n\nAttributes:\n    run_id: UUID of the autolabel run whose results should be promoted.\n    chapter_ids: Optional filter on what chapters to include.\n    start: Optional filter on the least chapter number to include.\n    end: Optional filter on the greatest chapter number to include.' })
+
+export const CreateLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPost202Response = S.Struct({
+  "itemCount": S.Number,
+  "promotionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const CreateLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPost404Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const CreateLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPost409Response = S.Struct({
+  "detail": S.String
+}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
+
+export const CreateLabelPromotionLabelGroupsLabelGroupIdLabelPromotionsPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * List the chapters a label promotion job could not promote, in processing order.
+ * @summary Read Label Promotion Failures
+ */
+export const ReadLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetParams = S.Struct({
+  "promotionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetQueryLimitDefault = 50;
+export const readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetQueryLimitMax = 200;
+
+export const readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetQueryOffsetDefault = 0;
+export const readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetQueryOffsetMin = 0;
+
+
+
+export const ReadLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetQueryParams = S.Struct({
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetQueryLimitDefault))),
+  "offset": S.Number.check(S.isGreaterThanOrEqualTo(readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetQueryOffsetMin)).pipe(S.withDecodingDefaultType(Effect.succeed(readLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGetQueryOffsetDefault)))
+})
+
+export const ReadLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGet200ResponseItem = S.Struct({
+  "chapterId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "chapterNum": S.Number,
+  "message": S.String
+})
+export const ReadLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGet200Response = S.Array(ReadLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGet200ResponseItem)
+
+export const ReadLabelPromotionFailuresLabelPromotionsPromotionIdFailuresGet422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
  * Gets a label by id.
  * @summary Read Label
  */
@@ -3751,6 +3831,52 @@ export const CreateChapterNovelsNovelIdChaptersPost200Response = S.Struct({
 }).annotate({ description: 'Pydantic schema for aggregating a ChapterContent and a Chapter together.\n\nAttributes:\n    metadata: The metadata of the chapter, such as title and whether it\'s primary.\n    content: The text content of the chapter.' })
 
 export const CreateChapterNovelsNovelIdChaptersPost422Response = S.Struct({
+  "detail": S.optional(S.Array(S.Struct({
+  "ctx": S.optional(S.StructWithRest(S.Struct({
+
+}), [S.Record(S.String, S.Unknown)])),
+  "input": S.optional(S.Unknown),
+  "loc": S.Array(S.Union([S.String, S.Number])),
+  "msg": S.String,
+  "type": S.String
+})))
+})
+
+/**
+ * List a novel's label promotion jobs: active ones first, then the most recently updated.
+ * @summary Read Label Promotions
+ */
+export const ReadLabelPromotionsNovelsNovelIdLabelPromotionsGetParams = S.Struct({
+  "novelId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
+})
+
+export const readLabelPromotionsNovelsNovelIdLabelPromotionsGetQueryLimitDefault = 10;
+export const readLabelPromotionsNovelsNovelIdLabelPromotionsGetQueryLimitMax = 50;
+
+
+
+export const ReadLabelPromotionsNovelsNovelIdLabelPromotionsGetQueryParams = S.Struct({
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readLabelPromotionsNovelsNovelIdLabelPromotionsGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readLabelPromotionsNovelsNovelIdLabelPromotionsGetQueryLimitDefault)))
+})
+
+export const ReadLabelPromotionsNovelsNovelIdLabelPromotionsGet200ResponseItem = S.Struct({
+  "counts": S.Struct({
+  "done": S.Number,
+  "failed": S.Number,
+  "pending": S.Number,
+  "total": S.Number
+}),
+  "createdAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/)),
+  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "message": S.Union([S.String, S.Null]),
+  "promotionId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "runId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
+  "status": S.Literals(['failed', 'pending', 'processing', 'done']).annotate({ description: 'Status for an autolabel in database. One of \'failed\', \'pending\', \'processing\', \'done\'' }),
+  "updatedAt": S.String.check(S.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/))
+})
+export const ReadLabelPromotionsNovelsNovelIdLabelPromotionsGet200Response = S.Array(ReadLabelPromotionsNovelsNovelIdLabelPromotionsGet200ResponseItem)
+
+export const ReadLabelPromotionsNovelsNovelIdLabelPromotionsGet422Response = S.Struct({
   "detail": S.optional(S.Array(S.Struct({
   "ctx": S.optional(S.StructWithRest(S.Struct({
 

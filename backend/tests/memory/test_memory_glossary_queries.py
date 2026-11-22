@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.auth.constants import UserType
@@ -154,11 +155,13 @@ def _seed_glossary_query_scenario(db: Session) -> GlossaryQueryScenario:
     )
 
 
-def test_glossary_terms_are_ordered_by_all_associated_glossary_memories(test_db: Session) -> None:
+async def test_glossary_terms_are_ordered_by_all_associated_glossary_memories(
+    test_db: Session, async_test_db: AsyncSession
+) -> None:
     scenario = _seed_glossary_query_scenario(test_db)
 
-    page = query_glossary_terms(
-        test_db,
+    page = await query_glossary_terms(
+        async_test_db,
         scenario.admin,
         scenario.memory_group.memory_group_id,
         contains_query,
@@ -181,11 +184,13 @@ def test_glossary_terms_are_ordered_by_all_associated_glossary_memories(test_db:
     }
 
 
-def test_chapter_scoped_terms_use_latest_content_and_active_memory_counts(test_db: Session) -> None:
+async def test_chapter_scoped_terms_use_latest_content_and_active_memory_counts(
+    test_db: Session, async_test_db: AsyncSession
+) -> None:
     scenario = _seed_glossary_query_scenario(test_db)
 
-    page = query_glossary_terms(
-        test_db,
+    page = await query_glossary_terms(
+        async_test_db,
         scenario.admin,
         scenario.memory_group.memory_group_id,
         contains_query,
@@ -201,11 +206,13 @@ def test_chapter_scoped_terms_use_latest_content_and_active_memory_counts(test_d
     ]
 
 
-def test_glossary_term_search_and_pagination_apply_after_count_ordering(test_db: Session) -> None:
+async def test_glossary_term_search_and_pagination_apply_after_count_ordering(
+    test_db: Session, async_test_db: AsyncSession
+) -> None:
     scenario = _seed_glossary_query_scenario(test_db)
 
-    page = query_glossary_terms(
-        test_db,
+    page = await query_glossary_terms(
+        async_test_db,
         scenario.admin,
         scenario.memory_group.memory_group_id,
         contains_query,

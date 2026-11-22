@@ -6,7 +6,7 @@ from pydantic import Field
 from sqlalchemy import VARCHAR, Boolean, Integer, Text, column, insert, select, values
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import DataError, IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.models import User
 from src.exceptions import InsufficientPermissionsException
@@ -30,12 +30,14 @@ class BulkChapterUploadV1(Model):
     chapters: list[ChapterUpload] = Field(max_length=10000, min_length=1)
 
 
-def upload_v1(db: Session, current_user: User, novel_id: uuid.UUID, request: BulkChapterUploadV1) -> Sequence[Chapter]:
+async def upload_v1(
+    db: AsyncSession, current_user: User, novel_id: uuid.UUID, request: BulkChapterUploadV1
+) -> Sequence[Chapter]:
     """
     Uploads multiple chapters to a novel in bulk.
 
     Args:
-        db (Session): The database session.
+        db (AsyncSession): The database session.
         current_user (User): The currently authenticated user.
         novel_id (uuid.UUID): The ID of the novel to which chapters are being uploaded.
         request (BulkChapterUploadV1): The request object containing the novel ID and chapters to upload.
@@ -64,20 +66,20 @@ def upload_v1(db: Session, current_user: User, novel_id: uuid.UUID, request: Bul
     vals = chapter_mod_access_insert(vals, current_user, novel_id)
     stmt = insert(Chapter).from_select(cols, vals).returning(Chapter)
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         result_scalars = result.scalars().all()
     except IntegrityError as e:
-        db.rollback()
+        await db.rollback()
         if isinstance(e.orig, ForeignKeyViolation):
             raise NovelNotFoundException from e
         if isinstance(e.orig, UniqueViolation):
             raise ChapterNumDuplicateException from e
         raise e
     except DataError as e:
-        db.rollback()
+        await db.rollback()
         raise ValueError("Chapter title is too long") from e
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise e
 
     if len(result_scalars) != len(request.chapters):
@@ -99,10 +101,10 @@ def upload_v1(db: Session, current_user: User, novel_id: uuid.UUID, request: Bul
     stmt2 = insert(ChapterContent).from_select(cols2, vals)
 
     try:
-        db.execute(stmt2)
-        db.commit()
+        await db.execute(stmt2)
+        await db.commit()
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise e
 
     return result_scalars

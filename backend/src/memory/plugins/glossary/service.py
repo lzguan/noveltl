@@ -3,6 +3,7 @@ from uuid import UUID
 
 from sqlalchemy import Select, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.auth.models import User
@@ -120,8 +121,8 @@ def query_glossary_memories(
     return _enrich_memories(db, page.rows, page.count)
 
 
-def query_glossary_terms(
-    db: Session,
+async def query_glossary_terms(
+    db: AsyncSession,
     user: User | None,
     memory_group_id: UUID,
     contains_query: ContainsQuery,
@@ -142,10 +143,10 @@ def query_glossary_terms(
         )
         chapter_query = memory_group_mod_access_select(chapter_query, user)
         try:
-            chapter_num = db.execute(chapter_query).scalar_one()
+            chapter_num = (await db.execute(chapter_query)).scalar_one()
         except NoResultFound as e:
             raise ChapterNotFoundException from e
-        chapter_content_id = query_chapter_content_by_most_recent(db, user, chapter_id).chapter_content_id
+        chapter_content_id = (await query_chapter_content_by_most_recent(db, user, chapter_id)).chapter_content_id
 
     def apply_filters[T: Select[*tuple[Any, ...]]](query: T) -> T:
         query = query.where(GlossaryTerm.memory_group_id == memory_group_id)
@@ -168,7 +169,7 @@ def query_glossary_terms(
             query = query.where(GlossaryTerm.review_status.in_(review_statuses))
         return query
 
-    count = db.execute(apply_filters(select(func.count(GlossaryTerm.term_id)))).scalar_one()
+    count = (await db.execute(apply_filters(select(func.count(GlossaryTerm.term_id))))).scalar_one()
 
     memory_count = func.count(Memory.memory_id).label("associated_memory_count")
     memory_counts_query = (
@@ -188,15 +189,17 @@ def query_glossary_terms(
         )
     memory_counts = memory_counts_query.subquery()
     associated_memory_count = func.coalesce(memory_counts.c.associated_memory_count, 0).label("associated_memory_count")
-    rows = db.execute(
-        apply_filters(
-            select(GlossaryTerm, associated_memory_count).outerjoin(
-                memory_counts, memory_counts.c.term_id == GlossaryTerm.term_id
+    rows = (
+        await db.execute(
+            apply_filters(
+                select(GlossaryTerm, associated_memory_count).outerjoin(
+                    memory_counts, memory_counts.c.term_id == GlossaryTerm.term_id
+                )
             )
+            .order_by(associated_memory_count.desc(), GlossaryTerm.term, GlossaryTerm.term_id)
+            .offset(skip)
+            .limit(limit)
         )
-        .order_by(associated_memory_count.desc(), GlossaryTerm.term, GlossaryTerm.term_id)
-        .offset(skip)
-        .limit(limit)
     ).all()
     return GlossaryTermPage(
         count=count,

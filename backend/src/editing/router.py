@@ -3,11 +3,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.dependencies import get_current_user
 from src.auth.models import User, UserType
-from src.database import get_db
+from src.database import get_async_db
 from src.editing.schemas import EagerEntry, EditChapterData
 from src.editing.service import query_edit_chapter_data, query_edit_chapter_data_only_label_data
 from src.novels.exceptions import ChapterContentNotFoundException
@@ -16,9 +16,9 @@ router = APIRouter()
 
 
 @router.post("/edit-chapter-data/{chapterId}", response_model=EditChapterData)
-def read_edit_chapter_data(
+async def read_edit_chapter_data(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     eager: Annotated[
         list[uuid.UUID],
@@ -44,11 +44,11 @@ def read_edit_chapter_data(
             )
         elif subject_id is not None and subject_id != current_user.user_id:
             q = select(User).where(User.user_id == subject_id)
-            subject_user = db.execute(q).scalar_one_or_none()
+            subject_user = (await db.execute(q)).scalar_one_or_none()
             if subject_user is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject user not found.")
-            return query_edit_chapter_data(db, subject_user, chapter_id, eager)
-        return query_edit_chapter_data(db, current_user, chapter_id, eager)
+            return await query_edit_chapter_data(db, subject_user, chapter_id, eager)
+        return await query_edit_chapter_data(db, current_user, chapter_id, eager)
     except ChapterContentNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or insufficient permissions."
@@ -56,9 +56,9 @@ def read_edit_chapter_data(
 
 
 @router.post("/edit-chapter-data/{chapterId}/label-data", response_model=list[EagerEntry])
-def read_edit_chapter_label_data(
+async def read_edit_chapter_label_data(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     label_group_ids: Annotated[
         list[uuid.UUID],
@@ -81,11 +81,11 @@ def read_edit_chapter_label_data(
             )
         elif subject_id is not None and subject_id != current_user.user_id:
             q = select(User).where(User.user_id == subject_id)
-            subject_user = db.execute(q).scalar_one_or_none()
+            subject_user = (await db.execute(q)).scalar_one_or_none()
             if subject_user is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject user not found.")
-            return query_edit_chapter_data_only_label_data(db, subject_user, chapter_id, label_group_ids)
-        return query_edit_chapter_data_only_label_data(db, current_user, chapter_id, label_group_ids)
+            return await query_edit_chapter_data_only_label_data(db, subject_user, chapter_id, label_group_ids)
+        return await query_edit_chapter_data_only_label_data(db, current_user, chapter_id, label_group_ids)
     except ChapterContentNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or insufficient permissions."

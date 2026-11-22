@@ -2,11 +2,12 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.auth.dependencies import get_current_user, get_optional_user
 from src.auth.models import User
-from src.database import get_db
+from src.database import get_async_db, get_db
 from src.memory.exceptions import (
     GlossaryTermAlreadyExistsException,
     GlossaryTermNotFoundException,
@@ -99,9 +100,9 @@ def read_glossary_memories(
     response_model=GlossaryTermPage,
     responses={404: {"model": DetailHTTPErrorResponse}},
 )
-def read_glossary_terms(
+async def read_glossary_terms(
     memory_group_id: Annotated[UUID, Path(alias="memoryGroupId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
@@ -110,7 +111,7 @@ def read_glossary_terms(
     review_statuses: Annotated[list[ReviewStatus] | None, Query(alias="reviewStatuses")] = None,
 ):
     try:
-        return query_glossary_terms(
+        return await query_glossary_terms(
             db,
             current_user,
             memory_group_id,

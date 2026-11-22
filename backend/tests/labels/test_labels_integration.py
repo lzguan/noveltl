@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from src.autolabels.promotion import insert_label_datas_by_autolabels
+from src.autolabels.promotions.service import insert_label_datas_by_autolabels
 from src.autolabels.schemas import CreateLabelDataByAutoLabel
 from src.labels import models as label_models
 from test_support.test_data.scenarios import DatabaseScenario

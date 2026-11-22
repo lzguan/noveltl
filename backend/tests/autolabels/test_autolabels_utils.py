@@ -6,8 +6,8 @@ import pytest
 
 from src.autolabels.constants import SepPriority
 from src.autolabels.exceptions import ChunkTooLargeException, TokenDoesNotExistException
-from src.autolabels.worker.interfaces import Tokenizer
-from src.autolabels.worker.utils import _chunk_blocks, _chunk_paragraph, chunk_text
+from src.autolabels.inference.worker.interfaces import Tokenizer
+from src.autolabels.inference.worker.utils import _chunk_blocks, _chunk_paragraph, chunk_text
 
 
 class TokenizerTestWords(Tokenizer):

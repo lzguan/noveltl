@@ -27,7 +27,7 @@ routers. [`src/models.py`](src/models.py) imports all SQLAlchemy model modules
 so Alembic and test setup share one metadata registry.
 
 The autolabel worker is a separate process under
-[`src/autolabels/worker/`](src/autolabels/worker/). It consumes Arq jobs from
+[`src/autolabels/inference/worker/`](src/autolabels/inference/worker/). It consumes Arq jobs from
 Redis and writes inference results to PostgreSQL.
 
 ## Development

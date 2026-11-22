@@ -43,7 +43,7 @@ chapter, about 10 s for 1,900 chapters in one request, event-loop stalls up to
 about 1 s; no regression from the async/psycopg 3 change versus `master`.
 
 Done (uncommitted): promotion code, its schemas, and its endpoint moved from
-`labels` to `src/autolabels/promotion.py` (pure move; OpenAPI unchanged), so
+`labels` to `src/autolabels/promotions/service.py` (pure move; OpenAPI unchanged), so
 `labels` no longer imports `autolabels`. Model and migration
 `4ea4c662b46f`: `label_promotion_jobs` (run, group, requester, requested filter,
 status, message, claim token and lease; partial unique index on one active job

@@ -17,8 +17,8 @@ from sqlalchemy.orm import Session, defer
 from src.auth.models import User
 from src.autolabels import models, schemas
 from src.autolabels.constants import AutoLabelProgress
-from src.autolabels.dispatch.dispatcher import AutoLabelDispatcher
 from src.autolabels.exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
+from src.autolabels.inference.dispatch.dispatcher import AutoLabelDispatcher
 from src.autolabels.permissions import auto_label_mod_access_insert, auto_label_mod_access_select
 from src.novels import models as nm
 from src.novels.exceptions import NovelNotFoundException

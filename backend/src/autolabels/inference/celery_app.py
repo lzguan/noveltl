@@ -6,6 +6,6 @@ from src.config import redis_settings
 app = Celery(
     "tasks",
     broker=f"redis://{redis_settings.REDIS_HOST}:{redis_settings.REDIS_PORT}/{redis_settings.AUTOLABELS_DATABASE}",
-    include=["src.autolabels.dispatch.celery"],
+    include=["src.autolabels.inference.dispatch.celery"],
 )
-app.config_from_object("src.autolabels.celeryconfig")
+app.config_from_object("src.autolabels.inference.celeryconfig")

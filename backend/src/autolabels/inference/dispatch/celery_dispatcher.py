@@ -2,17 +2,17 @@
 
 Work is published by task name through `send_task`, so an API process never
 imports the inference implementation behind it. The worker registers the
-matching name in `src.autolabels.dispatch.celery`.
+matching name in `src.autolabels.inference.dispatch.celery`.
 """
 
 import asyncio
 import logging
 import uuid
 
-from src.autolabels.celery_app import app
-from src.autolabels.dispatch.dispatcher import AutoLabelDispatcher
 from src.autolabels.exceptions import EnqueueFailedException
-from src.autolabels.task_names import CELERY_INFER
+from src.autolabels.inference.celery_app import app
+from src.autolabels.inference.dispatch.dispatcher import AutoLabelDispatcher
+from src.autolabels.inference.task_names import CELERY_INFER
 
 logger = logging.getLogger(__name__)
 

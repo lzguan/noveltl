@@ -3,8 +3,8 @@ from typing import Protocol
 
 import pytest
 
+from src.autolabels.inference.worker.interfaces import NERModel
 from src.autolabels.params import CluenerParams
-from src.autolabels.worker.interfaces import NERModel
 from src.datasets import NovelDataset
 
 pytestmark = pytest.mark.implementation
@@ -18,7 +18,7 @@ class ModelWrapper(Protocol):
 
 @pytest.fixture(scope="session")
 def cluener() -> ModelWrapper:
-    from src.autolabels.worker.inference import Cluener
+    from src.autolabels.inference.worker.inference import Cluener
 
     return Cluener()  # <--- Runs ONCE. Caches the result.
 

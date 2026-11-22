@@ -8,9 +8,9 @@ from sqlalchemy.orm import Session
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
 from src.autolabels.dependencies import get_dispatcher
-from src.autolabels.dispatch.dispatcher import AutoLabelDispatcher
 from src.autolabels.exceptions import AutoLabelDuplicateException, AutoLabelNotFoundException
-from src.autolabels.promotion import insert_label_datas_by_autolabels
+from src.autolabels.inference.dispatch.dispatcher import AutoLabelDispatcher
+from src.autolabels.promotions.service import insert_label_datas_by_autolabels
 from src.autolabels.schemas import (
     AutoLabel,
     AutoLabelMetaWithCid,

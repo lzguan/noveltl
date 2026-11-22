@@ -36,7 +36,7 @@ RUN uv run --no-sync hf download \
       tokenizer_config.json \
       vocab.txt \
       --revision ${CLUENER_REVISION}
-CMD ["uv", "run", "--no-sync", "celery", "-A", "src.autolabels.celery_app", "worker", "--loglevel=info"]
+CMD ["uv", "run", "--no-sync", "celery", "-A", "src.autolabels.inference.celery_app", "worker", "--loglevel=info"]
 
 FROM base AS filters-worker
 # The filter runners need only the base dependencies. Nothing reachable from

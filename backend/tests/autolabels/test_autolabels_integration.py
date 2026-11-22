@@ -12,12 +12,12 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.autolabels.celery_app import app
 from src.autolabels.constants import AutoLabelProgress
-from src.autolabels.dispatch.celery_dispatcher import CeleryDispatcher
+from src.autolabels.inference.celery_app import app
+from src.autolabels.inference.dispatch.celery_dispatcher import CeleryDispatcher
 from src.autolabels.models import AutoLabel
 from src.autolabels.params import CluenerParams
-from src.autolabels.promotion import insert_label_datas_by_autolabels
+from src.autolabels.promotions.service import insert_label_datas_by_autolabels
 from src.autolabels.schemas import CreateAutoLabels, CreateLabelDataByAutoLabel
 from src.autolabels.service import insert_auto_labels
 from src.labels import models as label_models
@@ -42,7 +42,7 @@ def celery_worker(
     test_db: Session,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Generator[None]:
-    import src.autolabels.worker.tasks as worker_tasks
+    import src.autolabels.inference.worker.tasks as worker_tasks
 
     redis_host = os.getenv("TEST_REDIS_HOST", "test_redis")
     redis_port = int(os.getenv("TEST_REDIS_PORT", "6379"))

@@ -21,7 +21,7 @@ def configured_autolabel_worker(
     test_url: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Generator[None]:
-    import src.autolabels.worker.tasks as worker_tasks
+    import src.autolabels.inference.worker.tasks as worker_tasks
 
     engine = create_engine(test_url)
     monkeypatch.setattr(worker_tasks, "SessionLocal", sessionmaker(bind=engine))
@@ -41,7 +41,7 @@ class TestInsertAutoLabels:
         recording_dispatcher: RecordingDispatcher,
         configured_autolabel_worker: None,
     ) -> None:
-        from src.autolabels.worker.tasks import autolabel_infer
+        from src.autolabels.inference.worker.tasks import autolabel_infer
 
         novel = xianxia_scenario.novels["novel"]
         user = xianxia_scenario.users["owner"]

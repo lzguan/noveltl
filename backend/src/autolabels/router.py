@@ -16,7 +16,6 @@ from src.autolabels.exceptions import (
 )
 from src.autolabels.inference.dispatch.dispatcher import AutoLabelDispatcher
 from src.autolabels.promotions.dispatch.dispatcher import PromotionDispatcher
-from src.autolabels.promotions.processing import insert_label_datas_by_autolabels
 from src.autolabels.schemas import (
     AutoLabel,
     AutoLabelMetaWithCid,
@@ -25,7 +24,6 @@ from src.autolabels.schemas import (
     CreateAutoLabelsResponse,
     CreatedLabelPromotion,
     CreateLabelDataByAutoLabel,
-    CreateLabelDataByAutoLabelStatus,
     LabelPromotionFailure,
     LabelPromotionJob,
 )
@@ -148,41 +146,6 @@ async def create_autolabels(
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unknown error occured.",
-        ) from e
-
-
-@router.post(
-    "/label-groups/{labelGroupId}/label-datas/auto-labels",
-    response_model=CreateLabelDataByAutoLabelStatus,
-    responses={
-        404: {"model": DetailHTTPErrorResponse, "description": "Label group not found."},
-        409: {
-            "model": RequestConflictErrorResponse,
-            "description": "Request key conflict.",
-        },
-    },
-)
-@attl_cache(
-    ttl=3600,
-    cache=redis_cache,
-    serialize_ret=serialize_response_model(CreateLabelDataByAutoLabelStatus),
-)
-async def create_label_datas_by_auto_labels(
-    label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
-    request: CreateLabelDataByAutoLabel,
-    db: Annotated[AsyncSession, Depends(get_async_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
-    request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
-):
-    """
-    Creates label datas and populates labels from autolabel results.
-    """
-    try:
-        return await insert_label_datas_by_autolabels(db, current_user, label_group_id, request)
-    except LabelGroupNotFoundException as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Label group {label_group_id} not found or not accessible.",
         ) from e
 
 

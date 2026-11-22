@@ -1368,53 +1368,6 @@ export const CreateLabelDataLabelGroupsLabelGroupIdLabelDatasPost422Response = S
 })
 
 /**
- * Creates label datas and populates labels from autolabel results.
- * @summary Create Label Datas By Auto Labels
- */
-export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostParams = S.Struct({
-  "labelGroupId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))
-})
-
-export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostQueryParams = S.Struct({
-  "requestKey": S.optional(S.Union([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.Null]))
-})
-
-export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPostBody = S.Struct({
-  "chapterIds": S.optional(S.Union([S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))), S.Null])),
-  "end": S.optional(S.Union([S.Number, S.Null])),
-  "runId": S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)),
-  "start": S.optional(S.Union([S.Number, S.Null]))
-}).annotate({ description: 'Pydantic schema to specifiy a set of AutoLabels to be moved to LabelDatas.\n\nAttributes:\n    run_id: UUID of the autolabel run whose results should be promoted.\n    chapter_ids: Optional filter on what chapters to include.\n    start: Optional filter on the least chapter number to include.\n    end: Optional filter on the greatest chapter number to include.' })
-
-export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost200Response = S.Struct({
-  "errors": S.Array(S.Tuple([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.String])),
-  "success": S.Array(S.Tuple([S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)), S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))]))
-}).annotate({ description: 'Return message for CreateLabelDataByAutoLabel.\n\nAttributes:\n    success: List of tuples of (chapter_id, chapter_content_id) for successful inserts.\n    errors: List of tuples of (chapter_id, chapter_content_id, error message) for failed inserts.' })
-
-export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost404Response = S.Struct({
-  "detail": S.String
-}).annotate({ description: 'Generic error payload for HTTPException responses that only return a detail string.\n\nAttributes:\n    detail: Human-readable description of the error.' })
-
-export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost409Response = S.Struct({
-  "detail": S.Struct({
-  "cacheConflict": S.Boolean,
-  "detail": S.String
-}).annotate({ description: 'Structured detail payload used by request-key wrapped 409 responses.\n\nAttributes:\n    detail: Human-readable description of the error.\n    cache_conflict: Whether the failure was caused by a request-key cache conflict.' })
-}).annotate({ description: 'HTTPException response body for request-key wrapped 409 responses.\n\nAttributes:\n    detail: Structured conflict detail.' })
-
-export const CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost422Response = S.Struct({
-  "detail": S.optional(S.Array(S.Struct({
-  "ctx": S.optional(S.StructWithRest(S.Struct({
-
-}), [S.Record(S.String, S.Unknown)])),
-  "input": S.optional(S.Unknown),
-  "loc": S.Array(S.Union([S.String, S.Number])),
-  "msg": S.String,
-  "type": S.String
-})))
-})
-
-/**
  * Start promoting an autolabel run's labels into a label group in the background.
  * @summary Create Label Promotion
  */

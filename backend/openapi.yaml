@@ -805,42 +805,6 @@ components:
       - runId
       title: CreateLabelDataByAutoLabel
       type: object
-    CreateLabelDataByAutoLabelStatus:
-      description: "Return message for CreateLabelDataByAutoLabel.\n\nAttributes:\n\
-        \    success: List of tuples of (chapter_id, chapter_content_id) for successful\
-        \ inserts.\n    errors: List of tuples of (chapter_id, chapter_content_id,\
-        \ error message) for failed inserts."
-      properties:
-        errors:
-          items:
-            maxItems: 3
-            minItems: 3
-            prefixItems:
-            - format: uuid
-              type: string
-            - format: uuid
-              type: string
-            - type: string
-            type: array
-          title: Errors
-          type: array
-        success:
-          items:
-            maxItems: 2
-            minItems: 2
-            prefixItems:
-            - format: uuid
-              type: string
-            - format: uuid
-              type: string
-            type: array
-          title: Success
-          type: array
-      required:
-      - success
-      - errors
-      title: CreateLabelDataByAutoLabelStatus
-      type: object
     CreateLabelGroup:
       description: "Pydantic schema for validating forms for creating a label group.\n\
         \nAttributes:\n    label_group_name: Name of label group to create.\n    novel_id:\
@@ -6671,61 +6635,6 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Create Label Data
-  /label-groups/{labelGroupId}/label-datas/auto-labels:
-    post:
-      description: Creates label datas and populates labels from autolabel results.
-      operationId: create_label_datas_by_auto_labels_label_groups__labelGroupId__label_datas_auto_labels_post
-      parameters:
-      - in: path
-        name: labelGroupId
-        required: true
-        schema:
-          format: uuid
-          title: Labelgroupid
-          type: string
-      - in: query
-        name: requestKey
-        required: false
-        schema:
-          anyOf:
-          - format: uuid
-            type: string
-          - type: 'null'
-          title: Requestkey
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateLabelDataByAutoLabel'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateLabelDataByAutoLabelStatus'
-          description: Successful Response
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DetailHTTPErrorResponse'
-          description: Label group not found.
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RequestConflictErrorResponse'
-          description: Request key conflict.
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
-      security:
-      - OAuth2PasswordBearer: []
-      summary: Create Label Datas By Auto Labels
   /label-groups/{labelGroupId}/label-promotions:
     post:
       description: Start promoting an autolabel run's labels into a label group in

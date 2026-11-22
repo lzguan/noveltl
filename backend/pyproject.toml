@@ -15,6 +15,8 @@ dependencies = [
     "redis[hiredis]>=6.4.0",
     "boto3>=1.43.93",
     "aiobotocore>=3.10.0",
+    "taskiq>=0.13.0",
+    "taskiq-redis>=1.2.4",
 ]
 
 [dependency-groups]

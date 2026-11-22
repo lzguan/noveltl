@@ -15,7 +15,8 @@ as optional context by translation prompts.
 | Action discovery and form metadata | [metadata.py](../../backend/src/translations/metadata.py) |
 | Job/stage/batch/task persistence and pinned chapters | [models.py](../../backend/src/translations/models.py), [tasks/jobs.py](../../backend/src/translations/tasks/jobs.py) |
 | Controls and dispatch reporting | [service.py](../../backend/src/translations/service.py) |
-| Worker callback contract and wrappers | [actions.py](../../backend/src/translations/actions/actions.py), [celery_actions.py](../../backend/src/translations/actions/celery_actions.py) |
+| Worker callback contract, step specs, and wrappers | [actions.py](../../backend/src/translations/actions/actions.py), [celery_actions.py](../../backend/src/translations/actions/celery_actions.py) |
+| Claimed step execution and next-stage handoff | [runner.py](../../backend/src/translations/actions/runner.py) |
 | Lease ownership | [claims.py](../../backend/src/translations/tasks/claims.py) |
 | Normalized data, JSONL, output completeness | [records.py](../../backend/src/translations/records.py), [jsonl.py](../../backend/src/translations/jsonl.py), [validation.py](../../backend/src/translations/validation.py) |
 | Provider transport and response codecs | [clients/](../../backend/src/translations/clients/), [codecs/](../../backend/src/translations/codecs/) |
@@ -157,6 +158,44 @@ rather than model-listed order. Structural validity does not establish that
 pruning is semantically well tuned.
 
 ## Lifecycle and recovery
+
+Each action module defines public step callbacks (`translate.prepare(context)`
+etc.) and exports them as a `STEPS` tuple of `StepSpec`/`PollSpec` (task name,
+expect/during/finish states, lease, poll interval). The module registers the
+tuple on its `callbacks` with `register_steps`, so another `ActionCallbacks`
+implementation can register the same specs. The Celery tasks are not bound to
+module names: reach one by its registered name, e.g.
+`app.tasks[TRANSLATE_PREPARE](task_id)` with names from `task_names.py`. Dispatch
+stays in `CeleryActionCallbacks`; `run_claimed_step` (claim, run, finish or
+fail; returns `unclaimed`/`advanced`/`pending`) and `ready_next_task` (mark the
+next stage's task READY) take a session factory and contain no dispatch.
+
+[async_actions.py](../../backend/src/translations/actions/async_actions.py)
+(marked not audited, strictly for agent-eval use) implements `ActionCallbacks`
+in-process. Awaiting `entrypoint(task_id)` runs that batch's remaining stages to
+completion: steps run in `asyncio.to_thread` through `run_claimed_step` behind a
+shared semaphore, pending polls `asyncio.sleep` their interval without holding
+it, and `exitpoint` awaits the next stage's `entrypoint`. A step error is
+recorded on the task and raised from `entrypoint`; an unclaimable task returns
+without error. `build_async_registry(session_factory, max_concurrent_steps=...)`
+registers every action's `STEPS`. To run a job, await each batch's stage-0
+`load_inputs` entrypoint (e.g. with `asyncio.gather`). It bypasses
+`control_translation_job`, and the actions still use the global object store
+and registered batch clients. Tests do not cover poll waits: the claim gate
+blocks reclaiming a poll before `next_poll_at`, so skipping the sleep stalls.
+
+Model `qwen-flash-sync` uses
+[sync_client.py](../../backend/src/translations/clients/sync_client.py) behind
+the same `BatchJobClient` interface: `create_batch_job` sends each request
+line's body to the chat-completions endpoint (model renamed to `qwen-flash`),
+at most four at once with SDK retries for 429/5xx (one `asyncio.run` per batch,
+`AsyncOpenAI` from a factory with `async_buffer`; the interface stays sync), and writes provider
+batch-output lines to the object store at `translations/sync-batches/<uuid>.jsonl`.
+That key is the job and output ID, and the first poll is complete, so a stage
+needs no poll wait. A failed request becomes that chapter's failed line. The
+whole batch runs inside `submit`, so it must finish within the 300 s submit lease;
+use small batches. These objects have no `StoredFile` row and are never cleaned
+up. The model appears in the editor's model list through `configSchema`.
 
 Wrappers own commit/rollback, status, failure, and claim fields. Callbacks must
 not commit, roll back, or close the session. Long work renews its lease

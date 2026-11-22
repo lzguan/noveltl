@@ -71,6 +71,7 @@ def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsO
                 rationale=draft.rationale,
                 creator_type=Creator.AGENT,
                 workspace_id=deps.mem_access_context.workspace_id,
+                recorded_on=deps.mem_access_context.chapter_content_id,
             )
         for revision in output.revise:
             target = convention_id(revision.handle)
@@ -88,6 +89,7 @@ def write_conventions_output(ctx: RunContext[MemAgentDeps], output: ConventionsO
                     only_creator=Creator.AGENT,
                     only_pending=True,
                     workspace_id=deps.mem_access_context.workspace_id,
+                    recorded_on=deps.mem_access_context.chapter_content_id,
                 )
             except ConventionNotFoundException:
                 locked.append(revision.handle)

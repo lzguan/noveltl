@@ -80,10 +80,15 @@ def create_term_translation(db: Session, ctx: MemAccessContext, term: str, trans
                 translation=translation.strip(),
                 review_status=ReviewStatus.PENDING,
                 creator_type=Creator.AGENT,
+                recorded_on=ctx.chapter_content_id,
             )
         return
     statement = insert(TermTranslationRow).values(
-        term_id=term_id, translation=translation.strip(), review_status=ReviewStatus.PENDING, creator_type=Creator.AGENT
+        term_id=term_id,
+        translation=translation.strip(),
+        review_status=ReviewStatus.PENDING,
+        creator_type=Creator.AGENT,
+        recorded_on=ctx.chapter_content_id,
     )
     db.execute(
         statement.on_conflict_do_update(
@@ -92,6 +97,7 @@ def create_term_translation(db: Session, ctx: MemAccessContext, term: str, trans
                 "translation": statement.excluded.translation,
                 "review_status": ReviewStatus.PENDING,
                 "creator_type": Creator.AGENT,
+                "recorded_on": statement.excluded.recorded_on,
                 "updated_at": func.now(),
             },
             where=TermTranslationRow.review_status == ReviewStatus.REJECTED,

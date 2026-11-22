@@ -244,7 +244,7 @@ def test_exitpoint_commits_ready_before_dispatch_and_can_retry(
 
     # Replace only the queue boundary; read the committed state in a real new session.
     class NextAction(CeleryActionCallbacks):
-        def entrypoint(self, x: UUID) -> None:
+        async def entrypoint(self, x: UUID) -> None:
             with testing_session_local() as db:
                 task = db.get(TranslationTask, x)
                 assert task is not None and task.status == State.READY

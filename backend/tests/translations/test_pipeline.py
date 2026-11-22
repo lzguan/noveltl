@@ -13,7 +13,6 @@ from src.memory.plugins.conventions.types import ConventionCategory
 from src.memory.plugins.glossary.models import GlossaryTerm
 from src.memory.plugins.translations.models import TermTranslation
 from src.memory.types import Creator, MemoryType
-from src.translations.actions import load_inputs, prune_memories, translate
 from src.translations.celery_app import app
 from src.translations.clients.batch_jobs import BatchJobComplete, BatchJobId, BatchJobPoll, BatchOutputId
 from src.translations.clients.registry import BATCH_CLIENT_FACTORIES
@@ -21,6 +20,17 @@ from src.translations.jsonl import iter_translation_records
 from src.translations.models import TranslationJobChapter, TranslationStage, TranslationTask
 from src.translations.records import ChapterRecord, MemoriesRecord, TranslationRecord
 from src.translations.schemas import TranslationJobCreate
+from src.translations.task_names import (
+    LOAD_INPUTS_LOAD,
+    PRUNE_MEMORIES_FINALIZE,
+    PRUNE_MEMORIES_POLL,
+    PRUNE_MEMORIES_PREPARE,
+    PRUNE_MEMORIES_SUBMIT,
+    TRANSLATE_FINALIZE,
+    TRANSLATE_POLL,
+    TRANSLATE_PREPARE,
+    TRANSLATE_SUBMIT,
+)
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationTaskStatus as State
 from test_support.test_data.scenarios import DatabaseScenario
@@ -151,13 +161,13 @@ def test_job_loads_prunes_and_translates_with_each_stage_carrying_the_full_state
     ]
     loader, pruning, translation, revision = _tasks(test_db, sample_scenario, stages, inputs)
 
-    load_inputs.load(loader.task_id)
-    for step in (prune_memories.prepare, prune_memories.submit, prune_memories.poll, prune_memories.finalize):
-        step(pruning.task_id)
-    for step in (translate.prepare, translate.submit, translate.poll, translate.finalize):
-        step(translation.task_id)
-    for step in (translate.prepare, translate.submit, translate.poll, translate.finalize):
-        step(revision.task_id)
+    app.tasks[LOAD_INPUTS_LOAD](loader.task_id)
+    for step in (PRUNE_MEMORIES_PREPARE, PRUNE_MEMORIES_SUBMIT, PRUNE_MEMORIES_POLL, PRUNE_MEMORIES_FINALIZE):
+        app.tasks[step](pruning.task_id)
+    for step in (TRANSLATE_PREPARE, TRANSLATE_SUBMIT, TRANSLATE_POLL, TRANSLATE_FINALIZE):
+        app.tasks[step](translation.task_id)
+    for step in (TRANSLATE_PREPARE, TRANSLATE_SUBMIT, TRANSLATE_POLL, TRANSLATE_FINALIZE):
+        app.tasks[step](revision.task_id)
 
     loaded = _output(test_db, store, loader)
     pruned = _output(test_db, store, pruning)
@@ -212,9 +222,9 @@ def test_translation_without_a_memories_stream_sends_only_the_chapter(
         test_db, sample_scenario, [{"action": "translate", "config": {"model": "qwen-plus"}}], {}
     )
 
-    load_inputs.load(loader.task_id)
-    for step in (translate.prepare, translate.submit, translate.poll, translate.finalize):
-        step(translation.task_id)
+    app.tasks[LOAD_INPUTS_LOAD](loader.task_id)
+    for step in (TRANSLATE_PREPARE, TRANSLATE_SUBMIT, TRANSLATE_POLL, TRANSLATE_FINALIZE):
+        app.tasks[step](translation.task_id)
 
     source = {record.chapter_id: record.payload for record in _output(test_db, store, loader)}
     assert {request["body"]["messages"][1]["content"] for request in client.batches[0]} == set(source.values())

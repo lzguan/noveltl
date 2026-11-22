@@ -16,8 +16,10 @@ behavior is in [memory jobs](memory-jobs.md) and
   reads, possibly selectable toolsets; keep tools pluggable rather than
   growing the context. The job form does not set `since_chapter_num` yet.
 - **Dry-run naming as input:** name first so the agent resolves observed
-  rendering variance. `term_translations` has no job provenance, so keep drafts
-  out of the table rather than persisting and clearing them. V3 params allow
+  rendering variance. `term_translations` records the chapter content it was
+  written on (`recorded_on`, see [chapter provenance](memory-jobs.md#chapter-provenance))
+  but not the job, so keep drafts out of the table rather than persisting and
+  clearing them. V3 params allow
   two naming stages in one job.
 - Flagging existing mappings that conflict with a convention is deferred.
   A free-text summary does not by itself fix retrieval or source matching; see

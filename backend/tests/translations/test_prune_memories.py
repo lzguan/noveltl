@@ -12,7 +12,6 @@ from src.files.models import StoredFile
 from src.memory.models import Memory, MemoryGroup
 from src.memory.schemas import Memory as MemorySchema
 from src.memory.types import Creator, MemoryType
-from src.translations.actions.prune_memories import finalize, poll, prepare, submit
 from src.translations.celery_app import app
 from src.translations.clients.batch_jobs import BatchJobComplete, BatchJobId, BatchJobPoll, BatchOutputId
 from src.translations.clients.registry import BATCH_CLIENT_FACTORIES
@@ -20,10 +19,22 @@ from src.translations.jsonl import encode_translation_record, iter_translation_r
 from src.translations.models import TranslationJobChapter, TranslationStage, TranslationTask
 from src.translations.records import ChapterRecord, MemoriesRecord, TranslationRecord
 from src.translations.schemas import TranslationJobCreate
+from src.translations.task_names import (
+    PRUNE_MEMORIES_FINALIZE,
+    PRUNE_MEMORIES_POLL,
+    PRUNE_MEMORIES_PREPARE,
+    PRUNE_MEMORIES_SUBMIT,
+)
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationTaskStatus as State
 from test_support.test_data.scenarios import DatabaseScenario
 from tests.files.test_access import MemoryObjectStore
+
+# The registered Celery tasks: claim, run the step, then dispatch the next one.
+prepare, submit, poll, finalize = (
+    app.tasks[name]
+    for name in (PRUNE_MEMORIES_PREPARE, PRUNE_MEMORIES_SUBMIT, PRUNE_MEMORIES_POLL, PRUNE_MEMORIES_FINALIZE)
+)
 
 
 class PruningClient:

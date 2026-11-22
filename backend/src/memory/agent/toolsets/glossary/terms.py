@@ -58,6 +58,7 @@ def add_term(ctx: RunContext[MemAgentDeps], term_name: str, term_kind: TermKind)
                 term_name,
                 term_kind,
                 workspace_id=ctx.deps.mem_access_context.workspace_id,
+                recorded_on=ctx.deps.mem_access_context.chapter_content_id,
             )
             result = f"Term {new_term.term} added successfully."
     except GlossaryTermAlreadyExistsException as exc:

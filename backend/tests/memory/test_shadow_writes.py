@@ -242,6 +242,7 @@ def test_convention_updates_and_deletions_use_drafts_and_tombstones(test_db: Ses
             only_creator=Creator.AGENT,
             only_pending=True,
             workspace_id=reads.current.workspace_id,
+            recorded_on=reads.current.chapter_content_id,
         )
     assert original.title == "Published"
     assert [

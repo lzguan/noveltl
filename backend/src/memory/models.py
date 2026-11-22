@@ -56,7 +56,7 @@ class MemoryFields:
         nullable=False,
     )
     mark: Mapped[str | None] = mapped_column(types.String, nullable=True)
-    memory_observed_in: Mapped[UUID] = mapped_column(types.UUID, nullable=False)
+    memory_observed_in: Mapped[UUID | None] = mapped_column(types.UUID, nullable=True)
     memory_start_num: Mapped[int] = mapped_column(types.Integer, nullable=False)
     memory_end_num: Mapped[int | None] = mapped_column(types.Integer, nullable=True)
     supersedes_memory_id: Mapped[UUID | None] = mapped_column(types.UUID, nullable=True)
@@ -83,7 +83,12 @@ class Memory(MemoryFields, Base):
         ForeignKeyConstraint(
             ["memory_group_id"], ["memory_groups.memory_group_id"], name="fk_memories_memory_group_id_memory_groups"
         ),
-        ForeignKeyConstraint(["memory_observed_in"], ["chapter_contents.chapter_content_id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(
+            ["memory_observed_in"],
+            ["chapter_contents.chapter_content_id"],
+            name="fk_memories_memory_observed_in_chapter_contents",
+            ondelete="SET NULL",
+        ),
         ForeignKeyConstraint(["supersedes_memory_id"], ["memories.memory_id"], ondelete="SET NULL"),
         CheckConstraint("memory_start_num < memory_end_num", name="ck_memories_start_end_num"),
         Index("ix_memories_memory_group_id_start_num", "memory_group_id", "memory_start_num"),

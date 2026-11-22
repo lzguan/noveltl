@@ -67,6 +67,12 @@ class ShadowTerm(GlossaryTermFields, ShadowRecord, Base):
 
     __table_args__ = (
         ForeignKeyConstraint(["workspace_id"], ["memory_workspaces.workspace_id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(
+            ["recorded_on"],
+            ["chapter_contents.chapter_content_id"],
+            name="fk_shadow_terms_recorded_on_chapter_contents",
+            ondelete="SET NULL",
+        ),
         ForeignKeyConstraint(["memory_group_id"], ["memory_groups.memory_group_id"], ondelete="CASCADE"),
         PrimaryKeyConstraint("workspace_id", "term_id"),
         Index(
@@ -95,6 +101,12 @@ class ShadowTermTranslation(TermTranslationFields, ShadowRecord, Base):
 
     __table_args__ = (
         ForeignKeyConstraint(["workspace_id"], ["memory_workspaces.workspace_id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(
+            ["recorded_on"],
+            ["chapter_contents.chapter_content_id"],
+            name="fk_shadow_term_translations_recorded_on_chapter_contents",
+            ondelete="SET NULL",
+        ),
         PrimaryKeyConstraint("workspace_id", "term_id"),
         CheckConstraint("char_length(btrim(translation)) > 0", name="ck_shadow_term_translations_nonblank"),
     )
@@ -105,6 +117,12 @@ class ShadowConvention(TranslationConventionFields, ShadowRecord, Base):
 
     __table_args__ = (
         ForeignKeyConstraint(["workspace_id"], ["memory_workspaces.workspace_id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(
+            ["recorded_on"],
+            ["chapter_contents.chapter_content_id"],
+            name="fk_shadow_conventions_recorded_on_chapter_contents",
+            ondelete="SET NULL",
+        ),
         ForeignKeyConstraint(["memory_group_id"], ["memory_groups.memory_group_id"], ondelete="CASCADE"),
         PrimaryKeyConstraint("workspace_id", "convention_id"),
         CheckConstraint("char_length(btrim(title)) > 0", name="ck_shadow_conventions_title_nonblank"),

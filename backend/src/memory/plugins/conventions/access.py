@@ -50,6 +50,7 @@ def create_convention(
     rationale: str | None,
     creator_type: Creator,
     workspace_id: UUID | None = None,
+    recorded_on: UUID | None = None,
 ) -> TranslationConvention | ShadowConvention:
     if workspace_id is not None:
         check_workspace(db, workspace_id, memory_group_id)
@@ -63,6 +64,7 @@ def create_convention(
             rule=rule,
             rationale=rationale,
             creator_type=creator_type,
+            recorded_on=recorded_on,
         )
     return db.execute(
         insert(TranslationConvention)
@@ -73,6 +75,7 @@ def create_convention(
             rule=rule,
             rationale=rationale,
             creator_type=creator_type,
+            recorded_on=recorded_on,
         )
         .returning(TranslationConvention)
     ).scalar_one()
@@ -107,6 +110,7 @@ def update_convention(
     rationale: str | None,
     only_creator: Creator | None = None,
     only_pending: bool = False,
+    recorded_on: UUID,
     workspace_id: UUID | None = None,
 ) -> None:
     if workspace_id is not None:
@@ -126,14 +130,29 @@ def update_convention(
         except NoResultFound as e:
             raise ConventionNotFoundException(f"Convention {convention_id} not found or not editable") from e
         stage_record(
-            db, ShadowConvention, workspace_id, original, category=category, title=title, rule=rule, rationale=rationale
+            db,
+            ShadowConvention,
+            workspace_id,
+            original,
+            category=category,
+            title=title,
+            rule=rule,
+            rationale=rationale,
+            recorded_on=recorded_on,
         )
         return
     try:
         db.execute(
             update(TranslationConvention)
             .where(*_convention_filters(memory_group_id, convention_id, only_creator, only_pending))
-            .values(category=category, title=title, rule=rule, rationale=rationale, updated_at=func.now())
+            .values(
+                category=category,
+                title=title,
+                rule=rule,
+                rationale=rationale,
+                recorded_on=recorded_on,
+                updated_at=func.now(),
+            )
             .returning(TranslationConvention.convention_id)
         ).scalar_one()
     except NoResultFound as e:

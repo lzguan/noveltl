@@ -15,7 +15,6 @@ from src.memory.models import Memory, MemoryGroup
 from src.memory.plugins.conventions.types import ConventionCategory
 from src.memory.schemas import Memory as MemorySchema
 from src.memory.types import Creator, MemoryType
-from src.translations.actions.translate import finalize, poll, prepare, submit
 from src.translations.celery_app import app
 from src.translations.clients.batch_jobs import (
     BatchJobComplete,
@@ -39,6 +38,7 @@ from src.translations.records import (
     TranslationRecord,
 )
 from src.translations.schemas import TranslationJobCreate
+from src.translations.task_names import TRANSLATE_FINALIZE, TRANSLATE_POLL, TRANSLATE_PREPARE, TRANSLATE_SUBMIT
 from src.translations.tasks.jobs import create_job
 from src.translations.types import TranslationDataKey
 from src.translations.types import TranslationTaskStatus as State
@@ -46,6 +46,10 @@ from test_support.test_data.scenarios import DatabaseScenario
 from tests.files.test_access import MemoryObjectStore
 
 LOADED_TEXT = "Loaded chapter"
+# The registered Celery tasks: claim, run the step, then dispatch the next one.
+prepare, submit, poll, finalize = (
+    app.tasks[name] for name in (TRANSLATE_PREPARE, TRANSLATE_SUBMIT, TRANSLATE_POLL, TRANSLATE_FINALIZE)
+)
 
 
 class RecordingCodec:

@@ -214,6 +214,30 @@ validate their group, source novel, or parent existence. [Schema tests](../../ba
 exercise the migration in an isolated PostgreSQL schema, including parity with
 ORM metadata, unpublished IDs, workspace isolation, constraints, and cleanup.
 
+## Chapter provenance
+
+[Migration 74a4a10cb394](../../backend/alembic/versions/74a4a10cb394_add_memory_chapter_provenance.py)
+adds a nullable `recorded_on` (foreign key to `chapter_contents.chapter_content_id`,
+`ON DELETE SET NULL`) to `glossaries`, `term_translations`, and
+`translation_conventions` and their shadows; only the published tables are
+indexed. It also makes `memories.memory_observed_in` nullable with
+`SET NULL`, so deleting a chapter unlinks memories instead of deleting them.
+
+Agent writes take the value from `MemAccessContext.chapter_content_id`
+([access.py](../../backend/src/memory/access.py)): term creation
+([terms.py](../../backend/src/memory/agent/toolsets/glossary/terms.py)),
+convention create and revise
+([conventions capability](../../backend/src/memory/agent/capabilities/conventions.py)),
+and the term-translation upsert, which overwrites it on conflict
+([translations access](../../backend/src/memory/plugins/translations/access.py)).
+Publication copies every shadow column, so the value reaches the published row.
+Later agent term edits (kind, review status) do not set it, and the human
+convention edit path builds its own update in the conventions service, so a
+human edit keeps the agent's value. Meaning: the chapter content the agent
+created the row on, or last revised it on for conventions and translations.
+No read schema exposes it yet. The user accepted this behavior (2026-11-21)
+because analysis will happen on exports in [analytics](analytics.md).
+
 ## Workspace reads
 
 `MemAccessContext.workspace_id` defaults to `None`. With no workspace, accessors

@@ -10,14 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from src.autolabels.dependencies import get_dispatcher
+from src.autolabels.dependencies import get_dispatcher, get_promotion_dispatcher
 from src.database import get_async_db, get_db
 from src.datasets import Catalog, NovelDataset, load_catalog, load_config, load_novel
 from src.filters.dependencies import get_dispatcher as get_filter_dispatcher
 from src.main import app
 from src.memory.agent.dispatch.dependencies import get_dispatcher as get_memory_agent_dispatcher
 from src.models import Base
-from test_support.autolabels import RecordingDispatcher
+from test_support.autolabels import RecordingDispatcher, RecordingPromotionDispatcher
 from test_support.filters import RecordingRunnerDispatcher
 from test_support.memory import RecordingMemoryAgentDispatcher
 
@@ -174,6 +174,11 @@ def recording_dispatcher() -> RecordingDispatcher:
 
 
 @pytest.fixture
+def recording_promotion_dispatcher() -> RecordingPromotionDispatcher:
+    return RecordingPromotionDispatcher()
+
+
+@pytest.fixture
 def recording_runner_dispatcher() -> RecordingRunnerDispatcher:
     return RecordingRunnerDispatcher()
 
@@ -188,6 +193,7 @@ def client(
     test_db: Session,
     testing_async_session_local: async_sessionmaker[AsyncSession],
     recording_dispatcher: RecordingDispatcher,
+    recording_promotion_dispatcher: RecordingPromotionDispatcher,
     recording_runner_dispatcher: RecordingRunnerDispatcher,
     recording_memory_agent_dispatcher: RecordingMemoryAgentDispatcher,
 ):
@@ -201,6 +207,7 @@ def client(
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_async_db] = override_get_async_db
     app.dependency_overrides[get_dispatcher] = lambda: recording_dispatcher
+    app.dependency_overrides[get_promotion_dispatcher] = lambda: recording_promotion_dispatcher
     app.dependency_overrides[get_filter_dispatcher] = lambda: recording_runner_dispatcher
     app.dependency_overrides[get_memory_agent_dispatcher] = lambda: recording_memory_agent_dispatcher
     with TestClient(app) as c:

@@ -110,12 +110,7 @@ services:
 
   jobs-worker:
     image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-jobs-worker:${IMAGE_TAG:-latest}
-    # Built locally: the image has no heavy dependencies and is not published until merged.
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: jobs-worker
-    pull_policy: build
+    pull_policy: always
     depends_on:
       - db
       - redis

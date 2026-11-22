@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import pytest
 from pydantic import ValidationError
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.auth.constants import UserType
@@ -187,8 +188,9 @@ def _create_advanced_query_data(db: Session) -> AdvancedQueryData:
     return AdvancedQueryData(workflow=workflow, instances=instances, groupings=groupings)
 
 
-def _create_catalog_sort_data(
+async def _create_catalog_sort_data(
     db: Session,
+    async_db: AsyncSession,
     session_factory: sessionmaker[Session],
     password_hash: PasswordHash,
     catalog: Catalog,
@@ -213,8 +215,8 @@ def _create_catalog_sort_data(
         admin,
     )
     run = db.execute(select(AutoLabelRun).where(AutoLabelRun.run_id == auto_labels[0].run_id)).scalar_one()
-    promotion = insert_label_datas_by_autolabels(
-        db,
+    promotion = await insert_label_datas_by_autolabels(
+        async_db,
         admin,
         scenario.label_groups["labels"].label_group_id,
         CreateLabelDataByAutoLabel(run_id=run.run_id),
@@ -683,15 +685,17 @@ def test_advanced_query_paginates_lexicographically_with_mixed_directions(
     ]
 
 
-def test_catalog_instances_paginate_across_all_scalar_sort_types(
+async def test_catalog_instances_paginate_across_all_scalar_sort_types(
     test_db: Session,
+    async_test_db: AsyncSession,
     testing_session_local: sessionmaker[Session],
     no_hash: PasswordHash,
     legacy_test_catalog: Catalog,
     silverleaf_test_dataset: NovelDataset,
 ) -> None:
-    data, admin = _create_catalog_sort_data(
+    data, admin = await _create_catalog_sort_data(
         test_db,
+        async_test_db,
         testing_session_local,
         no_hash,
         legacy_test_catalog,

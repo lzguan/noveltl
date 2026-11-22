@@ -12,7 +12,7 @@ from psycopg.errors import ExclusionViolation, ForeignKeyViolation, StringDataRi
 from sqlalchemy import func, insert, literal, select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.models import User
 from src.autolabels import models as autolabel_models
@@ -45,7 +45,7 @@ PROMOTION_CANDIDATE_BATCH_SIZE = 1000
 PROMOTION_LABEL_BATCH_SIZE = 1000
 
 
-def query_label_groups(db: Session, current_user: User, novel_id: uuid.UUID) -> Sequence[models.LabelGroup]:
+async def query_label_groups(db: AsyncSession, current_user: User, novel_id: uuid.UUID) -> Sequence[models.LabelGroup]:
     """
     Queries all label groups that belong to current_user.
 
@@ -56,13 +56,13 @@ def query_label_groups(db: Session, current_user: User, novel_id: uuid.UUID) -> 
     """
     q = select(models.LabelGroup).where(models.LabelGroup.novel_id == novel_id)
     q = label_group_mod_access_select(q, current_user)
-    result = db.execute(q)
+    result = await db.execute(q)
     result_rows = result.scalars().all()
     return result_rows
 
 
-def query_label_groups_with_contributor_info(
-    db: Session, current_user: User, novel_id: uuid.UUID
+async def query_label_groups_with_contributor_info(
+    db: AsyncSession, current_user: User, novel_id: uuid.UUID
 ) -> Sequence[schemas.LabelGroupWithRole]:
     """
     Queries all label groups that belong to current_user, along with the role of the user in each label group.
@@ -79,7 +79,7 @@ def query_label_groups_with_contributor_info(
         .where(models.LabelContributor.user_id == current_user.user_id)
     )
     q = label_group_mod_access_select(q, current_user)
-    result = db.execute(q)
+    result = await db.execute(q)
     result_rows = result.all()
     out: list[schemas.LabelGroupWithRole] = []
     for lg, r in result_rows:
@@ -90,7 +90,7 @@ def query_label_groups_with_contributor_info(
     return out
 
 
-def query_label_group_by_id(db: Session, current_user: User, label_group_id: uuid.UUID) -> models.LabelGroup:
+async def query_label_group_by_id(db: AsyncSession, current_user: User, label_group_id: uuid.UUID) -> models.LabelGroup:
     """
     Queries a label group with specified id.
 
@@ -105,15 +105,15 @@ def query_label_group_by_id(db: Session, current_user: User, label_group_id: uui
     q = select(models.LabelGroup).where(models.LabelGroup.label_group_id == label_group_id)
     q = label_group_mod_access_select(q, current_user)
     try:
-        result = db.execute(q)
+        result = await db.execute(q)
         result_row = result.scalar_one()
     except NoResultFound as e:
         raise LabelGroupNotFoundException from e
     return result_row
 
 
-def query_label_datas(
-    db: Session, current_user: User, label_group_id: uuid.UUID, start: int | None, end: int | None
+async def query_label_datas(
+    db: AsyncSession, current_user: User, label_group_id: uuid.UUID, start: int | None, end: int | None
 ) -> Sequence[models.LabelData]:
     """
     Query all label datas in some label_group_id with certain criteria.
@@ -147,12 +147,12 @@ def query_label_datas(
     if end is not None:
         q = q.where(novel_models.Chapter.chapter_num < end)
     q = q.order_by(novel_models.Chapter.chapter_num, novel_models.ChapterContent.chapter_content_version)
-    result = db.execute(q)
+    result = await db.execute(q)
     result_rows = result.scalars().all()
     return result_rows
 
 
-def query_label_data_by_id(db: Session, current_user: User, label_data_id: uuid.UUID) -> models.LabelData:
+async def query_label_data_by_id(db: AsyncSession, current_user: User, label_data_id: uuid.UUID) -> models.LabelData:
     """
     Query a label data by id.
 
@@ -167,14 +167,16 @@ def query_label_data_by_id(db: Session, current_user: User, label_data_id: uuid.
     q = select(models.LabelData).where(models.LabelData.label_data_id == label_data_id)
     q = label_data_mod_access_select(q, current_user)
     try:
-        result = db.execute(q)
+        result = await db.execute(q)
         label_data = result.scalar_one()
     except NoResultFound as e:
         raise LabelDataNotFoundException from e
     return label_data
 
 
-def query_labels_by_label_data_id(db: Session, current_user: User, label_data_id: uuid.UUID) -> Sequence[models.Label]:
+async def query_labels_by_label_data_id(
+    db: AsyncSession, current_user: User, label_data_id: uuid.UUID
+) -> Sequence[models.Label]:
     """
     Returns a list of all labels corresponding to a label data.
 
@@ -191,12 +193,12 @@ def query_labels_by_label_data_id(db: Session, current_user: User, label_data_id
         .order_by(models.Label.label_start)
     )
     q = label_data_mod_access_select(q, current_user)
-    result = db.execute(q)
+    result = await db.execute(q)
     result_rows = result.scalars().all()
     return result_rows
 
 
-def query_label_by_id(db: Session, current_user: User, label_id: uuid.UUID) -> models.Label:
+async def query_label_by_id(db: AsyncSession, current_user: User, label_id: uuid.UUID) -> models.Label:
     """Return an accessible label by its ID."""
     q = (
         select(models.Label)
@@ -206,13 +208,13 @@ def query_label_by_id(db: Session, current_user: User, label_id: uuid.UUID) -> m
     )
     q = label_data_mod_access_select(q, current_user)
     try:
-        return db.execute(q).scalar_one()
+        return (await db.execute(q)).scalar_one()
     except NoResultFound as e:
         raise LabelNotFoundException from e
 
 
-def query_label_contributors_of_label_group(
-    db: Session, current_user: User, label_group_id: uuid.UUID
+async def query_label_contributors_of_label_group(
+    db: AsyncSession, current_user: User, label_group_id: uuid.UUID
 ) -> Sequence[models.LabelContributor]:
     """
     Returns a list of all label contributors corresponding to a label group.
@@ -224,14 +226,16 @@ def query_label_contributors_of_label_group(
     """
     q = select(models.LabelContributor).where(models.LabelContributor.label_group_id == label_group_id)
     q = label_contributors_mod_access_select(q, current_user)
-    result = db.execute(q)
+    result = await db.execute(q)
     result_rows = result.scalars().all()
     if len(result_rows) == 0:
         raise LabelGroupNotFoundException
     return result_rows
 
 
-def insert_label_group(db: Session, current_user: User, request: schemas.CreateLabelGroup) -> models.LabelGroup:
+async def insert_label_group(
+    db: AsyncSession, current_user: User, request: schemas.CreateLabelGroup
+) -> models.LabelGroup:
     """
     Creates a label group.
 
@@ -251,7 +255,7 @@ def insert_label_group(db: Session, current_user: User, request: schemas.CreateL
 
     stmt = insert(models.LabelGroup).from_select(cols, vals).returning(models.LabelGroup)
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         label_group = result.scalar_one()
         stmt = insert(models.LabelContributor).values(
             {
@@ -260,29 +264,29 @@ def insert_label_group(db: Session, current_user: User, request: schemas.CreateL
                 "label_contributor_role": LabelRole.OWNER,
             }
         )
-        db.execute(stmt)
-        db.commit()
+        await db.execute(stmt)
+        await db.commit()
     except IntegrityError as e:
-        db.rollback()
+        await db.rollback()
         if isinstance(e.orig, ForeignKeyViolation):
             raise NovelNotFoundException from e
         raise
     except DataError as e:
-        db.rollback()
+        await db.rollback()
         if isinstance(e.orig, StringDataRightTruncation):
             raise DataTooLongException from e
         raise
     except NoResultFound as e:
-        db.rollback()
+        await db.rollback()
         raise NovelNotFoundException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return label_group
 
 
-def modify_label_group(
-    db: Session, current_user: User, label_group_id: uuid.UUID, request: schemas.UpdateLabelGroup
+async def modify_label_group(
+    db: AsyncSession, current_user: User, label_group_id: uuid.UUID, request: schemas.UpdateLabelGroup
 ) -> models.LabelGroup:
     """
     Modifies a label group with specified id.
@@ -305,25 +309,25 @@ def modify_label_group(
     )
     stmt = label_group_mod_access_update(stmt, current_user)
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         label_group = result.scalar_one()
-        db.commit()
+        await db.commit()
     except DataError as e:
-        db.rollback()
+        await db.rollback()
         if isinstance(e.orig, StringDataRightTruncation):
             raise DataTooLongException from e
         raise
     except NoResultFound as e:
-        db.rollback()
+        await db.rollback()
         raise LabelGroupNotFoundException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return label_group
 
 
-def insert_label_data(
-    db: Session, current_user: User, label_group_id: uuid.UUID, request: schemas.CreateLabelData
+async def insert_label_data(
+    db: AsyncSession, current_user: User, label_group_id: uuid.UUID, request: schemas.CreateLabelData
 ) -> models.LabelData:
     """
     Inserts a label data object into the database.
@@ -348,27 +352,27 @@ def insert_label_data(
     vals = label_data_mod_access_insert(vals, current_user, label_group_id)
     stmt = insert(models.LabelData).from_select(cols, vals).returning(models.LabelData)
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         label_data = result.scalar_one()
-        db.commit()
+        await db.commit()
     except IntegrityError as e:
-        db.rollback()
+        await db.rollback()
         if isinstance(e.orig, ForeignKeyViolation):
             raise NotFoundException("Either chapter content or label group not found.") from e
         if isinstance(e.orig, UniqueViolation):
             raise LabelDataRevisionDuplicateException from e
         raise
     except NoResultFound as e:
-        db.rollback()
+        await db.rollback()
         raise LabelGroupNotFoundException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return label_data
 
 
-def modify_label_data_by_stream(
-    db: Session, current_user: User, label_data_id: uuid.UUID, request: schemas.UpdateLabelDataStream
+async def modify_label_data_by_stream(
+    db: AsyncSession, current_user: User, label_data_id: uuid.UUID, request: schemas.UpdateLabelDataStream
 ) -> list[schemas.OpResult]:
     """
     Processes a stream of label datas
@@ -398,7 +402,7 @@ def modify_label_data_by_stream(
     )
     q = label_data_mod_access_select(q, current_user, label_edit_only=True)
     try:
-        result = db.execute(q)
+        result = await db.execute(q)
         text = result.scalar_one()
     except NoResultFound as e:
         raise LabelDataNotFoundException from e
@@ -407,16 +411,16 @@ def modify_label_data_by_stream(
     result = list()
     try:
         for op in request.ops:
-            result.append(apply_operation(db, current_user, label_data_id, text, op))
-        db.commit()
+            result.append(await apply_operation(db, current_user, label_data_id, text, op))
+        await db.commit()
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise e
     return result
 
 
-def _insert_label_datas_by_autolabels(
-    db: Session,
+async def _insert_label_datas_by_autolabels(
+    db: AsyncSession,
     label_group_id: uuid.UUID,
     autolabel_pairs: list[tuple[uuid.UUID, uuid.UUID]],
     success: list[tuple[uuid.UUID, uuid.UUID]],
@@ -452,7 +456,7 @@ def _insert_label_datas_by_autolabels(
             )
         )
     )
-    candidates = db.execute(q).all()
+    candidates = (await db.execute(q)).all()
 
     if len(candidates) != len(autolabel_pairs):
         raise RuntimeError("Autolabel promotion candidates changed during processing")
@@ -507,11 +511,11 @@ def _insert_label_datas_by_autolabels(
             )
         )
 
-    def insert_candidate_batch(
+    async def insert_candidate_batch(
         batch: list[tuple[autolabel_models.AutoLabel, novel_models.ChapterContent]],
     ) -> None:
         try:
-            with db.begin_nested():
+            async with db.begin_nested():
                 label_data_stmt = (
                     pg_insert(models.LabelData)
                     .values(
@@ -525,14 +529,16 @@ def _insert_label_datas_by_autolabels(
                     )
                     .on_conflict_do_nothing(constraint="one_label_group_per_chapter")
                 )
-                db.execute(label_data_stmt)
+                await db.execute(label_data_stmt)
                 chapter_content_ids = [autolabel.chapter_content_id for autolabel, _ in batch]
                 label_datas = {
                     chapter_content_id: label_data_id
-                    for label_data_id, chapter_content_id in db.execute(
-                        select(models.LabelData.label_data_id, models.LabelData.chapter_content_id)
-                        .where(models.LabelData.label_group_id == label_group_id)
-                        .where(models.LabelData.chapter_content_id.in_(chapter_content_ids))
+                    for label_data_id, chapter_content_id in (
+                        await db.execute(
+                            select(models.LabelData.label_data_id, models.LabelData.chapter_content_id)
+                            .where(models.LabelData.label_group_id == label_group_id)
+                            .where(models.LabelData.chapter_content_id.in_(chapter_content_ids))
+                        )
                     ).all()
                 }
                 if len(label_datas) != len(batch):
@@ -551,26 +557,26 @@ def _insert_label_datas_by_autolabels(
                     for label in autolabel.auto_label_data or []
                 )
                 for label_batch in batched(label_values, PROMOTION_LABEL_BATCH_SIZE, strict=False):
-                    db.execute(insert(models.Label), list(label_batch))
+                    await db.execute(insert(models.Label), list(label_batch))
         except (IntegrityError, DataError) as error:
             if len(batch) == 1:
                 append_database_error(*batch[0], error)
                 return
             # TODO: Consider a higher split factor to reduce repeated work when isolating rare database failures.
             midpoint = len(batch) // 2
-            insert_candidate_batch(batch[:midpoint])
-            insert_candidate_batch(batch[midpoint:])
+            await insert_candidate_batch(batch[:midpoint])
+            await insert_candidate_batch(batch[midpoint:])
             return
 
         for autolabel, chapter_content in batch:
             success.append((chapter_content.chapter_id, autolabel.chapter_content_id))
 
     if valid_candidates:
-        insert_candidate_batch(valid_candidates)
+        await insert_candidate_batch(valid_candidates)
 
 
-def insert_label_datas_by_autolabels(
-    db: Session, current_user: User, label_group_id: uuid.UUID, request: schemas.CreateLabelDataByAutoLabel
+async def insert_label_datas_by_autolabels(
+    db: AsyncSession, current_user: User, label_group_id: uuid.UUID, request: schemas.CreateLabelDataByAutoLabel
 ) -> schemas.CreateLabelDataByAutoLabelStatus:
     """
     Move matching autolabels into a label group in bounded batches.
@@ -589,7 +595,7 @@ def insert_label_datas_by_autolabels(
         current_user,
         label_edit_only=True,
     )
-    if db.execute(permission_query).scalar_one_or_none() is None:
+    if (await db.execute(permission_query)).scalar_one_or_none() is None:
         raise LabelGroupNotFoundException(f"Label group with ID {label_group_id} not found or not accessible.")
 
     q = (
@@ -631,7 +637,7 @@ def insert_label_datas_by_autolabels(
     if request.end is not None:
         q = q.where(novel_models.Chapter.chapter_num < request.end)
 
-    candidate_identifiers = db.execute(q).all()
+    candidate_identifiers = (await db.execute(q)).all()
 
     success: list[tuple[uuid.UUID, uuid.UUID]] = []
     errors: list[tuple[uuid.UUID, uuid.UUID, str]] = []
@@ -646,7 +652,7 @@ def insert_label_datas_by_autolabels(
 
     permission_q = label_data_mod_access_insert(select(literal(1)), current_user, label_group_id)
     try:
-        db.execute(permission_q).scalar_one()
+        (await db.execute(permission_q)).scalar_one()
     except NoResultFound:
         for chapter_content_id, _, auto_label_id, chapter_id in candidate_identifiers:
             errors.append(
@@ -666,7 +672,7 @@ def insert_label_datas_by_autolabels(
 
     autolabel_pairs = [(chapter_content_id, run_id) for chapter_content_id, run_id, _, _ in candidate_identifiers]
     for autolabel_batch in batched(autolabel_pairs, PROMOTION_CANDIDATE_BATCH_SIZE, strict=False):
-        _insert_label_datas_by_autolabels(
+        await _insert_label_datas_by_autolabels(
             db,
             label_group_id,
             list(autolabel_batch),
@@ -674,7 +680,7 @@ def insert_label_datas_by_autolabels(
             errors,
         )
 
-    db.commit()
+    await db.commit()
     logger.info(
         "Autolabel promotion ended %s success_count=%s error_count=%s elapsed_ms=%.2f",
         log_context,

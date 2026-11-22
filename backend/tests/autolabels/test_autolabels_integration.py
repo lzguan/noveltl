@@ -9,6 +9,7 @@ import pytest
 import redis
 from celery.contrib.testing.worker import start_worker
 from sqlalchemy import create_engine, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.autolabels.celery_app import app
@@ -84,6 +85,7 @@ class TestAutolabelEndToEnd:
         self,
         xianxia_scenario: DatabaseScenario,
         test_db: Session,
+        async_test_db: AsyncSession,
         celery_worker: None,
     ) -> None:
         novel = xianxia_scenario.novels["novel"]
@@ -132,8 +134,8 @@ class TestAutolabelEndToEnd:
 
         # 3. Promote autolabels to label data.
         promote_request = CreateLabelDataByAutoLabel(run_id=run_id)
-        promote_result = insert_label_datas_by_autolabels(
-            test_db,
+        promote_result = await insert_label_datas_by_autolabels(
+            async_test_db,
             user,
             label_group.label_group_id,
             promote_request,

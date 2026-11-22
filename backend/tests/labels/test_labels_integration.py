@@ -2,6 +2,7 @@ import logging
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.labels import models as label_models
@@ -15,10 +16,11 @@ logger = logging.getLogger(__name__)
 class TestInsertLabelDatasByAutolabels:
     """Tests for insert_label_datas_by_autolabels cross-module operation."""
 
-    def test_basic(
+    async def test_basic(
         self,
         xianxia_autolabels_scenario: DatabaseScenario,
         test_db: Session,
+        async_test_db: AsyncSession,
     ):
         run = xianxia_autolabels_scenario.autolabel_runs["cluener"]
         autolabels = xianxia_autolabels_scenario.autolabels
@@ -37,8 +39,8 @@ class TestInsertLabelDatasByAutolabels:
         test_db.commit()
         test_db.refresh(preexisting_label_data)
 
-        res = insert_label_datas_by_autolabels(
-            test_db,
+        res = await insert_label_datas_by_autolabels(
+            async_test_db,
             xianxia_autolabels_scenario.users["owner"],
             label_group.label_group_id,
             request,

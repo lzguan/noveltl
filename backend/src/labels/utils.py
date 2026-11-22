@@ -7,7 +7,7 @@ import uuid
 from psycopg.errors import ExclusionViolation
 from sqlalchemy import and_, delete, insert, literal, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.models import User
 from src.labels import models, schemas
@@ -24,8 +24,8 @@ from src.labels.permissions import label_mod_access_delete, label_mod_access_ins
 from src.labels.schemas import OpResult
 
 
-def _apply_add(
-    db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.AddLabelOp
+async def _apply_add(
+    db: AsyncSession, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.AddLabelOp
 ) -> OpResult:
     """
     Applies a label add operation to database. Does not commit. Secure operation.
@@ -65,7 +65,7 @@ def _apply_add(
     vals = label_mod_access_insert(vals, current_user, label_data_id)
     stmt = insert(models.Label).from_select(cols, vals).returning(models.Label)
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         return result.scalar_one().label_id
     except NoResultFound as e:
         raise LabelDataNotFoundException from e
@@ -77,8 +77,8 @@ def _apply_add(
         raise
 
 
-def _apply_update(
-    db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.UpdateLabelOp
+async def _apply_update(
+    db: AsyncSession, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.UpdateLabelOp
 ) -> OpResult:
     """
     Applies a label update operation to database. Does not commit. Secure operation.
@@ -98,15 +98,17 @@ def _apply_update(
         LabelConcurrentModificationException: If the label changes between the read and update.
     """
     try:
-        old_label = db.execute(
-            label_mod_access_insert(
-                select(models.Label).where(
-                    models.Label.label_id == op.label_id,
-                    models.Label.label_data_id == label_data_id,
-                ),
-                current_user,
-                label_data_id,
-            )  # kinda scuffed but ok
+        old_label = (
+            await db.execute(
+                label_mod_access_insert(
+                    select(models.Label).where(
+                        models.Label.label_id == op.label_id,
+                        models.Label.label_data_id == label_data_id,
+                    ),
+                    current_user,
+                    label_data_id,
+                )  # kinda scuffed but ok
+            )
         ).scalar_one()
     except NoResultFound as e:
         raise LabelNotExistsInvalidOperationException from e
@@ -140,7 +142,7 @@ def _apply_update(
     )
     stmt = label_mod_access_update(stmt, current_user)
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         return result.scalar_one().label_id
     except NoResultFound as e:
         raise LabelConcurrentModificationException from e
@@ -152,8 +154,8 @@ def _apply_update(
         raise
 
 
-def _apply_delete(
-    db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.DeleteLabelOp
+async def _apply_delete(
+    db: AsyncSession, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.DeleteLabelOp
 ) -> OpResult:
     """
     Applies a label delete operation. Does not commit.
@@ -178,7 +180,7 @@ def _apply_delete(
     stmt = stmt.returning(models.Label)
 
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         return result.scalar_one().label_id
     except NoResultFound as e:
         raise LabelNotExistsInvalidOperationException from e
@@ -186,8 +188,8 @@ def _apply_delete(
         raise
 
 
-def apply_operation(
-    db: Session, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.LabelOp
+async def apply_operation(
+    db: AsyncSession, current_user: User, label_data_id: uuid.UUID, text: str, op: schemas.LabelOp
 ) -> OpResult:
     """
     Applies a single label operation.
@@ -211,10 +213,10 @@ def apply_operation(
         This function acts as a wrapper for calling `_apply_(add, update, delete)`. See documentation for these functions for when the corresponding types of operations get passed into op.
     """
     if isinstance(op, schemas.AddLabelOp):
-        return _apply_add(db, current_user, label_data_id, text, op)
+        return await _apply_add(db, current_user, label_data_id, text, op)
     elif isinstance(op, schemas.UpdateLabelOp):
-        return _apply_update(db, current_user, label_data_id, text, op)
+        return await _apply_update(db, current_user, label_data_id, text, op)
     elif isinstance(op, schemas.DeleteLabelOp):
-        return _apply_delete(db, current_user, label_data_id, text, op)
+        return await _apply_delete(db, current_user, label_data_id, text, op)
     else:
         raise LabelInvalidOperationException("Unknown operation type.")

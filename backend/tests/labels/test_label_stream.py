@@ -168,18 +168,18 @@ def test_delete_targets_label_id(
 ) -> None:
     actor = label_access_scenario.users["owner"]
     label_data = label_access_scenario.label_datas["owner_only_data"]
-    label = label_access_scenario.labels["owner_test"]
+    label_id = label_access_scenario.labels["owner_test"].label_id
 
     response = _patch_labels(
         client,
         actor,
         label_data,
-        [{"op": "delete", "labelId": str(label.label_id)}],
+        [{"op": "delete", "labelId": str(label_id)}],
     )
 
     assert response.status_code == status.HTTP_200_OK
     test_db.expire_all()
-    assert test_db.get(Label, label.label_id) is None
+    assert test_db.get(Label, label_id) is None
 
 
 def test_viewer_cannot_update_label(

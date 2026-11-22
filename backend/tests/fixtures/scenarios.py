@@ -6,6 +6,7 @@ from collections.abc import Sequence
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.auth.constants import UserType
@@ -457,13 +458,14 @@ def scifi_autolabels_scenario(
 
 
 @pytest.fixture
-def xianxia_labels_scenario(
+async def xianxia_labels_scenario(
     xianxia_autolabels_scenario: DatabaseScenario,
     test_db: Session,
+    async_test_db: AsyncSession,
 ) -> DatabaseScenario:
     scenario = xianxia_autolabels_scenario
-    result = insert_label_datas_by_autolabels(
-        test_db,
+    result = await insert_label_datas_by_autolabels(
+        async_test_db,
         scenario.users["owner"],
         scenario.label_groups["labels"].label_group_id,
         CreateLabelDataByAutoLabel(run_id=scenario.autolabel_runs["cluener"].run_id),

@@ -71,7 +71,11 @@ Agreed next:
   `novelDataManager` operation looping `chaptersIndex` and calling
   `reloadGroup`); keep the workspace lock for now. Later, consider moving run
   listing and creation out of the controller too, keeping the preview there.
-- Later: a sweeper for stale `pending` jobs and expired leases.
+- Before deployment, add a sweeper that redispatches stale pending promotions
+  and jobs with expired claims. Recovery uses the original job ID and works
+  after the client disconnects. Keep the active-job conflict on repeat POSTs.
+  Cover a failed initial enqueue followed by one sweep, plus duplicate delivery
+  with a single set of persisted labels.
 - Later (user request, 2026-11-22): a per-job promotion mode. Today only chapters
   without label data in the group are filled; chapters that already have one fail
   with "already has label data". Wanted options include inserting into existing

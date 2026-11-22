@@ -149,3 +149,32 @@ class CreateLabelDataByAutoLabelStatus(Model):
 
     success: list[tuple[uuid.UUID, uuid.UUID]]
     errors: list[tuple[uuid.UUID, uuid.UUID, str]]
+
+
+class CreatedLabelPromotion(Model):
+    promotion_id: uuid.UUID
+    item_count: int
+
+
+class LabelPromotionCounts(Model):
+    total: int
+    done: int
+    failed: int
+    pending: int
+
+
+class LabelPromotionFailure(Model):
+    chapter_id: uuid.UUID
+    chapter_num: int
+    message: str
+
+
+class LabelPromotionJob(Model):
+    promotion_id: uuid.UUID
+    run_id: uuid.UUID
+    label_group_id: uuid.UUID
+    status: AutoLabelProgress
+    message: str | None
+    counts: LabelPromotionCounts
+    created_at: datetime
+    updated_at: datetime

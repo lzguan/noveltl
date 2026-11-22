@@ -25,6 +25,10 @@ class AutoLabelNotFoundException(NotFoundException):
     pass
 
 
+class PromotionAlreadyActiveException(DuplicateException):
+    pass
+
+
 class AutoLabelDuplicateException(DuplicateException):
     pass
 

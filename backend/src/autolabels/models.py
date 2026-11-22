@@ -115,9 +115,6 @@ class LabelPromotionJob(Base):
         run_id: Autolabel run being promoted.
         label_group_id: Label group receiving the labels.
         requested_by: User who requested the promotion. Null if that user was deleted.
-        start_chapter: Filter the job was requested with: least chapter number to include.
-        end_chapter: Filter the job was requested with: greatest chapter number to include.
-        chapter_ids: Filter the job was requested with: chapters to include, as a JSON list of UUIDs.
         status: Job status: pending, processing, done or failed.
         message: Reason the whole job failed. Nullable.
         claim_token: Token of the worker currently holding the job. Null when unclaimed.
@@ -143,9 +140,6 @@ class LabelPromotionJob(Base):
         ForeignKey("users.user_id", name="fk_label_promotion_jobs_requested_by_users", ondelete="SET NULL"),
         nullable=True,
     )
-    start_chapter: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    end_chapter: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    chapter_ids: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     status: Mapped[AutoLabelProgress] = mapped_column(
         Enum(
             AutoLabelProgress,

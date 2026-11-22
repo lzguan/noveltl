@@ -7,7 +7,6 @@ Create Date: 2026-11-22 08:17:54.169529+00:00
 """
 
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -26,9 +25,6 @@ def upgrade():
         sa.Column("run_id", sa.UUID(), nullable=False),
         sa.Column("label_group_id", sa.UUID(), nullable=False),
         sa.Column("requested_by", sa.UUID(), nullable=True),
-        sa.Column("start_chapter", sa.Integer(), nullable=True),
-        sa.Column("end_chapter", sa.Integer(), nullable=True),
-        sa.Column("chapter_ids", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column(
             "status",
             sa.Enum("failed", "pending", "processing", "done", name="label_promotion_job_status", native_enum=False),

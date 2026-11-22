@@ -140,12 +140,6 @@ export type NovelUserEvent =
 			eventType: "loadAutoLabelData";
 			autoLabelId: AProvId;
 			flags?: { now: boolean; forPreview: boolean };
-	  }
-	| {
-			eventType: "promoteAutoLabelRun";
-			runId: ALRProvId;
-			chapterFilter: ChapterFilter;
-			labelGroupId: LGProvId;
 	  };
 
 /**
@@ -201,28 +195,6 @@ export type TriggerEvent =
 			eventType: "autoLabelRunCreated";
 			run: ProvAutoLabelRun;
 			autoLabels: Omit<ProvAutoLabel, "autoLabelData">[];
-	  }
-	| {
-			eventType: "autoLabelRunPromotionFinished";
-			runId: ALRProvId;
-			outcome: "success";
-			labelGroupId: LGProvId;
-			chapterFilter: ChapterFilter;
-			success: readonly {
-				chapterId: CProvId;
-				chapterContentId: CCProvId;
-			}[];
-			errors: readonly {
-				chapterId: CProvId;
-				chapterContentId: CCProvId;
-				error: string;
-			}[];
-	  }
-	| {
-			eventType: "autoLabelRunPromotionFinished";
-			runId: ALRProvId;
-			outcome: "failure";
-			error: Error;
 	  }
 	| { eventType: "autoLabelRunsRefreshed" }
 	| { eventType: "autoLabelRunReloaded"; runId: ALRProvId }

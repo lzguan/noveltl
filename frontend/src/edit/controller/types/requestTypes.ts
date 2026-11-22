@@ -24,8 +24,7 @@ export type RequestVariant =
 	| "createAutoLabelRun"
 	| "refreshAutoLabelRuns"
 	| "reloadAutoLabelRun"
-	| "loadAutoLabelData"
-	| "promoteAutoLabelRun";
+	| "loadAutoLabelData";
 
 /**
  * Type representing a desired reservation of a state transition for a given id and kind.

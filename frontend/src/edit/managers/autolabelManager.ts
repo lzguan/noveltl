@@ -1,7 +1,7 @@
 import type { RefObject } from "react";
 import { Effect } from "effect";
 import { UnknownError } from "effect/Cause";
-import type { ALRProvId, CCProvId, CProvId, LGProvId } from "../controller/types/idTypes";
+import type { ALRProvId, CCProvId, CProvId } from "../controller/types/idTypes";
 import type { AutoLabelRunGetterSlot } from "../controller/types/helperTypes";
 import { Prov } from "../controller/types/helperTypes";
 import type {
@@ -19,21 +19,14 @@ import type {
 } from "../hooks/useAutoLabelState";
 import type { EditorData } from "../hooks/useEditorState";
 import type { useAutoLabelPreview } from "../hooks/useAutoLabelPreview";
-import type {
-	AcquireWorkspaceLock,
-	ReleaseWorkspaceLock,
-	WorkspaceLockToken,
-} from "../hooks/useWorkspaceLock";
-import type { EditorMode } from "./editorManager";
 import { labelsToUtf16 } from "../utils/textPositions";
 
-/** Coordinates autolabel run state, preview reconciliation, and promotion. */
+/** Coordinates autolabel run state and preview reconciliation. */
 export type AutoLabelUserEventHandlers = {
 	createRun(params: CluenerParams | DoNothingParams, filter: ChapterFilter): void;
 	selectRun(runId: ALRProvId): void;
 	deselectRun(): void;
 	setPreviewEnabled(enabled: boolean): void;
-	promote(runId: ALRProvId, labelGroupId: LGProvId, filter: ChapterFilter): void;
 	refreshAllRuns(): void;
 	reloadRun(runId: ALRProvId): void;
 };
@@ -85,43 +78,14 @@ export function createAutoLabelManager({
 	autoLabels,
 	autoLabelPreview,
 	dataRef,
-	modeRef,
-	setMode,
-	acquireLock,
-	releaseLock,
 }: {
 	controllerUserEvent(event: NovelUserEvent): void;
 	controllerGetters: NovelGetters;
 	autoLabels: ReturnType<typeof useAutoLabelState>;
 	autoLabelPreview: ReturnType<typeof useAutoLabelPreview>;
 	dataRef: RefObject<EditorData>;
-	modeRef: RefObject<EditorMode>;
-	setMode(mode: EditorMode): void;
-	acquireLock: AcquireWorkspaceLock;
-	releaseLock: ReleaseWorkspaceLock;
 }): AutoLabelManager {
-	let modeBeforePromotion: EditorMode | null = null;
-	let promotionLockToken: WorkspaceLockToken | null = null;
-	let promotingRunId: ALRProvId | null = null;
 	const invalidatedContentIds = new Map<CProvId, CCProvId>();
-
-	function releasePromotionLock(): void {
-		if (promotionLockToken === null) return;
-		const token = promotionLockToken;
-		promotionLockToken = null;
-		releaseLock(token);
-	}
-
-	function finishPromotion(runId: ALRProvId): void {
-		if (promotingRunId !== runId) return;
-		promotingRunId = null;
-		autoLabels.setPromoting(false);
-		releasePromotionLock();
-		if (modeBeforePromotion !== null) {
-			setMode(modeBeforePromotion);
-			modeBeforePromotion = null;
-		}
-	}
 
 	function currentChapterId(): CProvId | null {
 		const data = dataRef.current;
@@ -311,11 +275,6 @@ export function createAutoLabelManager({
 					break;
 				}
 
-				case "autoLabelRunPromotionFinished": {
-					finishPromotion(event.runId);
-					break;
-				}
-
 				case "chapterOpened": {
 					if (!event.flags.forEditor) break;
 					yield* refreshSelectedRunAndMatches(getters);
@@ -399,31 +358,6 @@ export function createAutoLabelManager({
 		setPreviewEnabled(enabled) {
 			autoLabelPreview.setEnabled(enabled);
 			if (enabled) syncPreviewNow();
-		},
-		promote(runId, labelGroupId, filter) {
-			const token = acquireLock("Promoting auto labels...");
-			if (token === null) return;
-			promotionLockToken = token;
-			promotingRunId = runId;
-			modeBeforePromotion = modeRef.current;
-
-			try {
-				autoLabels.setPromoting(true);
-				setMode("view");
-				controllerUserEvent({
-					eventType: "promoteAutoLabelRun",
-					runId,
-					labelGroupId,
-					chapterFilter: filter,
-				});
-			} catch (error) {
-				promotingRunId = null;
-				autoLabels.setPromoting(false);
-				releasePromotionLock();
-				if (modeBeforePromotion !== null) setMode(modeBeforePromotion);
-				modeBeforePromotion = null;
-				throw error;
-			}
 		},
 		refreshAllRuns() {
 			autoLabels.setRefreshing(true);

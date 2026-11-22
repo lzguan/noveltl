@@ -17,7 +17,6 @@ import { useChapters } from "../hooks/useChapters";
 import { useTrackedLabelGroups } from "../hooks/useTrackedLabelGroups";
 import { useAutoLabelState } from "../hooks/useAutoLabelState";
 import { useAutoLabelPreview } from "../hooks/useAutoLabelPreview";
-import { useWorkspaceLock } from "../hooks/useWorkspaceLock";
 import { createChapterManager } from "../managers/chapterManager";
 import { createLabelGroupManager } from "../managers/labelGroupManager";
 import { createEditorManager } from "../managers/editorManager";
@@ -32,7 +31,6 @@ import { TranslationsPanel } from "../panels/translations/TranslationsPanel";
 import { RightPanel } from "../panels/RightPanel";
 import { ToolbarPanel } from "../panels/ToolbarPanel";
 import type { Role } from "@/api/models/role";
-import { LoaderCircle } from "lucide-react";
 import { ChapterTabs } from "../panels/chapters/ChapterTabs";
 import { FiltersPanel } from "../panels/filters/FiltersPanel";
 import type { GotoText } from "../panels/termSearch/TermSearchPanel";
@@ -64,7 +62,6 @@ export function EditNovelPage() {
 	const trackedLabelGroups = useTrackedLabelGroups();
 	const autoLabels = useAutoLabelState();
 	const autoLabelPreview = useAutoLabelPreview();
-	const { workspaceLock, acquireLock, releaseLock } = useWorkspaceLock();
 
 	const [managers, setManagers] = useState<{
 		chapterMgr: ReturnType<typeof createChapterManager>;
@@ -188,10 +185,6 @@ export function EditNovelPage() {
 			autoLabels,
 			autoLabelPreview,
 			dataRef: editorState.dataRef,
-			modeRef: editorState.modeRef,
-			setMode: editorState.setMode,
-			acquireLock,
-			releaseLock,
 		});
 
 		ctrl.subscribe(chapterMgr.handleControllerEvent);
@@ -304,7 +297,7 @@ export function EditNovelPage() {
 
 	return (
 		<div className="relative h-full min-h-0">
-			<div className="flex h-full min-h-0 flex-col" inert={workspaceLock !== null}>
+			<div className="flex h-full min-h-0 flex-col">
 				<ToolbarPanel
 					mode={editorState.mode}
 					loading={!editorState.data.empty && editorState.data.loading}
@@ -431,18 +424,6 @@ export function EditNovelPage() {
 					</div>
 				</div>
 			</div>
-			{workspaceLock !== null && (
-				<div className="absolute inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-[1px]">
-					<div
-						role="status"
-						aria-live="polite"
-						className="flex items-center gap-2 rounded-md border bg-background px-4 py-3 text-sm shadow-lg"
-					>
-						<LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-						<span>{workspaceLock.message}</span>
-					</div>
-				</div>
-			)}
 		</div>
 	);
 }

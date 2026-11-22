@@ -176,16 +176,6 @@ export const buildController = (
 						);
 						break;
 					}
-					case "promoteAutoLabelRun": {
-						yield* dispatch(
-							novelDM.promoteAutoLabelRun(
-								event.runId,
-								event.labelGroupId,
-								event.chapterFilter,
-							),
-						);
-						break;
-					}
 					case "refreshAutoLabelRuns": {
 						yield* dispatch(novelDM.refreshAutoLabelRuns(event.flags));
 						break;

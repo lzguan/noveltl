@@ -748,7 +748,6 @@ export const buildNovelDataManager = (
 			flush,
 			getChapterDM,
 			createAutoLabelRun: autolabelDM.createAutoLabelRun,
-			promoteAutoLabelRun: autolabelDM.promoteAutoLabelRun,
 			refreshAutoLabelRuns: autolabelDM.refreshAutoLabelRuns,
 			reloadAutoLabelRun: autolabelDM.reloadAutoLabelRun,
 			loadAutoLabelData: autolabelDM.loadAutoLabelData,

@@ -108,15 +108,6 @@ export type NovelDataManager = DataManager<
 			chapterFilter: ChapterFilter,
 		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
 		/**
-		 * Promotes autolabel results from a run into a label group.
-		 * Locks both the run and the label group to prevent concurrent modification.
-		 */
-		promoteAutoLabelRun: (
-			runId: ALRProvId,
-			labelGroupId: LGProvId,
-			chapterFilter: ChapterFilter,
-		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
-		/**
 		 * Reloads the autolabel run list from the server and replaces the local index.
 		 */
 		refreshAutoLabelRuns: (flags?: {
@@ -162,11 +153,6 @@ export type AutolabelDataManager = DataManager<
 	{
 		createAutoLabelRun: (
 			params: CluenerParams | DoNothingParams,
-			chapterFilter: ChapterFilter,
-		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
-		promoteAutoLabelRun: (
-			runId: ALRProvId,
-			labelGroupId: LGProvId,
 			chapterFilter: ChapterFilter,
 		) => Effect.Effect<RequestEvent[], UnknownError | FatalException>;
 		refreshAutoLabelRuns: (flags?: {

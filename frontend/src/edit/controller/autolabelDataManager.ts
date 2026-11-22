@@ -23,7 +23,6 @@ import {
 	CProvId,
 	CServId,
 	type IDRepository,
-	LGProvId,
 	type ProvAutoLabel,
 	type ProvAutoLabelRun,
 } from "./types/idTypes";
@@ -42,14 +41,12 @@ import {
 } from "./types/helperTypes";
 import {
 	CreateAutolabelsAutoLabelsPost200Response,
-	CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost200Response,
 	ReadAutoLabelRunsAutoLabelRunsGet200Response,
 	ReadAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet200Response,
 	ReadAutolabelByIdAutoLabelsAutoLabelIdGet200Response,
 } from "@/api/endpoints/default/default.effect";
 import {
 	createAutolabelsAutoLabelsPost,
-	createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost,
 	readAutoLabelRunsAutoLabelRunsGet,
 	readAutoLabelsByRunAutoLabelRunsRunIdAutoLabelsGet,
 	readAutolabelByIdAutoLabelsAutoLabelIdGet,
@@ -360,214 +357,6 @@ export const buildAutolabelDataManager = (
 					},
 				];
 			});
-
-		const _promoteAutoLabelRun = (
-			runId: ALRProvId,
-			labelGroupId: LGProvId,
-			chapterFilter: ChapterFilter,
-		): Effect.Effect<RequestEvent[], UnknownError | FatalException> => {
-			const promotionFailed = (error: Error): Effect.Effect<void> =>
-				raiseTriggerEvent({
-					eventType: "autoLabelRunPromotionFinished",
-					runId,
-					outcome: "failure",
-					error,
-				});
-			const buildRequests = (): RequestEvent[] => {
-				const reserveList = (): ReserveList => ({
-					autoLabelRun: [{ id: runId, kind: "autoLabelRun", desiredState: "locked" }],
-					labelGroup: [
-						{ id: labelGroupId, kind: "labelGroup", desiredState: "updating" },
-					],
-					autoLabel: [],
-					label: [],
-					chapter: [],
-					chapterContent: Effect.runSync(resolveChapterContentIds(chapterFilter)).map(
-						(id) => ({
-							id,
-							kind: "chapterContent",
-							desiredState: "locked",
-						}),
-					),
-					labelData: [],
-				});
-
-				return [
-					{
-						cached: true,
-						variant: "promoteAutoLabelRun",
-						active: true,
-						retries: 3,
-						reservationRequest: {
-							reserveList: IdempotentCallable(reserveList),
-							skip: () => false,
-							wait: () =>
-								isAllReserveable(idRepo, reserveList()).pipe(
-									Effect.map((ready) => !ready),
-								),
-						},
-						onFailure: () =>
-							promotionFailed(
-								new Error("Promotion failed after exhausting request retries."),
-							),
-						onFatalError: promotionFailed,
-						preSend: () => Effect.succeed(void 0),
-						send: (requestKey) =>
-							Effect.gen(function* () {
-								const servRunId = yield* idRepo
-									.getServerId({ kind: "autoLabelRun", provId: runId })
-									.pipe(
-										Effect.mapError((err) => new FatalException({ orig: err })),
-									);
-								const servLabelGroupId = yield* idRepo
-									.getServerId({ kind: "labelGroup", provId: labelGroupId })
-									.pipe(
-										Effect.mapError((err) => new FatalException({ orig: err })),
-									);
-								if (!servRunId || !servLabelGroupId) {
-									return yield* Effect.fail(
-										new FatalException({
-											orig: new Error("Missing server IDs for promote"),
-										}),
-									);
-								}
-								const resp = yield* Effect.tryPromise(() =>
-									createLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost(
-										servLabelGroupId,
-										{
-											runId: servRunId,
-											start: chapterFilter.start ?? null,
-											end: chapterFilter.end ?? null,
-											chapterIds: null,
-										},
-										{ requestKey },
-									),
-								).pipe(
-									Effect.mapError(
-										(err) => new ConnectionException({ orig: err }),
-									),
-								);
-								if (resp.status === 409 && resp.data.detail.cacheConflict) {
-									return yield* Effect.fail(
-										new CacheConflictException({ requestKey }),
-									);
-								}
-								if (resp.status !== 200) {
-									return yield* Effect.fail(
-										new FatalException({
-											orig: new Error(
-												`Promote autolabels failed: ${resp.status}`,
-											),
-										}),
-									);
-								}
-								return resp.data;
-							}),
-						postSend: (data) =>
-							Effect.gen(function* () {
-								const validated = yield* Schema.decodeUnknownEffect(
-									CreateLabelDatasByAutoLabelsLabelGroupsLabelGroupIdLabelDatasAutoLabelsPost200Response,
-								)(data).pipe(
-									Effect.mapError((err) => new FatalException({ orig: err })),
-								);
-
-								const successEntries: {
-									chapterId: CProvId;
-									chapterContentId: CCProvId;
-								}[] = [];
-								for (const [servChapterId, servContentId] of validated.success) {
-									const chProvId = yield* idRepo
-										.newIdAndBindId({
-											kind: "chapter",
-											servId: CServId(servChapterId),
-										})
-										.pipe(
-											Effect.mapError(
-												(err) => new FatalException({ orig: err }),
-											),
-										);
-									const ccProvId = yield* idRepo
-										.newIdAndBindId({
-											kind: "chapterContent",
-											servId: CCServId(servContentId),
-										})
-										.pipe(
-											Effect.mapError(
-												(err) => new FatalException({ orig: err }),
-											),
-										);
-									successEntries.push({
-										chapterId: chProvId,
-										chapterContentId: ccProvId,
-									});
-								}
-
-								const errorEntries: {
-									chapterId: CProvId;
-									chapterContentId: CCProvId;
-									error: string;
-								}[] = [];
-								for (const [
-									servChapterId,
-									servContentId,
-									error,
-								] of validated.errors) {
-									const chProvId = yield* idRepo
-										.newIdAndBindId({
-											kind: "chapter",
-											servId: CServId(servChapterId),
-										})
-										.pipe(
-											Effect.mapError(
-												(err) => new FatalException({ orig: err }),
-											),
-										);
-									const ccProvId = yield* idRepo
-										.newIdAndBindId({
-											kind: "chapterContent",
-											servId: CCServId(servContentId),
-										})
-										.pipe(
-											Effect.mapError(
-												(err) => new FatalException({ orig: err }),
-											),
-										);
-									if (!chProvId || !ccProvId) {
-										yield* raiseTriggerEvent({
-											eventType: "errorOccured",
-											from: "dataManager",
-											error: new Error(
-												`Failed to bind chapter ${servChapterId} or chapter content ${servContentId} in ID repo during promotion error handling.`,
-											),
-										});
-										continue;
-									}
-									errorEntries.push({
-										chapterId: chProvId,
-										chapterContentId: ccProvId,
-										error,
-									});
-								}
-
-								yield* raiseTriggerEvent({
-									eventType: "autoLabelRunPromotionFinished",
-									runId,
-									outcome: "success",
-									labelGroupId,
-									chapterFilter,
-									success: successEntries,
-									errors: errorEntries,
-								});
-							}).pipe(Effect.mapError((err) => new FatalException({ orig: err }))),
-					},
-				];
-			};
-
-			return Effect.try({
-				try: buildRequests,
-				catch: (error) => new UnknownError({ orig: error }),
-			}).pipe(Effect.tapError(promotionFailed));
-		};
 
 		const _refreshAutoLabelRuns = (): Effect.Effect<
 			RequestEvent[],
@@ -1117,7 +906,6 @@ export const buildAutolabelDataManager = (
 
 		return {
 			createAutoLabelRun: decorate(_createAutoLabelRun),
-			promoteAutoLabelRun: decorate(_promoteAutoLabelRun),
 			refreshAutoLabelRuns,
 			reloadAutoLabelRun,
 			loadAutoLabelData,

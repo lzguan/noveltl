@@ -149,7 +149,7 @@ export default function ChapterPage({ loaderData }: Route.ComponentProps) {
 	return (
 		<>
 			<SiteHeader />
-			<main className="mx-auto max-w-[42rem] px-4 py-5">
+			<main className="mx-auto max-w-2xl px-4 py-5">
 				<ChapterNav prev={prev} next={next} contentsHref={contentsHref} />
 				<header className="mt-6 mb-6 text-center">
 					<Link

@@ -50,6 +50,10 @@ jobs:
             context: ./backend
             file: ./backend/Dockerfile
             target: backend
+          - image: noveltl-reader-dev
+            context: ./reader
+            file: ./reader/Dockerfile
+            target: base
 
     steps:
       - name: Checkout repository

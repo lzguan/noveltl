@@ -43,7 +43,7 @@ chapter, about 10 s for 1,900 chapters in one request, event-loop stalls up to
 about 1 s; no regression from the async/psycopg 3 change versus `master`.
 
 Done (uncommitted): promotion code, its schemas, and its endpoint moved from
-`labels` to `src/autolabels/promotions/service.py` (pure move; OpenAPI unchanged), so
+`labels` to `src/autolabels/promotions/processing.py` (pure move; OpenAPI unchanged), so
 `labels` no longer imports `autolabels`. Model and migration
 `4ea4c662b46f`: `label_promotion_jobs` (run, group, requester, requested filter,
 status, message, claim token and lease; partial unique index on one active job
@@ -72,6 +72,12 @@ Agreed next:
   `reloadGroup`); keep the workspace lock for now. Later, consider moving run
   listing and creation out of the controller too, keeping the preview there.
 - Later: a sweeper for stale `pending` jobs and expired leases.
+- Later (user request, 2026-11-22): a per-job promotion mode. Today only chapters
+  without label data in the group are filled; chapters that already have one fail
+  with "already has label data". Wanted options include inserting into existing
+  label datas without overwriting existing labels, and inserting eagerly. A
+  `mode` column on `label_promotion_jobs` defaulting to today's behaviour would
+  carry it; only the insert statement's choice of label datas and spans changes.
 
 ## 3. Label permission refactor
 

@@ -17,7 +17,7 @@ from src.autolabels.inference.celery_app import app
 from src.autolabels.inference.dispatch.celery_dispatcher import CeleryDispatcher
 from src.autolabels.models import AutoLabel
 from src.autolabels.params import CluenerParams
-from src.autolabels.promotions.service import insert_label_datas_by_autolabels
+from src.autolabels.promotions.processing import insert_label_datas_by_autolabels
 from src.autolabels.schemas import CreateAutoLabels, CreateLabelDataByAutoLabel
 from src.autolabels.service import insert_auto_labels
 from src.labels import models as label_models

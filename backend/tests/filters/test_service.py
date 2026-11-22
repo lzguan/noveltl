@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from src.auth.constants import UserType
 from src.auth.models import User
 from src.autolabels.models import AutoLabelRun
-from src.autolabels.promotions.service import insert_label_datas_by_autolabels
+from src.autolabels.promotions.processing import insert_label_datas_by_autolabels
 from src.autolabels.schemas import CreateLabelDataByAutoLabel
 from src.datasets import Catalog, NovelDataset, load_config
 from src.datasets.materializer import materialize_latest_autolabels

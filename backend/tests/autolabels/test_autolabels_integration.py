@@ -17,11 +17,10 @@ from src.autolabels.constants import AutoLabelProgress
 from src.autolabels.dispatch.celery_dispatcher import CeleryDispatcher
 from src.autolabels.models import AutoLabel
 from src.autolabels.params import CluenerParams
-from src.autolabels.schemas import CreateAutoLabels
+from src.autolabels.promotion import insert_label_datas_by_autolabels
+from src.autolabels.schemas import CreateAutoLabels, CreateLabelDataByAutoLabel
 from src.autolabels.service import insert_auto_labels
 from src.labels import models as label_models
-from src.labels.schemas import CreateLabelDataByAutoLabel
-from src.labels.service import insert_label_datas_by_autolabels
 from test_support.autolabels import DeterministicNERModel
 from test_support.test_data.scenarios import DatabaseScenario
 

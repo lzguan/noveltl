@@ -22,8 +22,6 @@ from src.labels.exceptions import (
 )
 from src.labels.schemas import (
     CreateLabelData,
-    CreateLabelDataByAutoLabel,
-    CreateLabelDataByAutoLabelStatus,
     CreateLabelGroup,
     Label,
     LabelContributor,
@@ -36,7 +34,6 @@ from src.labels.schemas import (
 )
 from src.labels.service import (
     insert_label_data,
-    insert_label_datas_by_autolabels,
     insert_label_group,
     modify_label_data_by_stream,
     modify_label_group,
@@ -350,38 +347,3 @@ async def update_label_data_stream(
         ) from e
     except LabelInvalidOperationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e) or "Invalid operation.") from e
-
-
-@router.post(
-    "/label-groups/{labelGroupId}/label-datas/auto-labels",
-    response_model=CreateLabelDataByAutoLabelStatus,
-    responses={
-        404: {"model": DetailHTTPErrorResponse, "description": "Label group not found."},
-        409: {
-            "model": RequestConflictErrorResponse,
-            "description": "Request key conflict.",
-        },
-    },
-)
-@attl_cache(
-    ttl=3600,
-    cache=redis_cache,
-    serialize_ret=serialize_response_model(CreateLabelDataByAutoLabelStatus),
-)
-async def create_label_datas_by_auto_labels(
-    label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
-    request: CreateLabelDataByAutoLabel,
-    db: Annotated[AsyncSession, Depends(get_async_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
-    request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
-):
-    """
-    Creates label datas and populates labels from autolabel results.
-    """
-    try:
-        return await insert_label_datas_by_autolabels(db, current_user, label_group_id, request)
-    except LabelGroupNotFoundException as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Label group {label_group_id} not found or not accessible.",
-        ) from e

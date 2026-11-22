@@ -3844,6 +3844,8 @@ export const CreateChapterNovelsNovelIdChaptersPost422Response = S.Struct({
 
 /**
  * List a novel's label promotion jobs: active ones first, then the most recently updated.
+ *
+ * With `promotionIds`, return only those jobs; ids that are missing or not readable are omitted.
  * @summary Read Label Promotions
  */
 export const ReadLabelPromotionsNovelsNovelIdLabelPromotionsGetParams = S.Struct({
@@ -3853,10 +3855,13 @@ export const ReadLabelPromotionsNovelsNovelIdLabelPromotionsGetParams = S.Struct
 export const readLabelPromotionsNovelsNovelIdLabelPromotionsGetQueryLimitDefault = 10;
 export const readLabelPromotionsNovelsNovelIdLabelPromotionsGetQueryLimitMax = 50;
 
+export const readLabelPromotionsNovelsNovelIdLabelPromotionsGetQueryPromotionIdsOneMax = 10;
+
 
 
 export const ReadLabelPromotionsNovelsNovelIdLabelPromotionsGetQueryParams = S.Struct({
-  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readLabelPromotionsNovelsNovelIdLabelPromotionsGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readLabelPromotionsNovelsNovelIdLabelPromotionsGetQueryLimitDefault)))
+  "limit": S.Number.check(S.isGreaterThanOrEqualTo(1), S.isLessThanOrEqualTo(readLabelPromotionsNovelsNovelIdLabelPromotionsGetQueryLimitMax)).pipe(S.withDecodingDefaultType(Effect.succeed(readLabelPromotionsNovelsNovelIdLabelPromotionsGetQueryLimitDefault))),
+  "promotionIds": S.optional(S.Union([S.Array(S.String.check(S.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/))).check(S.isMinLength(1), S.isMaxLength(readLabelPromotionsNovelsNovelIdLabelPromotionsGetQueryPromotionIdsOneMax)), S.Null]))
 })
 
 export const ReadLabelPromotionsNovelsNovelIdLabelPromotionsGet200ResponseItem = S.Struct({

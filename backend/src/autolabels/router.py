@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
+from src.autolabels.constants import MAX_POLLED_PROMOTIONS
 from src.autolabels.dependencies import get_dispatcher, get_promotion_dispatcher
 from src.autolabels.exceptions import (
     AutoLabelDuplicateException,
@@ -221,11 +222,16 @@ async def read_label_promotions(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     limit: Annotated[int, Query(ge=1, le=50)] = 10,
+    promotion_ids: Annotated[
+        list[uuid.UUID] | None, Query(alias="promotionIds", min_length=1, max_length=MAX_POLLED_PROMOTIONS)
+    ] = None,
 ):
     """
     List a novel's label promotion jobs: active ones first, then the most recently updated.
+
+    With `promotionIds`, return only those jobs; ids that are missing or not readable are omitted.
     """
-    return await query_promotion_jobs(db, current_user, novel_id, limit)
+    return await query_promotion_jobs(db, current_user, novel_id, limit, promotion_ids)
 
 
 @router.get("/label-promotions/{promotionId}/failures", response_model=list[LabelPromotionFailure])

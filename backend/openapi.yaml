@@ -9027,7 +9027,11 @@ paths:
   /novels/{novelId}/label-promotions:
     get:
       description: 'List a novel''s label promotion jobs: active ones first, then
-        the most recently updated.'
+        the most recently updated.
+
+
+        With `promotionIds`, return only those jobs; ids that are missing or not readable
+        are omitted.'
       operationId: read_label_promotions_novels__novelId__label_promotions_get
       parameters:
       - in: path
@@ -9046,6 +9050,19 @@ paths:
           minimum: 1
           title: Limit
           type: integer
+      - in: query
+        name: promotionIds
+        required: false
+        schema:
+          anyOf:
+          - items:
+              format: uuid
+              type: string
+            maxItems: 10
+            minItems: 1
+            type: array
+          - type: 'null'
+          title: Promotionids
       responses:
         '200':
           content:

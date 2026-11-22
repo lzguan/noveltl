@@ -454,7 +454,11 @@ async def create_promotion_job(
 
 
 async def query_promotion_jobs(
-    db: AsyncSession, current_user: User, novel_id: uuid.UUID, limit: int
+    db: AsyncSession,
+    current_user: User,
+    novel_id: uuid.UUID,
+    limit: int,
+    promotion_ids: list[uuid.UUID] | None = None,
 ) -> list[schemas.LabelPromotionJob]:
     job, item = models.LabelPromotionJob, models.LabelPromotionJobItem
     query = (
@@ -471,6 +475,8 @@ async def query_promotion_jobs(
         .order_by(job.status.in_(_ACTIVE).desc(), job.updated_at.desc())
         .limit(limit)
     )
+    if promotion_ids is not None:
+        query = query.where(job.promotion_id.in_(promotion_ids))
     query = label_group_mod_access_select(query, current_user)
     return [
         schemas.LabelPromotionJob(

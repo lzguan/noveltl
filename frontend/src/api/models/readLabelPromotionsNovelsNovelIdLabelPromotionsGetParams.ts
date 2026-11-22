@@ -11,4 +11,5 @@ export type ReadLabelPromotionsNovelsNovelIdLabelPromotionsGetParams = {
    * @maximum 50
    */
   limit?: number;
+  promotionIds?: string[] | null;
 };

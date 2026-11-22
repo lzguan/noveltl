@@ -2942,7 +2942,7 @@
     "/novels/{novelId}/label-promotions": {
       "get": {
         "summary": "Read Label Promotions",
-        "description": "List a novel's label promotion jobs: active ones first, then the most recently updated.",
+        "description": "List a novel's label promotion jobs: active ones first, then the most recently updated.\n\nWith `promotionIds`, return only those jobs; ids that are missing or not readable are omitted.",
         "operationId": "read_label_promotions_novels__novelId__label_promotions_get",
         "security": [
           {
@@ -2970,6 +2970,28 @@
               "minimum": 1,
               "default": 10,
               "title": "Limit"
+            }
+          },
+          {
+            "name": "promotionIds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "minItems": 1,
+                  "maxItems": 10
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Promotionids"
             }
           }
         ],

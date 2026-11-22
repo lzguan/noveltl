@@ -5045,6 +5045,14 @@ export const getReadLabelPromotionsNovelsNovelIdLabelPromotionsGetUrl = (novelId
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["promotionIds"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
 
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : String(value))
@@ -5058,6 +5066,8 @@ export const getReadLabelPromotionsNovelsNovelIdLabelPromotionsGetUrl = (novelId
 
 /**
  * List a novel's label promotion jobs: active ones first, then the most recently updated.
+ *
+ * With `promotionIds`, return only those jobs; ids that are missing or not readable are omitted.
  * @summary Read Label Promotions
  */
 export const readLabelPromotionsNovelsNovelIdLabelPromotionsGet = async (novelId: string,

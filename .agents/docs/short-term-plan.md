@@ -8,7 +8,7 @@ Working rules agreed for this list: one slice per commit, the user reviews each
 commit; HTTP requests must return fast and long work goes to a worker; no
 heavy processing in the backend container.
 
-## 1. Async backend (in progress, branch `feature/psycopg3`, not pushed)
+## 1. Async backend (partly merged in #144)
 
 Done, one commit each: psycopg 3 driver swap (psycopg exception classes such
 as `UniqueViolation` instead of SQLSTATE strings), async engine and
@@ -36,13 +36,13 @@ with the Celery-to-taskiq move.
   the 10 ms threshold); whole-novel upload parse 34 ms; term search and label
   span checks well under 15 ms.
 
-## 2. Autolabel promotion as a background job (in progress, branch `feature/label-promotion-jobs`, uncommitted)
+## 2. Autolabel promotion as a background job (backend merged in #144; frontend in progress)
 
 Measured on a real 381-chapter run copied to the test DB: about 5 ms per
 chapter, about 10 s for 1,900 chapters in one request, event-loop stalls up to
 about 1 s; no regression from the async/psycopg 3 change versus `master`.
 
-Done (uncommitted): promotion code, its schemas, and its endpoint moved from
+Done: promotion code, its schemas, and its endpoint moved from
 `labels` to `src/autolabels/promotions/processing.py` (pure move; OpenAPI unchanged), so
 `labels` no longer imports `autolabels`. Model and migration
 `4ea4c662b46f`: `label_promotion_jobs` (run, group, requester, requested filter,
@@ -76,12 +76,23 @@ Agreed next:
   after the client disconnects. Keep the active-job conflict on repeat POSTs.
   Cover a failed initial enqueue followed by one sweep, plus duplicate delivery
   with a single set of persisted labels.
-- Later (user request, 2026-11-22): a per-job promotion mode. Today only chapters
-  without label data in the group are filled; chapters that already have one fail
-  with "already has label data". Wanted options include inserting into existing
-  label datas without overwriting existing labels, and inserting eagerly. A
-  `mode` column on `label_promotion_jobs` defaulting to today's behaviour would
-  carry it; only the insert statement's choice of label datas and spans changes.
+- Later, after the promotion UI (user request, 2026-11-22): eager promotion.
+  Today only chapters without label data in the group are filled; chapters that
+  already have one fail with "already has label data". Wanted: insert into
+  existing label datas, skipping (user toggle, on by default) only label datas
+  with at least one label. A `mode` column on `label_promotion_jobs` would carry
+  it; only the insert statement's choice of label datas and spans changes.
+- Frontend polling (agreed 2026-11-22, branch `feature/label-promotion-polling`):
+  `GET .../label-promotions?promotionIds=` (max `MAX_POLLED_PROMOTIONS` = 10,
+  `limit` still applies). A `usePromotionJobs` hook mounted in `EditNovelPage`
+  owns `active` (by `createdAt`) and `finished` (by `updatedAt` desc, evict tail)
+  lists, POSTs and polls the active snapshot about every 2 s; a re-seed
+  generation guards against racing polls. On finish it reloads the group in
+  loaded chapters, active chapter first, via a helper emitting `loadLabelData`.
+  Accepted: edits attempted during a reload are rejected; a reload is serialized
+  after in-flight edits by ID-repo reservations. The workspace lock and the
+  controller promotion path are removed; `PromotionJobsList` stays prop-only
+  because `AutoLabelRunsPanel` will be refactored.
 
 ## 3. Label permission refactor
 

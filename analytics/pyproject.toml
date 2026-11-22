@@ -1,0 +1,23 @@
+[project]
+name = "analytics"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "yellowjuice", email = "leo.ziqi@gmail.com" }
+]
+requires-python = ">=3.15"
+dependencies = [
+    "boto3>=1.44.9",
+    "duckdb==2.0.0",
+    "pydantic-ai-slim[openai]>=2.71.0",
+    "pydantic-evals>=2.71.0",
+    "pytz>=2026.6",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+namespace = true

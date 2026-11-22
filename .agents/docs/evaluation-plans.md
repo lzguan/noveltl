@@ -1,9 +1,32 @@
 # Evaluation plans
 
-Discussed directions (2026-11-14), not implemented behavior or an approved
-design. The current memory-agent eval framework is
-[agent-evals/](../../agent-evals/README.md); chapter-translation behavior is in
+Discussed directions, not an approved design. Evals now read from the
+[analytics store](analytics.md); `agent-evals/` (the earlier memory-agent eval
+framework) is to be retired. Chapter-translation behavior is in
 [chapter translation](chapter-translation.md).
+
+## Current state (2026-11-21)
+
+- [pronoun_judge.py](../../analytics/src/evals/pronoun_judge.py) is the first
+  Pydantic Evals dataset: cases from `chapter_data`, a task that returns the
+  stored translation, a deterministic tic-rate evaluator, and a whole-chapter
+  DeepSeek judge listing 他/她 mismatches. Results go to the ignored
+  `analytics/.data/evals/`. Planting she-to-he flips in two chapters
+  (17 and 14) returned 15 and 9 reports, some naming the wrong character, so
+  recall is partial and counts are approximate. Next: paragraph-pair judging,
+  gender/persona memories as context, low thinking, and the planted-error
+  check as a standing canary.
+- The user wants to try both Pydantic Evals and Inspect. Agreed split:
+  deterministic metrics as SQL or Python over the store (a future `metrics`
+  table); frameworks for LLM judges; Pydantic Evals also fits CI-style agent
+  evals.
+- Metric priorities discussed: term adherence and cross-chapter name drift,
+  paragraph alignment and length ratio, then a blind pairwise judge once an
+  A/B exists. Gender memories as an input (pronouns) and a banned-tic
+  instruction are the planned first A/B experiments.
+- Experiments need a frozen memory group (or a filter such as the tag prefix)
+  so arms see identical memories, and a run spec fixing slice, shared config,
+  one varied factor, and repeats.
 
 ## Framework: Pydantic Evals
 
@@ -46,9 +69,16 @@ framework would supply.
 4. Port memory-agent scoring to evaluators; retire the old reporting path.
 5. Evaluate the calibration loop below.
 
-Unsettled: whether evals stay in `agent-evals/` or become a sibling package;
-whether the runner uses the API or backend functions directly (as
+Unsettled: whether the runner uses the API or backend functions directly (as
 `agent-evals` does); the audited-snapshot format.
+
+Deferred cleanup: the versioned test-data catalog moved from
+`backend/test_support/test_data/` to [backend/src/datasets](../../backend/src/datasets)
+(commit `8903e1a`) so `agent-evals` corpora could import it. Besides
+`agent-evals`, its importers are backend tests (`tests/conftest.py`,
+`tests/fixtures/scenarios.py`, `tests/test_data_support/`) and test-data scripts
+in `backend/scripts/`. When `agent-evals` is deleted, consider moving it back
+under `test_support/`; first confirm nothing outside tests and scripts imports it.
 
 ## Calibration loop (sample → refine) × N → translate
 
@@ -86,3 +116,13 @@ conventions versus terms + memories + conventions, no prune stage.
 
 Limits: string-match and pronoun-count proxies only; no meaning, continuity, or
 prose-quality judgment; single run per arm.
+
+## Reader feedback (2026-11-17)
+
+The user read chapters 1–30 of a modern-day romance novel (dev novel
+`e33ee811…`, environment-specific) translated by `qwen-flash` through the batch
+API with `terms` + `conventions` inputs and no memories: "pretty good", clearly
+better than a year earlier, but lacking human touch and slang, especially in
+dialogue. The user suspects the modern setting is the easy case (no invented
+terminology or classical idioms). Untested levers: translate-stage style
+instructions, per-character voice conventions, a stronger model.

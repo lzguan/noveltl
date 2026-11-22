@@ -29,11 +29,14 @@ x-file-store-env: &file-store-env
   AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
   AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
 
+x-duckdb-env: &duckdb-env
+  DUCKDB_QUACK_TOKEN: ${DUCKDB_QUACK_TOKEN}
+
 services:
   dev:
     image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-devcontainer:${DEV_IMAGE_TAG:-latest}
     environment:
-      <<: [*db-env, *test-db-env, *redis-env, *test-redis-env, *file-store-env]
+      <<: [*db-env, *test-db-env, *redis-env, *test-redis-env, *file-store-env, *duckdb-env]
       SECRET_KEY: ${SECRET_KEY}
     command: sleep infinity
 
@@ -204,7 +207,23 @@ services:
       - garage_meta:/var/lib/garage/meta
       - garage_data:/var/lib/garage/data
     ports:
-      - "3900:3900"
+      - "127.0.0.1:3900:3900"
+
+  duckdb:
+    image: duckdb/duckdb:2.0.0
+    volumes:
+      - ./analytics/.data:/data
+    # The shell starts a Quack server (port 9494) and stays open to keep it running.
+    entrypoint:
+      - /duckdb
+      - -dark-mode
+      - -cmd
+      - "CALL quack_serve('quack:0.0.0.0:9494', allow_other_hostname = true, token = '${DUCKDB_QUACK_TOKEN}', disable_ssl = true);"
+      - /data/store.duckdb
+    stdin_open: true
+    tty: true
+    ports:
+      - "127.0.0.1:9494:9494"
 
 volumes:
   db_data:

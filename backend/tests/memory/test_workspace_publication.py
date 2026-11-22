@@ -335,6 +335,7 @@ def test_staged_conventions_overwrite_late_reviews(test_db: Session, reads: Read
         rationale=None,
         only_pending=True,
         only_creator=Creator.AGENT,
+        recorded_on=reads.current.chapter_content_id,
     )
     convention.review_status = ReviewStatus.APPROVED
     test_db.commit()

@@ -18,6 +18,7 @@ they describe changes.
 | Change translation conventions, their naming use, or the conventions agent | [Translation conventions](translation-conventions.md) |
 | Plan chapter-translation wiring, windowed schedules, job chaining, or story arcs | [Memory workflow follow-ups](memory-workflow-followups.md) |
 | Choose checks or regenerate API contracts | [Verification](verification.md) |
+| Change the analytics store, translation-job export, or loader | [Analytics store](analytics.md) |
 | Plan eval framework work or the translation calibration loop | [Evaluation plans](evaluation-plans.md) |
 | Plan the reader app or translation publishing | [Reader plans](reader-plans.md) |
 

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKeyConstraint, PrimaryKeyConstraint, types
+from sqlalchemy import CheckConstraint, Enum, ForeignKeyConstraint, Index, PrimaryKeyConstraint, types
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.memory.types import Creator, ReviewStatus
@@ -21,6 +21,7 @@ class TermTranslationFields:
         Enum(Creator, native_enum=False, length=10, values_callable=lambda values: [value.value for value in values]),
         nullable=False,
     )
+    recorded_on: Mapped[UUID | None] = mapped_column(types.UUID, nullable=True)
 
 
 class TermTranslation(TermTranslationFields, Base):
@@ -33,5 +34,12 @@ class TermTranslation(TermTranslationFields, Base):
         ForeignKeyConstraint(
             ["term_id"], ["glossaries.term_id"], name="fk_term_translations_term_id_glossaries", ondelete="CASCADE"
         ),
+        ForeignKeyConstraint(
+            ["recorded_on"],
+            ["chapter_contents.chapter_content_id"],
+            name="fk_term_translations_recorded_on_chapter_contents",
+            ondelete="SET NULL",
+        ),
         CheckConstraint("char_length(btrim(translation)) > 0", name="ck_term_translations_nonblank"),
+        Index("ix_term_translations_recorded_on", "recorded_on"),
     )

@@ -3,14 +3,14 @@ x-db-env: &db-env
   DB_NAME: ${DB_NAME}
   DB_USER: ${DB_USER}
   DB_PASSWORD: ${DB_PASSWORD}
-  DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+  DB_URL: postgresql+psycopg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
 
 x-test-db-env: &test-db-env
   TEST_HOST: test_db
   TEST_USER: ${TEST_USER}
   TEST_PASSWORD: ${TEST_PASSWORD}
   TEST_NAME: ${TEST_NAME}
-  TEST_URL: postgresql+psycopg2://${TEST_USER}:${TEST_PASSWORD}@test_db:5432/${TEST_NAME}
+  TEST_URL: postgresql+psycopg://${TEST_USER}:${TEST_PASSWORD}@test_db:5432/${TEST_NAME}
 
 x-redis-env: &redis-env
   REDIS_HOST: redis

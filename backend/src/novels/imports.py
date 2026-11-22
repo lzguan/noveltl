@@ -1,8 +1,7 @@
 import uuid
 from collections.abc import Sequence
 
-from psycopg2 import Error as PgError
-from psycopg2 import errorcodes
+from psycopg.errors import ForeignKeyViolation, UniqueViolation
 from pydantic import Field
 from sqlalchemy import VARCHAR, Boolean, Integer, Text, column, insert, select, values
 from sqlalchemy.dialects import postgresql
@@ -69,11 +68,10 @@ def upload_v1(db: Session, current_user: User, novel_id: uuid.UUID, request: Bul
         result_scalars = result.scalars().all()
     except IntegrityError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            if e.orig.pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
-                raise NovelNotFoundException from e
-            elif e.orig.pgcode == errorcodes.UNIQUE_VIOLATION:
-                raise ChapterNumDuplicateException from e
+        if isinstance(e.orig, ForeignKeyViolation):
+            raise NovelNotFoundException from e
+        if isinstance(e.orig, UniqueViolation):
+            raise ChapterNumDuplicateException from e
         raise e
     except DataError as e:
         db.rollback()

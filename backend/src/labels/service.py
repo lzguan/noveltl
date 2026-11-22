@@ -8,8 +8,7 @@ from collections.abc import Sequence
 from itertools import batched
 from time import perf_counter
 
-from psycopg2 import Error as PgError
-from psycopg2 import errorcodes
+from psycopg.errors import ExclusionViolation, ForeignKeyViolation, StringDataRightTruncation, UniqueViolation
 from sqlalchemy import func, insert, literal, select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
@@ -265,17 +264,13 @@ def insert_label_group(db: Session, current_user: User, request: schemas.CreateL
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
-                raise NovelNotFoundException from e
+        if isinstance(e.orig, ForeignKeyViolation):
+            raise NovelNotFoundException from e
         raise
     except DataError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     except NoResultFound as e:
         db.rollback()
@@ -315,10 +310,8 @@ def modify_label_group(
         db.commit()
     except DataError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     except NoResultFound as e:
         db.rollback()
@@ -360,12 +353,10 @@ def insert_label_data(
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
-                raise NotFoundException("Either chapter content or label group not found.") from e
-            elif pgcode == errorcodes.UNIQUE_VIOLATION:
-                raise LabelDataRevisionDuplicateException from e
+        if isinstance(e.orig, ForeignKeyViolation):
+            raise NotFoundException("Either chapter content or label group not found.") from e
+        if isinstance(e.orig, UniqueViolation):
+            raise LabelDataRevisionDuplicateException from e
         raise
     except NoResultFound as e:
         db.rollback()
@@ -502,11 +493,10 @@ def _insert_label_datas_by_autolabels(
         chapter_content: novel_models.ChapterContent,
         error: IntegrityError | DataError,
     ) -> None:
-        if isinstance(error, IntegrityError) and isinstance(error.orig, PgError):
-            if error.orig.pgcode == errorcodes.EXCLUSION_VIOLATION:
-                reason = "labels in autolabel data overlapping"
-            else:
-                reason = f"unknown reason: {error.orig}"
+        if isinstance(error, IntegrityError) and isinstance(error.orig, ExclusionViolation):
+            reason = "labels in autolabel data overlapping"
+        elif isinstance(error, IntegrityError):
+            reason = f"unknown reason: {error.orig}"
         else:
             reason = f"unknown reason: {error}"
         errors.append(

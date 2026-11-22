@@ -4,8 +4,7 @@ Utilities for label services.
 
 import uuid
 
-from psycopg2 import Error as PgError
-from psycopg2 import errorcodes
+from psycopg.errors import ExclusionViolation
 from sqlalchemy import and_, delete, insert, literal, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
@@ -71,10 +70,8 @@ def _apply_add(
     except NoResultFound as e:
         raise LabelDataNotFoundException from e
     except IntegrityError as e:
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.EXCLUSION_VIOLATION:
-                raise LabelExclusionViolationInvalidOperationException from e
+        if isinstance(e.orig, ExclusionViolation):
+            raise LabelExclusionViolationInvalidOperationException from e
         raise
     except Exception:
         raise
@@ -148,10 +145,8 @@ def _apply_update(
     except NoResultFound as e:
         raise LabelConcurrentModificationException from e
     except IntegrityError as e:
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.EXCLUSION_VIOLATION:
-                raise LabelExclusionViolationInvalidOperationException from e
+        if isinstance(e.orig, ExclusionViolation):
+            raise LabelExclusionViolationInvalidOperationException from e
         raise
     except Exception:
         raise

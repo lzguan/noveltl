@@ -9,8 +9,7 @@ from collections.abc import Coroutine
 from typing import Any
 from uuid import uuid4
 
-from psycopg2 import Error as PgError
-from psycopg2 import errorcodes
+from psycopg.errors import UniqueViolation
 from sqlalchemy import exists, func, insert, literal, select
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session, defer
@@ -246,10 +245,8 @@ async def insert_auto_labels(
     except IntegrityError as e:
         db.rollback()
         logger.exception("Autolabel insert integrity error run_id=%s novel_id=%s", run.run_id, request.novel_id)
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.UNIQUE_VIOLATION:
-                raise AutoLabelDuplicateException from e
+        if isinstance(e.orig, UniqueViolation):
+            raise AutoLabelDuplicateException from e
         raise
     except Exception:
         db.rollback()

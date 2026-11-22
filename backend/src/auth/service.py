@@ -1,7 +1,6 @@
 import uuid
 
-from psycopg2 import Error as PgError
-from psycopg2 import errorcodes
+from psycopg.errors import StringDataRightTruncation, UniqueViolation
 from sqlalchemy import select
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
@@ -107,17 +106,13 @@ def insert_user(db: Session, current_user: schemas.User | None, request: schemas
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.UNIQUE_VIOLATION:
-                raise UserNameDuplicateException from e
+        if isinstance(e.orig, UniqueViolation):
+            raise UserNameDuplicateException from e
         raise
     except DataError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     return new_user
 

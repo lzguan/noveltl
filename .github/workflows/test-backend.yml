@@ -39,7 +39,7 @@ jobs:
       DB_HOST: localhost
       DB_NAME: noveltl_test
       DB_PASSWORD: postgres
-      DB_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/noveltl_test
+      DB_URL: postgresql+psycopg://postgres:postgres@localhost:5432/noveltl_test
       DB_USER: postgres
       LOG_OUTPUT: STREAM
       REDIS_HOST: localhost
@@ -50,7 +50,7 @@ jobs:
       TEST_PASSWORD: postgres
       TEST_REDIS_HOST: localhost
       TEST_REDIS_PORT: 6379
-      TEST_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/noveltl_test
+      TEST_URL: postgresql+psycopg://postgres:postgres@localhost:5432/noveltl_test
       TEST_USER: postgres
 
     steps:

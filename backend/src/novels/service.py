@@ -11,8 +11,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from typing import Any, cast
 
-from psycopg2 import Error as PgError
-from psycopg2 import errorcodes
+from psycopg.errors import ForeignKeyViolation, StringDataRightTruncation, UniqueViolation
 from sqlalchemy import CursorResult, and_, delete, exists, func, insert, literal, select, update
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
 from sqlalchemy.orm import Session, aliased, defer
@@ -148,10 +147,8 @@ def insert_source_work(db: Session, current_user: User, request: schemas.CreateS
         db.commit()
     except DataError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     except Exception:
         db.rollback()
@@ -189,10 +186,8 @@ def modify_source_work(
         db.commit()
     except DataError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     except NoResultFound as e:
         db.rollback()
@@ -526,20 +521,16 @@ def insert_novel(db: Session, current_user: User, request: schemas.CreateNovel) 
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
-                constraint = getattr(e.orig.diag, "constraint_name", "") or ""
-                if "source_work" in constraint:
-                    raise SourceWorkNotFoundException from e
-                raise LanguageNotFoundException from e
+        if isinstance(e.orig, ForeignKeyViolation):
+            constraint = getattr(e.orig.diag, "constraint_name", "") or ""
+            if "source_work" in constraint:
+                raise SourceWorkNotFoundException from e
+            raise LanguageNotFoundException from e
         raise
     except DataError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     except Exception:
         db.rollback()
@@ -571,10 +562,8 @@ def modify_novel(db: Session, current_user: User, novel_id: uuid.UUID, request: 
         db.commit()
     except DataError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     except NoResultFound as e:
         db.rollback()
@@ -626,12 +615,10 @@ def insert_chapter(
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.FOREIGN_KEY_VIOLATION:
-                raise NovelNotFoundException from e
-            if pgcode == errorcodes.UNIQUE_VIOLATION:
-                raise ChapterNumDuplicateException from e
+        if isinstance(e.orig, ForeignKeyViolation):
+            raise NovelNotFoundException from e
+        if isinstance(e.orig, UniqueViolation):
+            raise ChapterNumDuplicateException from e
         raise
     except NoResultFound as e:
         db.rollback()
@@ -639,10 +626,8 @@ def insert_chapter(
         raise InsufficientPermissionsException from e
     except DataError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     except Exception:
         db.rollback()
@@ -682,10 +667,8 @@ def modify_chapter(
         db.commit()
     except DataError as e:
         db.rollback()
-        if isinstance(e.orig, PgError):
-            pgcode = e.orig.pgcode
-            if pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION:
-                raise DataTooLongException from e
+        if isinstance(e.orig, StringDataRightTruncation):
+            raise DataTooLongException from e
         raise
     except NoResultFound as e:
         db.rollback()

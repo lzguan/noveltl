@@ -367,7 +367,7 @@ def test_unrelated_database_exception_is_not_reported_as_lost_claim(
         test_db.rollback()
         test_db.execute(text("DROP FUNCTION reject_publication() CASCADE"))
         test_db.commit()
-    assert getattr(raised.value.orig, "pgcode", None) == "P0001"
+    assert getattr(raised.value.orig, "sqlstate", None) == "P0001"
     assert test_db.get(GlossaryTerm, term_id) is None
 
 

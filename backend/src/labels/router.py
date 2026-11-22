@@ -2,11 +2,11 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
-from src.database import get_db
+from src.database import get_async_db
 from src.exceptions import DataTooLongException, NotFoundException
 from src.labels.exceptions import (
     LabelConcurrentModificationException,
@@ -22,8 +22,6 @@ from src.labels.exceptions import (
 )
 from src.labels.schemas import (
     CreateLabelData,
-    CreateLabelDataByAutoLabel,
-    CreateLabelDataByAutoLabelStatus,
     CreateLabelGroup,
     Label,
     LabelContributor,
@@ -36,7 +34,6 @@ from src.labels.schemas import (
 )
 from src.labels.service import (
     insert_label_data,
-    insert_label_datas_by_autolabels,
     insert_label_group,
     modify_label_data_by_stream,
     modify_label_group,
@@ -51,40 +48,40 @@ from src.labels.service import (
 )
 from src.novels.exceptions import ChapterContentNotFoundException, NovelNotFoundException
 from src.requests.cache import redis_cache
-from src.requests.decorators import serialize_response_model, ttl_cache
+from src.requests.decorators import attl_cache, serialize_response_model
 from src.schemas import DetailHTTPErrorResponse, RequestConflictErrorResponse
 
 router = APIRouter()
 
 
 @router.get("/label-groups", response_model=list[LabelGroup])
-def read_label_groups(
+async def read_label_groups(
     novel_id: Annotated[uuid.UUID, Query(alias="novelId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
     Gets all label groups of the current user for a novel.
     """
-    return query_label_groups(db, current_user, novel_id)
+    return await query_label_groups(db, current_user, novel_id)
 
 
 @router.get("/label-groups-with-role", response_model=list[LabelGroupWithRole])
-def read_label_groups_with_role(
+async def read_label_groups_with_role(
     novel_id: Annotated[uuid.UUID, Query(alias="novelId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
     Gets all label groups of the current user for a novel, along with their roles.
     """
-    return query_label_groups_with_contributor_info(db, current_user, novel_id)
+    return await query_label_groups_with_contributor_info(db, current_user, novel_id)
 
 
 @router.get("/label-groups/{labelGroupId}", response_model=LabelGroup)
-def read_label_group(
+async def read_label_group(
     label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -94,7 +91,7 @@ def read_label_group(
         404: Label group not found (or insufficient permissions).
     """
     try:
-        label_group = query_label_group_by_id(db, current_user, label_group_id)
+        label_group = await query_label_group_by_id(db, current_user, label_group_id)
     except LabelGroupNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Label group with id {label_group_id} not found."
@@ -103,9 +100,9 @@ def read_label_group(
 
 
 @router.get("/label-datas", response_model=list[LabelData])
-def read_label_datas_by_group_chapters(
+async def read_label_datas_by_group_chapters(
     label_group_id: Annotated[uuid.UUID, Query(alias="labelGroupId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     start: int | None = None,
     end: int | None = None,
@@ -113,14 +110,14 @@ def read_label_datas_by_group_chapters(
     """
     Gets all label datas in a label group, optionally filtered by chapter range.
     """
-    label_datas = query_label_datas(db, current_user, label_group_id, start, end)
+    label_datas = await query_label_datas(db, current_user, label_group_id, start, end)
     return label_datas
 
 
 @router.get("/label-datas/{labelDataId}", response_model=LabelData)
-def read_label_data(
+async def read_label_data(
     label_data_id: Annotated[uuid.UUID, Path(alias="labelDataId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -130,49 +127,49 @@ def read_label_data(
         404: Label data not found (or insufficient permissions).
     """
     try:
-        label_data = query_label_data_by_id(db, current_user, label_data_id)
+        label_data = await query_label_data_by_id(db, current_user, label_data_id)
     except LabelDataNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Label data not found.") from e
     return label_data
 
 
 @router.get("/label-datas/{labelDataId}/labels", response_model=list[Label])
-def read_labels_by_label_data(
+async def read_labels_by_label_data(
     label_data_id: Annotated[uuid.UUID, Path(alias="labelDataId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
     Get the specific list of labels inside a label data entry.
     """
-    labels = query_labels_by_label_data_id(db, current_user, label_data_id)
+    labels = await query_labels_by_label_data_id(db, current_user, label_data_id)
     return labels
 
 
 @router.get("/labels/{labelId}", response_model=Label)
-def read_label(
+async def read_label(
     label_id: Annotated[uuid.UUID, Path(alias="labelId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Gets a label by id."""
     try:
-        return query_label_by_id(db, current_user, label_id)
+        return await query_label_by_id(db, current_user, label_id)
     except LabelNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Label not found.") from e
 
 
 @router.get("/label-groups/{labelGroupId}/contributors", response_model=list[LabelContributor])
-def read_label_contributors(
+async def read_label_contributors(
     label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
     Get the list of contributors for a label group.
     """
     try:
-        contributors = query_label_contributors_of_label_group(db, current_user, label_group_id)
+        contributors = await query_label_contributors_of_label_group(db, current_user, label_group_id)
     except LabelGroupNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Label group with id {label_group_id} not found."
@@ -192,10 +189,10 @@ def read_label_contributors(
         },
     },
 )
-@ttl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=serialize_response_model(LabelGroup))
-def create_label_group(
+@attl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=serialize_response_model(LabelGroup))
+async def create_label_group(
     request: CreateLabelGroup,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
 ):
@@ -207,7 +204,7 @@ def create_label_group(
         400: Label group name is too long.
     """
     try:
-        label_group = insert_label_group(db, current_user, request)
+        label_group = await insert_label_group(db, current_user, request)
     except NovelNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Novel associated with this label group not found."
@@ -218,10 +215,10 @@ def create_label_group(
 
 
 @router.patch("/label-groups/{labelGroupId}", response_model=LabelGroup)
-def update_label_group(
+async def update_label_group(
     label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
     request: UpdateLabelGroup,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -232,7 +229,7 @@ def update_label_group(
         400: Label group name is too long.
     """
     try:
-        label_group = modify_label_group(db, current_user, label_group_id, request)
+        label_group = await modify_label_group(db, current_user, label_group_id, request)
     except LabelGroupNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Label group with id {label_group_id} not found."
@@ -253,11 +250,11 @@ def update_label_group(
         },
     },
 )
-@ttl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=serialize_response_model(LabelData))
-def create_label_data(
+@attl_cache(ttl=60, cache=redis_cache, success_code=200, serialize_ret=serialize_response_model(LabelData))
+async def create_label_data(
     label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
     request: CreateLabelData,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
 ):
@@ -269,7 +266,7 @@ def create_label_data(
         409: Label data for this revision text already exists in this group.
     """
     try:
-        label_data = insert_label_data(db, current_user, label_group_id, request)
+        label_data = await insert_label_data(db, current_user, label_group_id, request)
     except LabelGroupNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Label group not found.") from e
     except LabelDataRevisionDuplicateException as e:
@@ -302,11 +299,11 @@ def create_label_data(
         },
     },
 )
-@ttl_cache(ttl=60, cache=redis_cache, serialize_ret=serialize_response_model(OpsResult))
-def update_label_data_stream(
+@attl_cache(ttl=60, cache=redis_cache, serialize_ret=serialize_response_model(OpsResult))
+async def update_label_data_stream(
     label_data_id: Annotated[uuid.UUID, Path(alias="labelDataId")],
     request: UpdateLabelDataStream,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
 ) -> OpsResult:
@@ -319,7 +316,7 @@ def update_label_data_stream(
         400: Operation positions out of bounds or invalid operation.
     """
     try:
-        return OpsResult(results=modify_label_data_by_stream(db, current_user, label_data_id, request))
+        return OpsResult(results=await modify_label_data_by_stream(db, current_user, label_data_id, request))
     except (LabelDataNotFoundException, ChapterContentNotFoundException) as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -350,38 +347,3 @@ def update_label_data_stream(
         ) from e
     except LabelInvalidOperationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e) or "Invalid operation.") from e
-
-
-@router.post(
-    "/label-groups/{labelGroupId}/label-datas/auto-labels",
-    response_model=CreateLabelDataByAutoLabelStatus,
-    responses={
-        404: {"model": DetailHTTPErrorResponse, "description": "Label group not found."},
-        409: {
-            "model": RequestConflictErrorResponse,
-            "description": "Request key conflict.",
-        },
-    },
-)
-@ttl_cache(
-    ttl=3600,
-    cache=redis_cache,
-    serialize_ret=serialize_response_model(CreateLabelDataByAutoLabelStatus),
-)
-def create_label_datas_by_auto_labels(
-    label_group_id: Annotated[uuid.UUID, Path(alias="labelGroupId")],
-    request: CreateLabelDataByAutoLabel,
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
-    request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
-):
-    """
-    Creates label datas and populates labels from autolabel results.
-    """
-    try:
-        return insert_label_datas_by_autolabels(db, current_user, label_group_id, request)
-    except LabelGroupNotFoundException as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Label group {label_group_id} not found or not accessible.",
-        ) from e

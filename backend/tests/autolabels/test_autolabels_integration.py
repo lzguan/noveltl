@@ -9,18 +9,18 @@ import pytest
 import redis
 from celery.contrib.testing.worker import start_worker
 from sqlalchemy import create_engine, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.autolabels.celery_app import app
 from src.autolabels.constants import AutoLabelProgress
-from src.autolabels.dispatch.celery_dispatcher import CeleryDispatcher
+from src.autolabels.inference.celery_app import app
+from src.autolabels.inference.dispatch.celery_dispatcher import CeleryDispatcher
 from src.autolabels.models import AutoLabel
 from src.autolabels.params import CluenerParams
-from src.autolabels.schemas import CreateAutoLabels
+from src.autolabels.promotions.processing import insert_label_datas_by_autolabels
+from src.autolabels.schemas import CreateAutoLabels, CreateLabelDataByAutoLabel
 from src.autolabels.service import insert_auto_labels
 from src.labels import models as label_models
-from src.labels.schemas import CreateLabelDataByAutoLabel
-from src.labels.service import insert_label_datas_by_autolabels
 from test_support.autolabels import DeterministicNERModel
 from test_support.test_data.scenarios import DatabaseScenario
 
@@ -42,7 +42,7 @@ def celery_worker(
     test_db: Session,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Generator[None]:
-    import src.autolabels.worker.tasks as worker_tasks
+    import src.autolabels.inference.worker.tasks as worker_tasks
 
     redis_host = os.getenv("TEST_REDIS_HOST", "test_redis")
     redis_port = int(os.getenv("TEST_REDIS_PORT", "6379"))
@@ -84,6 +84,7 @@ class TestAutolabelEndToEnd:
         self,
         xianxia_scenario: DatabaseScenario,
         test_db: Session,
+        async_test_db: AsyncSession,
         celery_worker: None,
     ) -> None:
         novel = xianxia_scenario.novels["novel"]
@@ -132,8 +133,8 @@ class TestAutolabelEndToEnd:
 
         # 3. Promote autolabels to label data.
         promote_request = CreateLabelDataByAutoLabel(run_id=run_id)
-        promote_result = insert_label_datas_by_autolabels(
-            test_db,
+        promote_result = await insert_label_datas_by_autolabels(
+            async_test_db,
             user,
             label_group.label_group_id,
             promote_request,

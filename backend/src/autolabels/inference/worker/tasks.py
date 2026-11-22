@@ -8,11 +8,11 @@ from sqlalchemy import CursorResult, select, update
 from sqlalchemy.exc import NoResultFound
 
 from src.autolabels.constants import AutoLabelProgress
+from src.autolabels.inference.worker.config import SessionLocal
+from src.autolabels.inference.worker.inference import Cluener
+from src.autolabels.inference.worker.interfaces import NERModel
 from src.autolabels.models import AutoLabel, AutoLabelRun
 from src.autolabels.params import ModelName, NERParams
-from src.autolabels.worker.config import SessionLocal
-from src.autolabels.worker.inference import Cluener
-from src.autolabels.worker.interfaces import NERModel
 from src.novels.models import ChapterContent
 
 logger = logging.getLogger(__name__)

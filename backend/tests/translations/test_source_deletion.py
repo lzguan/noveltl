@@ -1,5 +1,6 @@
 import pytest
 from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from src.novels.models import Chapter, ChapterContent
@@ -11,8 +12,8 @@ from test_support.test_data.scenarios import DatabaseScenario
 
 
 @pytest.mark.parametrize("delete_revision", [False, True])
-def test_deleting_translation_source_removes_only_its_association(
-    test_db: Session, sample_scenario: DatabaseScenario, delete_revision: bool
+async def test_deleting_translation_source_removes_only_its_association(
+    test_db: Session, async_test_db: AsyncSession, sample_scenario: DatabaseScenario, delete_revision: bool
 ) -> None:
     # Chapter deletion must remain usable after job creation. Translation jobs
     # retain their graph, accepting that missing sources may fail later work.
@@ -51,7 +52,7 @@ def test_deleting_translation_source_removes_only_its_association(
         test_db.execute(delete(ChapterContent).where(ChapterContent.chapter_content_id == content_id))
         test_db.commit()
     else:
-        assert remove_chapter(test_db, user, removed_id).status == "success"
+        assert (await remove_chapter(async_test_db, user, removed_id)).status == "success"
     test_db.expire_all()
     assert (
         test_db.scalar(select(ChapterContent.chapter_content_id).where(ChapterContent.chapter_content_id == content_id))

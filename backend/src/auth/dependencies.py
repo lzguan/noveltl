@@ -5,13 +5,13 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.config import ALGORITHM, SECRET_KEY
 from src.auth.exceptions import UserNotFoundException
 from src.auth.models import User
 from src.auth.service import query_user_by_user_name
-from src.database import get_db
+from src.database import get_async_db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 async def get_optional_user(
-    db: Annotated[Session, Depends(get_db)], token: Annotated[str | None, Depends(oauth2_scheme_optional)]
+    db: Annotated[AsyncSession, Depends(get_async_db)], token: Annotated[str | None, Depends(oauth2_scheme_optional)]
 ) -> User | None:
     """
     Get the current user as a Pydantic schema from a JSON web token, or return None if there is no current logged in user.
@@ -49,7 +49,7 @@ async def get_optional_user(
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
     try:
-        user = query_user_by_user_name(db, username)
+        user = await query_user_by_user_name(db, username)
     except UserNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.") from e
     return user

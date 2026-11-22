@@ -3,7 +3,7 @@ import uuid
 
 from sqlalchemy import Integer, Select, cast, func, select
 from sqlalchemy.dialects.postgresql import distinct_on
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.models import User
 from src.novels.exceptions import ChapterContentNotFoundException
@@ -47,8 +47,8 @@ def _latest_readable_contents(
     return chapter_mod_access_select(statement, current_user)
 
 
-def search_novel(
-    db: Session,
+async def search_novel(
+    db: AsyncSession,
     current_user: User | None,
     novel_id: uuid.UUID,
     term: str,
@@ -75,31 +75,33 @@ def search_novel(
     )
 
     # Window totals are computed before OFFSET/LIMIT, so one scan gives the page and the totals.
-    rows = db.execute(
-        select(
-            matches.c.chapter_id,
-            matches.c.chapter_num,
-            matches.c.chapter_content_id,
-            matches.c.match_count,
-            func.count().over().label("total_chapters"),
-            func.sum(matches.c.match_count).over().label("total_matches"),
+    rows = (
+        await db.execute(
+            select(
+                matches.c.chapter_id,
+                matches.c.chapter_num,
+                matches.c.chapter_content_id,
+                matches.c.match_count,
+                func.count().over().label("total_chapters"),
+                func.sum(matches.c.match_count).over().label("total_matches"),
+            )
+            .order_by(matches.c.chapter_num, matches.c.chapter_id)
+            .offset(offset)
+            .limit(limit + 1)
         )
-        .order_by(matches.c.chapter_num, matches.c.chapter_id)
-        .offset(offset)
-        .limit(limit + 1)
     ).all()
 
     if rows:
         total_chapters, total_matches = rows[0].total_chapters, rows[0].total_matches
     elif offset > 0:
         # Past the last page: the window has no rows to report totals on.
-        total_chapters, total_matches = db.execute(
-            select(func.count(), func.coalesce(func.sum(matches.c.match_count), 0))
+        total_chapters, total_matches = (
+            await db.execute(select(func.count(), func.coalesce(func.sum(matches.c.match_count), 0)))
         ).one()
     else:
         total_chapters, total_matches = 0, 0
     if total_chapters == 0:
-        query_novel_by_id(db, current_user, novel_id)
+        await query_novel_by_id(db, current_user, novel_id)
 
     return NovelTermSearch(
         total_chapters=total_chapters,
@@ -117,14 +119,14 @@ def search_novel(
     )
 
 
-def search_chapter_content(
-    db: Session, current_user: User | None, chapter_content_id: uuid.UUID, term: str
+async def search_chapter_content(
+    db: AsyncSession, current_user: User | None, chapter_content_id: uuid.UUID, term: str
 ) -> ChapterContentTermSearch:
     statement = chapter_content_mod_access_select(
         select(ChapterContent.chapter_content_text).where(ChapterContent.chapter_content_id == chapter_content_id),
         current_user,
     )
-    text = db.scalar(statement)
+    text = await db.scalar(statement)
     if text is None:
         raise ChapterContentNotFoundException
     previews: list[TermOccurrencePreview] = []

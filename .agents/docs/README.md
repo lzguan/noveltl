@@ -21,6 +21,7 @@ they describe changes.
 | Change the analytics store, translation-job export, or loader | [Analytics store](analytics.md) |
 | Plan eval framework work or the translation calibration loop | [Evaluation plans](evaluation-plans.md) |
 | Plan the reader app or translation publishing | [Reader plans](reader-plans.md) |
+| Pick up the current short-term work list (async backend, promotion jobs, permissions, feedback) | [Short-term plan](short-term-plan.md) |
 
 The root [AGENTS.md](../../AGENTS.md) contains project instructions. This folder
 is discovered through those instructions, not special directory handling.

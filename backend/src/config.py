@@ -43,6 +43,7 @@ class RedisSettings(BaseConfig):
     REQUESTS_DATABASE: int = Field(default=2, ge=0)
     AGENT_DATABASE: int = Field(default=3, ge=0)
     TRANSLATIONS_DATABASE: int = Field(default=4, ge=0)
+    JOBS_DATABASE: int = Field(default=5, ge=0)
 
 
 class LogSettings(BaseConfig):

@@ -3,7 +3,7 @@ x-db-env: &db-env
   DB_NAME: ${DB_NAME}
   DB_USER: ${DB_USER}
   DB_PASSWORD: ${DB_PASSWORD}
-  DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+  DB_URL: postgresql+psycopg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
 
 x-redis-env: &redis-env
   REDIS_HOST: redis
@@ -77,6 +77,22 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: filters-worker
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: [*db-env, *redis-env]
+      SECRET_KEY: ${SECRET_KEY}
+
+  jobs-worker:
+    image: ghcr.io/lzguan/noveltl-jobs-worker:${IMAGE_TAG:-latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: jobs-worker
     restart: unless-stopped
     depends_on:
       db:

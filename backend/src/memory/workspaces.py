@@ -175,7 +175,7 @@ def publish_workspace(
             except Exception:
                 pass
             original = getattr(error, "orig", error)
-            code = getattr(original, "pgcode", None)
+            code = getattr(original, "sqlstate", None)
             message = getattr(getattr(original, "diag", None), "message_primary", str(error))
             if code == "MW001":
                 raise MemoryJobClaimLostException(message) from error

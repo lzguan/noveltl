@@ -6,8 +6,8 @@ authors = [{ name = "Leo Guan", email = "leo.ziqi@gmail.com" }]
 requires-python = ">=3.15,<3.16"
 readme = "README.md"
 dependencies = [
-    "sqlalchemy>=2.1.6",
-    "psycopg2-binary>=2.9.0",
+    "sqlalchemy[asyncio]>=2.1.6",
+    "psycopg[binary]>=3.2.0",
     "pydantic>=2.14.0",
     "pydantic-settings>=2.16.0",
     "alembic>=1.13.0",
@@ -15,6 +15,8 @@ dependencies = [
     "redis[hiredis]>=6.4.0",
     "boto3>=1.43.93",
     "aiobotocore>=3.10.0",
+    "taskiq>=0.13.0",
+    "taskiq-redis>=1.2.4",
 ]
 
 [dependency-groups]
@@ -37,7 +39,6 @@ dev = [
     "ruff>=0.17.3",
     "coverage>=7.0.0",
     "pyrefly>=1.4.0",
-    "types-psycopg2>=2.9.21.20260408",
     "pyyaml>=6.0.3",
     "types-pyyaml>=6.0.12.20260518",
     "celery-types>=0.26.0",

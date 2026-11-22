@@ -3,14 +3,14 @@ x-db-env: &db-env
   DB_NAME: ${DB_NAME}
   DB_USER: ${DB_USER}
   DB_PASSWORD: ${DB_PASSWORD}
-  DB_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+  DB_URL: postgresql+psycopg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
 
 x-test-db-env: &test-db-env
   TEST_HOST: test_db
   TEST_USER: ${TEST_USER}
   TEST_PASSWORD: ${TEST_PASSWORD}
   TEST_NAME: ${TEST_NAME}
-  TEST_URL: postgresql+psycopg2://${TEST_USER}:${TEST_PASSWORD}@test_db:5432/${TEST_NAME}
+  TEST_URL: postgresql+psycopg://${TEST_USER}:${TEST_PASSWORD}@test_db:5432/${TEST_NAME}
 
 x-redis-env: &redis-env
   REDIS_HOST: redis
@@ -107,6 +107,26 @@ services:
       - ./logs:/home/newuser/backend/logs
     profiles:
       - manual
+
+  jobs-worker:
+    image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-jobs-worker:${IMAGE_TAG:-latest}
+    # Built locally: the image has no heavy dependencies and is not published until merged.
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: jobs-worker
+    pull_policy: build
+    depends_on:
+      - db
+      - redis
+    environment:
+      <<: [*db-env, *redis-env]
+      UV_COMPILE_BYTECODE: false
+      SECRET_KEY: ${SECRET_KEY} # purely to not crash on startup
+    volumes:
+      - ./backend:/home/newuser/backend
+      - /home/newuser/backend/.venv
+      - ./logs:/home/newuser/backend/logs
 
   memory-agent-worker:
     image: ghcr.io/${GHCR_OWNER:-lzguan}/noveltl-memory-agent-worker:${IMAGE_TAG:-latest}

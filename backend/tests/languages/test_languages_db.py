@@ -1,6 +1,5 @@
 import pytest
-from psycopg2 import errorcodes
-from psycopg2.errors import Error as Psycopg2Error
+from psycopg.errors import CheckViolation, ForeignKeyViolation, StringDataRightTruncation, UniqueViolation
 from sqlalchemy import insert, select
 from sqlalchemy.exc import DataError, IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
@@ -20,16 +19,14 @@ def test_language_unique_constraints(test_db: Session):
     test_db.add(lang2)
     with pytest.raises(IntegrityError) as e:
         test_db.commit()
-    assert isinstance(e.value.orig, Psycopg2Error)
-    assert e.value.orig.pgcode == errorcodes.UNIQUE_VIOLATION  # Unique violation
+    assert isinstance(e.value.orig, UniqueViolation)
     test_db.rollback()
 
     # Attempt to create another language with the same code
     with pytest.raises(IntegrityError) as e:
         test_db.execute(insert(Language).values(language_name="French", language_code="en"))
         test_db.commit()
-    assert isinstance(e.value.orig, Psycopg2Error)
-    assert e.value.orig.pgcode == errorcodes.UNIQUE_VIOLATION  # Unique violation
+    assert isinstance(e.value.orig, UniqueViolation)
     test_db.rollback()
 
 
@@ -40,8 +37,7 @@ def test_language_length_constraints(test_db: Session):
     test_db.add(lang1)
     with pytest.raises(DataError) as e:
         test_db.commit()
-    assert isinstance(e.value.orig, Psycopg2Error)
-    assert e.value.orig.pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION  # String data right truncation
+    assert isinstance(e.value.orig, StringDataRightTruncation)
     test_db.rollback()
 
     # Language code exceeding 2 characters
@@ -50,8 +46,7 @@ def test_language_length_constraints(test_db: Session):
     test_db.add(lang2)
     with pytest.raises(DataError) as e:
         test_db.commit()
-    assert isinstance(e.value.orig, Psycopg2Error)
-    assert e.value.orig.pgcode == errorcodes.STRING_DATA_RIGHT_TRUNCATION  # String data right truncation
+    assert isinstance(e.value.orig, StringDataRightTruncation)
     test_db.rollback()
 
     # Language code less than 2 characters
@@ -60,8 +55,7 @@ def test_language_length_constraints(test_db: Session):
     test_db.add(lang3)
     with pytest.raises(IntegrityError) as e:
         test_db.commit()
-    assert isinstance(e.value.orig, Psycopg2Error)
-    assert e.value.orig.pgcode == errorcodes.CHECK_VIOLATION  # Check violation
+    assert isinstance(e.value.orig, CheckViolation)
     test_db.rollback()
     with pytest.raises(NoResultFound):
         _ = test_db.execute(select(Language).where(Language.language_name == "TestLang2")).scalar_one()
@@ -83,6 +77,5 @@ def test_cannot_delete_language_in_use(test_db: Session, sample_scenario: Databa
     test_db.delete(lang_in_use)
     with pytest.raises(IntegrityError) as e:
         test_db.commit()
-    assert isinstance(e.value.orig, Psycopg2Error)
-    assert e.value.orig.pgcode == errorcodes.FOREIGN_KEY_VIOLATION  # Foreign key violation
+    assert isinstance(e.value.orig, ForeignKeyViolation)
     test_db.rollback()

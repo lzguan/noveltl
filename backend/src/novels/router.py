@@ -2,16 +2,17 @@
 Router functions for novels service.
 """
 
+import asyncio
 import uuid
-from typing import Annotated, Literal
+from typing import Annotated, Literal, assert_never
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, UploadFile, status
 from pydantic import ValidationError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.dependencies import get_current_user, get_optional_user
 from src.auth.models import User
-from src.database import get_db
+from src.database import get_async_db
 from src.exceptions import DataTooLongException, InsufficientPermissionsException
 from src.languages.exceptions import LanguageNotFoundException
 from src.novels.exceptions import (
@@ -82,7 +83,7 @@ router = APIRouter()
 
 @router.get("/source-works", response_model=list[SourceWorkData])
 async def read_source_works(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
     title_contains: Annotated[str | None, Query(alias="titleContains")] = None,
     ret_novels: Annotated[bool, Query(alias="retNovels")] = False,
@@ -90,14 +91,14 @@ async def read_source_works(
     """
     Endpoint for retrieving source works in bulk, optionally filtered by title substring.
     """
-    source_works = query_source_works_by_title(db, current_user, title_contains, ret_novels)
+    source_works = await query_source_works_by_title(db, current_user, title_contains, ret_novels)
     return [SourceWorkData(source_work=sw, novels=novels) for sw, novels in source_works]
 
 
 @router.get("/source-works/{sourceWorkId}", response_model=SourceWork)
 async def read_source_work(
     source_work_id: Annotated[uuid.UUID, Path(alias="sourceWorkId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
 ):
     """
@@ -107,7 +108,7 @@ async def read_source_work(
         404: Source work not found (or insufficient permissions).
     """
     try:
-        source_work = query_source_work_by_id(db, current_user, source_work_id)
+        source_work = await query_source_work_by_id(db, current_user, source_work_id)
     except SourceWorkNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Source work with id {source_work_id} not found."
@@ -118,7 +119,7 @@ async def read_source_work(
 @router.get("/source-works/{sourceWorkId}/novels", response_model=list[Novel])
 async def read_novels_by_source_work(
     source_work_id: Annotated[uuid.UUID, Path(alias="sourceWorkId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
 ):
     """
@@ -128,7 +129,7 @@ async def read_novels_by_source_work(
         404: Source work not found (or insufficient permissions).
     """
     try:
-        novels = query_novels_by_source_work(db, current_user, source_work_id)
+        novels = await query_novels_by_source_work(db, current_user, source_work_id)
     except SourceWorkNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Source work with id {source_work_id} not found."
@@ -139,7 +140,7 @@ async def read_novels_by_source_work(
 @router.post("/source-works", response_model=SourceWork)
 async def create_source_work(
     request: CreateSourceWork,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -149,7 +150,7 @@ async def create_source_work(
         400: Data in some field is too long.
     """
     try:
-        source_work = insert_source_work(db, current_user, request)
+        source_work = await insert_source_work(db, current_user, request)
     except DataTooLongException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Data in some field is too long.") from e
     return source_work
@@ -159,7 +160,7 @@ async def create_source_work(
 async def update_source_work(
     source_work_id: Annotated[uuid.UUID, Path(alias="sourceWorkId")],
     request: UpdateSourceWork,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -171,7 +172,7 @@ async def update_source_work(
         400: Data in some field exceeds maximum length.
     """
     try:
-        source_work = modify_source_work(db, current_user, source_work_id, request)
+        source_work = await modify_source_work(db, current_user, source_work_id, request)
     except SourceWorkNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source work not found.") from e
     except InsufficientPermissionsException as e:
@@ -192,20 +193,20 @@ async def update_source_work(
 
 @router.get("/novels", response_model=list[Novel])
 async def read_novels(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
     title_contains: Annotated[str | None, Query(alias="titleContains")] = None,
 ):
     """
     Endpoint for retrieving novels in bulk.
     """
-    novels = query_novels_by_title(db, current_user, title_contains)
+    novels = await query_novels_by_title(db, current_user, title_contains)
     return novels
 
 
 @router.get("/novels/mine", response_model=list[Novel])
 async def read_novels_mine(
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     editable: bool = False,
     title_contains: str | None = Query(default=None, alias="titleContains"),
@@ -213,14 +214,14 @@ async def read_novels_mine(
     """
     Endpoint for retrieving novels that the user has special access to.
     """
-    novels = query_novels_by_current_user(db, current_user, editable, title_contains)
+    novels = await query_novels_by_current_user(db, current_user, editable, title_contains)
     return novels
 
 
 @router.get("/novels/{novelId}", response_model=Novel)
 async def read_novel(
     novel_id: Annotated[uuid.UUID, Path(alias="novelId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
 ):
     """
@@ -230,7 +231,7 @@ async def read_novel(
         404: Novel not found (or insufficient permissions).
     """
     try:
-        novel = query_novel_by_id(db, current_user, novel_id)
+        novel = await query_novel_by_id(db, current_user, novel_id)
     except NovelNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Novel with id {novel_id} not found.") from e
     return novel
@@ -239,7 +240,7 @@ async def read_novel(
 @router.get("/novels/{novelId}/with-contributors", response_model=NovelAndUsers)
 async def read_novel_with_contributors(
     novel_id: Annotated[uuid.UUID, Path(alias="novelId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -249,7 +250,7 @@ async def read_novel_with_contributors(
         404: Novel not found (or insufficient permissions).
     """
     try:
-        novel_and_users = query_novel_and_users_by_id(db, current_user, novel_id)
+        novel_and_users = await query_novel_and_users_by_id(db, current_user, novel_id)
     except NovelNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Novel with id {novel_id} not found.") from e
     return novel_and_users
@@ -258,7 +259,7 @@ async def read_novel_with_contributors(
 @router.post("/novels", response_model=Novel)
 async def create_novel(
     request: CreateNovel,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -269,7 +270,7 @@ async def create_novel(
         400: Data in some field is too long.
     """
     try:
-        db_novel = insert_novel(db, current_user, request)
+        db_novel = await insert_novel(db, current_user, request)
     except SourceWorkNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Source work with id {request.source_work_id} not found."
@@ -288,7 +289,7 @@ async def create_novel(
 async def update_novel(
     novel_id: Annotated[uuid.UUID, Path(alias="novelId")],
     request: UpdateNovel,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -300,7 +301,7 @@ async def update_novel(
         400: Data in some field exceeds maximum length.
     """
     try:
-        db_novel = modify_novel(db, current_user, novel_id, request)
+        db_novel = await modify_novel(db, current_user, novel_id, request)
     except NovelNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Novel not found.") from e
     except InsufficientPermissionsException as e:
@@ -322,7 +323,7 @@ async def update_novel(
 @router.get("/chapters", response_model=list[Chapter])
 async def read_chapters_by_novel(
     novel_id: Annotated[uuid.UUID, Query(alias="novelId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
     start: int | None = None,
     end: int | None = None,
@@ -334,7 +335,7 @@ async def read_chapters_by_novel(
         404: Novel not found (or insufficient permissions).
     """
     try:
-        chapters = query_chapters_by_novel(db, current_user, novel_id, start, end)
+        chapters = await query_chapters_by_novel(db, current_user, novel_id, start, end)
     except NovelNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Novel not found.") from e
     return chapters
@@ -343,7 +344,7 @@ async def read_chapters_by_novel(
 @router.get("/chapters/{chapterId}", response_model=Chapter)
 async def read_chapter_by_id(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
 ):
     """
@@ -353,7 +354,7 @@ async def read_chapter_by_id(
         404: Chapter not found (or insufficient permissions).
     """
     try:
-        chapter = query_chapter_by_id(db, current_user, chapter_id)
+        chapter = await query_chapter_by_id(db, current_user, chapter_id)
     except ChapterNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Chapter with id {chapter_id} not found."
@@ -365,7 +366,7 @@ async def read_chapter_by_id(
 async def create_chapter(
     novel_id: Annotated[uuid.UUID, Path(alias="novelId")],
     request: CreateChapter,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -377,7 +378,7 @@ async def create_chapter(
         401: Insufficient permissions.
     """
     try:
-        chapter, chapter_content = insert_chapter(db, current_user, novel_id, request)
+        chapter, chapter_content = await insert_chapter(db, current_user, novel_id, request)
     except NovelNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Novel with id {novel_id} not found.") from e
     except ChapterNumDuplicateException as e:
@@ -399,7 +400,7 @@ async def create_chapter(
 async def update_chapter(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
     request: UpdateChapter,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -411,7 +412,7 @@ async def update_chapter(
         400: Field in request too long.
     """
     try:
-        chapter = modify_chapter(db, current_user, chapter_id, request)
+        chapter = await modify_chapter(db, current_user, chapter_id, request)
     except ChapterNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Chapter with id {chapter_id} not found."
@@ -428,7 +429,7 @@ async def update_chapter(
 @router.delete("/chapters/{chapterId}", response_model=OperationStatus)
 async def delete_chapter(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -440,7 +441,7 @@ async def delete_chapter(
         500: Delete failed for other reasons.
     """
     try:
-        delete_status = remove_chapter(db, current_user, chapter_id)
+        delete_status = await remove_chapter(db, current_user, chapter_id)
     except ChapterNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Chapter with id {chapter_id} not found."
@@ -459,7 +460,7 @@ async def delete_chapter(
 @router.post("/chapters/{chapterId}/publish", response_model=Chapter)
 async def action_publish_chapter(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -470,7 +471,7 @@ async def action_publish_chapter(
         401: Insufficient permissions.
     """
     try:
-        chapter = make_public_chapter(db, current_user, chapter_id)
+        chapter = await make_public_chapter(db, current_user, chapter_id)
     except ChapterNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Chapter with id {chapter_id} not found."
@@ -490,7 +491,7 @@ async def action_publish_chapter(
 @router.get("/chapters/{chapterId}/content", response_model=ChapterContent)
 async def read_chapter_content(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
 ):
     """
@@ -500,7 +501,7 @@ async def read_chapter_content(
         404: Chapter not found, or chapter has no content.
     """
     try:
-        content = query_chapter_content_by_most_recent(db, current_user, chapter_id)
+        content = await query_chapter_content_by_most_recent(db, current_user, chapter_id)
     except ChapterNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Chapter with id {chapter_id} not found."
@@ -515,7 +516,7 @@ async def read_chapter_content(
 @router.get("/chapter-contents/{chapterContentId}", response_model=ChapterContent)
 async def read_chapter_content_by_id(
     chapter_content_id: Annotated[uuid.UUID, Path(alias="chapterContentId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -525,7 +526,7 @@ async def read_chapter_content_by_id(
         404: Chapter content not found (or insufficient permissions).
     """
     try:
-        content = query_chapter_content_by_id(db, current_user, chapter_content_id)
+        content = await query_chapter_content_by_id(db, current_user, chapter_content_id)
     except ChapterContentNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Chapter content with id {chapter_content_id} not found."
@@ -540,7 +541,7 @@ SearchTerm = Annotated[str, Query(min_length=1, max_length=200, description="Exa
 async def search_novel_term(
     novel_id: Annotated[uuid.UUID, Path(alias="novelId")],
     term: SearchTerm,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
     start_chapter_num: Annotated[int | None, Query(alias="startChapterNum", ge=0)] = None,
     end_chapter_num: Annotated[int | None, Query(alias="endChapterNum", ge=0)] = None,
@@ -556,7 +557,7 @@ async def search_novel_term(
         404: Novel not found (or insufficient permissions).
     """
     try:
-        return search_novel(
+        return await search_novel(
             db,
             current_user,
             novel_id,
@@ -574,7 +575,7 @@ async def search_novel_term(
 async def search_chapter_content_term(
     chapter_content_id: Annotated[uuid.UUID, Path(alias="chapterContentId")],
     term: SearchTerm,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
 ):
     """
@@ -584,7 +585,7 @@ async def search_chapter_content_term(
         404: Chapter content not found (or insufficient permissions).
     """
     try:
-        return search_chapter_content(db, current_user, chapter_content_id, term)
+        return await search_chapter_content(db, current_user, chapter_content_id, term)
     except ChapterContentNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Chapter content with id {chapter_content_id} not found."
@@ -594,14 +595,14 @@ async def search_chapter_content_term(
 @router.get("/chapters/{chapterId}/content-versions", response_model=list[ChapterContentMeta])
 async def read_chapter_content_versions(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
     Endpoint for retrieving all content version metadata for a chapter.
     Returns an empty list if the chapter has no content versions or doesn't exist.
     """
-    versions = query_chapter_content_ids_by_chapter_id(db, current_user, chapter_id)
+    versions = await query_chapter_content_ids_by_chapter_id(db, current_user, chapter_id)
     return versions
 
 
@@ -609,7 +610,7 @@ async def read_chapter_content_versions(
 async def read_chapter_content_status(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
     chapter_content_id: Annotated[uuid.UUID, Path(alias="chapterContentId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User | None, Depends(get_optional_user)],
 ):
     """
@@ -620,7 +621,7 @@ async def read_chapter_content_status(
         409: Chapter content is outdated.
     """
     try:
-        result = query_chapter_content_status(db, current_user, chapter_id, chapter_content_id)
+        result = await query_chapter_content_status(db, current_user, chapter_id, chapter_content_id)
     except ChapterContentNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter content not found.") from e
     except ChapterContentOutdatedException as e:
@@ -651,7 +652,7 @@ async def read_chapter_content_status(
 async def update_chapter_content(
     chapter_id: Annotated[uuid.UUID, Path(alias="chapterId")],
     request: UpdateChapterContent,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,
 ):
@@ -666,7 +667,9 @@ async def update_chapter_content(
         401: Insufficient permissions to modify this chapter.
     """
     try:
-        result = modify_chapter_content(db, current_user, chapter_id, request.chapter_content_id, request.text_ops)
+        result = await modify_chapter_content(
+            db, current_user, chapter_id, request.chapter_content_id, request.text_ops
+        )
     except ChapterContentNotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Chapter content not found for chapter {chapter_id}."
@@ -708,7 +711,7 @@ async def create_chapters_by_upload(
     novelId: Annotated[uuid.UUID, Form()],
     version: Annotated[Literal["v1"], Form()],
     file: Annotated[UploadFile, File()],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -722,12 +725,12 @@ async def create_chapters_by_upload(
     """
     try:
         if version == "v1":
-            return upload_v1(db, current_user, novelId, BulkChapterUploadV1.model_validate_json(await file.read()))
+            body = await file.read()
+            # Parsing a whole novel takes tens of milliseconds; keep it off the event loop.
+            request = await asyncio.to_thread(BulkChapterUploadV1.model_validate_json, body)
+            return await upload_v1(db, current_user, novelId, request)
         else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Unexpected: {version} is not a valid version for chapter upload.",
-            )
+            assert_never(version)
     except NovelNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Novel not found.") from e
     except ChapterNumDuplicateException as e:

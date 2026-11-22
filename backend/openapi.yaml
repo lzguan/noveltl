@@ -985,6 +985,20 @@ components:
       - userType
       title: CreateUser
       type: object
+    CreatedLabelPromotion:
+      properties:
+        itemCount:
+          title: Itemcount
+          type: integer
+        promotionId:
+          format: uuid
+          title: Promotionid
+          type: string
+      required:
+      - promotionId
+      - itemCount
+      title: CreatedLabelPromotion
+      type: object
     Creator:
       enum:
       - user
@@ -1897,6 +1911,87 @@ components:
       - $ref: '#/components/schemas/AddLabelOp'
       - $ref: '#/components/schemas/DeleteLabelOp'
       - $ref: '#/components/schemas/UpdateLabelOp'
+    LabelPromotionCounts:
+      properties:
+        done:
+          title: Done
+          type: integer
+        failed:
+          title: Failed
+          type: integer
+        pending:
+          title: Pending
+          type: integer
+        total:
+          title: Total
+          type: integer
+      required:
+      - total
+      - done
+      - failed
+      - pending
+      title: LabelPromotionCounts
+      type: object
+    LabelPromotionFailure:
+      properties:
+        chapterId:
+          format: uuid
+          title: Chapterid
+          type: string
+        chapterNum:
+          title: Chapternum
+          type: integer
+        message:
+          title: Message
+          type: string
+      required:
+      - chapterId
+      - chapterNum
+      - message
+      title: LabelPromotionFailure
+      type: object
+    LabelPromotionJob:
+      properties:
+        counts:
+          $ref: '#/components/schemas/LabelPromotionCounts'
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        labelGroupId:
+          format: uuid
+          title: Labelgroupid
+          type: string
+        message:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Message
+        promotionId:
+          format: uuid
+          title: Promotionid
+          type: string
+        runId:
+          format: uuid
+          title: Runid
+          type: string
+        status:
+          $ref: '#/components/schemas/AutoLabelProgress'
+        updatedAt:
+          format: date-time
+          title: Updatedat
+          type: string
+      required:
+      - promotionId
+      - runId
+      - labelGroupId
+      - status
+      - message
+      - counts
+      - createdAt
+      - updatedAt
+      title: LabelPromotionJob
+      type: object
     LabelRef:
       additionalProperties: false
       properties:
@@ -6631,6 +6726,103 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Create Label Datas By Auto Labels
+  /label-groups/{labelGroupId}/label-promotions:
+    post:
+      description: Start promoting an autolabel run's labels into a label group in
+        the background.
+      operationId: create_label_promotion_label_groups__labelGroupId__label_promotions_post
+      parameters:
+      - in: path
+        name: labelGroupId
+        required: true
+        schema:
+          format: uuid
+          title: Labelgroupid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLabelDataByAutoLabel'
+        required: true
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedLabelPromotion'
+          description: Successful Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: Label group or run not found, or not editable.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailHTTPErrorResponse'
+          description: A promotion for this run and group is running.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Create Label Promotion
+  /label-promotions/{promotionId}/failures:
+    get:
+      description: List the chapters a label promotion job could not promote, in processing
+        order.
+      operationId: read_label_promotion_failures_label_promotions__promotionId__failures_get
+      parameters:
+      - in: path
+        name: promotionId
+        required: true
+        schema:
+          format: uuid
+          title: Promotionid
+          type: string
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/LabelPromotionFailure'
+                title: Response Read Label Promotion Failures Label Promotions  Promotionid  Failures
+                  Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Label Promotion Failures
   /labels/{labelId}:
     get:
       description: Gets a label by id.
@@ -8832,6 +9024,48 @@ paths:
       security:
       - OAuth2PasswordBearer: []
       summary: Create Chapter
+  /novels/{novelId}/label-promotions:
+    get:
+      description: 'List a novel''s label promotion jobs: active ones first, then
+        the most recently updated.'
+      operationId: read_label_promotions_novels__novelId__label_promotions_get
+      parameters:
+      - in: path
+        name: novelId
+        required: true
+        schema:
+          format: uuid
+          title: Novelid
+          type: string
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 10
+          maximum: 50
+          minimum: 1
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/LabelPromotionJob'
+                title: Response Read Label Promotions Novels  Novelid  Label Promotions
+                  Get
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - OAuth2PasswordBearer: []
+      summary: Read Label Promotions
   /novels/{novelId}/term-search:
     get:
       description: "Endpoint for finding every occurrence of a term in the latest\

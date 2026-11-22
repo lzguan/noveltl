@@ -7,7 +7,7 @@ debugging; the request-result cache is a different subsystem.
 
 | Work | Celery app | Broker database setting (default) | Registration |
 | --- | --- | --- | --- |
-| Autolabel inference | [autolabels](../../backend/src/autolabels/celery_app.py) | `AUTOLABELS_DATABASE` (1) | [dispatch/celery.py](../../backend/src/autolabels/dispatch/celery.py) |
+| Autolabel inference | [autolabels](../../backend/src/autolabels/inference/celery_app.py) | `AUTOLABELS_DATABASE` (1) | [dispatch/celery.py](../../backend/src/autolabels/inference/dispatch/celery.py) |
 | Filter runners | [filters](../../backend/src/filters/celery_app.py) | `FILTERS_DATABASE` (0) | [dispatch/celery.py](../../backend/src/filters/dispatch/celery.py) |
 | Memory recording/naming | [memory agent](../../backend/src/memory/agent/celery_app.py) | `AGENT_DATABASE` (3) | [dispatch/celery.py](../../backend/src/memory/agent/dispatch/celery.py) |
 | Chapter translation | [translations](../../backend/src/translations/celery_app.py) | `TRANSLATIONS_DATABASE` (4) | [actions package](../../backend/src/translations/actions/__init__.py) |

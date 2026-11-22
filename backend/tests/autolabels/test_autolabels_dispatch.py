@@ -5,11 +5,11 @@ from unittest.mock import Mock
 
 import pytest
 
-from src.autolabels.celery_app import app
-from src.autolabels.dispatch.celery import celery_infer
-from src.autolabels.dispatch.celery_dispatcher import CeleryDispatcher
 from src.autolabels.exceptions import EnqueueFailedException
-from src.autolabels.task_names import CELERY_INFER
+from src.autolabels.inference.celery_app import app
+from src.autolabels.inference.dispatch.celery import celery_infer
+from src.autolabels.inference.dispatch.celery_dispatcher import CeleryDispatcher
+from src.autolabels.inference.task_names import CELERY_INFER
 
 
 class TestCeleryDispatcher:

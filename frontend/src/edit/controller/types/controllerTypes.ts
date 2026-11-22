@@ -7,6 +7,7 @@ import type {
 	CProvId,
 	CServId,
 	LGProvId,
+	LGServId,
 	LProvId,
 	LServId,
 	ProvAutoLabel,
@@ -74,6 +75,8 @@ export interface NovelGetters {
 	chapterContentServerId: (chapterId: CProvId) => Effect.Effect<CCServId | null>;
 	chapterContentIdFromServerId: (chapterContentId: CCServId) => Effect.Effect<CCProvId | null>;
 	labelIdFromServerId: (labelId: LServId) => Effect.Effect<LProvId | null>;
+	labelGroupIdFromServerId: (labelGroupId: LGServId) => Effect.Effect<LGProvId | null>;
+	labelGroupServerId: (labelGroupId: LGProvId) => Effect.Effect<LGServId | null>;
 	chapterGetterSlot: (chapterId: CProvId) => Effect.Effect<ChapterGetterSlot, NotFoundException>;
 	labelGroupSlot: (labelGroupId: LGProvId) => Effect.Effect<LabelGroupSlot, NotFoundException>;
 	autoLabelRunIds: () => Effect.Effect<readonly ALRProvId[]>;

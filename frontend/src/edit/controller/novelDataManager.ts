@@ -150,6 +150,12 @@ export const buildNovelDataManager = (
 				idRepo.queryProvId({ kind: "chapterContent", servId: chapterContentId }),
 			labelIdFromServerId: (labelId) =>
 				idRepo.queryProvId({ kind: "label", servId: labelId }),
+			labelGroupIdFromServerId: (labelGroupId) =>
+				idRepo.queryProvId({ kind: "labelGroup", servId: labelGroupId }),
+			labelGroupServerId: (labelGroupId) =>
+				idRepo
+					.getServerId({ kind: "labelGroup", provId: labelGroupId })
+					.pipe(Effect.catch(() => Effect.succeed(null))),
 			chapterGetterSlot: (chapterId: CProvId) =>
 				Effect.gen(function* () {
 					const slot = yield* chaptersIndex.get(chapterId);

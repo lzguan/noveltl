@@ -26,6 +26,8 @@ const getters: NovelGetters = {
 	chapterContentServerId: unusedGetter,
 	chapterContentIdFromServerId: unusedGetter,
 	labelIdFromServerId: unusedGetter,
+	labelGroupIdFromServerId: unusedGetter,
+	labelGroupServerId: unusedGetter,
 	chapterGetterSlot: unusedGetter,
 	labelGroupSlot: unusedGetter,
 	autoLabelRunIds: unusedGetter,

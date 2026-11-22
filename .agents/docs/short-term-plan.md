@@ -84,7 +84,9 @@ Agreed next:
   it; only the insert statement's choice of label datas and spans changes.
 - Frontend polling (agreed 2026-11-22, branch `feature/label-promotion-polling`):
   `GET .../label-promotions?promotionIds=` (max `MAX_POLLED_PROMOTIONS` = 10,
-  `limit` still applies). A `usePromotionJobs` hook mounted in `EditNovelPage`
+  `limit` still applies). A `usePromotionJobs` hook (in `frontend/src/autolabels/promotions/`;
+  new autolabel code goes under `src/autolabels/`, existing code moves there
+  gradually as it stops needing the controller) mounted in `EditNovelPage`
   owns `active` (by `createdAt`) and `finished` (by `updatedAt` desc, evict tail)
   lists, POSTs and polls the active snapshot about every 2 s; a re-seed
   generation guards against racing polls. On finish it reloads the group in

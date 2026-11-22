@@ -1,7 +1,13 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page, type TestInfo } from "@playwright/test";
 
 import { apiUrl, latestChapterContent, loginByApi } from "../helpers/api.js";
 import { readSeed } from "../helpers/seed.js";
+
+// Retries and repeats share one seeded DB, so each attempt needs its own chapter number.
+function chapterNumber(base: number, testInfo: TestInfo): number {
+	const attempt = testInfo.repeatEachIndex * (testInfo.project.retries + 1) + testInfo.retry;
+	return base + 10 * attempt;
+}
 
 async function createChapter(
 	page: Page,
@@ -56,9 +62,10 @@ async function placeCaretAfterEmoji(page: Page) {
 test("saves an insertion after an emoji at the position shown in the editor", async ({
 	page,
 	request,
-}) => {
-	const fixture = await createChapter(page, request, 9001, "A😀BCDEF");
-	await openChapter(page, 9001, fixture.title, "A😀BCDEF");
+}, testInfo) => {
+	const number = chapterNumber(9001, testInfo);
+	const fixture = await createChapter(page, request, number, "A😀BCDEF");
+	await openChapter(page, number, fixture.title, "A😀BCDEF");
 	await placeCaretAfterEmoji(page);
 	const saved = page.waitForResponse(
 		(response) =>
@@ -71,13 +78,14 @@ test("saves an insertion after an emoji at the position shown in the editor", as
 	const content = await latestChapterContent(request, fixture.token, fixture.chapterId);
 	expect(content.chapterContentText).toBe("A😀XBCDEF");
 	await page.reload();
-	await page.getByText(`Ch.9001: ${fixture.title}`, { exact: true }).click();
+	await page.getByText(`Ch.${number}: ${fixture.title}`, { exact: true }).click();
 	await expect(page.locator(".cm-content")).toHaveText("A😀XBCDEF");
 });
 
-test("saves a deletion after an emoji", async ({ page, request }) => {
-	const fixture = await createChapter(page, request, 9002, "A😀BCDEF");
-	await openChapter(page, 9002, fixture.title, "A😀BCDEF");
+test("saves a deletion after an emoji", async ({ page, request }, testInfo) => {
+	const number = chapterNumber(9002, testInfo);
+	const fixture = await createChapter(page, request, number, "A😀BCDEF");
+	await openChapter(page, number, fixture.title, "A😀BCDEF");
 	await placeCaretAfterEmoji(page);
 	const saved = page.waitForResponse(
 		(response) =>
@@ -92,16 +100,20 @@ test("saves a deletion after an emoji", async ({ page, request }) => {
 		(await latestChapterContent(request, fixture.token, fixture.chapterId)).chapterContentText,
 	).toBe("A😀CDEF");
 	await page.reload();
-	await page.getByText(`Ch.9002: ${fixture.title}`, { exact: true }).click();
+	await page.getByText(`Ch.${number}: ${fixture.title}`, { exact: true }).click();
 	await expect(page.locator(".cm-content")).toHaveText("A😀CDEF");
 });
 
-test("renders a server label after an emoji over its actual word", async ({ page, request }) => {
-	const fixture = await createChapter(page, request, 9003, "A😀BCDEF");
+test("renders a server label after an emoji over its actual word", async ({
+	page,
+	request,
+}, testInfo) => {
+	const number = chapterNumber(9003, testInfo);
+	const fixture = await createChapter(page, request, number, "A😀BCDEF");
 	const headers = { Authorization: `Bearer ${fixture.token}` };
 	const groupResponse = await request.post(apiUrl("/label-groups"), {
 		headers,
-		data: { novelId: readSeed().novelId, labelGroupName: "Unicode label offsets" },
+		data: { novelId: readSeed().novelId, labelGroupName: `Unicode label offsets ${number}` },
 	});
 	expect(groupResponse.ok(), await groupResponse.text()).toBeTruthy();
 	const group = await groupResponse.json();
@@ -119,19 +131,23 @@ test("renders a server label after an emoji over its actual word", async ({ page
 		data: { ops: [{ op: "add", startPos: 2, endPos: 4, entityGroup: "DEMO" }] },
 	});
 	expect(labelResponse.ok(), await labelResponse.text()).toBeTruthy();
-	await openChapter(page, 9003, fixture.title, "A😀BCDEF");
+	await openChapter(page, number, fixture.title, "A😀BCDEF");
 	const label = page.locator('.cm-content span[style*="border-bottom"]');
 	await expect(label).toHaveCount(1);
 	await expect(label).toHaveText("BC");
 });
 
-test("highlights the searched term after emoji in its preview", async ({ page, request }) => {
-	const fixture = await createChapter(page, request, 9004, "😀😀白玫走进花园。");
-	await openChapter(page, 9004, fixture.title, "😀😀白玫走进花园。");
+test("highlights the searched term after emoji in its preview", async ({
+	page,
+	request,
+}, testInfo) => {
+	const number = chapterNumber(9004, testInfo);
+	const fixture = await createChapter(page, request, number, "😀😀白玫走进花园。");
+	await openChapter(page, number, fixture.title, "😀😀白玫走进花园。");
 	await page.getByRole("tab", { name: "Search", exact: true }).click();
 	await page.getByRole("textbox", { name: "Search text" }).fill("白玫");
 	await page.getByRole("button", { name: "Search", exact: true }).click();
-	await page.getByRole("button", { name: `Expand Chapter 9004 · ${fixture.title}` }).click();
+	await page.getByRole("button", { name: `Expand Chapter ${number} · ${fixture.title}` }).click();
 	const match = page.locator("mark");
 	await expect(match).toHaveCount(1);
 	await expect(match).toHaveText("白玫");
@@ -141,8 +157,8 @@ for (const cached of [false, true]) {
 	test(`search navigation selects a rare CJK term in a ${cached ? "cached" : "newly loaded"} chapter`, async ({
 		page,
 		request,
-	}) => {
-		const number = cached ? 9006 : 9005;
+	}, testInfo) => {
+		const number = chapterNumber(cached ? 9006 : 9005, testInfo);
 		const fixture = await createChapter(page, request, number, "😀😀𠮷走进花园。");
 		if (cached) await openChapter(page, number, fixture.title, "😀😀𠮷走进花园。");
 		else await page.goto(`/edit/novels/${readSeed().novelId}`);
@@ -155,8 +171,18 @@ for (const cached of [false, true]) {
 		const occurrence = page.getByRole("button", { name: "😀😀𠮷走进花园。", exact: true });
 		await occurrence.click();
 		await expect(page.locator(".cm-content")).toHaveText("😀😀𠮷走进花园。");
+		// drawSelection renders a background for a non-empty selection even while unfocused.
+		await expect(
+			page.locator(".cm-editor .cm-selectionBackground"),
+			"search navigation did not select the occurrence",
+		).not.toHaveCount(0);
 		await page.getByRole("button", { name: "Edit", exact: true }).click();
 		await page.locator(".cm-content").focus();
+		await expect
+			.poll(() => page.evaluate(() => window.getSelection()?.toString()), {
+				message: "editor selection was lost before typing",
+			})
+			.toBe("𠮷");
 		await page.keyboard.insertText("X");
 		await expect(page.locator(".cm-content")).toHaveText("😀😀X走进花园。");
 		await expect

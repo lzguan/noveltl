@@ -57,19 +57,29 @@ check before re-running the suite.
 
 `search navigation selects a rare CJK term in a newly loaded chapter`
 ([editor-unicode-offsets.spec.ts](../../e2e/tests/editor-unicode-offsets.spec.ts))
-failed once in CI on 2026-11-15 (typed `X` landed at offset 0, so the 𠮷
-selection was lost) and passed on rerun; it passed 15/15 locally with a fresh
-chapter per repeat. The user chose to record rather than fix it for now.
+failed in CI on 2026-11-15 (typed `X` landed at offset 0, so the 𠮷 selection
+was lost) and again on 2026-11-22 (same wrong editor text); both passed on
+rerun. The app is unchanged; only the test was hardened.
 
-- Test gaps: it checks only the editor text after clicking the occurrence, never
-  that 𠮷 is selected, before Edit and typing; and it reuses chapter 9005/9006,
-  so a first failure makes CI retries fail on "chapter already exists" and
-  `--repeat-each` needs unique numbers.
+- Spec hardening: `chapterNumber(base, testInfo)` offsets every chapter in the
+  spec by 10 per attempt (`repeatEachIndex`, `retry`), so retries and
+  `--repeat-each` no longer hit "chapter already exists" (the seed resets the DB
+  only once per run). The CJK test now asserts, with distinct messages, that a
+  `.cm-selectionBackground` exists after clicking the occurrence ("did not
+  select") and that the DOM selection is `𠮷` after Edit and focus ("lost
+  before typing"). A failure past both points to typing/input, not selection.
 - Unproven app races that would drop the selection on a slow machine:
   `switchChapter` returns early when the tab is already `loading`, discarding the
   highlight ([chapterManager.ts](../../frontend/src/edit/managers/chapterManager.ts));
   the cached open path keeps the highlight only when `isTextSynced()`
   ([novelDataManager.ts](../../frontend/src/edit/controller/novelDataManager.ts)).
-  A selection assertion before typing would show whether either occurs.
+  Neither has been reproduced; the next CI failure's message and trace should
+  say which stage drops it.
 - CI runs e2e against its own Postgres service (`.github/workflows/test-e2e.yml`),
-  not the Compose `test_db`, and uploads no traces.
+  not the Compose `test_db`. The config keeps traces for failed and retried
+  attempts (`retain-on-failure-and-retries`), and the workflow uploads
+  `playwright-report/` and `test-results/` only when the job fails, so a flake
+  that passes on retry leaves no artifact.
+- Local runs: the spec runs against Compose `test_db`/`test_redis` once the
+  worktree has `backend/.venv` and `frontend/node_modules`; the seed drops all
+  tables, so do not overlap it with backend pytest.

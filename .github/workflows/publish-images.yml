@@ -35,6 +35,10 @@ jobs:
             context: ./backend
             file: ./backend/Dockerfile
             target: filters-worker
+          - image: noveltl-jobs-worker
+            context: ./backend
+            file: ./backend/Dockerfile
+            target: jobs-worker
           - image: noveltl-memory-agent-worker
             context: ./backend
             file: ./backend/Dockerfile

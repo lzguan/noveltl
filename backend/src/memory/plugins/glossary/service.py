@@ -4,7 +4,6 @@ from uuid import UUID
 from sqlalchemy import Select, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from src.auth.models import User
 from src.memory import service as memory_service
@@ -39,27 +38,29 @@ from src.novels.models import Chapter, ChapterContent
 from src.novels.service import query_chapter_content_by_most_recent
 
 
-def _query_editable_group(db: Session, user: User, memory_group_id: UUID) -> MemoryGroup:
+async def _query_editable_group(db: AsyncSession, user: User, memory_group_id: UUID) -> MemoryGroup:
     query = memory_group_mod_access_select(
         select(MemoryGroup).where(MemoryGroup.memory_group_id == memory_group_id),
         user,
         edit_only=True,
     )
     try:
-        return db.execute(query).scalar_one()
+        return (await db.execute(query)).scalar_one()
     except NoResultFound as e:
         raise MemoryGroupNotFoundException from e
 
 
-def _enrich_memories(db: Session, memories: list[Memory], count: int) -> GlossaryMemoryPage:
+async def _enrich_memories(db: AsyncSession, memories: list[Memory], count: int) -> GlossaryMemoryPage:
     memory_ids = [memory.memory_id for memory in memories]
     terms_by_memory: dict[UUID, list[GlossaryTerm]] = {memory_id: [] for memory_id in memory_ids}
     if memory_ids:
-        rows = db.execute(
-            select(GlossaryAssociation.memory_id, GlossaryTerm)
-            .join(GlossaryTerm, GlossaryTerm.term_id == GlossaryAssociation.term_id)
-            .where(GlossaryAssociation.memory_id.in_(memory_ids))
-            .order_by(GlossaryAssociation.memory_id, GlossaryTerm.term, GlossaryTerm.term_id)
+        rows = (
+            await db.execute(
+                select(GlossaryAssociation.memory_id, GlossaryTerm)
+                .join(GlossaryTerm, GlossaryTerm.term_id == GlossaryAssociation.term_id)
+                .where(GlossaryAssociation.memory_id.in_(memory_ids))
+                .order_by(GlossaryAssociation.memory_id, GlossaryTerm.term, GlossaryTerm.term_id)
+            )
         ).all()
         for memory_id, term in rows:
             terms_by_memory[memory_id].append(term)
@@ -75,8 +76,8 @@ def _enrich_memories(db: Session, memories: list[Memory], count: int) -> Glossar
     )
 
 
-def query_glossary_memories_at_chapter(
-    db: Session,
+async def query_glossary_memories_at_chapter(
+    db: AsyncSession,
     user: User | None,
     memory_group_id: UUID,
     chapter_id: UUID,
@@ -86,7 +87,7 @@ def query_glossary_memories_at_chapter(
     created_exactly_at_chapter: bool = False,
     memory_types: list[MemoryType] | None = None,
 ) -> GlossaryMemoryPage:
-    page = memory_service.query_memories_at_chapter(
+    page = await memory_service.query_memories_at_chapter(
         db,
         user,
         memory_group_id,
@@ -97,11 +98,11 @@ def query_glossary_memories_at_chapter(
         plugin_names=[GLOSSARY_PLUGIN_NAME],
         memory_types=memory_types,
     )
-    return _enrich_memories(db, page.rows, page.count)
+    return await _enrich_memories(db, page.rows, page.count)
 
 
-def query_glossary_memories(
-    db: Session,
+async def query_glossary_memories(
+    db: AsyncSession,
     user: User | None,
     memory_group_id: UUID,
     skip: int = 0,
@@ -109,7 +110,7 @@ def query_glossary_memories(
     *,
     memory_types: list[MemoryType] | None = None,
 ) -> GlossaryMemoryPage:
-    page = memory_service.query_memories(
+    page = await memory_service.query_memories(
         db,
         user,
         memory_group_id,
@@ -118,7 +119,7 @@ def query_glossary_memories(
         plugin_names=[GLOSSARY_PLUGIN_NAME],
         memory_types=memory_types,
     )
-    return _enrich_memories(db, page.rows, page.count)
+    return await _enrich_memories(db, page.rows, page.count)
 
 
 async def query_glossary_terms(
@@ -216,8 +217,8 @@ async def query_glossary_terms(
     )
 
 
-def query_memories_for_term(
-    db: Session,
+async def query_memories_for_term(
+    db: AsyncSession,
     user: User | None,
     memory_group_id: UUID,
     term_id: UUID,
@@ -235,7 +236,7 @@ def query_memories_for_term(
         )
         chapter_query = memory_group_mod_access_select(chapter_query, user)
         try:
-            chapter_num = db.execute(chapter_query).scalar_one()
+            chapter_num = (await db.execute(chapter_query)).scalar_one()
         except NoResultFound as e:
             raise ChapterNotFoundException from e
     term_query = glossary_term_mod_access_select(
@@ -246,7 +247,7 @@ def query_memories_for_term(
         user,
     )
     try:
-        db.execute(term_query).scalar_one()
+        (await db.execute(term_query)).scalar_one()
     except NoResultFound as e:
         raise GlossaryTermNotFoundException from e
 
@@ -267,20 +268,22 @@ def query_memories_for_term(
             )
         return memory_mod_access_select(query, user)
 
-    count = db.execute(apply_filters(select(func.count(Memory.memory_id)))).scalar_one()
+    count = (await db.execute(apply_filters(select(func.count(Memory.memory_id))))).scalar_one()
     memories = list(
-        db.scalars(
-            apply_filters(select(Memory))
-            .order_by(Memory.memory_start_num.desc(), Memory.memory_id)
-            .offset(skip)
-            .limit(limit)
+        (
+            await db.scalars(
+                apply_filters(select(Memory))
+                .order_by(Memory.memory_start_num.desc(), Memory.memory_id)
+                .offset(skip)
+                .limit(limit)
+            )
         ).all()
     )
-    return _enrich_memories(db, memories, count)
+    return await _enrich_memories(db, memories, count)
 
 
-def query_terms_for_memory(
-    db: Session,
+async def query_terms_for_memory(
+    db: AsyncSession,
     user: User | None,
     memory_group_id: UUID,
     memory_id: UUID,
@@ -294,21 +297,23 @@ def query_terms_for_memory(
         user,
     )
     try:
-        db.execute(memory_query).scalar_one()
+        (await db.execute(memory_query)).scalar_one()
     except NoResultFound as e:
         raise MemoryNotFoundException from e
     return list(
-        db.scalars(
-            select(GlossaryTerm)
-            .join(GlossaryAssociation, GlossaryAssociation.term_id == GlossaryTerm.term_id)
-            .where(GlossaryAssociation.memory_id == memory_id)
-            .order_by(GlossaryTerm.term, GlossaryTerm.term_id)
+        (
+            await db.scalars(
+                select(GlossaryTerm)
+                .join(GlossaryAssociation, GlossaryAssociation.term_id == GlossaryTerm.term_id)
+                .where(GlossaryAssociation.memory_id == memory_id)
+                .order_by(GlossaryTerm.term, GlossaryTerm.term_id)
+            )
         ).all()
     )
 
 
-def create_glossary_memory(
-    db: Session,
+async def create_glossary_memory(
+    db: AsyncSession,
     user: User,
     memory_group_id: UUID,
     chapter_id: UUID,
@@ -319,16 +324,18 @@ def create_glossary_memory(
     scope: Scope | None = None,
     mark: str | None = None,
 ) -> GlossaryMemory:
-    _query_editable_group(db, user, memory_group_id)
+    await _query_editable_group(db, user, memory_group_id)
     unique_term_ids = list(dict.fromkeys(term_ids))
     terms = list(
-        db.scalars(
-            select(GlossaryTerm)
-            .where(
-                GlossaryTerm.memory_group_id == memory_group_id,
-                GlossaryTerm.term_id.in_(unique_term_ids),
+        (
+            await db.scalars(
+                select(GlossaryTerm)
+                .where(
+                    GlossaryTerm.memory_group_id == memory_group_id,
+                    GlossaryTerm.term_id.in_(unique_term_ids),
+                )
+                .order_by(GlossaryTerm.term, GlossaryTerm.term_id)
             )
-            .order_by(GlossaryTerm.term, GlossaryTerm.term_id)
         ).all()
     )
     if not unique_term_ids or len(terms) != len(unique_term_ids):
@@ -339,7 +346,7 @@ def create_glossary_memory(
         chapter_content_id=chapter_content_id,
     )
     try:
-        memory, _ = access.create_memory(
+        memory, _ = await access.create_memory(
             db,
             context,
             Creator.USER,
@@ -349,35 +356,35 @@ def create_glossary_memory(
             scope,
             mark,
         )
-        db.commit()
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
     return GlossaryMemory(memory=MemorySchema.model_validate(memory), terms=terms)
 
 
-def create_glossary_term(
-    db: Session,
+async def create_glossary_term(
+    db: AsyncSession,
     user: User,
     memory_group_id: UUID,
     term: str,
     term_kind: TermKind | None = None,
 ) -> GlossaryTerm:
-    _query_editable_group(db, user, memory_group_id)
+    await _query_editable_group(db, user, memory_group_id)
     try:
-        glossary_term = access.create_term(db, memory_group_id, term, term_kind)
-        db.commit()
+        glossary_term = await access.create_term(db, memory_group_id, term, term_kind)
+        await db.commit()
         return glossary_term
     except IntegrityError as e:
-        db.rollback()
+        await db.rollback()
         raise GlossaryTermAlreadyExistsException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
 
-def update_glossary_term(
-    db: Session,
+async def update_glossary_term(
+    db: AsyncSession,
     user: User,
     memory_group_id: UUID,
     term_id: UUID,
@@ -392,22 +399,22 @@ def update_glossary_term(
     )
     query = glossary_term_mod_access_update(query, user)
     try:
-        glossary_term = db.execute(query).scalar_one()
-        db.commit()
+        glossary_term = (await db.execute(query)).scalar_one()
+        await db.commit()
         return glossary_term
     except NoResultFound as e:
-        db.rollback()
+        await db.rollback()
         raise GlossaryTermNotFoundException from e
     except IntegrityError as e:
-        db.rollback()
+        await db.rollback()
         raise GlossaryTermAlreadyExistsException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
 
-def change_glossary_term_review_status(
-    db: Session,
+async def change_glossary_term_review_status(
+    db: AsyncSession,
     user: User,
     memory_group_id: UUID,
     term_id: UUID,
@@ -421,19 +428,19 @@ def change_glossary_term_review_status(
     )
     query = glossary_term_mod_access_update(query, user)
     try:
-        glossary_term = db.execute(query).scalar_one()
-        db.commit()
+        glossary_term = (await db.execute(query)).scalar_one()
+        await db.commit()
         return glossary_term
     except NoResultFound as e:
-        db.rollback()
+        await db.rollback()
         raise GlossaryTermNotFoundException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
 
-def replace_memory_terms(
-    db: Session,
+async def replace_memory_terms(
+    db: AsyncSession,
     user: User,
     memory_group_id: UUID,
     memory_id: UUID,
@@ -449,36 +456,38 @@ def replace_memory_terms(
         edit_only=True,
     )
     try:
-        db.execute(memory_query).scalar_one()
+        (await db.execute(memory_query)).scalar_one()
     except NoResultFound as e:
         raise MemoryNotFoundException from e
 
     unique_term_ids = list(dict.fromkeys(term_ids))
     terms = list(
-        db.scalars(
-            glossary_term_mod_access_select(
-                select(GlossaryTerm).where(
-                    GlossaryTerm.memory_group_id == memory_group_id,
-                    GlossaryTerm.term_id.in_(unique_term_ids),
-                ),
-                user,
-                edit_only=True,
-            ).order_by(GlossaryTerm.term, GlossaryTerm.term_id)
+        (
+            await db.scalars(
+                glossary_term_mod_access_select(
+                    select(GlossaryTerm).where(
+                        GlossaryTerm.memory_group_id == memory_group_id,
+                        GlossaryTerm.term_id.in_(unique_term_ids),
+                    ),
+                    user,
+                    edit_only=True,
+                ).order_by(GlossaryTerm.term, GlossaryTerm.term_id)
+            )
         ).all()
     )
     if len(terms) != len(unique_term_ids):
         raise GlossaryTermNotFoundException
     try:
-        db.execute(delete(GlossaryAssociation).where(GlossaryAssociation.memory_id == memory_id))
+        await db.execute(delete(GlossaryAssociation).where(GlossaryAssociation.memory_id == memory_id))
         db.add_all([GlossaryAssociation(memory_id=memory_id, term_id=term.term_id) for term in terms])
-        db.commit()
+        await db.commit()
         return terms
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
 
-def delete_glossary_term(db: Session, user: User, memory_group_id: UUID, term_id: UUID) -> UUID:
+async def delete_glossary_term(db: AsyncSession, user: User, memory_group_id: UUID, term_id: UUID) -> UUID:
     query = (
         delete(GlossaryTerm)
         .where(GlossaryTerm.term_id == term_id, GlossaryTerm.memory_group_id == memory_group_id)
@@ -486,12 +495,12 @@ def delete_glossary_term(db: Session, user: User, memory_group_id: UUID, term_id
     )
     query = glossary_term_mod_access_delete(query, user)
     try:
-        deleted_term_id = db.execute(query).scalar_one()
-        db.commit()
+        deleted_term_id = (await db.execute(query)).scalar_one()
+        await db.commit()
         return deleted_term_id
     except NoResultFound as e:
-        db.rollback()
+        await db.rollback()
         raise GlossaryTermNotFoundException from e
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise

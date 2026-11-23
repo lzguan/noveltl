@@ -3,7 +3,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from src.auth.dependencies import get_current_user
 from src.auth.models import User
@@ -36,7 +35,7 @@ from src.autolabels.service import (
     query_promotion_failures,
     query_promotion_jobs,
 )
-from src.database import get_async_db, get_db
+from src.database import get_async_db
 from src.labels.exceptions import LabelGroupNotFoundException
 from src.novels.exceptions import NovelNotFoundException
 from src.requests.cache import redis_cache
@@ -49,7 +48,7 @@ router = APIRouter()
 @router.get("/auto-label-runs", response_model=list[AutoLabelRun])
 async def read_auto_label_runs(
     novel_id: Annotated[uuid.UUID, Query(alias="novelId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     mine: bool = False,
 ):
@@ -60,7 +59,7 @@ async def read_auto_label_runs(
         novel_id: UUID of novel to query runs for.
         mine: If true, only return runs triggered by the current user.
     """
-    return query_auto_label_runs(db, current_user, novel_id, mine)
+    return await query_auto_label_runs(db, current_user, novel_id, mine)
 
 
 @router.get(
@@ -69,7 +68,7 @@ async def read_auto_label_runs(
 )
 async def read_auto_labels_by_run(
     run_id: Annotated[uuid.UUID, Path(alias="runId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
     start: int | None = None,
     end: int | None = None,
@@ -82,13 +81,13 @@ async def read_auto_labels_by_run(
         start: Optional inclusive lower bound on chapter number.
         end: Optional exclusive upper bound on chapter number.
     """
-    return query_auto_labels_by_run(db, current_user, run_id, start, end)
+    return await query_auto_labels_by_run(db, current_user, run_id, start, end)
 
 
 @router.get("/auto-labels/{autoLabelId}", response_model=AutoLabel)
 async def read_autolabel_by_id(
     auto_label_id: Annotated[uuid.UUID, Path(alias="autoLabelId")],
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
@@ -98,7 +97,7 @@ async def read_autolabel_by_id(
         auto_label_id: UUID of the autolabel.
     """
     try:
-        autolabel = query_auto_label_by_id(db, current_user, auto_label_id)
+        autolabel = await query_auto_label_by_id(db, current_user, auto_label_id)
     except AutoLabelNotFoundException as e:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND,
@@ -119,7 +118,7 @@ async def read_autolabel_by_id(
 @attl_cache(cache=redis_cache, ttl=60, serialize_ret=serialize_response_model(CreateAutoLabelsResponse))
 async def create_autolabels(
     request: CreateAutoLabels,
-    db: Annotated[Session, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     dispatcher: Annotated[AutoLabelDispatcher, Depends(get_dispatcher)],
     current_user: Annotated[User, Depends(get_current_user)],
     request_key: Annotated[uuid.UUID | None, Query(alias="requestKey")] = None,

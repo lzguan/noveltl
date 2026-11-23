@@ -5,15 +5,13 @@ Service functions for auto labeling.
 import asyncio
 import logging
 import uuid
-from collections.abc import Coroutine
-from typing import Any
 from uuid import uuid4
 
 from psycopg.errors import UniqueViolation
 from sqlalchemy import and_, exists, func, insert, literal, select
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session, defer
+from sqlalchemy.orm import defer
 
 from src.auth.models import User
 from src.autolabels import models, schemas
@@ -38,8 +36,8 @@ from src.novels.permissions import chapter_mod_access_select, novel_mod_access_s
 logger = logging.getLogger(__name__)
 
 
-def query_auto_label_runs(
-    db: Session,
+async def query_auto_label_runs(
+    db: AsyncSession,
     current_user: User,
     novel_id: uuid.UUID,
     mine: bool = False,
@@ -60,13 +58,13 @@ def query_auto_label_runs(
     subq = select(1).select_from(nm.Novel).where(nm.Novel.novel_id == novel_id)
     subq = novel_mod_access_select(subq, current_user)
     q = q.where(exists(subq))
-    result = db.execute(q)
+    result = await db.execute(q)
     rows = result.scalars().all()
     return [schemas.AutoLabelRun.model_validate(row) for row in rows]
 
 
-def query_auto_labels_by_run(
-    db: Session,
+async def query_auto_labels_by_run(
+    db: AsyncSession,
     current_user: User,
     run_id: uuid.UUID,
     start: int | None = None,
@@ -100,7 +98,7 @@ def query_auto_labels_by_run(
         if end is not None:
             q = q.where(nm.Chapter.chapter_num < end)
     q = auto_label_mod_access_select(q, current_user)
-    result = db.execute(q)
+    result = await db.execute(q)
     rows = result.all()
 
     ret = []
@@ -111,7 +109,7 @@ def query_auto_labels_by_run(
     return ret
 
 
-def query_auto_label_by_id(db: Session, current_user: User, auto_label_id: uuid.UUID) -> models.AutoLabel:
+async def query_auto_label_by_id(db: AsyncSession, current_user: User, auto_label_id: uuid.UUID) -> models.AutoLabel:
     """
     Query an autolabel with a specific id from database.
 
@@ -126,7 +124,7 @@ def query_auto_label_by_id(db: Session, current_user: User, auto_label_id: uuid.
     q = select(models.AutoLabel).where(models.AutoLabel.auto_label_id == auto_label_id)
     q = auto_label_mod_access_select(q, current_user)
     try:
-        result = db.execute(q)
+        result = await db.execute(q)
         autolabel = result.scalar_one()
     except NoResultFound as e:
         raise AutoLabelNotFoundException from e
@@ -134,7 +132,7 @@ def query_auto_label_by_id(db: Session, current_user: User, auto_label_id: uuid.
 
 
 async def insert_auto_labels(
-    db: Session,
+    db: AsyncSession,
     current_user: User,
     dispatcher: AutoLabelDispatcher,
     request: schemas.CreateAutoLabels,
@@ -182,7 +180,7 @@ async def insert_auto_labels(
         current_user,
         contributor_only=True,
     )
-    if db.execute(permission_query).scalar_one_or_none() is None:
+    if (await db.execute(permission_query)).scalar_one_or_none() is None:
         raise NovelNotFoundException(f"Novel with ID {request.novel_id} not found or not accessible.")
 
     # 1. Create the run.
@@ -194,10 +192,11 @@ async def insert_auto_labels(
     )
     db.add(run)
     # Flush to get the server-generated run_id before we insert autolabels.
-    db.flush()
+    await db.flush()
+    run_id = run.run_id
     logger.info(
         "Autolabel run created run_id=%s novel_id=%s model_name=%s",
-        run.run_id,
+        run_id,
         request.novel_id,
         model_name,
     )
@@ -214,7 +213,7 @@ async def insert_auto_labels(
             literal(AutoLabelProgress.PENDING),
             literal("Waiting to be queued."),
             nm.ChapterContent.chapter_content_id,
-            literal(run.run_id),
+            literal(run_id),
         )
         .select_from(nm.ChapterContent)
         .join(nm.Chapter, nm.Chapter.chapter_id == nm.ChapterContent.chapter_id)
@@ -239,51 +238,53 @@ async def insert_auto_labels(
     q = auto_label_mod_access_insert(q, current_user, contributor_only=True)
     stmt = insert(models.AutoLabel).from_select(columns, q).returning(models.AutoLabel)
     try:
-        result = db.execute(stmt)
+        result = await db.execute(stmt)
         result_rows = result.scalars().all()
-        db.commit()
+        await db.commit()
         logger.info(
             "Autolabel rows inserted run_id=%s count=%s",
-            run.run_id,
+            run_id,
             len(result_rows),
         )
         if len(result_rows) == 0:
             logger.warning(
                 "Autolabel run has no matching chapter contents run_id=%s novel_id=%s",
-                run.run_id,
+                run_id,
                 request.novel_id,
             )
     except IntegrityError as e:
-        db.rollback()
-        logger.exception("Autolabel insert integrity error run_id=%s novel_id=%s", run.run_id, request.novel_id)
+        await db.rollback()
+        logger.exception("Autolabel insert integrity error run_id=%s novel_id=%s", run_id, request.novel_id)
         if isinstance(e.orig, UniqueViolation):
             raise AutoLabelDuplicateException from e
         raise
     except Exception:
-        db.rollback()
-        logger.exception("Autolabel insert failed run_id=%s novel_id=%s", run.run_id, request.novel_id)
+        await db.rollback()
+        logger.exception("Autolabel insert failed run_id=%s novel_id=%s", run_id, request.novel_id)
         raise
 
     # 3. Dispatch worker tasks.
-    tasks: list[Coroutine[Any, Any, None]] = []
+    jobs: list[tuple[uuid.UUID, uuid.UUID]] = []
     for autolabel in result_rows:
         job_id = uuid4()
         autolabel.auto_label_last_job_id = job_id
         logger.info(
             "Autolabel job assigned run_id=%s auto_label_id=%s job_id=%s",
-            run.run_id,
+            run_id,
             autolabel.auto_label_id,
             job_id,
         )
-        tasks.append(dispatcher.aenqueue(job_id, autolabel.auto_label_id))
+        jobs.append((job_id, autolabel.auto_label_id))
     try:
-        db.commit()
+        await db.commit()
     except Exception:
-        db.rollback()
-        logger.exception("Autolabel job id commit failed run_id=%s", run.run_id)
+        await db.rollback()
+        logger.exception("Autolabel job id commit failed run_id=%s", run_id)
         raise
 
-    ret = await asyncio.gather(*tasks, return_exceptions=True)
+    ret = await asyncio.gather(
+        *(dispatcher.aenqueue(job_id, auto_label_id) for job_id, auto_label_id in jobs), return_exceptions=True
+    )
 
     queued_count = 0
     failed_count = 0
@@ -294,7 +295,7 @@ async def insert_auto_labels(
             queued_count += 1
             logger.info(
                 "Autolabel job queued run_id=%s auto_label_id=%s job_id=%s",
-                run.run_id,
+                run_id,
                 autolabel.auto_label_id,
                 autolabel.auto_label_last_job_id,
             )
@@ -304,39 +305,35 @@ async def insert_auto_labels(
             failed_count += 1
             logger.error(
                 "Autolabel job failed to queue run_id=%s auto_label_id=%s job_id=%s error=%s",
-                run.run_id,
+                run_id,
                 autolabel.auto_label_id,
                 autolabel.auto_label_last_job_id,
                 result,
             )
     try:
-        db.commit()
+        await db.commit()
         logger.info(
             "Autolabel queue dispatch completed run_id=%s queued=%s failed=%s",
-            run.run_id,
+            run_id,
             queued_count,
             failed_count,
         )
     except Exception:
-        db.rollback()
-        logger.exception("Autolabel queue status commit failed run_id=%s", run.run_id)
+        await db.rollback()
+        logger.exception("Autolabel queue status commit failed run_id=%s", run_id)
         raise
 
     # 4. Build response.
     q = (
         select(models.AutoLabel.auto_label_id, nm.Chapter.chapter_id)
         .select_from(models.AutoLabel)
-        .where(models.AutoLabel.run_id == run.run_id)
+        .where(models.AutoLabel.run_id == run_id)
         .join(nm.ChapterContent, nm.ChapterContent.chapter_content_id == models.AutoLabel.chapter_content_id)
         .join(nm.Chapter, nm.Chapter.chapter_id == nm.ChapterContent.chapter_id)
     )
     q = auto_label_mod_access_select(q, current_user)
     q = chapter_mod_access_select(q, current_user)
-    try:
-        new_result = db.execute(q)
-        new_result_rows = new_result.all()
-    except Exception:
-        raise
+    new_result_rows = (await db.execute(q)).all()
     alcid_map: dict[uuid.UUID, uuid.UUID] = {row[0]: row[1] for row in new_result_rows}
 
     run_schema = schemas.AutoLabelRun.model_validate(run)

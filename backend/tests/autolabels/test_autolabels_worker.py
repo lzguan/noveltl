@@ -3,7 +3,8 @@ from collections.abc import Generator
 
 import pytest
 from sqlalchemy import create_engine, select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import sessionmaker
 
 from src.autolabels.constants import AutoLabelProgress, SepPriority
 from src.autolabels.models import AutoLabel
@@ -37,7 +38,7 @@ class TestInsertAutoLabels:
     async def test_basic(
         self,
         xianxia_scenario: DatabaseScenario,
-        test_db: Session,
+        async_test_db: AsyncSession,
         recording_dispatcher: RecordingDispatcher,
         configured_autolabel_worker: None,
     ) -> None:
@@ -47,7 +48,7 @@ class TestInsertAutoLabels:
         user = xianxia_scenario.users["owner"]
         chapters = [chapter for key, chapter in xianxia_scenario.chapters.items() if key.startswith("novel:")]
         ret = await insert_auto_labels(
-            test_db,
+            async_test_db,
             user,
             recording_dispatcher,
             CreateAutoLabels(
@@ -65,11 +66,11 @@ class TestInsertAutoLabels:
         for job_id, auto_label_id in recording_dispatcher.jobs:
             autolabel_infer(job_id, auto_label_id)
 
-        test_db.expire_all()
+        async_test_db.expire_all()
         q = select(AutoLabel).where(
             AutoLabel.auto_label_id.in_([a.auto_label_meta.auto_label_id for a in ret.autolabels])
         )
-        rows = test_db.execute(q).scalars().all()
+        rows = (await async_test_db.scalars(q)).all()
         for row in rows:
             logger.info("AutoLabel row: %s", row.__dict__)
             assert row.auto_label_status == AutoLabelProgress.DONE
@@ -77,14 +78,14 @@ class TestInsertAutoLabels:
     async def test_set_params(
         self,
         xianxia_scenario: DatabaseScenario,
-        test_db: Session,
+        async_test_db: AsyncSession,
         recording_dispatcher: RecordingDispatcher,
     ) -> None:
         novel = xianxia_scenario.novels["novel"]
         user = xianxia_scenario.users["owner"]
         chapters = [chapter for key, chapter in xianxia_scenario.chapters.items() if key.startswith("novel:")]
         await insert_auto_labels(
-            test_db,
+            async_test_db,
             user,
             recording_dispatcher,
             CreateAutoLabels(
@@ -98,14 +99,14 @@ class TestInsertAutoLabels:
     async def test_insert_twice_is_idempotent(
         self,
         xianxia_scenario: DatabaseScenario,
-        test_db: Session,
+        async_test_db: AsyncSession,
         recording_dispatcher: RecordingDispatcher,
     ) -> None:
         novel = xianxia_scenario.novels["novel"]
         user = xianxia_scenario.users["owner"]
         chapters = [chapter for key, chapter in xianxia_scenario.chapters.items() if key.startswith("novel:")]
         ret = await insert_auto_labels(
-            test_db,
+            async_test_db,
             user,
             recording_dispatcher,
             CreateAutoLabels(
@@ -121,7 +122,7 @@ class TestInsertAutoLabels:
         # idempotent in the old sense, but each run is independent and
         # the unique constraint is (chapter_content_id, run_id).
         ret2 = await insert_auto_labels(
-            test_db,
+            async_test_db,
             user,
             recording_dispatcher,
             CreateAutoLabels(
@@ -134,6 +135,6 @@ class TestInsertAutoLabels:
 
         # Total autolabels in DB should be double (two runs).
         q = select(AutoLabel)
-        result_rows = test_db.execute(q).scalars().all()
+        result_rows = (await async_test_db.scalars(q)).all()
         assert len(result_rows) == len(chapters) * 2
         assert len(recording_dispatcher.jobs) == len(chapters) * 2

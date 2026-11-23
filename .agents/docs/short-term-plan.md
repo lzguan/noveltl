@@ -19,8 +19,9 @@ unconverted services briefly use two connections per request), `novels` with
 
 Done on `feature/taskiq-agent-workers`: the whole memory module (routes, services,
 access layer, agent tools, task bookkeeping, workers) is on async sessions, and the
-memory agent worker runs on taskiq. Remaining: `autolabels` (4 routes) and the
-`translations` routes plus slice 2 (translations worker).
+memory agent worker runs on taskiq. The translation and autolabel routes now use async sessions.
+Autolabel inference dispatch still uses the Celery dispatcher. Remaining: slice 2
+(translations worker).
 
 - Deferred (user decision, 2026-11-23): `filters` stays sync; the user does not
   use it. Sync routes run in the threadpool, so the only costs are a second
@@ -37,8 +38,8 @@ memory agent worker runs on taskiq. Remaining: `autolabels` (4 routes) and the
   `AsyncSession` (one commit per layer). Known pre-existing bug: read toolsets are not
   `sequential=True`, so parallel read calls share one session across threads.
 - Slice 2 (translations worker to taskiq) also removes the `asyncio.run` bridges left by
-  `de11687` (async `ActionCallbacks` protocol, sync callers): `translations/service.py:283`,
-  `translations/actions/celery_actions.py:112,157`, `translations/clients/sync_client.py:46`.
+  `de11687` in `translations/actions/celery_actions.py` and
+  `translations/clients/sync_client.py`.
   Open question for slice 2: an async taskiq worker already runs many translation jobs in
   one process; decide whether the in-process `AsyncActionCallbacks` path stays (then a
   shared translation kernel is needed) or the worker becomes the only runner.

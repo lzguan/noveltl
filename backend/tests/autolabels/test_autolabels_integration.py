@@ -97,7 +97,7 @@ class TestAutolabelEndToEnd:
 
         # 1. Create autolabels.
         ret = await insert_auto_labels(
-            test_db,
+            async_test_db,
             user,
             InlineCeleryDispatcher(),
             CreateAutoLabels(

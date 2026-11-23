@@ -4,7 +4,7 @@ This is a retrospective of the design discussion and early evaluation cycles,
 not a specification or a benchmark report. Sections follow the order of the
 discussion rather than assigning dates to decisions that were not dated.
 Implementation details belong in the [memory data model](../../docs/memory/data-model.md);
-commands and artifact locations belong in the [eval README](../README.md).
+artifact locations are documented in the [eval README](../../agent-evals/README.md).
 
 All examples below are synthetic or abstract. This record deliberately omits
 source titles, character names, quotations, plot details, corpus identifiers,

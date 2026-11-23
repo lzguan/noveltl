@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Iterator
+from collections.abc import AsyncIterable, AsyncIterator
 from dataclasses import dataclass
 from typing import NewType, Protocol
 
@@ -36,15 +36,15 @@ class BatchJobClient(Protocol):
     provider state, not a failed polling request.
     """
 
-    def create_batch_job(self, content: Iterable[bytes]) -> BatchJobId:
+    async def create_batch_job(self, content: AsyncIterable[bytes]) -> BatchJobId:
         """Consume a possibly single-use input stream and create a provider job."""
         ...
 
-    def poll_batch_job(self, job_id: BatchJobId) -> BatchJobPoll:
+    async def poll_batch_job(self, job_id: BatchJobId) -> BatchJobPoll:
         """Return the provider batch job's current state."""
         ...
 
-    def fetch_batch_output(self, output_id: BatchOutputId) -> Iterator[bytes]:
+    def fetch_batch_output(self, output_id: BatchOutputId) -> AsyncIterator[bytes]:
         """Stream output bytes; chunks need not align with JSONL line boundaries.
 
         Each call starts a new download so finalization can retry independently.

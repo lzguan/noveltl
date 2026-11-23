@@ -47,6 +47,9 @@ Autolabel inference dispatch still uses the Celery dispatcher. Remaining: slice 
   (`RedisScheduleSource` + `taskiq scheduler` service), broker on `TRANSLATIONS_DATABASE`,
   Celery still selectable, in-process `AsyncActionCallbacks` kept. Lease semantics
   unchanged (cooperative renewal between awaits).
+- End of slice 2 PR A: if nothing uses `buffered_reader` / `IterReader`
+  (`src/streaming.py`) by then, delete them and `tests/test_streaming.py`. The Qwen
+  upload, their last caller, now spools to a temp file (user decision, 2026-11-23).
 - Slice 2 (translations worker to taskiq) also removes the `asyncio.run` bridges left by
   `de11687` in `translations/actions/celery_actions.py` and
   `translations/clients/sync_client.py`.

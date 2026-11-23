@@ -1,8 +1,8 @@
-from collections.abc import Iterable, Iterator
+from collections.abc import AsyncIterable, AsyncIterator
+from tempfile import TemporaryFile
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 
-from src.streaming import buffered_reader
 from src.translations.clients.batch_jobs import (
     BatchJobClient,
     BatchJobComplete,
@@ -20,10 +20,13 @@ class QwenClient(BatchJobClient):
     def __init__(self, api_key: str, base_url: str) -> None:
         self.api_key = api_key
         self.base_url = base_url
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
 
-    def poll_batch_job(self, job_id: BatchJobId) -> BatchJobPoll:
-        response = self.client.batches.retrieve(job_id)
+    def _client(self) -> AsyncOpenAI:
+        return AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
+
+    async def poll_batch_job(self, job_id: BatchJobId) -> BatchJobPoll:
+        async with self._client() as client:
+            response = await client.batches.retrieve(job_id)
         if (
             response.status == "pending"
             or response.status == "in_progress"
@@ -39,17 +42,23 @@ class QwenClient(BatchJobClient):
         else:
             return BatchJobFailed(error=f"Batch job {job_id} failed with status {response.status}: response={response}")
 
-    def create_batch_job(self, content: Iterable[bytes]) -> BatchJobId:
-        # This stream cannot rewind. Task recovery must reopen it after failure.
-        with buffered_reader(content) as stream:
-            file_obj = self.client.with_options(max_retries=0).files.create(
-                file=("input.jsonl", stream), purpose="batch"
-            )
-        response = self.client.batches.create(
-            input_file_id=file_obj.id, endpoint="/v1/chat/completions", completion_window="24h"
-        )
+    async def create_batch_job(self, content: AsyncIterable[bytes]) -> BatchJobId:
+        # The SDK uploads a file object, not an async stream, so spool the input first.
+        with TemporaryFile(mode="w+b") as spool:
+            async for chunk in content:
+                spool.write(chunk)
+            spool.seek(0)
+            async with self._client() as client:
+                file_obj = await client.with_options(max_retries=0).files.create(
+                    file=("input.jsonl", spool), purpose="batch"
+                )
+                response = await client.batches.create(
+                    input_file_id=file_obj.id, endpoint="/v1/chat/completions", completion_window="24h"
+                )
         return BatchJobId(response.id)
 
-    def fetch_batch_output(self, output_id: BatchOutputId) -> Iterator[bytes]:
-        with self.client.files.with_streaming_response.content(file_id=output_id) as response:
-            yield from response.iter_bytes()
+    async def fetch_batch_output(self, output_id: BatchOutputId) -> AsyncIterator[bytes]:
+        async with self._client() as client:
+            async with client.files.with_streaming_response.content(file_id=output_id) as response:
+                async for chunk in response.iter_bytes():
+                    yield chunk

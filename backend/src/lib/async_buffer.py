@@ -1,8 +1,15 @@
 import asyncio
-from collections.abc import AsyncGenerator, Awaitable, Iterable
+from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Awaitable, Iterable
 
 
-async def async_buffer[T](awaitables: Iterable[Awaitable[T]], size: int = 8) -> AsyncGenerator[T]:
+async def _as_async[T](items: Iterable[T]) -> AsyncIterator[T]:
+    for item in items:
+        yield item
+
+
+async def async_buffer[T](
+    awaitables: Iterable[Awaitable[T]] | AsyncIterable[Awaitable[T]], size: int = 8
+) -> AsyncGenerator[T]:
     # Runs at most `size` awaitables at once, counting finished results the consumer has
     # not taken yet, and pulls the next awaitable only when there is room. Results come
     # out in completion order. An error is raised to the consumer; closing early or
@@ -11,7 +18,8 @@ async def async_buffer[T](awaitables: Iterable[Awaitable[T]], size: int = 8) -> 
         raise ValueError("size must be positive")
     pending: set[asyncio.Future[T]] = set()
     try:
-        for awaitable in awaitables:
+        source = awaitables if isinstance(awaitables, AsyncIterable) else _as_async(awaitables)
+        async for awaitable in source:
             pending.add(asyncio.ensure_future(awaitable))
             if len(pending) >= size:
                 done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)

@@ -1,10 +1,7 @@
 import asyncio
-from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Awaitable, Iterable
+from collections.abc import AsyncGenerator, AsyncIterable, Awaitable, Iterable
 
-
-async def _as_async[T](items: Iterable[T]) -> AsyncIterator[T]:
-    for item in items:
-        yield item
+from src.lib.aiter import as_async_iter
 
 
 async def async_buffer[T](
@@ -18,7 +15,7 @@ async def async_buffer[T](
         raise ValueError("size must be positive")
     pending: set[asyncio.Future[T]] = set()
     try:
-        source = awaitables if isinstance(awaitables, AsyncIterable) else _as_async(awaitables)
+        source = awaitables if isinstance(awaitables, AsyncIterable) else as_async_iter(awaitables)
         async for awaitable in source:
             pending.add(asyncio.ensure_future(awaitable))
             if len(pending) >= size:

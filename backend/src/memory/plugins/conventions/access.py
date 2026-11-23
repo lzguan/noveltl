@@ -7,7 +7,7 @@ checks and the transaction.
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, Select, delete, func, insert, select, update
+from sqlalchemy import ColumnElement, delete, func, insert, select, update
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.util import AliasedClass
@@ -21,24 +21,6 @@ from src.memory.staging import check_workspace, stage_record
 from src.memory.types import Creator, ReviewStatus
 
 
-def conventions_statement(
-    memory_group_id: UUID,
-    *,
-    workspace_id: UUID | None = None,
-    category: ConventionCategory | None = None,
-    review_statuses: Sequence[ReviewStatus] | None = None,
-) -> Select[TranslationConvention]:
-    """Select a group's conventions in creation order; None filters match everything."""
-    convention_rows = visible_rows(TranslationConvention, ShadowConvention, workspace_id)
-    statement = select(convention_rows).where(convention_rows.memory_group_id == memory_group_id)
-    if category is not None:
-        statement = statement.where(convention_rows.category == category)
-    if review_statuses is not None:
-        statement = statement.where(convention_rows.review_status.in_(review_statuses))
-    statement = statement.order_by(convention_rows.created_at, convention_rows.convention_id)
-    return workspace_read(statement, workspace_id)
-
-
 async def read_conventions(
     db: AsyncSession,
     memory_group_id: UUID,
@@ -48,10 +30,14 @@ async def read_conventions(
     review_statuses: Sequence[ReviewStatus] | None = None,
 ) -> list[TranslationConvention]:
     """Read a group's conventions in creation order; None filters match everything."""
-    statement = conventions_statement(
-        memory_group_id, workspace_id=workspace_id, category=category, review_statuses=review_statuses
-    )
-    return list(await db.scalars(statement))
+    convention_rows = visible_rows(TranslationConvention, ShadowConvention, workspace_id)
+    statement = select(convention_rows).where(convention_rows.memory_group_id == memory_group_id)
+    if category is not None:
+        statement = statement.where(convention_rows.category == category)
+    if review_statuses is not None:
+        statement = statement.where(convention_rows.review_status.in_(review_statuses))
+    statement = statement.order_by(convention_rows.created_at, convention_rows.convention_id)
+    return list(await db.scalars(workspace_read(statement, workspace_id)))
 
 
 async def create_convention(

@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from sqlalchemy import Integer, case, cast, func, insert, literal, select, true
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.novels.models import Chapter, ChapterContent
 from src.translations.models import (
@@ -15,7 +15,7 @@ from src.translations.schemas import TranslationJobCreate
 from src.translations.types import TranslationTaskStatus
 
 
-def create_job(db: Session, request: TranslationJobCreate) -> UUID:
+async def create_job(db: AsyncSession, request: TranslationJobCreate) -> UUID:
     """Create a translation job and its complete stage-by-batch execution graph."""
     latest_content_version = (
         select(func.max(ChapterContent.chapter_content_version))
@@ -48,16 +48,18 @@ def create_job(db: Session, request: TranslationJobCreate) -> UUID:
     selected_chapters = selected_chapters_statement.cte("selected_chapters").prefix_with("MATERIALIZED")
 
     try:
-        job_id = db.execute(
-            insert(TranslationJob)
-            .values(
-                novel_id=request.novel_id,
-                config=request.config.model_dump(mode="json"),
+        job_id = (
+            await db.execute(
+                insert(TranslationJob)
+                .values(
+                    novel_id=request.novel_id,
+                    config=request.config.model_dump(mode="json"),
+                )
+                .returning(TranslationJob.job_id)
             )
-            .returning(TranslationJob.job_id)
         ).scalar_one()
 
-        db.execute(
+        await db.execute(
             insert(TranslationStage),
             [
                 {
@@ -87,7 +89,7 @@ def create_job(db: Session, request: TranslationJobCreate) -> UUID:
             .returning(TranslationBatch.batch_id, TranslationBatch.batch_num)
             .cte("inserted_batches")
         )
-        db.execute(
+        await db.execute(
             insert(TranslationJobChapter).from_select(
                 [
                     "job_id",
@@ -111,7 +113,7 @@ def create_job(db: Session, request: TranslationJobCreate) -> UUID:
             (TranslationStage.stage_num == 0, literal(TranslationTaskStatus.READY.value)),
             else_=literal(TranslationTaskStatus.WAITING.value),
         )
-        db.execute(
+        await db.execute(
             insert(TranslationTask).from_select(
                 ["stage_id", "batch_id", "status"],
                 select(
@@ -127,9 +129,9 @@ def create_job(db: Session, request: TranslationJobCreate) -> UUID:
                 ),
             )
         )
-        db.commit()
+        await db.commit()
     except Exception:
-        db.rollback()
+        await db.rollback()
         raise
 
     return job_id

@@ -1,4 +1,4 @@
-from src.files.dependencies import get_object_store
+from src.files.dependencies import get_async_object_store
 from src.translations.actions.actions import ActionStepSpec, ActionTaskContext, StepSpec, register_steps
 from src.translations.actions.celery_actions import CeleryActionCallbacks
 from src.translations.actions.common.files import store_lines
@@ -15,15 +15,15 @@ from src.translations.types import TranslationTaskStatus
 _LEASE_SECONDS = 300
 
 
-def load(context: ActionTaskContext) -> None:
-    stage = context.db.get(TranslationStage, context.task.stage_id)
+async def load(context: ActionTaskContext) -> None:
+    stage = await context.db.get(TranslationStage, context.task.stage_id)
     if stage is None or stage.action != "load_inputs":
         raise ValueError("Input loading requires a load_inputs stage")
-    store = get_object_store()
+    store = get_async_object_store()
     loaded = iter_initial_records(context, stage, LoadInputsConfig.model_validate(stage.config).inputs)
-    output = output_records(context, store, stage, loaded, stage_types(context.db, stage))
-    context.task.output_file_id = store_lines(
-        context, store, map(encode_translation_record, output), renew_seconds=_LEASE_SECONDS / 3
+    output = output_records(context, store, stage, loaded, await stage_types(context.db, stage))
+    context.task.output_file_id = await store_lines(
+        context, store, (encode_translation_record(record) async for record in output), renew_seconds=_LEASE_SECONDS / 3
     )
 
 

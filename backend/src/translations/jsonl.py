@@ -21,6 +21,12 @@ def iter_translation_records(chunks: Iterable[bytes]) -> Iterator[TranslationRec
         yield translation_record_adapter.validate_json(line)
 
 
+async def aiter_translation_records(chunks: AsyncIterable[bytes]) -> AsyncIterator[TranslationRecord]:
+    """Async counterpart of `iter_translation_records`."""
+    async for line in aiter_jsonl_lines(chunks):
+        yield translation_record_adapter.validate_json(line)
+
+
 def iter_jsonl_lines(chunks: Iterable[bytes]) -> Iterator[bytes]:
     """Frame arbitrary chunks as lines, retaining CR and accepting a final newline-less line."""
     pending = bytearray()

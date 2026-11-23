@@ -70,7 +70,7 @@ async def create_translation_job(db: AsyncSession, user: User, request: Translat
         )
         if found != group_ids:
             raise ValueError("Memory groups must belong to the job's novel")
-    return await db.run_sync(create_job, request)
+    return await create_job(db, request)
 
 
 async def read_translation_job(db: AsyncSession, user: User, job_id: UUID) -> TranslationJobRead:

@@ -35,6 +35,12 @@ worker, only when that worker needs changes anyway.
   match). Next: convert memory services, toolsets, transaction helpers and task bookkeeping to
   `AsyncSession` (one commit per layer). Known pre-existing bug: read toolsets are not
   `sequential=True`, so parallel read calls share one session across threads.
+- Slice 2 (translations worker to taskiq) also removes the `asyncio.run` bridges left by
+  `de11687` (async `ActionCallbacks` protocol, sync callers): `translations/service.py:283`,
+  `translations/actions/celery_actions.py:112,157`, `translations/clients/sync_client.py:46`.
+  Open question for slice 2: an async taskiq worker already runs many translation jobs in
+  one process; decide whether the in-process `AsyncActionCallbacks` path stays (then a
+  shared translation kernel is needed) or the worker becomes the only runner.
 - When the translations worker moves to async sessions (slice 2), fold
   `conventions_statement` back into `read_conventions`
   (`src/memory/plugins/conventions/access.py`) and have

@@ -3,8 +3,7 @@
 import asyncio
 from uuid import UUID
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.config import database_settings
 from src.memory.agent.broker import broker
@@ -13,11 +12,12 @@ from src.memory.agent.task_names import RUN_MEMORY_JOB, RUN_MEMORY_TASK
 from src.memory.agent.tasks.tasks import run_all_tasks, run_one_task
 from src.models import Base  # noqa: F401  registers every mapper for the worker process
 
-# Tools commit before each model request, so a task holds a connection only while a tool
-# or its own bookkeeping runs. pydantic-ai runs sync tools in anyio's worker threads (40
-# by default), so the pool matches that many concurrent tool calls.
-worker_engine = create_engine(database_settings.DB_URL, pool_size=40, max_overflow=0, pool_timeout=10)
-WorkerSessionLocal: sessionmaker[Session] = sessionmaker(autoflush=False, bind=worker_engine)
+# Tools commit before each model request, so a task holds a connection only while its
+# queries run; a task waiting for a free connection yields the event loop.
+worker_engine = create_async_engine(database_settings.DB_URL, pool_size=20)
+WorkerSessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
+    worker_engine, autoflush=False, expire_on_commit=False
+)
 
 
 @broker.task(task_name=RUN_MEMORY_JOB)

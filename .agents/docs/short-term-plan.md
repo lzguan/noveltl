@@ -37,6 +37,16 @@ Autolabel inference dispatch still uses the Celery dispatcher. Remaining: slice 
   match). Next: convert memory services, toolsets, transaction helpers and task bookkeeping to
   `AsyncSession` (one commit per layer). Known pre-existing bug: read toolsets are not
   `sequential=True`, so parallel read calls share one session across threads.
+- Slice 2 plan (agreed 2026-11-23), commit by commit with review stops. PR A: async
+  `ActionTaskContext` (`AsyncSession`, async `renew_lease`) and awaitable step callbacks;
+  async runner; async `BatchJobClient` (Qwen on `AsyncOpenAI` spooling uploads to a temp
+  file, OpenRouter on `httpx2.AsyncClient`, `SyncChatClient` without `asyncio.run`); async
+  `create_file` on `AsyncObjectStore` with `store_lines` keeping its temp file; async step
+  bodies and inputs; Celery keeps running steps via one `asyncio.run` + `NullPool` engine.
+  PR B: `TaskiqActionCallbacks` with polls delayed through the taskiq scheduler
+  (`RedisScheduleSource` + `taskiq scheduler` service), broker on `TRANSLATIONS_DATABASE`,
+  Celery still selectable, in-process `AsyncActionCallbacks` kept. Lease semantics
+  unchanged (cooperative renewal between awaits).
 - Slice 2 (translations worker to taskiq) also removes the `asyncio.run` bridges left by
   `de11687` in `translations/actions/celery_actions.py` and
   `translations/clients/sync_client.py`.

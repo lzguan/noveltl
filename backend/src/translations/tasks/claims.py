@@ -4,7 +4,7 @@ from datetime import timedelta
 from uuid import UUID
 
 from sqlalchemy import and_, func, or_, update
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.translations.models import TranslationTask
 from src.translations.types import TranslationTaskStatus
@@ -17,8 +17,8 @@ class TranslationClaimLostError(RuntimeError):
 POLL_GATE_SLACK = timedelta(seconds=30)
 
 
-def claim_task(
-    db: Session,
+async def claim_task(
+    db: AsyncSession,
     task_id: UUID,
     token: UUID,
     *,
@@ -29,7 +29,7 @@ def claim_task(
     if duration <= timedelta(0):
         raise ValueError("Claim duration must be positive")
     return (
-        db.scalar(
+        await db.scalar(
             update(TranslationTask)
             .where(
                 TranslationTask.task_id == task_id,
@@ -63,11 +63,13 @@ def _owned(task_id: UUID, token: UUID, during: TranslationTaskStatus):
     )
 
 
-def renew_claim(db: Session, task_id: UUID, token: UUID, *, during: TranslationTaskStatus, duration: timedelta) -> bool:
+async def renew_claim(
+    db: AsyncSession, task_id: UUID, token: UUID, *, during: TranslationTaskStatus, duration: timedelta
+) -> bool:
     if duration <= timedelta(0):
         raise ValueError("Claim duration must be positive")
     return (
-        db.scalar(
+        await db.scalar(
             update(TranslationTask)
             .where(_owned(task_id, token, during))
             .values(claim_expires_at=func.clock_timestamp() + duration)
@@ -77,8 +79,8 @@ def renew_claim(db: Session, task_id: UUID, token: UUID, *, during: TranslationT
     )
 
 
-def finish_claim(
-    db: Session,
+async def finish_claim(
+    db: AsyncSession,
     task_id: UUID,
     token: UUID,
     *,
@@ -94,7 +96,7 @@ def finish_claim(
     if poll_interval is not None and poll_interval <= timedelta(0):
         raise ValueError("Poll interval must be positive")
     with db.no_autoflush:
-        owned = db.scalar(
+        owned = await db.scalar(
             update(TranslationTask)
             .where(_owned(task_id, token, during))
             .values(
@@ -108,13 +110,15 @@ def finish_claim(
         )
     if owned is None:
         raise TranslationClaimLostError(f"Lost translation task claim: {task_id}")
-    db.flush()
+    await db.flush()
 
 
-def fail_claim(db: Session, task_id: UUID, token: UUID, *, during: TranslationTaskStatus, error: str) -> bool:
+async def fail_claim(
+    db: AsyncSession, task_id: UUID, token: UUID, *, during: TranslationTaskStatus, error: str
+) -> bool:
     """Record failure after callback writes have been rolled back."""
     return (
-        db.scalar(
+        await db.scalar(
             update(TranslationTask)
             .where(_owned(task_id, token, during))
             .values(failed_at=func.clock_timestamp(), error=error, claim_token=None, claim_expires_at=None)

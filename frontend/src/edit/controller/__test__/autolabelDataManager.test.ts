@@ -53,7 +53,6 @@ function buildManager(events: TriggerEvent[] = []) {
 	);
 }
 
-
 describe("buildAutolabelDataManager", () => {
 	it("does not clean up autolabel IDs that are reused by reload", () => {
 		const manager = Effect.runSync(buildManager());
